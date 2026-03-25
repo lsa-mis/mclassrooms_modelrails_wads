@@ -41,3 +41,13 @@ en:
         submit: "Save settings"
       update:
         success: "Settings updated."
+    brandings:
+      edit:
+        title: "Workspace branding"
+        logo_label: "Logo"
+        color_label: "Primary color (OKLCH)"
+        color_hint: "e.g. oklch(0.65 0.18 250)"
+        preview: "Color preview"
+        submit: "Save branding"
+      update:
+        success: "Branding updated."

@@ -21,6 +21,7 @@ Rails.application.routes.draw do
     scope module: :workspaces do
       resources :members, only: [:index]
       resource :settings, only: [:edit, :update]
+      resource :branding, only: [:edit, :update]
     end
   end
 
