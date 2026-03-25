@@ -1,0 +1,6 @@
+en:
+  roles:
+    owner: "Owner"
+    admin: "Admin"
+    member: "Member"
+    viewer: "Viewer"
