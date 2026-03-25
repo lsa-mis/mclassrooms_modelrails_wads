@@ -3,6 +3,8 @@ en:
     name: "ModelRails"
     description: "A multi-tenant SaaS starter kit built on Rails."
     skip_to_content: "Skip to main content"
+  errors:
+    not_authorized: "You don't have permission to do that."
   navigation:
     aria_label: "Main navigation"
     sign_in: "Sign in"

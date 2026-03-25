@@ -32,6 +32,27 @@ en:
         name: "Name"
         email: "Email"
         role: "Role"
+        status: "Status"
+        active: "Active"
+        deactivated: "Deactivated"
+        actions: "Actions"
+        edit_role: "Edit role"
+        deactivate: "Deactivate"
+        reactivate: "Reactivate"
+        transfer_ownership: "Transfer ownership"
+      edit:
+        title: "Change role"
+        role_label: "Role"
+        submit: "Save"
+      update:
+        success: "Role updated."
+      destroy:
+        deactivated: "Member deactivated."
+        cannot_deactivate_last_owner: "Cannot deactivate the last owner."
+      reactivate:
+        reactivated: "Member reactivated."
+      transfer_ownership:
+        transferred: "Ownership transferred."
     settings:
       edit:
         title: "Workspace settings"

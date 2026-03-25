@@ -21,12 +21,14 @@ class WorkspacesController < ApplicationController
   end
 
   def show
+    authorize @workspace
   end
 
   def edit
   end
 
   def update
+    authorize @workspace
     if @workspace.update(workspace_params)
       redirect_to workspace_path(@workspace), notice: t(".success")
     else
@@ -35,6 +37,7 @@ class WorkspacesController < ApplicationController
   end
 
   def destroy
+    authorize @workspace
     @workspace.discard!
     redirect_to workspaces_path, notice: t(".success")
   end

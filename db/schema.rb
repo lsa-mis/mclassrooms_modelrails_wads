@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_25_171515) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_25_202805) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -55,6 +55,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_171515) do
     t.index ["user_id", "provider"], name: "index_authentications_on_user_id_and_provider", unique: true
     t.index ["user_id"], name: "index_authentications_on_user_id"
     t.index ["verification_token"], name: "index_authentications_on_verification_token", unique: true
+  end
+
+  create_table "invitations", force: :cascade do |t|
+    t.datetime "accepted_at"
+    t.integer "accepted_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "declined_at"
+    t.string "email"
+    t.datetime "expires_at", null: false
+    t.integer "invitable_id", null: false
+    t.string "invitable_type", null: false
+    t.integer "invited_by_id", null: false
+    t.datetime "revoked_at"
+    t.integer "role_id", null: false
+    t.string "status", default: "pending", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["accepted_by_id"], name: "index_invitations_on_accepted_by_id"
+    t.index ["email", "invitable_type", "invitable_id"], name: "index_invitations_on_email_and_invitable_pending", unique: true, where: "status = 'pending'"
+    t.index ["invitable_type", "invitable_id"], name: "index_invitations_on_invitable"
+    t.index ["invitable_type", "invitable_id"], name: "index_invitations_on_invitable_type_and_invitable_id"
+    t.index ["invited_by_id"], name: "index_invitations_on_invited_by_id"
+    t.index ["role_id"], name: "index_invitations_on_role_id"
+    t.index ["token"], name: "index_invitations_on_token", unique: true
   end
 
   create_table "memberships", force: :cascade do |t|
@@ -134,6 +158,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_171515) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "authentications", "users"
+  add_foreign_key "invitations", "roles"
+  add_foreign_key "invitations", "users", column: "accepted_by_id"
+  add_foreign_key "invitations", "users", column: "invited_by_id"
   add_foreign_key "memberships", "roles"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"

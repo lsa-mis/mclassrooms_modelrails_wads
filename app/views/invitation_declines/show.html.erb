@@ -1,0 +1,19 @@
+<% content_for(:title) { t("invitation_declines.show.title") } %>
+<div class="max-w-md mx-auto px-4 py-16 text-center">
+  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+    <%= t("invitation_declines.show.title") %>
+  </h1>
+
+  <p class="mt-4 text-slate-600 dark:text-gray-400">
+    <%= t("invitation_declines.show.body", workspace: @invitation.invitable.name) %>
+  </p>
+
+  <%= button_to t("invitation_declines.show.confirm"),
+        decline_invitation_path(token: @invitation.token),
+        method: :post,
+        class: "mt-8 w-full min-h-[44px] rounded-md px-4 py-2
+                border border-red-600 text-red-600 dark:text-red-400 font-medium
+                hover:bg-red-50 dark:hover:bg-red-900
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500
+                cursor-pointer" %>
+</div>

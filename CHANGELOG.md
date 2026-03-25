@@ -2,6 +2,40 @@
 
 All notable changes to ModelRails are documented here, organized by phase.
 
+## v0.3.0 — Phase 3: Invitations + Membership Lifecycle
+
+### Invitations
+- Email invitations with role assignment and 7-day expiry
+- Batch invitations (multi-line email input, single role)
+- Magic link invitations (shareable token URL, no email required)
+- Resend (regenerates token, resets expiry) and revoke actions
+- Polymorphic invitable (ready for Team invitations in Phase 4)
+- InvitationMailer with accept/decline links
+
+### Accept/Decline Flow
+- Token-based accept page (works for authenticated and unauthenticated users)
+- Unauthenticated users redirected to registration, auto-joined after sign-up
+- Token-based decline with confirmation page
+- Guards against expired, revoked, and already-used invitations
+
+### Membership Lifecycle
+- Role change by Owner/Admin
+- Member deactivation (soft delete) with last-owner protection
+- Member reactivation
+- Ownership transfer (atomic: promote target, demote self)
+
+### Authorization (Pundit)
+- Pundit policies for Invitation, Membership, Workspace, Settings, Branding
+- Permission checks via Role.permissions JSON (manage_workspace, manage_members, manage_teams, manage_settings)
+- Retrofitted Phase 2 controllers (replaced inline role checks)
+- Graceful rescue_from for unauthorized access
+
+### Infrastructure
+- 217 examples, 0 failures, 92.3% line coverage
+- 0 Brakeman warnings
+
+---
+
 ## v0.2.0 — Phase 2: Workspaces + Multi-tenancy + Ownership + Branding
 
 ### Workspaces

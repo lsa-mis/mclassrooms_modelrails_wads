@@ -16,6 +16,12 @@
         <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400">
           <%= t("workspaces.members.index.role") %>
         </th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400">
+          <%= t("workspaces.members.index.status") %>
+        </th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400">
+          <%= t("workspaces.members.index.actions") %>
+        </th>
       </tr>
     </thead>
     <tbody>
@@ -24,6 +30,38 @@
           <td class="py-3 text-slate-900 dark:text-gray-100"><%= membership.user.full_name %></td>
           <td class="py-3 text-slate-600 dark:text-gray-400"><%= membership.user.email_address %></td>
           <td class="py-3 text-slate-600 dark:text-gray-400"><%= membership.role.name %></td>
+          <td class="py-3 text-slate-600 dark:text-gray-400">
+            <% if membership.discarded? %>
+              <span class="text-red-600 dark:text-red-400"><%= t("workspaces.members.index.deactivated") %></span>
+            <% else %>
+              <span class="text-green-600 dark:text-green-400"><%= t("workspaces.members.index.active") %></span>
+            <% end %>
+          </td>
+          <td class="py-3 space-x-2">
+            <% if policy(membership).update? %>
+              <%= link_to t("workspaces.members.index.edit_role"),
+                    edit_workspace_member_path(@workspace, membership),
+                    class: "text-sm text-sky-700 hover:text-sky-800 dark:text-sky-400" %>
+            <% end %>
+            <% if policy(membership).destroy? && !membership.discarded? %>
+              <%= button_to t("workspaces.members.index.deactivate"),
+                    workspace_member_path(@workspace, membership),
+                    method: :delete,
+                    class: "text-sm text-red-600 hover:text-red-700 dark:text-red-400 bg-transparent border-0 cursor-pointer p-0" %>
+            <% end %>
+            <% if policy(membership).reactivate? && membership.discarded? %>
+              <%= button_to t("workspaces.members.index.reactivate"),
+                    reactivate_workspace_member_path(@workspace, membership),
+                    method: :patch,
+                    class: "text-sm text-green-600 hover:text-green-700 dark:text-green-400 bg-transparent border-0 cursor-pointer p-0" %>
+            <% end %>
+            <% if policy(membership).transfer_ownership? %>
+              <%= button_to t("workspaces.members.index.transfer_ownership"),
+                    transfer_ownership_workspace_member_path(@workspace, membership),
+                    method: :patch,
+                    class: "text-sm text-slate-600 hover:text-slate-800 dark:text-gray-400 bg-transparent border-0 cursor-pointer p-0" %>
+            <% end %>
+          </td>
         </tr>
       <% end %>
     </tbody>

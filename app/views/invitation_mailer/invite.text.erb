@@ -1,0 +1,9 @@
+<%= t("invitation_mailer.invite.greeting") %>
+
+<%= t("invitation_mailer.invite.body", inviter: @inviter.full_name, workspace: @workspace.name, role: @role.name) %>
+
+<%= t("invitation_mailer.invite.accept_action") %>: <%= @accept_url %>
+
+<%= t("invitation_mailer.invite.decline_action") %>: <%= @decline_url %>
+
+<%= t("invitation_mailer.invite.expiry_note") %>

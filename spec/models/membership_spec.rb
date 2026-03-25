@@ -46,4 +46,57 @@ RSpec.describe Membership, type: :model do
       expect(Membership.reflect_on_association(:role).macro).to eq(:belongs_to)
     end
   end
+
+  describe "role change" do
+    let(:membership) { create(:membership) }
+    let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
+
+    it "changes role" do
+      membership.change_role!(admin_role)
+      expect(membership.reload.role).to eq(admin_role)
+    end
+  end
+
+  describe "deactivation" do
+    let(:workspace) { create(:workspace) }
+    let(:membership) { create(:membership, :owner, workspace: workspace) }
+
+    it "deactivates a member" do
+      create(:membership, :owner, workspace: workspace)
+      membership.deactivate!
+      expect(membership.reload).to be_discarded
+    end
+
+    it "prevents deactivating the last owner" do
+      expect { membership.deactivate! }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
+
+  describe "reactivation" do
+    let(:membership) { create(:membership) }
+
+    it "reactivates a deactivated member" do
+      membership.discard!
+      membership.reactivate!
+      expect(membership.reload).not_to be_discarded
+    end
+  end
+
+  describe "ownership transfer" do
+    let(:workspace) { create(:workspace) }
+    let(:owner_membership) { create(:membership, :owner, workspace: workspace) }
+    let(:target_membership) { create(:membership, workspace: workspace) }
+
+    it "promotes the target to owner" do
+      owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+      owner_membership.transfer_ownership_to!(target_membership)
+      expect(target_membership.reload.role).to eq(owner_role)
+    end
+
+    it "demotes the current owner to admin" do
+      admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
+      owner_membership.transfer_ownership_to!(target_membership)
+      expect(owner_membership.reload.role).to eq(admin_role)
+    end
+  end
 end

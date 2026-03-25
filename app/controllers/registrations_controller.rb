@@ -15,6 +15,7 @@ class RegistrationsController < ApplicationController
       authentication.generate_verification_token!
       AuthenticationMailer.verification_email(authentication).deliver_later
       start_new_session_for(@user)
+      accept_pending_invitation(@user)
       redirect_to root_path, notice: t(".success")
     else
       render :new, status: :unprocessable_entity
@@ -28,5 +29,13 @@ class RegistrationsController < ApplicationController
       :email_address, :first_name, :last_name,
       :password, :password_confirmation
     )
+  end
+
+  def accept_pending_invitation(user)
+    token = session.delete(:pending_invitation_token)
+    return unless token
+
+    invitation = Invitation.find_by(token: token)
+    invitation&.accept!(user) if invitation&.pending? && !invitation&.expired?
   end
 end

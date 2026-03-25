@@ -6,6 +6,7 @@ class User < ApplicationRecord
   has_one_attached :avatar
   has_many :memberships, dependent: :destroy
   has_many :workspaces, through: :memberships
+  has_many :sent_invitations, class_name: "Invitation", foreign_key: :invited_by_id, dependent: :nullify
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 

@@ -19,11 +19,26 @@ Rails.application.routes.draw do
 
   resources :workspaces, param: :slug do
     scope module: :workspaces do
-      resources :members, only: [:index]
+      resources :members, only: [:index, :edit, :update, :destroy] do
+        member do
+          patch :reactivate
+          patch :transfer_ownership
+        end
+      end
+      resources :invitations, only: [:index, :new, :create, :destroy] do
+        member do
+          post :resend
+        end
+      end
       resource :settings, only: [:edit, :update]
       resource :branding, only: [:edit, :update]
     end
   end
+
+  get "invitations/:token/accept", to: "invitation_accepts#show", as: :accept_invitation
+  post "invitations/:token/accept", to: "invitation_accepts#create"
+  get "invitations/:token/decline", to: "invitation_declines#show", as: :decline_invitation
+  post "invitations/:token/decline", to: "invitation_declines#create"
 
   root "pages#home"
   get "about", to: "pages#about"
