@@ -1,0 +1,39 @@
+<% if authenticated? && Current.user.workspaces.kept.any? %>
+  <div data-controller="workspace-switcher"
+       data-action="keydown->workspace-switcher#handleKeydown"
+       class="relative">
+    <button data-action="click->workspace-switcher#toggle"
+            aria-expanded="false"
+            aria-haspopup="true"
+            class="min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-md
+                   text-slate-700 dark:text-gray-300
+                   hover:bg-gray-100 dark:hover:bg-gray-800
+                   focus:outline-none focus:ring-2 focus:ring-sky-700">
+      <%= t("navigation.workspaces") %>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+
+    <div data-workspace-switcher-target="menu"
+         role="menu"
+         class="hidden absolute right-0 mt-2 w-56 rounded-md bg-white dark:bg-gray-800
+                border border-gray-200 dark:border-gray-700 shadow-lg z-50">
+      <% Current.user.workspaces.kept.each do |workspace| %>
+        <%= link_to workspace_path(workspace), role: "menuitem",
+              class: "block px-4 py-3 text-sm text-slate-700 dark:text-gray-300
+                      hover:bg-gray-100 dark:hover:bg-gray-700
+                      focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700" do %>
+          <span class="font-medium"><%= workspace.name %></span>
+          <span class="block text-xs text-slate-500 dark:text-gray-400"><%= workspace.plan.titleize %></span>
+        <% end %>
+      <% end %>
+      <div class="border-t border-gray-200 dark:border-gray-700">
+        <%= link_to t("navigation.new_workspace"), new_workspace_path, role: "menuitem",
+              class: "block px-4 py-3 text-sm text-sky-700 dark:text-sky-400
+                      hover:bg-gray-100 dark:hover:bg-gray-700
+                      focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700" %>
+      </div>
+    </div>
+  </div>
+<% end %>

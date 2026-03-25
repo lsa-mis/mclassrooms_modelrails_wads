@@ -15,6 +15,7 @@
               class: "min-h-[44px] flex items-center text-slate-700 dark:text-gray-300
                       hover:text-sky-700 dark:hover:text-sky-400
                       focus:outline-none focus:ring-2 focus:ring-sky-700 rounded px-2" %>
+        <%= render "shared/workspace_switcher" %>
         <%= button_to t("navigation.sign_out"), session_path, method: :delete,
               class: "min-h-[44px] flex items-center text-slate-700 dark:text-gray-300
                       hover:text-sky-700 dark:hover:text-sky-400
