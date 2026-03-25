@@ -1,0 +1,36 @@
+en:
+  invitation_mailer:
+    invite:
+      subject: "You've been invited to %{workspace}"
+      greeting: "Hello,"
+      body: "%{inviter} has invited you to join %{workspace} as a %{role}."
+      accept_action: "Accept invitation"
+      decline_action: "Decline invitation"
+      expiry_note: "This invitation expires in 7 days."
+  workspaces:
+    invitations:
+      index:
+        title: "Invitations"
+        new_invitation: "Invite members"
+        invitee: "Invitee"
+        role: "Role"
+        status: "Status"
+        actions: "Actions"
+        magic_link: "Magic link"
+        magic_link_label: "Share this link to invite members:"
+        resend: "Resend"
+        revoke: "Revoke"
+      new:
+        title: "Invite members"
+        emails_label: "Email addresses"
+        emails_hint: "One email per line, or comma-separated."
+        role_label: "Role"
+        magic_link_label: "Generate a shareable magic link instead"
+        submit: "Send invitations"
+      create:
+        sent: "%{sent} invitation(s) sent. %{skipped} skipped."
+        magic_link_created: "Magic link created."
+      destroy:
+        revoked: "Invitation revoked."
+      resend:
+        resent: "Invitation resent."
