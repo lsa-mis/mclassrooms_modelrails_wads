@@ -10,6 +10,9 @@ Rails.application.routes.draw do
   get "/auth/failure", to: "omniauth_callbacks#failure"
 
   namespace :account do
+    resource :profile, only: [:edit, :update]
+    resource :avatar, only: [:update, :destroy]
+    resource :theme_preference, only: [:update]
     resources :connected_accounts, only: [:index, :destroy]
   end
 

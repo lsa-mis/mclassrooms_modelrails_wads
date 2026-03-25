@@ -1,5 +1,22 @@
 en:
   account:
+    profiles:
+      edit:
+        title: "Edit profile"
+        first_name_label: "First name"
+        last_name_label: "Last name"
+        email_label: "Email address"
+        submit: "Save changes"
+      update:
+        success: "Profile updated."
+    avatars:
+      update:
+        success: "Avatar uploaded."
+      destroy:
+        removed: "Avatar removed."
+    theme_preferences:
+      update:
+        success: "Theme updated."
     connected_accounts:
       index:
         title: "Connected accounts"
