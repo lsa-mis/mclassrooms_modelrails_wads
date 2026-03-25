@@ -3,3 +3,10 @@ en:
     name: "ModelRails"
     description: "A multi-tenant SaaS starter kit built on Rails."
     skip_to_content: "Skip to main content"
+  navigation:
+    aria_label: "Main navigation"
+    sign_in: "Sign in"
+    sign_up: "Sign up"
+    sign_out: "Sign out"
+    profile: "Profile"
+    connected_accounts: "Accounts"
