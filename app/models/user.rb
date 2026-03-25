@@ -2,6 +2,8 @@ class User < ApplicationRecord
   has_secure_password
   has_many :sessions, dependent: :destroy
   has_many :authentications, dependent: :destroy
+  has_one :preferences, class_name: "UserPreferences", dependent: :destroy
+  has_one_attached :avatar
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
