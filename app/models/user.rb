@@ -4,6 +4,8 @@ class User < ApplicationRecord
   has_many :authentications, dependent: :destroy
   has_one :preferences, class_name: "UserPreferences", dependent: :destroy
   has_one_attached :avatar
+  has_many :memberships, dependent: :destroy
+  has_many :workspaces, through: :memberships
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
