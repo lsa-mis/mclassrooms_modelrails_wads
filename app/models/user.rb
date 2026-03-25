@@ -11,8 +11,25 @@ class User < ApplicationRecord
   validates :password, length: { minimum: 12 }, if: -> { password_digest_changed? || new_record? }
   validate :password_not_pwned, if: -> { password_digest_changed? || new_record? }
 
+  MAX_FAILED_ATTEMPTS = 5
+  LOCK_DURATION = 1.hour
+
   def full_name
     "#{first_name} #{last_name}"
+  end
+
+  def locked?
+    return false if locked_at.nil?
+    locked_at > LOCK_DURATION.ago
+  end
+
+  def register_failed_login!
+    increment!(:failed_login_attempts)
+    update!(locked_at: Time.current) if failed_login_attempts >= MAX_FAILED_ATTEMPTS
+  end
+
+  def register_successful_login!
+    update!(failed_login_attempts: 0, locked_at: nil)
   end
 
   private

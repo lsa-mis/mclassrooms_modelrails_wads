@@ -11,6 +11,8 @@ en:
     create:
       success: "Signed in successfully."
       failure: "Invalid email or password."
+      locked: "Your account has been locked due to too many failed attempts. Please try again later."
+      rate_limited: "Too many attempts. Please try again later."
     destroy:
       success: "Signed out successfully."
   registrations:

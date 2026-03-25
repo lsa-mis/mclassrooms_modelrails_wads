@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_25_135142) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_25_142653) do
   create_table "authentications", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "oauth_expires_at"
@@ -41,8 +41,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_135142) do
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email_address", null: false
+    t.integer "failed_login_attempts", default: 0, null: false
     t.string "first_name"
     t.string "last_name"
+    t.datetime "locked_at"
     t.string "password_digest", null: false
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"

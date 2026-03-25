@@ -25,4 +25,29 @@ RSpec.describe User, type: :model do
       expect(User.reflect_on_association(:sessions).macro).to eq(:has_many)
     end
   end
+
+  describe "account locking" do
+    let(:user) { create(:user) }
+
+    it "locks after 5 failed attempts" do
+      5.times { user.register_failed_login! }
+      expect(user.reload).to be_locked
+    end
+
+    it "does not lock after 4 failed attempts" do
+      4.times { user.register_failed_login! }
+      expect(user.reload).not_to be_locked
+    end
+
+    it "auto-unlocks after 1 hour" do
+      user.update!(locked_at: 61.minutes.ago, failed_login_attempts: 5)
+      expect(user).not_to be_locked
+    end
+
+    it "resets failed attempts on successful login" do
+      3.times { user.register_failed_login! }
+      user.register_successful_login!
+      expect(user.reload.failed_login_attempts).to eq(0)
+    end
+  end
 end
