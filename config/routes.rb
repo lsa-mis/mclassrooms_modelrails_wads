@@ -3,6 +3,9 @@ Rails.application.routes.draw do
   resource :registration, only: [:new, :create]
   resource :email_verification, only: [:show]
   resources :passwords, param: :token
+
+  get "/auth/:provider/callback", to: "omniauth_callbacks#create"
+  get "/auth/failure", to: "omniauth_callbacks#failure"
   root "pages#home"
   get "about", to: "pages#about"
   get "privacy", to: "pages#privacy"
