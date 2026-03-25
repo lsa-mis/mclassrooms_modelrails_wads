@@ -4,8 +4,15 @@ Rails.application.routes.draw do
   resource :email_verification, only: [:show]
   resources :passwords, param: :token
 
+  resource :email_verification_resend, only: [:create]
+
   get "/auth/:provider/callback", to: "omniauth_callbacks#create"
   get "/auth/failure", to: "omniauth_callbacks#failure"
+
+  namespace :account do
+    resources :connected_accounts, only: [:index, :destroy]
+  end
+
   root "pages#home"
   get "about", to: "pages#about"
   get "privacy", to: "pages#privacy"

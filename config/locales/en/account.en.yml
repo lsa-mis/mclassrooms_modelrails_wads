@@ -1,0 +1,19 @@
+en:
+  account:
+    connected_accounts:
+      index:
+        title: "Connected accounts"
+        email_provider: "Email and password"
+        verified: "Verified"
+        disconnect: "Disconnect"
+      destroy:
+        success: "%{provider} has been disconnected."
+        last_method: "You cannot disconnect your only sign-in method."
+  omniauth_callbacks:
+    create:
+      linked: "%{provider} has been connected to your account."
+  email_verification_resends:
+    create:
+      success: "A new verification email has been sent."
+      already_verified: "Your email address is already verified."
+      no_email_auth: "No email authentication found."

@@ -50,6 +50,38 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
   end
 
+  describe "signed-in user linking a new provider" do
+    let(:user) { create(:user) }
+
+    before do
+      create(:authentication, user: user, provider: "email", uid: user.email_address)
+      sign_in(user)
+      OmniAuth.config.mock_auth[:github] = OmniAuth::AuthHash.new(
+        provider: "github",
+        uid: "789",
+        info: { email: user.email_address, first_name: "Jane", last_name: "Doe" },
+        credentials: { token: "token", refresh_token: nil, expires_at: nil }
+      )
+    end
+
+    it "links the provider to the current user" do
+      expect {
+        get "/auth/github/callback"
+      }.to change(user.authentications, :count).by(1)
+    end
+
+    it "does not create a new user" do
+      expect {
+        get "/auth/github/callback"
+      }.not_to change(User, :count)
+    end
+
+    it "redirects to connected accounts" do
+      get "/auth/github/callback"
+      expect(response).to redirect_to(account_connected_accounts_path)
+    end
+  end
+
   describe "OAuth failure" do
     it "redirects with error" do
       get "/auth/failure", params: { message: "invalid_credentials" }
