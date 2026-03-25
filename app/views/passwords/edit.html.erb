@@ -1,0 +1,52 @@
+<% content_for(:title) { t("passwords.edit.title") } %>
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+    <%= t("passwords.edit.title") %>
+  </h1>
+
+  <%= form_with model: @user, url: password_path(params[:token]), method: :patch, class: "mt-8 space-y-6" do |form| %>
+
+    <% if @user.errors.any? %>
+      <div role="alert" class="p-4 bg-red-50 dark:bg-red-900 rounded-lg">
+        <h2 class="text-red-800 dark:text-red-200 font-semibold">
+          <%= t("errors.form_errors", count: @user.errors.count) %>
+        </h2>
+        <ul class="mt-2 list-disc list-inside text-red-700 dark:text-red-300">
+          <% @user.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label :password, t("passwords.edit.password_label"),
+            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+      <%= form.password_field :password, required: true, autocomplete: "new-password",
+            aria: { describedby: "password-requirements" },
+            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
+                    bg-white dark:bg-gray-800 px-3 py-2
+                    text-slate-900 dark:text-gray-100
+                    focus:outline-none focus:ring-2 focus:ring-cyan-700 focus:border-cyan-700" %>
+      <p id="password-requirements" class="mt-1 text-sm text-slate-600 dark:text-gray-400">
+        <%= t("passwords.edit.password_hint") %>
+      </p>
+    </div>
+
+    <div>
+      <%= form.label :password_confirmation, t("passwords.edit.password_confirmation_label"),
+            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+      <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password",
+            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
+                    bg-white dark:bg-gray-800 px-3 py-2
+                    text-slate-900 dark:text-gray-100
+                    focus:outline-none focus:ring-2 focus:ring-cyan-700 focus:border-cyan-700" %>
+    </div>
+
+    <%= form.submit t("passwords.edit.submit"),
+          class: "w-full min-h-[44px] rounded-md px-4 py-2
+                  bg-cyan-700 hover:bg-cyan-800 text-white font-medium
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-700
+                  cursor-pointer" %>
+  <% end %>
+</div>

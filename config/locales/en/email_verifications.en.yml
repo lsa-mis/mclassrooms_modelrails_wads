@@ -1,0 +1,6 @@
+en:
+  email_verifications:
+    show:
+      success: "Your email address has been verified."
+      invalid_token: "Invalid verification link."
+      expired_token: "This verification link has expired. Please request a new one."

@@ -1,0 +1,7 @@
+<%= t("authentication_mailer.verification_email.greeting", name: @user.first_name) %>
+
+<%= t("authentication_mailer.verification_email.body") %>
+
+<%= t("authentication_mailer.verification_email.action") %>: <%= @verification_url %>
+
+<%= t("authentication_mailer.verification_email.expiry_note") %>

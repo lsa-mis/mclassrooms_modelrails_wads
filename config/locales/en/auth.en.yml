@@ -1,0 +1,43 @@
+en:
+  sessions:
+    new:
+      title: "Sign in"
+      email_label: "Email address"
+      password_label: "Password"
+      submit: "Sign in"
+      forgot_password: "Forgot your password?"
+      no_account: "Don't have an account?"
+      sign_up: "Sign up"
+    create:
+      success: "Signed in successfully."
+      failure: "Invalid email or password."
+      locked: "Your account has been locked due to too many failed attempts. Please try again later."
+      rate_limited: "Too many attempts. Please try again later."
+      oauth_failure: "Authentication failed. Please try again."
+    destroy:
+      success: "Signed out successfully."
+  registrations:
+    new:
+      title: "Create your account"
+      email_label: "Email address"
+      first_name_label: "First name"
+      last_name_label: "Last name"
+      password_label: "Password"
+      password_confirmation_label: "Confirm password"
+      password_hint: "Must be at least 12 characters."
+      submit: "Create account"
+      already_have_account: "Already have an account?"
+      sign_in: "Sign in"
+    create:
+      success: "Welcome! Your account has been created."
+  errors:
+    form_errors:
+      one: "1 error prevented this form from being saved:"
+      other: "%{count} errors prevented this form from being saved:"
+  activerecord:
+    errors:
+      models:
+        user:
+          attributes:
+            password:
+              pwned: "has been found in a data breach. Please choose a different password."

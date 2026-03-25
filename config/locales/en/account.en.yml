@@ -1,0 +1,48 @@
+en:
+  account:
+    profiles:
+      edit:
+        title: "Edit profile"
+        first_name_label: "First name"
+        last_name_label: "Last name"
+        email_label: "Email address"
+        submit: "Save changes"
+      update:
+        success: "Profile updated."
+    passwords:
+      new:
+        title: "Set a password"
+        instructions: "Add email and password sign-in to your account."
+        password_label: "Password"
+        password_confirmation_label: "Confirm password"
+        password_hint: "Must be at least 12 characters."
+        submit: "Set password"
+        already_has_password: "You already have email and password sign-in."
+      create:
+        success: "Email and password sign-in has been added to your account."
+        already_has_password: "You already have email and password sign-in."
+    avatars:
+      update:
+        success: "Avatar uploaded."
+      destroy:
+        removed: "Avatar removed."
+    theme_preferences:
+      update:
+        success: "Theme updated."
+    connected_accounts:
+      index:
+        title: "Connected accounts"
+        email_provider: "Email and password"
+        verified: "Verified"
+        disconnect: "Disconnect"
+      destroy:
+        success: "%{provider} has been disconnected."
+        last_method: "You cannot disconnect your only sign-in method."
+  omniauth_callbacks:
+    create:
+      linked: "%{provider} has been connected to your account."
+  email_verification_resends:
+    create:
+      success: "A new verification email has been sent."
+      already_verified: "Your email address is already verified."
+      no_email_auth: "No email authentication found."
