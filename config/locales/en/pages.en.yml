@@ -1,0 +1,14 @@
+en:
+  pages:
+    home:
+      title: "Welcome to ModelRails"
+      description: "A multi-tenant SaaS starter kit built on Rails."
+    about:
+      title: "About ModelRails"
+      description: "Learn about the ModelRails platform."
+    privacy:
+      title: "Privacy Policy"
+      description: "How we handle your data."
+    contact:
+      title: "Contact Us"
+      description: "Get in touch with the ModelRails team."

@@ -1,30 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="<%= I18n.locale %>">
   <head>
-    <title><%= content_for(:title) || "Modelrails Base" %></title>
+    <title><%= content_for(:title) || t("application.name") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Modelrails Base">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="<%= content_for(:description) || t("application.description") %>">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
-
-    <%= yield :head %>
-
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <body class="min-h-screen bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-200">
+    <a href="#main-content"
+       class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-cyan-700 focus:underline">
+      <%= t("application.skip_to_content") %>
+    </a>
+
+    <%= render "shared/flash" %>
+
+    <main id="main-content" tabindex="-1">
       <%= yield %>
     </main>
   </body>
