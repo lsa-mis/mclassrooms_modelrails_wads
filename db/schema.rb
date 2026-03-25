@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_25_143907) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_25_171036) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -90,6 +90,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_143907) do
     t.datetime "updated_at", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+  end
+
+  create_table "workspaces", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "discarded_at"
+    t.integer "max_members", default: 5, null: false
+    t.integer "max_teams", default: 3, null: false
+    t.string "name", null: false
+    t.string "plan", default: "free", null: false
+    t.string "primary_color"
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.index ["discarded_at"], name: "index_workspaces_on_discarded_at"
+    t.index ["slug"], name: "index_workspaces_on_slug", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
