@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Invitation Accepts", type: :request do
   let(:workspace) { create(:workspace) }
-  let(:invitation) { create(:invitation, invitable: workspace) }
+  let!(:invitation) { create(:invitation, invitable: workspace) }
 
   describe "GET /invitations/:token/accept" do
     it "shows the accept page" do
