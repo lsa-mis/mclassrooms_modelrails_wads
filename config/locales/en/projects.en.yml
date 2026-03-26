@@ -1,0 +1,27 @@
+en:
+  projects:
+    not_found: "Project not found."
+    index:
+      title: "Projects"
+      new_project: "New project"
+      empty: "No projects yet."
+    new:
+      title: "Create a project"
+      name_label: "Project name"
+      description_label: "Description"
+      submit: "Create project"
+    create:
+      success: "Project created."
+    show:
+      members: "Members"
+      edit: "Edit"
+      invite: "Invite"
+    edit:
+      title: "Edit project"
+      name_label: "Project name"
+      description_label: "Description"
+      submit: "Save changes"
+    update:
+      success: "Project updated."
+    destroy:
+      success: "Project archived."
