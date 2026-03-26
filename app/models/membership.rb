@@ -13,7 +13,12 @@ class Membership < ApplicationRecord
 
   def deactivate!
     validate_not_last_owner!
-    discard!
+    transaction do
+      discard!
+      ProjectMembership.joins(:project)
+        .where(projects: { workspace_id: workspace_id }, user_id: user_id)
+        .destroy_all
+    end
   end
 
   def reactivate!
