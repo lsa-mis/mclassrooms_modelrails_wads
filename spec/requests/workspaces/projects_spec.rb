@@ -83,4 +83,51 @@ RSpec.describe "Workspace Projects", type: :request do
       expect(project.reload).to be_discarded
     end
   end
+
+  describe "GET /workspaces/:workspace_slug/projects/:slug/edit" do
+    let(:project) { create(:project, workspace: workspace, created_by: user) }
+    before { create(:project_membership, :creator, project: project, user: user) }
+
+    it "renders the edit form" do
+      get edit_workspace_project_path(workspace, project)
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
+  describe "POST /workspaces/:workspace_slug/projects with invalid params" do
+    it "returns unprocessable entity for blank name" do
+      post workspace_projects_path(workspace), params: { project: { name: "" } }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "PATCH /workspaces/:workspace_slug/projects/:slug with invalid params" do
+    let(:project) { create(:project, workspace: workspace, created_by: user) }
+    before { create(:project_membership, :creator, project: project, user: user) }
+
+    it "returns unprocessable entity for blank name" do
+      patch workspace_project_path(workspace, project), params: { project: { name: "" } }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "GET /workspaces/:workspace_slug/projects/:slug with nonexistent slug" do
+    it "redirects to projects list" do
+      get workspace_project_path(workspace, "nonexistent-slug")
+      expect(response).to redirect_to(workspace_projects_path(workspace))
+    end
+  end
+
+  describe "discarded projects" do
+    let(:project) { create(:project, workspace: workspace, created_by: user) }
+    before do
+      create(:project_membership, :creator, project: project, user: user)
+      project.discard!
+    end
+
+    it "are excluded from show" do
+      get workspace_project_path(workspace, project)
+      expect(response).to redirect_to(workspace_projects_path(workspace))
+    end
+  end
 end
