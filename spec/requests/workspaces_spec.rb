@@ -100,4 +100,31 @@ RSpec.describe "Workspaces", type: :request do
       expect(response).to redirect_to(workspaces_path)
     end
   end
+
+  describe "GET /workspaces/:slug/edit" do
+    let(:workspace) { create(:workspace) }
+    let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
+
+    it "renders the edit form" do
+      get edit_workspace_path(workspace)
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
+  describe "POST /workspaces with invalid params" do
+    it "returns unprocessable entity for blank name" do
+      post workspaces_path, params: { workspace: { name: "" } }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "PATCH /workspaces/:slug with invalid params" do
+    let(:workspace) { create(:workspace) }
+    let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
+
+    it "returns unprocessable entity for blank name" do
+      patch workspace_path(workspace), params: { workspace: { name: "" } }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
 end

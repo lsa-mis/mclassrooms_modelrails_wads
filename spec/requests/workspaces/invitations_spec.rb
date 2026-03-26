@@ -92,6 +92,26 @@ RSpec.describe "Workspace Invitations", type: :request do
     end
   end
 
+  describe "POST /workspaces/:workspace_slug/invitations with empty emails" do
+    it "creates no invitations for empty string" do
+      expect {
+        post workspace_invitations_path(workspace), params: {
+          invitation: { emails: "", role_id: membership.role.id }
+        }
+      }.not_to change(Invitation, :count)
+    end
+  end
+
+  describe "POST /workspaces/:workspace_slug/invitations with comma-separated emails" do
+    it "creates invitations for comma-separated emails" do
+      expect {
+        post workspace_invitations_path(workspace), params: {
+          invitation: { emails: "comma1@example.com, comma2@example.com", role_id: membership.role.id }
+        }
+      }.to change(Invitation, :count).by(2)
+    end
+  end
+
   describe "authorization" do
     it "denies member from creating invitations" do
       member = create(:user)

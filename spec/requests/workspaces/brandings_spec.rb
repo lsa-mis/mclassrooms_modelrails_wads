@@ -38,6 +38,18 @@ RSpec.describe "Workspace Brandings", type: :request do
     end
   end
 
+  describe "PATCH /workspaces/:workspace_slug/branding with logo and color together" do
+    it "updates both logo and color" do
+      file = fixture_file_upload("avatar.png", "image/png")
+      patch workspace_branding_path(workspace), params: {
+        workspace: { logo: file, primary_color: "oklch(0.7 0.2 200)" }
+      }
+      workspace.reload
+      expect(workspace.logo).to be_attached
+      expect(workspace.primary_color).to eq("oklch(0.7 0.2 200)")
+    end
+  end
+
   describe "authorization" do
     it "rejects non-owner/admin access" do
       viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
