@@ -51,8 +51,8 @@ RSpec.describe Invitation, type: :model do
 
   describe "#accept!" do
     let(:workspace) { create(:workspace) }
-    let(:invitation) { create(:invitation, invitable: workspace) }
-    let(:user) { create(:user) }
+    let!(:invitation) { create(:invitation, invitable: workspace) }
+    let!(:user) { create(:user) }
 
     it "creates a membership" do
       expect { invitation.accept!(user) }.to change(Membership, :count).by(1)

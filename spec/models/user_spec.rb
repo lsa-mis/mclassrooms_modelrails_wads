@@ -26,6 +26,20 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "personal workspace" do
+    it "creates a personal workspace on sign-up" do
+      user = create(:user)
+      expect(user.workspaces.count).to eq(1)
+      expect(user.workspaces.first.name).to include(user.first_name)
+    end
+
+    it "assigns owner role to personal workspace" do
+      user = create(:user)
+      membership = user.memberships.first
+      expect(membership.role.slug).to eq("owner")
+    end
+  end
+
   describe "account locking" do
     let(:user) { create(:user) }
 

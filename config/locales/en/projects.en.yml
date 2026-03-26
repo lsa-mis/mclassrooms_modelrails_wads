@@ -1,0 +1,55 @@
+en:
+  projects:
+    not_found: "Project not found."
+    index:
+      title: "Projects"
+      new_project: "New project"
+      empty: "No projects yet."
+    new:
+      title: "Create a project"
+      name_label: "Project name"
+      description_label: "Description"
+      submit: "Create project"
+    create:
+      success: "Project created."
+    show:
+      members: "Members"
+      edit: "Edit"
+      invite: "Invite"
+    edit:
+      title: "Edit project"
+      name_label: "Project name"
+      description_label: "Description"
+      submit: "Save changes"
+    update:
+      success: "Project updated."
+    destroy:
+      success: "Project archived."
+    invitations:
+      new:
+        title: "Invite to project"
+        email_label: "Email address"
+        role_label: "Project role"
+        submit: "Send invitation"
+      create:
+        success: "Invitation sent."
+    memberships:
+      index:
+        title: "Project members"
+        add_member: "Add member"
+        role: "Role"
+        actions: "Actions"
+        remove: "Remove"
+      new:
+        title: "Add member"
+        user_label: "Workspace member"
+        role_label: "Role"
+        submit: "Add to project"
+      create:
+        success: "Member added."
+      update:
+        role_updated: "Role updated."
+      destroy:
+        removed: "Member removed."
+      toggle_pin:
+        toggled: "Pin updated."

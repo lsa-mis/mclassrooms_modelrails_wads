@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_25_202805) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_26_221245) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -67,6 +67,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_202805) do
     t.integer "invitable_id", null: false
     t.string "invitable_type", null: false
     t.integer "invited_by_id", null: false
+    t.string "project_role"
     t.datetime "revoked_at"
     t.integer "role_id", null: false
     t.string "status", default: "pending", null: false
@@ -93,6 +94,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_202805) do
     t.index ["user_id", "workspace_id"], name: "index_memberships_on_user_id_and_workspace_id", unique: true
     t.index ["user_id"], name: "index_memberships_on_user_id"
     t.index ["workspace_id"], name: "index_memberships_on_workspace_id"
+  end
+
+  create_table "project_memberships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "pinned", default: false, null: false
+    t.integer "project_id", null: false
+    t.string "role", default: "editor", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["project_id", "user_id"], name: "index_project_memberships_on_project_id_and_user_id", unique: true
+    t.index ["project_id"], name: "index_project_memberships_on_project_id"
+    t.index ["user_id"], name: "index_project_memberships_on_user_id"
+  end
+
+  create_table "projects", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "created_by_id", null: false
+    t.text "description"
+    t.datetime "discarded_at"
+    t.string "name", null: false
+    t.string "primary_color"
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_projects_on_created_by_id"
+    t.index ["discarded_at"], name: "index_projects_on_discarded_at"
+    t.index ["workspace_id", "slug"], name: "index_projects_on_workspace_id_and_slug", unique: true
+    t.index ["workspace_id"], name: "index_projects_on_workspace_id"
   end
 
   create_table "roles", force: :cascade do |t|
@@ -145,7 +174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_202805) do
     t.datetime "created_at", null: false
     t.datetime "discarded_at"
     t.integer "max_members", default: 5, null: false
-    t.integer "max_teams", default: 3, null: false
+    t.integer "max_projects", default: 3, null: false
     t.string "name", null: false
     t.string "plan", default: "free", null: false
     t.string "primary_color"
@@ -164,6 +193,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_202805) do
   add_foreign_key "memberships", "roles"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
+  add_foreign_key "project_memberships", "projects"
+  add_foreign_key "project_memberships", "users"
+  add_foreign_key "projects", "users", column: "created_by_id"
+  add_foreign_key "projects", "workspaces"
   add_foreign_key "roles", "workspaces"
   add_foreign_key "sessions", "users"
   add_foreign_key "user_preferences", "users"

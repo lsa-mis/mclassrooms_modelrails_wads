@@ -2,6 +2,41 @@
 
 All notable changes to ModelRails are documented here, organized by phase.
 
+## v0.4.0 — Phase 4: Projects + Collaboration Spaces
+
+### Projects
+- Lightweight, Basecamp-style collaboration spaces within workspaces
+- Project CRUD with slug routing, description, and max_projects enforcement
+- Enum roles on ProjectMembership (creator/editor/viewer)
+- Creator auto-assigned on project creation
+- Direct member add for workspace members with role selection
+- Pin/unpin projects for quick access (IDOR-safe: finds by current user)
+- Logo upload with initials fallback, OKLCH primary color picker
+- Soft delete (Discardable) for project archiving
+
+### Personal Workspace
+- Auto-created on user sign-up (invisible in consumer UIs)
+- Backfill rake task for existing users: `rails users:backfill_personal_workspaces`
+
+### Project Invitations
+- Polymorphic invitation reuse (invitable_type: "Project")
+- Auto-adds invitee to workspace (as viewer) + project in one step
+- project_role field on invitations (editor/viewer only — "creator" injection blocked by validation)
+- Branching accept! flow for workspace vs project invitations
+- Handles archived project rejection, discarded member reactivation
+
+### Renames
+- `max_teams` → `max_projects` (column + all references)
+- `manage_teams` → `manage_projects` (permission JSON data migration)
+
+### Infrastructure
+- Workspace membership cascade: deactivating a workspace member destroys their project memberships (in transaction)
+- Pundit policies for Project and ProjectMembership
+- 280 examples, 0 failures, 94.2% line coverage
+- 1 Brakeman note: `user_id` in project membership strong params — intentional, guarded by Pundit creator-only policy
+
+---
+
 ## v0.3.0 — Phase 3: Invitations + Membership Lifecycle
 
 ### Invitations

@@ -9,6 +9,8 @@ class Invitation < ApplicationRecord
   validates :role, presence: true
   validates :invited_by, presence: true
   validates :expires_at, presence: true
+  validates :project_role, inclusion: { in: %w[editor viewer] }, allow_nil: true
+  validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_nil: true
 
   before_create :generate_token
 
@@ -16,17 +18,17 @@ class Invitation < ApplicationRecord
   scope :expired, -> { where(status: "pending").where("expires_at <= ?", Time.current) }
 
   def accept!(user)
-    raise ActiveRecord::RecordInvalid.new(self), "User is already a member" if invitable.memberships.kept.exists?(user: user)
-
     transaction do
+      if invitable_type == "Project"
+        accept_project_invitation!(user)
+      else
+        accept_workspace_invitation!(user)
+      end
+
       update!(
         status: "accepted",
         accepted_by: user,
         accepted_at: Time.current
-      )
-      invitable.memberships.create!(
-        user: user,
-        role: role
       )
     end
   end
@@ -55,6 +57,26 @@ class Invitation < ApplicationRecord
   end
 
   private
+
+  def accept_workspace_invitation!(user)
+    raise ActiveRecord::RecordInvalid.new(self), "User is already a member" if invitable.memberships.kept.exists?(user: user)
+    invitable.memberships.create!(user: user, role: role)
+  end
+
+  def accept_project_invitation!(user)
+    workspace = invitable.workspace
+
+    existing_membership = workspace.memberships.find_by(user: user)
+    if existing_membership&.discarded?
+      existing_membership.undiscard!
+    elsif existing_membership.nil?
+      workspace.memberships.create!(user: user, role: role)
+    end
+
+    raise ActiveRecord::RecordInvalid.new(self), "Project is no longer active" if invitable.discarded?
+    raise ActiveRecord::RecordInvalid.new(self), "User is already a project member" if invitable.project_memberships.exists?(user: user)
+    invitable.project_memberships.create!(user: user, role: project_role || "editor")
+  end
 
   def generate_token
     self.token = SecureRandom.urlsafe_base64(32)

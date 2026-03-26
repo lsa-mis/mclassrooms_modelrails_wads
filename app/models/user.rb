@@ -7,6 +7,10 @@ class User < ApplicationRecord
   has_many :memberships, dependent: :destroy
   has_many :workspaces, through: :memberships
   has_many :sent_invitations, class_name: "Invitation", foreign_key: :invited_by_id, dependent: :nullify
+  has_many :project_memberships, dependent: :destroy
+  has_many :projects, through: :project_memberships
+
+  after_create :create_personal_workspace
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
@@ -38,6 +42,15 @@ class User < ApplicationRecord
   end
 
   private
+
+  def create_personal_workspace
+    workspace = Workspace.create!(name: "#{first_name}'s Workspace")
+    owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
+      r.name = "Owner"
+      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+    end
+    workspace.memberships.create!(user: self, role: owner_role)
+  end
 
   def password_not_pwned
     return if password.blank?

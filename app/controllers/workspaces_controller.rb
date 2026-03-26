@@ -2,7 +2,7 @@ class WorkspacesController < ApplicationController
   before_action :set_workspace, only: [:show, :edit, :update, :destroy]
 
   def index
-    @workspaces = Current.user.workspaces.kept
+    @workspaces = Current.user.workspaces.kept.with_attached_logo
   end
 
   def new

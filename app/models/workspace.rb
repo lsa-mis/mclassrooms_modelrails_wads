@@ -6,6 +6,7 @@ class Workspace < ApplicationRecord
   has_many :users, through: :memberships
   has_many :roles
   has_many :invitations, as: :invitable, dependent: :destroy
+  has_many :projects, dependent: :destroy
 
   enum :plan, { free: "free", pro: "pro", enterprise: "enterprise" }
 
