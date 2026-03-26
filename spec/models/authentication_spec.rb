@@ -59,4 +59,44 @@ RSpec.describe Authentication, type: :model do
       expect(auth.verification_token).to be_nil
     end
   end
+
+  describe "#verified?" do
+    it "returns true when verified_at is present" do
+      auth = create(:authentication, :verified)
+      expect(auth).to be_verified
+    end
+
+    it "returns false when verified_at is nil" do
+      auth = create(:authentication)
+      expect(auth).not_to be_verified
+    end
+  end
+
+  describe "#verification_token_expired?" do
+    it "returns true when verification_sent_at is nil" do
+      auth = create(:authentication)
+      expect(auth.verification_token_expired?).to be true
+    end
+
+    it "returns true when sent more than 24 hours ago" do
+      auth = create(:authentication)
+      auth.update!(verification_sent_at: 25.hours.ago, verification_token: "test")
+      expect(auth.verification_token_expired?).to be true
+    end
+
+    it "returns false when sent less than 24 hours ago" do
+      auth = create(:authentication)
+      auth.update!(verification_sent_at: 1.hour.ago, verification_token: "test")
+      expect(auth.verification_token_expired?).to be false
+    end
+  end
+
+  describe ".oauth scope" do
+    it "returns only non-email providers" do
+      email_auth = create(:authentication, provider: "email")
+      google_auth = create(:authentication, :google)
+      expect(Authentication.oauth).to include(google_auth)
+      expect(Authentication.oauth).not_to include(email_auth)
+    end
+  end
 end

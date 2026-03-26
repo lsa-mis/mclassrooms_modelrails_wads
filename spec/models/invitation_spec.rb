@@ -136,4 +136,94 @@ RSpec.describe Invitation, type: :model do
       expect(invitation).not_to be_magic_link
     end
   end
+
+  describe "#accept! for project invitation" do
+    let(:workspace) { create(:workspace) }
+    let(:owner) { create(:user) }
+    let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
+    let(:project) { create(:project, workspace: workspace, created_by: owner) }
+    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
+    let(:invitation) do
+      project.invitations.create!(
+        email: "project-invitee@example.com",
+        role: viewer_role,
+        project_role: "editor",
+        invited_by: owner,
+        expires_at: 7.days.from_now
+      )
+    end
+
+    it "creates workspace membership and project membership" do
+      invitee = create(:user, email_address: "project-invitee@example.com")
+      invitation.accept!(invitee)
+      expect(workspace.memberships.kept.exists?(user: invitee)).to be true
+      expect(project.project_memberships.exists?(user: invitee)).to be true
+    end
+
+    it "assigns the correct project role" do
+      invitee = create(:user, email_address: "project-invitee2@example.com")
+      invitation2 = project.invitations.create!(
+        email: "project-invitee2@example.com",
+        role: viewer_role,
+        project_role: "viewer",
+        invited_by: owner,
+        expires_at: 7.days.from_now
+      )
+      invitation2.accept!(invitee)
+      pm = project.project_memberships.find_by(user: invitee)
+      expect(pm).to be_viewer
+    end
+
+    it "raises for discarded project" do
+      project.discard!
+      invitee = create(:user)
+      expect { invitation.accept!(invitee) }.to raise_error(ActiveRecord::RecordInvalid, /no longer active/)
+    end
+  end
+
+  describe "project_role validation" do
+    it "accepts editor" do
+      inv = build(:invitation, project_role: "editor")
+      inv.valid?
+      expect(inv.errors[:project_role]).to be_empty
+    end
+
+    it "accepts viewer" do
+      inv = build(:invitation, project_role: "viewer")
+      inv.valid?
+      expect(inv.errors[:project_role]).to be_empty
+    end
+
+    it "rejects creator" do
+      inv = build(:invitation, project_role: "creator")
+      expect(inv).not_to be_valid
+      expect(inv.errors[:project_role]).to be_present
+    end
+
+    it "accepts nil (for workspace invitations)" do
+      inv = build(:invitation, project_role: nil)
+      inv.valid?
+      expect(inv.errors[:project_role]).to be_empty
+    end
+  end
+
+  describe "email format validation" do
+    it "rejects malformed email" do
+      inv = build(:invitation, email: "not-an-email")
+      expect(inv).not_to be_valid
+      expect(inv.errors[:email]).to be_present
+    end
+
+    it "accepts valid email" do
+      inv = build(:invitation, email: "valid@example.com")
+      inv.valid?
+      expect(inv.errors[:email]).to be_empty
+    end
+
+    it "accepts nil email (magic links)" do
+      inv = build(:invitation, email: nil)
+      inv.valid?
+      expect(inv.errors[:email]).to be_empty
+    end
+  end
 end
