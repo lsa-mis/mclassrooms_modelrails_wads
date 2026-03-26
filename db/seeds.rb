@@ -1,7 +1,7 @@
 default_roles = {
-  owner:  { name: "Owner",  permissions: { manage_workspace: true, manage_members: true, manage_teams: true, manage_settings: true } },
-  admin:  { name: "Admin",  permissions: { manage_members: true, manage_teams: true, manage_settings: true } },
-  member: { name: "Member", permissions: { manage_teams: true } },
+  owner:  { name: "Owner",  permissions: { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true } },
+  admin:  { name: "Admin",  permissions: { manage_members: true, manage_projects: true, manage_settings: true } },
+  member: { name: "Member", permissions: { manage_projects: true } },
   viewer: { name: "Viewer", permissions: {} }
 }
 

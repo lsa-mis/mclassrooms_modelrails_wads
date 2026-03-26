@@ -52,8 +52,8 @@ RSpec.describe Workspace, type: :model do
       expect(Workspace.new.max_members).to eq(5)
     end
 
-    it "defaults max_teams to 3" do
-      expect(Workspace.new.max_teams).to eq(3)
+    it "defaults max_projects to 3" do
+      expect(Workspace.new.max_projects).to eq(3)
     end
   end
 
