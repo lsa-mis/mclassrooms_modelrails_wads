@@ -88,4 +88,47 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       expect(response).to redirect_to(new_session_path)
     end
   end
+
+  describe "existing OAuth login updates tokens" do
+    let!(:user) { create(:user, email_address: "returning@example.com") }
+    let!(:auth) do
+      user.authentications.create!(
+        provider: "google",
+        uid: "returning-123",
+        oauth_token: "old_token"
+      )
+    end
+
+    before do
+      OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+        provider: "google",
+        uid: "returning-123",
+        info: { email: "returning@example.com", first_name: "Return", last_name: "User" },
+        credentials: { token: "new_token", refresh_token: "new_refresh", expires_at: 1.hour.from_now.to_i }
+      )
+    end
+
+    it "updates the OAuth token on re-login" do
+      get "/auth/google_oauth2/callback"
+      expect(auth.reload.oauth_token).to eq("new_token")
+    end
+  end
+
+  describe "OAuth with missing name fields" do
+    before do
+      OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+        provider: "google",
+        uid: "no-name-123",
+        info: { email: "noname@example.com", first_name: nil, last_name: "Smith", name: "" },
+        credentials: { token: "token", refresh_token: nil, expires_at: nil }
+      )
+    end
+
+    it "falls back to defaults for missing name" do
+      get "/auth/google_oauth2/callback"
+      user = User.find_by(email_address: "noname@example.com")
+      expect(user).to be_present
+      expect(user.first_name).to eq("User")
+    end
+  end
 end

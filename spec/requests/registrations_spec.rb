@@ -68,4 +68,30 @@ RSpec.describe "Registrations", type: :request do
       end
     end
   end
+
+  describe "POST /signup side effects" do
+    let(:valid_params) do
+      {
+        user: {
+          email_address: "sideeffect@example.com",
+          first_name: "Test",
+          last_name: "User",
+          password: "SecureP@ssw0rd123!",
+          password_confirmation: "SecureP@ssw0rd123!"
+        }
+      }
+    end
+
+    it "creates an email authentication record" do
+      post registration_path, params: valid_params
+      user = User.find_by(email_address: "sideeffect@example.com")
+      expect(user.authentications.email.count).to eq(1)
+    end
+
+    it "enqueues a verification email" do
+      expect {
+        post registration_path, params: valid_params
+      }.to have_enqueued_mail(AuthenticationMailer, :verification_email)
+    end
+  end
 end

@@ -42,4 +42,49 @@ RSpec.describe "Sessions", type: :request do
       expect(response).to redirect_to(new_session_path)
     end
   end
+
+  describe "POST /session with locked account" do
+    let(:locked_user) { create(:user) }
+
+    before do
+      5.times { locked_user.register_failed_login! }
+    end
+
+    it "rejects sign in for locked user" do
+      post session_path, params: {
+        email_address: locked_user.email_address,
+        password: "SecureP@ssw0rd123!"
+      }
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to include(I18n.t("sessions.create.locked"))
+    end
+  end
+
+  describe "POST /session tracks failed attempts" do
+    let(:user) { create(:user) }
+
+    it "increments failed_login_attempts on bad password" do
+      post session_path, params: {
+        email_address: user.email_address,
+        password: "wrongpassword"
+      }
+      expect(user.reload.failed_login_attempts).to eq(1)
+    end
+  end
+
+  describe "POST /session resets attempts on success" do
+    let(:user) { create(:user) }
+
+    before do
+      3.times { user.register_failed_login! }
+    end
+
+    it "resets failed_login_attempts on successful login" do
+      post session_path, params: {
+        email_address: user.email_address,
+        password: "SecureP@ssw0rd123!"
+      }
+      expect(user.reload.failed_login_attempts).to eq(0)
+    end
+  end
 end
