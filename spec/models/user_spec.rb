@@ -40,6 +40,59 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "#full_name" do
+    it "returns first and last name" do
+      user = build(:user, first_name: "Jane", last_name: "Doe")
+      expect(user.full_name).to eq("Jane Doe")
+    end
+  end
+
+  describe "name validations" do
+    it "requires first_name" do
+      user = build(:user, first_name: nil)
+      expect(user).not_to be_valid
+      expect(user.errors[:first_name]).to include("can't be blank")
+    end
+
+    it "limits first_name to 100 characters" do
+      user = build(:user, first_name: "a" * 101)
+      expect(user).not_to be_valid
+      expect(user.errors[:first_name]).to be_present
+    end
+
+    it "requires last_name" do
+      user = build(:user, last_name: nil)
+      expect(user).not_to be_valid
+      expect(user.errors[:last_name]).to include("can't be blank")
+    end
+
+    it "limits last_name to 100 characters" do
+      user = build(:user, last_name: "a" * 101)
+      expect(user).not_to be_valid
+      expect(user.errors[:last_name]).to be_present
+    end
+  end
+
+  describe "password validations" do
+    it "requires minimum 12 characters" do
+      user = build(:user, password: "Short1!aaa")
+      expect(user).not_to be_valid
+      expect(user.errors[:password]).to be_present
+    end
+
+    it "accepts 12+ character password" do
+      user = build(:user, password: "ValidP@ssw0rd!")
+      expect(user).to be_valid
+    end
+  end
+
+  describe "email normalization" do
+    it "strips whitespace from email" do
+      user = create(:user, email_address: "  test@example.com  ")
+      expect(user.email_address).to eq("test@example.com")
+    end
+  end
+
   describe "account locking" do
     let(:user) { create(:user) }
 
