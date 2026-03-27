@@ -9,7 +9,15 @@ class ProjectMembership < ApplicationRecord
 
   scope :pinned, -> { where(pinned: true) }
 
+  after_commit :broadcast_changes, on: [:create, :update, :destroy]
+
   private
+
+  def broadcast_changes
+    broadcast_refresh_to project
+  rescue => e
+    Rails.logger.warn("Broadcast failed: #{e.message}")
+  end
 
   def user_is_workspace_member
     return unless project&.workspace

@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  mount Markdowndocs::Engine, at: "/docs"
   resource :session
   resource :registration, only: [:new, :create]
   resource :email_verification, only: [:show]

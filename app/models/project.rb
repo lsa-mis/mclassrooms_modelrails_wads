@@ -16,6 +16,8 @@ class Project < ApplicationRecord
 
   before_validation :generate_slug, if: -> { name.present? && (slug.blank? || (name_changed? && !slug_changed?)) }
 
+  after_commit :broadcast_changes, on: [:create, :update]
+
   def to_param
     slug
   end
@@ -25,6 +27,12 @@ class Project < ApplicationRecord
   end
 
   private
+
+  def broadcast_changes
+    broadcast_refresh_to workspace
+  rescue => e
+    Rails.logger.warn("Broadcast failed: #{e.message}")
+  end
 
   def generate_slug
     base_slug = name.parameterize

@@ -1,5 +1,6 @@
 <% content_for(:title) { @workspace.name } %>
 <div class="max-w-4xl mx-auto px-4 py-16">
+  <%= turbo_stream_from @workspace %>
   <div class="flex items-center gap-4">
     <% if @workspace.logo.attached? %>
       <%= image_tag @workspace.logo, class: "w-16 h-16 rounded-full object-cover" %>

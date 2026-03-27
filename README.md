@@ -8,8 +8,12 @@ A multi-tenant SaaS starter kit built on Rails 8.1.
 - **Database:** SQLite
 - **Frontend:** TailwindCSS 4, Turbo, Stimulus
 - **Assets:** Propshaft, Importmaps
-- **Auth:** Rails 8 authentication generator, OmniAuth (Google, GitHub)
-- **Testing:** RSpec, FactoryBot, Capybara, Playwright
+- **Auth:** Rails 8 authentication generator, OmniAuth (Google, GitHub), Pundit
+- **Real-Time:** Turbo Stream broadcasts (morph-based refresh)
+- **Content:** Action Text (Trix rich text editor)
+- **Docs:** Markdowndocs engine at `/docs`
+- **Testing:** RSpec, FactoryBot, Capybara, Playwright, Bullet (N+1 detection)
+- **Security:** Rate limiting, security headers, CSP, Pwned password check
 - **Version Management:** [mise](https://mise.jdx.dev/) (see `.tool-versions`)
 
 ## Setup

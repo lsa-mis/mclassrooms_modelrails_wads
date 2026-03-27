@@ -16,6 +16,8 @@ class Invitation < ApplicationRecord
 
   before_create :generate_token
 
+  after_commit :broadcast_changes, on: [:create, :update]
+
   scope :pending, -> { where(status: "pending").where("expires_at > ?", Time.current) }
   scope :expired, -> { where(status: "pending").where("expires_at <= ?", Time.current) }
 
@@ -62,6 +64,13 @@ class Invitation < ApplicationRecord
   end
 
   private
+
+  def broadcast_changes
+    target = invitable_type == "Project" ? invitable.workspace : invitable
+    broadcast_refresh_to target
+  rescue => e
+    Rails.logger.warn("Broadcast failed: #{e.message}")
+  end
 
   def accept_workspace_invitation!(user)
     existing = invitable.memberships.find_by(user: user)

@@ -2,6 +2,36 @@
 
 All notable changes to ModelRails are documented here, organized by phase.
 
+## v1.0.0 — Phase 5B: Admin + Security + Polish
+
+### Admin
+- Rake tasks: `users:unlock[email]`, `users:verify[email]`, `users:suspend[email]`
+- Suspend destroys all sessions and deactivates all memberships
+
+### Real-Time
+- Turbo Stream broadcasts on workspace and project streams
+- Morph-based refresh (`broadcast_refresh_to`) — no partial rendering in models
+- Workspace stream: membership, invitation, project, and settings changes
+- Project stream: resource and project membership changes
+- Resilient: broadcast failures never break primary operations
+
+### Security
+- Security headers initializer (X-Frame-Options, Referrer-Policy, Permissions-Policy, CSP)
+- Rate limiting on registration and password reset endpoints (Rails 8 `rate_limit` DSL)
+- All auth endpoints now rate-limited (login was already covered)
+
+### Documentation
+- Markdowndocs gem integration at `/docs`
+- Starter docs: Getting Started, Architecture, Extending, Security
+- Security docs include Top Secret and Rack::Attack production recommendations
+
+### Infrastructure
+- 439+ examples, 0 failures
+- Brakeman clean (1 known mass assignment note)
+- 95%+ line coverage
+
+---
+
 ## v0.5.0-alpha — Phase 5A: Resource Layer + Activity Tracking
 
 ### Resources

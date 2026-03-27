@@ -16,4 +16,14 @@ class Resource < ApplicationRecord
 
   scope :positioned, -> { order(position: :asc) }
   scope :published, -> { where(status: "published") }
+
+  after_commit :broadcast_changes, on: [:create, :update]
+
+  private
+
+  def broadcast_changes
+    broadcast_refresh_to project
+  rescue => e
+    Rails.logger.warn("Broadcast failed: #{e.message}")
+  end
 end

@@ -9,6 +9,8 @@ class Membership < ApplicationRecord
   validates :user_id, uniqueness: { scope: :workspace_id }
   validate :workspace_has_member_capacity, on: :create
 
+  after_commit :broadcast_changes, on: [:create, :update]
+
   def change_role!(new_role)
     update!(role: new_role)
   end
@@ -39,6 +41,12 @@ class Membership < ApplicationRecord
   end
 
   private
+
+  def broadcast_changes
+    broadcast_refresh_to workspace
+  rescue => e
+    Rails.logger.warn("Broadcast failed: #{e.message}")
+  end
 
   def workspace_has_member_capacity
     return unless workspace

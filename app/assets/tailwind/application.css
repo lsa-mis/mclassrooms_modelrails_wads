@@ -1,1 +1,4 @@
 @import "tailwindcss";
+
+/* Markdowndocs gem views — required so Tailwind scans the gem's templates */
+@source "/Users/dschmura/.local/share/mise/installs/ruby/4.0.2/lib/ruby/gems/4.0.0/gems/markdowndocs-0.4.0/app/views/**/*.erb";
