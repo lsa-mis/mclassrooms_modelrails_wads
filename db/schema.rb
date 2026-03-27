@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_27_031350) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_27_101643) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -83,6 +83,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_27_031350) do
     t.index ["verification_token"], name: "index_authentications_on_verification_token", unique: true
   end
 
+  create_table "documents", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "invitations", force: :cascade do |t|
     t.datetime "accepted_at"
     t.integer "accepted_by_id"
@@ -148,6 +153,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_27_031350) do
     t.index ["discarded_at"], name: "index_projects_on_discarded_at"
     t.index ["workspace_id", "slug"], name: "index_projects_on_workspace_id_and_slug", unique: true
     t.index ["workspace_id"], name: "index_projects_on_workspace_id"
+  end
+
+  create_table "resources", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "created_by_id", null: false
+    t.datetime "discarded_at"
+    t.integer "position", default: 0, null: false
+    t.integer "project_id", null: false
+    t.integer "resourceable_id", null: false
+    t.string "resourceable_type", null: false
+    t.string "status", default: "draft", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_resources_on_created_by_id"
+    t.index ["discarded_at"], name: "index_resources_on_discarded_at"
+    t.index ["project_id", "position"], name: "index_resources_on_project_id_and_position"
+    t.index ["project_id"], name: "index_resources_on_project_id"
+    t.index ["resourceable_type", "resourceable_id"], name: "index_resources_on_resourceable_type_and_resourceable_id", unique: true
   end
 
   create_table "roles", force: :cascade do |t|
@@ -225,6 +248,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_27_031350) do
   add_foreign_key "project_memberships", "users"
   add_foreign_key "projects", "users", column: "created_by_id"
   add_foreign_key "projects", "workspaces"
+  add_foreign_key "resources", "projects"
+  add_foreign_key "resources", "users", column: "created_by_id"
   add_foreign_key "roles", "workspaces"
   add_foreign_key "sessions", "users"
   add_foreign_key "user_preferences", "users"
