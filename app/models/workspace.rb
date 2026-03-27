@@ -5,7 +5,7 @@ class Workspace < ApplicationRecord
   has_one_attached :logo
   has_many :memberships, dependent: :destroy
   has_many :users, through: :memberships
-  has_many :roles
+  has_many :roles, dependent: :destroy
   has_many :invitations, as: :invitable, dependent: :destroy
   has_many :projects, dependent: :destroy
 

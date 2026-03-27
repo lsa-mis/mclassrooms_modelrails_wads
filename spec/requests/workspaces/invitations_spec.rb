@@ -50,7 +50,7 @@ RSpec.describe "Workspace Invitations", type: :request do
         }
       }.to change(Invitation, :count).by(1)
 
-      expect(Invitation.find_by(email: nil)).to be_magic_link
+      expect(workspace.invitations.find_by(email: nil)).to be_magic_link
     end
 
     it "skips existing members" do

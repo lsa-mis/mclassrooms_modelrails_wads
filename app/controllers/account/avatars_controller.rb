@@ -1,8 +1,13 @@
 module Account
   class AvatarsController < ApplicationController
     def update
-      Current.user.avatar.attach(params[:user][:avatar])
-      redirect_to edit_account_profile_path, notice: t(".success")
+      file = params.dig(:user, :avatar)
+      if file.present?
+        Current.user.avatar.attach(file)
+        redirect_to edit_account_profile_path, notice: t(".success")
+      else
+        redirect_to edit_account_profile_path, alert: t(".no_file")
+      end
     end
 
     def destroy

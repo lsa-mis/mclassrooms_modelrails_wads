@@ -41,10 +41,12 @@ class Invitation < ApplicationRecord
   end
 
   def decline!
+    raise ActiveRecord::RecordInvalid.new(self), "Invitation already processed" unless pending?
     update!(status: "declined", declined_at: Time.current)
   end
 
   def revoke!
+    raise ActiveRecord::RecordInvalid.new(self), "Invitation already processed" unless pending?
     update!(status: "revoked", revoked_at: Time.current)
   end
 

@@ -20,6 +20,44 @@ RSpec.describe InvitationMailer, type: :mailer do
     end
   end
 
+  describe "#invite with magic link" do
+    let(:invitation) { create(:invitation, :magic_link) }
+
+    it "does not deliver for magic link invitations (no email sent)" do
+      expect { described_class.invite(invitation).deliver_now }
+        .not_to have_enqueued_mail(InvitationMailer, :invite)
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+  end
+
+  describe "#invite for project invitation" do
+    let(:workspace) { create(:workspace) }
+    let(:user) { create(:user) }
+    let(:project) { create(:project, workspace: workspace, created_by: user) }
+    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
+    let(:invitation) do
+      project.invitations.create!(
+        email: "project-invite@example.com",
+        role: viewer_role,
+        project_role: "editor",
+        invited_by: user,
+        expires_at: 7.days.from_now
+      )
+    end
+
+    before { create(:membership, user: user, workspace: workspace) }
+
+    it "includes the workspace name in subject" do
+      mail = described_class.invite(invitation)
+      expect(mail.subject).to include(workspace.name)
+    end
+
+    it "sends to the invitee email" do
+      mail = described_class.invite(invitation)
+      expect(mail.to).to eq(["project-invite@example.com"])
+    end
+  end
+
   describe "#invite details" do
     let(:invitation) { create(:invitation) }
 

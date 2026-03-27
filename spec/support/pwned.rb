@@ -1,5 +1,6 @@
 RSpec.configure do |config|
   config.before(:each) do
-    allow_any_instance_of(Pwned::Password).to receive(:pwned?).and_return(false)
+    pwned = instance_double(Pwned::Password, pwned?: false)
+    allow(Pwned::Password).to receive(:new).and_return(pwned)
   end
 end

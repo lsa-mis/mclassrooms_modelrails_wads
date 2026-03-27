@@ -34,8 +34,14 @@ module Workspaces
       invitation = @workspace.invitations.find(params[:id])
       authorize invitation
       invitation.resend!
-      InvitationMailer.invite(invitation).deliver_later
-      redirect_to workspace_invitations_path(@workspace), notice: t(".resent")
+      if invitation.magic_link?
+        redirect_to workspace_invitations_path(@workspace),
+          notice: t(".magic_link_refreshed"),
+          flash: { magic_link_url: accept_invitation_url(token: invitation.token) }
+      else
+        InvitationMailer.invite(invitation).deliver_later
+        redirect_to workspace_invitations_path(@workspace), notice: t(".resent")
+      end
     end
 
     private

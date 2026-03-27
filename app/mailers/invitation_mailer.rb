@@ -1,9 +1,18 @@
 class InvitationMailer < ApplicationMailer
   def invite(invitation)
+    return if invitation.email.nil?  # Magic links don't send emails
+
     @invitation = invitation
-    @workspace = invitation.invitable
     @inviter = invitation.invited_by
     @role = invitation.role
+
+    if invitation.invitable_type == "Project"
+      @project = invitation.invitable
+      @workspace = @project.workspace
+    else
+      @workspace = invitation.invitable
+    end
+
     @accept_url = accept_invitation_url(token: invitation.token)
     @decline_url = decline_invitation_url(token: invitation.token)
 

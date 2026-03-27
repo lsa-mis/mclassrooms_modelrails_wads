@@ -24,6 +24,7 @@ en:
     avatars:
       update:
         success: "Avatar uploaded."
+        no_file: "Please select a file to upload."
       destroy:
         removed: "Avatar removed."
     theme_preferences:

@@ -34,6 +34,7 @@ en:
         revoked: "Invitation revoked."
       resend:
         resent: "Invitation resent."
+        magic_link_refreshed: "Magic link refreshed."
   invitation_accepts:
     show:
       title: "You've been invited"

@@ -51,7 +51,8 @@ RSpec.describe "Registrations", type: :request do
 
     context "with pwned password" do
       before do
-        allow_any_instance_of(Pwned::Password).to receive(:pwned?).and_return(true)
+        pwned = instance_double(Pwned::Password, pwned?: true)
+        allow(Pwned::Password).to receive(:new).and_return(pwned)
       end
 
       it "rejects registration with a breached password" do

@@ -33,7 +33,7 @@ RSpec.describe "Workspace Projects", type: :request do
         post workspace_projects_path(workspace), params: { project: { name: "New Project" } }
       }.to change(Project, :count).by(1)
 
-      project = Project.last
+      project = Project.find_by!(name: "New Project")
       pm = project.project_memberships.find_by(user: user)
       expect(pm).to be_creator
     end

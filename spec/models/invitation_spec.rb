@@ -119,6 +119,23 @@ RSpec.describe Invitation, type: :model do
     end
   end
 
+  describe "#decline! guard" do
+    it "prevents declining an already accepted invitation" do
+      invitation = create(:invitation, invitable: create(:workspace))
+      user = create(:user)
+      invitation.accept!(user)
+      expect { invitation.decline! }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
+
+  describe "#revoke! guard" do
+    it "prevents revoking an already declined invitation" do
+      invitation = create(:invitation)
+      invitation.decline!
+      expect { invitation.revoke! }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
+
   describe "#resend!" do
     let(:invitation) { create(:invitation) }
 
