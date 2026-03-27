@@ -85,5 +85,14 @@ RSpec.describe Project, type: :model do
       expect(second).not_to be_valid
       expect(second.errors[:base]).to be_present
     end
+
+    it "acquires a lock on the workspace during capacity check" do
+      workspace = create(:workspace, max_projects: 2)
+      user = create(:user)
+      create(:membership, user: user, workspace: workspace)
+      project = build(:project, workspace: workspace, created_by: user)
+      expect(workspace).to receive(:lock!).and_call_original
+      project.save
+    end
   end
 end

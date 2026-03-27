@@ -39,6 +39,18 @@ RSpec.describe WorkspacePolicy do
     end
   end
 
+  describe "for any authenticated user" do
+    let(:user) { create(:user) }
+
+    it "allows index" do
+      expect(described_class.new(user, Workspace).index?).to be true
+    end
+
+    it "allows create" do
+      expect(described_class.new(user, Workspace).create?).to be true
+    end
+  end
+
   describe "for viewer" do
     let(:user) { create(:user) }
     let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }

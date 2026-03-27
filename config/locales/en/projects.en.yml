@@ -49,6 +49,7 @@ en:
         success: "Member added."
       update:
         role_updated: "Role updated."
+        invalid_role: "Invalid role."
       destroy:
         removed: "Member removed."
       toggle_pin:

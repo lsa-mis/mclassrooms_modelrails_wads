@@ -2,14 +2,17 @@ class WorkspacesController < ApplicationController
   before_action :set_workspace, only: [:show, :edit, :update, :destroy]
 
   def index
+    authorize Workspace
     @workspaces = Current.user.workspaces.kept.with_attached_logo
   end
 
   def new
+    authorize Workspace
     @workspace = Workspace.new
   end
 
   def create
+    authorize Workspace
     @workspace = Workspace.new(workspace_params)
     if @workspace.save
       owner_role = Role.find_by!(slug: "owner", workspace_id: nil)

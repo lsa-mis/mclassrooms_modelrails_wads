@@ -12,6 +12,7 @@ class Resource < ApplicationRecord
 
   validates :title, presence: true
   validates :resourceable_type, inclusion: { in: ALLOWED_RESOURCEABLE_TYPES }
+  validates :position, numericality: { greater_than_or_equal_to: 0 }
 
   scope :positioned, -> { order(position: :asc) }
   scope :published, -> { where(status: "published") }

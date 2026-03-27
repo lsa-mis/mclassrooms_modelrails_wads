@@ -46,4 +46,11 @@
                     focus:outline-none focus:ring-2 focus:ring-sky-700" %>
     </div>
   <% end %>
+
+  <p class="mt-6 text-center text-sm text-slate-600 dark:text-gray-400">
+    <%= t("sessions.new.no_account") %>
+    <%= link_to t("sessions.new.sign_up"), new_registration_path,
+          class: "text-sky-700 dark:text-sky-400 underline hover:no-underline
+                  focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+  </p>
 </div>

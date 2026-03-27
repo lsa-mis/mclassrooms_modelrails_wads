@@ -42,6 +42,7 @@ class Membership < ApplicationRecord
 
   def workspace_has_member_capacity
     return unless workspace
+    workspace.lock!
     if workspace.memberships.kept.count >= workspace.max_members
       errors.add(:base, :workspace_member_limit, message: "workspace has reached its member limit")
     end

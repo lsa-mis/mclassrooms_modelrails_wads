@@ -96,6 +96,13 @@ RSpec.describe Membership, type: :model do
       expect(third).not_to be_valid
       expect(third.errors[:base]).to be_present
     end
+
+    it "acquires a lock on the workspace during capacity check" do
+      workspace = create(:workspace, max_members: 5)
+      membership = build(:membership, workspace: workspace)
+      expect(workspace).to receive(:lock!).and_call_original
+      membership.save
+    end
   end
 
   describe "ownership transfer" do

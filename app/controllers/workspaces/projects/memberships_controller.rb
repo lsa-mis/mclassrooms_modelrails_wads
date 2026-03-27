@@ -33,6 +33,8 @@ module Workspaces
         authorize @pm
         @pm.update!(role: params[:project_membership][:role])
         redirect_to workspace_project_memberships_path(@workspace, @project), notice: t(".role_updated")
+      rescue ArgumentError
+        redirect_to workspace_project_memberships_path(@workspace, @project), alert: t("projects.memberships.update.invalid_role")
       end
 
       def destroy

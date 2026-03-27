@@ -72,6 +72,19 @@ RSpec.describe "Project Memberships", type: :request do
     end
   end
 
+  describe "PATCH with invalid role" do
+    let(:member_user) { create(:user) }
+    let!(:member_ws) { create(:membership, user: member_user, workspace: workspace) }
+    let!(:member_pm) { create(:project_membership, project: project, user: member_user) }
+
+    it "handles invalid role gracefully" do
+      patch workspace_project_membership_path(workspace, project, member_pm), params: {
+        project_membership: { role: "superadmin" }
+      }
+      expect(response).to redirect_to(workspace_project_memberships_path(workspace, project))
+    end
+  end
+
   describe "PATCH toggle_pin" do
     it "pins own membership" do
       patch toggle_pin_workspace_project_membership_path(workspace, project, creator_pm)

@@ -33,6 +33,12 @@ RSpec.describe Resource, type: :model do
       resource = build(:resource)
       expect(resource).to be_valid
     end
+
+    it "requires non-negative position" do
+      resource = build(:resource, position: -1)
+      expect(resource).not_to be_valid
+      expect(resource.errors[:position]).to be_present
+    end
   end
 
   describe "status enum" do

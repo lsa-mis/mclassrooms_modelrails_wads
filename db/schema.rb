@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_27_101643) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_27_115342) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -107,7 +107,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_27_101643) do
     t.index ["accepted_by_id"], name: "index_invitations_on_accepted_by_id"
     t.index ["email", "invitable_type", "invitable_id"], name: "index_invitations_on_email_and_invitable_pending", unique: true, where: "status = 'pending'"
     t.index ["invitable_type", "invitable_id"], name: "index_invitations_on_invitable"
-    t.index ["invitable_type", "invitable_id"], name: "index_invitations_on_invitable_type_and_invitable_id"
     t.index ["invited_by_id"], name: "index_invitations_on_invited_by_id"
     t.index ["role_id"], name: "index_invitations_on_role_id"
     t.index ["token"], name: "index_invitations_on_token", unique: true
