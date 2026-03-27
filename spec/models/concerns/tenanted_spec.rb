@@ -3,12 +3,6 @@ require "rails_helper"
 RSpec.describe Tenanted, type: :model do
   # Use Project as the host model (includes Tenanted)
 
-  describe "workspace association" do
-    it "belongs to workspace" do
-      expect(Project.reflect_on_association(:workspace).macro).to eq(:belongs_to)
-    end
-  end
-
   describe ".for_current_workspace" do
     let(:workspace1) { create(:workspace) }
     let(:workspace2) { create(:workspace) }

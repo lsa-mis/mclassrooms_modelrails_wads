@@ -22,7 +22,7 @@ RSpec.describe "Static pages", type: :system do
     describe "#{page_name} page" do
       it "renders successfully" do
         visit send(:"#{page_name}_path")
-        expect(page).to have_css("h1")
+        expect(page).to have_text(I18n.t("pages.#{page_name}.title"))
       end
     end
   end

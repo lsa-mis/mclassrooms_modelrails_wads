@@ -46,14 +46,14 @@ RSpec.describe "Workspaces", type: :request do
 
     it "assigns the creator as owner" do
       post workspaces_path, params: { workspace: { name: "New Workspace" } }
-      workspace = Workspace.last
+      workspace = Workspace.find_by!(name: "New Workspace")
       membership = workspace.memberships.find_by(user: user)
       expect(membership.role.slug).to eq("owner")
     end
 
     it "redirects to the workspace" do
       post workspaces_path, params: { workspace: { name: "New Workspace" } }
-      expect(response).to redirect_to(workspace_path(Workspace.last))
+      expect(response).to redirect_to(workspace_path(Workspace.find_by!(name: "New Workspace")))
     end
   end
 

@@ -34,16 +34,18 @@ RSpec.describe Membership, type: :model do
   end
 
   describe "associations" do
-    it "belongs to user" do
-      expect(Membership.reflect_on_association(:user).macro).to eq(:belongs_to)
+    let(:membership) { create(:membership) }
+
+    it "belongs to a user" do
+      expect(membership.user).to be_a(User)
     end
 
-    it "belongs to workspace" do
-      expect(Membership.reflect_on_association(:workspace).macro).to eq(:belongs_to)
+    it "belongs to a workspace" do
+      expect(membership.workspace).to be_a(Workspace)
     end
 
-    it "belongs to role" do
-      expect(Membership.reflect_on_association(:role).macro).to eq(:belongs_to)
+    it "belongs to a role" do
+      expect(membership.role).to be_a(Role)
     end
   end
 

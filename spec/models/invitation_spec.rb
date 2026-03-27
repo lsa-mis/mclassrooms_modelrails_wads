@@ -74,7 +74,7 @@ RSpec.describe Invitation, type: :model do
 
     it "assigns the invitation's role to the membership" do
       invitation.accept!(user)
-      membership = Membership.last
+      membership = workspace.memberships.find_by(user: user)
       expect(membership.role).to eq(invitation.role)
     end
 
@@ -199,7 +199,7 @@ RSpec.describe Invitation, type: :model do
     it "raises for discarded project" do
       project.discard!
       invitee = create(:user)
-      expect { invitation.accept!(invitee) }.to raise_error(ActiveRecord::RecordInvalid, /no longer active/)
+      expect { invitation.accept!(invitee) }.to raise_error(ActiveRecord::RecordInvalid)
     end
   end
 

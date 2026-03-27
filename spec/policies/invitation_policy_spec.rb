@@ -56,5 +56,13 @@ RSpec.describe InvitationPolicy do
     it "denies create" do
       expect(described_class.new(user, invitation).create?).to be false
     end
+
+    it "denies destroy" do
+      expect(described_class.new(user, invitation).destroy?).to be false
+    end
+
+    it "denies resend" do
+      expect(described_class.new(user, invitation).resend?).to be false
+    end
   end
 end

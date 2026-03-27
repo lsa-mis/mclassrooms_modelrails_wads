@@ -45,7 +45,8 @@ RSpec.describe "Project Resources", type: :request do
         resource: { title: "My Document", type: "Document" },
         document: { body: "Content" }
       }
-      expect(Resource.last.created_by).to eq(user)
+      resource = Resource.find_by!(title: "My Document")
+      expect(resource.created_by).to eq(user)
     end
 
     it "defaults to draft status" do
@@ -53,7 +54,8 @@ RSpec.describe "Project Resources", type: :request do
         resource: { title: "Draft Doc", type: "Document" },
         document: { body: "Draft" }
       }
-      expect(Resource.last).to be_draft
+      resource = Resource.find_by!(title: "Draft Doc")
+      expect(resource).to be_draft
     end
 
     it "rejects invalid resource type" do

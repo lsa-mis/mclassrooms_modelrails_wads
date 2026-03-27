@@ -38,4 +38,22 @@ RSpec.describe WorkspacePolicy do
       expect(described_class.new(user, workspace).destroy?).to be false
     end
   end
+
+  describe "for viewer" do
+    let(:user) { create(:user) }
+    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
+    before { create(:membership, user: user, workspace: workspace, role: viewer_role) }
+
+    it "allows show" do
+      expect(described_class.new(user, workspace).show?).to be true
+    end
+
+    it "denies update" do
+      expect(described_class.new(user, workspace).update?).to be false
+    end
+
+    it "denies destroy" do
+      expect(described_class.new(user, workspace).destroy?).to be false
+    end
+  end
 end

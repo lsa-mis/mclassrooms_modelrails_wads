@@ -11,8 +11,16 @@ RSpec.describe Document, type: :model do
   end
 
   describe "association" do
-    it "has one resource" do
-      expect(Document.reflect_on_association(:resource).macro).to eq(:has_one)
+    it "can have a resource" do
+      doc = Document.create!
+      project = create(:project)
+      resource = Resource.create!(
+        project: project,
+        resourceable: doc,
+        title: "Test",
+        created_by: project.created_by
+      )
+      expect(doc.reload.resource).to eq(resource)
     end
   end
 end

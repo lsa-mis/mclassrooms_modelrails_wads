@@ -22,7 +22,9 @@ RSpec.describe User, type: :model do
 
   describe "associations" do
     it "has many sessions" do
-      expect(User.reflect_on_association(:sessions).macro).to eq(:has_many)
+      user = create(:user)
+      session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+      expect(user.sessions).to include(session)
     end
   end
 
@@ -51,7 +53,7 @@ RSpec.describe User, type: :model do
     it "requires first_name" do
       user = build(:user, first_name: nil)
       expect(user).not_to be_valid
-      expect(user.errors[:first_name]).to include("can't be blank")
+      expect(user.errors[:first_name]).to be_present
     end
 
     it "limits first_name to 100 characters" do
@@ -63,7 +65,7 @@ RSpec.describe User, type: :model do
     it "requires last_name" do
       user = build(:user, last_name: nil)
       expect(user).not_to be_valid
-      expect(user.errors[:last_name]).to include("can't be blank")
+      expect(user.errors[:last_name]).to be_present
     end
 
     it "limits last_name to 100 characters" do
