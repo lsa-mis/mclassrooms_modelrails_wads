@@ -16,7 +16,7 @@ module Workspaces
     def update
       @membership = @workspace.memberships.find(params[:id])
       authorize @membership
-      role = Role.find(params[:membership][:role_id])
+      role = @workspace.effective_roles.find(params[:membership][:role_id])
       @membership.change_role!(role)
       redirect_to workspace_members_path(@workspace), notice: t(".success")
     end

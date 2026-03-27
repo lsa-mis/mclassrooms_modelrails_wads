@@ -47,12 +47,13 @@ module Workspaces
 
       def update
         authorize @resource
-        @resource.resourceable.update!(resourceable_params) if resourceable_params.present?
-        if @resource.update(resource_params)
-          redirect_to workspace_project_resource_path(@workspace, @project, @resource), notice: t(".success")
-        else
-          render :edit, status: :unprocessable_entity
+        ActiveRecord::Base.transaction do
+          @resource.resourceable.update!(resourceable_params) if resourceable_params.present?
+          @resource.update!(resource_params)
         end
+        redirect_to workspace_project_resource_path(@workspace, @project, @resource), notice: t(".success")
+      rescue ActiveRecord::RecordInvalid
+        render :edit, status: :unprocessable_entity
       end
 
       def destroy

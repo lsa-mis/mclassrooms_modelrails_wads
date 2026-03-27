@@ -33,6 +33,12 @@ RSpec.describe Workspace, type: :model do
       workspace = create(:workspace, name: "Acme Corp")
       expect(workspace.to_param).to eq("acme-corp")
     end
+
+    it "generates a fallback slug for non-Latin names" do
+      workspace = create(:workspace, name: "日本語の名前")
+      expect(workspace.slug).to be_present
+      expect(workspace.slug).not_to be_blank
+    end
   end
 
   describe "plan enum" do

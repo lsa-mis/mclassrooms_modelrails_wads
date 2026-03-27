@@ -42,7 +42,7 @@ module Workspaces
 
     def create_email_invitations
       emails = params[:invitation][:emails].to_s.split(/[\n,]/).map(&:strip).reject(&:blank?)
-      role = Role.find(params[:invitation][:role_id])
+      role = @workspace.effective_roles.find(params[:invitation][:role_id])
       sent = 0
       skipped = 0
 
@@ -74,7 +74,7 @@ module Workspaces
     end
 
     def create_magic_link
-      role = Role.find(params[:invitation][:role_id])
+      role = @workspace.effective_roles.find(params[:invitation][:role_id])
       invitation = @workspace.invitations.create!(
         role: role,
         invited_by: Current.user,

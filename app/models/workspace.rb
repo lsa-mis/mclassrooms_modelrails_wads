@@ -32,6 +32,7 @@ class Workspace < ApplicationRecord
 
   def generate_slug
     base_slug = name.parameterize
+    base_slug = "workspace-#{SecureRandom.hex(4)}" if base_slug.blank?
     self.slug = base_slug
     counter = 1
     while Workspace.where.not(id: id).exists?(slug: slug)

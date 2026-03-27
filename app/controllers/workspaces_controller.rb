@@ -25,6 +25,7 @@ class WorkspacesController < ApplicationController
   end
 
   def edit
+    authorize @workspace
   end
 
   def update

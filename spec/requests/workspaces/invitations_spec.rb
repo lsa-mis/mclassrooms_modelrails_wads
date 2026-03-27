@@ -125,4 +125,15 @@ RSpec.describe "Workspace Invitations", type: :request do
       expect(response).to have_http_status(:redirect)
     end
   end
+
+  describe "role injection protection" do
+    it "rejects role from another workspace" do
+      other_workspace = create(:workspace)
+      foreign_role = Role.create!(name: "Foreign", slug: "foreign", workspace: other_workspace)
+      post workspace_invitations_path(workspace), params: {
+        invitation: { emails: "test@example.com", role_id: foreign_role.id }
+      }
+      expect(response).to have_http_status(:not_found).or have_http_status(:redirect)
+    end
+  end
 end

@@ -111,6 +111,17 @@ RSpec.describe "Workspaces", type: :request do
     end
   end
 
+  describe "GET /workspaces/:slug/edit authorization" do
+    it "denies members without manage_workspace" do
+      workspace = create(:workspace)
+      member = create(:user)
+      create(:membership, user: member, workspace: workspace)
+      sign_in(member)
+      get edit_workspace_path(workspace)
+      expect(response).to have_http_status(:redirect)
+    end
+  end
+
   describe "POST /workspaces with invalid params" do
     it "returns unprocessable entity for blank name" do
       post workspaces_path, params: { workspace: { name: "" } }

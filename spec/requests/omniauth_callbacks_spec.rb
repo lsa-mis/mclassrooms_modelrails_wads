@@ -37,8 +37,12 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       end
     end
 
-    context "existing user with matching email" do
+    context "existing user with matching email and verified email auth" do
       let!(:user) { create(:user, email_address: "oauth@example.com") }
+
+      before do
+        user.authentications.create!(provider: "email", uid: "oauth@example.com", verified_at: Time.current)
+      end
 
       it "links the OAuth provider to existing user" do
         expect {
@@ -111,6 +115,27 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     it "updates the OAuth token on re-login" do
       get "/auth/google_oauth2/callback"
       expect(auth.reload.oauth_token).to eq("new_token")
+    end
+  end
+
+  describe "OAuth does not link to unverified email accounts" do
+    let!(:unverified_user) { create(:user, email_address: "unverified@example.com") }
+
+    before do
+      # User has email auth but it's not verified
+      unverified_user.authentications.create!(provider: "email", uid: "unverified@example.com")
+      OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+        provider: "google",
+        uid: "new-oauth-123",
+        info: { email: "unverified@example.com", first_name: "Evil", last_name: "User" },
+        credentials: { token: "token", refresh_token: nil, expires_at: nil }
+      )
+    end
+
+    it "does not link the OAuth account to the unverified user" do
+      get "/auth/google_oauth2/callback"
+      # The unverified user should NOT have a Google authentication linked
+      expect(unverified_user.authentications.google.count).to eq(0)
     end
   end
 

@@ -21,6 +21,9 @@ class Invitation < ApplicationRecord
 
   def accept!(user)
     transaction do
+      lock!
+      raise ActiveRecord::RecordInvalid.new(self), "Invitation already processed" unless pending?
+      raise ActiveRecord::RecordInvalid.new(self), "Invitation expired" if expired?
       if invitable_type == "Project"
         accept_project_invitation!(user)
       else
@@ -61,8 +64,14 @@ class Invitation < ApplicationRecord
   private
 
   def accept_workspace_invitation!(user)
-    raise ActiveRecord::RecordInvalid.new(self), "User is already a member" if invitable.memberships.kept.exists?(user: user)
-    invitable.memberships.create!(user: user, role: role)
+    existing = invitable.memberships.find_by(user: user)
+    if existing&.discarded?
+      existing.undiscard!
+    elsif existing && !existing.discarded?
+      raise ActiveRecord::RecordInvalid.new(self), "User is already a member"
+    else
+      invitable.memberships.create!(user: user, role: role)
+    end
   end
 
   def accept_project_invitation!(user)

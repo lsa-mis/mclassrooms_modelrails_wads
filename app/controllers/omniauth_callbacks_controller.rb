@@ -22,7 +22,7 @@ class OmniauthCallbacksController < ApplicationController
       redirect_to account_connected_accounts_path, notice: t(".linked", provider: auth_hash.provider.titleize)
     else
       # New OAuth — find or create user
-      user = User.find_by(email_address: auth_hash.info.email) || create_user_from_oauth(auth_hash)
+      user = find_verified_user_by_email(auth_hash.info.email) || create_user_from_oauth(auth_hash)
       user.authentications.create!(
         provider: auth_hash.provider,
         uid: auth_hash.uid,
@@ -46,6 +46,13 @@ class OmniauthCallbacksController < ApplicationController
       oauth_refresh_token: auth_hash.credentials.refresh_token,
       oauth_expires_at: auth_hash.credentials.expires_at ? Time.at(auth_hash.credentials.expires_at) : nil
     }
+  end
+
+  def find_verified_user_by_email(email)
+    user = User.find_by(email_address: email)
+    return nil unless user
+    return user if user.authentications.email.where.not(verified_at: nil).exists?
+    nil # Don't link to unverified accounts
   end
 
   def create_user_from_oauth(auth_hash)

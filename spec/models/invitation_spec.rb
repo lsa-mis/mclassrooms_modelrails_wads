@@ -58,6 +58,13 @@ RSpec.describe Invitation, type: :model do
       expect { invitation.accept!(user) }.to change(Membership, :count).by(1)
     end
 
+    it "prevents double-accept" do
+      invitation = create(:invitation, invitable: create(:workspace))
+      user = create(:user)
+      invitation.accept!(user)
+      expect { invitation.accept!(create(:user)) }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+
     it "sets accepted status" do
       invitation.accept!(user)
       expect(invitation.reload.status).to eq("accepted")
@@ -74,6 +81,21 @@ RSpec.describe Invitation, type: :model do
     it "raises if user is already a member" do
       create(:membership, user: user, workspace: workspace)
       expect { invitation.accept!(user) }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
+
+  describe "#accept! reactivates discarded workspace membership" do
+    it "reactivates discarded membership on workspace re-invite" do
+      workspace = create(:workspace)
+      invitation = create(:invitation, invitable: workspace)
+      user = create(:user)
+      old_membership = create(:membership, user: user, workspace: workspace)
+      other_owner = create(:user)
+      create(:membership, :owner, user: other_owner, workspace: workspace)
+      old_membership.deactivate!
+
+      invitation.accept!(user)
+      expect(old_membership.reload).not_to be_discarded
     end
   end
 

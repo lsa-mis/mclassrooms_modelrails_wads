@@ -28,6 +28,7 @@ class Project < ApplicationRecord
 
   def generate_slug
     base_slug = name.parameterize
+    base_slug = "project-#{SecureRandom.hex(4)}" if base_slug.blank?
     self.slug = base_slug
     return unless workspace
     counter = 1
