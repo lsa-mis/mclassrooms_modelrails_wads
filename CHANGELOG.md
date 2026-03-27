@@ -2,6 +2,30 @@
 
 All notable changes to ModelRails are documented here, organized by phase.
 
+## v0.5.0-alpha — Phase 5A: Resource Layer + Activity Tracking
+
+### Resources
+- Polymorphic Resource registry with title, status (draft/published), position, and type allowlist
+- Document content type with Action Text (Trix) rich text editor
+- One controller serves all resource types — type-specific form/display partials
+- ResourcePolicy enforces project membership access (viewer reads, editor creates, creator manages)
+- Drag-and-drop reposition via Turbo Stream
+
+### Activity Tracking
+- ActivityLog model with polymorphic trackable, workspace scoping, and visibility enum (workspace/admin)
+- Trackable concern with `after_commit` callbacks — opt-in per model
+- Automatic creation/update tracking on Workspace, Membership, Invitation, Project, and Resource
+- Sensitive attribute filtering (tokens, passwords stripped from metadata)
+- Failure resilience — tracking errors never break primary operations
+- Activity feed on workspace and project show pages
+
+### Infrastructure
+- Action Text installed for rich text content
+- 404 examples, 0 failures, 95.8% line coverage
+- 1 Brakeman note (same known mass assignment on project membership)
+
+---
+
 ## v0.4.0 — Phase 4: Projects + Collaboration Spaces
 
 ### Projects
