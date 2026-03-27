@@ -15,4 +15,6 @@
       <p class="text-sm text-slate-600 dark:text-gray-400"><%= @workspace.plan.titleize %></p>
     </div>
   </div>
+
+  <%= render "shared/activity_feed", activities: ActivityLog.visible.for_workspace(@workspace).recent.includes(:actor) %>
 </div>

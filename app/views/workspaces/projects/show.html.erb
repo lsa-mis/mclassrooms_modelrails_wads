@@ -28,4 +28,6 @@
                     focus:outline-none focus:ring-2 focus:ring-sky-700" %>
     <% end %>
   </nav>
+
+  <%= render "shared/activity_feed", activities: ActivityLog.visible.where(trackable: @project.resources).or(ActivityLog.visible.where(trackable: @project)).recent.includes(:actor) %>
 </div>

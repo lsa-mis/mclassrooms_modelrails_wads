@@ -1,0 +1,14 @@
+<li class="flex items-start gap-3 text-sm">
+  <div class="flex-1">
+    <span class="font-medium text-slate-900 dark:text-gray-100">
+      <%= activity_log.actor&.full_name || t("activity.system") %>
+    </span>
+    <span class="text-slate-600 dark:text-gray-400">
+      <%= t("activity.actions.#{activity_log.action}", default: activity_log.action.humanize) %>
+    </span>
+  </div>
+  <time datetime="<%= activity_log.created_at.iso8601 %>"
+        class="text-xs text-slate-500 dark:text-gray-500 whitespace-nowrap">
+    <%= time_ago_in_words(activity_log.created_at) %> <%= t("activity.ago") %>
+  </time>
+</li>

@@ -1,0 +1,12 @@
+<section aria-label="<%= t('activity.title') %>" class="mt-8">
+  <h2 class="text-lg font-semibold text-slate-900 dark:text-gray-100">
+    <%= t("activity.title") %>
+  </h2>
+  <% if activities.any? %>
+    <ol class="mt-4 space-y-3">
+      <%= render partial: "activity_logs/activity_log", collection: activities, as: :activity_log %>
+    </ol>
+  <% else %>
+    <p class="mt-4 text-sm text-slate-600 dark:text-gray-400"><%= t("activity.empty") %></p>
+  <% end %>
+</section>

@@ -1,0 +1,16 @@
+en:
+  activity:
+    title: "Recent activity"
+    empty: "No activity yet."
+    system: "System"
+    ago: "ago"
+    actions:
+      workspace.updated: "updated workspace settings"
+      membership.created: "joined the workspace"
+      membership.updated: "had their role changed"
+      invitation.created: "sent an invitation"
+      invitation.updated: "invitation was updated"
+      project.created: "created a project"
+      project.updated: "updated a project"
+      resource.created: "added a resource"
+      resource.updated: "updated a resource"
