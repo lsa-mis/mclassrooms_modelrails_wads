@@ -87,4 +87,36 @@ RSpec.describe "Sessions", type: :request do
       expect(user.reload.failed_login_attempts).to eq(0)
     end
   end
+
+  describe "POST /session/lookup (smart routing)" do
+    context "user with password" do
+      let(:user) { create(:user) }
+
+      it "returns the password form" do
+        post session_lookup_path, params: { email_address: user.email_address }
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include(I18n.t("sessions.lookup.password_prompt"))
+      end
+    end
+
+    context "user without password" do
+      let(:user) { create(:user) }
+
+      before { user.update_column(:password_digest, nil) }
+
+      it "sends magic link and redirects" do
+        post session_lookup_path, params: { email_address: user.email_address }
+        expect(response).to redirect_to(new_session_path)
+        expect(flash[:notice]).to eq(I18n.t("magic_links.create.check_email"))
+      end
+    end
+
+    context "non-existent email" do
+      it "shows same message as magic link (no leak)" do
+        post session_lookup_path, params: { email_address: "ghost@example.com" }
+        expect(response).to redirect_to(new_session_path)
+        expect(flash[:notice]).to eq(I18n.t("magic_links.create.check_email"))
+      end
+    end
+  end
 end
