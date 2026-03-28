@@ -1,6 +1,7 @@
 ---
 title: Extending
 description: How to add resource types, custom roles, and new features to ModelRails
+keywords: resource types roles permissions migration polymorphic customization
 ---
 
 # Extending ModelRails

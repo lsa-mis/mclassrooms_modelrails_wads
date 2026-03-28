@@ -26,7 +26,7 @@ Markdowndocs.configure do |config|
 
   # Enable full-text search on the documentation index (default: false)
   # Adds a search bar that filters docs by title, description, and content
-  # config.search_enabled = true
+  config.search_enabled = true
 
   # Optional: Resolve current user's mode preference from database
   # Return nil to fall back to cookie/default

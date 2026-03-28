@@ -1,6 +1,7 @@
 ---
 title: Getting Started
 description: Setup instructions and development workflow for ModelRails
+keywords: setup install mise ruby bundle rspec tests oauth credentials development
 ---
 
 # Getting Started
