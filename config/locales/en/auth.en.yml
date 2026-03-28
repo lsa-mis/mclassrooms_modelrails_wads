@@ -5,6 +5,7 @@ en:
       email_label: "Email address"
       password_label: "Password"
       submit: "Sign in"
+      continue: "Continue"
       forgot_password: "Forgot your password?"
       no_account: "Don't have an account?"
       sign_up: "Sign up"

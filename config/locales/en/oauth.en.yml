@@ -1,0 +1,4 @@
+en:
+  oauth:
+    sign_in_with: "Sign in with %{provider}"
+    or: "or continue with email"

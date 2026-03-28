@@ -37,3 +37,4 @@ en:
       title: "Sign in"
       password_label: "Password"
       submit: "Sign in"
+      use_magic_link: "Send me a sign-in link instead"
