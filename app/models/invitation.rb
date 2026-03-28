@@ -16,7 +16,7 @@ class Invitation < ApplicationRecord
 
   before_create :generate_token
 
-  after_commit :broadcast_changes, on: [:create, :update]
+  after_commit :broadcast_changes, on: [ :create, :update ]
 
   scope :pending, -> { where(status: "pending").where("expires_at > ?", Time.current) }
   scope :expired, -> { where(status: "pending").where("expires_at <= ?", Time.current) }

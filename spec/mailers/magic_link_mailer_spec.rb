@@ -7,7 +7,7 @@ RSpec.describe MagicLinkMailer, type: :mailer do
 
     it "sends to the user's email" do
       mail = described_class.sign_in_link(user)
-      expect(mail.to).to eq([user.email_address])
+      expect(mail.to).to eq([ user.email_address ])
     end
 
     it "includes the magic link token in the body" do
@@ -26,7 +26,7 @@ RSpec.describe MagicLinkMailer, type: :mailer do
 
     it "sends to the provided email" do
       mail = described_class.registration_link("newuser@example.com", token)
-      expect(mail.to).to eq(["newuser@example.com"])
+      expect(mail.to).to eq([ "newuser@example.com" ])
     end
 
     it "includes the registration token in the body" do

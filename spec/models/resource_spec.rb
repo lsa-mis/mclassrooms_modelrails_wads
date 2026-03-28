@@ -57,7 +57,7 @@ RSpec.describe Resource, type: :model do
       project = create(:project)
       r2 = create(:resource, project: project, created_by: project.created_by, position: 2)
       r1 = create(:resource, project: project, created_by: project.created_by, position: 1)
-      expect(project.resources.positioned.to_a).to eq([r1, r2])
+      expect(project.resources.positioned.to_a).to eq([ r1, r2 ])
     end
 
     it ".published returns only published resources" do

@@ -9,7 +9,7 @@ class ProjectMembership < ApplicationRecord
 
   scope :pinned, -> { where(pinned: true) }
 
-  after_commit :broadcast_changes, on: [:create, :update, :destroy]
+  after_commit :broadcast_changes, on: [ :create, :update, :destroy ]
 
   private
 

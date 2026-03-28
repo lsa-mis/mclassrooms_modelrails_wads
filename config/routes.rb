@@ -2,13 +2,13 @@ Rails.application.routes.draw do
   mount Markdowndocs::Engine, at: "/docs"
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
   resource :session
-  resource :registration, only: [:new, :create]
-  resource :email_verification, only: [:show]
+  resource :registration, only: [ :new, :create ]
+  resource :email_verification, only: [ :show ]
   resources :passwords, param: :token
 
-  resource :email_verification_resend, only: [:create]
+  resource :email_verification_resend, only: [ :create ]
 
-  resource :magic_link, only: [:create]
+  resource :magic_link, only: [ :create ]
   get "magic_link_session/:token", to: "magic_link_sessions#show", as: :magic_link_session
   get "magic_link_registration/:token", to: "magic_link_registrations#show", as: :magic_link_registration
   post "magic_link_registration/:token", to: "magic_link_registrations#create"
@@ -18,37 +18,37 @@ Rails.application.routes.draw do
   get "/auth/failure", to: "omniauth_callbacks#failure"
 
   namespace :account do
-    resource :profile, only: [:edit, :update]
-    resource :password, only: [:new, :create]
-    resource :avatar, only: [:update, :destroy]
-    resource :theme_preference, only: [:update]
-    resources :connected_accounts, only: [:index, :destroy]
+    resource :profile, only: [ :edit, :update ]
+    resource :password, only: [ :new, :create ]
+    resource :avatar, only: [ :update, :destroy ]
+    resource :theme_preference, only: [ :update ]
+    resources :connected_accounts, only: [ :index, :destroy ]
   end
 
   resources :workspaces, param: :slug do
     scope module: :workspaces do
-      resources :members, only: [:index, :edit, :update, :destroy] do
+      resources :members, only: [ :index, :edit, :update, :destroy ] do
         member do
           patch :reactivate
           patch :transfer_ownership
         end
       end
-      resources :invitations, only: [:index, :new, :create, :destroy] do
+      resources :invitations, only: [ :index, :new, :create, :destroy ] do
         member do
           post :resend
         end
       end
-      resource :settings, only: [:edit, :update]
-      resource :branding, only: [:edit, :update]
+      resource :settings, only: [ :edit, :update ]
+      resource :branding, only: [ :edit, :update ]
       resources :projects, param: :slug do
         scope module: :projects do
-          resources :memberships, only: [:index, :new, :create, :update, :destroy] do
+          resources :memberships, only: [ :index, :new, :create, :update, :destroy ] do
             member do
               patch :toggle_pin
             end
           end
-          resources :invitations, only: [:new, :create]
-          resources :resources, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
+          resources :invitations, only: [ :new, :create ]
+          resources :resources, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
             member do
               patch :reposition
             end

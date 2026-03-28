@@ -12,7 +12,7 @@ class CreateProjects < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :projects, [:workspace_id, :slug], unique: true
+    add_index :projects, [ :workspace_id, :slug ], unique: true
     add_index :projects, :discarded_at
   end
 end

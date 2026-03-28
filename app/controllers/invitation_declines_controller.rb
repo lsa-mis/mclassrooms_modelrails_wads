@@ -3,7 +3,7 @@ class InvitationDeclinesController < ApplicationController
 
   def show
     @invitation = find_valid_invitation
-    return unless @invitation
+    nil unless @invitation
   end
 
   def create

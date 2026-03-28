@@ -18,7 +18,7 @@ class Workspace < ApplicationRecord
 
   before_validation :generate_slug, if: -> { name.present? && (slug.blank? || (name_changed? && !slug_changed?)) }
 
-  after_commit :broadcast_changes, on: [:update]
+  after_commit :broadcast_changes, on: [ :update ]
 
   def discard!
     transaction do
@@ -36,7 +36,7 @@ class Workspace < ApplicationRecord
   end
 
   def effective_roles
-    Role.where(workspace_id: [nil, id])
+    Role.where(workspace_id: [ nil, id ])
   end
 
   private

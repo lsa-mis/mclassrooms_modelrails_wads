@@ -1,6 +1,6 @@
 class SessionsController < ApplicationController
   allow_unauthenticated_access only: %i[new create lookup]
-  rate_limit to: 10, within: 3.minutes, only: [:create, :lookup], with: -> { redirect_to new_session_path, alert: t("sessions.create.rate_limited") }
+  rate_limit to: 10, within: 3.minutes, only: [ :create, :lookup ], with: -> { redirect_to new_session_path, alert: t("sessions.create.rate_limited") }
 
   def new
   end

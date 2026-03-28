@@ -6,7 +6,7 @@ RSpec.describe InvitationMailer, type: :mailer do
 
     it "sends to the invitee's email" do
       mail = described_class.invite(invitation)
-      expect(mail.to).to eq([invitation.email])
+      expect(mail.to).to eq([ invitation.email ])
     end
 
     it "includes the accept link" do
@@ -54,7 +54,7 @@ RSpec.describe InvitationMailer, type: :mailer do
 
     it "sends to the invitee email" do
       mail = described_class.invite(invitation)
-      expect(mail.to).to eq(["project-invite@example.com"])
+      expect(mail.to).to eq([ "project-invite@example.com" ])
     end
   end
 

@@ -1,6 +1,6 @@
 namespace :users do
   desc "Unlock a locked user account"
-  task :unlock, [:email] => :environment do |_t, args|
+  task :unlock, [ :email ] => :environment do |_t, args|
     abort "Usage: rails users:unlock[email@example.com]" unless args[:email]
     user = User.find_by!(email_address: args[:email])
     user.update!(failed_login_attempts: 0, locked_at: nil)
@@ -10,7 +10,7 @@ namespace :users do
   end
 
   desc "Verify a user's email address"
-  task :verify, [:email] => :environment do |_t, args|
+  task :verify, [ :email ] => :environment do |_t, args|
     abort "Usage: rails users:verify[email@example.com]" unless args[:email]
     user = User.find_by!(email_address: args[:email])
     auth = user.authentications.email.first
@@ -26,7 +26,7 @@ namespace :users do
   end
 
   desc "Suspend a user — destroy sessions, deactivate all memberships"
-  task :suspend, [:email] => :environment do |_t, args|
+  task :suspend, [ :email ] => :environment do |_t, args|
     abort "Usage: rails users:suspend[email@example.com]" unless args[:email]
     user = User.find_by!(email_address: args[:email])
     user.sessions.destroy_all

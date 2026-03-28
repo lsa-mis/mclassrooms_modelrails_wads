@@ -17,7 +17,7 @@ class Resource < ApplicationRecord
   scope :positioned, -> { order(position: :asc) }
   scope :published, -> { where(status: "published") }
 
-  after_commit :broadcast_changes, on: [:create, :update]
+  after_commit :broadcast_changes, on: [ :create, :update ]
 
   private
 

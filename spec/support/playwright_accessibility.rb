@@ -53,7 +53,7 @@ RSpec.configure do |config|
   # In CI, automatically run axe accessibility audit after every system spec
   if ENV["CI"]
     config.after(:each, type: :system) do
-      options = { runOnly: { type: "tag", values: ["wcag2aa"] } }
+      options = { runOnly: { type: "tag", values: [ "wcag2aa" ] } }
       expect(axe_clean?(options)).to be(true),
         "Accessibility violations found:\n#{axe_violations(options).join("\n")}"
     end

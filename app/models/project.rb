@@ -16,7 +16,7 @@ class Project < ApplicationRecord
 
   before_validation :generate_slug, if: -> { name.present? && (slug.blank? || (name_changed? && !slug_changed?)) }
 
-  after_commit :broadcast_changes, on: [:create, :update]
+  after_commit :broadcast_changes, on: [ :create, :update ]
 
   def to_param
     slug

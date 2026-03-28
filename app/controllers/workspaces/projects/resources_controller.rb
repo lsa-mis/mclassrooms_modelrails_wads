@@ -3,7 +3,7 @@ module Workspaces
     class ResourcesController < ApplicationController
       include WorkspaceScoped
       before_action :set_project
-      before_action :set_resource, only: [:show, :edit, :update, :destroy, :reposition]
+      before_action :set_resource, only: [ :show, :edit, :update, :destroy, :reposition ]
 
       def index
         authorize Resource
@@ -65,7 +65,7 @@ module Workspaces
       def reposition
         authorize @resource
         max_position = @project.resources.kept.count - 1
-        new_position = params[:resource][:position].to_i.clamp(0, [max_position, 0].max)
+        new_position = params[:resource][:position].to_i.clamp(0, [ max_position, 0 ].max)
         @resource.update!(position: new_position)
         head :ok
       end

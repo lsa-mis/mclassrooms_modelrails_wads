@@ -9,7 +9,7 @@ RSpec.describe AuthenticationMailer, type: :mailer do
 
     it "sends to the user's email" do
       mail = described_class.verification_email(authentication)
-      expect(mail.to).to eq([user.email_address])
+      expect(mail.to).to eq([ user.email_address ])
     end
 
     it "includes the verification link" do
@@ -23,7 +23,7 @@ RSpec.describe AuthenticationMailer, type: :mailer do
 
     it "sends to the user's email" do
       mail = described_class.password_reset_email(user)
-      expect(mail.to).to eq([user.email_address])
+      expect(mail.to).to eq([ user.email_address ])
     end
 
     it "includes the reset token in the body" do

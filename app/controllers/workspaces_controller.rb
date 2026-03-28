@@ -1,5 +1,5 @@
 class WorkspacesController < ApplicationController
-  before_action :set_workspace, only: [:show, :edit, :update, :destroy]
+  before_action :set_workspace, only: [ :show, :edit, :update, :destroy ]
 
   def index
     authorize Workspace

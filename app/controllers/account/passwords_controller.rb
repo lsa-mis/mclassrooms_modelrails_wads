@@ -3,7 +3,7 @@ module Account
     def new
       if Current.user.authentications.email.exists?
         redirect_to edit_account_profile_path, notice: t(".already_has_password")
-        return
+        nil
       end
     end
 

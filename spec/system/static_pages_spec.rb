@@ -139,7 +139,7 @@ RSpec.describe "Static pages", type: :system do
   end
 
   describe "accessibility (axe-core)" do
-    let(:axe_options) { { runOnly: { type: "tag", values: ["wcag2aa"] } } }
+    let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aa" ] } } }
 
     %w[home about privacy contact].each do |page_name|
       it "#{page_name} page passes automated accessibility checks" do

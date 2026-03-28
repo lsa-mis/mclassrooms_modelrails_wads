@@ -17,8 +17,8 @@ class CreateInvitations < ActiveRecord::Migration[8.1]
     end
 
     add_index :invitations, :token, unique: true
-    add_index :invitations, [:invitable_type, :invitable_id]
-    add_index :invitations, [:email, :invitable_type, :invitable_id],
+    add_index :invitations, [ :invitable_type, :invitable_id ]
+    add_index :invitations, [ :email, :invitable_type, :invitable_id ],
               unique: true,
               where: "status = 'pending'",
               name: "index_invitations_on_email_and_invitable_pending"
