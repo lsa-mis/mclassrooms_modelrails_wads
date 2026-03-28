@@ -43,6 +43,14 @@ RSpec.describe "Static pages", type: :system do
       end
     end
 
+    it "displays the site logo in the footer" do
+      visit root_path
+      within("footer") do
+        expect(page).to have_css("svg[aria-hidden='true']")
+        expect(page).to have_text(I18n.t("application.name"))
+      end
+    end
+
     it "navigation contains the app name as home link" do
       visit root_path
       within("header nav") do
