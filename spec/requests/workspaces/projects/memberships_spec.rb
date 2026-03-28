@@ -85,6 +85,88 @@ RSpec.describe "Project Memberships", type: :request do
     end
   end
 
+  describe "authorization" do
+    let(:editor_user) { create(:user) }
+    let!(:editor_ws) { create(:membership, user: editor_user, workspace: workspace) }
+    let!(:editor_pm) { create(:project_membership, project: project, user: editor_user) }
+    let(:target_user) { create(:user) }
+    let!(:target_ws) { create(:membership, user: target_user, workspace: workspace) }
+
+    describe "editor cannot add members" do
+      before { sign_in(editor_user) }
+
+      it "denies creating a membership" do
+        expect {
+          post workspace_project_memberships_path(workspace, project), params: {
+            project_membership: { user_id: target_user.id, role: "viewer" }
+          }
+        }.not_to change(ProjectMembership, :count)
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    describe "editor cannot change roles" do
+      let!(:target_pm) { create(:project_membership, :viewer, project: project, user: target_user) }
+      before { sign_in(editor_user) }
+
+      it "denies updating a membership role" do
+        patch workspace_project_membership_path(workspace, project, target_pm), params: {
+          project_membership: { role: "editor" }
+        }
+        expect(target_pm.reload).to be_viewer
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    describe "editor cannot remove members" do
+      let!(:target_pm) { create(:project_membership, :viewer, project: project, user: target_user) }
+      before { sign_in(editor_user) }
+
+      it "denies deleting a membership" do
+        expect {
+          delete workspace_project_membership_path(workspace, project, target_pm)
+        }.not_to change(ProjectMembership, :count)
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    describe "viewer cannot add members" do
+      let(:viewer_user) { create(:user) }
+      let!(:viewer_ws) { create(:membership, user: viewer_user, workspace: workspace) }
+      let!(:viewer_pm) { create(:project_membership, :viewer, project: project, user: viewer_user) }
+      before { sign_in(viewer_user) }
+
+      it "denies creating a membership" do
+        expect {
+          post workspace_project_memberships_path(workspace, project), params: {
+            project_membership: { user_id: target_user.id, role: "editor" }
+          }
+        }.not_to change(ProjectMembership, :count)
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    describe "non-project-member cannot access memberships" do
+      let(:outsider) { create(:user) }
+      let!(:outsider_ws) { create(:membership, user: outsider, workspace: workspace) }
+      before { sign_in(outsider) }
+
+      it "denies listing memberships" do
+        get workspace_project_memberships_path(workspace, project)
+        expect(response).to have_http_status(:redirect)
+      end
+
+      it "denies adding a member with arbitrary user_id" do
+        expect {
+          post workspace_project_memberships_path(workspace, project), params: {
+            project_membership: { user_id: target_user.id, role: "editor" }
+          }
+        }.not_to change(ProjectMembership, :count)
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+  end
+
   describe "PATCH toggle_pin" do
     it "pins own membership" do
       patch toggle_pin_workspace_project_membership_path(workspace, project, creator_pm)
