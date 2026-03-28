@@ -2,6 +2,40 @@
 
 All notable changes to ModelRails are documented here, organized by phase.
 
+## v1.1.0 — Auth Redesign: Smart Sign-In + Magic Links
+
+### Smart Sign-In Flow
+- Unified email-first sign-in: single email field intelligently routes users
+- Existing user with password → password form (within Turbo Frame)
+- Existing passwordless user → magic link sent, inline "check your email" confirmation
+- Unknown email → registration magic link sent, same inline confirmation
+- "Send me a sign-in link instead" option on password form for password users
+
+### Magic Links
+- MagicLinkToken model with secure token generation, 15-minute expiry, one-time consumption
+- Magic link sign-in for existing users (clears token after use)
+- Passwordless registration via magic link (name-only form, no password required)
+- Registration auto-creates verified email authentication record
+- MagicLinkMailer with sign-in and registration email templates
+
+### UI
+- Turbo Frame inline transitions: check-email confirmation replaces sign-in form in-place
+- Screen reader announcements via `role="status"` and `aria-live="polite"`
+- `aria-hidden="true"` on decorative icons
+
+### Security
+- Rate limiting on magic link requests (5 per 3 minutes)
+- Rate limiting on session lookup (10 per 3 minutes)
+- No information leakage: same response for existing and non-existent emails
+- Token consumed on first use, preventing replay
+
+### Infrastructure
+- 550 examples, 0 failures, 95.7% line coverage
+- System specs for full magic link sign-in and registration flows
+- Request specs for all magic link endpoints
+
+---
+
 ## v1.0.0 — Phase 5B: Admin + Security + Polish
 
 ### Admin
