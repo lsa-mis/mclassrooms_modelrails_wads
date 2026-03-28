@@ -2,3 +2,495 @@
 
 /* Markdowndocs gem views — required so Tailwind scans the gem's templates */
 @source "/Users/dschmura/.local/share/mise/installs/ruby/4.0.2/lib/ruby/gems/4.0.0/gems/markdowndocs-0.4.0/app/views/**/*.erb";
+
+/* ==========================================================================
+   Prose Styles (documentation pages rendered by Markdowndocs)
+   The gem wraps rendered markdown in <div class="prose prose-indigo">.
+   Tailwind 4 resets all element styles, so we define them here.
+   ========================================================================== */
+
+.prose {
+  @apply text-slate-600 leading-relaxed;
+}
+
+.prose p {
+  @apply text-base mb-4;
+}
+
+.prose h1 {
+  @apply text-4xl font-bold text-slate-900 mb-6 mt-8;
+}
+
+.prose h1:first-child {
+  @apply mt-0;
+}
+
+.prose h2 {
+  @apply text-3xl font-semibold text-slate-900 mb-4 mt-10 pb-2 border-b border-slate-200;
+}
+
+.prose h3 {
+  @apply text-2xl font-semibold text-slate-900 mb-3 mt-8;
+}
+
+.prose h4 {
+  @apply text-xl font-semibold text-slate-900 mb-2 mt-6;
+}
+
+.prose h5 {
+  @apply text-lg font-semibold text-slate-900 mb-2 mt-4;
+}
+
+.prose h6 {
+  @apply text-base font-semibold text-slate-900 mb-2 mt-4;
+}
+
+.prose a {
+  @apply text-indigo-600 underline transition-colors duration-150;
+  text-decoration-color: var(--color-indigo-300);
+}
+
+.prose a:hover {
+  @apply text-indigo-700;
+  text-decoration-color: var(--color-indigo-500);
+}
+
+.prose strong {
+  @apply font-semibold text-slate-900;
+}
+
+.prose em {
+  @apply italic;
+}
+
+.prose del, .prose s, .prose strike {
+  @apply line-through text-slate-500;
+}
+
+.prose ul {
+  @apply list-disc list-outside ml-6 mb-4;
+}
+
+.prose ol {
+  @apply list-decimal list-outside ml-6 mb-4;
+}
+
+.prose ul li,
+.prose ol li {
+  @apply mb-2 text-base;
+}
+
+.prose li > ul,
+.prose li > ol {
+  @apply mt-2 mb-0;
+}
+
+.prose blockquote {
+  @apply pl-4 py-2 my-6 italic text-slate-600 bg-indigo-100 rounded-md;
+  border-left: 4px solid var(--color-indigo-600);
+}
+
+.prose code {
+  @apply px-1.5 py-0.5 bg-slate-100 text-slate-800 text-sm font-mono rounded-md;
+}
+
+.prose pre code {
+  @apply p-0 bg-transparent text-sm leading-relaxed block;
+}
+
+.prose pre {
+  @apply mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg overflow-x-auto;
+}
+
+.prose table {
+  @apply w-full mb-6;
+  border-collapse: collapse;
+}
+
+.prose table th {
+  @apply bg-slate-100 border border-slate-300 px-4 py-2 text-left font-semibold text-slate-900;
+}
+
+.prose table td {
+  @apply border border-slate-300 px-4 py-2;
+}
+
+.prose img {
+  @apply max-w-full h-auto rounded-lg shadow-sm my-6;
+}
+
+.prose hr {
+  @apply my-8 border-slate-300;
+}
+
+.prose input[type="checkbox"] {
+  @apply mr-2 rounded-md;
+}
+
+.prose input[type="checkbox"]:disabled {
+  @apply opacity-60;
+}
+
+/* --- Dark Mode: Prose --- */
+.dark .prose {
+  @apply text-slate-300;
+}
+
+.dark .prose h1, .dark .prose h2, .dark .prose h3,
+.dark .prose h4, .dark .prose h5, .dark .prose h6 {
+  @apply text-gray-100;
+}
+
+.dark .prose h2 {
+  @apply border-gray-700;
+}
+
+.dark .prose strong {
+  @apply text-gray-100;
+}
+
+.dark .prose a {
+  @apply text-indigo-400;
+  text-decoration-color: rgb(129 140 248 / 0.5);
+}
+
+.dark .prose a:hover {
+  @apply text-indigo-300;
+  text-decoration-color: rgb(165 180 252 / 0.7);
+}
+
+.dark .prose code {
+  @apply bg-slate-700 text-slate-200;
+}
+
+.dark .prose del, .dark .prose s, .dark .prose strike {
+  @apply text-slate-500;
+}
+
+.dark .prose blockquote {
+  @apply bg-indigo-950 text-slate-300;
+  border-left-color: #6366f1;
+}
+
+.dark .prose pre {
+  @apply bg-slate-800 border-slate-700;
+}
+
+.dark .prose table th {
+  @apply bg-slate-700 border-slate-600 text-slate-200;
+}
+
+.dark .prose table td {
+  @apply border-slate-600;
+}
+
+.dark .prose hr {
+  @apply border-slate-600;
+}
+
+/* ==========================================================================
+   Syntax Highlighting (Rouge / GitHub Theme)
+   Used by Markdowndocs for fenced code blocks.
+   ========================================================================== */
+
+.highlight {
+  @apply bg-slate-50 rounded-lg p-4 overflow-x-auto text-sm;
+}
+
+.highlight .hll {
+  @apply bg-yellow-100;
+}
+
+/* Comments */
+.highlight .c,
+.highlight .cm,
+.highlight .c1,
+.highlight .cs {
+  @apply text-slate-500 italic;
+}
+
+.highlight .cp {
+  @apply text-slate-500 font-bold;
+}
+
+/* Errors */
+.highlight .err {
+  @apply text-red-700 bg-red-50;
+}
+
+/* Keywords */
+.highlight .k,
+.highlight .kc,
+.highlight .kd,
+.highlight .kn,
+.highlight .kp,
+.highlight .kr,
+.highlight .ow {
+  @apply text-purple-700 font-semibold;
+}
+
+.highlight .kt {
+  @apply text-red-600 font-semibold;
+}
+
+/* Operators */
+.highlight .o {
+  @apply text-slate-600;
+}
+
+/* Generic styles */
+.highlight .gd {
+  @apply text-red-700 bg-red-50;
+}
+
+.highlight .ge {
+  @apply italic;
+}
+
+.highlight .gr,
+.highlight .gt {
+  @apply text-red-700;
+}
+
+.highlight .gh {
+  @apply text-slate-900 font-bold;
+}
+
+.highlight .gi {
+  @apply text-green-700 bg-green-50;
+}
+
+.highlight .go,
+.highlight .gp {
+  @apply text-slate-500;
+}
+
+.highlight .gp {
+  @apply font-bold;
+}
+
+.highlight .gs {
+  @apply font-bold;
+}
+
+.highlight .gu {
+  @apply text-slate-600 font-bold;
+}
+
+/* Numbers */
+.highlight .m,
+.highlight .mf,
+.highlight .mh,
+.highlight .mi,
+.highlight .mo,
+.highlight .il {
+  @apply text-blue-700;
+}
+
+/* Strings */
+.highlight .s,
+.highlight .sb,
+.highlight .sc,
+.highlight .s2,
+.highlight .sh,
+.highlight .si,
+.highlight .sx,
+.highlight .s1 {
+  @apply text-green-700;
+}
+
+.highlight .sd {
+  @apply text-green-700 italic;
+}
+
+.highlight .se,
+.highlight .sr {
+  @apply text-orange-600;
+}
+
+.highlight .ss {
+  @apply text-cyan-700;
+}
+
+/* Names */
+.highlight .na,
+.highlight .no,
+.highlight .nd,
+.highlight .ni,
+.highlight .nl,
+.highlight .nv,
+.highlight .vc,
+.highlight .vg,
+.highlight .vi {
+  @apply text-cyan-700;
+}
+
+.highlight .nb,
+.highlight .bp {
+  @apply text-purple-600;
+}
+
+.highlight .nc,
+.highlight .nf {
+  @apply text-blue-700;
+}
+
+.highlight .nc {
+  @apply font-semibold;
+}
+
+.highlight .ne {
+  @apply text-red-700 font-bold;
+}
+
+.highlight .nn {
+  @apply text-slate-800;
+}
+
+.highlight .nt {
+  @apply text-green-700;
+}
+
+/* Whitespace */
+.highlight .w {
+  @apply text-slate-300;
+}
+
+/* --- Dark Mode: Syntax Highlighting --- */
+.dark .highlight {
+  @apply bg-slate-800;
+}
+
+.dark .highlight .hll {
+  background-color: rgb(250 204 21 / 0.15);
+}
+
+.dark .highlight .c,
+.dark .highlight .cm,
+.dark .highlight .c1,
+.dark .highlight .cs {
+  @apply text-slate-500;
+}
+
+.dark .highlight .cp {
+  @apply text-slate-400;
+}
+
+.dark .highlight .err {
+  @apply text-red-400 bg-transparent;
+}
+
+.dark .highlight .k,
+.dark .highlight .kc,
+.dark .highlight .kd,
+.dark .highlight .kn,
+.dark .highlight .kp,
+.dark .highlight .kr,
+.dark .highlight .ow {
+  @apply text-purple-400;
+}
+
+.dark .highlight .kt {
+  @apply text-red-400;
+}
+
+.dark .highlight .o {
+  @apply text-slate-400;
+}
+
+.dark .highlight .gd {
+  @apply text-red-400 bg-transparent;
+}
+
+.dark .highlight .gr,
+.dark .highlight .gt {
+  @apply text-red-400;
+}
+
+.dark .highlight .gh {
+  @apply text-gray-100;
+}
+
+.dark .highlight .gi {
+  @apply text-green-400 bg-transparent;
+}
+
+.dark .highlight .go,
+.dark .highlight .gp {
+  @apply text-slate-500;
+}
+
+.dark .highlight .gu {
+  @apply text-slate-400;
+}
+
+.dark .highlight .m,
+.dark .highlight .mf,
+.dark .highlight .mh,
+.dark .highlight .mi,
+.dark .highlight .mo,
+.dark .highlight .il {
+  @apply text-blue-400;
+}
+
+.dark .highlight .s,
+.dark .highlight .sb,
+.dark .highlight .sc,
+.dark .highlight .s2,
+.dark .highlight .sh,
+.dark .highlight .si,
+.dark .highlight .sx,
+.dark .highlight .s1 {
+  @apply text-green-400;
+}
+
+.dark .highlight .sd {
+  @apply text-green-400;
+}
+
+.dark .highlight .se,
+.dark .highlight .sr {
+  @apply text-orange-400;
+}
+
+.dark .highlight .ss {
+  @apply text-cyan-400;
+}
+
+.dark .highlight .na,
+.dark .highlight .no,
+.dark .highlight .nd,
+.dark .highlight .ni,
+.dark .highlight .nl,
+.dark .highlight .nv,
+.dark .highlight .vc,
+.dark .highlight .vg,
+.dark .highlight .vi {
+  @apply text-cyan-400;
+}
+
+.dark .highlight .nb,
+.dark .highlight .bp {
+  @apply text-purple-400;
+}
+
+.dark .highlight .nc,
+.dark .highlight .nf {
+  @apply text-blue-400;
+}
+
+.dark .highlight .ne {
+  @apply text-red-400;
+}
+
+.dark .highlight .nn {
+  @apply text-gray-100;
+}
+
+.dark .highlight .nt {
+  @apply text-green-400;
+}
+
+.dark .highlight .w {
+  @apply text-slate-600;
+}
