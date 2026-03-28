@@ -8,7 +8,7 @@ A multi-tenant SaaS starter kit built on Rails 8.1.
 - **Database:** SQLite
 - **Frontend:** TailwindCSS 4, Turbo, Stimulus
 - **Assets:** Propshaft, Importmaps
-- **Auth:** Rails 8 authentication generator, OmniAuth (Google, GitHub), Pundit
+- **Auth:** Rails 8 authentication generator, magic links, OmniAuth (Google, GitHub), Pundit
 - **Real-Time:** Turbo Stream broadcasts (morph-based refresh)
 - **Content:** Action Text (Trix rich text editor)
 - **Docs:** Markdowndocs engine at `/docs`
@@ -80,11 +80,17 @@ OAuth is optional — email/password sign-up works without it.
 ## What's included (Phase 1)
 
 ### Authentication
+- Smart sign-in: single email field routes users to the right auth method
+  - Existing user with password → password form (with "send magic link instead" option)
+  - Existing passwordless user → magic link sent automatically
+  - Unknown email → registration magic link sent
+- Magic link sign-in with 15-minute token expiry and one-time use
+- Passwordless registration via magic link (name-only form, no password required)
 - Email/password sign-up with 12-character minimum and Pwned password breach detection
-- Sign in/out with Rails 8 session management
 - Account locking after 5 failed attempts (1-hour auto-unlock)
 - Password reset using Rails 8.1 signed tokens (15-minute expiry)
 - Email verification with 24-hour token expiry
+- Turbo Frame inline transitions (check-email confirmation replaces form in-place)
 
 ### OAuth
 - Google and GitHub sign-in via OmniAuth
@@ -116,22 +122,27 @@ OAuth is optional — email/password sign-up works without it.
 ```
 app/
   controllers/
-    account/              # Profile, avatar, passwords, theme, connected accounts
+    account/                          # Profile, avatar, passwords, theme, connected accounts
     concerns/
-      authenticatable.rb  # Rails 8 auth concern
-    pages_controller.rb
-    sessions_controller.rb
+      authenticatable.rb              # Rails 8 auth concern
+    sessions_controller.rb            # Smart lookup + password sign-in
+    magic_links_controller.rb         # Request a magic link
+    magic_link_sessions_controller.rb # Consume magic link token (existing user)
+    magic_link_registrations_controller.rb  # Passwordless registration via magic link
     registrations_controller.rb
     passwords_controller.rb
     email_verifications_controller.rb
     omniauth_callbacks_controller.rb
+    pages_controller.rb
   models/
-    user.rb               # Core user with has_secure_password
+    user.rb               # Core user with has_secure_password (optional password)
     session.rb            # DB-backed sessions
+    magic_link_token.rb   # Secure tokens for passwordless sign-in and registration
     authentication.rb     # Multi-provider identity (email, Google, GitHub)
     user_preferences.rb   # Theme, locale, timezone
   mailers/
     authentication_mailer.rb  # Verification + password reset emails
+    magic_link_mailer.rb      # Sign-in and registration magic link emails
 ```
 
 ### Test suite
