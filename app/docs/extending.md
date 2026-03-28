@@ -1,7 +1,7 @@
 ---
 title: Extending
 description: How to add resource types, custom roles, and new features to ModelRails
-keywords: resource types roles permissions migration polymorphic customization
+keywords: resource types roles permissions migration polymorphic customization logo branding
 ---
 
 # Extending ModelRails
@@ -48,6 +48,25 @@ In `ResourcesController#resourceable_params`, add a case:
 ```ruby
 when "Slideshow"
   params.fetch(:slideshow, {}).permit(:title, slides_attributes: [:image, :caption, :position])
+```
+
+## Customizing the Site Logo
+
+The app logo is rendered via `app/views/shared/_site_logo.html.erb`, an inline SVG partial used in both the header and footer. It accepts strict locals:
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `size` | `:medium` | SVG height — `:small` (h-6), `:medium` (h-8), `:large` (h-10) |
+| `color_class` | `"text-sky-700"` | Tailwind color class for the SVG mark (uses `currentColor`) |
+| `show_name` | `false` | Show the app name text next to the mark |
+| `name_class` | `"text-xl font-bold text-slate-900 dark:text-gray-100"` | Tailwind classes for the name text |
+
+To replace the logo with your own SVG, edit the partial and swap the `<svg>` content. Keep `aria-hidden="true"` and `fill="currentColor"` so theming and accessibility continue to work.
+
+Usage example:
+
+```erb
+<%= render "shared/site_logo", size: :small, show_name: true %>
 ```
 
 ## Adding Custom Workspace Roles
