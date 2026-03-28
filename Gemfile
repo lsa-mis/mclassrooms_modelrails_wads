@@ -86,3 +86,6 @@ group :development do
   gem "letter_opener_web"
   gem "hotwire-spark"
 end
+
+gem "axe-core-rspec", "~> 4.11", group: :test
+gem "axe-core-api", "~> 4.11", group: :test
