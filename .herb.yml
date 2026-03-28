@@ -1,0 +1,20 @@
+version: 0.8.4
+files:
+  include:
+    - "**/*.html.erb"
+    - "**/*.turbo_stream.erb"
+  exclude:
+    - node_modules/**/*
+    - vendor/bundle/**/*
+    - coverage/**/*
+
+linter:
+  enabled: true
+  rules:
+    html-no-self-closing:
+      enabled: false
+
+formatter:
+  enabled: true
+  indentWidth: 2
+  maxLineLength: 80
