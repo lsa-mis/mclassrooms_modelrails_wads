@@ -51,4 +51,25 @@ RSpec.describe "Magic Link Registrations", type: :request do
       expect(auth).to be_verified
     end
   end
+
+  describe "POST with invalid user params" do
+    it "returns unprocessable entity for blank first_name" do
+      token = MagicLinkToken.create_for_email("invalid-reg@example.com")
+      post magic_link_registration_path(token: token), params: {
+        user: { first_name: "", last_name: "Test" }
+      }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "POST with consumed token" do
+    it "redirects to sign in" do
+      token = MagicLinkToken.create_for_email("consumed@example.com")
+      MagicLinkToken.find_by(token: token).consume!
+      post magic_link_registration_path(token: token), params: {
+        user: { first_name: "Test", last_name: "User" }
+      }
+      expect(response).to redirect_to(new_session_path)
+    end
+  end
 end

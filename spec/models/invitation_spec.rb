@@ -246,6 +246,62 @@ RSpec.describe Invitation, type: :model do
     end
   end
 
+  describe "#accept! when user is already a project member" do
+    let(:workspace) { create(:workspace) }
+    let(:owner) { create(:user) }
+    let(:project) { create(:project, workspace: workspace, created_by: owner) }
+    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
+    let(:invitation) do
+      project.invitations.create!(
+        email: "already-member@example.com",
+        role: viewer_role,
+        project_role: "editor",
+        invited_by: owner,
+        expires_at: 7.days.from_now
+      )
+    end
+
+    before do
+      create(:membership, :owner, user: owner, workspace: workspace)
+    end
+
+    it "raises when user is already a project member" do
+      existing_user = create(:user, email_address: "already-member@example.com")
+      create(:membership, user: existing_user, workspace: workspace)
+      create(:project_membership, project: project, user: existing_user)
+
+      expect { invitation.accept!(existing_user) }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
+
+  describe "#accept! reactivates discarded workspace membership for project invitation" do
+    let(:workspace) { create(:workspace) }
+    let(:owner) { create(:user) }
+    let(:project) { create(:project, workspace: workspace, created_by: owner) }
+    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
+
+    before { create(:membership, :owner, user: owner, workspace: workspace) }
+
+    it "reactivates the discarded membership" do
+      user = create(:user)
+      ws_membership = create(:membership, user: user, workspace: workspace)
+      other_owner = create(:membership, :owner, workspace: workspace)
+      ws_membership.deactivate!
+
+      invitation = project.invitations.create!(
+        email: user.email_address,
+        role: viewer_role,
+        project_role: "editor",
+        invited_by: owner,
+        expires_at: 7.days.from_now
+      )
+
+      invitation.accept!(user)
+      expect(ws_membership.reload).not_to be_discarded
+      expect(project.project_memberships.exists?(user: user)).to be true
+    end
+  end
+
   describe "email format validation" do
     it "rejects malformed email" do
       inv = build(:invitation, email: "not-an-email")

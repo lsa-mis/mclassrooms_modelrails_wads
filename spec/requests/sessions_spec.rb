@@ -88,6 +88,14 @@ RSpec.describe "Sessions", type: :request do
     end
   end
 
+  describe "POST /session with non-existent email" do
+    it "redirects with failure flash" do
+      post session_path, params: { email_address: "ghost@example.com", password: "anything" }
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to be_present
+    end
+  end
+
   describe "POST /session/lookup (smart routing)" do
     context "user with password" do
       let(:user) { create(:user) }

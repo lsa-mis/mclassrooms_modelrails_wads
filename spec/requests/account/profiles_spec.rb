@@ -27,4 +27,11 @@ RSpec.describe "Account Profiles", type: :request do
       expect(user.reload.email_address).to eq("newemail@example.com")
     end
   end
+
+  describe "PATCH /account/profile with invalid params" do
+    it "returns unprocessable entity for blank first_name" do
+      patch account_profile_path, params: { user: { first_name: "" } }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
 end

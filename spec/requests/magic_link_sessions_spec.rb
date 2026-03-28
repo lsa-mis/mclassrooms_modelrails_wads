@@ -52,5 +52,22 @@ RSpec.describe "Magic Link Sessions", type: :request do
         expect(response).to redirect_to(new_session_path)
       end
     end
+
+    context "token already used" do
+      let(:user) { create(:user) }
+
+      before { user.generate_magic_link_token! }
+
+      it "rejects a token that was already consumed" do
+        token = user.magic_link_token
+        get magic_link_session_path(token: token)
+        expect(response).to redirect_to(root_path)
+
+        # Second attempt with same token
+        get magic_link_session_path(token: token)
+        expect(response).to redirect_to(new_session_path)
+        expect(flash[:alert]).to be_present
+      end
+    end
   end
 end

@@ -18,6 +18,7 @@ class User < ApplicationRecord
   validates :first_name, presence: true, length: { maximum: 100 }
   validates :last_name, presence: true, length: { maximum: 100 }
   validates :password, length: { minimum: 12 }, if: -> { password.present? && (password_digest_changed? || new_record?) }
+  validates :password, confirmation: true, if: -> { password.present? }
   validate :password_not_pwned, if: -> { password.present? && (password_digest_changed? || new_record?) }
 
   MAX_FAILED_ATTEMPTS = 5

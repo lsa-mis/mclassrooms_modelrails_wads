@@ -31,6 +31,13 @@ RSpec.describe "Workspace Settings", type: :request do
     end
   end
 
+  describe "PATCH with invalid params" do
+    it "returns unprocessable entity for zero max_members" do
+      patch workspace_settings_path(workspace), params: { workspace: { max_members: 0 } }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   describe "authorization" do
     it "rejects non-owner/admin access" do
       viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }

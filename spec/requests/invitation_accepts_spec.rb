@@ -73,4 +73,41 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(invitation.reload).to be_accepted
     end
   end
+
+  describe "project invitation auto-accept on registration" do
+    let(:workspace) { create(:workspace) }
+    let(:owner) { create(:user) }
+    let(:project) { create(:project, workspace: workspace, created_by: owner) }
+    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
+    let!(:invitation) do
+      create(:membership, :owner, user: owner, workspace: workspace)
+      project.invitations.create!(
+        email: "new-project-user@example.com",
+        role: viewer_role,
+        project_role: "editor",
+        invited_by: owner,
+        expires_at: 7.days.from_now
+      )
+    end
+
+    it "unauthenticated user accepts project invitation, registers, joins workspace + project" do
+      post accept_invitation_path(token: invitation.token)
+      expect(response).to redirect_to(new_registration_path)
+
+      post registration_path, params: {
+        user: {
+          email_address: "new-project-user@example.com",
+          first_name: "Project",
+          last_name: "Invitee",
+          password: "SecureP@ssw0rd123!",
+          password_confirmation: "SecureP@ssw0rd123!"
+        }
+      }
+
+      new_user = User.find_by(email_address: "new-project-user@example.com")
+      expect(new_user.workspaces).to include(workspace)
+      expect(new_user.projects).to include(project)
+      expect(invitation.reload).to be_accepted
+    end
+  end
 end

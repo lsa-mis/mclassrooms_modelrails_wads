@@ -97,4 +97,42 @@ RSpec.describe "Workspace Members", type: :request do
       expect(response).to have_http_status(:redirect)
     end
   end
+
+  describe "DELETE last owner" do
+    it "returns redirect with alert when deactivating last owner" do
+      # user is owner (outer let). Create an admin user who can manage_members but is not owner.
+      admin_user = create(:user)
+      create(:membership, :admin, user: admin_user, workspace: workspace)
+      sign_in(admin_user)
+      # user's membership is the last (only) owner - trying to delete it should fail with alert
+      delete workspace_member_path(workspace, membership)
+      expect(response).to redirect_to(workspace_members_path(workspace))
+      expect(flash[:alert]).to be_present
+    end
+  end
+
+  describe "member authorization" do
+    let(:regular_member) { create(:user) }
+    let!(:regular_membership) { create(:membership, user: regular_member, workspace: workspace) }
+    let(:target) { create(:user) }
+    let!(:target_membership) { create(:membership, user: target, workspace: workspace) }
+
+    before { sign_in(regular_member) }
+
+    it "denies edit" do
+      get edit_workspace_member_path(workspace, target_membership)
+      expect(response).to have_http_status(:redirect)
+    end
+
+    it "denies reactivate" do
+      target_membership.discard!
+      patch reactivate_workspace_member_path(workspace, target_membership)
+      expect(target_membership.reload).to be_discarded
+    end
+
+    it "denies transfer_ownership" do
+      patch transfer_ownership_workspace_member_path(workspace, target_membership)
+      expect(response).to have_http_status(:redirect)
+    end
+  end
 end

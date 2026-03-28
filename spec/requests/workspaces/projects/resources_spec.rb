@@ -139,4 +139,20 @@ RSpec.describe "Project Resources", type: :request do
       expect(response).to have_http_status(:redirect)
     end
   end
+
+  describe "authorization - editor cannot update others' resources" do
+    let(:editor) { create(:user) }
+    let!(:editor_ws) { create(:membership, user: editor, workspace: workspace) }
+    let!(:editor_pm) { create(:project_membership, project: project, user: editor) }
+    let!(:resource) { create(:resource, project: project, created_by: user) }
+
+    it "denies editor from updating a resource they didn't create" do
+      sign_in(editor)
+      patch workspace_project_resource_path(workspace, project, resource), params: {
+        resource: { title: "Hacked Title" }
+      }
+      expect(resource.reload.title).not_to eq("Hacked Title")
+      expect(response).to have_http_status(:redirect)
+    end
+  end
 end

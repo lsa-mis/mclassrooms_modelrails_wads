@@ -138,4 +138,23 @@ RSpec.describe "Workspaces", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end
+
+  describe "authorization" do
+    let(:workspace) { create(:workspace) }
+    let(:member) { create(:user) }
+    let!(:member_membership) { create(:membership, user: member, workspace: workspace) }
+
+    it "denies non-owner from updating workspace" do
+      sign_in(member)
+      patch workspace_path(workspace), params: { workspace: { name: "Hacked" } }
+      expect(response).to have_http_status(:redirect)
+      expect(workspace.reload.name).not_to eq("Hacked")
+    end
+
+    it "denies non-owner from destroying workspace" do
+      sign_in(member)
+      delete workspace_path(workspace)
+      expect(workspace.reload).not_to be_discarded
+    end
+  end
 end

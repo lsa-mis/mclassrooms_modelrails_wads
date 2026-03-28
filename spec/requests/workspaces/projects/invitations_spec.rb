@@ -87,4 +87,19 @@ RSpec.describe "Project Invitations", type: :request do
       expect(response).to redirect_to(root_path)
     end
   end
+
+  describe "authorization" do
+    let(:editor) { create(:user) }
+    let!(:editor_ws) { create(:membership, user: editor, workspace: workspace) }
+    let!(:editor_pm) { create(:project_membership, project: project, user: editor) }
+
+    it "denies editor from creating project invitations" do
+      sign_in(editor)
+      post workspace_project_invitations_path(workspace, project), params: {
+        invitation: { email: "denied@example.com", project_role: "viewer" }
+      }
+      expect(response).to have_http_status(:redirect)
+      expect(Invitation.where(email: "denied@example.com")).to be_empty
+    end
+  end
 end

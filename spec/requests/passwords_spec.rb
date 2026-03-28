@@ -84,6 +84,18 @@ RSpec.describe "Passwords", type: :request do
     end
   end
 
+  describe "PATCH /passwords/:token with mismatched passwords" do
+    let(:user) { create(:user) }
+
+    it "returns unprocessable entity" do
+      token = user.password_reset_token
+      patch password_path(token: token), params: {
+        user: { password: "NewP@ssw0rd123!", password_confirmation: "Different123!" }
+      }
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   describe "PATCH /passwords/:token destroys old sessions (I5)" do
     it "destroys all existing sessions after password reset" do
       user.sessions.create!(user_agent: "old-browser", ip_address: "1.1.1.1")
