@@ -112,18 +112,22 @@ RSpec.describe "Sessions", type: :request do
 
       before { user.update_column(:password_digest, nil) }
 
-      it "sends magic link and shows check email message inline" do
+      it "shows check email confirmation inline" do
         post session_lookup_path, params: { email_address: user.email_address }
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(I18n.t("sessions.check_email.title"))
+        expect(response.body).to include(user.email_address)
+        expect(response.body).to include(I18n.t("sessions.check_email.expiry"))
+        expect(response.body).to include('role="status"')
       end
     end
 
     context "non-existent email" do
-      it "shows same check email message (no leak)" do
+      it "shows identical check email message (no information leakage)" do
         post session_lookup_path, params: { email_address: "ghost@example.com" }
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(I18n.t("sessions.check_email.title"))
+        expect(response.body).to include("ghost@example.com")
       end
     end
   end
