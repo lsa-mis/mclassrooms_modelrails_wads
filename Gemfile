@@ -91,3 +91,5 @@ gem "axe-core-rspec", "~> 4.11", group: :test
 gem "axe-core-api", "~> 4.11", group: :test
 
 gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
+
+gem "biscuit-rails", "~> 0.1.4"

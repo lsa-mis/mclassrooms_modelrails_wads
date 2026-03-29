@@ -42,7 +42,16 @@ module Authenticatable
       user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         Current.session = session
         cookies.signed.permanent[:session_id] = { value: session.id, httponly: true, same_site: :lax }
+        sync_theme_cookie_to_preferences(user)
       end
+    end
+
+    def sync_theme_cookie_to_preferences(user)
+      cookie_theme = cookies[:theme]
+      return unless cookie_theme.present? && %w[light dark system].include?(cookie_theme)
+
+      preferences = user.preferences || user.create_preferences!
+      preferences.update!(theme: cookie_theme) if preferences.theme != cookie_theme
     end
 
     def terminate_session

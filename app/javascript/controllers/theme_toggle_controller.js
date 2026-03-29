@@ -22,6 +22,7 @@ export default class extends Controller {
     const next = this.constructor.CYCLE[(index + 1) % this.constructor.CYCLE.length]
 
     document.documentElement.dataset.themeThemeValue = next
+    document.cookie = `theme=${next};path=/;max-age=31536000;SameSite=Lax`
     this.updateVisuals()
 
     if (this.signedInValue && this.urlValue) {

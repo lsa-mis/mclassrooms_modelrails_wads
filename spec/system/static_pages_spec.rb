@@ -98,6 +98,18 @@ RSpec.describe "Static pages", type: :system do
       expect(page).to have_css("[data-toast-target='progress']")
     end
 
+    it "preserves theme preference across fresh page loads via cookie" do
+      visit root_path
+      # Cycle to dark: system → light → dark
+      find("[data-controller='theme-toggle']").click
+      find("[data-controller='theme-toggle']").click
+      expect(page).to have_css("html.dark")
+
+      # Full page load (not Turbo) — cookie should restore dark mode
+      visit root_path
+      expect(page).to have_css("html[data-theme-theme-value='dark']")
+    end
+
     it "allows dismissing a toast via keyboard" do
       sign_in_via_form
       expect(page).to have_css("[data-controller='toast']")

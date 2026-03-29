@@ -1,6 +1,10 @@
 <script nonce="<%= content_security_policy_nonce %>">
   (function() {
     var preference = document.documentElement.dataset.themeThemeValue || 'system';
+    if (preference === 'system') {
+      var cookie = document.cookie.match(/(?:^|; )theme=(\w+)/);
+      if (cookie) preference = cookie[1];
+    }
     var shouldBeDark = preference === 'dark' ||
       (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     if (shouldBeDark) {

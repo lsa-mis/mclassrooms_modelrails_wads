@@ -1,7 +1,7 @@
 ---
 title: Extending
 description: How to add resource types, custom roles, and new features to ModelRails
-keywords: resource types roles permissions migration polymorphic customization logo branding
+keywords: resource types roles permissions migration polymorphic customization logo branding cookies gdpr consent analytics
 ---
 
 # Extending ModelRails
@@ -68,6 +68,43 @@ Usage example:
 ```erb
 <%= render "shared/site_logo", size: :small, show_name: true %>
 ```
+
+## Cookie Consent (GDPR)
+
+The app includes a GDPR cookie consent banner via [biscuit-rails](https://github.com/garethfr/biscuit-rails). It renders at the bottom of every page and manages consent across 4 categories:
+
+| Category | Required | Purpose |
+|----------|:--------:|---------|
+| `necessary` | Yes | Session, CSRF, theme preference |
+| `analytics` | No | Usage tracking (Google Analytics, etc.) |
+| `preferences` | No | Non-essential preference cookies |
+| `marketing` | No | Advertising and retargeting pixels |
+
+Configuration is in `config/initializers/biscuit.rb`. The engine is mounted at `/biscuit`.
+
+### Guarding third-party scripts
+
+Wrap any non-essential scripts with the `biscuit_allowed?` helper:
+
+```erb
+<% if biscuit_allowed?(:analytics) %>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXX"></script>
+<% end %>
+
+<% if biscuit_allowed?(:marketing) %>
+  <!-- Retargeting pixel -->
+<% end %>
+```
+
+In controllers:
+
+```ruby
+Biscuit::Consent.new(cookies).allowed?(:analytics)
+```
+
+### Disabling the banner
+
+If your deployment only uses functional cookies (session, theme, CSRF), you can remove the banner by deleting `<%= biscuit_banner %>` from both layouts.
 
 ## Adding Custom Workspace Roles
 

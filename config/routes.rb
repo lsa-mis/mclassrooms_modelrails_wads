@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   mount Markdowndocs::Engine, at: "/docs"
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
+  mount Biscuit::Engine, at: "/biscuit"
   resource :session
   resource :registration, only: [ :new, :create ]
   resource :email_verification, only: [ :show ]

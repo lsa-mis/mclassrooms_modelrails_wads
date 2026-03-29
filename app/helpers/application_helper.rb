@@ -1,5 +1,5 @@
 module ApplicationHelper
   def current_user_theme
-    Current.user&.preferences&.theme || "system"
+    cookies[:theme].presence || Current.user&.preferences&.theme || "system"
   end
 end
