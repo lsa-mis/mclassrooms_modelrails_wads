@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Dark mode: class-based toggle via .dark on <html> instead of media query.
+   This allows a three-way user preference (light/dark/system). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Markdowndocs gem views — required so Tailwind scans the gem's templates */
 @source "/Users/dschmura/.local/share/mise/installs/ruby/4.0.2/lib/ruby/gems/4.0.0/gems/markdowndocs-0.4.0/app/views/**/*.erb";
 
