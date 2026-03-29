@@ -1,7 +1,7 @@
 <div id="notifications"
      aria-label="<%= t('toasts.aria_label') %>"
      class="fixed top-16 right-0 z-[100] flex flex-col gap-3 p-4 sm:p-6
-            pointer-events-none">
+            max-h-[calc(100vh-5rem)] overflow-y-auto pointer-events-none">
   <% flash.each do |type, message| %>
     <% next unless %w[notice success alert error].include?(type) %>
     <%= render "shared/toast", type: type, message: message %>
