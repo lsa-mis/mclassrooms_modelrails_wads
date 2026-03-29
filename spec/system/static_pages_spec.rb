@@ -63,6 +63,13 @@ RSpec.describe "Static pages", type: :system do
       end
     end
 
+    it "has a theme toggle button" do
+      visit root_path
+      within("header nav") do
+        expect(page).to have_css("button[aria-label]", text: /Light|Dark|System/i, visible: :all)
+      end
+    end
+
     it "has a mobile menu toggle button" do
       visit root_path
       expect(page).to have_css("button[aria-label='#{I18n.t("navigation.toggle_menu")}']", visible: :all)
