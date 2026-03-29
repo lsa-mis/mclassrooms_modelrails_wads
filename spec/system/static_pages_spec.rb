@@ -81,6 +81,32 @@ RSpec.describe "Static pages", type: :system do
     end
   end
 
+  describe "toast notifications" do
+    let(:user) { create(:user) }
+
+    def sign_in_via_form
+      visit new_session_path
+      fill_in I18n.t("sessions.new.email_label"), with: user.email_address
+      click_button I18n.t("sessions.new.continue")
+      fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
+      click_button I18n.t("sessions.password_form.submit")
+    end
+
+    it "shows a toast with progress bar on successful sign-in" do
+      sign_in_via_form
+      expect(page).to have_css("[data-controller='toast']")
+      expect(page).to have_css("[data-toast-target='progress']")
+    end
+
+    it "allows dismissing a toast via keyboard" do
+      sign_in_via_form
+      expect(page).to have_css("[data-controller='toast']")
+      close_button = find("[data-controller='toast'] button[aria-label]")
+      close_button.send_keys(:enter)
+      expect(page).not_to have_css("[data-controller='toast']")
+    end
+  end
+
   describe "home page" do
     before { visit root_path }
 
