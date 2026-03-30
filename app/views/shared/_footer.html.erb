@@ -1,33 +1,33 @@
-<footer class="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
+<footer class="bg-surface border-t border-border mt-auto">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="flex flex-col sm:flex-row sm:items-center gap-6">
         <%= link_to main_app.root_path,
               class: "hover:opacity-80 transition-opacity
-                      focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" do %>
+                      focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" do %>
           <%= render "shared/site_logo", size: :small, show_name: true %>
         <% end %>
 
         <div class="flex items-center gap-6">
           <%= link_to t("footer.about"), main_app.about_path,
-                class: "text-sm text-slate-600 dark:text-gray-400
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+                class: "text-sm text-text-muted
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
           <%= link_to t("footer.privacy"), main_app.privacy_path,
-                class: "text-sm text-slate-600 dark:text-gray-400
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+                class: "text-sm text-text-muted
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
           <%= link_to t("footer.contact"), main_app.contact_path,
-                class: "text-sm text-slate-600 dark:text-gray-400
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+                class: "text-sm text-text-muted
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
           <%= link_to t("footer.docs"), "/docs",
-                class: "text-sm text-slate-600 dark:text-gray-400
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+                class: "text-sm text-text-muted
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
         </div>
       </div>
-      <p class="text-sm text-slate-600 dark:text-gray-400">
+      <p class="text-sm text-text-muted">
         &copy; <%= Date.current.year %> <%= t("footer.copyright") %>
       </p>
     </div>
