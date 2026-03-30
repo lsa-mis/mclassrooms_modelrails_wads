@@ -16,7 +16,7 @@
   /* --- Text --- */
   --color-text-heading:        var(--neutral-900);
   --color-text-body:           var(--neutral-700);
-  --color-text-muted:          var(--neutral-500);
+  --color-text-muted:          var(--neutral-700);
   --color-text-on-interactive: oklch(100% 0 0);  /* white */
 
   /* --- Interactive (buttons, links, focus rings) --- */
