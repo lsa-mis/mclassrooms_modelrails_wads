@@ -86,8 +86,9 @@ en:
       edit:
         title: "Workspace branding"
         logo_label: "Logo"
-        color_label: "Primary color (OKLCH)"
-        color_hint: "e.g. oklch(0.65 0.18 250)"
+        color_label: "Primary color"
+        color_palette_label: "Choose a color"
+        color_custom_label: "Or enter a custom value"
         preview: "Color preview"
         submit: "Save branding"
       update:
