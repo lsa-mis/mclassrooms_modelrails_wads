@@ -21,8 +21,9 @@
             <% if workspace.logo.attached? %>
               <%= image_tag workspace.logo, class: "w-10 h-10 rounded-full object-cover" %>
             <% else %>
+              <% ws_badge_color = workspace.primary_color&.match(/\A#[0-9a-fA-F]{6}\z/)&.to_s || "var(--color-interactive)" %>
               <div class="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm text-white"
-                   style="background: <%= workspace.primary_color || 'var(--color-interactive)' %>;">
+                   style="background: <%= ws_badge_color %>;">
                 <%= workspace.initials %>
               </div>
             <% end %>

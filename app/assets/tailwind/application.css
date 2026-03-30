@@ -72,6 +72,27 @@
   --color-info-border: var(--color-info-border);
 }
 
+/* ==========================================================================
+   Workspace Branding Override
+   ==========================================================================
+   When a workspace has a primary_color, --ws-primary is set on <main>.
+   These rules cascade the branding color through the interactive tokens
+   with proper light/dark mode variants using color-mix(). */
+
+[data-workspace-branded] {
+  --color-interactive: var(--ws-primary);
+  --color-interactive-hover: color-mix(in oklch, var(--ws-primary) 80%, black);
+  --color-interactive-focus: var(--ws-primary);
+  --color-interactive-subtle: color-mix(in oklch, var(--ws-primary) 10%, white);
+}
+
+.dark [data-workspace-branded] {
+  --color-interactive: color-mix(in oklch, var(--ws-primary) 70%, white);
+  --color-interactive-hover: color-mix(in oklch, var(--ws-primary) 50%, white);
+  --color-interactive-focus: color-mix(in oklch, var(--ws-primary) 70%, white);
+  --color-interactive-subtle: color-mix(in oklch, var(--ws-primary) 15%, black);
+}
+
 /* Markdowndocs gem views — required so Tailwind scans the gem's templates.
    Symlink created by: ln -sf $(bundle show markdowndocs)/app/views vendor/markdowndocs_views */
 @source "../../../vendor/markdowndocs_views/**/*.erb";

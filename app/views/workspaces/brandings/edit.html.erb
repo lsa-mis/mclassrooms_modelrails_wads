@@ -71,8 +71,9 @@
     </div>
 
     <%# Live preview %>
+    <% preview_color = @workspace.primary_color&.match(/\A#[0-9a-fA-F]{6}\z/)&.to_s || "#0284c7" %>
     <div data-color-picker-target="preview"
-         style="--ws-primary: <%= @workspace.primary_color || '#0284c7' %>"
+         style="--ws-primary: <%= preview_color %>"
          class="p-4 rounded-lg border border-border">
       <p class="text-sm text-text-muted"><%= t("workspaces.brandings.edit.preview") %></p>
       <div class="mt-2 flex items-center gap-3">

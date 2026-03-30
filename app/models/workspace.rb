@@ -15,6 +15,8 @@ class Workspace < ApplicationRecord
   validates :slug, presence: true, uniqueness: true
   validates :max_members, numericality: { greater_than: 0 }
   validates :max_projects, numericality: { greater_than: 0 }
+  validates :primary_color, format: { with: /\A#[0-9a-fA-F]{6}\z/, message: :invalid_hex_color },
+            allow_blank: true
 
   before_validation :generate_slug, if: -> { name.present? && (slug.blank? || (name_changed? && !slug_changed?)) }
 

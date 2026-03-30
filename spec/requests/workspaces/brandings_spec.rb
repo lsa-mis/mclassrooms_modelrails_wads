@@ -17,9 +17,9 @@ RSpec.describe "Workspace Brandings", type: :request do
   describe "PATCH /workspaces/:workspace_slug/branding" do
     it "updates the primary color" do
       patch workspace_branding_path(workspace), params: {
-        workspace: { primary_color: "oklch(0.65 0.18 250)" }
+        workspace: { primary_color: "#6366f1" }
       }
-      expect(workspace.reload.primary_color).to eq("oklch(0.65 0.18 250)")
+      expect(workspace.reload.primary_color).to eq("#6366f1")
     end
 
     it "uploads a logo" do
@@ -32,7 +32,7 @@ RSpec.describe "Workspace Brandings", type: :request do
 
     it "redirects with success message" do
       patch workspace_branding_path(workspace), params: {
-        workspace: { primary_color: "oklch(0.65 0.18 250)" }
+        workspace: { primary_color: "#6366f1" }
       }
       expect(response).to redirect_to(edit_workspace_branding_path(workspace))
     end
@@ -42,11 +42,11 @@ RSpec.describe "Workspace Brandings", type: :request do
     it "updates both logo and color" do
       file = fixture_file_upload("avatar.png", "image/png")
       patch workspace_branding_path(workspace), params: {
-        workspace: { logo: file, primary_color: "oklch(0.7 0.2 200)" }
+        workspace: { logo: file, primary_color: "#0d9488" }
       }
       workspace.reload
       expect(workspace.logo).to be_attached
-      expect(workspace.primary_color).to eq("oklch(0.7 0.2 200)")
+      expect(workspace.primary_color).to eq("#0d9488")
     end
   end
 

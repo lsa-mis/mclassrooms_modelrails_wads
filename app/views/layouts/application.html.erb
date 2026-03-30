@@ -27,13 +27,11 @@
     <%= render "shared/header" %>
     <%= render "shared/toasts" %>
 
+    <% ws_color = Current.workspace&.primary_color&.match(/\A#[0-9a-fA-F]{6}\z/)&.to_s %>
     <main id="main-content" tabindex="-1" class="flex-1"
-          <% if Current.workspace&.primary_color.present? %>
-            style="--ws-primary: <%= Current.workspace.primary_color %>;
-                   --color-interactive: var(--ws-primary);
-                   --color-interactive-hover: color-mix(in oklch, var(--ws-primary) 80%, black);
-                   --color-interactive-focus: var(--ws-primary);
-                   --color-interactive-subtle: color-mix(in oklch, var(--ws-primary) 10%, white);"
+          <% if ws_color.present? %>
+            data-workspace-branded
+            style="--ws-primary: <%= ws_color %>;"
           <% end %>>
       <%= yield %>
     </main>
