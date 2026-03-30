@@ -1,0 +1,72 @@
+/* ==========================================================================
+   Signal Tokens — Fixed Colors for Semantic Meaning
+   ==========================================================================
+   These do NOT shift with theming. Red = danger, green = success, etc.
+   Uses Tailwind 4's built-in OKLCH color values for consistency.
+   ========================================================================== */
+
+:root {
+  /* --- Danger (red) --- */
+  --color-danger:          oklch(50.5% 0.213 27.518);   /* ~red-700 */
+  --color-danger-surface:  oklch(97.1% 0.013 17.38);    /* ~red-50 */
+  --color-danger-icon:     oklch(63.7% 0.237 25.331);   /* ~red-500 */
+  --color-danger-hover:    oklch(93.6% 0.032 17.717);   /* ~red-100 */
+  --color-danger-progress: oklch(70.4% 0.191 22.216);   /* ~red-400 */
+  --color-danger-border:   oklch(80.8% 0.114 19.571);   /* ~red-300 */
+
+  /* --- Warning (amber) --- */
+  --color-warning:          oklch(66.6% 0.179 58.318);   /* ~amber-600 */
+  --color-warning-surface:  oklch(98.1% 0.029 95.724);   /* ~amber-50 */
+  --color-warning-icon:     oklch(76.6% 0.163 70.08);    /* ~amber-500 */
+  --color-warning-hover:    oklch(95.4% 0.064 86.375);   /* ~amber-100 */
+  --color-warning-border:   oklch(87.9% 0.125 85.859);   /* ~amber-300 */
+
+  /* --- Success (green) --- */
+  --color-success:          oklch(52.7% 0.154 150.069);  /* ~green-700 */
+  --color-success-surface:  oklch(98.2% 0.018 155.826);  /* ~green-50 */
+  --color-success-icon:     oklch(72.3% 0.219 149.579);  /* ~green-500 */
+  --color-success-hover:    oklch(96.2% 0.044 156.743);  /* ~green-100 */
+  --color-success-progress: oklch(79.2% 0.209 151.711);  /* ~green-400 */
+  --color-success-border:   oklch(87.1% 0.15 154.449);   /* ~green-300 */
+
+  /* --- Info (sky) --- */
+  --color-info:          oklch(58.8% 0.158 231.966);  /* ~sky-600 */
+  --color-info-surface:  oklch(97.7% 0.013 236.62);   /* ~sky-50 */
+  --color-info-icon:     oklch(71.4% 0.168 237.674);  /* ~sky-500 */
+  --color-info-hover:    oklch(95.1% 0.026 236.824);  /* ~sky-100 */
+  --color-info-progress: oklch(79.6% 0.15 235.169);   /* ~sky-400 */
+  --color-info-border:   oklch(86.2% 0.084 237.323);  /* ~sky-300 */
+}
+
+.dark {
+  /* --- Danger (red) --- */
+  --color-danger:          oklch(70.4% 0.191 22.216);   /* ~red-400 */
+  --color-danger-surface:  oklch(25.8% 0.092 26.042);   /* ~red-950 */
+  --color-danger-icon:     oklch(70.4% 0.191 22.216);   /* ~red-400 */
+  --color-danger-hover:    oklch(29.6% 0.093 25.166);   /* ~red-900 */
+  --color-danger-progress: oklch(63.7% 0.237 25.331);   /* ~red-500 */
+  --color-danger-border:   oklch(44.4% 0.177 26.899);   /* ~red-700 */
+
+  /* --- Warning (amber) --- */
+  --color-warning:          oklch(82.7% 0.174 78.604);   /* ~amber-400 */
+  --color-warning-surface:  oklch(27.9% 0.077 45.635);   /* ~amber-950 */
+  --color-warning-icon:     oklch(82.7% 0.174 78.604);   /* ~amber-400 */
+  --color-warning-hover:    oklch(31.1% 0.091 50.601);   /* ~amber-900 */
+  --color-warning-border:   oklch(55.4% 0.163 48.998);   /* ~amber-700 */
+
+  /* --- Success (green) --- */
+  --color-success:          oklch(79.2% 0.209 151.711);  /* ~green-400 */
+  --color-success-surface:  oklch(26.2% 0.065 152.934);  /* ~green-950 */
+  --color-success-icon:     oklch(79.2% 0.209 151.711);  /* ~green-400 */
+  --color-success-hover:    oklch(29.3% 0.094 153.051);  /* ~green-900 */
+  --color-success-progress: oklch(72.3% 0.219 149.579);  /* ~green-500 */
+  --color-success-border:   oklch(46.2% 0.141 148.96);   /* ~green-700 */
+
+  /* --- Info (sky) --- */
+  --color-info:          oklch(79.6% 0.15 235.169);   /* ~sky-400 */
+  --color-info-surface:  oklch(24.4% 0.063 264.052);  /* ~sky-950 */
+  --color-info-icon:     oklch(79.6% 0.15 235.169);   /* ~sky-400 */
+  --color-info-hover:    oklch(28.3% 0.088 260.031);  /* ~sky-900 */
+  --color-info-progress: oklch(71.4% 0.168 237.674);  /* ~sky-500 */
+  --color-info-border:   oklch(45.1% 0.146 256.823);  /* ~sky-700 */
+}
