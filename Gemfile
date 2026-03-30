@@ -29,6 +29,7 @@ gem "omniauth-github"
 gem "omniauth-rails_csrf_protection"
 gem "pwned"
 gem "pundit"
+gem "pagy"
 gem "markdowndocs"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
