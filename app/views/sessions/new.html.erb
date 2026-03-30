@@ -1,6 +1,6 @@
 <% content_for(:title) { t("sessions.new.title") } %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+  <h1 class="text-2xl font-bold text-text-heading">
     <%= t("sessions.new.title") %>
   </h1>
 
@@ -10,31 +10,31 @@
     <%= form_with url: main_app.session_lookup_path, class: "mt-8 space-y-6" do |form| %>
       <div>
         <%= form.label :email_address, t("sessions.new.email_label"),
-              class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+              class: "block text-sm font-medium text-text-body" %>
         <%= form.email_field :email_address,
               required: true,
               autofocus: true,
               autocomplete: "email",
-              class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                      bg-white dark:bg-gray-800 px-3 py-2
-                      text-slate-900 dark:text-gray-100
-                      focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+              class: "mt-1 block w-full rounded-md border border-border-strong
+                      bg-surface-raised px-3 py-2
+                      text-text-heading
+                      focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
       </div>
 
       <%= form.submit t("sessions.new.continue"),
             class: "w-full min-h-[44px] rounded-md px-4 py-2
-                    bg-sky-700 hover:bg-sky-800 text-white font-medium
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:ring-offset-2
+                    bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:ring-offset-2
                     cursor-pointer" %>
     <% end %>
   <% end %>
 
   <div class="mt-6 text-center">
-    <p class="text-sm text-slate-600 dark:text-gray-400">
+    <p class="text-sm text-text-muted">
       <%= t("sessions.new.no_account") %>
       <%= link_to t("sessions.new.sign_up"), main_app.new_registration_path,
-            class: "text-sky-700 dark:text-sky-400 underline hover:no-underline
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+            class: "text-interactive underline hover:no-underline
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
     </p>
   </div>
 </div>

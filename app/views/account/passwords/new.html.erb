@@ -1,17 +1,17 @@
 <% content_for(:title) { t("account.passwords.new.title") } %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+  <h1 class="text-2xl font-bold text-text-heading">
     <%= t("account.passwords.new.title") %>
   </h1>
 
-  <p class="mt-2 text-slate-600 dark:text-gray-400">
+  <p class="mt-2 text-text-muted">
     <%= t("account.passwords.new.instructions") %>
   </p>
 
   <%= form_with url: account_password_path, method: :post, class: "mt-8 space-y-6" do |form| %>
     <% if Current.user.errors.any? %>
-      <div role="alert" class="p-4 bg-red-50 dark:bg-red-900 rounded-lg">
-        <ul class="list-disc list-inside text-red-700 dark:text-red-300">
+      <div role="alert" class="p-4 bg-danger-surface rounded-lg">
+        <ul class="list-disc list-inside text-danger">
           <% Current.user.errors.full_messages.each do |message| %>
             <li><%= message %></li>
           <% end %>
@@ -21,34 +21,34 @@
 
     <div>
       <%= form.label :password, t("account.passwords.new.password_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.password_field :password, required: true, autocomplete: "new-password",
             name: "user[password]",
             aria: { describedby: "password-requirements" },
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
-      <p id="password-requirements" class="mt-1 text-sm text-slate-600 dark:text-gray-400">
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
+      <p id="password-requirements" class="mt-1 text-sm text-text-muted">
         <%= t("account.passwords.new.password_hint") %>
       </p>
     </div>
 
     <div>
       <%= form.label :password_confirmation, t("account.passwords.new.password_confirmation_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password",
             name: "user[password_confirmation]",
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <%= form.submit t("account.passwords.new.submit"),
           class: "w-full min-h-[44px] rounded-md px-4 py-2
-                  bg-sky-700 hover:bg-sky-800 text-white font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700
+                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
                   cursor-pointer" %>
   <% end %>
 </div>

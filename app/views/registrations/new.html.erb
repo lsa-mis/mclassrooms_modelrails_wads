@@ -1,6 +1,6 @@
 <% content_for(:title) { t("registrations.new.title") } %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+  <h1 class="text-2xl font-bold text-text-heading">
     <%= t("registrations.new.title") %>
   </h1>
 
@@ -8,11 +8,11 @@
 
   <%= form_with(model: @user, url: registration_path, class: "mt-8 space-y-6") do |form| %>
     <% if @user.errors.any? %>
-      <div role="alert" class="p-4 bg-red-50 dark:bg-red-900 rounded-lg">
-        <h2 class="text-red-800 dark:text-red-200 font-semibold">
+      <div role="alert" class="p-4 bg-danger-surface rounded-lg">
+        <h2 class="text-danger font-semibold">
           <%= t("errors.form_errors", count: @user.errors.count) %>
         </h2>
-        <ul class="mt-2 list-disc list-inside text-red-700 dark:text-red-300">
+        <ul class="mt-2 list-disc list-inside text-danger">
           <% @user.errors.full_messages.each do |message| %>
             <li><%= message %></li>
           <% end %>
@@ -22,69 +22,69 @@
 
     <div>
       <%= form.label :email_address, t("registrations.new.email_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.email_field :email_address, required: true, autocomplete: "email",
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <div>
       <%= form.label :first_name, t("registrations.new.first_name_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.text_field :first_name, required: true, autocomplete: "given-name",
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <div>
       <%= form.label :last_name, t("registrations.new.last_name_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.text_field :last_name, required: true, autocomplete: "family-name",
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <div>
       <%= form.label :password, t("registrations.new.password_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.password_field :password, required: true, autocomplete: "new-password",
             aria: { describedby: "password-requirements" },
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
-      <p id="password-requirements" class="mt-1 text-sm text-slate-600 dark:text-gray-400">
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
+      <p id="password-requirements" class="mt-1 text-sm text-text-muted">
         <%= t("registrations.new.password_hint") %>
       </p>
     </div>
 
     <div>
       <%= form.label :password_confirmation, t("registrations.new.password_confirmation_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password",
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <%= form.submit t("registrations.new.submit"),
           class: "w-full min-h-[44px] rounded-md px-4 py-3
-                  bg-sky-700 hover:bg-sky-800 text-white font-semibold
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700
+                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-semibold
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
                   cursor-pointer" %>
   <% end %>
 
-  <p class="mt-6 text-center text-slate-600 dark:text-gray-400">
+  <p class="mt-6 text-center text-text-muted">
     <%= t("registrations.new.already_have_account") %>
     <%= link_to t("registrations.new.sign_in"), new_session_path,
-          class: "text-sky-700 dark:text-sky-400 underline hover:no-underline
-                  focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+          class: "text-interactive underline hover:no-underline
+                  focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
   </p>
 </div>

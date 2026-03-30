@@ -1,17 +1,17 @@
 <% content_for(:title) { t("magic_link_registrations.new.title") } %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+  <h1 class="text-2xl font-bold text-text-heading">
     <%= t("magic_link_registrations.new.title") %>
   </h1>
 
-  <p class="mt-2 text-slate-600 dark:text-gray-400">
+  <p class="mt-2 text-text-muted">
     <%= t("magic_link_registrations.new.subtitle", email: @token_record.email) %>
   </p>
 
   <%= form_with url: magic_link_registration_path(token: @token_record.token), method: :post, class: "mt-8 space-y-6" do |form| %>
     <% if @user.errors.any? %>
-      <div role="alert" class="p-4 bg-red-50 dark:bg-red-900 rounded-lg">
-        <ul class="list-disc list-inside text-red-700 dark:text-red-300">
+      <div role="alert" class="p-4 bg-danger-surface rounded-lg">
+        <ul class="list-disc list-inside text-danger">
           <% @user.errors.full_messages.each do |message| %>
             <li><%= message %></li>
           <% end %>
@@ -21,30 +21,30 @@
 
     <div>
       <%= form.label :first_name, t("magic_link_registrations.new.first_name_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.text_field :first_name, required: true, autofocus: true,
             name: "user[first_name]",
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <div>
       <%= form.label :last_name, t("magic_link_registrations.new.last_name_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.text_field :last_name, required: true,
             name: "user[last_name]",
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <%= form.submit t("magic_link_registrations.new.submit"),
           class: "w-full min-h-[44px] rounded-md px-4 py-2
-                  bg-sky-700 hover:bg-sky-800 text-white font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700
+                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
                   cursor-pointer" %>
   <% end %>
 </div>
