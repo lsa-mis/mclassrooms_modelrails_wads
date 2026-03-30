@@ -1,0 +1,65 @@
+/* ==========================================================================
+   Semantic Design Tokens — Role-Based Color Aliases
+   ==========================================================================
+   These tokens define what colors are FOR, not what they ARE.
+   Dark mode is handled here: .dark remaps semantic tokens to dark primitives.
+   Views never need dark: prefixes for token-backed colors.
+   ========================================================================== */
+
+:root {
+  /* --- Surfaces --- */
+  --color-surface:         var(--neutral-50);
+  --color-surface-raised:  oklch(100% 0 0);  /* white */
+  --color-surface-overlay: oklch(100% 0 0);  /* white — distinct role for modals/dropdowns */
+  --color-surface-sunken:  var(--neutral-100);
+
+  /* --- Text --- */
+  --color-text-heading:        var(--neutral-900);
+  --color-text-body:           var(--neutral-700);
+  --color-text-muted:          var(--neutral-500);
+  --color-text-on-interactive: oklch(100% 0 0);  /* white */
+
+  /* --- Interactive (buttons, links, focus rings) --- */
+  --color-interactive:       var(--primary-700);
+  --color-interactive-hover: var(--primary-800);
+  --color-interactive-focus: var(--primary-700);
+  --color-interactive-subtle: var(--primary-50);
+
+  /* --- Accent (secondary highlights, prose links) --- */
+  --color-accent:       var(--secondary-600);
+  --color-accent-hover: var(--secondary-700);
+
+  /* --- Borders --- */
+  --color-border:        var(--neutral-200);
+  --color-border-strong: var(--neutral-300);
+  --color-border-focus:  var(--primary-700);
+}
+
+.dark {
+  /* --- Surfaces --- */
+  --color-surface:         var(--neutral-900);
+  --color-surface-raised:  var(--neutral-800);
+  --color-surface-overlay: var(--neutral-800);
+  --color-surface-sunken:  var(--neutral-950);
+
+  /* --- Text --- */
+  --color-text-heading:        var(--neutral-100);
+  --color-text-body:           var(--neutral-300);
+  --color-text-muted:          var(--neutral-400);
+  --color-text-on-interactive: oklch(100% 0 0);  /* stays white */
+
+  /* --- Interactive --- */
+  --color-interactive:       var(--primary-400);
+  --color-interactive-hover: var(--primary-300);
+  --color-interactive-focus: var(--primary-400);
+  --color-interactive-subtle: var(--primary-950);
+
+  /* --- Accent --- */
+  --color-accent:       var(--secondary-400);
+  --color-accent-hover: var(--secondary-300);
+
+  /* --- Borders --- */
+  --color-border:        var(--neutral-700);
+  --color-border-strong: var(--neutral-600);
+  --color-border-focus:  var(--primary-400);
+}
