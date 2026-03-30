@@ -9,6 +9,37 @@ class Membership < ApplicationRecord
   validates :user_id, uniqueness: { scope: :workspace_id }
   validate :workspace_has_member_capacity, on: :create
 
+  scope :search, ->(query) {
+    return all if query.blank?
+    joins(:user).where(
+      "LOWER(users.first_name) LIKE :q OR LOWER(users.last_name) LIKE :q OR LOWER(users.email_address) LIKE :q",
+      q: "%#{query.downcase}%"
+    )
+  }
+
+  scope :filter_by_role, ->(role_slug) {
+    return all if role_slug.blank?
+    joins(:role).where(roles: { slug: role_slug })
+  }
+
+  scope :filter_by_status, ->(status) {
+    case status
+    when "active" then kept
+    when "deactivated" then discarded
+    else all
+    end
+  }
+
+  scope :sorted_by, ->(column, direction) {
+    dir = direction&.downcase == "asc" ? :asc : :desc
+    case column
+    when "name" then joins(:user).order(Arel.sql("users.first_name #{dir}, users.last_name #{dir}"))
+    when "email" then joins(:user).order(Arel.sql("users.email_address #{dir}"))
+    when "role" then joins(:role).order(Arel.sql("roles.name #{dir}"))
+    else order(created_at: :desc)
+    end
+  }
+
   after_commit :broadcast_changes, on: [ :create, :update ]
 
   def change_role!(new_role)

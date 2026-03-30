@@ -1,2 +1,2 @@
-Pagy::DEFAULT[:limit] = 20
-Pagy::DEFAULT[:size] = 7
+Pagy::OPTIONS[:limit] = 20
+Pagy::OPTIONS.freeze
