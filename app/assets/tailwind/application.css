@@ -4,6 +4,74 @@
    This allows a three-way user preference (light/dark/system). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Design token layers */
+@import "./tokens/_primitives.css";
+@import "./tokens/_semantic.css";
+@import "./tokens/_signals.css";
+
+/* Register semantic tokens as Tailwind utilities via @theme inline.
+   "inline" is required because these reference CSS custom properties
+   that change under .dark — Tailwind needs to inline the var() references. */
+@theme inline {
+  /* Surfaces */
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-overlay: var(--color-surface-overlay);
+  --color-surface-sunken: var(--color-surface-sunken);
+
+  /* Text */
+  --color-text-heading: var(--color-text-heading);
+  --color-text-body: var(--color-text-body);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-on-interactive: var(--color-text-on-interactive);
+
+  /* Interactive */
+  --color-interactive: var(--color-interactive);
+  --color-interactive-hover: var(--color-interactive-hover);
+  --color-interactive-focus: var(--color-interactive-focus);
+  --color-interactive-subtle: var(--color-interactive-subtle);
+
+  /* Accent */
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+
+  /* Borders */
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-border-focus: var(--color-border-focus);
+
+  /* Signals — Danger */
+  --color-danger: var(--color-danger);
+  --color-danger-surface: var(--color-danger-surface);
+  --color-danger-icon: var(--color-danger-icon);
+  --color-danger-hover: var(--color-danger-hover);
+  --color-danger-progress: var(--color-danger-progress);
+  --color-danger-border: var(--color-danger-border);
+
+  /* Signals — Warning */
+  --color-warning: var(--color-warning);
+  --color-warning-surface: var(--color-warning-surface);
+  --color-warning-icon: var(--color-warning-icon);
+  --color-warning-hover: var(--color-warning-hover);
+  --color-warning-border: var(--color-warning-border);
+
+  /* Signals — Success */
+  --color-success: var(--color-success);
+  --color-success-surface: var(--color-success-surface);
+  --color-success-icon: var(--color-success-icon);
+  --color-success-hover: var(--color-success-hover);
+  --color-success-progress: var(--color-success-progress);
+  --color-success-border: var(--color-success-border);
+
+  /* Signals — Info */
+  --color-info: var(--color-info);
+  --color-info-surface: var(--color-info-surface);
+  --color-info-icon: var(--color-info-icon);
+  --color-info-hover: var(--color-info-hover);
+  --color-info-progress: var(--color-info-progress);
+  --color-info-border: var(--color-info-border);
+}
+
 /* Markdowndocs gem views — required so Tailwind scans the gem's templates.
    Symlink created by: ln -sf $(bundle show markdowndocs)/app/views vendor/markdowndocs_views */
 @source "../../../vendor/markdowndocs_views/**/*.erb";
