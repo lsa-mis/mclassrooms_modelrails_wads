@@ -6,20 +6,20 @@
 
 <%= render "shared/section",
       title: t("pages.about.mission.title"),
-      bg: "bg-gray-50 dark:bg-gray-800" do %>
-  <p class="text-lg text-slate-600 dark:text-gray-400 max-w-3xl mx-auto text-center">
+      bg: "bg-surface" do %>
+  <p class="text-lg text-text-muted max-w-3xl mx-auto text-center">
     <%= t("pages.about.mission.description") %>
   </p>
 <% end %>
 
 <%= render "shared/section",
       title: t("pages.about.features.title"),
-      bg: "bg-white dark:bg-gray-900" do %>
+      bg: "bg-surface-raised" do %>
   <ul class="max-w-2xl mx-auto space-y-3">
     <% t("pages.about.features.items").each do |item| %>
       <li class="flex items-start gap-3">
-        <span class="mt-1 text-sky-700 dark:text-sky-400" aria-hidden="true">&#10003;</span>
-        <span class="text-slate-700 dark:text-gray-300"><%= item %></span>
+        <span class="mt-1 text-interactive" aria-hidden="true">&#10003;</span>
+        <span class="text-text-body"><%= item %></span>
       </li>
     <% end %>
   </ul>
@@ -27,7 +27,7 @@
 
 <%= render "shared/section",
       title: t("pages.about.philosophy.title"),
-      bg: "bg-gray-50 dark:bg-gray-800" do %>
+      bg: "bg-surface" do %>
   <div class="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
     <% %w[conventions accessibility testing extensible].each do |principle| %>
       <%= render "shared/feature_card",
