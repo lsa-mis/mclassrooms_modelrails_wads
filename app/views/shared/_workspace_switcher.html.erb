@@ -21,11 +21,15 @@
                 border border-border shadow-lg z-50">
       <% Current.user.workspaces.kept.each do |workspace| %>
         <%= link_to workspace_path(workspace), role: "menuitem",
-              class: "block px-4 py-3 text-sm text-text-body
+              class: "flex items-center gap-3 px-4 py-3 text-sm text-text-body
                       hover:bg-surface-sunken
                       focus:outline-none focus:bg-surface-sunken" do %>
-          <span class="font-medium"><%= workspace.name %></span>
-          <span class="block text-xs text-text-muted"><%= workspace.plan.titleize %></span>
+          <span class="w-3 h-3 rounded-full shrink-0"
+                style="background: <%= workspace.primary_color || 'var(--color-interactive)' %>;"></span>
+          <span>
+            <span class="font-medium"><%= workspace.name %></span>
+            <span class="block text-xs text-text-muted"><%= workspace.plan.titleize %></span>
+          </span>
         <% end %>
       <% end %>
       <div class="border-t border-border">

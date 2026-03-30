@@ -27,7 +27,10 @@
     <%= render "shared/header" %>
     <%= render "shared/toasts" %>
 
-    <main id="main-content" tabindex="-1" class="flex-1">
+    <main id="main-content" tabindex="-1" class="flex-1"
+          <% if Current.workspace&.primary_color.present? %>
+            style="--ws-primary: <%= Current.workspace.primary_color %>;"
+          <% end %>>
       <%= yield %>
     </main>
 
