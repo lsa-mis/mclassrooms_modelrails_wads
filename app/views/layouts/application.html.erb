@@ -29,7 +29,11 @@
 
     <main id="main-content" tabindex="-1" class="flex-1"
           <% if Current.workspace&.primary_color.present? %>
-            style="--ws-primary: <%= Current.workspace.primary_color %>;"
+            style="--ws-primary: <%= Current.workspace.primary_color %>;
+                   --color-interactive: var(--ws-primary);
+                   --color-interactive-hover: color-mix(in oklch, var(--ws-primary) 80%, black);
+                   --color-interactive-focus: var(--ws-primary);
+                   --color-interactive-subtle: color-mix(in oklch, var(--ws-primary) 10%, white);"
           <% end %>>
       <%= yield %>
     </main>
