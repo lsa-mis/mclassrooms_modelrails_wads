@@ -1,11 +1,11 @@
-<header class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700"
+<header class="sticky top-0 z-40 bg-surface-raised border-b border-border"
         data-controller="mobile-menu">
   <nav aria-label="<%= t("navigation.aria_label") %>"
        class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <%= link_to main_app.root_path,
             class: "flex items-center gap-2 hover:opacity-80 transition-opacity
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" do %>
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" do %>
         <%= render "shared/site_logo", size: :small, show_name: true %>
       <% end %>
 
@@ -13,27 +13,27 @@
       <div class="hidden md:flex items-center gap-2">
         <% if authenticated? %>
           <%= link_to t("navigation.workspaces"), main_app.workspaces_path,
-                class: "min-h-[44px] flex items-center text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded px-2" %>
+                class: "min-h-[44px] flex items-center text-text-body
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded px-2" %>
           <%= link_to t("navigation.profile"), main_app.edit_account_profile_path,
-                class: "min-h-[44px] flex items-center text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded px-2" %>
+                class: "min-h-[44px] flex items-center text-text-body
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded px-2" %>
           <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,
-                class: "min-h-[44px] flex items-center text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded px-2
+                class: "min-h-[44px] flex items-center text-text-body
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded px-2
                         cursor-pointer" %>
         <% else %>
           <%= link_to t("navigation.sign_in"), main_app.new_session_path,
-                class: "min-h-[44px] flex items-center text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 rounded px-2" %>
+                class: "min-h-[44px] flex items-center text-text-body
+                        hover:text-interactive-hover
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded px-2" %>
           <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
                 class: "min-h-[44px] flex items-center px-4 rounded-md
-                        bg-sky-700 hover:bg-sky-800 text-white font-medium
-                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700" %>
+                        bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
         <% end %>
         <%= render "shared/theme_toggle", style: :icon %>
       </div>
@@ -44,8 +44,8 @@
               aria-label="<%= t("navigation.toggle_menu") %>"
               aria-expanded="false"
               class="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center
-                     text-slate-700 dark:text-gray-300
-                     focus:outline-none focus:ring-2 focus:ring-sky-700 rounded">
+                     text-text-body
+                     focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
@@ -57,26 +57,26 @@
       <div class="flex flex-col gap-2">
         <% if authenticated? %>
           <%= link_to t("navigation.workspaces"), main_app.workspaces_path,
-                class: "min-h-[44px] flex items-center px-2 text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400 rounded
-                        focus:outline-none focus:ring-2 focus:ring-sky-700" %>
+                class: "min-h-[44px] flex items-center px-2 text-text-body
+                        hover:text-interactive-hover rounded
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
           <%= link_to t("navigation.profile"), main_app.edit_account_profile_path,
-                class: "min-h-[44px] flex items-center px-2 text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400 rounded
-                        focus:outline-none focus:ring-2 focus:ring-sky-700" %>
+                class: "min-h-[44px] flex items-center px-2 text-text-body
+                        hover:text-interactive-hover rounded
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
           <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,
-                class: "min-h-[44px] flex items-center px-2 text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400 rounded
-                        focus:outline-none focus:ring-2 focus:ring-sky-700 cursor-pointer" %>
+                class: "min-h-[44px] flex items-center px-2 text-text-body
+                        hover:text-interactive-hover rounded
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus cursor-pointer" %>
         <% else %>
           <%= link_to t("navigation.sign_in"), main_app.new_session_path,
-                class: "min-h-[44px] flex items-center px-2 text-slate-700 dark:text-gray-300
-                        hover:text-sky-700 dark:hover:text-sky-400 rounded
-                        focus:outline-none focus:ring-2 focus:ring-sky-700" %>
+                class: "min-h-[44px] flex items-center px-2 text-text-body
+                        hover:text-interactive-hover rounded
+                        focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
           <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
                 class: "min-h-[44px] flex items-center px-4 rounded-md
-                        bg-sky-700 hover:bg-sky-800 text-white font-medium
-                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700" %>
+                        bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
         <% end %>
         <%= render "shared/theme_toggle", style: :labeled %>
       </div>
