@@ -1,37 +1,37 @@
 <% content_for(:title) { t("projects.memberships.index.title") } %>
 <div class="max-w-4xl mx-auto px-4 py-16">
   <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+    <h1 class="text-2xl font-bold text-text-heading">
       <%= t("projects.memberships.index.title") %>
     </h1>
     <% if policy(ProjectMembership).create? %>
       <%= link_to t("projects.memberships.index.add_member"),
             workspace_project_memberships_path(@workspace, @project),
             class: "min-h-[44px] flex items-center px-4 rounded-md
-                    bg-sky-700 hover:bg-sky-800 text-white font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700" %>
+                    bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
     <% end %>
   </div>
 
   <table class="mt-8 w-full">
     <thead>
-      <tr class="border-b border-gray-200 dark:border-gray-700">
-        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400">Name</th>
-        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400"><%= t("projects.memberships.index.role") %></th>
-        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400"><%= t("projects.memberships.index.actions") %></th>
+      <tr class="border-b border-border">
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted">Name</th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("projects.memberships.index.role") %></th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("projects.memberships.index.actions") %></th>
       </tr>
     </thead>
     <tbody>
       <% @memberships.each do |pm| %>
-        <tr class="border-b border-gray-100 dark:border-gray-800">
-          <td class="py-3 text-slate-900 dark:text-gray-100"><%= pm.user.full_name %></td>
-          <td class="py-3 text-slate-600 dark:text-gray-400"><%= pm.role.titleize %></td>
+        <tr class="border-b border-border">
+          <td class="py-3 text-text-heading"><%= pm.user.full_name %></td>
+          <td class="py-3 text-text-muted"><%= pm.role.titleize %></td>
           <td class="py-3 flex gap-2">
             <% if policy(pm).destroy? %>
               <%= button_to t("projects.memberships.index.remove"),
                     workspace_project_membership_path(@workspace, @project, pm),
                     method: :delete,
-                    class: "text-sm text-red-600 dark:text-red-400 underline hover:no-underline cursor-pointer" %>
+                    class: "text-sm text-danger underline hover:no-underline cursor-pointer" %>
             <% end %>
           </td>
         </tr>

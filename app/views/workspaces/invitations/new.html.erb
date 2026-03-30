@@ -1,45 +1,45 @@
 <% content_for(:title) { t("workspaces.invitations.new.title") } %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+  <h1 class="text-2xl font-bold text-text-heading">
     <%= t("workspaces.invitations.new.title") %>
   </h1>
 
   <%= form_with url: workspace_invitations_path(@workspace), method: :post, class: "mt-8 space-y-6" do |form| %>
     <div>
       <%= form.label :emails, t("workspaces.invitations.new.emails_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.text_area :emails, rows: 4,
             aria: { describedby: "emails-hint" },
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
-      <p id="emails-hint" class="mt-1 text-sm text-slate-600 dark:text-gray-400">
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
+      <p id="emails-hint" class="mt-1 text-sm text-text-muted">
         <%= t("workspaces.invitations.new.emails_hint") %>
       </p>
     </div>
 
     <div>
       <%= form.label :role_id, t("workspaces.invitations.new.role_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.select :role_id, @roles.map { |r| [r.name, r.id] },
             {},
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <div class="flex items-center gap-2">
-      <%= form.check_box :magic_link, class: "rounded border-gray-300 text-sky-700 focus:ring-sky-700" %>
+      <%= form.check_box :magic_link, class: "rounded border-border-strong text-interactive focus:ring-interactive-focus" %>
       <%= form.label :magic_link, t("workspaces.invitations.new.magic_link_label"),
-            class: "text-sm text-slate-700 dark:text-gray-300" %>
+            class: "text-sm text-text-body" %>
     </div>
 
     <%= form.submit t("workspaces.invitations.new.submit"),
           class: "w-full min-h-[44px] rounded-md px-4 py-2
-                  bg-sky-700 hover:bg-sky-800 text-white font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700
+                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
                   cursor-pointer" %>
   <% end %>
 </div>

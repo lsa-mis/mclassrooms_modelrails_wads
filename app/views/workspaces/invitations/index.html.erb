@@ -1,23 +1,23 @@
 <% content_for(:title) { t("workspaces.invitations.index.title") } %>
 <div class="max-w-4xl mx-auto px-4 py-16">
   <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+    <h1 class="text-2xl font-bold text-text-heading">
       <%= t("workspaces.invitations.index.title") %>
     </h1>
     <% if policy(Invitation).create? %>
       <%= link_to t("workspaces.invitations.index.new_invitation"), new_workspace_invitation_path(@workspace),
             class: "min-h-[44px] flex items-center px-4 rounded-md
-                    bg-sky-700 hover:bg-sky-800 text-white font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700" %>
+                    bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
     <% end %>
   </div>
 
   <% if flash[:magic_link_url].present? %>
-    <div class="mt-4 p-4 bg-sky-50 dark:bg-sky-900 rounded-lg" role="alert">
-      <p class="text-sm font-medium text-sky-800 dark:text-sky-200">
+    <div class="mt-4 p-4 bg-info-surface rounded-lg" role="alert">
+      <p class="text-sm font-medium text-interactive">
         <%= t("workspaces.invitations.index.magic_link_label") %>
       </p>
-      <code class="mt-1 block text-sm text-sky-700 dark:text-sky-300 break-all">
+      <code class="mt-1 block text-sm text-interactive break-all">
         <%= flash[:magic_link_url] %>
       </code>
     </div>
@@ -25,25 +25,25 @@
 
   <table class="mt-8 w-full">
     <thead>
-      <tr class="border-b border-gray-200 dark:border-gray-700">
-        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400"><%= t("workspaces.invitations.index.invitee") %></th>
-        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400"><%= t("workspaces.invitations.index.role") %></th>
-        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400"><%= t("workspaces.invitations.index.status") %></th>
-        <th scope="col" class="text-left py-3 text-sm font-medium text-slate-600 dark:text-gray-400"><%= t("workspaces.invitations.index.actions") %></th>
+      <tr class="border-b border-border">
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.invitations.index.invitee") %></th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.invitations.index.role") %></th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.invitations.index.status") %></th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.invitations.index.actions") %></th>
       </tr>
     </thead>
     <tbody>
       <% @invitations.each do |invitation| %>
-        <tr class="border-b border-gray-100 dark:border-gray-800">
-          <td class="py-3 text-slate-900 dark:text-gray-100">
+        <tr class="border-b border-border">
+          <td class="py-3 text-text-heading">
             <%= invitation.magic_link? ? t("workspaces.invitations.index.magic_link") : invitation.email %>
           </td>
-          <td class="py-3 text-slate-600 dark:text-gray-400"><%= invitation.role.name %></td>
+          <td class="py-3 text-text-muted"><%= invitation.role.name %></td>
           <td class="py-3">
             <span class="px-2 py-1 text-xs font-medium rounded-full
-                         <%= invitation.pending? ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                             invitation.accepted? ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                             'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' %>">
+                         <%= invitation.pending? ? 'bg-info-surface text-interactive' :
+                             invitation.accepted? ? 'bg-success-surface text-success' :
+                             'bg-surface text-text-muted' %>">
               <%= invitation.status.titleize %>
             </span>
           </td>
@@ -53,11 +53,11 @@
                 <%= button_to t("workspaces.invitations.index.resend"),
                       resend_workspace_invitation_path(@workspace, invitation),
                       method: :post,
-                      class: "text-sm text-sky-700 dark:text-sky-400 underline hover:no-underline cursor-pointer" %>
+                      class: "text-sm text-interactive underline hover:no-underline cursor-pointer" %>
                 <%= button_to t("workspaces.invitations.index.revoke"),
                       workspace_invitation_path(@workspace, invitation),
                       method: :delete,
-                      class: "text-sm text-red-600 dark:text-red-400 underline hover:no-underline cursor-pointer" %>
+                      class: "text-sm text-danger underline hover:no-underline cursor-pointer" %>
               </div>
             <% end %>
           </td>

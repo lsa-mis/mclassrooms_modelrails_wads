@@ -5,15 +5,15 @@
     <% if @workspace.logo.attached? %>
       <%= image_tag @workspace.logo, class: "w-16 h-16 rounded-full object-cover" %>
     <% else %>
-      <div class="w-16 h-16 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center text-sky-700 dark:text-sky-300 font-bold text-xl">
+      <div class="w-16 h-16 rounded-full bg-info-surface flex items-center justify-center text-interactive font-bold text-xl">
         <%= @workspace.initials %>
       </div>
     <% end %>
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+      <h1 class="text-2xl font-bold text-text-heading">
         <%= @workspace.name %>
       </h1>
-      <p class="text-sm text-slate-600 dark:text-gray-400"><%= @workspace.plan.titleize %></p>
+      <p class="text-sm text-text-muted"><%= @workspace.plan.titleize %></p>
     </div>
   </div>
 

@@ -1,46 +1,46 @@
 <% content_for(:title) { t("resources.index.title") } %>
 <div class="max-w-4xl mx-auto px-4 py-16">
   <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+    <h1 class="text-2xl font-bold text-text-heading">
       <%= t("resources.index.title") %>
     </h1>
     <% if policy(Resource).create? %>
       <%= link_to t("resources.index.new_resource"),
             new_workspace_project_resource_path(@workspace, @project),
             class: "min-h-[44px] flex items-center px-4 rounded-md
-                    bg-sky-700 hover:bg-sky-800 text-white font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700" %>
+                    bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
     <% end %>
   </div>
 
   <% if @resources.any? %>
     <ul class="mt-8 space-y-3" aria-label="<%= t('resources.index.title') %>">
       <% @resources.each do |resource| %>
-        <li class="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
+        <li class="flex items-center justify-between border border-border rounded-lg px-4 py-3">
           <div class="flex items-center gap-3">
             <%= link_to resource.title,
                   workspace_project_resource_path(@workspace, @project, resource),
-                  class: "text-sky-700 dark:text-sky-400 font-medium hover:underline
-                          focus:outline-none focus:ring-2 focus:ring-sky-700 rounded" %>
+                  class: "text-interactive font-medium hover:underline
+                          focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
             <% if resource.draft? %>
               <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                           bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                           bg-surface text-text-muted">
                 <%= t("resources.index.draft") %>
               </span>
             <% else %>
               <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                           bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                           bg-success-surface text-success">
                 <%= t("resources.index.published") %>
               </span>
             <% end %>
           </div>
-          <span class="text-sm text-slate-500 dark:text-gray-400">
+          <span class="text-sm text-text-muted">
             <%= t("resources.show.created_by", name: resource.created_by.full_name) %>
           </span>
         </li>
       <% end %>
     </ul>
   <% else %>
-    <p class="mt-8 text-slate-500 dark:text-gray-400"><%= t("resources.index.empty") %></p>
+    <p class="mt-8 text-text-muted"><%= t("resources.index.empty") %></p>
   <% end %>
 </div>

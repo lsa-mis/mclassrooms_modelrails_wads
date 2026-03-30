@@ -1,32 +1,32 @@
 <% content_for(:title) { t("workspaces.settings.edit.title") } %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+  <h1 class="text-2xl font-bold text-text-heading">
     <%= t("workspaces.settings.edit.title") %>
   </h1>
 
   <%= form_with model: @workspace, url: workspace_settings_path(@workspace), method: :patch, class: "mt-8 space-y-6" do |form| %>
     <div>
       <%= form.label :max_members, t("workspaces.settings.edit.max_members_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.number_field :max_members, min: 1, required: true,
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
     <div>
       <%= form.label :max_projects, t("workspaces.settings.edit.max_projects_label"),
-            class: "block text-sm font-medium text-slate-700 dark:text-gray-300" %>
+            class: "block text-sm font-medium text-text-body" %>
       <%= form.number_field :max_projects, min: 1, required: true,
-            class: "mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600
-                    bg-white dark:bg-gray-800 px-3 py-2
-                    text-slate-900 dark:text-gray-100
-                    focus:outline-none focus:ring-2 focus:ring-sky-700 focus:border-sky-700" %>
+            class: "mt-1 block w-full rounded-md border border-border-strong
+                    bg-surface-raised px-3 py-2
+                    text-text-heading
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
     </div>
 
-    <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-      <p class="text-sm text-slate-600 dark:text-gray-400">
+    <div class="p-4 bg-surface rounded-lg">
+      <p class="text-sm text-text-muted">
         <strong><%= t("workspaces.settings.edit.plan_label") %>:</strong>
         <%= @workspace.plan.titleize %>
       </p>
@@ -34,8 +34,8 @@
 
     <%= form.submit t("workspaces.settings.edit.submit"),
           class: "w-full min-h-[44px] rounded-md px-4 py-2
-                  bg-sky-700 hover:bg-sky-800 text-white font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700
+                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
                   cursor-pointer" %>
   <% end %>
 </div>

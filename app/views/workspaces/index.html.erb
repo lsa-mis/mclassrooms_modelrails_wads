@@ -1,39 +1,39 @@
 <% content_for(:title) { t("workspaces.index.title") } %>
 <div class="max-w-4xl mx-auto px-4 py-16">
   <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-slate-900 dark:text-gray-100">
+    <h1 class="text-2xl font-bold text-text-heading">
       <%= t("workspaces.index.title") %>
     </h1>
     <%= link_to t("workspaces.index.new_workspace"), new_workspace_path,
           class: "min-h-[44px] flex items-center px-4 rounded-md
-                  bg-sky-700 hover:bg-sky-800 text-white font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-700" %>
+                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
   </div>
 
   <% if @workspaces.any? %>
     <div class="mt-8 grid gap-4">
       <% @workspaces.each do |workspace| %>
         <%= link_to workspace_path(workspace),
-              class: "block p-4 border border-gray-200 dark:border-gray-700 rounded-lg
-                      hover:border-sky-300 dark:hover:border-sky-600
-                      focus:outline-none focus:ring-2 focus:ring-sky-700" do %>
+              class: "block p-4 border border-border rounded-lg
+                      hover:border-interactive
+                      focus:outline-none focus:ring-2 focus:ring-interactive-focus" do %>
           <div class="flex items-center gap-3">
             <% if workspace.logo.attached? %>
               <%= image_tag workspace.logo, class: "w-10 h-10 rounded-full object-cover" %>
             <% else %>
-              <div class="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center text-sky-700 dark:text-sky-300 font-semibold text-sm">
+              <div class="w-10 h-10 rounded-full bg-info-surface flex items-center justify-center text-interactive font-semibold text-sm">
                 <%= workspace.initials %>
               </div>
             <% end %>
             <div>
-              <p class="font-medium text-slate-900 dark:text-gray-100"><%= workspace.name %></p>
-              <p class="text-sm text-slate-600 dark:text-gray-400"><%= workspace.plan.titleize %></p>
+              <p class="font-medium text-text-heading"><%= workspace.name %></p>
+              <p class="text-sm text-text-muted"><%= workspace.plan.titleize %></p>
             </div>
           </div>
         <% end %>
       <% end %>
     </div>
   <% else %>
-    <p class="mt-8 text-slate-600 dark:text-gray-400"><%= t("workspaces.index.empty") %></p>
+    <p class="mt-8 text-text-muted"><%= t("workspaces.index.empty") %></p>
   <% end %>
 </div>
