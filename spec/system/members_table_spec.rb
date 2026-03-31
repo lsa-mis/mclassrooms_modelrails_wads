@@ -131,7 +131,10 @@ RSpec.describe "Members table", type: :system do
     it "hides invite button for regular members" do
       regular = create(:user, first_name: "Regular", last_name: "Member", password: "SecureP@ssw0rd123!")
       create(:membership, user: regular, workspace: workspace)
-      visit new_session_path
+      # Sign out the owner first
+      click_button I18n.t("navigation.sign_out")
+      expect(page).to have_text(I18n.t("sessions.new.title"))
+      # Sign in as regular member
       fill_in I18n.t("sessions.new.email_label"), with: regular.email_address
       click_button I18n.t("sessions.new.continue")
       fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
