@@ -30,6 +30,9 @@
 
 /public/assets
 
+# Node modules (Playwright browser driver)
+/node_modules
+
 # Test coverage reports
 /coverage/
 
