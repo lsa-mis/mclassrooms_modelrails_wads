@@ -1,42 +1,51 @@
 require "rails_helper"
 
 RSpec.describe "Email Verification Resends", type: :request do
-  let(:user) { create(:user) }
-  let!(:authentication) { create(:authentication, user: user, provider: "email", uid: user.email_address) }
-
-  before { sign_in(user) }
-
-  describe "POST /email_verification_resend" do
-    it "sends a new verification email" do
-      expect {
-        post email_verification_resend_path
-      }.to have_enqueued_mail(AuthenticationMailer, :verification_email)
-    end
-
-    it "generates a fresh token" do
-      old_token = authentication.verification_token
+  describe "unauthenticated access" do
+    it "redirects POST /email_verification_resend to sign in" do
       post email_verification_resend_path
-      expect(authentication.reload.verification_token).not_to eq(old_token)
+      expect(response).to redirect_to(new_session_path)
     end
+  end
 
-    describe "POST when user has no email authentication" do
-      before do
-        user.authentications.destroy_all
+  context "authenticated" do
+    let(:user) { create(:user) }
+    let!(:authentication) { create(:authentication, user: user, provider: "email", uid: user.email_address) }
+
+    before { sign_in(user) }
+
+    describe "POST /email_verification_resend" do
+      it "sends a new verification email" do
+        expect {
+          post email_verification_resend_path
+        }.to have_enqueued_mail(AuthenticationMailer, :verification_email)
       end
 
-      it "redirects with alert" do
+      it "generates a fresh token" do
+        old_token = authentication.verification_token
         post email_verification_resend_path
-        expect(response).to redirect_to(root_path)
-        expect(flash[:alert]).to be_present
+        expect(authentication.reload.verification_token).not_to eq(old_token)
       end
-    end
 
-    context "already verified" do
-      before { authentication.verify! }
+      describe "POST when user has no email authentication" do
+        before do
+          user.authentications.destroy_all
+        end
 
-      it "redirects with notice" do
-        post email_verification_resend_path
-        expect(flash[:notice]).to eq(I18n.t("email_verification_resends.create.already_verified"))
+        it "redirects with alert" do
+          post email_verification_resend_path
+          expect(response).to redirect_to(root_path)
+          expect(flash[:alert]).to be_present
+        end
+      end
+
+      context "already verified" do
+        before { authentication.verify! }
+
+        it "redirects with notice" do
+          post email_verification_resend_path
+          expect(flash[:notice]).to eq(I18n.t("email_verification_resends.create.already_verified"))
+        end
       end
     end
   end
