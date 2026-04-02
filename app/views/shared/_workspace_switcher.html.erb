@@ -1,8 +1,8 @@
 <% if authenticated? && Current.user.workspaces.kept.any? %>
-  <div data-controller="workspace-switcher"
-       data-action="keydown->workspace-switcher#handleKeydown"
+  <div data-controller="dropdown"
        class="relative">
-    <button data-action="click->workspace-switcher#toggle"
+    <button data-dropdown-target="button"
+            data-action="click->dropdown#toggle"
             aria-expanded="false"
             aria-haspopup="true"
             class="min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-md
@@ -15,12 +15,12 @@
       </svg>
     </button>
 
-    <div data-workspace-switcher-target="menu"
+    <div data-dropdown-target="menu"
          role="menu"
          class="hidden absolute right-0 mt-2 w-56 rounded-md bg-surface-overlay
                 border border-border shadow-lg z-50">
       <% Current.user.workspaces.kept.each do |workspace| %>
-        <%= link_to workspace_path(workspace), role: "menuitem",
+        <%= link_to workspace_path(workspace), role: "menuitem", tabindex: "-1",
               class: "flex items-center gap-3 px-4 py-3 text-sm text-text-body
                       hover:bg-surface-sunken
                       focus:outline-none focus:bg-surface-sunken" do %>
@@ -34,7 +34,7 @@
         <% end %>
       <% end %>
       <div class="border-t border-border">
-        <%= link_to t("navigation.new_workspace"), new_workspace_path, role: "menuitem",
+        <%= link_to t("navigation.new_workspace"), new_workspace_path, role: "menuitem", tabindex: "-1",
               class: "block px-4 py-3 text-sm text-interactive
                       hover:bg-surface-sunken
                       focus:outline-none focus:bg-surface-sunken" %>
