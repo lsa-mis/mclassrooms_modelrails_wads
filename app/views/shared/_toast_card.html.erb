@@ -1,0 +1,50 @@
+<%# locals: (type:, message:) -%>
+<%
+  type_classes = case type
+                 when "alert" then "bg-warning-surface border-warning-border"
+                 when "error" then "bg-danger-surface border-danger-border"
+                 end
+
+  text_color = case type
+               when "alert" then "text-warning"
+               when "error" then "text-danger"
+               end
+
+  icon_color = case type
+               when "alert" then "text-warning-icon"
+               when "error" then "text-danger-icon"
+               end
+
+  close_hover = case type
+                when "alert" then "hover:bg-warning-hover"
+                when "error" then "hover:bg-danger-hover"
+                end
+%>
+<div data-controller="toast-card"
+     role="alert"
+     aria-live="assertive"
+     aria-atomic="true"
+     class="w-96 max-w-[calc(100vw-2rem)] pointer-events-auto rounded-lg border shadow-lg overflow-hidden <%= type_classes %>">
+  <div class="flex items-start gap-3 p-4">
+    <div class="shrink-0 mt-0.5 <%= icon_color %>">
+      <% if type == "alert" %>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        </svg>
+      <% else %>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+      <% end %>
+    </div>
+    <p class="flex-1 text-sm leading-relaxed <%= text_color %>"><%= message %></p>
+    <button type="button"
+            aria-label="<%= t('toasts.close') %>"
+            data-action="click->toast-card#dismiss"
+            class="shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md -m-1 <%= close_hover %> focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-current">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+</div>

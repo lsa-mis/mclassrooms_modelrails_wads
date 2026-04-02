@@ -15,4 +15,17 @@ RSpec.describe "Toast rendering", type: :request do
       expect(response.body).to include('role="status"')
     end
   end
+
+  describe "error flash" do
+    it "renders a card in the toast-cards container" do
+      post session_path, params: {
+        email_address: "nobody@example.com",
+        password: "wrong"
+      }
+      follow_redirect!
+      expect(response.body).to include('id="toast-cards"')
+      expect(response.body).to include('data-controller="toast-card"')
+      expect(response.body).to include('role="alert"')
+    end
+  end
 end
