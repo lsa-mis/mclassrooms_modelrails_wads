@@ -1,4 +1,5 @@
 en:
   toasts:
-    aria_label: "Notifications"
-    close: "Close notification"
+    pill_aria_label: "Notifications"
+    card_aria_label: "Alerts"
+    close: "Dismiss notification"
