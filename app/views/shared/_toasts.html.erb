@@ -1,9 +1,26 @@
-<div id="notifications"
-     aria-label="<%= t('toasts.aria_label') %>"
-     class="fixed top-16 right-0 z-[100] flex flex-col gap-3 p-4 sm:p-6
-            max-h-[calc(100vh-5rem)] overflow-y-auto pointer-events-none">
+<%# Top-center: success/info pills %>
+<div id="toast-pills"
+     aria-label="<%= t('toasts.pill_aria_label') %>"
+     class="fixed top-20 left-1/2 -translate-x-1/2 z-[100]
+            flex flex-col items-center gap-2
+            pointer-events-none">
   <% flash.each do |type, message| %>
-    <% next unless %w[notice success alert error].include?(type) %>
-    <%= render "shared/toast", type: type, message: message %>
+    <% if %w[notice success].include?(type) %>
+      <%= render "shared/toast_pill", type: type, message: message %>
+    <% end %>
+  <% end %>
+</div>
+
+<%# Bottom-center: warning/error cards %>
+<div id="toast-cards"
+     aria-label="<%= t('toasts.card_aria_label') %>"
+     class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100]
+            flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]
+            max-w-[calc(100vw-2rem)]
+            pointer-events-none">
+  <% flash.each do |type, message| %>
+    <% if %w[alert error].include?(type) %>
+      <%= render "shared/toast_card", type: type, message: message %>
+    <% end %>
   <% end %>
 </div>
