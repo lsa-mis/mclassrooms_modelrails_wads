@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static values = { timeout: { type: Number, default: 5000 } }
+  static values = { timeout: { type: Number, default: 5000 }, stagger: { type: Number, default: 2000 } }
   static targets = ["progress"]
 
   connect() {
@@ -86,6 +86,6 @@ export default class extends Controller {
     if (!container) return 0
     const siblings = [...container.querySelectorAll('[data-controller="toast-pill"]')]
     const index = siblings.indexOf(this.element)
-    return index * 2000
+    return index * this.staggerValue
   }
 }
