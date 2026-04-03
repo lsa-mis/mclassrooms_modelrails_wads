@@ -5,41 +5,15 @@
   </h1>
 
   <%= form_with url: workspace_project_invitations_path(@workspace, @project), method: :post, class: "mt-8 space-y-6" do |form| %>
-    <% if @invitation.errors.any? %>
-      <div role="alert" class="p-4 bg-danger-surface rounded-lg">
-        <ul class="list-disc list-inside text-danger">
-          <% @invitation.errors.full_messages.each do |message| %>
-            <li><%= message %></li>
-          <% end %>
-        </ul>
-      </div>
-    <% end %>
+    <%= form.email_field :email,
+          label: t("workspaces.projects.invitations.new.email_label"),
+          required: true %>
 
-    <div>
-      <%= form.label :email, t("workspaces.projects.invitations.new.email_label"),
-            class: "block text-sm font-medium text-text-body" %>
-      <%= form.email_field :email, required: true,
-            class: "mt-1 block w-full rounded-md border border-border-strong
-                    bg-surface-raised px-3 py-2
-                    text-text-heading
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
-    </div>
+    <%= form.select :project_role,
+          [["Editor", "editor"], ["Viewer", "viewer"]],
+          { label: t("workspaces.projects.invitations.new.role_label") },
+          {} %>
 
-    <div>
-      <%= form.label :project_role, t("workspaces.projects.invitations.new.role_label"),
-            class: "block text-sm font-medium text-text-body" %>
-      <%= form.select :project_role, [["Editor", "editor"], ["Viewer", "viewer"]],
-            {},
-            class: "mt-1 block w-full rounded-md border border-border-strong
-                    bg-surface-raised px-3 py-2
-                    text-text-heading
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
-    </div>
-
-    <%= form.submit t("workspaces.projects.invitations.new.submit"),
-          class: "w-full min-h-[44px] rounded-md px-4 py-2
-                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
-                  cursor-pointer" %>
+    <%= form.submit t("workspaces.projects.invitations.new.submit"), class: "w-full" %>
   <% end %>
 </div>

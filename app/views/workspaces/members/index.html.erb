@@ -20,17 +20,12 @@
           data: { controller: "search-form", turbo_frame: "members_results" },
           class: "mt-6 flex flex-col gap-3 sm:flex-row sm:items-end" do |form| %>
       <div class="flex-1">
-        <%= form.label :q, t("workspaces.members.index.search_placeholder"),
-              class: "sr-only" %>
         <%= form.search_field :q,
+              label: t("workspaces.members.index.search_placeholder"),
               value: params[:q],
               placeholder: t("workspaces.members.index.search_placeholder"),
               data: { action: "input->search-form#search keydown->search-form#clear" },
-              autocomplete: "off",
-              class: "w-full min-h-[44px] rounded-md border border-border-strong
-                      bg-surface-raised px-3 py-2 text-sm
-                      text-text-heading placeholder:text-text-muted
-                      focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
+              autocomplete: "off" %>
       </div>
 
       <div class="flex gap-3">
@@ -40,13 +35,8 @@
                 @roles.map { |r| [r.name, r.slug] },
                 params[:role]
               ),
-              {},
-              { onchange: "this.form.requestSubmit()",
-                class: "min-h-[44px] rounded-md border border-border-strong
-                        bg-surface-raised px-3 py-2 text-sm
-                        text-text-heading
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus",
-                aria: { label: t("workspaces.members.index.filter_by_role") } } %>
+              { label: t("workspaces.members.index.filter_by_role") },
+              { onchange: "this.form.requestSubmit()" } %>
 
         <%= form.select :status,
               options_for_select(
@@ -55,13 +45,8 @@
                  [t("workspaces.members.index.status_deactivated"), "deactivated"]],
                 params[:status]
               ),
-              {},
-              { onchange: "this.form.requestSubmit()",
-                class: "min-h-[44px] rounded-md border border-border-strong
-                        bg-surface-raised px-3 py-2 text-sm
-                        text-text-heading
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus",
-                aria: { label: t("workspaces.members.index.filter_by_status") } } %>
+              { label: t("workspaces.members.index.filter_by_status") },
+              { onchange: "this.form.requestSubmit()" } %>
       </div>
 
       <%# Preserve sort params through filter changes %>

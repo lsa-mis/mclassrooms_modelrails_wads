@@ -5,25 +5,15 @@
   </h1>
 
   <%= form_with model: @workspace, url: workspace_settings_path(@workspace), method: :patch, class: "mt-8 space-y-6" do |form| %>
-    <div>
-      <%= form.label :max_members, t("workspaces.settings.edit.max_members_label"),
-            class: "block text-sm font-medium text-text-body" %>
-      <%= form.number_field :max_members, min: 1, required: true,
-            class: "mt-1 block w-full rounded-md border border-border-strong
-                    bg-surface-raised px-3 py-2
-                    text-text-heading
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
-    </div>
+    <%= form.number_field :max_members,
+          label: t("workspaces.settings.edit.max_members_label"),
+          min: 1,
+          required: true %>
 
-    <div>
-      <%= form.label :max_projects, t("workspaces.settings.edit.max_projects_label"),
-            class: "block text-sm font-medium text-text-body" %>
-      <%= form.number_field :max_projects, min: 1, required: true,
-            class: "mt-1 block w-full rounded-md border border-border-strong
-                    bg-surface-raised px-3 py-2
-                    text-text-heading
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
-    </div>
+    <%= form.number_field :max_projects,
+          label: t("workspaces.settings.edit.max_projects_label"),
+          min: 1,
+          required: true %>
 
     <div class="p-4 bg-surface rounded-lg">
       <p class="text-sm text-text-muted">
@@ -32,10 +22,6 @@
       </p>
     </div>
 
-    <%= form.submit t("workspaces.settings.edit.submit"),
-          class: "w-full min-h-[44px] rounded-md px-4 py-2
-                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
-                  cursor-pointer" %>
+    <%= form.submit t("workspaces.settings.edit.submit"), class: "w-full" %>
   <% end %>
 </div>

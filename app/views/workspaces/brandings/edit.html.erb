@@ -18,8 +18,7 @@
             <%= @workspace.initials %>
           </div>
         <% end %>
-        <%= form.file_field :logo, accept: "image/*",
-              class: "text-sm text-text-muted" %>
+        <%= form.file_field :logo, accept: "image/*" %>
       </div>
     </div>
 
@@ -59,8 +58,9 @@
                  class="w-12 h-10 rounded-md border border-border-strong cursor-pointer p-0.5
                         focus:outline-none focus:ring-2 focus:ring-interactive-focus"
                  aria-label="<%= t("workspaces.brandings.edit.color_label") %>">
-          <%= form.text_field :primary_color,
-                value: @workspace.primary_color || "#0284c7",
+          <%= text_field_tag "workspace[primary_color]",
+                @workspace.primary_color || "#0284c7",
+                id: "workspace_primary_color",
                 data: { color_picker_target: "textInput", action: "input->color-picker#updateFromText" },
                 class: "flex-1 min-h-[44px] rounded-md border border-border-strong
                         bg-surface-raised px-3 py-2 text-sm
@@ -85,10 +85,6 @@
       </div>
     </div>
 
-    <%= form.submit t("workspaces.brandings.edit.submit"),
-          class: "w-full min-h-[44px] rounded-md px-4 py-2
-                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
-                  cursor-pointer" %>
+    <%= form.submit t("workspaces.brandings.edit.submit"), class: "w-full" %>
   <% end %>
 </div>
