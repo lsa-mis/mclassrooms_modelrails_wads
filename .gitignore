@@ -46,16 +46,5 @@
 # Gem view symlinks for Tailwind source scanning
 /vendor/markdowndocs_views
 
-# Claude Code — development tools (not committed)
-.claude/settings.local.json
-.claude/skills/
-.claude/agents/
-.claude/commands/
-.claude/worktrees/
-.claude/plans/
-
-# Agent-OS — development tools (not committed)
-agent-os/
-
-# Agent-OS active specs (not committed)
-.agent-os/
+# macOS metadata
+.DS_Store
