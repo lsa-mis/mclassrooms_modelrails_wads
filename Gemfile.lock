@@ -255,7 +255,7 @@ GEM
     mime-types (3.7.0)
       logger
       mime-types-data (~> 3.2025, >= 3.2025.0507)
-    mime-types-data (3.2026.0317)
+    mime-types-data (3.2026.0331)
     mini_magick (5.3.1)
       logger
     mini_mime (1.1.5)
@@ -704,7 +704,7 @@ CHECKSUMS
   markdowndocs (0.4.0) sha256=1cedd2e771f56ff6a89ed5f3b26fc8c1f2264aa05feedf1ffdc515435edd2f75
   matrix (0.4.3) sha256=a0d5ab7ddcc1973ff690ab361b67f359acbb16958d1dc072b8b956a286564c5b
   mime-types (3.7.0) sha256=dcebf61c246f08e15a4de34e386ebe8233791e868564a470c3fe77c00eed5e56
-  mime-types-data (3.2026.0317) sha256=77f078a4d8631d52b842ba77099734b06eddb7ad339d792e746d2272b67e511b
+  mime-types-data (3.2026.0331) sha256=e9942b1fac72532e2b201b0c32c52e7650ef5ef8ca043a5054674597795c97a5
   mini_magick (5.3.1) sha256=29395dfd76badcabb6403ee5aff6f681e867074f8f28ce08d78661e9e4a351c4
   mini_mime (1.1.5) sha256=8681b7e2e4215f2a159f9400b5816d85e9d8c6c6b491e96a12797e798f8bccef
   minitest (6.0.2) sha256=db6e57956f6ecc6134683b4c87467d6dd792323c7f0eea7b93f66bd284adbc3d
