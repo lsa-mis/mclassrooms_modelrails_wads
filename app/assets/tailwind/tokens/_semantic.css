@@ -37,6 +37,11 @@
   /* --- Toast (inverted overlay pill) --- */
   --color-surface-toast: oklch(20.5% 0.016 265.755 / 90%);  /* neutral-900 @ 90% */
   --color-text-on-toast: oklch(100% 0 0);                     /* white */
+
+  /* --- Toast positioning --- */
+  --toast-pill-top: 5rem;
+  --toast-card-bottom: 1rem;
+  --toast-z: 100;
 }
 
 .dark {
