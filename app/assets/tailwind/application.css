@@ -560,6 +560,11 @@
 
 .dark .biscuit-banner {
   --biscuit-shadow-bottom: 0 -4px 16px rgba(0, 0, 0, 0.3);
+  --biscuit-accent: var(--color-interactive);
+}
+
+.dark .biscuit-btn--primary {
+  color: var(--color-text-on-interactive);
 }
 
 .dark .biscuit-btn--secondary:hover {

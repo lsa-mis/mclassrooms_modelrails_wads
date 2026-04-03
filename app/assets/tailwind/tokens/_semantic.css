@@ -55,7 +55,7 @@
   --color-text-heading:        var(--neutral-100);
   --color-text-body:           var(--neutral-300);
   --color-text-muted:          var(--neutral-400);
-  --color-text-on-interactive: oklch(100% 0 0);  /* stays white */
+  --color-text-on-interactive: var(--neutral-900);  /* dark text on light interactive bg */
 
   /* --- Interactive --- */
   --color-interactive:       var(--primary-400);
