@@ -1,26 +1,27 @@
+<%
+  toast_types = Rails.application.config.toasts[:types]
+%>
 <%# Top-center: success/info pills %>
 <div id="toast-pills"
      aria-label="<%= t('toasts.pill_aria_label') %>"
-     class="fixed top-20 left-1/2 -translate-x-1/2 z-[100]
+     class="fixed top-[var(--toast-pill-top)] left-1/2 -translate-x-1/2 z-[var(--toast-z)]
             flex flex-col items-center gap-2
             pointer-events-none">
   <% flash.each do |type, message| %>
-    <% if %w[notice success info].include?(type) %>
-      <%= render "shared/toast_pill", type: type, message: message %>
-    <% end %>
+    <% next unless toast_types.dig(type.to_sym, :tier) == :pill %>
+    <%= render "shared/toast_pill", type: type, message: message %>
   <% end %>
 </div>
 
 <%# Bottom-center: warning/error cards %>
 <div id="toast-cards"
      aria-label="<%= t('toasts.card_aria_label') %>"
-     class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100]
+     class="fixed bottom-[var(--toast-card-bottom)] left-1/2 -translate-x-1/2 z-[var(--toast-z)]
             flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]
             max-w-[calc(100vw-2rem)]
             pointer-events-none">
   <% flash.each do |type, message| %>
-    <% if %w[alert error].include?(type) %>
-      <%= render "shared/toast_card", type: type, message: message %>
-    <% end %>
+    <% next unless toast_types.dig(type.to_sym, :tier) == :card %>
+    <%= render "shared/toast_card", type: type, message: message %>
   <% end %>
 </div>
