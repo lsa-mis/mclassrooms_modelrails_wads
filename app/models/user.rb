@@ -13,6 +13,7 @@ class User < ApplicationRecord
   after_create :create_personal_workspace
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
+  normalizes :pending_email, with: ->(e) { e&.strip&.downcase }
 
   EMAIL_FORMAT = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
 
@@ -23,6 +24,9 @@ class User < ApplicationRecord
   validates :password, length: { minimum: 12 }, if: -> { password.present? && (password_digest_changed? || new_record?) }
   validates :password, confirmation: true, if: -> { password.present? }
   validate :password_not_pwned, if: -> { password.present? && (password_digest_changed? || new_record?) }
+
+  validates :pending_email, format: { with: EMAIL_FORMAT }, allow_blank: true
+  validate :pending_email_not_taken, if: -> { pending_email.present? }
 
   MAX_FAILED_ATTEMPTS = 5
   LOCK_DURATION = 1.hour
@@ -70,6 +74,49 @@ class User < ApplicationRecord
     password_digest.present?
   end
 
+  def initiate_email_change!(new_email, password)
+    return false unless has_password?
+    return false unless authenticate(password)
+
+    normalized = new_email.strip.downcase
+    return false if normalized == email_address
+
+    self.pending_email = new_email
+    self.pending_email_token = SecureRandom.urlsafe_base64(32)
+    self.pending_email_sent_at = Time.current
+
+    save
+  end
+
+  def confirm_email_change!(token)
+    return false if token.blank?
+    return false if pending_email_token != token
+    return false unless pending_email_token_valid?
+
+    transaction do
+      self.email_address = pending_email
+      clear_pending_email_fields
+      save!
+
+      authentications.email.update_all(uid: email_address)
+    end
+
+    true
+  rescue ActiveRecord::RecordInvalid
+    false
+  end
+
+  def cancel_email_change!
+    clear_pending_email_fields
+    save!
+  end
+
+  def pending_email_token_valid?
+    pending_email_token.present? &&
+      pending_email_sent_at.present? &&
+      pending_email_sent_at > 24.hours.ago
+  end
+
   private
 
   def create_personal_workspace
@@ -88,5 +135,17 @@ class User < ApplicationRecord
     end
   rescue Pwned::Error
     # Network error — allow password (don't block registration on external service failure)
+  end
+
+  def pending_email_not_taken
+    if User.where.not(id: id).exists?(email_address: pending_email)
+      errors.add(:pending_email, :taken)
+    end
+  end
+
+  def clear_pending_email_fields
+    self.pending_email = nil
+    self.pending_email_token = nil
+    self.pending_email_sent_at = nil
   end
 end

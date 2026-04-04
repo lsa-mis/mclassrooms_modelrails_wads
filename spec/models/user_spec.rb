@@ -147,4 +147,145 @@ RSpec.describe User, type: :model do
       expect(user.reload.failed_login_attempts).to eq(0)
     end
   end
+
+  describe "#initiate_email_change!" do
+    let(:user) { create(:user) }
+
+    it "sets pending fields when password is correct" do
+      result = user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+      expect(result).to be true
+      expect(user.reload.pending_email).to eq("new@example.com")
+      expect(user.pending_email_token).to be_present
+      expect(user.pending_email_sent_at).to be_present
+    end
+
+    it "returns false when password is wrong" do
+      result = user.initiate_email_change!("new@example.com", "wrongpassword")
+      expect(result).to be false
+      expect(user.reload.pending_email).to be_nil
+    end
+
+    it "returns false when email format is invalid" do
+      result = user.initiate_email_change!("notanemail", "SecureP@ssw0rd123!")
+      expect(result).to be false
+      expect(user.reload.pending_email).to be_nil
+    end
+
+    it "returns false when email is already taken" do
+      create(:user, email_address: "taken@example.com")
+      result = user.initiate_email_change!("taken@example.com", "SecureP@ssw0rd123!")
+      expect(result).to be false
+      expect(user.reload.pending_email).to be_nil
+    end
+
+    it "returns false when email is same as current" do
+      result = user.initiate_email_change!(user.email_address, "SecureP@ssw0rd123!")
+      expect(result).to be false
+    end
+
+    it "overwrites previous pending change" do
+      user.initiate_email_change!("first@example.com", "SecureP@ssw0rd123!")
+      user.initiate_email_change!("second@example.com", "SecureP@ssw0rd123!")
+      expect(user.reload.pending_email).to eq("second@example.com")
+    end
+
+    it "returns false for passwordless user" do
+      oauth_user = create(:user, password: nil, password_digest: nil)
+      result = oauth_user.initiate_email_change!("new@example.com", "anything")
+      expect(result).to be false
+    end
+
+    it "normalizes the pending email" do
+      user.initiate_email_change!("  NEW@EXAMPLE.COM  ", "SecureP@ssw0rd123!")
+      expect(user.reload.pending_email).to eq("new@example.com")
+    end
+  end
+
+  describe "#confirm_email_change!" do
+    let(:user) { create(:user, :with_email_auth) }
+
+    before do
+      user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+      user.reload
+    end
+
+    it "updates email_address with valid token" do
+      token = user.pending_email_token
+      result = user.confirm_email_change!(token)
+      expect(result).to be true
+      expect(user.reload.email_address).to eq("new@example.com")
+    end
+
+    it "updates email Authentication uid" do
+      email_auth = user.authentications.email.first
+      token = user.pending_email_token
+      user.confirm_email_change!(token)
+      expect(email_auth.reload.uid).to eq("new@example.com")
+    end
+
+    it "does not touch OAuth authentications" do
+      oauth_auth = user.authentications.create!(provider: "google", uid: "google123", verified_at: Time.current)
+      token = user.pending_email_token
+      user.confirm_email_change!(token)
+      expect(oauth_auth.reload.uid).to eq("google123")
+    end
+
+    it "clears pending fields" do
+      token = user.pending_email_token
+      user.confirm_email_change!(token)
+      user.reload
+      expect(user.pending_email).to be_nil
+      expect(user.pending_email_token).to be_nil
+      expect(user.pending_email_sent_at).to be_nil
+    end
+
+    it "returns false for expired token" do
+      user.update!(pending_email_sent_at: 25.hours.ago)
+      result = user.confirm_email_change!(user.pending_email_token)
+      expect(result).to be false
+      expect(user.reload.email_address).not_to eq("new@example.com")
+    end
+
+    it "returns false for wrong token" do
+      result = user.confirm_email_change!("wrong-token")
+      expect(result).to be false
+    end
+
+    it "returns false for nil token" do
+      result = user.confirm_email_change!(nil)
+      expect(result).to be false
+    end
+  end
+
+  describe "#cancel_email_change!" do
+    let(:user) { create(:user) }
+
+    it "clears all pending fields" do
+      user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+      user.cancel_email_change!
+      user.reload
+      expect(user.pending_email).to be_nil
+      expect(user.pending_email_token).to be_nil
+      expect(user.pending_email_sent_at).to be_nil
+    end
+  end
+
+  describe "#pending_email_token_valid?" do
+    let(:user) { create(:user) }
+
+    it "returns true for fresh token" do
+      user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+      expect(user.pending_email_token_valid?).to be true
+    end
+
+    it "returns false for expired token" do
+      user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+      user.update!(pending_email_sent_at: 25.hours.ago)
+      expect(user.pending_email_token_valid?).to be false
+    end
+
+    it "returns false when no token" do
+      expect(user.pending_email_token_valid?).to be false
+    end
+  end
 end
