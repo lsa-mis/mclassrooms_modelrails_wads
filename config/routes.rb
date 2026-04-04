@@ -24,6 +24,7 @@ Rails.application.routes.draw do
     resource :avatar, only: [ :update, :destroy ]
     resource :theme_preference, only: [ :update ]
     resources :connected_accounts, only: [ :index, :destroy ]
+    resource :email_confirmation, only: [ :show, :destroy ]
   end
 
   resources :workspaces, param: :slug do
