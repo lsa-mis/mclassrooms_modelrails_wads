@@ -1,5 +1,7 @@
 class User < ApplicationRecord
   has_secure_password validations: false
+  attr_accessor :current_password
+
   has_many :sessions, dependent: :destroy
   has_many :authentications, dependent: :destroy
   has_one :preferences, class_name: "UserPreferences", dependent: :destroy

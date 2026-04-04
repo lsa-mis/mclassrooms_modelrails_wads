@@ -17,10 +17,46 @@
           required: true,
           autocomplete: "family-name" %>
 
-    <%= form.email_field :email_address,
-          label: t("account.profiles.edit.email_label"),
-          required: true,
-          autocomplete: "email" %>
+    <% if @user.has_password? %>
+      <%= form.email_field :email_address,
+            label: t("account.profiles.edit.email_label"),
+            required: true,
+            autocomplete: "email" %>
+
+      <%= form.password_field :current_password,
+            label: t("account.profiles.edit.current_password_label"),
+            help: t("account.profiles.edit.current_password_help"),
+            autocomplete: "current-password" %>
+    <% else %>
+      <div class="space-y-2">
+        <p class="block text-sm font-medium text-text-body"><%= t("account.profiles.edit.email_label") %></p>
+        <p class="text-text-heading"><%= @user.email_address %></p>
+        <p class="text-sm text-text-muted">
+          <%= t("account.profiles.edit.email_readonly_notice") %>
+          <%= link_to t("account.profiles.edit.set_password"), new_account_password_path,
+                class: "text-interactive underline hover:no-underline" %>
+        </p>
+      </div>
+    <% end %>
+
+    <% if @user.pending_email.present? %>
+      <div class="rounded-lg border border-info-border bg-info-surface p-4">
+        <div class="flex items-start gap-3">
+          <%= icon(:information_circle, size: :md, class: "text-info-icon shrink-0 mt-0.5") %>
+          <div>
+            <p class="text-sm text-info">
+              <%= t("account.profiles.edit.pending_email_notice", email: @user.pending_email) %>
+            </p>
+            <p class="mt-2">
+              <%= link_to t("account.profiles.edit.cancel_email_change"),
+                    account_email_confirmation_path,
+                    data: { turbo_method: :delete },
+                    class: "text-sm text-interactive underline hover:no-underline" %>
+            </p>
+          </div>
+        </div>
+      </div>
+    <% end %>
 
     <%= form.submit t("account.profiles.edit.submit"), class: "w-full" %>
   <% end %>
