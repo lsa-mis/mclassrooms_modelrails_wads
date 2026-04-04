@@ -16,6 +16,9 @@ en:
       rate_limited: "Too many attempts. Please try again later."
       oauth_failure: "Authentication failed. Please try again."
       oauth_account_exists: "An account with that email already exists. Please sign in first, then link your account."
+    lookup:
+      invalid_email: "Please enter a valid email address."
+      password_prompt: "Enter your password to sign in."
     check_email:
       title: "Check your email"
       description: "We sent a sign-in link to %{email}. Click the link in your email to continue."

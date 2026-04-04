@@ -25,6 +25,12 @@ class SessionsController < ApplicationController
 
   def lookup
     email = params[:email_address]&.downcase&.strip
+
+    unless email&.match?(User::EMAIL_FORMAT)
+      redirect_to new_session_path, alert: t(".invalid_email")
+      return
+    end
+
     user = User.find_by(email_address: email)
 
     if user&.has_password?
