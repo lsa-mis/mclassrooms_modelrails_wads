@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_04_103839) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_05_202949) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -66,6 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_103839) do
   end
 
   create_table "authentications", force: :cascade do |t|
+    t.string "avatar_url"
     t.datetime "created_at", null: false
     t.datetime "oauth_expires_at"
     t.string "oauth_refresh_token"
@@ -214,10 +215,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_103839) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.string "avatar_source", default: "initials", null: false
     t.datetime "created_at", null: false
     t.string "email_address", null: false
     t.integer "failed_login_attempts", default: 0, null: false
     t.string "first_name"
+    t.boolean "has_gravatar", default: false, null: false
     t.string "last_name"
     t.datetime "locked_at"
     t.datetime "magic_link_sent_at"
