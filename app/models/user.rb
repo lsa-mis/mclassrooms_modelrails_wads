@@ -13,6 +13,8 @@ class User < ApplicationRecord
   has_many :projects, through: :project_memberships
 
   after_create :create_personal_workspace
+  after_create :check_gravatar_later
+  after_update_commit :check_gravatar_later, if: :saved_change_to_email_address?
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
   normalizes :pending_email, with: ->(e) { e&.strip&.downcase }
@@ -29,6 +31,10 @@ class User < ApplicationRecord
 
   validates :pending_email, format: { with: EMAIL_FORMAT }, allow_blank: true
   validate :pending_email_not_taken, if: -> { pending_email.present? }
+  validates :avatar_source, inclusion: { in: %w[upload gravatar initials] }
+  validates :avatar,
+    content_type: %w[image/png image/jpeg image/gif image/webp],
+    size: { less_than: 5.megabytes }
 
   MAX_FAILED_ATTEMPTS = 5
   LOCK_DURATION = 1.hour
@@ -76,6 +82,18 @@ class User < ApplicationRecord
     password_digest.present?
   end
 
+  def gravatar_url(size: 128)
+    hash = Digest::SHA256.hexdigest(email_address.strip.downcase)
+    "https://www.gravatar.com/avatar/#{hash}?s=#{size}&d=404"
+  end
+
+  def available_avatar_sources
+    sources = [ "initials" ]
+    sources << "gravatar" if has_gravatar?
+    sources << "upload" if avatar.attached?
+    sources
+  end
+
   def initiate_email_change!(new_email, password)
     return false unless has_password?
     return false unless authenticate(password)
@@ -120,6 +138,10 @@ class User < ApplicationRecord
   end
 
   private
+
+  def check_gravatar_later
+    CheckGravatarJob.perform_later(self)
+  end
 
   def create_personal_workspace
     workspace = Workspace.create!(name: "#{first_name}'s Workspace")

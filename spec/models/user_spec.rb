@@ -288,4 +288,125 @@ RSpec.describe User, type: :model do
       expect(user.pending_email_token_valid?).to be false
     end
   end
+
+  describe "avatar_source validation" do
+    it "allows 'upload' as avatar_source" do
+      user = build(:user, avatar_source: "upload")
+      user.valid?
+      expect(user.errors[:avatar_source]).to be_empty
+    end
+
+    it "allows 'gravatar' as avatar_source" do
+      user = build(:user, avatar_source: "gravatar")
+      user.valid?
+      expect(user.errors[:avatar_source]).to be_empty
+    end
+
+    it "allows 'initials' as avatar_source" do
+      user = build(:user, avatar_source: "initials")
+      user.valid?
+      expect(user.errors[:avatar_source]).to be_empty
+    end
+
+    it "rejects invalid avatar_source" do
+      user = build(:user, avatar_source: "invalid")
+      expect(user).not_to be_valid
+      expect(user.errors[:avatar_source]).to be_present
+    end
+  end
+
+  describe "#gravatar_url" do
+    it "generates a SHA256-based Gravatar URL" do
+      user = build(:user, email_address: "test@example.com")
+      hash = Digest::SHA256.hexdigest("test@example.com")
+      expect(user.gravatar_url).to eq("https://www.gravatar.com/avatar/#{hash}?s=128&d=404")
+    end
+
+    it "accepts a custom size" do
+      user = build(:user, email_address: "test@example.com")
+      expect(user.gravatar_url(size: 64)).to include("s=64")
+    end
+
+    it "normalizes email before hashing" do
+      user = build(:user, email_address: "Test@Example.COM")
+      hash = Digest::SHA256.hexdigest("test@example.com")
+      expect(user.gravatar_url).to include(hash)
+    end
+  end
+
+  describe "#available_avatar_sources" do
+    it "always includes initials" do
+      user = build(:user)
+      expect(user.available_avatar_sources).to include("initials")
+    end
+
+    it "includes gravatar when has_gravatar is true" do
+      user = build(:user, has_gravatar: true)
+      expect(user.available_avatar_sources).to include("gravatar")
+    end
+
+    it "excludes gravatar when has_gravatar is false" do
+      user = build(:user, has_gravatar: false)
+      expect(user.available_avatar_sources).not_to include("gravatar")
+    end
+
+    it "includes upload when avatar is attached" do
+      user = create(:user)
+      user.avatar.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")), filename: "avatar.png", content_type: "image/png")
+      expect(user.available_avatar_sources).to include("upload")
+    end
+
+    it "excludes upload when avatar is not attached" do
+      user = build(:user)
+      expect(user.available_avatar_sources).not_to include("upload")
+    end
+  end
+
+  describe "avatar Active Storage validations" do
+    it "accepts valid image content types" do
+      user = create(:user)
+      %w[image/png image/jpeg image/gif image/webp].each do |content_type|
+        user.avatar.attach(io: StringIO.new("fake"), filename: "test.png", content_type: content_type)
+        user.valid?
+        expect(user.errors[:avatar]).to be_empty, "Expected #{content_type} to be valid"
+      end
+    end
+
+    it "rejects invalid content types" do
+      user = create(:user)
+      user.avatar.attach(io: StringIO.new("fake"), filename: "test.txt", content_type: "text/plain")
+      expect(user).not_to be_valid
+      expect(user.errors[:avatar]).to be_present
+    end
+
+    it "rejects files over 5MB" do
+      user = create(:user)
+      large_io = StringIO.new("x" * 6.megabytes)
+      user.avatar.attach(io: large_io, filename: "big.png", content_type: "image/png")
+      expect(user).not_to be_valid
+      expect(user.errors[:avatar]).to be_present
+    end
+  end
+
+  describe "Gravatar check callbacks" do
+    it "enqueues CheckGravatarJob after create" do
+      expect {
+        create(:user)
+      }.to have_enqueued_job(CheckGravatarJob)
+    end
+
+    it "enqueues CheckGravatarJob after email change" do
+      user = create(:user)
+      expect {
+        user.update!(email_address: "newemail#{SecureRandom.hex(4)}@example.com")
+      }.to have_enqueued_job(CheckGravatarJob)
+    end
+
+    it "does not enqueue CheckGravatarJob when email does not change" do
+      user = create(:user)
+      expect {
+        user.update!(first_name: "Updated")
+      }.not_to have_enqueued_job(CheckGravatarJob)
+    end
+  end
 end
