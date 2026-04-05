@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Magic Links", type: :request do
+  before { MagicLinksController::RATE_LIMIT_STORE.clear }
+
   describe "POST /magic_link" do
     context "existing user with no password" do
       let(:user) { create(:user) }
