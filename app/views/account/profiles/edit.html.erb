@@ -4,6 +4,52 @@
     <%= t("account.profiles.edit.title") %>
   </h1>
 
+  <%# Avatar preview and editor %>
+  <div class="flex items-center gap-6 mt-8 mb-8" data-controller="modal">
+    <%= avatar_for(@user, size: :xl) %>
+    <div>
+      <h2 class="text-lg font-semibold text-text-heading"><%= @user.full_name %></h2>
+      <button data-action="click->modal#open"
+              type="button"
+              class="text-sm text-interactive underline hover:no-underline mt-1
+                     min-h-[44px] min-w-[44px]
+                     focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
+        <%= t("account.avatars.edit.change") %>
+      </button>
+    </div>
+
+    <%= render "shared/image_upload_modal",
+          title: t("account.avatars.edit.title"),
+          form_url: account_avatar_path,
+          field_name: :avatar,
+          current_image: @user.avatar.attached? ? @user.avatar : nil,
+          placeholder: avatar_for(@user, size: :xl),
+          remove_url: @user.avatar.attached? ? account_avatar_path : nil,
+          crop: true, aspect_ratio: 1, max_width: 512, max_height: 512 %>
+  </div>
+
+  <%# Source selection (when multiple sources available) %>
+  <% if @user.available_avatar_sources.size > 1 %>
+    <%= form_with url: account_avatar_path, method: :patch, class: "mb-8" do |f| %>
+      <fieldset class="space-y-2">
+        <legend class="text-sm font-medium text-text-body">
+          <%= t("account.avatars.source_label") %>
+        </legend>
+        <% @user.available_avatar_sources.each do |source| %>
+          <label class="flex items-center gap-3 min-h-[44px]">
+            <%= f.radio_button :avatar_source, source,
+                  checked: @user.avatar_source == source,
+                  class: "size-5 text-interactive focus:ring-2 focus:ring-interactive-focus",
+                  data: { action: "change->form#requestSubmit" } %>
+            <span class="text-sm text-text-body">
+              <%= t("account.avatars.sources.#{source}") %>
+            </span>
+          </label>
+        <% end %>
+      </fieldset>
+    <% end %>
+  <% end %>
+
   <%= form_with model: @user, url: account_profile_path, method: :patch, class: "mt-8 space-y-6" do |form| %>
     <%= form.error_summary %>
 
