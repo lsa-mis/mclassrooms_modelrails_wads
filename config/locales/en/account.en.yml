@@ -46,6 +46,7 @@ en:
         success: "Avatar removed."
       source_label: "Avatar source"
       source_updated: "Avatar source updated."
+      source_unavailable: "That avatar source is not available for your account."
       sources:
         upload: "Uploaded photo"
         gravatar: "Gravatar"

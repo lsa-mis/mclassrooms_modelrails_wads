@@ -117,5 +117,20 @@ RSpec.describe AvatarHelper, type: :helper do
         expect(result).to have_css("span.w-32.h-32")
       end
     end
+
+    context "edge cases" do
+      it "falls back to initials when source is upload but avatar was purged" do
+        user.update_columns(avatar_source: "upload")
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css("span", text: "JD")
+      end
+
+      it "falls back to initials when source is gravatar but email is blank" do
+        user.update_columns(avatar_source: "gravatar", has_gravatar: true)
+        allow(user).to receive(:email_address).and_return(nil)
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css("span", text: "JD")
+      end
+    end
   end
 end

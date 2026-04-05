@@ -14,7 +14,13 @@ module Account
           redirect_to edit_account_profile_path, alert: Current.user.errors.full_messages.to_sentence
         end
       elsif params.dig(:user, :avatar_source).present?
-        if Current.user.update(avatar_source: params[:user][:avatar_source])
+        source = params[:user][:avatar_source]
+        unless Current.user.available_avatar_sources.include?(source)
+          redirect_to edit_account_profile_path, alert: t("account.avatars.source_unavailable")
+          return
+        end
+
+        if Current.user.update(avatar_source: source)
           redirect_to edit_account_profile_path, notice: t("account.avatars.source_updated")
         else
           redirect_to edit_account_profile_path, alert: Current.user.errors.full_messages.to_sentence

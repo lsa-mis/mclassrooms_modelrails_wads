@@ -332,6 +332,12 @@ RSpec.describe User, type: :model do
       hash = Digest::SHA256.hexdigest("test@example.com")
       expect(user.gravatar_url).to include(hash)
     end
+
+    it "returns nil when email is blank" do
+      user = build(:user)
+      allow(user).to receive(:email_address).and_return(nil)
+      expect(user.gravatar_url).to be_nil
+    end
   end
 
   describe "#available_avatar_sources" do

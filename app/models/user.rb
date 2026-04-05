@@ -83,6 +83,8 @@ class User < ApplicationRecord
   end
 
   def gravatar_url(size: 128)
+    return nil if email_address.blank?
+
     hash = Digest::SHA256.hexdigest(email_address.strip.downcase)
     "https://www.gravatar.com/avatar/#{hash}?s=#{size}&d=404"
   end

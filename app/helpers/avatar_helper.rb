@@ -1,4 +1,6 @@
 module AvatarHelper
+  # xs/sm are below 44px WCAG 2.2 AAA touch target — use only as decorative;
+  # wrap in a 44px+ interactive element if clickable.
   AVATAR_SIZES = {
     xs: { css: "w-6 h-6", px: 24, text: "text-xs" },
     sm: { css: "w-8 h-8", px: 32, text: "text-xs" },
@@ -23,6 +25,8 @@ module AvatarHelper
   private
 
   def render_upload_avatar(user, config, aria_label)
+    return render_initials_avatar(user, config, aria_label) unless user.avatar.attached?
+
     variant = user.avatar.variant(resize_to_fill: [ config[:px], config[:px] ])
     image_tag variant,
       class: "#{config[:css]} rounded-full object-cover",
@@ -30,8 +34,13 @@ module AvatarHelper
   end
 
   def render_gravatar_avatar(user, config, aria_label)
-    image_tag user.gravatar_url(size: config[:px]),
+    url = user.gravatar_url(size: config[:px])
+    return render_initials_avatar(user, config, aria_label) if url.nil?
+
+    image_tag url,
       class: "#{config[:css]} rounded-full object-cover",
+      loading: "lazy",
+      onerror: "this.style.display='none'",
       **avatar_aria_attrs(aria_label, alt: "")
   end
 

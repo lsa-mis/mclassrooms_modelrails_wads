@@ -3,6 +3,7 @@ en:
     drop_zone: "Click to upload or drag and drop"
     constraints: "%{types} up to %{max_size}MB"
     remove: "Remove current image"
+    remove_confirm: "Are you sure you want to remove this image?"
     crop_title: "Crop image"
     crop_save: "Save"
     crop_cancel: "Cancel"
