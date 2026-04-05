@@ -42,6 +42,10 @@
   --toast-pill-top: 5rem;
   --toast-card-bottom: 1rem;
   --toast-z: 100;
+
+  /* --- Modal --- */
+  --modal-backdrop: oklch(20.5% 0.016 265.755 / 50%);
+  --modal-animation-duration: 200ms;
 }
 
 .dark {
