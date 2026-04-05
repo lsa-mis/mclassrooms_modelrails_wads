@@ -10,10 +10,14 @@ RSpec.describe "Modal system", type: :system do
     JS
     # Set a fast animation duration on the root element (where the controller reads it from)
     page.execute_script("document.documentElement.style.setProperty('--modal-animation-duration', '50ms')")
-    # Inject a test modal into the page via JavaScript
+  end
+
+  def inject_test_modal(options = {})
+    open_value = options[:open] ? 'data-modal-open-value="true"' : ""
     page.execute_script(<<~JS)
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-controller', 'modal');
+      #{options[:open] ? "wrapper.setAttribute('data-modal-open-value', 'true');" : ""}
       wrapper.innerHTML = `
         <button data-action="click->modal#open" id="test-modal-trigger">Open Modal</button>
         <dialog data-modal-target="dialog" id="test-modal"
@@ -34,7 +38,14 @@ RSpec.describe "Modal system", type: :system do
 
   describe "opening" do
     it "opens when trigger button is clicked" do
+      inject_test_modal
       click_button "Open Modal"
+      expect(page).to have_css("dialog[open]")
+      expect(page).to have_text("Test Modal")
+    end
+
+    it "opens on connect when open value is true" do
+      inject_test_modal(open: true)
       expect(page).to have_css("dialog[open]")
       expect(page).to have_text("Test Modal")
     end
@@ -42,6 +53,7 @@ RSpec.describe "Modal system", type: :system do
 
   describe "closing" do
     before do
+      inject_test_modal
       click_button "Open Modal"
       expect(page).to have_css("dialog[open]")
     end
@@ -59,17 +71,23 @@ RSpec.describe "Modal system", type: :system do
     end
 
     it "closes on backdrop click" do
-      # Click the dialog element itself (the backdrop area)
-      # The dialog is full-viewport, so clicking at coordinates outside the panel hits the backdrop
       page.driver.with_playwright_page do |pw_page|
         pw_page.mouse.click(5, 5)
       end
       expect(page).to have_no_css("dialog[open]")
     end
+
+    it "returns focus to trigger button after close" do
+      click_button "Close"
+      expect(page).to have_no_css("dialog[open]")
+      focused_id = page.evaluate_script("document.activeElement?.id")
+      expect(focused_id).to eq("test-modal-trigger")
+    end
   end
 
   describe "accessibility" do
     before do
+      inject_test_modal
       click_button "Open Modal"
       expect(page).to have_css("dialog[open]")
     end
@@ -91,6 +109,23 @@ RSpec.describe "Modal system", type: :system do
       close_btn = find("#test-modal-close")
       close_btn.send_keys(:enter)
       expect(page).to have_no_css("dialog[open]")
+    end
+  end
+
+  describe "reduced motion" do
+    it "skips animation when prefers-reduced-motion is set" do
+      page.driver.with_playwright_page do |pw_page|
+        pw_page.emulate_media(reducedMotion: "reduce")
+      end
+      inject_test_modal
+      click_button "Open Modal"
+      expect(page).to have_css("dialog[open]")
+
+      # Panel should be immediately visible (opacity 1, no transition)
+      panel_opacity = page.evaluate_script(
+        'document.querySelector("[data-modal-target=\\"panel\\"]")?.style.opacity'
+      )
+      expect(panel_opacity).to eq("1")
     end
   end
 end

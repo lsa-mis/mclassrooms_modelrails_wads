@@ -33,6 +33,13 @@ export default class extends Controller {
   }
 
   open() {
+    if (this.dialogTarget.open) return
+
+    const openDialogs = document.querySelectorAll("dialog[open]")
+    if (openDialogs.length > 0) {
+      console.warn("Modal: another dialog is already open. Stacked modals are not supported.")
+    }
+
     this.dialogTarget.showModal()
     this.animateIn()
   }
