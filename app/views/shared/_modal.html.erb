@@ -1,0 +1,40 @@
+<%# locals: (title:, id: nil, size: :md) -%>
+<%
+  modal_id = id || "modal-#{SecureRandom.hex(4)}"
+  size_class = case size
+               when :sm then "max-w-sm"
+               when :md then "max-w-lg"
+               when :lg then "max-w-2xl"
+               when :full then "max-w-4xl"
+               else "max-w-lg"
+               end
+%>
+<dialog data-modal-target="dialog"
+        id="<%= modal_id %>"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="<%= modal_id %>-title"
+        class="bg-transparent backdrop:bg-transparent p-4 sm:p-6">
+  <div data-modal-target="panel"
+       class="relative w-full <%= size_class %> mx-auto rounded-lg
+              bg-surface-raised border border-border shadow-xl
+              opacity-0 scale-95">
+    <header class="flex items-center justify-between px-6 py-4 border-b border-border">
+      <h2 id="<%= modal_id %>-title"
+          class="text-lg font-semibold text-text-heading">
+        <%= title %>
+      </h2>
+      <button data-action="click->modal#close"
+              aria-label="<%= t('modals.close') %>"
+              class="min-h-[44px] min-w-[44px] inline-flex items-center justify-center
+                     rounded-md -m-2 hover:bg-surface-sunken
+                     text-text-muted hover:text-text-body
+                     focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+        <%= icon(:x_mark, size: :md) %>
+      </button>
+    </header>
+    <div class="px-6 py-4">
+      <%= yield %>
+    </div>
+  </div>
+</dialog>
