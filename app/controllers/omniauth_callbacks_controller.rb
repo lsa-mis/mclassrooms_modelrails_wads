@@ -43,11 +43,13 @@ class OmniauthCallbacksController < ApplicationController
   private
 
   def oauth_attrs(auth_hash)
-    {
+    attrs = {
       oauth_token: auth_hash.credentials.token,
       oauth_refresh_token: auth_hash.credentials.refresh_token,
       oauth_expires_at: auth_hash.credentials.expires_at ? Time.at(auth_hash.credentials.expires_at) : nil
     }
+    attrs[:avatar_url] = auth_hash.info.image if auth_hash.info.image.present?
+    attrs
   end
 
   def find_verified_user_by_email(email)
