@@ -80,6 +80,14 @@ RSpec.describe "Account Avatars", type: :request do
         patch account_avatar_path, params: { user: {} }
         expect(response).to redirect_to(edit_account_profile_path)
       end
+
+      it "prioritizes file upload when both file and source are provided" do
+        file = fixture_file_upload("avatar.png", "image/png")
+        patch account_avatar_path, params: { user: { avatar: file, avatar_source: "gravatar" } }
+        user.reload
+        expect(user.avatar).to be_attached
+        expect(user.avatar_source).to eq("upload")
+      end
     end
 
     describe "DELETE /account/avatar" do
@@ -94,6 +102,12 @@ RSpec.describe "Account Avatars", type: :request do
         user.reload
         expect(user.avatar).not_to be_attached
         expect(user.avatar_source).to eq("initials")
+        expect(response).to redirect_to(edit_account_profile_path)
+      end
+
+      it "handles destroy gracefully when no avatar is attached" do
+        delete account_avatar_path
+        expect(user.reload.avatar_source).to eq("initials")
         expect(response).to redirect_to(edit_account_profile_path)
       end
     end

@@ -1,6 +1,6 @@
 module AvatarHelper
-  # xs/sm are below 44px WCAG 2.2 AAA touch target — use only as decorative;
-  # wrap in a 44px+ interactive element if clickable.
+  # xs/sm/md are below 44px WCAG 2.2 AAA touch target (24/32/40px) — use only
+  # as decorative; wrap in a 44px+ interactive element if clickable.
   AVATAR_SIZES = {
     xs: { css: "w-6 h-6", px: 24, text: "text-xs" },
     sm: { css: "w-8 h-8", px: 32, text: "text-xs" },

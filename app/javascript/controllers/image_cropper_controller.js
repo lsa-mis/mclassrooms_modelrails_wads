@@ -137,6 +137,7 @@ export default class extends Controller {
   #showUploadArea() {
     this.cropAreaTarget.style.display = "none"
     this.uploadAreaTarget.style.display = ""
+    this.fileInputTarget.focus()
   }
 
   #errorMessage(key, interpolations = {}) {

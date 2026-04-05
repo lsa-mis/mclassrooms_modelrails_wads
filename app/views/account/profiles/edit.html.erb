@@ -8,7 +8,7 @@
   <div class="flex items-center gap-6 mt-8 mb-8" data-controller="modal">
     <%= avatar_for(@user, size: :xl) %>
     <div>
-      <h2 class="text-lg font-semibold text-text-heading"><%= @user.full_name %></h2>
+      <p class="text-lg font-semibold text-text-heading"><%= @user.full_name %></p>
       <button data-action="click->modal#open"
               type="button"
               class="text-sm text-interactive underline hover:no-underline mt-1

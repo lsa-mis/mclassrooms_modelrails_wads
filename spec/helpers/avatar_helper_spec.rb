@@ -56,6 +56,16 @@ RSpec.describe AvatarHelper, type: :helper do
         result = helper.avatar_for(user, size: :md)
         expect(result).to have_css("img[aria-hidden='true']")
       end
+
+      it "includes onerror fallback for broken images" do
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css("img[onerror]")
+      end
+
+      it "includes loading=lazy for performance" do
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css("img[loading='lazy']")
+      end
     end
 
     context "with initials source" do

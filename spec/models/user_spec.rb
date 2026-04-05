@@ -366,6 +366,12 @@ RSpec.describe User, type: :model do
       user = build(:user)
       expect(user.available_avatar_sources).not_to include("upload")
     end
+
+    it "returns all three sources when gravatar and upload are both available" do
+      user = create(:user, has_gravatar: true)
+      user.avatar.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")), filename: "avatar.png", content_type: "image/png")
+      expect(user.available_avatar_sources).to match_array(%w[initials gravatar upload])
+    end
   end
 
   describe "avatar Active Storage validations" do

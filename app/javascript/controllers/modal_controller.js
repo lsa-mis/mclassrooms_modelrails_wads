@@ -40,6 +40,7 @@ export default class extends Controller {
       console.warn("Modal: another dialog is already open. Stacked modals are not supported.")
     }
 
+    this.previouslyFocused = document.activeElement
     this.dialogTarget.showModal()
     this.animateIn()
   }
@@ -49,6 +50,8 @@ export default class extends Controller {
       if (this.dialogTarget.open) {
         this.dialogTarget.close()
       }
+      this.previouslyFocused?.focus()
+      this.previouslyFocused = null
     })
   }
 

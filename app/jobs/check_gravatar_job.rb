@@ -1,5 +1,6 @@
 class CheckGravatarJob < ApplicationJob
   queue_as :default
+  discard_on ActiveJob::DeserializationError
 
   def perform(user)
     has_gravatar = GravatarService.check(user.email_address)

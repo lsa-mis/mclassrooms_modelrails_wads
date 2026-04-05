@@ -5,8 +5,8 @@ en:
     remove: "Remove current image"
     remove_confirm: "Are you sure you want to remove this image?"
     crop_title: "Crop image"
-    crop_save: "Save"
-    crop_cancel: "Cancel"
+    crop_save: "Save cropped image"
+    crop_cancel: "Cancel crop"
     crop_instructions: "Drag to reposition. Scroll to zoom."
     errors:
       file_too_large: "File is too large. Maximum size is %{max_size}MB."
