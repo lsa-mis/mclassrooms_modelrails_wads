@@ -1,7 +1,7 @@
 module Account
   class AvatarsController < ApplicationController
     def update
-      file = params.dig(:user, :avatar)
+      file = params[:avatar]
 
       if file.present?
         Current.user.avatar.attach(file)
@@ -13,8 +13,8 @@ module Account
           Current.user.avatar.purge
           redirect_to edit_account_profile_path, alert: Current.user.errors.full_messages.to_sentence
         end
-      elsif params.dig(:user, :avatar_source).present?
-        source = params[:user][:avatar_source]
+      elsif params[:avatar_source].present?
+        source = params[:avatar_source]
         unless Current.user.available_avatar_sources.include?(source)
           redirect_to edit_account_profile_path, alert: t("account.avatars.source_unavailable")
           return

@@ -20,7 +20,7 @@ RSpec.describe "Account Avatars", type: :request do
     describe "PATCH /account/avatar" do
       it "uploads an avatar and sets source to upload" do
         file = fixture_file_upload("avatar.png", "image/png")
-        patch account_avatar_path, params: { user: { avatar: file } }
+        patch account_avatar_path, params: { avatar: file }
         user.reload
         expect(user.avatar).to be_attached
         expect(user.avatar_source).to eq("upload")
@@ -31,7 +31,7 @@ RSpec.describe "Account Avatars", type: :request do
         file = Rack::Test::UploadedFile.new(
           StringIO.new("not an image"), "text/plain", true, original_filename: "document.txt"
         )
-        patch account_avatar_path, params: { user: { avatar: file } }
+        patch account_avatar_path, params: { avatar: file }
         expect(response).to redirect_to(edit_account_profile_path)
         expect(flash[:alert]).to be_present
         expect(user.reload.avatar).not_to be_attached
@@ -42,7 +42,7 @@ RSpec.describe "Account Avatars", type: :request do
         file = Rack::Test::UploadedFile.new(
           large_io, "image/png", true, original_filename: "oversized.png"
         )
-        patch account_avatar_path, params: { user: { avatar: file } }
+        patch account_avatar_path, params: { avatar: file }
         expect(response).to redirect_to(edit_account_profile_path)
         expect(flash[:alert]).to be_present
         expect(user.reload.avatar).not_to be_attached
@@ -50,19 +50,19 @@ RSpec.describe "Account Avatars", type: :request do
 
       it "changes avatar source without uploading a file" do
         user.update_columns(has_gravatar: true)
-        patch account_avatar_path, params: { user: { avatar_source: "gravatar" } }
+        patch account_avatar_path, params: { avatar_source: "gravatar" }
         expect(user.reload.avatar_source).to eq("gravatar")
         expect(response).to redirect_to(edit_account_profile_path)
       end
 
       it "rejects invalid avatar source" do
-        patch account_avatar_path, params: { user: { avatar_source: "invalid" } }
+        patch account_avatar_path, params: { avatar_source: "invalid" }
         expect(response).to redirect_to(edit_account_profile_path)
         expect(flash[:alert]).to be_present
       end
 
       it "rejects upload source when no avatar is attached" do
-        patch account_avatar_path, params: { user: { avatar_source: "upload" } }
+        patch account_avatar_path, params: { avatar_source: "upload" }
         expect(response).to redirect_to(edit_account_profile_path)
         expect(flash[:alert]).to be_present
         expect(user.reload.avatar_source).to eq("initials")
@@ -70,20 +70,20 @@ RSpec.describe "Account Avatars", type: :request do
 
       it "rejects gravatar source when user has no Gravatar" do
         user.update_columns(has_gravatar: false)
-        patch account_avatar_path, params: { user: { avatar_source: "gravatar" } }
+        patch account_avatar_path, params: { avatar_source: "gravatar" }
         expect(response).to redirect_to(edit_account_profile_path)
         expect(flash[:alert]).to be_present
         expect(user.reload.avatar_source).to eq("initials")
       end
 
       it "redirects when no params provided" do
-        patch account_avatar_path, params: { user: {} }
+        patch account_avatar_path
         expect(response).to redirect_to(edit_account_profile_path)
       end
 
       it "prioritizes file upload when both file and source are provided" do
         file = fixture_file_upload("avatar.png", "image/png")
-        patch account_avatar_path, params: { user: { avatar: file, avatar_source: "gravatar" } }
+        patch account_avatar_path, params: { avatar: file, avatar_source: "gravatar" }
         user.reload
         expect(user.avatar).to be_attached
         expect(user.avatar_source).to eq("upload")
