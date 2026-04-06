@@ -130,7 +130,7 @@ export default class extends Controller {
   }
 
   #showCropArea() {
-    this.cropAreaTarget.style.display = ""
+    this.cropAreaTarget.style.display = "flex"
     this.uploadAreaTarget.style.display = "none"
     this.cropAreaTarget.focus()
   }
