@@ -37,6 +37,10 @@ class Workspace < ApplicationRecord
     name.split.map(&:first).take(2).join.upcase
   end
 
+  def owner
+    memberships.joins(:role).find_by(roles: { slug: "owner" })&.user
+  end
+
   def effective_roles
     Role.where(workspace_id: [ nil, id ])
   end

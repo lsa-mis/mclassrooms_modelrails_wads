@@ -146,7 +146,7 @@ class User < ApplicationRecord
   end
 
   def create_personal_workspace
-    workspace = Workspace.create!(name: "#{first_name}'s Workspace")
+    workspace = Workspace.create!(name: "#{first_name}'s Workspace", personal: true)
     owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
       r.name = "Owner"
       r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }

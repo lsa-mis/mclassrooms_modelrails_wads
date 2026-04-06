@@ -86,6 +86,7 @@ en:
       edit:
         title: "Workspace branding"
         logo_label: "Logo"
+        change_logo: "Change logo"
         color_label: "Primary color"
         color_palette_label: "Choose a color"
         color_custom_label: "Or enter a custom value"
