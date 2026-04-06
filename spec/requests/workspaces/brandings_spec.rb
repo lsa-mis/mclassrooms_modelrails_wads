@@ -58,6 +58,15 @@ RSpec.describe "Workspace Brandings", type: :request do
       end
     end
 
+    describe "PATCH /workspaces/:workspace_slug/branding via upload modal" do
+      it "uploads a logo from the modal (top-level param)" do
+        file = fixture_file_upload("avatar.png", "image/png")
+        patch workspace_branding_path(workspace), params: { logo: file }
+        expect(workspace.reload.logo).to be_attached
+        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+      end
+    end
+
     describe "authorization" do
       it "rejects non-owner/admin access" do
         viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }

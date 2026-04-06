@@ -4,31 +4,34 @@
     <%= t("workspaces.brandings.edit.title") %>
   </h1>
 
+  <%# Logo section — separate from the branding form to avoid nested forms %>
+  <div class="mt-8 space-y-2">
+    <p class="block text-sm font-medium text-text-body">
+      <%= t("workspaces.brandings.edit.logo_label") %>
+    </p>
+    <div class="flex items-center gap-4" data-controller="modal">
+      <%= workspace_icon_for(@workspace, size: :lg) %>
+      <button data-action="click->modal#open"
+              type="button"
+              class="text-sm text-interactive underline hover:no-underline
+                     min-h-[44px] min-w-[44px]
+                     focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
+        <%= t("workspaces.brandings.edit.change_logo") %>
+      </button>
+
+      <%= render "shared/image_upload_modal",
+            title: t("workspaces.brandings.edit.change_logo"),
+            form_url: workspace_branding_path(@workspace),
+            field_name: :logo,
+            current_image: @workspace.logo.attached? ? @workspace.logo : nil,
+            remove_url: @workspace.logo.attached? ? workspace_branding_path(@workspace) : nil,
+            remove_method: :patch %>
+    </div>
+  </div>
+
+  <%# Color branding form %>
   <%= form_with model: @workspace, url: workspace_branding_path(@workspace), method: :patch,
         class: "mt-8 space-y-6", data: { controller: "color-picker" } do |form| %>
-    <div>
-      <p class="block text-sm font-medium text-text-body mb-2">
-        <%= t("workspaces.brandings.edit.logo_label") %>
-      </p>
-      <div class="flex items-center gap-4" data-controller="modal">
-        <%= workspace_icon_for(@workspace, size: :lg) %>
-        <button data-action="click->modal#open"
-                type="button"
-                class="text-sm text-interactive underline hover:no-underline
-                       min-h-[44px] min-w-[44px]
-                       focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
-          <%= t("workspaces.brandings.edit.change_logo") %>
-        </button>
-
-        <%= render "shared/image_upload_modal",
-              title: t("workspaces.brandings.edit.change_logo"),
-              form_url: workspace_branding_path(@workspace),
-              field_name: :logo,
-              current_image: @workspace.logo.attached? ? @workspace.logo : nil,
-              remove_url: @workspace.logo.attached? ? workspace_branding_path(@workspace) : nil,
-              remove_method: :patch %>
-      </div>
-    </div>
 
     <div>
       <p class="block text-sm font-medium text-text-body mb-3">
