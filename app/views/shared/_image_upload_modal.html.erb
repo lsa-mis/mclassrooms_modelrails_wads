@@ -55,7 +55,7 @@
     </div>
 
     <%# Upload form %>
-    <%= form_with url: form_url, method: form_method,
+    <%= form_with url: form_url, method: form_method, multipart: true,
                   data: { image_upload_target: "form" },
                   class: "space-y-4" do |f| %>
 
