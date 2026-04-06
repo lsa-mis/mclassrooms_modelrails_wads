@@ -21,11 +21,9 @@ export default class extends Controller {
     reader.readAsDataURL(file)
   }
 
-  clearFile() {
+  chooseAnother() {
     this.fileInputTarget.value = ""
-    this.previewTarget.hidden = true
-    this.uploadZoneTarget.hidden = false
-    if (this.hasSubmitButtonTarget) this.submitButtonTarget.hidden = true
+    this.fileInputTarget.click()
   }
 
   handleDragOver(event) {

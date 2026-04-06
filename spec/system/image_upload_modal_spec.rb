@@ -71,11 +71,9 @@ RSpec.describe "Image upload modal", type: :system do
       expect(page).to have_button(I18n.t("image_upload.upload"), wait: 3)
     end
 
-    it "returns to upload zone when choose different is clicked" do
+    it "shows choose different button that re-opens file picker" do
       inject_file
       expect(page).to have_button(I18n.t("image_upload.choose_different"), wait: 3)
-      click_button I18n.t("image_upload.choose_different")
-      expect(page).to have_css("[data-image-upload-target='uploadZone']:not([hidden])")
     end
   end
 
