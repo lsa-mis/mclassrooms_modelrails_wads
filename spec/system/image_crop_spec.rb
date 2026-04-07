@@ -59,6 +59,16 @@ RSpec.describe "Image cropping", type: :system do
       expect(page).to have_button(I18n.t("account.avatars.edit.upload_new"))
     end
 
+    it "passes accessibility audit" do
+      visit crop_account_avatar_path
+      dismiss_banner
+      # Wait for Cropper.js to initialize
+      expect(page).to have_css(".cropper-container", wait: 5)
+      axe_options = { runOnly: { type: "tag", values: [ "wcag2aa" ] } }
+      expect(axe_clean?(axe_options)).to be(true),
+        "Accessibility violations found:\n#{axe_violations(axe_options).join("\n")}"
+    end
+
     it "passes existing crop data to the controller" do
       Bullet.enable = false
       blob = user.avatar.blob
