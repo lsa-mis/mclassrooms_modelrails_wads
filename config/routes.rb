@@ -21,7 +21,10 @@ Rails.application.routes.draw do
   namespace :account do
     resource :profile, only: [ :edit, :update ]
     resource :password, only: [ :new, :create ]
-    resource :avatar, only: [ :update, :destroy ]
+    resource :avatar, only: [ :update, :destroy ] do
+      get :crop, on: :member
+      patch :save_crop, on: :member
+    end
     resource :theme_preference, only: [ :update ]
     resources :connected_accounts, only: [ :index, :destroy ]
     resource :email_confirmation, only: [ :show, :destroy ]
@@ -41,7 +44,10 @@ Rails.application.routes.draw do
         end
       end
       resource :settings, only: [ :edit, :update ]
-      resource :branding, only: [ :edit, :update ]
+      resource :branding, only: [ :edit, :update ] do
+        get :crop, on: :member
+        patch :save_crop, on: :member
+      end
       resources :projects, param: :slug do
         scope module: :projects do
           resources :memberships, only: [ :index, :new, :create, :update, :destroy ] do
