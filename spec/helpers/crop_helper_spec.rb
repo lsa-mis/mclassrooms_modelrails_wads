@@ -34,7 +34,7 @@ RSpec.describe CropHelper, type: :helper do
         variant = helper.cropped_variant(user.avatar, resize_to: [ 128, 128 ])
         expect(variant).to be_a(ActiveStorage::VariantWithRecord)
         expect(variant.variation.transformations).to include(
-          crop: "100x100+10+20",
+          crop: [ 10, 20, 100, 100 ],
           resize_to_fill: [ 128, 128 ]
         )
       end
