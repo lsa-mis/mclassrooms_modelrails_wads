@@ -119,5 +119,36 @@ RSpec.describe "Workspace Brandings", type: :request do
         expect(response).to redirect_to(edit_workspace_branding_path(workspace))
       end
     end
+
+    describe "PATCH /workspaces/:slug/branding via upload modal (turbo_stream)" do
+      it "responds with turbo stream containing crop UI after logo upload" do
+        file = fixture_file_upload("avatar.png", "image/png")
+        patch workspace_branding_path(workspace), params: { logo: file },
+              headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("turbo-stream")
+        expect(response.body).to include("image-cropper")
+      end
+    end
+
+    describe "PATCH /workspaces/:slug/branding/save_crop (turbo_stream)" do
+      before do
+        workspace.logo.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "logo.png", content_type: "image/png"
+        )
+      end
+
+      it "responds with turbo stream that updates workspace logo" do
+        patch save_crop_workspace_branding_path(workspace),
+              params: { crop: { x: 5, y: 10, w: 80, h: 80 } },
+              headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("turbo-stream")
+        expect(response.body).to include("workspace_logo_branding")
+        metadata = workspace.logo.blob.reload.metadata
+        expect(metadata["crop"]).to eq("x" => 5, "y" => 10, "w" => 80, "h" => 80)
+      end
+    end
   end
 end

@@ -1,0 +1,18 @@
+<%# Update the workspace logo display on the branding page %>
+<%= turbo_stream.replace "workspace_logo_branding" do %>
+  <span id="workspace_logo_branding"><%= workspace_icon_for(@workspace, size: :lg) %></span>
+<% end %>
+
+<%# Close the modal via a temporary script %>
+<%= turbo_stream.append_all "body" do %>
+  <template data-turbo-temporary>
+    <script>
+      document.querySelector("dialog[open]")?.close()
+    </script>
+  </template>
+<% end %>
+
+<%# Show success toast %>
+<%= turbo_stream.prepend "toast-pills" do %>
+  <%= render "shared/toast_pill", type: "notice", message: t(".success") %>
+<% end %>

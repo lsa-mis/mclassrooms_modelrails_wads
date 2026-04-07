@@ -31,7 +31,11 @@ module Workspaces
       crop_params = params.require(:crop).permit(:x, :y, :w, :h).transform_values(&:to_i)
       blob = ActiveStorage::Blob.find(attachment.blob_id)
       blob.update!(metadata: blob.metadata.merge("crop" => crop_params.to_h))
-      redirect_to edit_workspace_branding_path(@workspace), notice: t(".success")
+
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
+      end
     end
 
     def update
@@ -49,7 +53,11 @@ module Workspaces
 
       if logo_file.present?
         @workspace.logo.attach(logo_file)
-        redirect_to crop_workspace_branding_path(@workspace)
+
+        respond_to do |format|
+          format.turbo_stream
+          format.html { redirect_to crop_workspace_branding_path(@workspace) }
+        end
         return
       end
 

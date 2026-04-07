@@ -1,4 +1,7 @@
 <% content_for(:title) { t("workspaces.brandings.crop.title") } %>
+<%
+  existing_crop = @workspace.logo.blob.metadata["crop"] || {}
+%>
 
 <div data-controller="modal"
      data-action="keydown.esc@document->modal#handleEscOnPage">
@@ -12,6 +15,7 @@
         upload_action: "click->modal#open",
         remove_url: workspace_branding_path(@workspace),
         remove_method: :patch,
+        existing_crop: existing_crop,
         title: t("workspaces.brandings.crop.title") %>
 
   <%= render "shared/image_upload_modal",

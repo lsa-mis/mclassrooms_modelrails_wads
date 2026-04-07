@@ -10,7 +10,7 @@
       <%= t("workspaces.brandings.edit.logo_label") %>
     </p>
     <div class="flex items-center gap-4" data-controller="modal">
-      <%= workspace_icon_for(@workspace, size: :lg) %>
+      <span id="workspace_logo_branding"><%= workspace_icon_for(@workspace, size: :lg) %></span>
       <button data-action="click->modal#open"
               type="button"
               class="text-sm text-interactive underline hover:no-underline
