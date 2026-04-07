@@ -1,0 +1,20 @@
+<%# Update the avatar display on the profile page %>
+<%= turbo_stream.replace "user_avatar_profile" do %>
+  <span id="user_avatar_profile" class="block relative">
+    <%= avatar_for(Current.user, size: :xl) %>
+  </span>
+<% end %>
+
+<%# Close the modal via a temporary script %>
+<%= turbo_stream.append_all "body" do %>
+  <template data-turbo-temporary>
+    <script>
+      document.querySelector("dialog[open]")?.close()
+    </script>
+  </template>
+<% end %>
+
+<%# Show success toast — uses the pill container from shared/toasts %>
+<%= turbo_stream.prepend "toast-pills" do %>
+  <%= render "shared/toast_pill", type: "notice", message: t(".success") %>
+<% end %>

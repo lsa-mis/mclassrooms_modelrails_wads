@@ -61,13 +61,14 @@ RSpec.describe "Image upload modal", type: :system do
   end
 
   describe "auto-submit upload flow" do
-    it "auto-uploads and redirects to crop page on file select" do
+    it "auto-uploads and shows crop UI in modal on file select" do
       click_button I18n.t("account.avatars.edit.change")
       expect(page).to have_css("dialog[open]")
       inject_file(filename: "avatar.png")
 
-      # Should go straight to crop page (auto-submit, no preview step)
-      expect(page).to have_text(I18n.t("account.avatars.crop.title"), wait: 5)
+      # Modal stays open and shows crop UI (turbo stream replaces modal body)
+      expect(page).to have_css("dialog[open]", wait: 5)
+      expect(page).to have_text(I18n.t("image_crop.save"), wait: 5)
       expect(user.reload.avatar).to be_attached
     end
   end

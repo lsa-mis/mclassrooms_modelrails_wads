@@ -22,7 +22,11 @@ module Account
       crop_params = params.require(:crop).permit(:x, :y, :w, :h).transform_values(&:to_i)
       blob = ActiveStorage::Blob.find(attachment.blob_id)
       blob.update!(metadata: blob.metadata.merge("crop" => crop_params.to_h))
-      redirect_to edit_account_profile_path, notice: t(".success")
+
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to edit_account_profile_path, notice: t(".success") }
+      end
     end
 
     def update
@@ -33,7 +37,10 @@ module Account
         Current.user.avatar_source = "upload"
 
         if Current.user.save
-          redirect_to crop_account_avatar_path
+          respond_to do |format|
+            format.turbo_stream
+            format.html { redirect_to crop_account_avatar_path }
+          end
         else
           Current.user.avatar.purge
           redirect_to edit_account_profile_path, alert: Current.user.errors.full_messages.to_sentence

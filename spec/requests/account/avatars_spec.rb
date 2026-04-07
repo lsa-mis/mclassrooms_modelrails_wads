@@ -149,5 +149,36 @@ RSpec.describe "Account Avatars", type: :request do
         expect(response).to redirect_to(edit_account_profile_path)
       end
     end
+
+    describe "PATCH /account/avatar (turbo_stream)" do
+      it "responds with turbo stream containing crop UI after upload" do
+        file = fixture_file_upload("avatar.png", "image/png")
+        patch account_avatar_path, params: { avatar: file },
+              headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("turbo-stream")
+        expect(response.body).to include("image-cropper")
+      end
+    end
+
+    describe "PATCH /account/avatar/save_crop (turbo_stream)" do
+      before do
+        user.avatar.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "avatar.png", content_type: "image/png"
+        )
+      end
+
+      it "responds with turbo stream that updates avatar" do
+        patch save_crop_account_avatar_path,
+              params: { crop: { x: 10, y: 20, w: 100, h: 100 } },
+              headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("turbo-stream")
+        expect(response.body).to include("user_avatar_profile")
+        metadata = user.avatar.blob.reload.metadata
+        expect(metadata["crop"]).to eq("x" => 10, "y" => 20, "w" => 100, "h" => 100)
+      end
+    end
   end
 end
