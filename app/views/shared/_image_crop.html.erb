@@ -1,10 +1,10 @@
 <%# locals: (image:, aspect_ratio: 1.0, shape: :circle, save_url:, cancel_url:,
-             upload_url: nil, remove_url: nil, remove_method: :delete,
+             upload_action: nil, remove_url: nil, remove_method: :delete,
              use_initials_url: nil, use_initials_params: nil,
              title:) -%>
 <%
   overlay_class = shape == :circle ? "rounded-full" : "rounded-md"
-  has_secondary = upload_url.present? || use_initials_url.present? || remove_url.present?
+  has_secondary = upload_action.present? || use_initials_url.present? || remove_url.present?
 %>
 
 <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
@@ -115,11 +115,14 @@
     <% if has_secondary %>
       <div class="px-6 py-3 border-t border-border
                   flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-        <% if upload_url.present? %>
-          <%= link_to t("image_crop.upload_different"), upload_url,
-                class: "text-sm text-text-muted hover:text-interactive underline underline-offset-2
-                       min-h-[44px] inline-flex items-center
-                       focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+        <% if upload_action.present? %>
+          <button type="button"
+                  data-action="<%= upload_action %>"
+                  class="text-sm text-text-muted hover:text-interactive underline underline-offset-2
+                         min-h-[44px] inline-flex items-center
+                         focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
+            <%= t("image_crop.upload_different") %>
+          </button>
         <% end %>
         <% if use_initials_url.present? %>
           <%= button_to t("image_crop.use_initials"), use_initials_url,

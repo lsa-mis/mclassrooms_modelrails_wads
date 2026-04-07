@@ -1,13 +1,24 @@
 <% content_for(:title) { t("account.avatars.crop.title") } %>
-<%= render "shared/image_crop",
-      image: Current.user.avatar,
-      aspect_ratio: 1.0,
-      shape: :circle,
-      save_url: save_crop_account_avatar_path,
-      cancel_url: edit_account_profile_path,
-      upload_url: edit_account_profile_path,
-      use_initials_url: account_avatar_path,
-      use_initials_params: { avatar_source: "initials" },
-      remove_url: account_avatar_path,
-      remove_method: :delete,
-      title: t("account.avatars.crop.title") %>
+
+<div data-controller="modal"
+     data-action="keydown.esc@document->modal#handleEscOnPage">
+
+  <%= render "shared/image_crop",
+        image: Current.user.avatar,
+        aspect_ratio: 1.0,
+        shape: :circle,
+        save_url: save_crop_account_avatar_path,
+        cancel_url: edit_account_profile_path,
+        upload_action: "click->modal#open",
+        use_initials_url: account_avatar_path,
+        use_initials_params: { avatar_source: "initials" },
+        remove_url: account_avatar_path,
+        remove_method: :delete,
+        title: t("account.avatars.crop.title") %>
+
+  <%= render "shared/image_upload_modal",
+        title: t("account.avatars.edit.title"),
+        form_url: account_avatar_path,
+        field_name: :avatar,
+        auto_submit: true %>
+</div>

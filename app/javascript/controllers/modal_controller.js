@@ -55,6 +55,15 @@ export default class extends Controller {
     })
   }
 
+  handleEscOnPage() {
+    // When ESC is pressed on a page with a modal controller but the dialog
+    // is NOT open, navigate back. When the dialog IS open, the native
+    // <dialog> cancel event handles it (see handleCancel).
+    if (!this.dialogTarget.open) {
+      window.history.back()
+    }
+  }
+
   // Private
 
   handleCancel(event) {
