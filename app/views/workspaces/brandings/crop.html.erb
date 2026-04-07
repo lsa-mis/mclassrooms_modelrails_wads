@@ -6,4 +6,6 @@
       save_url: save_crop_workspace_branding_path(@workspace),
       cancel_url: edit_workspace_branding_path(@workspace),
       upload_url: edit_workspace_branding_path(@workspace),
+      remove_url: workspace_branding_path(@workspace),
+      remove_method: :patch,
       title: t("workspaces.brandings.crop.title") %>

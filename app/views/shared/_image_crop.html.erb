@@ -1,4 +1,7 @@
-<%# locals: (image:, aspect_ratio: 1.0, shape: :circle, save_url:, cancel_url:, upload_url: nil, title:) -%>
+<%# locals: (image:, aspect_ratio: 1.0, shape: :circle, save_url:, cancel_url:,
+             upload_url: nil, remove_url: nil, remove_method: :delete,
+             use_initials_url: nil, use_initials_params: nil,
+             title:) -%>
 <%
   overlay_class = shape == :circle ? "rounded-full" : "rounded-md"
 %>
@@ -86,8 +89,9 @@
         <input type="hidden" name="crop[w]" value="0" data-image-crop-target="w">
         <input type="hidden" name="crop[h]" value="0" data-image-crop-target="h">
 
-        <%# Footer %>
+        <%# Footer — primary actions + secondary options %>
         <div class="px-6 py-4 border-t border-border bg-surface-sunken/30">
+          <%# Primary: Save or skip %>
           <div class="flex flex-col sm:flex-row-reverse gap-3">
             <button type="submit"
                     data-action="click->image-crop#save"
@@ -107,12 +111,35 @@
                          focus:outline-none focus:ring-2 focus:ring-interactive-focus
                          sm:w-auto w-full" %>
           </div>
-          <% if upload_url.present? %>
-            <div class="mt-3 pt-3 border-t border-border text-center">
-              <%= link_to t("image_crop.upload_different"), upload_url,
-                    class: "text-sm text-interactive underline hover:no-underline
-                           min-h-[44px] inline-flex items-center justify-center
-                           focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+
+          <%# Secondary: other avatar actions — always one click away %>
+          <% has_secondary = upload_url.present? || use_initials_url.present? || remove_url.present? %>
+          <% if has_secondary %>
+            <div class="mt-3 pt-3 border-t border-border
+                        flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              <% if upload_url.present? %>
+                <%= link_to t("image_crop.upload_different"), upload_url,
+                      class: "text-sm text-text-muted hover:text-interactive underline underline-offset-2
+                             min-h-[44px] inline-flex items-center
+                             focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+              <% end %>
+              <% if use_initials_url.present? %>
+                <%= button_to t("image_crop.use_initials"), use_initials_url,
+                      method: :patch,
+                      params: use_initials_params || {},
+                      class: "text-sm text-text-muted hover:text-interactive underline underline-offset-2
+                             min-h-[44px] inline-flex items-center
+                             focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+              <% end %>
+              <% if remove_url.present? %>
+                <%= button_to t("image_crop.remove_photo"), remove_url,
+                      method: remove_method,
+                      params: { remove_image: "1" },
+                      class: "text-sm text-danger hover:text-danger/80 underline underline-offset-2
+                             min-h-[44px] inline-flex items-center
+                             focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded",
+                      data: { turbo_confirm: t("image_crop.remove_confirm") } %>
+              <% end %>
             </div>
           <% end %>
         </div>
