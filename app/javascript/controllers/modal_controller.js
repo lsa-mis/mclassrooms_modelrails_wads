@@ -85,6 +85,7 @@ export default class extends Controller {
     if (this.prefersReducedMotion) {
       this.panelTarget.style.opacity = "1"
       this.panelTarget.style.transform = "scale(1)"
+      document.dispatchEvent(new CustomEvent("modal:opened"))
       return
     }
 
@@ -96,6 +97,11 @@ export default class extends Controller {
       this.panelTarget.style.transition = `opacity ${duration} ease-out, transform ${duration} ease-out`
       this.panelTarget.style.opacity = "1"
       this.panelTarget.style.transform = "scale(1)"
+
+      const ms = parseInt(duration, 10) || 200
+      setTimeout(() => {
+        document.dispatchEvent(new CustomEvent("modal:opened"))
+      }, ms)
     })
   }
 
