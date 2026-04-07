@@ -4,6 +4,7 @@ en:
     zoom: "Zoom"
     save: "Save crop"
     saving: "Saving..."
+    skip: "Skip cropping"
     cancel: "Cancel"
     reset: "Reset"
     no_image: "Upload an image first."

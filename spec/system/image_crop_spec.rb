@@ -33,7 +33,7 @@ RSpec.describe "Image cropping", type: :system do
       expect(page).to have_css("[data-controller='image-crop']")
       expect(page).to have_css("img[data-image-crop-target='image']")
       expect(page).to have_button(I18n.t("image_crop.save"))
-      expect(page).to have_link(I18n.t("image_crop.cancel"))
+      expect(page).to have_link(I18n.t("image_crop.skip"))
     end
 
     it "saves crop and redirects to profile" do
@@ -43,10 +43,10 @@ RSpec.describe "Image cropping", type: :system do
       expect(page).to have_text(I18n.t("account.avatars.save_crop.success"), wait: 5)
     end
 
-    it "cancel returns to profile without saving" do
+    it "skip returns to profile without saving" do
       visit crop_account_avatar_path
       dismiss_banner
-      click_link I18n.t("image_crop.cancel")
+      click_link I18n.t("image_crop.skip")
       expect(page).to have_current_path(edit_account_profile_path)
     end
 
