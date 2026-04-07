@@ -7,5 +7,13 @@ module Workspaces
     def update?
       can?("manage_settings")
     end
+
+    def crop?
+      can?("manage_settings")
+    end
+
+    def save_crop?
+      can?("manage_settings")
+    end
   end
 end

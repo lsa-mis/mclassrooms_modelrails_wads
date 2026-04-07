@@ -6,6 +6,34 @@ module Workspaces
       authorize @workspace, policy_class: Workspaces::BrandingPolicy
     end
 
+    def crop
+      authorize @workspace, policy_class: Workspaces::BrandingPolicy
+      unless @workspace.logo.attached?
+        redirect_to edit_workspace_branding_path(@workspace), alert: t("image_crop.no_image")
+        nil
+      end
+    end
+
+    def save_crop
+      authorize @workspace, policy_class: Workspaces::BrandingPolicy
+
+      attachment = ActiveStorage::Attachment.find_by(
+        record_type: "Workspace",
+        record_id: @workspace.id,
+        name: "logo"
+      )
+
+      unless attachment
+        redirect_to edit_workspace_branding_path(@workspace), alert: t("image_crop.no_image")
+        return
+      end
+
+      crop_params = params.require(:crop).permit(:x, :y, :w, :h).transform_values(&:to_i)
+      blob = ActiveStorage::Blob.find(attachment.blob_id)
+      blob.update!(metadata: blob.metadata.merge("crop" => crop_params.to_h))
+      redirect_to edit_workspace_branding_path(@workspace), notice: t(".success")
+    end
+
     def update
       authorize @workspace, policy_class: Workspaces::BrandingPolicy
 

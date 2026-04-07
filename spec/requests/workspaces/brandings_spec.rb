@@ -87,5 +87,37 @@ RSpec.describe "Workspace Brandings", type: :request do
         expect(response).to redirect_to(workspace_path(workspace))
       end
     end
+
+    describe "GET /workspaces/:slug/branding/crop" do
+      it "renders the crop page when logo is attached" do
+        workspace.logo.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "logo.png", content_type: "image/png"
+        )
+        get crop_workspace_branding_path(workspace)
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "redirects when no logo is attached" do
+        get crop_workspace_branding_path(workspace)
+        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+      end
+    end
+
+    describe "PATCH /workspaces/:slug/branding/save_crop" do
+      before do
+        workspace.logo.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "logo.png", content_type: "image/png"
+        )
+      end
+
+      it "saves crop coordinates to blob metadata" do
+        patch save_crop_workspace_branding_path(workspace), params: { crop: { x: 5, y: 10, w: 80, h: 80 } }
+        metadata = workspace.logo.blob.reload.metadata
+        expect(metadata["crop"]).to eq("x" => 5, "y" => 10, "w" => 80, "h" => 80)
+        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+      end
+    end
   end
 end
