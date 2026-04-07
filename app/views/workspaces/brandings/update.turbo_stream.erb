@@ -3,72 +3,15 @@
 %>
 
 <%= turbo_stream.replace "modal-body" do %>
-  <div class="px-6 py-4 overflow-y-auto flex-1">
-    <div data-controller="image-cropper"
-         data-image-cropper-aspect-ratio-value="1.0"
-         data-image-cropper-existing-crop-value="<%= existing_crop.to_json %>"
-         data-image-cropper-view-mode-value="1">
-
-      <%# Crop viewport %>
-      <div tabindex="0"
-           role="application"
-           aria-roledescription="<%= t('image_crop.crop_area_label') %>"
-           aria-describedby="modal-crop-description"
-           data-action="keydown->image-cropper#handleKeydown"
-           class="relative overflow-hidden bg-neutral-900 rounded-lg
-                  focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:ring-inset"
-           style="max-height: 45vh;">
-        <%= image_tag url_for(@workspace.logo),
-              data: { image_cropper_target: "image" },
-              class: "block max-w-full",
-              draggable: false,
-              alt: t("workspaces.brandings.crop.title") %>
-      </div>
-      <p id="modal-crop-description" class="sr-only"><%= t("image_crop.crop_area_description") %></p>
-
-      <%# Live region %>
-      <div data-image-cropper-target="liveRegion" aria-live="polite" aria-atomic="true" class="sr-only"></div>
-
-      <%# Preview %>
-      <div class="py-3 text-center">
-        <p class="text-sm font-medium text-text-heading mb-2"><%= t("image_crop.preview") %></p>
-        <div data-image-cropper-target="preview"
-             class="inline-block overflow-hidden rounded-full border-2 border-border w-16 h-16">
-        </div>
-      </div>
-
-      <%# Instruction text %>
-      <p class="text-xs text-text-muted text-center mb-3">
-        <%= t("image_crop.instructions") %> · <%= t("image_crop.instructions_circle") %>
-      </p>
-
-      <%# Save crop form %>
-      <%= form_with url: save_crop_workspace_branding_path(@workspace), method: :patch do |f| %>
-        <input type="hidden" name="crop[x]" value="0" data-image-cropper-target="x">
-        <input type="hidden" name="crop[y]" value="0" data-image-cropper-target="y">
-        <input type="hidden" name="crop[w]" value="0" data-image-cropper-target="w">
-        <input type="hidden" name="crop[h]" value="0" data-image-cropper-target="h">
-        <div class="flex flex-col gap-2">
-          <button type="submit"
-                  data-action="click->image-cropper#save"
-                  data-turbo-submits-with="<%= t('image_crop.saving') %>"
-                  class="inline-flex items-center justify-center
-                         min-h-[44px] px-8 py-2.5 rounded-md w-full
-                         text-sm font-semibold text-white
-                         bg-interactive hover:bg-interactive-hover
-                         focus:outline-none focus:ring-2 focus:ring-interactive-focus">
-            <%= t("image_crop.save") %>
-          </button>
-          <button type="button"
-                  data-action="click->modal#close"
-                  class="inline-flex items-center justify-center
-                         min-h-[44px] px-6 py-2.5 rounded-md w-full
-                         text-sm font-medium text-text-muted hover:text-text-body
-                         focus:outline-none focus:ring-2 focus:ring-interactive-focus">
-            <%= t("image_crop.skip") %>
-          </button>
-        </div>
-      <% end %>
-    </div>
+  <div id="modal-body" class="px-6 py-4 overflow-y-auto flex-1">
+    <%= render "shared/image_crop",
+          image: @workspace.logo,
+          aspect_ratio: 1.0,
+          shape: :circle,
+          save_url: save_crop_workspace_branding_path(@workspace),
+          cancel_url: edit_workspace_branding_path(@workspace),
+          existing_crop: existing_crop,
+          compact: true,
+          title: t("workspaces.brandings.crop.title") %>
   </div>
 <% end %>

@@ -40,7 +40,6 @@ en:
       edit:
         title: "Change avatar"
         change: "Change avatar"
-        upload_new: "Upload new"
       update:
         success: "Avatar updated."
       destroy:
