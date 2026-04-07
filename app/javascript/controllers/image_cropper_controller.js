@@ -9,6 +9,8 @@ export default class extends Controller {
     viewMode: { type: Number, default: 1 }
   }
 
+  #modalOpenedHandler = null
+
   connect() {
     this.cropper = null
 
