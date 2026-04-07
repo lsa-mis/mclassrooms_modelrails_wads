@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import Cropper from "cropperjs"
 
 export default class extends Controller {
-  static targets = ["image", "preview", "x", "y", "w", "h", "slider", "liveRegion"]
+  static targets = ["image", "preview", "x", "y", "w", "h", "slider", "liveRegion", "dropZone"]
   static values = {
     aspectRatio: { type: Number, default: 1 },
     existingCrop: { type: Object, default: {} },
@@ -77,6 +77,64 @@ export default class extends Controller {
     if (!this.cropper) return
     this.cropper.reset()
     this.#syncSlider()
+  }
+
+  // Drop-to-upload: when a file is dropped on the crop viewport,
+  // find the upload form in the same modal and submit the file
+  handleDropUpload(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    this.#clearDropHighlight()
+
+    const files = event.dataTransfer?.files
+    if (!files?.length) return
+
+    const file = files[0]
+    const accepted = ["image/png", "image/jpeg", "image/gif", "image/webp"]
+    if (!accepted.includes(file.type)) return
+
+    // Find the upload form's file input in the same modal or page
+    const container = this.element.closest("[data-controller~='modal']") ||
+                      this.element.closest("[data-controller~='mode-switch']") ||
+                      document.body
+    const fileInput = container.querySelector("input[type='file'][accept*='image']")
+    const form = fileInput?.closest("form")
+
+    if (fileInput && form) {
+      const dt = new DataTransfer()
+      dt.items.add(file)
+      fileInput.files = dt.files
+
+      // If there's a mode-switch, switch to upload mode first
+      const modeSwitch = container.querySelector("[data-controller~='mode-switch']") ||
+                          container.closest("[data-controller~='mode-switch']")
+      if (modeSwitch) {
+        modeSwitch.dataset.modeSwitchModeValue = "upload"
+      }
+
+      // Trigger the upload
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }))
+    }
+  }
+
+  handleDragOver(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (this.hasDropZoneTarget) {
+      this.dropZoneTarget.classList.add("ring-2", "ring-interactive-focus", "ring-inset")
+    }
+  }
+
+  handleDragLeave(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    this.#clearDropHighlight()
+  }
+
+  #clearDropHighlight() {
+    if (this.hasDropZoneTarget) {
+      this.dropZoneTarget.classList.remove("ring-2", "ring-interactive-focus", "ring-inset")
+    }
   }
 
   // Private

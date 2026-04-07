@@ -27,7 +27,8 @@
              role="application"
              aria-roledescription="<%= t('image_crop.crop_area_label') %>"
              aria-describedby="crop-description"
-             data-action="keydown->image-cropper#handleKeydown"
+             data-image-cropper-target="dropZone"
+             data-action="keydown->image-cropper#handleKeydown dragover->image-cropper#handleDragOver dragleave->image-cropper#handleDragLeave drop->image-cropper#handleDropUpload"
              class="relative overflow-hidden bg-neutral-900
                     focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:ring-inset
                     <%= compact ? 'rounded-lg' : '' %>"
