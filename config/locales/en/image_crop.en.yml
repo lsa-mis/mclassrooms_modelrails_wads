@@ -1,6 +1,8 @@
 en:
   image_crop:
-    instructions: "Drag to reposition. Use the slider to zoom."
+    instructions: "Drag to reposition · Resize corners to zoom"
+    instructions_circle: "Image will be cropped to a circle"
+    instructions_rect: "Image will be cropped to a rectangle"
     zoom: "Zoom"
     save: "Save crop"
     saving: "Saving..."
@@ -12,3 +14,6 @@ en:
     remove_photo: "Remove photo"
     remove_confirm: "Are you sure you want to remove this photo?"
     no_image: "Upload an image first."
+    preview: "Preview:"
+    crop_area_label: "Image cropper"
+    crop_area_description: "Use arrow keys to move, plus and minus to zoom, or drag to reposition"
