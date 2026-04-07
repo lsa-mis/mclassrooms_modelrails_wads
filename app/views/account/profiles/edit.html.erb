@@ -16,6 +16,12 @@
                      focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
         <%= t("account.avatars.edit.change") %>
       </button>
+      <% if @user.avatar.attached? %>
+        <%= link_to t("account.avatars.crop.link"), crop_account_avatar_path,
+              class: "text-sm text-interactive underline hover:no-underline mt-1
+                     min-h-[44px] min-w-[44px] inline-flex items-center
+                     focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+      <% end %>
     </div>
 
     <%= render "shared/image_upload_modal",
