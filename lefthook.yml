@@ -5,7 +5,7 @@ pre-commit:
   commands:
     rubocop:
       glob: "*.rb"
-      run: bundle exec rubocop --force-exclusion --autocorrect {staged_files}
+      run: mise exec -- bundle exec rubocop --force-exclusion --autocorrect {staged_files}
       stage_fixed: true
 
 pre-push:
@@ -13,7 +13,7 @@ pre-push:
   commands:
     brakeman:
       tags: security
-      run: bundle exec brakeman --no-pager -q
+      run: mise exec -- bundle exec brakeman --no-pager -q
       skip:
         - merge
         - rebase
@@ -21,13 +21,13 @@ pre-push:
       tags: test
       env:
         CI: "true"
-      run: bundle exec rspec
+      run: mise exec -- bundle exec rspec
       skip:
         - merge
         - rebase
     rubocop:
       tags: style
-      run: bundle exec rubocop -f simple
+      run: mise exec -- bundle exec rubocop -f simple
       skip:
         - merge
         - rebase

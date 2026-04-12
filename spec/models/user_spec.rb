@@ -340,37 +340,39 @@ RSpec.describe User, type: :model do
     end
   end
 
-  describe "#available_avatar_sources" do
-    it "always includes initials" do
-      user = build(:user)
-      expect(user.available_avatar_sources).to include("initials")
-    end
-
-    it "includes gravatar when has_gravatar is true" do
-      user = build(:user, has_gravatar: true)
-      expect(user.available_avatar_sources).to include("gravatar")
-    end
-
-    it "excludes gravatar when has_gravatar is false" do
-      user = build(:user, has_gravatar: false)
-      expect(user.available_avatar_sources).not_to include("gravatar")
-    end
-
-    it "includes upload when avatar is attached" do
+  describe "avatar_original" do
+    it "supports avatar_original attachment" do
       user = create(:user)
-      user.avatar.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")), filename: "avatar.png", content_type: "image/png")
+      user.avatar_original.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "original.png",
+        content_type: "image/png"
+      )
+      expect(user.avatar_original).to be_attached
+    end
+  end
+
+  describe "#available_avatar_sources" do
+    it "always includes upload" do
+      user = create(:user)
       expect(user.available_avatar_sources).to include("upload")
     end
 
-    it "excludes upload when avatar is not attached" do
-      user = build(:user)
-      expect(user.available_avatar_sources).not_to include("upload")
+    it "always includes initials" do
+      user = create(:user)
+      expect(user.available_avatar_sources).to include("initials")
     end
 
-    it "returns all three sources when gravatar and upload are both available" do
-      user = create(:user, has_gravatar: true)
-      user.avatar.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")), filename: "avatar.png", content_type: "image/png")
-      expect(user.available_avatar_sources).to match_array(%w[initials gravatar upload])
+    it "includes gravatar when user has gravatar" do
+      user = create(:user)
+      user.update_columns(has_gravatar: true)
+      expect(user.available_avatar_sources).to include("gravatar")
+    end
+
+    it "excludes gravatar when user has no gravatar" do
+      user = create(:user)
+      user.update_columns(has_gravatar: false)
+      expect(user.available_avatar_sources).not_to include("gravatar")
     end
   end
 

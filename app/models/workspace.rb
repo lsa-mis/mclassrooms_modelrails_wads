@@ -3,6 +3,7 @@ class Workspace < ApplicationRecord
   include Trackable
 
   has_one_attached :logo
+  has_one_attached :logo_original
   has_many :memberships, dependent: :destroy
   has_many :users, through: :memberships
   has_many :roles, dependent: :destroy

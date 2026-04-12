@@ -61,11 +61,11 @@ RSpec.describe "Account Avatars", type: :request do
         expect(flash[:alert]).to be_present
       end
 
-      it "rejects upload source when no avatar is attached" do
+      it "accepts upload source even when no avatar is attached" do
         patch account_avatar_path, params: { avatar_source: "upload" }
         expect(response).to redirect_to(edit_account_profile_path)
-        expect(flash[:alert]).to be_present
-        expect(user.reload.avatar_source).to eq("initials")
+        expect(flash[:alert]).to be_nil
+        expect(user.reload.avatar_source).to eq("upload")
       end
 
       it "rejects gravatar source when user has no Gravatar" do
