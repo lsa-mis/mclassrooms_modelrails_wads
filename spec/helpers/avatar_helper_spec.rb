@@ -97,6 +97,38 @@ RSpec.describe AvatarHelper, type: :helper do
         result = helper.avatar_for(user, size: :md, aria_label: "Jane Doe")
         expect(result).to have_css("span[role='img'][aria-label='Jane Doe']")
       end
+
+      context "with custom primary_color" do
+        before do
+          user.update_columns(avatar_source: "initials", primary_color: 270)
+        end
+
+        it "renders inline OKLCH background style" do
+          result = helper.avatar_for(user, size: :md)
+          expect(result).to have_css("span[style*='oklch(0.45 0.2 270)']")
+        end
+
+        it "does not include bg-interactive class" do
+          result = helper.avatar_for(user, size: :md)
+          expect(result).not_to have_css("span.bg-interactive")
+        end
+      end
+
+      context "with default primary_color (210)" do
+        before do
+          user.update_columns(avatar_source: "initials", primary_color: 210)
+        end
+
+        it "uses bg-interactive class" do
+          result = helper.avatar_for(user, size: :md)
+          expect(result).to have_css("span.bg-interactive")
+        end
+
+        it "does not include inline style" do
+          result = helper.avatar_for(user, size: :md)
+          expect(result).not_to have_css("span[style]")
+        end
+      end
     end
 
     context "sizes" do

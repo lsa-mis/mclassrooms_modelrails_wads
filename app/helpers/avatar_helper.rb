@@ -45,10 +45,21 @@ module AvatarHelper
   end
 
   def render_initials_avatar(user, config, aria_label)
-    content_tag :span, user.initials,
-      class: "#{config[:css]} #{config[:text]} rounded-full bg-interactive text-text-on-interactive
-              flex items-center justify-center font-semibold",
-      **avatar_aria_attrs(aria_label)
+    custom_color = user.respond_to?(:primary_color) && user.primary_color.present? && user.primary_color != 210
+
+    classes = "#{config[:css]} #{config[:text]} rounded-full flex items-center justify-center font-semibold"
+    if custom_color
+      classes += " text-white"
+      style = "background-color: oklch(0.45 0.2 #{user.primary_color})"
+    else
+      classes += " bg-interactive text-text-on-interactive"
+      style = nil
+    end
+
+    attrs = avatar_aria_attrs(aria_label)
+    attrs[:style] = style if style
+
+    content_tag :span, user.initials, class: classes, **attrs
   end
 
   def avatar_aria_attrs(aria_label, alt: nil)
