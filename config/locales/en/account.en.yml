@@ -40,6 +40,7 @@ en:
       edit:
         title: "Change avatar"
         change: "Change avatar"
+        identity_picker_coming_soon: "Avatar management coming soon"
       update:
         success: "Avatar updated."
       destroy:
