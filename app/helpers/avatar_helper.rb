@@ -27,7 +27,7 @@ module AvatarHelper
   def render_upload_avatar(user, config, aria_label)
     return render_initials_avatar(user, config, aria_label) unless user.avatar.attached?
 
-    variant = cropped_variant(user.avatar, resize_to: [ config[:px], config[:px] ])
+    variant = user.avatar.variant(resize_to_fill: [ config[:px], config[:px] ])
     image_tag variant,
       class: "#{config[:css]} rounded-full object-cover",
       **avatar_aria_attrs(aria_label, alt: "")

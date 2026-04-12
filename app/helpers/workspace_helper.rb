@@ -20,7 +20,7 @@ module WorkspaceHelper
   private
 
   def render_workspace_logo(workspace, config)
-    variant = cropped_variant(workspace.logo, resize_to: [ config[:px], config[:px] ])
+    variant = workspace.logo.variant(resize_to_fill: [ config[:px], config[:px] ])
     image_tag variant,
       class: "#{config[:css]} rounded-full object-cover",
       alt: workspace.name,
