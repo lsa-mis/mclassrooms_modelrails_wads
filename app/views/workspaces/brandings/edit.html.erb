@@ -4,42 +4,44 @@
     <%= t("workspaces.brandings.edit.title") %>
   </h1>
 
-  <%# Logo section — separate from the branding form to avoid nested forms %>
-  <div class="mt-8 space-y-2">
-    <p class="block text-sm font-medium text-text-body">
-      <%= t("workspaces.brandings.edit.logo_label") %>
-    </p>
-    <div class="flex items-center gap-4" data-controller="modal">
-      <span id="workspace_logo_branding"><%= workspace_icon_for(@workspace, size: :lg) %></span>
-      <button data-action="click->modal#open"
-              type="button"
-              class="text-sm text-interactive underline hover:no-underline
-                     min-h-[44px] min-w-[44px]
-                     focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
-        <%= t("workspaces.brandings.edit.change_logo") %>
-      </button>
-
-      <%= render "shared/image_upload_modal",
-            title: t("workspaces.brandings.edit.change_logo"),
-            form_url: workspace_branding_path(@workspace),
-            field_name: :logo,
-            auto_submit: true,
-            current_image: @workspace.logo.attached? ? @workspace.logo : nil,
-            remove_url: @workspace.logo.attached? ? workspace_branding_path(@workspace) : nil,
-            remove_method: :patch %>
-    </div>
-  </div>
-
-  <%# Color branding form %>
+  <%# Branding form — logo upload and color in one form %>
   <%= form_with model: @workspace, url: workspace_branding_path(@workspace), method: :patch,
-        class: "mt-8 space-y-6", data: { controller: "color-picker" } do |form| %>
+        multipart: true, class: "mt-8 space-y-6", data: { controller: "color-picker" } do |form| %>
 
+    <%# Logo section %>
+    <div class="space-y-2">
+      <p class="block text-sm font-medium text-text-body">
+        <%= t("workspaces.brandings.edit.logo_label") %>
+      </p>
+      <div class="flex items-center gap-4">
+        <span id="workspace_logo_branding"><%= workspace_icon_for(@workspace, size: :lg) %></span>
+        <div class="space-y-2">
+          <%= form.label :logo, t("workspaces.brandings.edit.change_logo"),
+                class: "block text-sm text-interactive underline hover:no-underline cursor-pointer
+                        focus-within:outline-none focus-within:ring-2 focus-within:ring-interactive-focus rounded" %>
+          <%= form.file_field :logo, accept: "image/*",
+                class: "sr-only",
+                aria: { label: t("workspaces.brandings.edit.change_logo") } %>
+        </div>
+      </div>
+      <% if @workspace.logo.attached? %>
+        <div>
+          <%= button_to t("workspaces.brandings.edit.remove_logo"),
+                workspace_branding_path(@workspace),
+                method: :patch,
+                params: { remove_image: "1" },
+                class: "text-sm text-danger underline hover:no-underline
+                        min-h-[44px] focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Color palette %>
     <div>
       <p class="block text-sm font-medium text-text-body mb-3">
         <%= t("workspaces.brandings.edit.color_palette_label") %>
       </p>
 
-      <%# Color palette swatches %>
       <div class="flex flex-wrap gap-3" role="radiogroup" aria-label="<%= t("workspaces.brandings.edit.color_label") %>">
         <% %w[#0284c7 #6366f1 #7c3aed #db2777 #e11d48 #ea580c #d97706 #16a34a #0d9488 #475569].each do |color| %>
           <button type="button"

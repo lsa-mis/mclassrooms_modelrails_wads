@@ -87,6 +87,7 @@ en:
         title: "Workspace branding"
         logo_label: "Logo"
         change_logo: "Change logo"
+        remove_logo: "Remove logo"
         color_label: "Primary color"
         color_palette_label: "Choose a color"
         color_custom_label: "Or enter a custom value"
@@ -94,8 +95,3 @@ en:
         submit: "Save branding"
       update:
         success: "Branding updated."
-      crop:
-        title: "Crop logo"
-        link: "Crop"
-      save_crop:
-        success: "Logo cropped."
