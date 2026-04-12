@@ -90,6 +90,44 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    describe "PATCH /account/avatar with primary_color" do
+      it "updates primary_color when switching to initials" do
+        patch account_avatar_path, params: { avatar_source: "initials", primary_color: "270" }
+        expect(user.reload.primary_color).to eq(270)
+        expect(user.avatar_source).to eq("initials")
+      end
+    end
+
+    describe "PATCH /account/avatar with cropped image" do
+      it "saves both avatar and avatar_original" do
+        cropped = fixture_file_upload("avatar.png", "image/png")
+        original = fixture_file_upload("avatar.png", "image/png")
+        patch account_avatar_path, params: {
+          avatar: cropped,
+          avatar_original: original,
+          avatar_source: "upload",
+          crop_coordinates: '{"x":10,"y":20,"w":100,"h":100}'
+        }
+        user.reload
+        expect(user.avatar).to be_attached
+        expect(user.avatar_original).to be_attached
+        expect(user.avatar_source).to eq("upload")
+        metadata = user.avatar_original.blob.metadata
+        expect(metadata["crop"]).to eq("x" => 10, "y" => 20, "w" => 100, "h" => 100)
+      end
+    end
+
+    describe "PATCH /account/avatar (turbo_stream)" do
+      it "responds with turbo stream that updates avatars and closes modal" do
+        patch account_avatar_path, params: { avatar_source: "initials", primary_color: "180" },
+              headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("user_avatar_profile")
+        expect(response.body).to include("user_avatar_header")
+        expect(response.body).to include("modal-closer")
+      end
+    end
+
     describe "DELETE /account/avatar" do
       it "removes the avatar and falls back to initials" do
         user.avatar.attach(
