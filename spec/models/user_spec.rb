@@ -421,4 +421,27 @@ RSpec.describe User, type: :model do
       }.not_to have_enqueued_job(CheckGravatarJob)
     end
   end
+
+  describe "primary_color" do
+    it "defaults to 210" do
+      user = create(:user)
+      expect(user.primary_color).to eq(210)
+    end
+
+    it "validates inclusion in 0..360" do
+      user = build(:user, primary_color: 180)
+      expect(user).to be_valid
+
+      user.primary_color = -1
+      expect(user).not_to be_valid
+
+      user.primary_color = 361
+      expect(user).not_to be_valid
+    end
+
+    it "allows nil" do
+      user = build(:user, primary_color: nil)
+      expect(user).to be_valid
+    end
+  end
 end

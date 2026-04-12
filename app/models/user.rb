@@ -35,6 +35,7 @@ class User < ApplicationRecord
   validates :avatar,
     content_type: %w[image/png image/jpeg image/gif image/webp],
     size: { less_than: 5.megabytes }
+  validates :primary_color, inclusion: { in: 0..360 }, allow_nil: true
 
   MAX_FAILED_ATTEMPTS = 5
   LOCK_DURATION = 1.hour
