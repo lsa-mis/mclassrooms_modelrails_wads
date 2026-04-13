@@ -13,6 +13,7 @@ export default class extends Controller {
     "photoPreview",     // photo button in preview
     "gravPreview",      // gravatar img in preview
     "cropPreview",      // small circular preview in crop view
+    "sourceCards",      // radiogroup container for source cards
     "form"              // the hub form
   ]
 
@@ -39,6 +40,7 @@ export default class extends Controller {
     this.sourceFieldTarget.value = source
     this._updatePreview()
     this._updateContextualControls()
+    this._updateCardStyles()
 
     // Photo + no image → open file picker immediately
     // Use setTimeout to let the current click event finish before
@@ -143,25 +145,20 @@ export default class extends Controller {
       this.hasImageValue = true
       this.currentSourceValue = "upload"
       this.sourceFieldTarget.value = "upload"
+    }
 
-      // Update the photo preview with the newly saved avatar
-      // The turbo stream already replaced user_avatar_profile with the new image
-      // We need to update our local photo preview too
-      const profileAvatar = document.getElementById("user_avatar_profile")
-      if (profileAvatar) {
-        const newImg = profileAvatar.querySelector("img")
-        if (newImg && this.hasPhotoPreviewTarget) {
-          const previewImg = this.photoPreviewTarget.querySelector("img")
-          if (previewImg) {
-            previewImg.src = newImg.src
-          }
-        }
+    // Update the photo preview button with the cropped image
+    if (this.hasPhotoPreviewTarget) {
+      const previewImg = this.photoPreviewTarget.querySelector("img")
+      if (previewImg && this.hasCropPreviewTarget && this.cropPreviewTarget.src) {
+        previewImg.src = this.cropPreviewTarget.src
       }
     }
 
     this._switchMode("hub")
     this._updatePreview()
     this._updateContextualControls()
+    this._updateCardStyles()
   }
 
   // "Remove photo" from crop view
@@ -219,12 +216,10 @@ export default class extends Controller {
   // Private
 
   _switchMode(mode) {
-    const modeSwitch = this.element.querySelector("[data-controller~='mode-switch']")
-      || this.element.closest("[data-controller~='mode-switch']")
-    if (modeSwitch) {
-      const ctrl = this.application.getControllerForElementAndIdentifier(modeSwitch, "mode-switch")
-      if (ctrl) ctrl.modeValue = mode
-    }
+    // mode-switch is on the same element as identity-picker (data-controller="identity-picker mode-switch")
+    // so we can use this.element directly
+    const ctrl = this.application.getControllerForElementAndIdentifier(this.element, "mode-switch")
+    if (ctrl) ctrl.modeValue = mode
   }
 
   _updatePreview() {
@@ -244,6 +239,25 @@ export default class extends Controller {
     if (this.hasColorPanelTarget) {
       this.colorPanelTarget.hidden = this.currentSourceValue !== "initials"
     }
+  }
+
+  _updateCardStyles() {
+    if (!this.hasSourceCardsTarget) return
+
+    const cards = this.sourceCardsTarget.querySelectorAll("[data-source]")
+    cards.forEach((card) => {
+      const isSelected = card.dataset.source === this.currentSourceValue
+      const radio = card.querySelector("input[type='radio']")
+      if (radio) radio.checked = isSelected
+
+      if (isSelected) {
+        card.classList.remove("border-border")
+        card.classList.add("border-interactive", "bg-interactive/5")
+      } else {
+        card.classList.remove("border-interactive", "bg-interactive/5")
+        card.classList.add("border-border")
+      }
+    })
   }
 
   _hueToColorName(hue) {
