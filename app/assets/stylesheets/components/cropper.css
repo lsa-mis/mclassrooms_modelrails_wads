@@ -1,12 +1,18 @@
-/* Cropper.js v2 — container and selection styling */
+/* Cropper.js v2 — crop editor styling */
+
+/* ── Dark immersive viewport ── */
 
 .cropper-container {
   height: min(50vh, 400px);
   width: 100%;
   position: relative;
   overflow: hidden;
-  background: var(--color-surface-sunken, #f1f5f9);
+  background: var(--neutral-900);
   border-radius: var(--radius-lg, 0.5rem);
+}
+
+.dark .cropper-container {
+  background: var(--neutral-950);
 }
 
 /* Cropper.js v2 Web Components must fill the container */
@@ -16,9 +22,13 @@
   height: 100%;
 }
 
-/* Solid background on canvas (no checkerboard) */
+/* Canvas background matches container (no flash on init) */
 cropper-canvas {
-  background: var(--color-surface-sunken, #f1f5f9);
+  background: var(--neutral-900);
+}
+
+.dark cropper-canvas {
+  background: var(--neutral-950);
 }
 
 /*
@@ -34,16 +44,32 @@ cropper-shade {
   touch-action: none;
 }
 
+/* ── Circular crop overlay ── */
+
+/* Selection clips to circle — export stays rectangular */
+cropper-selection {
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* Circular white outline */
+cropper-selection[outlined] {
+  outline: 2px solid white;
+  outline-offset: -1px;
+}
+
+/* Move handle matches circular shape */
+cropper-selection > cropper-handle[action="move"] {
+  border-radius: 50%;
+}
+
 /* Dimmed overlay outside selection */
 cropper-shade {
   background: rgba(0, 0, 0, 0.5);
 }
 
-/* Corner resize handles — larger, visible grab points */
-cropper-selection [action$="-resize"][action*="n"][action*="w"],
-cropper-selection [action$="-resize"][action*="n"][action*="e"],
-cropper-selection [action$="-resize"][action*="s"][action*="w"],
-cropper-selection [action$="-resize"][action*="s"][action*="e"] {
+/* Corner resize handles — visible grab points at bounding box corners */
+cropper-selection cropper-handle[action$="-resize"] {
   width: 12px;
   height: 12px;
   background: white;
@@ -51,13 +77,43 @@ cropper-selection [action$="-resize"][action*="s"][action*="e"] {
   border-radius: 50%;
 }
 
-/* Selection outline */
-cropper-selection[outlined] {
-  outline: 2px solid white;
-  outline-offset: -1px;
-}
-
 /* Hide the original img once Cropper.js takes over */
 .cropper-container img[data-cropper-image] {
   display: none;
+}
+
+/* ── Dimension badge ── */
+
+.crop-dimension-badge {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── Two-column layout for crop view ── */
+
+.crop-view-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .crop-view-grid {
+    grid-template-columns: 1fr 300px;
+  }
+
+  .crop-view-footer {
+    grid-column: 1 / -1;
+  }
 }
