@@ -229,6 +229,7 @@ export default class extends Controller {
     // so we can use this.element directly
     const ctrl = this.application.getControllerForElementAndIdentifier(this.element, "mode-switch")
     if (ctrl) ctrl.modeValue = mode
+    this._toggleModalSize(mode)
   }
 
   _updatePreview() {
@@ -291,6 +292,19 @@ export default class extends Controller {
     const liveRegion = this.element.querySelector("[aria-live='polite']")
     if (liveRegion) {
       liveRegion.textContent = message
+    }
+  }
+
+  _toggleModalSize(mode) {
+    const panel = this.element.closest("[data-modal-target='panel']")
+    if (!panel) return
+
+    if (mode === "crop") {
+      panel.classList.remove("max-w-2xl")
+      panel.classList.add("max-w-4xl")
+    } else {
+      panel.classList.remove("max-w-4xl")
+      panel.classList.add("max-w-2xl")
     }
   }
 }
