@@ -17,13 +17,18 @@ module Workspaces
         return
       end
 
+      # JS saveCrop sends "avatar"/"avatar_original" to match User flow —
+      # accept those as aliases for logo/logo_original
+      cropped_image = params[:avatar] || params[:logo]
+      original_image = params[:avatar_original] || params[:logo_original]
+
       # Handle logo attachments (from identity picker crop flow)
-      if params[:logo].present?
-        @workspace.logo.attach(params[:logo])
+      if cropped_image.present?
+        @workspace.logo.attach(cropped_image)
       end
 
-      if params[:logo_original].present?
-        @workspace.logo_original.attach(params[:logo_original])
+      if original_image.present?
+        @workspace.logo_original.attach(original_image)
       end
 
       # Store crop coordinates
@@ -41,7 +46,7 @@ module Workspaces
       end
 
       # Crop save (logo file present) keeps modal open; hub save (no logo) closes it
-      @close_modal = params[:logo].blank?
+      @close_modal = cropped_image.blank?
 
       if @workspace.update(branding_params)
         respond_to do |format|

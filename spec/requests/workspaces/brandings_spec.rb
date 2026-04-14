@@ -196,6 +196,38 @@ RSpec.describe "Workspace Brandings", type: :request do
       end
     end
 
+    context "when cropped image is sent via JS saveCrop path" do
+      let(:valid_png) { fixture_file_upload("avatar.png", "image/png") }
+
+      it "accepts 'avatar'/'avatar_original' params and attaches as logo" do
+        patch workspace_branding_path(workspace), params: {
+          avatar: valid_png,
+          avatar_original: valid_png,
+          avatar_source: "upload",
+          crop_coordinates: '{"x":0,"y":0,"w":100,"h":100}'
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response.status).to be < 400
+        workspace.reload
+        expect(workspace.logo).to be_attached
+        expect(workspace.logo_original).to be_attached
+      end
+
+      it "still accepts 'logo'/'logo_original' params for regular HTML form" do
+        patch workspace_branding_path(workspace), params: {
+          logo: valid_png,
+          logo_original: valid_png,
+          avatar_source: "upload",
+          crop_coordinates: '{"x":0,"y":0,"w":100,"h":100}'
+        }
+
+        expect(response.status).to be < 400
+        workspace.reload
+        expect(workspace.logo).to be_attached
+        expect(workspace.logo_original).to be_attached
+      end
+    end
+
     describe "authorization" do
       it "rejects non-owner/admin access" do
         viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
