@@ -167,6 +167,69 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    describe "PATCH /account/avatar with crop_coordinates edge cases" do
+      context "with malformed JSON" do
+        it "ignores malformed JSON without crashing" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch account_avatar_path, params: {
+            avatar: file,
+            avatar_original: file,
+            crop_coordinates: "not-valid-json{",
+            avatar_source: "upload"
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          expect(response.status).to be < 500
+        end
+      end
+
+      context "with coords missing required keys" do
+        it "ignores coords missing required keys" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch account_avatar_path, params: {
+            avatar: file,
+            avatar_original: file,
+            crop_coordinates: '{"foo":"bar"}',
+            avatar_source: "upload"
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          expect(response.status).to be < 500
+          user.reload
+          expect(user.avatar_original.blob.metadata["crop"]).to be_nil
+        end
+      end
+
+      context "with non-numeric coord values" do
+        it "ignores coords with non-numeric values" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch account_avatar_path, params: {
+            avatar: file,
+            avatar_original: file,
+            crop_coordinates: '{"x":"a","y":"b","w":"c","h":"d"}',
+            avatar_source: "upload"
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          expect(response.status).to be < 500
+          user.reload
+          expect(user.avatar_original.blob.metadata["crop"]).to be_nil
+        end
+      end
+
+      context "with valid coords" do
+        it "stores coords when they have the expected shape" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch account_avatar_path, params: {
+            avatar: file,
+            avatar_original: file,
+            crop_coordinates: '{"x":10,"y":20,"w":100,"h":100}',
+            avatar_source: "upload"
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          user.reload
+          expect(user.avatar_original.blob.metadata["crop"]).to eq({ "x" => 10, "y" => 20, "w" => 100, "h" => 100 })
+        end
+      end
+    end
+
     describe "DELETE /account/avatar" do
       it "removes the avatar and falls back to initials" do
         user.avatar.attach(

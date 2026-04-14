@@ -28,9 +28,11 @@ module Workspaces
 
       # Store crop coordinates
       if params[:crop_coordinates].present? && @workspace.logo_original.attached?
-        coords = JSON.parse(params[:crop_coordinates])
-        blob = @workspace.logo_original.blob
-        blob.update!(metadata: blob.metadata.merge("crop" => coords))
+        coords = safe_parse_coordinates(params[:crop_coordinates])
+        if coords
+          blob = @workspace.logo_original.blob
+          blob.update!(metadata: blob.metadata.merge("crop" => coords))
+        end
       end
 
       # Handle nested form params (branding form)
@@ -57,6 +59,18 @@ module Workspaces
       params.require(:workspace).permit(:primary_color)
     rescue ActionController::ParameterMissing
       {}
+    end
+
+    def safe_parse_coordinates(raw)
+      return nil if raw.blank?
+
+      parsed = JSON.parse(raw)
+      return nil unless parsed.is_a?(Hash)
+      return nil unless %w[x y w h].all? { |k| parsed[k].is_a?(Numeric) }
+
+      parsed.slice("x", "y", "w", "h")
+    rescue JSON::ParserError
+      nil
     end
   end
 end

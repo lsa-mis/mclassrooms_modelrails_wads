@@ -113,6 +113,65 @@ RSpec.describe "Workspace Brandings", type: :request do
       end
     end
 
+    describe "PATCH /workspaces/:workspace_slug/branding with crop_coordinates edge cases" do
+      context "with malformed JSON" do
+        it "ignores malformed JSON without crashing" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch workspace_branding_path(workspace), params: {
+            logo: file,
+            logo_original: file,
+            crop_coordinates: "not-valid-json{"
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          expect(response.status).to be < 500
+        end
+      end
+
+      context "with coords missing required keys" do
+        it "ignores coords missing required keys" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch workspace_branding_path(workspace), params: {
+            logo: file,
+            logo_original: file,
+            crop_coordinates: '{"foo":"bar"}'
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          expect(response.status).to be < 500
+          workspace.reload
+          expect(workspace.logo_original.blob.metadata["crop"]).to be_nil
+        end
+      end
+
+      context "with non-numeric coord values" do
+        it "ignores coords with non-numeric values" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch workspace_branding_path(workspace), params: {
+            logo: file,
+            logo_original: file,
+            crop_coordinates: '{"x":"a","y":"b","w":"c","h":"d"}'
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          expect(response.status).to be < 500
+          workspace.reload
+          expect(workspace.logo_original.blob.metadata["crop"]).to be_nil
+        end
+      end
+
+      context "with valid coords" do
+        it "stores coords when they have the expected shape" do
+          file = fixture_file_upload("avatar.png", "image/png")
+          patch workspace_branding_path(workspace), params: {
+            logo: file,
+            logo_original: file,
+            crop_coordinates: '{"x":5,"y":10,"w":80,"h":80}'
+          }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+          workspace.reload
+          expect(workspace.logo_original.blob.metadata["crop"]).to eq({ "x" => 5, "y" => 10, "w" => 80, "h" => 80 })
+        end
+      end
+    end
+
     describe "authorization" do
       it "rejects non-owner/admin access" do
         viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }

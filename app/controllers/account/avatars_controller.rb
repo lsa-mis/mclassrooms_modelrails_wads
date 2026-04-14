@@ -15,9 +15,11 @@ module Account
 
       # Store crop coordinates in original blob metadata
       if params[:crop_coordinates].present? && user.avatar_original.attached?
-        coords = JSON.parse(params[:crop_coordinates])
-        blob = user.avatar_original.blob
-        blob.update!(metadata: blob.metadata.merge("crop" => coords))
+        coords = safe_parse_coordinates(params[:crop_coordinates])
+        if coords
+          blob = user.avatar_original.blob
+          blob.update!(metadata: blob.metadata.merge("crop" => coords))
+        end
       end
 
       # Handle source + color change (from hub save flow)
@@ -54,6 +56,20 @@ module Account
       Current.user.avatar_original.purge if Current.user.avatar_original.attached?
       Current.user.update!(avatar_source: "initials")
       redirect_to edit_account_profile_path, notice: t(".success")
+    end
+
+    private
+
+    def safe_parse_coordinates(raw)
+      return nil if raw.blank?
+
+      parsed = JSON.parse(raw)
+      return nil unless parsed.is_a?(Hash)
+      return nil unless %w[x y w h].all? { |k| parsed[k].is_a?(Numeric) }
+
+      parsed.slice("x", "y", "w", "h")
+    rescue JSON::ParserError
+      nil
     end
   end
 end
