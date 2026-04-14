@@ -76,7 +76,8 @@ en:
     select_file: "Select image file"
     save: "Save & apply"
     save_crop: "Save crop"
-    crop_title: "Crop your photo"
+    crop_title: "Crop & adjust"
+    back_to_source: "Choose source"
     crop_area_label: "Crop area — use arrow keys to move selection, plus and minus to zoom"
     zoom_label: "Zoom Level"
     zoom_aria_label: "Zoom level"
@@ -93,8 +94,11 @@ en:
     cancel: "Cancel"
     crop_hint: "Drag to move · Pinch to zoom"
     image_quality_tip: "High quality images work best. We recommend using a photo where your face is centered and clearly visible."
-    edit_profile_picture: "Edit profile picture"
-    edit_workspace_logo: "Edit workspace logo"
+    gif_static_warning: "Animated GIFs will be saved as a static image."
+    choose_profile_picture: "Choose profile picture"
+    choose_workspace_logo: "Choose workspace logo"
+    adjust_profile_picture: "Adjust profile picture"
+    adjust_workspace_logo: "Adjust workspace logo"
     sources:
       upload:
         title: "Photo"

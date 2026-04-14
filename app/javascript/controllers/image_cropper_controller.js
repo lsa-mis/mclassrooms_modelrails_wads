@@ -64,6 +64,7 @@ export default class extends Controller {
     if (this.hasSliderTarget) {
       this.sliderTarget.value = 0
     }
+    this._updateZoomPercent(0)
 
     this._announceReset()
 
@@ -190,14 +191,18 @@ export default class extends Controller {
       })
     }
 
-    // Capture base transform after image loads
+    // Capture base transform after image has fully settled into its
+    // auto-centered position. The first transform events fire during layout
+    // before centering completes — capturing too early gives wrong translate
+    // values that cause zoom jumps and broken reset.
     const image = this._cropper.getCropperImage()
     if (image) {
-      image.addEventListener("transform", () => {
-        if (!this._baseTransform) {
-          this._baseTransform = image.$getTransform()
+      setTimeout(() => {
+        if (!this._baseTransform && this._cropper) {
+          const img = this._cropper.getCropperImage()
+          if (img) this._baseTransform = img.$getTransform()
         }
-      }, { once: true })
+      }, 500)
     }
 
     // Enforce selection bounds
@@ -232,6 +237,7 @@ export default class extends Controller {
         <cropper-image
           initial-center-size="contain"
           scalable
+          translatable
         ></cropper-image>
         <cropper-shade></cropper-shade>
         <cropper-selection movable resizable outlined

@@ -35,13 +35,14 @@
           <%= t("workspaces.brandings.edit.change_logo") %>
         </button>
 
-        <%= render "shared/modal", title: t("identity_picker.edit_workspace_logo"), size: :lg do %>
+        <%= render "shared/modal", title: t("identity_picker.choose_workspace_logo"), size: :lg do %>
           <%= render "shared/identity_picker",
                 model: @workspace,
                 form_url: workspace_branding_path(@workspace),
                 available_sources: %w[upload initials],
                 has_color_picker: false,
-                title: t("identity_picker.edit_workspace_logo") %>
+                hub_title: t("identity_picker.choose_workspace_logo"),
+                crop_title: t("identity_picker.adjust_workspace_logo") %>
         <% end %>
       </div>
     </div>

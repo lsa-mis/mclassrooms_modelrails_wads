@@ -14,7 +14,8 @@ export default class extends Controller {
     "gravPreview",      // gravatar img in preview
     "cropPreview",      // small circular preview in crop view
     "sourceCards",      // radiogroup container for source cards
-    "form"              // the hub form
+    "form",             // the hub form
+    "gifWarning"        // warning banner shown when source file is a GIF
   ]
 
   static values = {
@@ -165,6 +166,9 @@ export default class extends Controller {
     this._pendingFile = file
     this._pendingObjectUrl = URL.createObjectURL(file)
     const objectUrl = this._pendingObjectUrl
+
+    // GIFs get rendered as a single static frame by canvas — warn the user.
+    this._toggleGifWarning(file.type === "image/gif")
 
     // Switch to crop view FIRST so the container is visible,
     // THEN load the image (Cropper.js v2 needs a visible container)
@@ -468,6 +472,14 @@ export default class extends Controller {
       this._pendingObjectUrl = null
     }
     this._pendingFile = null
+    // Any time we release the pending file, any GIF warning no longer applies.
+    this._toggleGifWarning(false)
+  }
+
+  _toggleGifWarning(show) {
+    if (this.hasGifWarningTarget) {
+      this.gifWarningTarget.hidden = !show
+    }
   }
 
   // Append the CSRF token from <meta name="csrf-token"> to FormData.

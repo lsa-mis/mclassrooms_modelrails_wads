@@ -360,6 +360,14 @@
           <%= t("identity_picker.reset_crop") %>
         </button>
 
+        <%# GIF warning — shown only when source file is an animated GIF %>
+        <div data-identity-picker-target="gifWarning"
+             class="flex items-start gap-2.5 p-3 rounded-lg bg-warning-surface text-warning text-sm"
+             hidden>
+          <%= icon(:exclamation_triangle, size: :sm, class: "shrink-0 mt-0.5") %>
+          <p><%= t("identity_picker.gif_static_warning") %></p>
+        </div>
+
         <%# Info banner %>
         <div class="flex items-start gap-2.5 p-3 rounded-lg bg-info-subtle text-info text-sm">
           <%= icon(:information_circle, size: :sm, class: "shrink-0 mt-0.5") %>
