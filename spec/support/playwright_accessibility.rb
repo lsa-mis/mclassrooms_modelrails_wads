@@ -53,14 +53,35 @@ RSpec.configure do |config|
   # In CI, automatically run axe accessibility audit after every system spec
   if ENV["CI"]
     config.after(:each, type: :system) do
-      # Wait for animations to settle before running axe
+      # Prepare toasts for audit:
+      # - Defeat in-progress animations (element opacity, transforms)
+      # - Force a solid background so axe can reliably compute color contrast.
+      #   The toast's production background uses alpha transparency (oklch / 90%),
+      #   which requires axe to walk up the DOM and blend with ancestors. That
+      #   walk-up is sensitive to DOM state and occasionally produces a flaky
+      #   "color-contrast" violation. Overriding to a solid-alpha version of
+      #   the same OKLCH color gives axe a deterministic value to test against,
+      #   without changing the production visual design.
       Capybara.current_session.driver.with_playwright_page do |playwright_page|
         playwright_page.evaluate(<<~JS)
           document.querySelectorAll('[data-controller="toast-pill"], [data-controller="toast-card"]').forEach(el => {
             el.style.transition = 'none';
             el.style.opacity = '1';
             el.style.transform = 'none';
+
+            // Replace the computed background with a solid (no-alpha) version.
+            // getComputedStyle returns rgba(r, g, b, a) — drop the alpha to 1.
+            const bg = getComputedStyle(el).backgroundColor;
+            const match = bg.match(/rgba?\\(([^)]+)\\)/);
+            if (match) {
+              const parts = match[1].split(',').map(s => s.trim());
+              el.style.backgroundColor = `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+            }
           });
+
+          // Force a synchronous reflow so the style overrides are reflected
+          // in computed styles before axe queries them.
+          document.body.offsetHeight;
         JS
       end
 
