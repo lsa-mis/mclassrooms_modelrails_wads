@@ -1,14 +1,26 @@
-<%# locals: (model:, form_url:, available_sources:, has_color_picker: false, title:) -%>
+<%# locals: (model:, form_url:, available_sources:, has_color_picker: false, hub_title:, crop_title:) -%>
 <%
   is_user = model.is_a?(User)
   current_source = is_user ? model.avatar_source : (model.logo.attached? ? "upload" : "initials")
   has_image = is_user ? model.avatar.attached? : model.logo.attached?
   current_hue = is_user ? (model.primary_color || 210) : 210
-  image_url = if is_user && model.avatar.attached?
-               url_for(model.avatar)
-             elsif !is_user && model.logo.attached?
-               url_for(model.logo)
-             end
+  # URL for the hub preview circle (resized/cropped variant)
+  display_url = if is_user && model.avatar.attached?
+                  url_for(model.avatar)
+                elsif !is_user && model.logo.attached?
+                  url_for(model.logo)
+                end
+
+  # URL for re-crop — use original so quality isn't progressively degraded.
+  # Falls back to display_url if no original is stored (shouldn't normally happen,
+  # but defensive for older records).
+  original_url = if is_user && model.avatar_original.attached?
+                   url_for(model.avatar_original)
+                 elsif !is_user && model.logo_original.attached?
+                   url_for(model.logo_original)
+                 else
+                   display_url
+                 end
   gravatar_url = is_user ? model.gravatar_url(size: 256) : nil
   initials = model.initials
 %>
@@ -17,6 +29,8 @@
      data-identity-picker-form-url-value="<%= form_url %>"
      data-identity-picker-current-source-value="<%= current_source %>"
      data-identity-picker-has-image-value="<%= has_image %>"
+     data-identity-picker-hub-title-value="<%= hub_title %>"
+     data-identity-picker-crop-title-value="<%= crop_title %>"
      data-mode-switch-mode-value="hub">
 
   <%# Hidden file input — triggered programmatically %>
@@ -43,8 +57,8 @@
                      group cursor-pointer
                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus"
               <%= "hidden" unless has_image && current_source == "upload" %>>
-        <% if image_url %>
-          <%= image_tag image_url,
+        <% if display_url %>
+          <%= image_tag display_url,
                 class: "w-full h-full object-cover",
                 alt: "" %>
         <% else %>
@@ -116,6 +130,7 @@
             </div>
             <input type="radio" name="avatar_source_radio"
                    value="upload"
+                   data-action="change->identity-picker#handleSourceChange"
                    <%= "checked" if current_source == "upload" %>
                    class="size-4 text-interactive focus:ring-interactive-focus shrink-0">
           </label>
@@ -140,6 +155,7 @@
             </div>
             <input type="radio" name="avatar_source_radio"
                    value="gravatar"
+                   data-action="change->identity-picker#handleSourceChange"
                    <%= "checked" if current_source == "gravatar" %>
                    class="size-4 text-interactive focus:ring-interactive-focus shrink-0">
           </label>
@@ -167,6 +183,7 @@
             </div>
             <input type="radio" name="avatar_source_radio"
                    value="initials"
+                   data-action="change->identity-picker#handleSourceChange"
                    <%= "checked" if current_source == "initials" %>
                    class="size-4 text-interactive focus:ring-interactive-focus shrink-0">
           </label>
@@ -223,16 +240,16 @@
 
   <%# ═══════ CROP VIEW ═══════ %>
   <div data-mode-switch-target="section" data-mode="crop" hidden>
-    <%# Header with back arrow %>
-    <div class="flex items-center gap-3 mb-4">
+    <%# Header: back link + crop title %>
+    <div class="flex items-center justify-between mb-4">
       <button type="button"
               data-action="click->identity-picker#backToHub"
-              class="min-h-[44px] min-w-[44px] inline-flex items-center justify-center
-                     rounded-md hover:bg-surface-sunken
-                     text-text-muted hover:text-text-body
-                     focus:outline-none focus:ring-2 focus:ring-interactive-focus"
-              aria-label="<%= t('identity_picker.back') %>">
-        <%= icon(:arrow_left, size: :md) %>
+              class="inline-flex items-center gap-1.5 text-sm text-interactive
+                     hover:text-interactive-hover
+                     min-h-[44px] px-2 rounded
+                     focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+        <%= icon(:arrow_left, size: :sm) %>
+        <%= t("identity_picker.back_to_source") %>
       </button>
       <h3 class="text-lg font-semibold text-text-heading">
         <%= t("identity_picker.crop_title") %>
@@ -241,19 +258,24 @@
 
     <%# Two-column grid: crop viewport (left) + controls (right) %>
     <%# image-cropper controller scoped to the grid so targets in both columns are reachable %>
+    <%# Keyboard: tabindex/keydown are on the cropper-container only, so arrow keys
+        don't conflict with the zoom slider or buttons elsewhere in the grid %>
     <div class="crop-view-grid"
          data-controller="image-cropper"
          data-image-cropper-aspect-ratio-value="1"
-         data-action="keydown->image-cropper#handleKeydown image-cropper:cropChanged->identity-picker#updateCropPreview"
-         tabindex="0"
-         aria-label="<%= t('identity_picker.crop_area_label') %>">
+         data-action="image-cropper:cropChanged->identity-picker#updateCropPreview">
 
       <%# ── Left column: Crop viewport ── %>
       <div>
-        <div class="cropper-container rounded-lg"
-             data-image-cropper-target="container">
+        <div class="cropper-container rounded-lg
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-interactive-focus focus-visible:ring-offset-2"
+             data-image-cropper-target="container"
+             data-action="keydown->image-cropper#handleKeydown"
+             tabindex="0"
+             role="application"
+             aria-label="<%= t('identity_picker.crop_area_label') %>">
           <% if has_image %>
-            <%= image_tag image_url, class: "max-w-full", alt: "" %>
+            <%= image_tag original_url, class: "max-w-full", alt: "" %>
           <% else %>
             <img src="" class="max-w-full" alt="">
           <% end %>
