@@ -300,6 +300,14 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    describe "authorization" do
+      it "invokes Account::AvatarPolicy#update? via Pundit" do
+        expect_any_instance_of(Account::AvatarPolicy).to receive(:update?).and_call_original
+        patch account_avatar_path, params: { avatar_source: "initials" },
+              headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      end
+    end
+
     describe "DELETE /account/avatar purges original" do
       it "purges both avatar and avatar_original" do
         user.avatar.attach(

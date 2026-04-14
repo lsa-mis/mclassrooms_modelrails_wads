@@ -2,6 +2,7 @@ module Account
   class AvatarsController < ApplicationController
     def update
       user = Current.user
+      authorize user, policy_class: Account::AvatarPolicy
 
       # Handle file attachments (from crop save flow)
       if params[:avatar].present?
