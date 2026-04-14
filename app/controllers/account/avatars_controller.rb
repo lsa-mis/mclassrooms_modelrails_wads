@@ -31,6 +31,12 @@ module Account
           return
         end
         user.avatar_source = source
+
+        # Switching away from upload (e.g. removePhoto) — purge blobs immediately
+        if source != "upload"
+          user.avatar.purge if user.avatar.attached?
+          user.avatar_original.purge if user.avatar_original.attached?
+        end
       end
 
       if params[:primary_color].present?

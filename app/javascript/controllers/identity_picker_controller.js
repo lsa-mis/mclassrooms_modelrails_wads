@@ -264,14 +264,56 @@ export default class extends Controller {
     }
   }
 
-  // "Remove photo" from crop view
-  removePhoto() {
-    this.hasImageValue = false
-    this.currentSourceValue = "initials"
-    this.sourceFieldTarget.value = "initials"
-    this._switchMode("hub")
-    this._updatePreview()
-    this._updateContextualControls()
+  // "Remove photo" from crop view — persists immediately to the server
+  async removePhoto() {
+    // In-flight guard (shared with saveCrop)
+    if (this._saving) return
+    this._saving = true
+
+    try {
+      const formData = new FormData()
+      formData.append("avatar_source", "initials")
+
+      const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
+      if (csrfToken) {
+        formData.append("authenticity_token", csrfToken)
+      }
+
+      const response = await fetch(this.formUrlValue, {
+        method: "PATCH",
+        headers: { "Accept": "text/vnd.turbo-stream.html" },
+        body: formData
+      })
+
+      if (response.status === 422) {
+        const html = await response.text()
+        Turbo.renderStreamMessage(html)
+        this._announce("Could not remove photo. Please try again.")
+        return
+      }
+
+      if (!response.ok) {
+        this._announce("Could not remove photo. Please try again.")
+        return
+      }
+
+      const html = await response.text()
+      Turbo.renderStreamMessage(html)
+
+      this._releasePendingFile()
+      this.hasImageValue = false
+      this.currentSourceValue = "initials"
+      this.sourceFieldTarget.value = "initials"
+      this._switchMode("hub")
+      this._updatePreview()
+      this._updateContextualControls()
+      this._updateCardStyles()
+    } catch (error) {
+      console.error("removePhoto failed:", error)
+      this._announce("Could not remove photo. Please check your connection and try again.")
+    } finally {
+      this._saving = false
+    }
   }
 
   // "Back to hub" from crop view

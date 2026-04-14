@@ -45,6 +45,16 @@ module Workspaces
         @workspace.logo.attach(params[:workspace][:logo])
       end
 
+      # Handle avatar_source change (from identity picker removePhoto flow)
+      # When JS removePhoto sends avatar_source=initials, purge logo blobs immediately
+      if params[:avatar_source].present? && cropped_image.blank?
+        source = params[:avatar_source]
+        if source != "upload"
+          @workspace.logo.purge if @workspace.logo.attached?
+          @workspace.logo_original.purge if @workspace.logo_original.attached?
+        end
+      end
+
       # Crop save (logo file present) keeps modal open; hub save (no logo) closes it
       @close_modal = cropped_image.blank?
 

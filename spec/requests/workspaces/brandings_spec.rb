@@ -196,6 +196,24 @@ RSpec.describe "Workspace Brandings", type: :request do
       end
     end
 
+    context "when avatar_source changes to initials (logo removal)" do
+      before do
+        workspace.logo.attach(fixture_file_upload("avatar.png", "image/png"))
+        workspace.logo_original.attach(fixture_file_upload("avatar.png", "image/png"))
+      end
+
+      it "purges logo attachments when avatar_source is set to initials" do
+        patch workspace_branding_path(workspace), params: {
+          avatar_source: "initials"
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response.status).to be < 400
+        workspace.reload
+        expect(workspace.logo).not_to be_attached
+        expect(workspace.logo_original).not_to be_attached
+      end
+    end
+
     context "when cropped image is sent via JS saveCrop path" do
       let(:valid_png) { fixture_file_upload("avatar.png", "image/png") }
 

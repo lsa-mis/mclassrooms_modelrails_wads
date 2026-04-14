@@ -128,6 +128,26 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    context "when avatar_source changes to initials (photo removal)" do
+      before do
+        user.avatar.attach(fixture_file_upload("avatar.png", "image/png"))
+        user.avatar_original.attach(fixture_file_upload("avatar.png", "image/png"))
+        user.update!(avatar_source: "upload")
+      end
+
+      it "purges avatar attachments and switches source to initials" do
+        patch account_avatar_path, params: {
+          avatar_source: "initials"
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response.status).to be < 400
+        user.reload
+        expect(user.avatar).not_to be_attached
+        expect(user.avatar_original).not_to be_attached
+        expect(user.avatar_source).to eq("initials")
+      end
+    end
+
     describe "PATCH /account/avatar crop save vs hub save" do
       it "does NOT close modal when saving a crop (file present)" do
         file = fixture_file_upload("avatar.png", "image/png")
