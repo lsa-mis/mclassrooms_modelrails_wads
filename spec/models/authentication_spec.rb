@@ -24,6 +24,33 @@ RSpec.describe Authentication, type: :model do
       other = build(:authentication, provider: "google", uid: "456")
       expect(other).to be_valid
     end
+
+    describe "avatar_url format" do
+      it "accepts https URLs" do
+        auth = build(:authentication, avatar_url: "https://example.com/avatar.png")
+        expect(auth).to be_valid
+      end
+
+      it "allows blank avatar_url" do
+        auth = build(:authentication, avatar_url: nil)
+        expect(auth).to be_valid
+      end
+
+      it "rejects http (non-TLS) URLs" do
+        auth = build(:authentication, avatar_url: "http://example.com/avatar.png")
+        expect(auth).not_to be_valid
+      end
+
+      it "rejects URLs with embedded whitespace (prevents newline injection)" do
+        auth = build(:authentication, avatar_url: "https://example.com\njavascript:alert(1)")
+        expect(auth).not_to be_valid
+      end
+
+      it "rejects javascript: scheme" do
+        auth = build(:authentication, avatar_url: "javascript:alert(1)")
+        expect(auth).not_to be_valid
+      end
+    end
   end
 
   describe "providers" do

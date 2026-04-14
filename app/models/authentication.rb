@@ -7,7 +7,7 @@ class Authentication < ApplicationRecord
   validates :uid, presence: true
   validates :provider, uniqueness: { scope: :user_id }
   validates :uid, uniqueness: { scope: :provider }
-  validates :avatar_url, format: { with: /\Ahttps:\/\//i }, allow_blank: true
+  validates :avatar_url, format: { with: /\Ahttps:\/\/\S+\z/i }, allow_blank: true
 
   scope :verified, -> { where.not(verified_at: nil) }
   scope :oauth, -> { where.not(provider: "email") }
