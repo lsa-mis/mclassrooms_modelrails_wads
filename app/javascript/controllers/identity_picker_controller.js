@@ -210,10 +210,7 @@ export default class extends Controller {
       formData.append("avatar_source", "upload")
       formData.append("crop_coordinates", JSON.stringify(coordinates))
 
-      const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
-      if (csrfToken) {
-        formData.append("authenticity_token", csrfToken)
-      }
+      this._appendCsrfToken(formData)
 
       const response = await fetch(this.formUrlValue, {
         method: "PATCH",
@@ -274,10 +271,7 @@ export default class extends Controller {
       const formData = new FormData()
       formData.append("avatar_source", "initials")
 
-      const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
-      if (csrfToken) {
-        formData.append("authenticity_token", csrfToken)
-      }
+      this._appendCsrfToken(formData)
 
       const response = await fetch(this.formUrlValue, {
         method: "PATCH",
@@ -474,6 +468,23 @@ export default class extends Controller {
       this._pendingObjectUrl = null
     }
     this._pendingFile = null
+  }
+
+  // Append the CSRF token from <meta name="csrf-token"> to FormData.
+  // If the meta tag is missing, log a warning — without the token, Rails
+  // will reject the request with 422 InvalidAuthenticityToken and the
+  // user will see a generic error. The warning helps developers catch
+  // layout regressions that accidentally remove csrf_meta_tags.
+  _appendCsrfToken(formData) {
+    const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
+    if (csrfToken) {
+      formData.append("authenticity_token", csrfToken)
+    } else {
+      console.warn(
+        "[identity-picker] CSRF token meta tag not found — request will likely fail. " +
+        "Ensure <%= csrf_meta_tags %> is in the layout."
+      )
+    }
   }
 
   _toggleModalSize(mode) {
