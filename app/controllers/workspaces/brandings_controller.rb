@@ -49,7 +49,17 @@ module Workspaces
           format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
         end
       else
-        render :edit, status: :unprocessable_entity
+        error_message = @workspace.errors.full_messages.to_sentence
+
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.append("toast-cards",
+              partial: "shared/toast_card",
+              locals: { type: :error, message: error_message }),
+                   status: :unprocessable_content
+          end
+          format.html { render :edit, status: :unprocessable_content }
+        end
       end
     end
 

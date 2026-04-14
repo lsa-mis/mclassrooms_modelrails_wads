@@ -230,6 +230,34 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    context "when save fails during avatar update" do
+      let(:valid_avatar) { fixture_file_upload("avatar.png", "image/png") }
+
+      before do
+        allow_any_instance_of(User).to receive(:save).and_return(false)
+        allow_any_instance_of(User).to receive_message_chain(:errors, :full_messages).and_return([ "Avatar is invalid" ])
+      end
+
+      it "returns 422 turbo stream for turbo_stream requests (not a redirect)" do
+        patch account_avatar_path, params: {
+          avatar: valid_avatar,
+          avatar_source: "upload"
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      end
+
+      it "still redirects for non-turbo HTML requests" do
+        patch account_avatar_path, params: {
+          avatar: valid_avatar,
+          avatar_source: "upload"
+        }
+
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
     describe "DELETE /account/avatar" do
       it "removes the avatar and falls back to initials" do
         user.avatar.attach(

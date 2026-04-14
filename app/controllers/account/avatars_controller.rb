@@ -47,7 +47,19 @@ module Account
         end
       else
         user.avatar.purge if params[:avatar].present?
-        redirect_to edit_account_profile_path, alert: user.errors.full_messages.to_sentence
+        user.avatar_original.purge if params[:avatar_original].present?
+
+        error_message = user.errors.full_messages.to_sentence
+
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.append("toast-cards",
+              partial: "shared/toast_card",
+              locals: { type: :error, message: error_message }),
+                   status: :unprocessable_content
+          end
+          format.html { redirect_to edit_account_profile_path, alert: error_message }
+        end
       end
     end
 

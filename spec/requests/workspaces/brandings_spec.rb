@@ -172,6 +172,30 @@ RSpec.describe "Workspace Brandings", type: :request do
       end
     end
 
+    context "when save fails during branding update" do
+      before do
+        allow_any_instance_of(Workspace).to receive(:update).and_return(false)
+        allow_any_instance_of(Workspace).to receive_message_chain(:errors, :full_messages).and_return([ "Primary color is invalid" ])
+      end
+
+      it "returns 422 turbo stream for turbo_stream requests (not a redirect)" do
+        patch workspace_branding_path(workspace), params: {
+          workspace: { primary_color: "bad-value" }
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      end
+
+      it "still renders edit with unprocessable_content for non-turbo HTML requests" do
+        patch workspace_branding_path(workspace), params: {
+          workspace: { primary_color: "bad-value" }
+        }
+
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+    end
+
     describe "authorization" do
       it "rejects non-owner/admin access" do
         viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
