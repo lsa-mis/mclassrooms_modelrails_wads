@@ -139,4 +139,44 @@ RSpec.describe Workspace, type: :model do
       expect(workspace).not_to be_valid
     end
   end
+
+  describe "logo attachment" do
+    let(:workspace) { create(:workspace) }
+
+    it "accepts valid image content types" do
+      %w[image/png image/jpeg image/gif image/webp].each do |content_type|
+        workspace.logo.attach(io: StringIO.new("fake"), filename: "test.png", content_type: content_type)
+        workspace.valid?
+        expect(workspace.errors[:logo]).to be_empty, "Expected #{content_type} to be valid"
+      end
+    end
+
+    it "rejects non-image content types" do
+      workspace.logo.attach(io: StringIO.new("not an image"), filename: "doc.pdf", content_type: "application/pdf")
+      expect(workspace).not_to be_valid
+      expect(workspace.errors[:logo]).to be_present
+    end
+
+    it "rejects files over 5MB" do
+      workspace.logo.attach(io: StringIO.new("x" * 6.megabytes), filename: "big.png", content_type: "image/png")
+      expect(workspace).not_to be_valid
+      expect(workspace.errors[:logo]).to be_present
+    end
+  end
+
+  describe "logo_original attachment" do
+    let(:workspace) { create(:workspace) }
+
+    it "rejects non-image content types" do
+      workspace.logo_original.attach(io: StringIO.new("not an image"), filename: "doc.pdf", content_type: "application/pdf")
+      expect(workspace).not_to be_valid
+      expect(workspace.errors[:logo_original]).to be_present
+    end
+
+    it "rejects files over 10MB (original can be larger than cropped)" do
+      workspace.logo_original.attach(io: StringIO.new("x" * 11.megabytes), filename: "big.png", content_type: "image/png")
+      expect(workspace).not_to be_valid
+      expect(workspace.errors[:logo_original]).to be_present
+    end
+  end
 end
