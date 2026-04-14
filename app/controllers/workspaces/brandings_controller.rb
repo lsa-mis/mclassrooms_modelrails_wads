@@ -40,11 +40,6 @@ module Workspaces
         end
       end
 
-      # Handle nested form params (branding form)
-      if params.dig(:workspace, :logo).present?
-        @workspace.logo.attach(params[:workspace][:logo])
-      end
-
       # Handle avatar_source change (from identity picker removePhoto flow)
       # When JS removePhoto sends avatar_source=initials, purge logo blobs immediately
       if params[:avatar_source].present? && cropped_image.blank?

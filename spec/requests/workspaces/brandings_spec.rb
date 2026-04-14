@@ -30,14 +30,6 @@ RSpec.describe "Workspace Brandings", type: :request do
         expect(workspace.reload.primary_color).to eq("#6366f1")
       end
 
-      it "uploads a logo" do
-        file = fixture_file_upload("avatar.png", "image/png")
-        patch workspace_branding_path(workspace), params: {
-          workspace: { logo: file }
-        }
-        expect(workspace.reload.logo).to be_attached
-      end
-
       it "redirects with success message" do
         patch workspace_branding_path(workspace), params: {
           workspace: { primary_color: "#6366f1" }
@@ -50,7 +42,8 @@ RSpec.describe "Workspace Brandings", type: :request do
       it "updates both logo and color" do
         file = fixture_file_upload("avatar.png", "image/png")
         patch workspace_branding_path(workspace), params: {
-          workspace: { logo: file, primary_color: "#0d9488" }
+          logo: file,
+          workspace: { primary_color: "#0d9488" }
         }
         workspace.reload
         expect(workspace.logo).to be_attached
@@ -59,13 +52,6 @@ RSpec.describe "Workspace Brandings", type: :request do
     end
 
     describe "PATCH /workspaces/:workspace_slug/branding via upload modal" do
-      it "uploads a logo and redirects to edit page" do
-        file = fixture_file_upload("avatar.png", "image/png")
-        patch workspace_branding_path(workspace), params: { workspace: { logo: file } }
-        expect(workspace.reload.logo).to be_attached
-        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
-      end
-
       it "removes the logo when remove_image is sent" do
         workspace.logo.attach(
           io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
