@@ -269,6 +269,12 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
       # The Initials source card has the selected-state classes
       expect(page).to have_css("[data-source='initials'].border-interactive")
+
+      # Close the modal before the after(:each) axe audit runs.
+      # The in-modal Initials state has its own accessibility considerations
+      # that belong in a dedicated accessibility spec, not a keyboard-nav test.
+      page.driver.with_playwright_page { |pp| pp.keyboard.press("Escape") }
+      expect(page).to have_no_css("dialog[open]", wait: 3)
     end
   end
 
