@@ -387,6 +387,11 @@ export default class extends Controller {
       this._previouslyFocused = document.activeElement
     }
 
+    // Any view transition closes the "file picker is open" window. Keeps the
+    // flag self-healing against any future flow that opens the picker from a
+    // different mode without going through handleFileSelected or backToHub.
+    this._filePickerOpen = false
+
     this._currentMode = mode
     const ctrl = this.application.getControllerForElementAndIdentifier(this.element, "mode-switch")
     if (ctrl) ctrl.modeValue = mode
