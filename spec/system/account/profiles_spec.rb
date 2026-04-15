@@ -128,4 +128,42 @@ RSpec.describe "Account profile — identity picker", type: :system do
       expect(user.avatar.blob.key).not_to eq(prior_avatar_key)
     end
   end
+
+  describe "remove photo" do
+    let(:user) do
+      u = create(:user)
+      u.avatar.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "avatar.png",
+        content_type: "image/png"
+      )
+      u.avatar_original.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "original.png",
+        content_type: "image/png"
+      )
+      u.update!(avatar_source: "upload")
+      u
+    end
+
+    it "persists removal immediately (without clicking Save & apply)" do
+      open_identity_picker
+
+      # Enter crop view via photo preview
+      find("button[data-identity-picker-target='photoPreview']").click
+      wait_for_crop_view
+
+      click_button I18n.t("identity_picker.remove_photo")
+
+      # Returns to hub with Initials now selected
+      wait_for_hub_view
+      expect(page).to have_css("[data-source='initials'].border-interactive", wait: 2)
+
+      # Server state persisted immediately — no Save & apply needed
+      user.reload
+      expect(user.avatar).not_to be_attached
+      expect(user.avatar_original).not_to be_attached
+      expect(user.avatar_source).to eq("initials")
+    end
+  end
 end
