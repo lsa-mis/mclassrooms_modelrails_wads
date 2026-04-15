@@ -83,21 +83,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
   end
 
   describe "re-crop existing photo" do
-    let(:user) do
-      u = create(:user)
-      u.avatar.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "avatar.png",
-        content_type: "image/png"
-      )
-      u.avatar_original.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "original.png",
-        content_type: "image/png"
-      )
-      u.update!(avatar_source: "upload")
-      u
-    end
+    let(:user) { create_user_with_avatar }
 
     it "loads avatar_original for re-crop and saves a new blob" do
       original_signed_id = user.avatar_original.blob.signed_id
@@ -130,21 +116,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
   end
 
   describe "remove photo" do
-    let(:user) do
-      u = create(:user)
-      u.avatar.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "avatar.png",
-        content_type: "image/png"
-      )
-      u.avatar_original.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "original.png",
-        content_type: "image/png"
-      )
-      u.update!(avatar_source: "upload")
-      u
-    end
+    let(:user) { create_user_with_avatar }
 
     it "persists removal immediately (without clicking Save & apply)" do
       open_identity_picker
@@ -174,21 +146,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
   end
 
   describe "navigation from crop view" do
-    let(:user) do
-      u = create(:user)
-      u.avatar.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "avatar.png",
-        content_type: "image/png"
-      )
-      u.avatar_original.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "original.png",
-        content_type: "image/png"
-      )
-      u.update!(avatar_source: "upload")
-      u
-    end
+    let(:user) { create_user_with_avatar }
 
     it "Escape returns to hub without closing the modal" do
       open_identity_picker
@@ -216,21 +174,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
   end
 
   describe "modal title" do
-    let(:user) do
-      u = create(:user)
-      u.avatar.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "avatar.png",
-        content_type: "image/png"
-      )
-      u.avatar_original.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "original.png",
-        content_type: "image/png"
-      )
-      u.update!(avatar_source: "upload")
-      u
-    end
+    let(:user) { create_user_with_avatar }
 
     it "changes between hub and crop modes" do
       open_identity_picker

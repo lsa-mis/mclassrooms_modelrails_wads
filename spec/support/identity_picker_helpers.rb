@@ -71,6 +71,26 @@ module IdentityPickerHelpers
   def wait_for_hub_view
     expect(page).to have_css("[data-mode='hub']:not([hidden])", wait: 3)
   end
+
+  # Build a user with a cropped avatar and its original, source set to "upload".
+  # Used by specs that start from the "user has an existing photo" state
+  # (re-crop, remove, navigation, modal title, etc.).
+  def create_user_with_avatar
+    user = create(:user)
+    fixture = Rails.root.join("spec/fixtures/files/avatar.png")
+    user.avatar.attach(
+      io: File.open(fixture),
+      filename: "avatar.png",
+      content_type: "image/png"
+    )
+    user.avatar_original.attach(
+      io: File.open(fixture),
+      filename: "original.png",
+      content_type: "image/png"
+    )
+    user.update!(avatar_source: "upload")
+    user
+  end
 end
 
 RSpec.configure do |config|
