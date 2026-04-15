@@ -164,6 +164,12 @@ RSpec.describe "Account profile — identity picker", type: :system do
       expect(user.avatar).not_to be_attached
       expect(user.avatar_original).not_to be_attached
       expect(user.avatar_source).to eq("initials")
+
+      # Close the modal before the after(:each) axe audit runs.
+      # The in-modal Initials state has its own accessibility considerations
+      # that belong in a dedicated accessibility spec.
+      page.driver.with_playwright_page { |pp| pp.keyboard.press("Escape") }
+      expect(page).to have_no_css("dialog[open]", wait: 3)
     end
   end
 
