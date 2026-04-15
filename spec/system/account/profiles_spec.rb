@@ -81,4 +81,51 @@ RSpec.describe "Account profile — identity picker", type: :system do
       end
     end
   end
+
+  describe "re-crop existing photo" do
+    let(:user) do
+      u = create(:user)
+      u.avatar.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "avatar.png",
+        content_type: "image/png"
+      )
+      u.avatar_original.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "original.png",
+        content_type: "image/png"
+      )
+      u.update!(avatar_source: "upload")
+      u
+    end
+
+    it "loads avatar_original for re-crop and saves a new blob" do
+      original_signed_id = user.avatar_original.blob.signed_id
+      prior_avatar_key = user.avatar.blob.key
+
+      open_identity_picker
+
+      # Click the large photo preview to enter crop view
+      find("button[data-identity-picker-target='photoPreview']").click
+
+      wait_for_crop_view
+
+      # Crop view image src should contain the avatar_original blob signed ID (not the avatar's)
+      img_src = page.evaluate_script(
+        "document.querySelector('.cropper-container img').getAttribute('src')"
+      )
+      expect(img_src).to include(original_signed_id)
+
+      simulate_crop_adjustment
+
+      click_button I18n.t("identity_picker.save_crop")
+
+      wait_for_hub_view
+
+      user.reload
+      expect(user.avatar).to be_attached
+      # New crop save creates a new avatar blob (different key than before)
+      expect(user.avatar.blob.key).not_to eq(prior_avatar_key)
+    end
+  end
 end
