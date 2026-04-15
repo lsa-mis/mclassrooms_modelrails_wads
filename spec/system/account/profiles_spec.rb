@@ -166,4 +166,46 @@ RSpec.describe "Account profile — identity picker", type: :system do
       expect(user.avatar_source).to eq("initials")
     end
   end
+
+  describe "navigation from crop view" do
+    let(:user) do
+      u = create(:user)
+      u.avatar.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "avatar.png",
+        content_type: "image/png"
+      )
+      u.avatar_original.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "original.png",
+        content_type: "image/png"
+      )
+      u.update!(avatar_source: "upload")
+      u
+    end
+
+    it "Escape returns to hub without closing the modal" do
+      open_identity_picker
+      find("button[data-identity-picker-target='photoPreview']").click
+      wait_for_crop_view
+
+      page.driver.with_playwright_page do |playwright_page|
+        playwright_page.keyboard.press("Escape")
+      end
+
+      wait_for_hub_view
+      expect(page).to have_css("dialog[open]")
+    end
+
+    it "Cancel button returns to hub without closing the modal" do
+      open_identity_picker
+      find("button[data-identity-picker-target='photoPreview']").click
+      wait_for_crop_view
+
+      click_button I18n.t("identity_picker.cancel")
+
+      wait_for_hub_view
+      expect(page).to have_css("dialog[open]")
+    end
+  end
 end
