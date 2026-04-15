@@ -228,6 +228,58 @@ RSpec.describe "Account profile — identity picker", type: :system do
     end
   end
 
+  describe "file picker dismissal" do
+    # Regression guard for a bug caught during characterization testing:
+    # when openFilePicker() calls fileInputTarget.click() inside a <dialog>
+    # and the user dismisses the OS file dialog (Escape on native picker),
+    # the browser fires a cancel event on the ancestor <dialog>. The modal
+    # controller's cancel handler would previously close the whole modal.
+    # The fix: identity_picker_controller sets a _filePickerOpen flag while
+    # the picker is open, and its cancel handler suppresses the close event
+    # (preventDefault + stopImmediatePropagation) so the user returns to hub.
+    it "keeps the modal open on hub when a cancel event fires during file picker" do
+      # Force a fast modal close animation so the dialog[open] assertion below
+      # reliably reflects "this didn't close" rather than "this hasn't finished
+      # closing yet". Without the fix, the modal controller calls close() which
+      # animates out before setting dialog.open = false.
+      page.execute_script(
+        "document.documentElement.style.setProperty('--modal-animation-duration', '50ms')"
+      )
+
+      open_identity_picker
+
+      # Simulate the state right after openFilePicker() has been called:
+      # flag is true, then a cancel event arrives on the dialog (as the browser
+      # fires when the OS file dialog is dismissed without a selection).
+      page.execute_script(<<~JS)
+        const el = document.querySelector("[data-controller~='identity-picker']")
+        const ctrl = window.Stimulus.getControllerForElementAndIdentifier(el, "identity-picker")
+        ctrl._filePickerOpen = true
+
+        const dialog = document.querySelector("dialog[open]")
+        dialog.dispatchEvent(new Event("cancel", { bubbles: false, cancelable: true }))
+      JS
+
+      # Wait longer than the modal animation; if the fix regressed, the dialog
+      # would have finished closing by now.
+      sleep 0.2
+
+      # Modal remains open, hub view still visible
+      expect(page).to have_css("dialog[open]")
+      expect(page).to have_css("[data-mode='hub']:not([hidden])")
+
+      # Flag was reset by the cancel handler
+      flag_cleared = page.evaluate_script(<<~JS)
+        (() => {
+          const el = document.querySelector("[data-controller~='identity-picker']")
+          const ctrl = window.Stimulus.getControllerForElementAndIdentifier(el, "identity-picker")
+          return ctrl._filePickerOpen === false
+        })()
+      JS
+      expect(flag_cleared).to eq(true)
+    end
+  end
+
   describe "double-click guard on Save crop" do
     it "triggers only one PATCH request even if Save crop is clicked twice rapidly" do
       open_identity_picker
