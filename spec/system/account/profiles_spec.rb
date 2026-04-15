@@ -56,5 +56,29 @@ RSpec.describe "Account profile — identity picker", type: :system do
       expect(user.avatar_source).to eq("initials")
       expect(user.primary_color).to eq(120)
     end
+
+    context "when user has a Gravatar" do
+      before do
+        user.update_columns(has_gravatar: true)
+        visit edit_account_profile_path
+      end
+
+      it "switches to Gravatar" do
+        open_identity_picker
+
+        select_identity_source("Gravatar")
+
+        # No color picker for Gravatar
+        expect(page).to have_css("[data-identity-picker-target='colorPanel'][hidden]", visible: :hidden, wait: 2)
+
+        click_button I18n.t("identity_picker.save")
+
+        # Modal closes on save & apply
+        expect(page).to have_no_css("dialog[open]", wait: 3)
+
+        user.reload
+        expect(user.avatar_source).to eq("gravatar")
+      end
+    end
   end
 end
