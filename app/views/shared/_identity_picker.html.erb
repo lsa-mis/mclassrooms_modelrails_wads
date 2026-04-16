@@ -74,7 +74,7 @@
       <%# Initials preview %>
       <div class="w-32 h-32 rounded-full flex items-center justify-center text-3xl font-semibold text-white"
            data-identity-picker-target="initialsPreview"
-           style="background-color: oklch(0.45 0.2 <%= current_hue %>)"
+           style="background-color: oklch(0.35 0.2 <%= current_hue %>)"
            <%= "hidden" unless current_source == "initials" %>>
         <%= initials %>
       </div>
@@ -170,7 +170,7 @@
                         hover:bg-surface-sunken/50 transition-all
                         <%= current_source == 'initials' ? 'border-interactive bg-interactive/5' : 'border-border' %>">
             <span class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
-                  style="background-color: oklch(0.45 0.2 <%= current_hue %>)">
+                  style="background-color: oklch(0.35 0.2 <%= current_hue %>)">
               <%= initials %>
             </span>
             <div class="flex-1 min-w-0">
@@ -220,13 +220,13 @@
                         [&::-webkit-slider-thumb]:shadow-md
                         [&::-webkit-slider-thumb]:cursor-pointer"
                  style="background: linear-gradient(to right,
-                   oklch(0.45 0.2 0),
-                   oklch(0.45 0.2 60),
-                   oklch(0.45 0.2 120),
-                   oklch(0.45 0.2 180),
-                   oklch(0.45 0.2 240),
-                   oklch(0.45 0.2 300),
-                   oklch(0.45 0.2 360));">
+                   oklch(0.35 0.2 0),
+                   oklch(0.35 0.2 60),
+                   oklch(0.35 0.2 120),
+                   oklch(0.35 0.2 180),
+                   oklch(0.35 0.2 240),
+                   oklch(0.35 0.2 300),
+                   oklch(0.35 0.2 360));">
         </div>
       <% end %>
 

@@ -20,9 +20,9 @@
   --color-text-on-interactive: oklch(100% 0 0);  /* white */
 
   /* --- Interactive (buttons, links, focus rings) --- */
-  --color-interactive:       var(--primary-700);
-  --color-interactive-hover: var(--primary-800);
-  --color-interactive-focus: var(--primary-700);
+  --color-interactive:       var(--primary-800);  /* was primary-700 (5.93:1) — now 7.56:1 AAA */
+  --color-interactive-hover: var(--primary-900);
+  --color-interactive-focus: var(--primary-800);
   --color-interactive-subtle: var(--primary-50);
 
   /* --- Accent (secondary highlights, prose links) --- */
@@ -32,7 +32,7 @@
   /* --- Borders --- */
   --color-border:        var(--neutral-200);
   --color-border-strong: var(--neutral-300);
-  --color-border-focus:  var(--primary-700);
+  --color-border-focus:  var(--primary-800);
 
   /* --- Toast (inverted overlay pill) --- */
   --color-surface-toast: oklch(20.5% 0.016 265.755 / 90%);  /* neutral-900 @ 90% */

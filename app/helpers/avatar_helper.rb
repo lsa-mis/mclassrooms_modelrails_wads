@@ -50,7 +50,7 @@ module AvatarHelper
     classes = "#{config[:css]} #{config[:text]} rounded-full flex items-center justify-center font-semibold"
     if custom_color
       classes += " text-white"
-      style = "background-color: oklch(0.45 0.2 #{user.primary_color})"
+      style = "background-color: oklch(0.35 0.2 #{user.primary_color})"
     else
       classes += " bg-interactive text-text-on-interactive"
       style = nil

@@ -105,7 +105,7 @@ RSpec.describe AvatarHelper, type: :helper do
 
         it "renders inline OKLCH background style" do
           result = helper.avatar_for(user, size: :md)
-          expect(result).to have_css("span[style*='oklch(0.45 0.2 270)']")
+          expect(result).to have_css("span[style*='oklch(0.35 0.2 270)']")
         end
 
         it "does not include bg-interactive class" do
