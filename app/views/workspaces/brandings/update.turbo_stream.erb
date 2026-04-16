@@ -21,6 +21,17 @@
   <% end %>
 <% end %>
 
+<%# Update --ws-primary CSS variable so the entire page theme reflects the new color immediately %>
+<% ws_hue = @workspace.primary_color %>
+<% if ws_hue.present? %>
+  <%= turbo_stream.append "body" do %>
+    <script>
+      document.getElementById("main-content").style.setProperty("--ws-primary", "oklch(0.40 0.15 <%= ws_hue %>)");
+      document.getElementById("main-content").setAttribute("data-workspace-branded", "");
+    </script>
+  <% end %>
+<% end %>
+
 <%= turbo_stream.append "toast-pills" do %>
   <%= render "shared/toast_pill", type: :success, message: t("workspaces.brandings.update.success") %>
 <% end %>

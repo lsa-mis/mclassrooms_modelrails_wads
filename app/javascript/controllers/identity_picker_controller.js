@@ -350,7 +350,7 @@ export default class extends Controller {
 
     // Update preview
     if (this.hasInitialsPreviewTarget) {
-      this.initialsPreviewTarget.style.backgroundColor = `oklch(0.45 0.2 ${hue})`
+      this.initialsPreviewTarget.style.backgroundColor = `oklch(0.35 0.2 ${hue})`
     }
 
     // Update hex display

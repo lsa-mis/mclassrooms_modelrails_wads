@@ -58,6 +58,13 @@ module Workspaces
         end
       end
 
+      # Handle primary_color from the identity picker hub form.
+      # The modal sends primary_color as a top-level param (not nested under workspace[...]),
+      # matching how the User avatars controller handles it.
+      if params[:primary_color].present?
+        @workspace.primary_color = params[:primary_color].to_i
+      end
+
       # Crop save (logo file present) keeps modal open; hub save (no logo) closes it
       @close_modal = cropped_image.blank?
 
