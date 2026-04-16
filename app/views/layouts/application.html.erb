@@ -27,11 +27,11 @@
     <%= render "shared/header" %>
     <%= render "shared/toasts" %>
 
-    <% ws_color = Current.workspace&.primary_color&.match(/\A#[0-9a-fA-F]{6}\z/)&.to_s %>
+    <% ws_hue = Current.workspace&.primary_color %>
     <main id="main-content" tabindex="-1" class="flex-1"
-          <% if ws_color.present? %>
+          <% if ws_hue.present? %>
             data-workspace-branded
-            style="--ws-primary: <%= ws_color %>;"
+            style="--ws-primary: oklch(0.40 0.15 <%= ws_hue %>);"
           <% end %>>
       <%= yield %>
     </main>

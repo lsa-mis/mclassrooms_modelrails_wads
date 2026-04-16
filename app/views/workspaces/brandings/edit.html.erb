@@ -4,9 +4,9 @@
     <%= t("workspaces.brandings.edit.title") %>
   </h1>
 
-  <%# Branding form — color in one form %>
+  <%# Branding form %>
   <%= form_with model: @workspace, url: workspace_branding_path(@workspace), method: :patch,
-        class: "mt-8 space-y-6", data: { controller: "color-picker" } do |form| %>
+        class: "mt-8 space-y-6" do |form| %>
 
     <%# Logo section — identity picker modal %>
     <div class="mt-8 space-y-2">
@@ -40,73 +40,10 @@
                 model: @workspace,
                 form_url: workspace_branding_path(@workspace),
                 available_sources: @workspace.available_logo_sources,
-                has_color_picker: false,
+                has_color_picker: true,
                 hub_title: t("identity_picker.choose_workspace_logo"),
                 crop_title: t("identity_picker.adjust_workspace_logo") %>
         <% end %>
-      </div>
-    </div>
-
-    <%# Color palette %>
-    <div>
-      <p class="block text-sm font-medium text-text-body mb-3">
-        <%= t("workspaces.brandings.edit.color_palette_label") %>
-      </p>
-
-      <div class="flex flex-wrap gap-3" role="radiogroup" aria-label="<%= t("workspaces.brandings.edit.color_label") %>">
-        <% %w[#0284c7 #6366f1 #7c3aed #db2777 #e11d48 #ea580c #d97706 #16a34a #0d9488 #475569].each do |color| %>
-          <button type="button"
-                  data-color-picker-target="swatch"
-                  data-color="<%= color %>"
-                  data-action="click->color-picker#select"
-                  role="radio"
-                  aria-checked="<%= (@workspace.primary_color || '#0284c7') == color %>"
-                  aria-label="<%= color %>"
-                  style="background-color: <%= color %>;"
-                  class="w-10 h-10 rounded-full cursor-pointer
-                         transition-transform duration-150
-                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus">
-          </button>
-        <% end %>
-      </div>
-
-      <%# Custom color input — native picker + text field synced via Stimulus %>
-      <div class="mt-4">
-        <label for="workspace_primary_color" class="block text-sm text-text-muted mb-1">
-          <%= t("workspaces.brandings.edit.color_custom_label") %>
-        </label>
-        <div class="flex items-center gap-3">
-          <input type="color"
-                 value="<%= @workspace.primary_color || '#0284c7' %>"
-                 data-color-picker-target="colorInput"
-                 data-action="input->color-picker#updateFromColor"
-                 class="w-12 h-10 rounded-md border border-border-strong cursor-pointer p-0.5
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus"
-                 aria-label="<%= t("workspaces.brandings.edit.color_label") %>">
-          <%= text_field_tag "workspace[primary_color]",
-                @workspace.primary_color || "#0284c7",
-                id: "workspace_primary_color",
-                data: { color_picker_target: "textInput", action: "input->color-picker#updateFromText" },
-                class: "flex-1 min-h-[44px] rounded-md border border-border-strong
-                        bg-surface-raised px-3 py-2 text-sm
-                        text-text-heading font-mono
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:border-interactive-focus" %>
-        </div>
-      </div>
-    </div>
-
-    <%# Live preview %>
-    <% preview_color = @workspace.primary_color&.match(/\A#[0-9a-fA-F]{6}\z/)&.to_s || "#0284c7" %>
-    <div data-color-picker-target="preview"
-         style="--ws-primary: <%= preview_color %>"
-         class="p-4 rounded-lg border border-border">
-      <p class="text-sm text-text-muted"><%= t("workspaces.brandings.edit.preview") %></p>
-      <div class="mt-2 flex items-center gap-3">
-        <div class="h-10 flex-1 rounded" style="background: var(--ws-primary);"></div>
-        <div class="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl text-white"
-             style="background: var(--ws-primary);">
-          <%= @workspace.initials %>
-        </div>
       </div>
     </div>
 

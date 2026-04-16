@@ -27,7 +27,7 @@
               class: "flex items-center gap-3 px-4 py-3 text-sm text-text-body
                       hover:bg-surface-sunken
                       focus:outline-none focus:bg-surface-sunken" do %>
-          <% ws_dot_color = workspace.primary_color&.match(/\A#[0-9a-fA-F]{6}\z/)&.to_s || "var(--color-interactive)" %>
+          <% ws_dot_color = workspace.primary_color ? "oklch(0.40 0.15 #{workspace.primary_color})" : "var(--color-interactive)" %>
           <span class="w-3 h-3 rounded-full shrink-0"
                 style="background: <%= ws_dot_color %>;"></span>
           <span>

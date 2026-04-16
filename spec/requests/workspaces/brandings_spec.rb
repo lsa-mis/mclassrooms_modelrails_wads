@@ -25,14 +25,14 @@ RSpec.describe "Workspace Brandings", type: :request do
     describe "PATCH /workspaces/:workspace_slug/branding" do
       it "updates the primary color" do
         patch workspace_branding_path(workspace), params: {
-          workspace: { primary_color: "#6366f1" }
+          workspace: { primary_color: 270 }
         }
-        expect(workspace.reload.primary_color).to eq("#6366f1")
+        expect(workspace.reload.primary_color).to eq(270)
       end
 
       it "redirects with success message" do
         patch workspace_branding_path(workspace), params: {
-          workspace: { primary_color: "#6366f1" }
+          workspace: { primary_color: 270 }
         }
         expect(response).to redirect_to(edit_workspace_branding_path(workspace))
       end
@@ -43,11 +43,11 @@ RSpec.describe "Workspace Brandings", type: :request do
         file = fixture_file_upload("avatar.png", "image/png")
         patch workspace_branding_path(workspace), params: {
           logo: file,
-          workspace: { primary_color: "#0d9488" }
+          workspace: { primary_color: 170 }
         }
         workspace.reload
         expect(workspace.logo).to be_attached
-        expect(workspace.primary_color).to eq("#0d9488")
+        expect(workspace.primary_color).to eq(170)
       end
     end
 
@@ -111,7 +111,7 @@ RSpec.describe "Workspace Brandings", type: :request do
     describe "PATCH /workspaces/:workspace_slug/branding (turbo_stream)" do
       it "responds with turbo stream that updates logo and closes modal" do
         patch workspace_branding_path(workspace), params: {
-          workspace: { primary_color: "#6366f1" }
+          workspace: { primary_color: 270 }
         }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
         expect(response.media_type).to eq("text/vnd.turbo-stream.html")
         expect(response.body).to include("workspace_logo_branding")
@@ -196,7 +196,7 @@ RSpec.describe "Workspace Brandings", type: :request do
 
       it "returns 422 turbo stream for turbo_stream requests (not a redirect)" do
         patch workspace_branding_path(workspace), params: {
-          workspace: { primary_color: "bad-value" }
+          workspace: { primary_color: 999 }
         }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
         expect(response).to have_http_status(:unprocessable_content)
@@ -205,7 +205,7 @@ RSpec.describe "Workspace Brandings", type: :request do
 
       it "still renders edit with unprocessable_content for non-turbo HTML requests" do
         patch workspace_branding_path(workspace), params: {
-          workspace: { primary_color: "bad-value" }
+          workspace: { primary_color: 999 }
         }
 
         expect(response).to have_http_status(:unprocessable_content)
