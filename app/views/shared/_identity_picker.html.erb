@@ -1,7 +1,7 @@
 <%# locals: (model:, form_url:, available_sources:, has_color_picker: false, hub_title:, crop_title:) -%>
 <%
   is_user = model.is_a?(User)
-  current_source = is_user ? model.avatar_source : (model.logo.attached? ? "upload" : "initials")
+  current_source = is_user ? model.avatar_source : model.logo_source
   has_image = is_user ? model.avatar.attached? : model.logo.attached?
   current_hue = is_user ? (model.primary_color || 210) : 210
   # URL for the hub preview circle (resized/cropped variant)
