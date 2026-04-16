@@ -2,10 +2,12 @@ module Account
   class ProfilesController < ApplicationController
     def edit
       @user = Current.user
+      authorize @user, policy_class: Account::ProfilePolicy
     end
 
     def update
       @user = Current.user
+      authorize @user, policy_class: Account::ProfilePolicy
 
       if email_change_requested?
         handle_email_change

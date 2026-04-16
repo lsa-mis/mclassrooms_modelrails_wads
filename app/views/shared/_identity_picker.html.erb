@@ -53,6 +53,7 @@
       <button type="button"
               data-action="click->identity-picker#openCrop"
               data-identity-picker-target="photoPreview"
+              aria-label="<%= t('identity_picker.edit_photo') %>"
               class="relative w-32 h-32 rounded-full overflow-hidden
                      group cursor-pointer
                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus"
@@ -211,7 +212,7 @@
             </span>
             <span class="text-xs font-mono text-text-muted"
                   data-identity-picker-target="colorHex">
-              Blue
+              <%= t("identity_picker.initial_color_name") %>
             </span>
           </div>
           <input type="range" min="0" max="360" step="1"
@@ -347,6 +348,7 @@
                  data-image-cropper-target="slider"
                  data-action="input->image-cropper#handleSlider"
                  aria-label="<%= t('identity_picker.zoom_aria_label') %>"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
                  class="w-full h-2 rounded-full appearance-none cursor-pointer
                         bg-border
                         [&::-webkit-slider-thumb]:appearance-none

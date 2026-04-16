@@ -85,6 +85,7 @@ module Account
     end
 
     def destroy
+      authorize Current.user, policy_class: Account::AvatarPolicy
       Current.user.avatar.purge
       Current.user.avatar_original.purge if Current.user.avatar_original.attached?
       Current.user.update!(avatar_source: "initials")
