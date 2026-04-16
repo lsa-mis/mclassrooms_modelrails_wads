@@ -67,6 +67,9 @@ module Workspaces
           format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
         end
       else
+        @workspace.logo.purge if cropped_image.present?
+        @workspace.logo_original.purge if original_image.present?
+
         error_message = @workspace.errors.full_messages.to_sentence
 
         respond_to do |format|
