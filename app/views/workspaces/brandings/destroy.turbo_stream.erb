@@ -15,12 +15,6 @@
   </span>
 <% end %>
 
-<% if @close_modal %>
-  <%= turbo_stream.append "modal-body" do %>
-    <div data-controller="modal-closer"></div>
-  <% end %>
-<% end %>
-
 <%= turbo_stream.append "toast-pills" do %>
-  <%= render "shared/toast_pill", type: :success, message: t("workspaces.brandings.update.success") %>
+  <%= render "shared/toast_pill", type: :success, message: t("workspaces.brandings.destroy.success") %>
 <% end %>

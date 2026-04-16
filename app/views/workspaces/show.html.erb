@@ -2,14 +2,9 @@
 <div class="max-w-4xl mx-auto px-4 py-16">
   <%= turbo_stream_from @workspace %>
   <div class="flex items-center gap-4">
-    <% if @workspace.logo.attached? %>
-      <%= image_tag @workspace.logo, class: "w-16 h-16 rounded-full object-cover" %>
-    <% else %>
-      <div class="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl text-white"
-           style="background: var(--ws-primary, var(--color-interactive));">
-        <%= @workspace.initials %>
-      </div>
-    <% end %>
+    <span id="workspace_logo_show">
+      <%= workspace_icon_for(@workspace, size: :lg) %>
+    </span>
     <div>
       <h1 class="text-2xl font-bold text-text-heading">
         <%= @workspace.name %>

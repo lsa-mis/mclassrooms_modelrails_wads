@@ -179,4 +179,26 @@ RSpec.describe Workspace, type: :model do
       expect(workspace.errors[:logo_original]).to be_present
     end
   end
+
+  describe "logo_source" do
+    it "defaults to initials" do
+      workspace = create(:workspace)
+      expect(workspace.logo_source).to eq("initials")
+    end
+
+    it "validates inclusion in upload and initials" do
+      workspace = build(:workspace, logo_source: "upload")
+      expect(workspace).to be_valid
+
+      workspace.logo_source = "invalid"
+      expect(workspace).not_to be_valid
+    end
+  end
+
+  describe "#available_logo_sources" do
+    it "returns upload and initials" do
+      workspace = build(:workspace)
+      expect(workspace.available_logo_sources).to eq(%w[upload initials])
+    end
+  end
 end

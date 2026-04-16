@@ -83,6 +83,7 @@ en:
       update:
         success: "Settings updated."
     brandings:
+      source_unavailable: "That identity source is not available."
       edit:
         title: "Workspace branding"
         logo_label: "Logo"
@@ -95,3 +96,5 @@ en:
         submit: "Save branding"
       update:
         success: "Branding updated."
+      destroy:
+        success: "Logo removed."

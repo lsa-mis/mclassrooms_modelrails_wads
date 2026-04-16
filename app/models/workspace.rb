@@ -24,6 +24,7 @@ class Workspace < ApplicationRecord
   validates :max_projects, numericality: { greater_than: 0 }
   validates :primary_color, format: { with: /\A#[0-9a-fA-F]{6}\z/, message: :invalid_hex_color },
             allow_blank: true
+  validates :logo_source, inclusion: { in: %w[upload initials] }
 
   before_validation :generate_slug, if: -> { name.present? && (slug.blank? || (name_changed? && !slug_changed?)) }
 
@@ -46,6 +47,10 @@ class Workspace < ApplicationRecord
 
   def owner
     memberships.joins(:role).find_by(roles: { slug: "owner" })&.user
+  end
+
+  def available_logo_sources
+    %w[upload initials]
   end
 
   def effective_roles

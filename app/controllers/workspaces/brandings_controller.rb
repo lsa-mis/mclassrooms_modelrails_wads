@@ -9,11 +9,17 @@ module Workspaces
     def update
       authorize @workspace, policy_class: Workspaces::BrandingPolicy
 
-      # Remove logo (from identity picker or form)
-      if params[:remove_image].present?
-        @workspace.logo.purge if @workspace.logo.attached?
-        @workspace.logo_original.purge if @workspace.logo_original.attached?
-        redirect_to edit_workspace_branding_path(@workspace), notice: t(".success")
+      # Guard: reject invalid source values
+      if params[:avatar_source].present? && !@workspace.available_logo_sources.include?(params[:avatar_source])
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.append("toast-cards",
+              partial: "shared/toast_card",
+              locals: { type: :error, message: t("workspaces.brandings.source_unavailable") }),
+                   status: :forbidden
+          end
+          format.html { redirect_to edit_workspace_branding_path(@workspace), alert: t("workspaces.brandings.source_unavailable") }
+        end
         return
       end
 
@@ -25,6 +31,7 @@ module Workspaces
       # Handle logo attachments (from identity picker crop flow)
       if cropped_image.present?
         @workspace.logo.attach(cropped_image)
+        @workspace.logo_source = "upload"
       end
 
       if original_image.present?
@@ -44,6 +51,7 @@ module Workspaces
       # When JS removePhoto sends avatar_source=initials, purge logo blobs immediately
       if params[:avatar_source].present? && cropped_image.blank?
         source = params[:avatar_source]
+        @workspace.logo_source = source
         if source != "upload"
           @workspace.logo.purge if @workspace.logo.attached?
           @workspace.logo_original.purge if @workspace.logo_original.attached?
@@ -59,6 +67,9 @@ module Workspaces
           format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
         end
       else
+        @workspace.logo.purge if cropped_image.present?
+        @workspace.logo_original.purge if original_image.present?
+
         error_message = @workspace.errors.full_messages.to_sentence
 
         respond_to do |format|
@@ -70,6 +81,19 @@ module Workspaces
           end
           format.html { render :edit, status: :unprocessable_content }
         end
+      end
+    end
+
+    def destroy
+      authorize @workspace, policy_class: Workspaces::BrandingPolicy
+
+      @workspace.logo.purge if @workspace.logo.attached?
+      @workspace.logo_original.purge if @workspace.logo_original.attached?
+      @workspace.update!(logo_source: "initials")
+
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
       end
     end
 

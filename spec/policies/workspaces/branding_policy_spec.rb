@@ -16,6 +16,10 @@ RSpec.describe Workspaces::BrandingPolicy do
     it "allows update" do
       expect(described_class.new(user, workspace).update?).to be true
     end
+
+    it "allows destroy" do
+      expect(described_class.new(user, workspace).destroy?).to be true
+    end
   end
 
   describe "for member" do
@@ -28,6 +32,10 @@ RSpec.describe Workspaces::BrandingPolicy do
 
     it "denies update" do
       expect(described_class.new(user, workspace).update?).to be false
+    end
+
+    it "denies destroy" do
+      expect(described_class.new(user, workspace).destroy?).to be false
     end
   end
 end
