@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_16_150955) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_16_163818) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -245,7 +245,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_16_150955) do
     t.string "name", null: false
     t.boolean "personal", default: false, null: false
     t.string "plan", default: "free", null: false
-    t.string "primary_color"
+    t.integer "primary_color", default: 210
     t.string "slug", null: false
     t.datetime "updated_at", null: false
     t.index ["discarded_at"], name: "index_workspaces_on_discarded_at"

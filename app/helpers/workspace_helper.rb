@@ -32,12 +32,13 @@ module WorkspaceHelper
   end
 
   def render_workspace_initials(workspace, config)
-    ws_color = workspace.primary_color&.match(/\A#[0-9a-fA-F]{6}\z/)&.to_s
+    ws_hue = workspace.primary_color
+    ws_color = ws_hue ? "oklch(0.55 0.2 #{ws_hue})" : "var(--color-interactive)"
 
     content_tag :div, workspace.initials,
       class: "#{config[:css]} #{config[:text]} rounded-full flex items-center justify-center
               font-semibold text-white",
-      style: "background: #{ws_color || 'var(--color-interactive)'};",
+      style: "background: #{ws_color};",
       aria: { hidden: true }
   end
 end

@@ -201,4 +201,27 @@ RSpec.describe Workspace, type: :model do
       expect(workspace.available_logo_sources).to eq(%w[upload initials])
     end
   end
+
+  describe "primary_color (integer hue)" do
+    it "defaults to 210 (blue)" do
+      workspace = create(:workspace)
+      expect(workspace.primary_color).to eq(210)
+    end
+
+    it "validates inclusion in 0..360" do
+      workspace = build(:workspace, primary_color: 180)
+      expect(workspace).to be_valid
+
+      workspace.primary_color = -1
+      expect(workspace).not_to be_valid
+
+      workspace.primary_color = 361
+      expect(workspace).not_to be_valid
+    end
+
+    it "allows nil" do
+      workspace = build(:workspace, primary_color: nil)
+      expect(workspace).to be_valid
+    end
+  end
 end
