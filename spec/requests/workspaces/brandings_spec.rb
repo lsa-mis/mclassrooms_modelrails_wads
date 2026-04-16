@@ -51,15 +51,45 @@ RSpec.describe "Workspace Brandings", type: :request do
       end
     end
 
-    describe "PATCH /workspaces/:workspace_slug/branding via upload modal" do
-      it "removes the logo when remove_image is sent" do
+    describe "DELETE /workspaces/:workspace_slug/branding" do
+      before do
         workspace.logo.attach(
           io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-          filename: "logo.png", content_type: "image/png"
+          filename: "logo.png",
+          content_type: "image/png"
         )
-        patch workspace_branding_path(workspace), params: { remove_image: "1" }
+        workspace.logo_original.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "original.png",
+          content_type: "image/png"
+        )
+        workspace.update!(logo_source: "upload")
+      end
+
+      it "purges both logo blobs and sets logo_source to initials" do
+        delete workspace_branding_path(workspace),
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response).to have_http_status(:success)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        workspace.reload
+        expect(workspace.logo).not_to be_attached
+        expect(workspace.logo_original).not_to be_attached
+        expect(workspace.logo_source).to eq("initials")
+      end
+
+      it "removes the logo via DELETE" do
+        delete workspace_branding_path(workspace)
         expect(workspace.reload.logo).not_to be_attached
         expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+      end
+
+      it "redirects for HTML requests" do
+        delete workspace_branding_path(workspace)
+
+        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+        workspace.reload
+        expect(workspace.logo_source).to eq("initials")
       end
     end
 

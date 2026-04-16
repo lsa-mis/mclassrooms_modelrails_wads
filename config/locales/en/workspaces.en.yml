@@ -96,3 +96,5 @@ en:
         submit: "Save branding"
       update:
         success: "Branding updated."
+      destroy:
+        success: "Logo removed."

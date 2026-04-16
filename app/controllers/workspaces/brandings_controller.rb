@@ -23,14 +23,6 @@ module Workspaces
         return
       end
 
-      # Remove logo (from identity picker or form)
-      if params[:remove_image].present?
-        @workspace.logo.purge if @workspace.logo.attached?
-        @workspace.logo_original.purge if @workspace.logo_original.attached?
-        redirect_to edit_workspace_branding_path(@workspace), notice: t(".success")
-        return
-      end
-
       # JS saveCrop sends "avatar"/"avatar_original" to match User flow —
       # accept those as aliases for logo/logo_original
       cropped_image = params[:avatar] || params[:logo]
@@ -86,6 +78,19 @@ module Workspaces
           end
           format.html { render :edit, status: :unprocessable_content }
         end
+      end
+    end
+
+    def destroy
+      authorize @workspace, policy_class: Workspaces::BrandingPolicy
+
+      @workspace.logo.purge if @workspace.logo.attached?
+      @workspace.logo_original.purge if @workspace.logo_original.attached?
+      @workspace.update!(logo_source: "initials")
+
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
       end
     end
 
