@@ -352,6 +352,30 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "avatar_original attachment" do
+    it "rejects non-image content types" do
+      user = create(:user)
+      user.avatar_original.attach(
+        io: StringIO.new("not an image"),
+        filename: "doc.pdf",
+        content_type: "application/pdf"
+      )
+      expect(user).not_to be_valid
+      expect(user.errors[:avatar_original]).to be_present
+    end
+
+    it "rejects files over 10MB" do
+      user = create(:user)
+      user.avatar_original.attach(
+        io: StringIO.new("x" * 11.megabytes),
+        filename: "huge.png",
+        content_type: "image/png"
+      )
+      expect(user).not_to be_valid
+      expect(user.errors[:avatar_original]).to be_present
+    end
+  end
+
   describe "#available_avatar_sources" do
     it "always includes upload" do
       user = create(:user)
