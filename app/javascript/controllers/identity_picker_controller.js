@@ -401,8 +401,15 @@ export default class extends Controller {
   }
 
   _manageFocus(mode) {
-    // Wait a tick for the mode-switch to unhide the new section
-    requestAnimationFrame(() => {
+    // Wait for the modal resize/mode-switch animation to complete before
+    // moving focus. Reading --modal-animation-duration from the root element
+    // ensures we stay in sync with the CSS (default 200ms, tests override to 50ms).
+    const duration = parseInt(
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--modal-animation-duration"), 10
+    ) || 200
+
+    setTimeout(() => {
       if (mode === "crop") {
         // Focus the crop area so arrow keys immediately move the selection
         const container = this.element.querySelector("[data-image-cropper-target='container']")
@@ -419,7 +426,7 @@ export default class extends Controller {
         }
         this._previouslyFocused = null
       }
-    })
+    }, duration)
   }
 
   _updatePreview() {

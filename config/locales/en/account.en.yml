@@ -71,6 +71,7 @@ en:
         last_method: "You cannot disconnect your only sign-in method."
   identity_picker:
     preview: "Preview"
+    last_updated: "Updated %{time} ago"
     choose_source: "Choose how you're represented"
     source_label: "Identity source"
     select_file: "Select image file"

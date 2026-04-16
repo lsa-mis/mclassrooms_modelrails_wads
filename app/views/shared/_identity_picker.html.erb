@@ -92,6 +92,16 @@
       <span class="text-xs text-text-muted mt-2 uppercase tracking-wider">
         <%= t("identity_picker.preview") %>
       </span>
+      <% last_changed = if is_user && model.avatar.attached?
+                           model.avatar.blob.created_at
+                         elsif !is_user && model.logo.attached?
+                           model.logo.blob.created_at
+                         end %>
+      <% if last_changed %>
+        <span class="text-xs text-text-muted mt-1">
+          <%= t("identity_picker.last_updated", time: time_ago_in_words(last_changed)) %>
+        </span>
+      <% end %>
     </div>
 
     <%# Source selection %>
