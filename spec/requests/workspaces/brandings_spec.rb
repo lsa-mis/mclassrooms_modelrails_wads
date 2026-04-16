@@ -232,6 +232,45 @@ RSpec.describe "Workspace Brandings", type: :request do
       end
     end
 
+    describe "logo_source persistence" do
+      it "sets logo_source to upload when a logo is saved via crop" do
+        file = fixture_file_upload("avatar.png", "image/png")
+        patch workspace_branding_path(workspace), params: {
+          avatar: file,
+          avatar_original: file,
+          avatar_source: "upload",
+          crop_coordinates: '{"x":0,"y":0,"w":100,"h":100}'
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        workspace.reload
+        expect(workspace.logo_source).to eq("upload")
+      end
+
+      it "sets logo_source to initials when source is switched" do
+        workspace.update!(logo_source: "upload")
+        workspace.logo.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "logo.png",
+          content_type: "image/png"
+        )
+
+        patch workspace_branding_path(workspace), params: {
+          avatar_source: "initials"
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        workspace.reload
+        expect(workspace.logo_source).to eq("initials")
+      end
+
+      it "rejects invalid source values" do
+        patch workspace_branding_path(workspace), params: {
+          avatar_source: "invalid_source"
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+
     describe "authorization" do
       it "rejects non-owner/admin access" do
         viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
