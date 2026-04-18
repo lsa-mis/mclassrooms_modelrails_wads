@@ -40,8 +40,7 @@
           <%= render "shared/identity_picker",
                 model: @workspace,
                 form_url: workspace_branding_path(@workspace),
-                available_sources: @workspace.available_logo_sources,
-                has_color_picker: true,
+                hub_url: hub_workspace_branding_path(@workspace),
                 hub_title: t("identity_picker.choose_workspace_logo"),
                 crop_title: t("identity_picker.adjust_workspace_logo") %>
         <% end %>

@@ -38,8 +38,7 @@
       <%= render "shared/identity_picker",
             model: @user,
             form_url: account_avatar_path,
-            available_sources: @user.available_avatar_sources,
-            has_color_picker: true,
+            hub_url: hub_account_avatar_path,
             hub_title: t("identity_picker.choose_profile_picture"),
             crop_title: t("identity_picker.adjust_profile_picture") %>
     <% end %>
