@@ -1,8 +1,6 @@
 <%# locals: (model:, form_url:, hub_url:, current_source:, has_color_picker: false, available_sources:, is_user:, has_image:, current_hue:, display_url:, gravatar_url:, initials:, hub_title:) -%>
 <turbo-frame id="identity-picker-hub"
-             data-action="turbo:frame-load->identity-picker#onHubLoad"
-             data-modal-size="lg"
-             data-modal-title="<%= hub_title %>">
+             data-action="turbo:frame-load->identity-picker#onHubLoad">
 
   <%# Large preview — only ONE preview renders based on current_source %>
   <div class="flex flex-col items-center py-6">

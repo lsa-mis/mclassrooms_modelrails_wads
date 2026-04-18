@@ -53,8 +53,8 @@ RSpec.describe "Workspace branding — identity picker", type: :system do
 
       select_identity_source("Initials")
 
-      # Workspace now has has_color_picker: true — color panel should be visible
-      expect(page).to have_css("[data-identity-picker-target='colorPanel']")
+      # Workspace now has has_color_picker: true — color slider should be visible
+      expect(page).to have_css("[data-identity-picker-target='colorSlider']", wait: 3)
 
       click_button I18n.t("identity_picker.save")
 

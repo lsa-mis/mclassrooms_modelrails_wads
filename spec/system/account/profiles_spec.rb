@@ -42,8 +42,8 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
       select_identity_source("Initials")
 
-      # Color picker panel should appear (User has has_color_picker: true)
-      expect(page).to have_css("[data-identity-picker-target='colorPanel']:not([hidden])", wait: 2)
+      # Color picker panel should appear (server-rendered when initials selected)
+      expect(page).to have_css("[data-identity-picker-target='colorSlider']", wait: 3)
 
       set_identity_color_hue(120)  # green
 
@@ -68,8 +68,8 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
         select_identity_source("Gravatar")
 
-        # No color picker for Gravatar
-        expect(page).to have_css("[data-identity-picker-target='colorPanel'][hidden]", visible: :hidden, wait: 2)
+        # No color picker for Gravatar (panel is not rendered server-side)
+        expect(page).to have_no_css("[data-identity-picker-target='colorSlider']", wait: 2)
 
         click_button I18n.t("identity_picker.save")
 
@@ -127,21 +127,15 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
       click_button I18n.t("identity_picker.remove_photo")
 
-      # Returns to hub with Initials now selected
-      wait_for_hub_view
-      expect(page).to have_css("[data-source='initials'].border-interactive", wait: 2)
+      # Remove photo submits a DELETE via button_to and the turbo stream
+      # response closes the modal automatically
+      expect(page).to have_no_css("dialog[open]", wait: 5)
 
       # Server state persisted immediately — no Save & apply needed
       user.reload
       expect(user.avatar).not_to be_attached
       expect(user.avatar_original).not_to be_attached
       expect(user.avatar_source).to eq("initials")
-
-      # Close the modal before the after(:each) axe audit runs.
-      # The in-modal Initials state has its own accessibility considerations
-      # that belong in a dedicated accessibility spec.
-      page.driver.with_playwright_page { |pp| pp.keyboard.press("Escape") }
-      expect(page).to have_no_css("dialog[open]", wait: 3)
     end
   end
 
@@ -195,34 +189,40 @@ RSpec.describe "Account profile — identity picker", type: :system do
   end
 
   describe "keyboard source selection" do
-    it "updates preview and color panel when arrow keys navigate the radiogroup" do
+    it "navigates to Initials source via Tab and Enter and shows color picker" do
       open_identity_picker
 
-      # Focus the Photo (upload) radio, then press ArrowDown once.
-      # available_avatar_sources for a default user (no Gravatar) is ["upload", "initials"],
-      # so a single ArrowDown moves selection from upload → initials.
+      # Source cards are now links. Tab to the Initials link and press Enter.
+      # For a default user (no Gravatar), available sources are ["upload", "initials"].
+      # We Tab past the Photo link to reach Initials, then activate it.
       page.driver.with_playwright_page do |playwright_page|
+        # Focus the first source card link (Photo)
         playwright_page.evaluate(<<~JS)
-          const radio = document.querySelector(
-            "[data-identity-picker-target='sourceCards'] input[type='radio'][value='upload']"
+          const firstLink = document.querySelector(
+            "#identity-picker-hub [role='radiogroup'] a[role='radio']"
           )
-          radio.focus()
+          firstLink.focus()
         JS
-        playwright_page.keyboard.press("ArrowDown")
+        # Tab to the next source card (Initials)
+        playwright_page.keyboard.press("Tab")
+        # Activate the Initials link
+        playwright_page.keyboard.press("Enter")
       end
 
-      # Preview section: initials now visible
-      expect(page).to have_css("[data-identity-picker-target='initialsPreview']:not([hidden])", wait: 2)
+      # Wait for turbo frame to reload with Initials selected
+      expect(page).to have_css("#identity-picker-hub", wait: 5)
 
-      # Color panel visible (has_color_picker: true for User)
-      expect(page).to have_css("[data-identity-picker-target='colorPanel']:not([hidden])")
+      # Initials preview now visible (server-rendered for the initials source)
+      expect(page).to have_css("[data-identity-picker-target='initialsPreview']", wait: 3)
 
-      # The Initials source card has the selected-state classes
-      expect(page).to have_css("[data-source='initials'].border-interactive")
+      # Color slider visible (has_color_picker: true for User)
+      expect(page).to have_css("[data-identity-picker-target='colorSlider']")
+
+      # The Initials source card has the selected-state aria attribute
+      expect(page).to have_css("#identity-picker-hub a[aria-checked='true']",
+        text: I18n.t("identity_picker.sources.initials.title"))
 
       # Close the modal before the after(:each) axe audit runs.
-      # The in-modal Initials state has its own accessibility considerations
-      # that belong in a dedicated accessibility spec, not a keyboard-nav test.
       page.driver.with_playwright_page { |pp| pp.keyboard.press("Escape") }
       expect(page).to have_no_css("dialog[open]", wait: 3)
     end
@@ -266,7 +266,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
       # Modal remains open, hub view still visible
       expect(page).to have_css("dialog[open]")
-      expect(page).to have_css("[data-mode='hub']:not([hidden])")
+      expect(page).to have_css("#identity-picker-hub:not([hidden])")
 
       # Flag was reset by the cancel handler
       flag_cleared = page.evaluate_script(<<~JS)

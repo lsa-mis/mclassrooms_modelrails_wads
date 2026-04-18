@@ -18,17 +18,28 @@ module IdentityPickerHelpers
 
   # Open the identity picker modal from a profile or branding edit page.
   # Both pages place the trigger inside a [data-controller="modal"] container.
+  # The hub is loaded via a lazy turbo frame, so we wait for content to appear.
   def open_identity_picker
     find("[data-controller='modal'] button[data-action*='modal#open']", match: :first).click
     expect(page).to have_css("dialog[open]", wait: 3)
+    # Wait for the hub turbo frame to load its content
+    expect(page).to have_css("#identity-picker-hub [role='radiogroup']", wait: 5)
   end
 
   # Click a source card by the visible title text ("Photo", "Gravatar", "Initials").
-  # Uses the label element — that's where the click action is bound.
+  # Source cards are now <a> links inside the turbo frame hub that reload it via GET.
+  # Waits for the turbo frame to finish loading (no [busy] attribute) and confirm the
+  # selected source is active.
   def select_identity_source(title)
-    within("[data-identity-picker-target='sourceCards']") do
-      find("label", text: title).click
+    within("#identity-picker-hub") do
+      click_link title
     end
+    # Wait for the turbo frame to finish loading (Turbo removes [busy] when done)
+    expect(page).to have_no_css("#identity-picker-hub[busy]", wait: 5)
+    # Wait for the selected source to be active
+    expect(page).to have_css(
+      "#identity-picker-hub a[aria-checked='true']", text: title, wait: 5
+    )
   end
 
   # Attach a file to the identity picker's hidden file input.
@@ -63,13 +74,13 @@ module IdentityPickerHelpers
   # Wait for crop view to become visible. Cropper.js v2 renders Web Components
   # (cropper-canvas) after initialization — waiting on that guarantees ready-to-act.
   def wait_for_crop_view
-    expect(page).to have_css("[data-mode='crop']:not([hidden])", wait: 3)
-    expect(page).to have_css("cropper-canvas", wait: 3)
+    expect(page).to have_css("[data-identity-picker-target='cropSection']:not([hidden])", wait: 5)
+    expect(page).to have_css("cropper-canvas", wait: 5)
   end
 
   # Wait for hub view to become visible (after a mode switch back to hub).
   def wait_for_hub_view
-    expect(page).to have_css("[data-mode='hub']:not([hidden])", wait: 3)
+    expect(page).to have_css("#identity-picker-hub:not([hidden])", wait: 5)
   end
 
   # Build a user with a cropped avatar and its original, source set to "upload".

@@ -7,7 +7,7 @@ export default class extends Controller {
     "initialsPreview", "gifWarning"
   ]
 
-  static values = { formUrl: String, hasImage: Boolean, cropTitle: String }
+  static values = { formUrl: String, hasImage: Boolean, hubTitle: String, cropTitle: String }
 
   connect() {
     this._pendingFile = null
@@ -19,14 +19,17 @@ export default class extends Controller {
     this._dialog = this.element.closest("dialog")
     if (this._dialog) {
       this._handleCancel = (event) => {
-        if (this._inCropView) {
-          event.preventDefault()
-          event.stopImmediatePropagation()
-          this.backToHub()
-        } else if (this._filePickerOpen) {
+        if (this._filePickerOpen) {
+          // File picker was dismissed — suppress the cancel so the modal stays open.
+          // Must be checked before _inCropView because the auto-file-picker can
+          // trigger a cancel event after handleFileSelected has already entered crop view.
           event.preventDefault()
           event.stopImmediatePropagation()
           this._filePickerOpen = false
+        } else if (this._inCropView) {
+          event.preventDefault()
+          event.stopImmediatePropagation()
+          this.backToHub()
         }
       }
       this._dialog.addEventListener("cancel", this._handleCancel, true)
@@ -57,22 +60,18 @@ export default class extends Controller {
     }
   }
 
-  // Turbo frame loaded — sync modal size/title from frame data attrs
-  onHubLoad(event) {
-    const frame = event.target
-    if (!frame) return
-    const size = frame.dataset.modalSize
-    const title = frame.dataset.modalTitle
-    if (size) {
-      const panel = this.element.closest("[data-modal-target='panel']")
-      if (panel) {
-        panel.classList.remove("max-w-sm", "max-w-md", "max-w-lg", "max-w-2xl", "max-w-4xl")
-        panel.classList.add(`max-w-${size}`)
-      }
+  // Turbo frame loaded — sync modal size and set hub title.
+  // Title comes from the hubTitle Stimulus value (not from frame data attrs,
+  // since Turbo does not copy data attributes from the response frame element).
+  onHubLoad(_event) {
+    const panel = this.element.closest("[data-modal-target='panel']")
+    if (panel) {
+      panel.classList.remove("max-w-sm", "max-w-md", "max-w-lg", "max-w-2xl", "max-w-4xl")
+      panel.classList.add("max-w-lg")
     }
-    if (title) {
+    if (this.hubTitleValue) {
       const titleEl = this._dialog?.querySelector("[id$='-title']")
-      if (titleEl) titleEl.textContent = title
+      if (titleEl) titleEl.textContent = this.hubTitleValue
     }
   }
 
@@ -153,9 +152,15 @@ export default class extends Controller {
         return
       }
 
-      // Success — turbo stream handles modal close + avatar update
+      // Success — turbo stream updates avatars on the page; return to hub
       Turbo.renderStreamMessage(await response.text())
       this._releasePendingFile()
+      this.hasImageValue = true
+      this._exitCropView()
+      // Reload the hub frame so it reflects the newly saved photo
+      const hubFrame = this.element.querySelector("#identity-picker-hub")
+      if (hubFrame?.src) hubFrame.src = hubFrame.src
+      this._manageFocus("hub")
     } catch (error) {
       console.error("saveCrop failed:", error)
       this._announce("Upload failed. Please check your connection and try again.")
