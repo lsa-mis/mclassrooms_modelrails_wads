@@ -124,7 +124,11 @@ module Account
       Current.user.avatar.purge
       Current.user.avatar_original.purge if Current.user.avatar_original.attached?
       Current.user.update!(avatar_source: "initials")
-      redirect_to edit_account_profile_path, notice: t(".success")
+
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to edit_account_profile_path, notice: t(".success") }
+      end
     end
 
     private

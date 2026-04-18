@@ -300,6 +300,33 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    describe "DELETE /account/avatar (turbo_stream)" do
+      before do
+        user.avatar.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "avatar.png",
+          content_type: "image/png"
+        )
+        user.update!(avatar_source: "upload")
+      end
+
+      it "responds with turbo stream" do
+        delete account_avatar_path,
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response).to have_http_status(:success)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        user.reload
+        expect(user.avatar).not_to be_attached
+        expect(user.avatar_source).to eq("initials")
+      end
+
+      it "still redirects for HTML requests" do
+        delete account_avatar_path
+        expect(response).to redirect_to(edit_account_profile_path)
+      end
+    end
+
     describe "authorization" do
       it "invokes Account::AvatarPolicy#update? via Pundit" do
         expect_any_instance_of(Account::AvatarPolicy).to receive(:update?).and_call_original
