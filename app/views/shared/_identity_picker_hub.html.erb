@@ -1,5 +1,218 @@
 <%# locals: (model:, form_url:, hub_url:, current_source:, has_color_picker: false, available_sources:, is_user:, has_image:, current_hue:, display_url:, gravatar_url:, initials:, hub_title:) -%>
-<turbo-frame id="identity-picker-hub">
-  <%# Task 3 will replace this placeholder with the real hub content %>
-  <p class="text-sm text-text-muted"><%= hub_title %></p>
+<turbo-frame id="identity-picker-hub"
+             data-action="turbo:frame-load->identity-picker#onHubLoad"
+             data-modal-size="lg"
+             data-modal-title="<%= hub_title %>">
+
+  <%# Large preview — only ONE preview renders based on current_source %>
+  <div class="flex flex-col items-center py-6">
+    <% if current_source == "upload" && has_image %>
+      <%# Photo preview (clickable to crop) %>
+      <button type="button"
+              data-action="click->identity-picker#openCrop"
+              data-identity-picker-target="photoPreview"
+              aria-label="<%= t('identity_picker.edit_photo') %>"
+              class="relative w-32 h-32 rounded-full overflow-hidden
+                     group cursor-pointer
+                     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus">
+        <% if display_url %>
+          <%= image_tag display_url,
+                class: "w-full h-full object-cover",
+                alt: "" %>
+        <% else %>
+          <img src="" class="w-full h-full object-cover" alt="">
+        <% end %>
+        <span class="absolute inset-0 bg-black/0 group-hover:bg-black/30
+                     flex items-center justify-center transition-colors">
+          <%= icon(:pencil, size: :md,
+                class: "text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md") %>
+        </span>
+      </button>
+    <% elsif current_source == "gravatar" && gravatar_url %>
+      <%# Gravatar preview %>
+      <%= image_tag gravatar_url,
+            class: "w-32 h-32 rounded-full object-cover",
+            alt: "",
+            loading: "lazy" %>
+    <% else %>
+      <%# Initials preview (also fallback for upload with no image) %>
+      <div class="w-32 h-32 rounded-full flex items-center justify-center text-3xl font-semibold text-white"
+           data-identity-picker-target="initialsPreview"
+           style="background-color: oklch(0.35 0.2 <%= current_hue %>)">
+        <%= initials %>
+      </div>
+    <% end %>
+
+    <span class="text-xs text-text-muted mt-2 uppercase tracking-wider">
+      <%= t("identity_picker.preview") %>
+    </span>
+    <% last_changed = if is_user && model.avatar.attached?
+                         model.avatar.blob.created_at
+                       elsif !is_user && model.logo.attached?
+                         model.logo.blob.created_at
+                       end %>
+    <% if last_changed %>
+      <span class="text-xs text-text-muted mt-1">
+        <%= t("identity_picker.last_updated", time: time_ago_in_words(last_changed)) %>
+      </span>
+    <% end %>
+  </div>
+
+  <%# Source selection %>
+  <p class="text-sm text-text-muted mb-3"><%= t("identity_picker.choose_source") %></p>
+
+  <%# Source cards — links that reload the turbo frame with a new source %>
+  <div role="radiogroup" aria-label="<%= t('identity_picker.source_label') %>"
+       class="space-y-2 mb-4">
+
+    <%# Photo card %>
+    <% if available_sources.include?("upload") %>
+      <%= link_to "#{hub_url}?source=upload",
+            data: { turbo_frame: "identity-picker-hub" },
+            role: "radio",
+            aria: { checked: current_source == "upload" },
+            class: "flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer
+                    hover:bg-surface-sunken/50 transition-all no-underline
+                    #{current_source == 'upload' ? 'border-interactive bg-interactive/5' : 'border-border'}" do %>
+        <%= icon(:camera, size: :lg, class: "text-text-muted shrink-0") %>
+        <div class="flex-1 min-w-0">
+          <span class="block text-sm font-medium text-text-heading">
+            <%= t("identity_picker.sources.upload.title") %>
+          </span>
+          <span class="block text-xs text-text-muted">
+            <%= t("identity_picker.sources.upload.description") %>
+          </span>
+        </div>
+        <%# Styled radio indicator span %>
+        <span class="size-4 rounded-full border-2 shrink-0 flex items-center justify-center
+                     <%= current_source == 'upload' ? 'border-interactive' : 'border-border-strong' %>"
+              aria-hidden="true">
+          <% if current_source == "upload" %>
+            <span class="size-2 rounded-full bg-interactive"></span>
+          <% end %>
+        </span>
+      <% end %>
+    <% end %>
+
+    <%# Gravatar card %>
+    <% if available_sources.include?("gravatar") %>
+      <%= link_to "#{hub_url}?source=gravatar",
+            data: { turbo_frame: "identity-picker-hub" },
+            role: "radio",
+            aria: { checked: current_source == "gravatar" },
+            class: "flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer
+                    hover:bg-surface-sunken/50 transition-all no-underline
+                    #{current_source == 'gravatar' ? 'border-interactive bg-interactive/5' : 'border-border'}" do %>
+        <%= icon(:globe_alt, size: :lg, class: "text-text-muted shrink-0") %>
+        <div class="flex-1 min-w-0">
+          <span class="block text-sm font-medium text-text-heading">
+            <%= t("identity_picker.sources.gravatar.title") %>
+          </span>
+          <span class="block text-xs text-text-muted">
+            <%= t("identity_picker.sources.gravatar.description") %>
+          </span>
+        </div>
+        <%# Styled radio indicator span %>
+        <span class="size-4 rounded-full border-2 shrink-0 flex items-center justify-center
+                     <%= current_source == 'gravatar' ? 'border-interactive' : 'border-border-strong' %>"
+              aria-hidden="true">
+          <% if current_source == "gravatar" %>
+            <span class="size-2 rounded-full bg-interactive"></span>
+          <% end %>
+        </span>
+      <% end %>
+    <% end %>
+
+    <%# Initials card %>
+    <% if available_sources.include?("initials") %>
+      <%= link_to "#{hub_url}?source=initials",
+            data: { turbo_frame: "identity-picker-hub" },
+            role: "radio",
+            aria: { checked: current_source == "initials" },
+            class: "flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer
+                    hover:bg-surface-sunken/50 transition-all no-underline
+                    #{current_source == 'initials' ? 'border-interactive bg-interactive/5' : 'border-border'}" do %>
+        <span class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
+              style="background-color: oklch(0.35 0.2 <%= current_hue %>)">
+          <%= initials %>
+        </span>
+        <div class="flex-1 min-w-0">
+          <span class="block text-sm font-medium text-text-heading">
+            <%= t("identity_picker.sources.initials.title") %>
+          </span>
+          <span class="block text-xs text-text-muted">
+            <%= t("identity_picker.sources.initials.description") %>
+          </span>
+        </div>
+        <%# Styled radio indicator span %>
+        <span class="size-4 rounded-full border-2 shrink-0 flex items-center justify-center
+                     <%= current_source == 'initials' ? 'border-interactive' : 'border-border-strong' %>"
+              aria-hidden="true">
+          <% if current_source == "initials" %>
+            <span class="size-2 rounded-full bg-interactive"></span>
+          <% end %>
+        </span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%# Color picker panel — only renders when initials selected and color picker enabled %>
+  <% if current_source == "initials" && has_color_picker %>
+    <div class="p-4 rounded-lg border border-border space-y-3 mb-4">
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-medium text-text-heading">
+          <%= t("identity_picker.color_label") %>
+        </span>
+        <span class="text-xs font-mono text-text-muted"
+              data-identity-picker-target="colorHex">
+          <%= t("identity_picker.initial_color_name") %>
+        </span>
+      </div>
+      <input type="range" min="0" max="360" step="1"
+             value="<%= current_hue %>"
+             data-identity-picker-target="colorSlider"
+             data-action="input->identity-picker#handleColorChange"
+             aria-label="<%= t('identity_picker.color_aria_label') %>"
+             aria-valuemin="0" aria-valuemax="360"
+             aria-valuenow="<%= current_hue %>"
+             class="w-full h-3 rounded-full appearance-none cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none
+                    [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+                    [&::-webkit-slider-thumb]:rounded-full
+                    [&::-webkit-slider-thumb]:bg-white
+                    [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-border-strong
+                    [&::-webkit-slider-thumb]:shadow-md
+                    [&::-webkit-slider-thumb]:cursor-pointer"
+             style="background: linear-gradient(to right,
+               oklch(0.35 0.2 0),
+               oklch(0.35 0.2 60),
+               oklch(0.35 0.2 120),
+               oklch(0.35 0.2 180),
+               oklch(0.35 0.2 240),
+               oklch(0.35 0.2 300),
+               oklch(0.35 0.2 360));">
+    </div>
+  <% end %>
+
+  <%# Save form — breaks out of the turbo frame to apply the change %>
+  <%= form_with url: form_url, method: :patch,
+        data: { turbo_frame: "_top" },
+        class: "space-y-2" do |f| %>
+    <input type="hidden" name="avatar_source" value="<%= current_source %>">
+    <input type="hidden" name="primary_color" value="<%= current_hue %>"
+           data-identity-picker-target="colorField">
+
+    <div class="pt-2">
+      <%= f.submit t("identity_picker.save"),
+            class: "w-full flex items-center justify-center gap-2" %>
+    </div>
+  <% end %>
+
+  <%# Auto-file-picker trigger — renders when Photo selected with no existing image %>
+  <% if current_source == "upload" && !has_image %>
+    <div data-controller="auto-file-picker"
+         data-auto-file-picker-target-value="[data-identity-picker-target='fileInput']">
+    </div>
+  <% end %>
+
 </turbo-frame>

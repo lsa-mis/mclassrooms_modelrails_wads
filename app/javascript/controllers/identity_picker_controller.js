@@ -343,6 +343,29 @@ export default class extends Controller {
     if (cropper) cropper.reset()
   }
 
+  // Called when the identity-picker-hub turbo frame finishes loading.
+  // Reads data attributes from the frame to update the modal size and title.
+  onHubLoad(event) {
+    const frame = event.target
+    if (!frame) return
+
+    const size = frame.dataset.modalSize
+    const title = frame.dataset.modalTitle
+
+    if (size) {
+      const panel = this.element.closest("[data-modal-target='panel']")
+      if (panel) {
+        panel.classList.remove("max-w-sm", "max-w-md", "max-w-lg", "max-w-2xl", "max-w-4xl")
+        panel.classList.add(`max-w-${size}`)
+      }
+    }
+
+    if (title) {
+      const titleEl = this._dialog?.querySelector("[id$='-title']")
+      if (titleEl) titleEl.textContent = title
+    }
+  }
+
   // Color slider changed
   handleColorChange() {
     const hue = parseInt(this.colorSliderTarget.value, 10)
