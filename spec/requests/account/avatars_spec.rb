@@ -308,6 +308,23 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    describe "GET /account/avatar/hub" do
+      it "renders the hub partial" do
+        get hub_account_avatar_path(source: "initials"),
+          headers: { "Turbo-Frame" => "identity-picker-hub" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("identity-picker-hub")
+      end
+
+      it "falls back to current source for invalid source param" do
+        get hub_account_avatar_path(source: "invalid"),
+          headers: { "Turbo-Frame" => "identity-picker-hub" }
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
     context "avatar_source guard on file upload" do
       let(:valid_avatar) { fixture_file_upload("avatar.png", "image/png") }
 
