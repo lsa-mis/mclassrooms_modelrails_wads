@@ -1,25 +1,36 @@
 <%# locals: (style: :icon) %>
-<button
-  type="button"
+<div
   data-controller="theme-toggle"
   <% if authenticated? %>
-    data-theme-toggle-url-value="<%= main_app.account_theme_preference_path %>"
     data-theme-toggle-signed-in-value="true"
   <% end %>
-  data-action="click->theme-toggle#cycle"
-  aria-label="<%= t("navigation.toggle_theme") %>"
-  class="<%= style == :icon ? "min-h-[44px] min-w-[44px] flex items-center justify-center" : "min-h-[44px] flex items-center gap-2 px-2" %>
-         text-text-body
-         hover:text-interactive-hover
-         focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded"
+  class="contents"
 >
-  <%# Sun icon (light mode) %>
-  <%= icon(:sun, class: "hidden", data: { theme_toggle_target: "lightIcon" }) %>
-  <%# Moon icon (dark mode) %>
-  <%= icon(:moon, class: "hidden", data: { theme_toggle_target: "darkIcon" }) %>
-  <%# Monitor icon (system mode) %>
-  <%= icon(:computer_desktop, class: "hidden", data: { theme_toggle_target: "systemIcon" }) %>
-  <% if style != :icon %>
-    <span data-theme-toggle-target="label" class="text-sm">System</span>
+  <% if authenticated? %>
+    <%= form_with url: main_app.account_theme_preference_path, method: :patch,
+          data: { theme_toggle_target: "form", turbo: true },
+          class: "hidden" do %>
+      <input type="hidden" name="theme" data-theme-toggle-target="themeInput">
+    <% end %>
   <% end %>
-</button>
+  <button
+    type="button"
+    data-action="click->theme-toggle#cycle"
+    data-theme-toggle-target="button"
+    aria-label="<%= t("navigation.toggle_theme") %>"
+    class="<%= style == :icon ? "min-h-[44px] min-w-[44px] flex items-center justify-center" : "min-h-[44px] flex items-center gap-2 px-2" %>
+           text-text-body
+           hover:text-interactive-hover
+           focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded"
+  >
+    <%# Sun icon (light mode) %>
+    <%= icon(:sun, class: "hidden", data: { theme_toggle_target: "lightIcon" }) %>
+    <%# Moon icon (dark mode) %>
+    <%= icon(:moon, class: "hidden", data: { theme_toggle_target: "darkIcon" }) %>
+    <%# Monitor icon (system mode) %>
+    <%= icon(:computer_desktop, class: "hidden", data: { theme_toggle_target: "systemIcon" }) %>
+    <% if style != :icon %>
+      <span data-theme-toggle-target="label" class="text-sm">System</span>
+    <% end %>
+  </button>
+</div>

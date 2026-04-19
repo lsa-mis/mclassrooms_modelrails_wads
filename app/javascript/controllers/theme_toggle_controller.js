@@ -4,11 +4,10 @@ import { Controller } from "@hotwired/stimulus"
 // immediately, and persists the preference server-side for signed-in users.
 export default class extends Controller {
   static values = {
-    url: String,
     signedIn: { type: Boolean, default: false }
   }
 
-  static targets = [ "lightIcon", "darkIcon", "systemIcon", "label" ]
+  static targets = [ "lightIcon", "darkIcon", "systemIcon", "label", "form", "themeInput", "button" ]
 
   static CYCLE = [ "light", "dark", "system" ]
 
@@ -25,17 +24,9 @@ export default class extends Controller {
     document.cookie = `theme=${next};path=/;max-age=31536000;SameSite=Lax`
     this.updateVisuals()
 
-    if (this.signedInValue && this.urlValue) {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-      fetch(this.urlValue, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-CSRF-Token": csrfToken,
-          "Accept": "application/json"
-        },
-        body: `theme=${next}`
-      })
+    if (this.signedInValue && this.hasFormTarget) {
+      this.themeInputTarget.value = next
+      this.formTarget.requestSubmit()
     }
   }
 
@@ -47,7 +38,8 @@ export default class extends Controller {
     const theme = this.currentTheme
     const labels = { light: "Light", dark: "Dark", system: "System" }
 
-    this.element.setAttribute("aria-label", labels[theme] || labels.system)
+    const buttonEl = this.hasButtonTarget ? this.buttonTarget : this.element
+    buttonEl.setAttribute("aria-label", labels[theme] || labels.system)
 
     if (this.hasLightIconTarget) this.lightIconTarget.classList.toggle("hidden", theme !== "light")
     if (this.hasDarkIconTarget) this.darkIconTarget.classList.toggle("hidden", theme !== "dark")

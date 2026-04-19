@@ -5,13 +5,11 @@ module Account
       preferences.update!(theme: params[:theme] || theme_params[:theme])
 
       respond_to do |format|
-        format.json { render json: { theme: preferences.theme }, status: :ok }
         format.turbo_stream
         format.html { redirect_to edit_account_profile_path, notice: t(".success") }
       end
     rescue ArgumentError
       respond_to do |format|
-        format.json { render json: { error: t(".invalid_theme") }, status: :unprocessable_entity }
         format.html { redirect_to edit_account_profile_path, alert: t(".invalid_theme") }
       end
     end
