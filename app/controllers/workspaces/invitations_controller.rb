@@ -49,39 +49,16 @@ module Workspaces
     def create_email_invitations
       emails = params[:invitation][:emails].to_s.split(/[\n,]/).map(&:strip).reject(&:blank?)
       role = @workspace.effective_roles.find(params[:invitation][:role_id])
-      sent = 0
-      skipped = 0
 
-      emails.each do |email|
-        normalized = email.downcase
-
-        unless normalized.match?(User::EMAIL_FORMAT)
-          skipped += 1
-          next
-        end
-
-        if @workspace.memberships.kept.joins(:user).where(users: { email_address: normalized }).exists?
-          skipped += 1
-          next
-        end
-
-        if @workspace.invitations.pending.where(email: normalized).exists?
-          skipped += 1
-          next
-        end
-
-        invitation = @workspace.invitations.create!(
-          email: normalized,
-          role: role,
-          invited_by: Current.user,
-          expires_at: 7.days.from_now
-        )
-        InvitationMailer.invite(invitation).deliver_later
-        sent += 1
-      end
+      result = Invitation.bulk_invite!(
+        workspace: @workspace,
+        emails: emails,
+        role: role,
+        invited_by: Current.user
+      )
 
       redirect_to workspace_invitations_path(@workspace),
-        notice: t(".sent", sent: sent, skipped: skipped)
+        notice: t(".sent", sent: result[:sent], skipped: result[:skipped])
     end
 
     def create_magic_link

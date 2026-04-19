@@ -302,6 +302,86 @@ RSpec.describe Invitation, type: :model do
     end
   end
 
+  describe ".bulk_invite!" do
+    let(:workspace) { create(:workspace) }
+    let(:role) { workspace.effective_roles.first }
+    let(:inviter) { create(:user) }
+
+    before do
+      create(:membership, :owner, user: inviter, workspace: workspace)
+    end
+
+    it "creates invitations for valid emails and returns counts" do
+      result = Invitation.bulk_invite!(
+        workspace: workspace,
+        emails: [ "alice@example.com", "bob@example.com" ],
+        role: role,
+        invited_by: inviter
+      )
+
+      expect(result[:sent]).to eq(2)
+      expect(result[:skipped]).to eq(0)
+      expect(workspace.invitations.count).to eq(2)
+    end
+
+    it "skips invalid email formats" do
+      result = Invitation.bulk_invite!(
+        workspace: workspace,
+        emails: [ "not-an-email", "valid@example.com" ],
+        role: role,
+        invited_by: inviter
+      )
+
+      expect(result[:sent]).to eq(1)
+      expect(result[:skipped]).to eq(1)
+    end
+
+    it "skips emails that are already workspace members" do
+      existing_user = create(:user, email_address: "member@example.com")
+      create(:membership, user: existing_user, workspace: workspace)
+
+      result = Invitation.bulk_invite!(
+        workspace: workspace,
+        emails: [ "member@example.com", "new@example.com" ],
+        role: role,
+        invited_by: inviter
+      )
+
+      expect(result[:sent]).to eq(1)
+      expect(result[:skipped]).to eq(1)
+    end
+
+    it "skips emails with pending invitations" do
+      workspace.invitations.create!(
+        email: "pending@example.com",
+        role: role,
+        invited_by: inviter,
+        expires_at: 7.days.from_now
+      )
+
+      result = Invitation.bulk_invite!(
+        workspace: workspace,
+        emails: [ "pending@example.com", "new@example.com" ],
+        role: role,
+        invited_by: inviter
+      )
+
+      expect(result[:sent]).to eq(1)
+      expect(result[:skipped]).to eq(1)
+    end
+
+    it "queues invitation mailers" do
+      expect {
+        Invitation.bulk_invite!(
+          workspace: workspace,
+          emails: [ "alice@example.com" ],
+          role: role,
+          invited_by: inviter
+        )
+      }.to have_enqueued_mail(InvitationMailer, :invite)
+    end
+  end
+
   describe "email format validation" do
     it "rejects malformed email" do
       inv = build(:invitation, email: "not-an-email")

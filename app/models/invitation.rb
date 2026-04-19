@@ -20,6 +20,41 @@ class Invitation < ApplicationRecord
   scope :pending, -> { where(status: "pending").where("expires_at > ?", Time.current) }
   scope :expired, -> { where(status: "pending").where("expires_at <= ?", Time.current) }
 
+  def self.bulk_invite!(workspace:, emails:, role:, invited_by:)
+    sent = 0
+    skipped = 0
+
+    emails.each do |email|
+      normalized = email.downcase
+
+      unless normalized.match?(User::EMAIL_FORMAT)
+        skipped += 1
+        next
+      end
+
+      if workspace.memberships.kept.joins(:user).where(users: { email_address: normalized }).exists?
+        skipped += 1
+        next
+      end
+
+      if workspace.invitations.pending.where(email: normalized).exists?
+        skipped += 1
+        next
+      end
+
+      invitation = workspace.invitations.create!(
+        email: normalized,
+        role: role,
+        invited_by: invited_by,
+        expires_at: 7.days.from_now
+      )
+      InvitationMailer.invite(invitation).deliver_later
+      sent += 1
+    end
+
+    { sent: sent, skipped: skipped }
+  end
+
   def accept!(user)
     transaction do
       lock!
