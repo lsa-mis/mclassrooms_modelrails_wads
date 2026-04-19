@@ -1,5 +1,7 @@
 module Account
   class AvatarsController < ApplicationController
+    include CropCoordinatable
+
     def hub
       @user = Current.user
       authorize @user, :update?, policy_class: Account::AvatarPolicy
@@ -129,20 +131,6 @@ module Account
         format.turbo_stream
         format.html { redirect_to edit_account_profile_path, notice: t(".success") }
       end
-    end
-
-    private
-
-    def safe_parse_coordinates(raw)
-      return nil if raw.blank?
-
-      parsed = JSON.parse(raw)
-      return nil unless parsed.is_a?(Hash)
-      return nil unless %w[x y w h].all? { |k| parsed[k].is_a?(Numeric) }
-
-      parsed.slice("x", "y", "w", "h")
-    rescue JSON::ParserError
-      nil
     end
   end
 end
