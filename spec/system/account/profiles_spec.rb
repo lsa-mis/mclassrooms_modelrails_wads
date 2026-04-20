@@ -296,7 +296,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
         playwright_page.route("**/account/avatar", ->(route, request) {
           if request.method == "PATCH"
             patch_count += 1
-            sleep 0.5  # keeps the first request in flight long enough for a second click
+            sleep 1  # keeps the first request in flight long enough for a second click
           end
           route.continue
         })

@@ -1,4 +1,6 @@
+<%# locals: (context: :desktop) -%>
 <% if authenticated? %>
+  <% if context == :desktop %>
   <%# Desktop: avatar-triggered dropdown %>
   <div data-controller="dropdown"
        class="relative hidden md:block">
@@ -47,7 +49,9 @@
       </div>
     </div>
   </div>
+  <% end %>
 
+  <% if context == :mobile %>
   <%# Mobile: inline links (shown inside hamburger menu) %>
   <div class="md:hidden">
     <div class="px-2 py-2">
@@ -63,6 +67,7 @@
                   hover:text-interactive-hover rounded
                   focus:outline-none focus:ring-2 focus:ring-interactive-focus cursor-pointer" %>
   </div>
+  <% end %>
 <% else %>
   <%= link_to t("navigation.sign_in"), main_app.new_session_path,
         class: "min-h-[44px] flex items-center text-text-body
