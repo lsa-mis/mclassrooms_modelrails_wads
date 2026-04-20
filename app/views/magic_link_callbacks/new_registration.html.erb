@@ -1,0 +1,27 @@
+<% content_for(:title) { t("magic_link_callbacks.new_registration.title") } %>
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-bold text-text-heading">
+    <%= t("magic_link_callbacks.new_registration.title") %>
+  </h1>
+
+  <p class="mt-2 text-text-muted">
+    <%= t("magic_link_callbacks.new_registration.subtitle", email: @email) %>
+  </p>
+
+  <%= form_with model: @user, url: magic_link_callback_path(token: @token), method: :post, class: "mt-8 space-y-6" do |form| %>
+    <%= form.error_summary %>
+
+    <%= form.text_field :first_name,
+          label: t("magic_link_callbacks.new_registration.first_name_label"),
+          required: true,
+          autofocus: true,
+          name: "user[first_name]" %>
+
+    <%= form.text_field :last_name,
+          label: t("magic_link_callbacks.new_registration.last_name_label"),
+          required: true,
+          name: "user[last_name]" %>
+
+    <%= form.submit t("magic_link_callbacks.new_registration.submit"), class: "w-full" %>
+  <% end %>
+</div>
