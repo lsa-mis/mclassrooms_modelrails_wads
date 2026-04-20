@@ -70,7 +70,7 @@
     <%# image-cropper controller scoped to the grid so targets in both columns are reachable %>
     <%# Keyboard: tabindex/keydown are on the cropper-container only, so arrow keys
         don't conflict with the zoom slider or buttons elsewhere in the grid %>
-    <div class="crop-view-grid"
+    <div class="grid gap-6 sm:grid-cols-[1fr_300px]"
          data-controller="image-cropper"
          data-image-cropper-aspect-ratio-value="1"
          data-image-cropper-ready-announce-value="<%= t('identity_picker.js.cropper_ready') %>"
@@ -183,14 +183,14 @@
         </div>
 
         <%# Info banner %>
-        <div class="flex items-start gap-2.5 p-3 rounded-lg bg-info-subtle text-info text-sm">
+        <div class="flex items-start gap-2.5 p-3 rounded-lg bg-info-surface text-info text-sm">
           <%= icon(:information_circle, size: :sm, class: "shrink-0 mt-0.5") %>
           <p><%= t("identity_picker.image_quality_tip") %></p>
         </div>
       </div>
 
       <%# ── Footer: spans both columns ── %>
-      <div class="crop-view-footer flex flex-col gap-3 pt-4 border-t border-border">
+      <div class="sm:col-span-full flex flex-col gap-3 pt-4 border-t border-border">
         <%# Primary row: Cancel + Save crop %>
         <div class="flex items-center justify-end gap-3">
           <button type="button"

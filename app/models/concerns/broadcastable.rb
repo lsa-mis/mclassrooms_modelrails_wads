@@ -22,7 +22,11 @@ module Broadcastable
 
   def broadcast_changes
     broadcast_refresh_to broadcast_target
-  rescue => e
-    Rails.logger.warn("Broadcast failed for #{self.class.name}##{id}: #{e.message}")
+  rescue StandardError => e
+    # Intentionally broad: broadcast failures must NEVER break model saves.
+    # The broadcast adapter (Solid Cable, Redis, etc.) can raise a wide range
+    # of exceptions depending on the backing store. Logging at error level
+    # ensures visibility while keeping the model save path reliable.
+    Rails.logger.error("Broadcast failed for #{self.class.name}##{id}: #{e.class}: #{e.message}")
   end
 end

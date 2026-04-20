@@ -3,6 +3,7 @@ class Project < ApplicationRecord
   include Tenanted
   include Trackable
   include Broadcastable
+  include Sluggable
 
   belongs_to :created_by, class_name: "User"
   has_many :project_memberships, dependent: :destroy
@@ -14,8 +15,6 @@ class Project < ApplicationRecord
   validates :name, presence: true, length: { maximum: 255 }
   validates :slug, presence: true, uniqueness: { scope: :workspace_id }
   validate :workspace_has_project_capacity, on: :create
-
-  before_validation :generate_slug, if: -> { name.present? && (slug.blank? || (name_changed? && !slug_changed?)) }
 
   def to_param
     slug
@@ -31,16 +30,10 @@ class Project < ApplicationRecord
     workspace
   end
 
-  def generate_slug
-    base_slug = name.parameterize
-    base_slug = "project-#{SecureRandom.hex(4)}" if base_slug.blank?
-    self.slug = base_slug
-    return unless workspace
-    counter = 1
-    while workspace.projects.where.not(id: id).exists?(slug: slug)
-      self.slug = "#{base_slug}-#{counter}"
-      counter += 1
-    end
+  # Slugs are unique within a workspace, not globally
+  def slug_taken?(candidate)
+    return false unless workspace
+    workspace.projects.where.not(id: id).exists?(slug: candidate)
   end
 
   def workspace_has_project_capacity

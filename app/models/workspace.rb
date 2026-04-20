@@ -2,6 +2,7 @@ class Workspace < ApplicationRecord
   include Discardable
   include Trackable
   include Broadcastable
+  include Sluggable
 
   has_one_attached :logo
   has_one_attached :logo_original
@@ -25,8 +26,6 @@ class Workspace < ApplicationRecord
   validates :max_projects, numericality: { greater_than: 0 }
   validates :primary_color, inclusion: { in: 0..360 }, allow_nil: true
   validates :logo_source, inclusion: { in: %w[upload initials] }
-
-  before_validation :generate_slug, if: -> { name.present? && (slug.blank? || (name_changed? && !slug_changed?)) }
 
   def self.broadcast_events
     [ :update ]
@@ -62,15 +61,4 @@ class Workspace < ApplicationRecord
   end
 
   private
-
-  def generate_slug
-    base_slug = name.parameterize
-    base_slug = "workspace-#{SecureRandom.hex(4)}" if base_slug.blank?
-    self.slug = base_slug
-    counter = 1
-    while Workspace.where.not(id: id).exists?(slug: slug)
-      self.slug = "#{base_slug}-#{counter}"
-      counter += 1
-    end
-  end
 end

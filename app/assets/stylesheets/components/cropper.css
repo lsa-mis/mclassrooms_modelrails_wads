@@ -99,21 +99,7 @@ cropper-selection cropper-handle[action$="-resize"] {
   z-index: 10;
 }
 
-/* ── Two-column layout for crop view ── */
-
-.crop-view-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto;
-  gap: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .crop-view-grid {
-    grid-template-columns: 1fr 300px;
-  }
-
-  .crop-view-footer {
-    grid-column: 1 / -1;
-  }
-}
+/* Two-column layout for crop view is handled by Tailwind utilities
+   on the elements in _identity_picker.html.erb:
+   grid gap-6 sm:grid-cols-[1fr_300px] on the grid wrapper
+   sm:col-span-full on the footer */
