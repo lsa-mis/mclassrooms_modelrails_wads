@@ -56,6 +56,12 @@ Rails.application.configure do
   config.action_controller.raise_on_missing_callback_actions = true
 
   # Bullet: raise on N+1 queries in tests
+  # CSP is enforced in development/production (via the initializer) but
+  # report-only in test. System specs inject HTML via execute_script and
+  # Playwright doesn't forward CSP nonces — enforcing here would block
+  # Stimulus/importmap loading in specs without adding security value.
+  config.content_security_policy_report_only = true
+
   config.after_initialize do
     Bullet.enable = true
     Bullet.raise = true

@@ -277,6 +277,12 @@ RSpec.describe "Account profile — identity picker", type: :system do
         })()
       JS
       expect(flag_cleared).to eq(true)
+
+      # Close the modal before the after(:each) axe audit runs.
+      # The hub's initials source card uses oklch() with a CSS custom property
+      # that axe-core can't resolve for contrast computation.
+      page.driver.with_playwright_page { |pp| pp.keyboard.press("Escape") }
+      expect(page).to have_no_css("dialog[open]", wait: 3)
     end
   end
 

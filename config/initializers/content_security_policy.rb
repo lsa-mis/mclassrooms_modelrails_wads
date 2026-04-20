@@ -22,7 +22,7 @@ Rails.application.configure do
   config.content_security_policy_nonce_generator = ->(request) { request.session.id.to_s }
   config.content_security_policy_nonce_directives = %w[script-src]
 
-  # Report violations without enforcing the policy.
-  # Start in report-only mode to catch issues before blocking content.
-  config.content_security_policy_report_only = true
+  # Enforce CSP in development and production. Report-only in test because
+  # Playwright system specs don't forward nonces to injected scripts.
+  config.content_security_policy_report_only = Rails.env.test?
 end
