@@ -10,9 +10,8 @@ Rails.application.routes.draw do
   resource :email_verification_resend, only: [ :create ]
 
   resource :magic_link, only: [ :create ]
-  get "magic_link_session/:token", to: "magic_link_sessions#show", as: :magic_link_session
-  get "magic_link_registration/:token", to: "magic_link_registrations#show", as: :magic_link_registration
-  post "magic_link_registration/:token", to: "magic_link_registrations#create"
+  get "magic_link_callback/:token", to: "magic_link_callbacks#show", as: :magic_link_callback
+  post "magic_link_callback/:token", to: "magic_link_callbacks#create"
   post "session/lookup", to: "sessions#lookup", as: :session_lookup
 
   get "/auth/:provider/callback", to: "omniauth_callbacks#create"

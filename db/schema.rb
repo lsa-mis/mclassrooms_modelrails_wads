@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_16_163818) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_20_004153) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -223,8 +223,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_16_163818) do
     t.boolean "has_gravatar", default: false, null: false
     t.string "last_name"
     t.datetime "locked_at"
-    t.datetime "magic_link_sent_at"
-    t.string "magic_link_token"
     t.string "password_digest"
     t.string "pending_email"
     t.datetime "pending_email_sent_at"
@@ -232,7 +230,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_16_163818) do
     t.integer "primary_color", default: 210
     t.datetime "updated_at", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
-    t.index ["magic_link_token"], name: "index_users_on_magic_link_token", unique: true
     t.index ["pending_email_token"], name: "index_users_on_pending_email_token", unique: true
   end
 

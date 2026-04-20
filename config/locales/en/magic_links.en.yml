@@ -16,6 +16,19 @@ en:
       body: "Click the link below to create your account."
       action: "Create account"
       expiry: "This link expires in 15 minutes."
+  magic_link_callbacks:
+    show:
+      invalid: "This magic link is invalid or has expired."
+      signed_in: "You're now signed in."
+    create:
+      invalid: "This magic link is invalid or has expired."
+      registered: "Welcome! Your account has been created."
+    new_registration:
+      title: "Complete your account"
+      subtitle: "Creating an account for %{email}"
+      first_name_label: "First name"
+      last_name_label: "Last name"
+      submit: "Create account"
   magic_link_sessions:
     show:
       success: "Signed in successfully."

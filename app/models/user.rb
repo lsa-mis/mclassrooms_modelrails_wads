@@ -68,21 +68,6 @@ class User < ApplicationRecord
     update!(failed_login_attempts: 0, locked_at: nil)
   end
 
-  def generate_magic_link_token!
-    update!(
-      magic_link_token: SecureRandom.urlsafe_base64(32),
-      magic_link_sent_at: Time.current
-    )
-  end
-
-  def magic_link_token_valid?
-    magic_link_token.present? && magic_link_sent_at.present? && magic_link_sent_at > 15.minutes.ago
-  end
-
-  def clear_magic_link_token!
-    update!(magic_link_token: nil, magic_link_sent_at: nil)
-  end
-
   def has_password?
     password_digest.present?
   end

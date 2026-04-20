@@ -12,8 +12,8 @@ class PasswordsController < ApplicationController
       if user.has_password?
         AuthenticationMailer.password_reset_email(user).deliver_later
       else
-        user.generate_magic_link_token!
-        MagicLinkMailer.sign_in_link(user).deliver_later
+        token = MagicLinkToken.create_for_email(user.email_address)
+        MagicLinkMailer.sign_in_link(user.email_address, token).deliver_later
       end
     end
     redirect_to new_session_path, notice: t(".success")

@@ -10,8 +10,8 @@ class MagicLinksController < ApplicationController
     user = User.find_by(email_address: email)
 
     if user
-      user.generate_magic_link_token!
-      MagicLinkMailer.sign_in_link(user).deliver_later
+      token = MagicLinkToken.create_for_email(user.email_address)
+      MagicLinkMailer.sign_in_link(user.email_address, token).deliver_later
     end
 
     # Always show same message — no information leakage

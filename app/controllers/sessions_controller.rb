@@ -39,8 +39,8 @@ class SessionsController < ApplicationController
       @email_address = email
       render :password_form
     elsif user
-      user.generate_magic_link_token!
-      MagicLinkMailer.sign_in_link(user).deliver_later
+      token = MagicLinkToken.create_for_email(user.email_address)
+      MagicLinkMailer.sign_in_link(user.email_address, token).deliver_later
       @email_address = email
       render :check_email
     else

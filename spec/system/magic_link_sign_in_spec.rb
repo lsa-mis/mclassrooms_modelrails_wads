@@ -18,10 +18,10 @@ RSpec.describe "Magic link sign-in", type: :system do
       expect(page).to have_text(user.email_address)
 
       # Extract the magic link token and visit it directly
-      user.reload
-      visit magic_link_session_path(token: user.magic_link_token)
+      token_record = MagicLinkToken.where(email: user.email_address).order(:created_at).last
+      visit magic_link_callback_path(token: token_record.token)
 
-      expect(page).to have_text(I18n.t("magic_link_sessions.show.success"))
+      expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
     end
   end
 
@@ -41,33 +41,33 @@ RSpec.describe "Magic link sign-in", type: :system do
       expect(page).to have_text(I18n.t("magic_links.create.check_email"))
 
       # Extract the magic link token and visit it directly
-      user.reload
-      visit magic_link_session_path(token: user.magic_link_token)
+      token_record = MagicLinkToken.where(email: user.email_address).order(:created_at).last
+      visit magic_link_callback_path(token: token_record.token)
 
-      expect(page).to have_text(I18n.t("magic_link_sessions.show.success"))
+      expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
     end
   end
 
   describe "expired token" do
-    let(:user) do
-      u = create(:user)
-      u.generate_magic_link_token!
-      u.update_column(:magic_link_sent_at, 20.minutes.ago)
-      u
+    let(:user) { create(:user) }
+    let(:token) do
+      t = MagicLinkToken.create_for_email(user.email_address)
+      MagicLinkToken.find_by(token: t).update!(expires_at: 20.minutes.ago)
+      t
     end
 
     it "rejects the token and shows an error" do
-      visit magic_link_session_path(token: user.magic_link_token)
+      visit magic_link_callback_path(token: token)
 
-      expect(page).to have_text(I18n.t("magic_link_sessions.show.invalid_or_expired"))
+      expect(page).to have_text(I18n.t("magic_link_callbacks.show.invalid"))
     end
   end
 
   describe "invalid token" do
     it "rejects and shows an error" do
-      visit magic_link_session_path(token: "bogus-token")
+      visit magic_link_callback_path(token: "bogus-token")
 
-      expect(page).to have_text(I18n.t("magic_link_sessions.show.invalid_or_expired"))
+      expect(page).to have_text(I18n.t("magic_link_callbacks.show.invalid"))
     end
   end
 
@@ -75,15 +75,14 @@ RSpec.describe "Magic link sign-in", type: :system do
     let(:user) { create(:user) }
 
     it "rejects a token that was already used" do
-      user.generate_magic_link_token!
-      token = user.magic_link_token
+      raw_token = MagicLinkToken.create_for_email(user.email_address)
 
-      visit magic_link_session_path(token: token)
-      expect(page).to have_text(I18n.t("magic_link_sessions.show.success"))
+      visit magic_link_callback_path(token: raw_token)
+      expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
 
-      # Sign out and try the same token again
-      visit magic_link_session_path(token: token)
-      expect(page).to have_text(I18n.t("magic_link_sessions.show.invalid_or_expired"))
+      # Token was consumed on first visit — visiting again should fail
+      visit magic_link_callback_path(token: raw_token)
+      expect(page).to have_text(I18n.t("magic_link_callbacks.show.invalid"))
     end
   end
 end
