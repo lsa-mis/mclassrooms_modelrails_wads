@@ -141,9 +141,7 @@ module Workspaces
     private
 
     def branding_params
-      params.require(:workspace).permit(:primary_color)
-    rescue ActionController::ParameterMissing
-      {}
+      params.fetch(:workspace, {}).permit(:primary_color)
     end
   end
 end

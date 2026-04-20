@@ -40,7 +40,6 @@ module AvatarHelper
     image_tag url,
       class: "#{config[:css]} rounded-full object-cover",
       loading: "lazy",
-      onerror: "this.style.display='none'",
       **avatar_aria_attrs(aria_label, alt: "")
   end
 
@@ -49,8 +48,8 @@ module AvatarHelper
 
     classes = "#{config[:css]} #{config[:text]} rounded-full flex items-center justify-center font-semibold"
     if custom_color
-      classes += " text-white"
-      style = "background-color: oklch(0.35 0.2 #{user.primary_color})"
+      classes += " bg-hue-initials text-white"
+      style = "--hue: #{user.primary_color}"
     else
       classes += " bg-interactive text-text-on-interactive"
       style = nil

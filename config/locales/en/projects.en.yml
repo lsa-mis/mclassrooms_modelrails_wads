@@ -38,9 +38,11 @@ en:
         index:
           title: "Project members"
           add_member: "Add member"
+          name_header: "Name"
           role: "Role"
           actions: "Actions"
           remove: "Remove"
+          table_label: "Project members"
         new:
           title: "Add member"
           user_label: "Workspace member"

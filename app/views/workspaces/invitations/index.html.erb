@@ -23,7 +23,7 @@
     </div>
   <% end %>
 
-  <table class="mt-8 w-full">
+  <table class="mt-8 w-full" aria-label="<%= t('workspaces.invitations.index.table_label') %>">
     <thead>
       <tr class="border-b border-border">
         <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.invitations.index.invitee") %></th>
@@ -53,11 +53,13 @@
                 <%= button_to t("workspaces.invitations.index.resend"),
                       resend_workspace_invitation_path(@workspace, invitation),
                       method: :post,
-                      class: "text-sm text-interactive underline hover:no-underline cursor-pointer" %>
+                      class: "text-sm text-interactive underline hover:no-underline cursor-pointer
+                              focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
                 <%= button_to t("workspaces.invitations.index.revoke"),
                       workspace_invitation_path(@workspace, invitation),
                       method: :delete,
-                      class: "text-sm text-danger underline hover:no-underline cursor-pointer" %>
+                      class: "text-sm text-danger underline hover:no-underline cursor-pointer
+                              focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
               </div>
             <% end %>
           </td>

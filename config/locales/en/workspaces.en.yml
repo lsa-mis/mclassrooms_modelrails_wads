@@ -50,6 +50,7 @@ en:
         empty: "No members found."
         showing: "Showing %{from}-%{to} of %{count} members"
         invite_member: "Invite member"
+        table_label: "Workspace members"
         pending_invitations:
           title: "Pending invitations"
           invitee: "Invitee"

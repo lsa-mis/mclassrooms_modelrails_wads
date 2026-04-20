@@ -13,10 +13,10 @@
     <% end %>
   </div>
 
-  <table class="mt-8 w-full">
+  <table class="mt-8 w-full" aria-label="<%= t('workspaces.projects.memberships.index.table_label') %>">
     <thead>
       <tr class="border-b border-border">
-        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted">Name</th>
+        <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.projects.memberships.index.name_header") %></th>
         <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.projects.memberships.index.role") %></th>
         <th scope="col" class="text-left py-3 text-sm font-medium text-text-muted"><%= t("workspaces.projects.memberships.index.actions") %></th>
       </tr>
@@ -31,7 +31,8 @@
               <%= button_to t("workspaces.projects.memberships.index.remove"),
                     workspace_project_membership_path(@workspace, @project, pm),
                     method: :delete,
-                    class: "text-sm text-danger underline hover:no-underline cursor-pointer" %>
+                    class: "text-sm text-danger underline hover:no-underline cursor-pointer
+                            focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
             <% end %>
           </td>
         </tr>

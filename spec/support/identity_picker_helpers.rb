@@ -87,20 +87,7 @@ module IdentityPickerHelpers
   # Used by specs that start from the "user has an existing photo" state
   # (re-crop, remove, navigation, modal title, etc.).
   def create_user_with_avatar
-    user = create(:user)
-    fixture = Rails.root.join("spec/fixtures/files/avatar.png")
-    user.avatar.attach(
-      io: File.open(fixture),
-      filename: "avatar.png",
-      content_type: "image/png"
-    )
-    user.avatar_original.attach(
-      io: File.open(fixture),
-      filename: "original.png",
-      content_type: "image/png"
-    )
-    user.update!(avatar_source: "upload")
-    user
+    create(:user, :with_avatar)
   end
 end
 

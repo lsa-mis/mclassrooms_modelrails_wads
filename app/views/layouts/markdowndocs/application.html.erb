@@ -3,7 +3,7 @@
       data-controller="theme"
       data-theme-theme-value="<%= current_user_theme %>">
   <head>
-    <title><%= content_for(:title) || "Documentation" %> — <%= t("application.name") %></title>
+    <title><%= content_for(:title) || t("markdowndocs.default_title") %> — <%= t("application.name") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">

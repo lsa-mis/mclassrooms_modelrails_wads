@@ -12,5 +12,14 @@ FactoryBot.define do
         end
       end
     end
+
+    trait :with_avatar do
+      after(:create) do |user|
+        fixture = Rails.root.join("spec/fixtures/files/avatar.png")
+        user.avatar.attach(io: File.open(fixture), filename: "avatar.png", content_type: "image/png")
+        user.avatar_original.attach(io: File.open(fixture), filename: "original.png", content_type: "image/png")
+        user.update!(avatar_source: "upload")
+      end
+    end
   end
 end

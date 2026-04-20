@@ -189,10 +189,8 @@ RSpec.describe "Workspace Brandings", type: :request do
     end
 
     context "when save fails during branding update" do
-      before do
-        allow_any_instance_of(Workspace).to receive(:update).and_return(false)
-        allow_any_instance_of(Workspace).to receive_message_chain(:errors, :full_messages).and_return([ "Primary color is invalid" ])
-      end
+      # Trigger a real validation failure: Workspace validates primary_color inclusion in 0..360.
+      # Sending 999 causes a genuine model validation error without any stubbing.
 
       it "returns 422 turbo stream for turbo_stream requests (not a redirect)" do
         patch workspace_branding_path(workspace), params: {

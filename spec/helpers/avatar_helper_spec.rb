@@ -57,9 +57,9 @@ RSpec.describe AvatarHelper, type: :helper do
         expect(result).to have_css("img[aria-hidden='true']")
       end
 
-      it "includes onerror fallback for broken images" do
+      it "does not include an inline onerror handler (CSP compliance)" do
         result = helper.avatar_for(user, size: :md)
-        expect(result).to have_css("img[onerror]")
+        expect(result).not_to have_css("img[onerror]")
       end
 
       it "includes loading=lazy for performance" do
@@ -103,9 +103,9 @@ RSpec.describe AvatarHelper, type: :helper do
           user.update_columns(avatar_source: "initials", primary_color: 270)
         end
 
-        it "renders inline OKLCH background style" do
+        it "renders CSS custom property --hue and bg-hue-initials class" do
           result = helper.avatar_for(user, size: :md)
-          expect(result).to have_css("span[style*='oklch(0.35 0.2 270)']")
+          expect(result).to have_css("span.bg-hue-initials[style*='--hue: 270']")
         end
 
         it "does not include bg-interactive class" do

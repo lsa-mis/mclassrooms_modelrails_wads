@@ -251,17 +251,14 @@ RSpec.describe "Account Avatars", type: :request do
     end
 
     context "when save fails during avatar update" do
-      let(:valid_avatar) { fixture_file_upload("avatar.png", "image/png") }
-
-      before do
-        allow_any_instance_of(User).to receive(:save).and_return(false)
-        allow_any_instance_of(User).to receive_message_chain(:errors, :full_messages).and_return([ "Avatar is invalid" ])
-      end
+      # Trigger a real validation failure by sending an out-of-range primary_color.
+      # User validates primary_color inclusion in 0..360, so 999 is always invalid.
+      let(:invalid_color) { 999 }
 
       it "returns 422 turbo stream for turbo_stream requests (not a redirect)" do
         patch account_avatar_path, params: {
-          avatar: valid_avatar,
-          avatar_source: "upload"
+          avatar_source: "initials",
+          primary_color: invalid_color
         }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
         expect(response).to have_http_status(:unprocessable_content)
@@ -270,8 +267,8 @@ RSpec.describe "Account Avatars", type: :request do
 
       it "still redirects for non-turbo HTML requests" do
         patch account_avatar_path, params: {
-          avatar: valid_avatar,
-          avatar_source: "upload"
+          avatar_source: "initials",
+          primary_color: invalid_color
         }
 
         expect(response).to have_http_status(:redirect)

@@ -57,7 +57,7 @@
     <%# Results table %>
     <% if @memberships.any? %>
       <div class="mt-6 bg-surface-raised rounded-lg border border-border shadow-sm overflow-hidden">
-        <table class="w-full">
+        <table class="w-full" aria-label="<%= t('workspaces.members.index.table_label') %>">
           <thead>
             <tr class="border-b border-border bg-surface">
               <th scope="col" class="text-left py-3 px-2">

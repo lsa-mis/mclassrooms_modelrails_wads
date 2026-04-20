@@ -1,0 +1,4 @@
+en:
+  pagination:
+    showing: "Showing %{from} to %{to} of %{count} results"
+    aria_label: "Pages"

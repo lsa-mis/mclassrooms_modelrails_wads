@@ -20,6 +20,7 @@ en:
         magic_link_label: "Share this link to invite members:"
         resend: "Resend"
         revoke: "Revoke"
+        table_label: "Workspace invitations"
       new:
         title: "Invite members"
         emails_label: "Email addresses"

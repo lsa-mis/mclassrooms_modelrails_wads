@@ -3,7 +3,7 @@
   <%= turbo_stream_from @project %>
   <div class="flex items-center gap-4">
     <% if @project.logo.attached? %>
-      <%= image_tag @project.logo, class: "w-16 h-16 rounded-full object-cover" %>
+      <%= image_tag @project.logo, class: "w-16 h-16 rounded-full object-cover", alt: "" %>
     <% else %>
       <div class="w-16 h-16 rounded-full bg-info-surface flex items-center justify-center text-interactive font-bold text-xl">
         <%= @project.initials %>

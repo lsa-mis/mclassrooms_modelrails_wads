@@ -86,6 +86,22 @@
 }
 
 /* ==========================================================================
+   OKLCH Hue-based Background Utilities
+   Used with style="--hue: <value>" to apply dynamic colors without full
+   inline background-color declarations (CSP-safer).
+   bg-hue-initials: L=0.35, C=0.20 — AAA contrast with white text
+   bg-hue-interactive: L=0.40, C=0.15 — accent/dot color for workspace branding
+   ========================================================================== */
+
+.bg-hue-initials {
+  background-color: oklch(0.35 0.2 var(--hue, 210));
+}
+
+.bg-hue-interactive {
+  background-color: oklch(0.40 0.15 var(--hue, 210));
+}
+
+/* ==========================================================================
    Dialog / Modal Backdrop
    ========================================================================== */
 

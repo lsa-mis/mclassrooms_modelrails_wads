@@ -11,7 +11,7 @@
           {} %>
 
     <%= form.select :role,
-          [["Editor", "editor"], ["Viewer", "viewer"]],
+          [[ t("project_roles.editor"), "editor" ], [ t("project_roles.viewer"), "viewer" ]],
           { label: t("workspaces.projects.memberships.new.role_label") },
           {} %>
 
