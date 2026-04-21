@@ -4,7 +4,10 @@ import { Controller } from "@hotwired/stimulus"
 // immediately, and persists the preference server-side for signed-in users.
 export default class extends Controller {
   static values = {
-    signedIn: { type: Boolean, default: false }
+    signedIn: { type: Boolean, default: false },
+    lightLabel: { type: String, default: "Light" },
+    darkLabel: { type: String, default: "Dark" },
+    systemLabel: { type: String, default: "System" }
   }
 
   static targets = [ "lightIcon", "darkIcon", "systemIcon", "label", "form", "themeInput", "button" ]
@@ -36,7 +39,7 @@ export default class extends Controller {
 
   updateVisuals() {
     const theme = this.currentTheme
-    const labels = { light: "Light", dark: "Dark", system: "System" }
+    const labels = { light: this.lightLabelValue, dark: this.darkLabelValue, system: this.systemLabelValue }
 
     const buttonEl = this.hasButtonTarget ? this.buttonTarget : this.element
     buttonEl.setAttribute("aria-label", labels[theme] || labels.system)

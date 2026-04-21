@@ -4,6 +4,9 @@
   <% if authenticated? %>
     data-theme-toggle-signed-in-value="true"
   <% end %>
+  data-theme-toggle-light-label-value="<%= t("theme.light") %>"
+  data-theme-toggle-dark-label-value="<%= t("theme.dark") %>"
+  data-theme-toggle-system-label-value="<%= t("theme.system") %>"
   class="contents"
 >
   <% if authenticated? %>
@@ -30,7 +33,7 @@
     <%# Monitor icon (system mode) %>
     <%= icon(:computer_desktop, class: "hidden", data: { theme_toggle_target: "systemIcon" }) %>
     <% if style != :icon %>
-      <span data-theme-toggle-target="label" class="text-sm">System</span>
+      <span data-theme-toggle-target="label" class="text-sm"><%= t("theme.system") %></span>
     <% end %>
   </button>
 </div>

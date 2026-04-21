@@ -279,7 +279,54 @@ dialog[open]::backdrop {
 /* ==========================================================================
    Syntax Highlighting (Rouge / GitHub Theme)
    Used by Markdowndocs for fenced code blocks.
+
+   Uses custom properties so colors switch automatically in dark mode,
+   and neutral tones follow the app's primitive palette (slate → zinc etc.).
    ========================================================================== */
+
+:root {
+  --syntax-comment:    var(--neutral-500);
+  --syntax-comment-alt: var(--neutral-500);
+  --syntax-keyword:    oklch(49.6% 0.155 313.029);   /* ~purple-700 */
+  --syntax-string:     oklch(52.7% 0.154 150.069);   /* ~green-700 */
+  --syntax-number:     oklch(48.8% 0.153 232.652);   /* ~blue-700 */
+  --syntax-error:      oklch(50.5% 0.213 27.518);    /* ~red-700 */
+  --syntax-error-bg:   oklch(97.1% 0.013 17.38);     /* ~red-50 */
+  --syntax-type:       oklch(57.7% 0.245 27.325);    /* ~red-600 */
+  --syntax-operator:   var(--neutral-600);
+  --syntax-name:       oklch(47.3% 0.136 202.677);   /* ~cyan-700 */
+  --syntax-builtin:    oklch(55.8% 0.158 313.556);   /* ~purple-600 */
+  --syntax-function:   oklch(48.8% 0.153 232.652);   /* ~blue-700 */
+  --syntax-escape:     oklch(55.3% 0.174 38.402);    /* ~orange-600 */
+  --syntax-tag:        oklch(52.7% 0.154 150.069);   /* ~green-700 */
+  --syntax-heading:    var(--neutral-900);
+  --syntax-namespace:  var(--neutral-800);
+  --syntax-insert-bg:  oklch(98.2% 0.018 155.826);   /* ~green-50 */
+  --syntax-whitespace: var(--neutral-300);
+  --syntax-prompt:     var(--neutral-500);
+}
+
+.dark {
+  --syntax-comment:    var(--neutral-500);
+  --syntax-comment-alt: var(--neutral-400);
+  --syntax-keyword:    oklch(71.4% 0.163 310.872);   /* ~purple-400 */
+  --syntax-string:     oklch(79.2% 0.209 151.711);   /* ~green-400 */
+  --syntax-number:     oklch(79.6% 0.15 235.169);    /* ~blue-400 */
+  --syntax-error:      oklch(70.4% 0.191 22.216);    /* ~red-400 */
+  --syntax-error-bg:   transparent;
+  --syntax-type:       oklch(70.4% 0.191 22.216);    /* ~red-400 */
+  --syntax-operator:   var(--neutral-400);
+  --syntax-name:       oklch(78.9% 0.154 211.53);    /* ~cyan-400 */
+  --syntax-builtin:    oklch(71.4% 0.163 310.872);   /* ~purple-400 */
+  --syntax-function:   oklch(79.6% 0.15 235.169);    /* ~blue-400 */
+  --syntax-escape:     oklch(79.2% 0.171 55.613);    /* ~orange-400 */
+  --syntax-tag:        oklch(79.2% 0.209 151.711);   /* ~green-400 */
+  --syntax-heading:    var(--neutral-100);
+  --syntax-namespace:  var(--neutral-100);
+  --syntax-insert-bg:  transparent;
+  --syntax-whitespace: var(--neutral-600);
+  --syntax-prompt:     var(--neutral-500);
+}
 
 .highlight {
   @apply bg-surface rounded-lg p-4 overflow-x-auto text-sm;
@@ -294,16 +341,19 @@ dialog[open]::backdrop {
 .highlight .cm,
 .highlight .c1,
 .highlight .cs {
-  @apply text-slate-500 italic;
+  color: var(--syntax-comment);
+  font-style: italic;
 }
 
 .highlight .cp {
-  @apply text-slate-500 font-bold;
+  color: var(--syntax-comment-alt);
+  font-weight: 700;
 }
 
 /* Errors */
 .highlight .err {
-  @apply text-red-700 bg-red-50;
+  color: var(--syntax-error);
+  background-color: var(--syntax-error-bg);
 }
 
 /* Keywords */
@@ -314,55 +364,61 @@ dialog[open]::backdrop {
 .highlight .kp,
 .highlight .kr,
 .highlight .ow {
-  @apply text-purple-700 font-semibold;
+  color: var(--syntax-keyword);
+  font-weight: 600;
 }
 
 .highlight .kt {
-  @apply text-red-600 font-semibold;
+  color: var(--syntax-type);
+  font-weight: 600;
 }
 
 /* Operators */
 .highlight .o {
-  @apply text-slate-600;
+  color: var(--syntax-operator);
 }
 
 /* Generic styles */
 .highlight .gd {
-  @apply text-red-700 bg-red-50;
+  color: var(--syntax-error);
+  background-color: var(--syntax-error-bg);
 }
 
 .highlight .ge {
-  @apply italic;
+  font-style: italic;
 }
 
 .highlight .gr,
 .highlight .gt {
-  @apply text-red-700;
+  color: var(--syntax-error);
 }
 
 .highlight .gh {
-  @apply text-slate-900 font-bold;
+  color: var(--syntax-heading);
+  font-weight: 700;
 }
 
 .highlight .gi {
-  @apply text-green-700 bg-green-50;
+  color: var(--syntax-string);
+  background-color: var(--syntax-insert-bg);
 }
 
 .highlight .go,
 .highlight .gp {
-  @apply text-slate-500;
+  color: var(--syntax-prompt);
 }
 
 .highlight .gp {
-  @apply font-bold;
+  font-weight: 700;
 }
 
 .highlight .gs {
-  @apply font-bold;
+  font-weight: 700;
 }
 
 .highlight .gu {
-  @apply text-slate-600 font-bold;
+  color: var(--syntax-operator);
+  font-weight: 700;
 }
 
 /* Numbers */
@@ -372,7 +428,7 @@ dialog[open]::backdrop {
 .highlight .mi,
 .highlight .mo,
 .highlight .il {
-  @apply text-blue-700;
+  color: var(--syntax-number);
 }
 
 /* Strings */
@@ -384,20 +440,21 @@ dialog[open]::backdrop {
 .highlight .si,
 .highlight .sx,
 .highlight .s1 {
-  @apply text-green-700;
+  color: var(--syntax-string);
 }
 
 .highlight .sd {
-  @apply text-green-700 italic;
+  color: var(--syntax-string);
+  font-style: italic;
 }
 
 .highlight .se,
 .highlight .sr {
-  @apply text-orange-600;
+  color: var(--syntax-escape);
 }
 
 .highlight .ss {
-  @apply text-cyan-700;
+  color: var(--syntax-name);
 }
 
 /* Names */
@@ -410,177 +467,39 @@ dialog[open]::backdrop {
 .highlight .vc,
 .highlight .vg,
 .highlight .vi {
-  @apply text-cyan-700;
+  color: var(--syntax-name);
 }
 
 .highlight .nb,
 .highlight .bp {
-  @apply text-purple-600;
+  color: var(--syntax-builtin);
 }
 
 .highlight .nc,
 .highlight .nf {
-  @apply text-blue-700;
+  color: var(--syntax-function);
 }
 
 .highlight .nc {
-  @apply font-semibold;
+  font-weight: 600;
 }
 
 .highlight .ne {
-  @apply text-red-700 font-bold;
+  color: var(--syntax-error);
+  font-weight: 700;
 }
 
 .highlight .nn {
-  @apply text-slate-800;
+  color: var(--syntax-namespace);
 }
 
 .highlight .nt {
-  @apply text-green-700;
+  color: var(--syntax-tag);
 }
 
 /* Whitespace */
 .highlight .w {
-  @apply text-slate-300;
-}
-
-/* --- Dark Mode: Syntax Highlighting --- */
-.dark .highlight {
-  @apply bg-surface;
-}
-
-.dark .highlight .hll {
-  background-color: rgb(250 204 21 / 0.15);
-}
-
-.dark .highlight .c,
-.dark .highlight .cm,
-.dark .highlight .c1,
-.dark .highlight .cs {
-  @apply text-slate-500;
-}
-
-.dark .highlight .cp {
-  @apply text-slate-400;
-}
-
-.dark .highlight .err {
-  @apply text-red-400 bg-transparent;
-}
-
-.dark .highlight .k,
-.dark .highlight .kc,
-.dark .highlight .kd,
-.dark .highlight .kn,
-.dark .highlight .kp,
-.dark .highlight .kr,
-.dark .highlight .ow {
-  @apply text-purple-400;
-}
-
-.dark .highlight .kt {
-  @apply text-red-400;
-}
-
-.dark .highlight .o {
-  @apply text-slate-400;
-}
-
-.dark .highlight .gd {
-  @apply text-red-400 bg-transparent;
-}
-
-.dark .highlight .gr,
-.dark .highlight .gt {
-  @apply text-red-400;
-}
-
-.dark .highlight .gh {
-  @apply text-gray-100;
-}
-
-.dark .highlight .gi {
-  @apply text-green-400 bg-transparent;
-}
-
-.dark .highlight .go,
-.dark .highlight .gp {
-  @apply text-slate-500;
-}
-
-.dark .highlight .gu {
-  @apply text-slate-400;
-}
-
-.dark .highlight .m,
-.dark .highlight .mf,
-.dark .highlight .mh,
-.dark .highlight .mi,
-.dark .highlight .mo,
-.dark .highlight .il {
-  @apply text-blue-400;
-}
-
-.dark .highlight .s,
-.dark .highlight .sb,
-.dark .highlight .sc,
-.dark .highlight .s2,
-.dark .highlight .sh,
-.dark .highlight .si,
-.dark .highlight .sx,
-.dark .highlight .s1 {
-  @apply text-green-400;
-}
-
-.dark .highlight .sd {
-  @apply text-green-400;
-}
-
-.dark .highlight .se,
-.dark .highlight .sr {
-  @apply text-orange-400;
-}
-
-.dark .highlight .ss {
-  @apply text-cyan-400;
-}
-
-.dark .highlight .na,
-.dark .highlight .no,
-.dark .highlight .nd,
-.dark .highlight .ni,
-.dark .highlight .nl,
-.dark .highlight .nv,
-.dark .highlight .vc,
-.dark .highlight .vg,
-.dark .highlight .vi {
-  @apply text-cyan-400;
-}
-
-.dark .highlight .nb,
-.dark .highlight .bp {
-  @apply text-purple-400;
-}
-
-.dark .highlight .nc,
-.dark .highlight .nf {
-  @apply text-blue-400;
-}
-
-.dark .highlight .ne {
-  @apply text-red-400;
-}
-
-.dark .highlight .nn {
-  @apply text-gray-100;
-}
-
-.dark .highlight .nt {
-  @apply text-green-400;
-}
-
-.dark .highlight .w {
-  @apply text-slate-600;
+  color: var(--syntax-whitespace);
 }
 
 /* ==========================================================================

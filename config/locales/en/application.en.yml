@@ -19,6 +19,10 @@ en:
     toggle_menu: "Toggle navigation menu"
     toggle_theme: "Toggle theme"
     user_menu_label: "User menu for %{name}"
+  theme:
+    light: "Light"
+    dark: "Dark"
+    system: "System"
   footer:
     about: "About"
     privacy: "Privacy"

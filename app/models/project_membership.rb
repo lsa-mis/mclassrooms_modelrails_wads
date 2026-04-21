@@ -24,7 +24,7 @@ class ProjectMembership < ApplicationRecord
   def user_is_workspace_member
     return unless project&.workspace
     unless project.workspace.memberships.kept.exists?(user: user)
-      errors.add(:user, :not_workspace_member, message: "must be a workspace member")
+      errors.add(:user, :not_workspace_member)
     end
   end
 end

@@ -52,3 +52,16 @@ en:
           attributes:
             password:
               pwned: "has been found in a data breach. Please choose a different password."
+        membership:
+          attributes:
+            base:
+              workspace_member_limit: "workspace has reached its member limit"
+              last_owner: "cannot deactivate the last owner"
+        project:
+          attributes:
+            base:
+              workspace_project_limit: "workspace has reached its project limit"
+        project_membership:
+          attributes:
+            user:
+              not_workspace_member: "must be a workspace member"
