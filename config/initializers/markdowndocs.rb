@@ -9,7 +9,8 @@ Markdowndocs.configure do |config|
   config.categories = {
     "Getting Started" => %w[getting-started],
     "Architecture" => %w[architecture],
-    "Guides" => %w[extending security]
+    "Features" => %w[accounts workspaces projects identity-system emails],
+    "Guides" => %w[extending security ui-patterns]
   }
 
   # Available documentation modes (default: %w[guide technical])

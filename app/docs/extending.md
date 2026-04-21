@@ -106,6 +106,15 @@ Biscuit::Consent.new(cookies).allowed?(:analytics)
 
 If your deployment only uses functional cookies (session, theme, CSRF), you can remove the banner by deleting `<%= biscuit_banner %>` from both layouts.
 
+## Invitation Types
+
+The invitation system supports two modes:
+
+- **Email invitations** — enter email addresses, system sends invitation emails with 7-day expiry tokens
+- **Magic link invitations** — generate a shareable URL (no email needed), useful for posting in Slack or team docs
+
+Both types create the same `Invitation` record. The difference is whether `email` is present. See [Workspace Administration](/docs/workspaces) for full details.
+
 ## Adding Custom Workspace Roles
 
 Seed a new role with custom permissions:

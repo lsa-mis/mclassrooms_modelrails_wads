@@ -17,13 +17,16 @@ Auth endpoints are rate-limited via Rails 8 `rate_limit` DSL:
 | POST /session (login) | 10 requests | 3 minutes |
 | POST /registration (sign-up) | 10 requests | 3 minutes |
 | POST /passwords (reset) | 10 requests | 3 minutes |
+| POST /magic_links (magic link) | 5 requests | 3 minutes |
 
 ### Account Locking
 
-After 5 failed login attempts, accounts are locked for 1 hour. Admin can unlock via:
+After 5 failed login attempts, accounts are locked for 1 hour. Auto-unlock occurs after the lockout period. Admin rake tasks:
 
 ```bash
-rails users:unlock[email@example.com]
+rails users:unlock[email@example.com]     # Unlock a locked account
+rails users:verify[email@example.com]     # Manually verify an email
+rails users:suspend[email@example.com]    # Suspend an account (destroys sessions, deactivates memberships)
 ```
 
 ### Security Headers
@@ -34,7 +37,7 @@ Configured in `config/initializers/security_headers.rb`:
 - `X-Content-Type-Options: nosniff` — prevents MIME sniffing
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy` — disables camera, microphone, geolocation by default
-- Content Security Policy via `content_security_policy.rb`
+- Content Security Policy via `content_security_policy.rb` (enforced in development and production, report-only in test for Playwright compatibility)
 
 ### Password Security
 
