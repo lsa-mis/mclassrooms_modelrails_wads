@@ -42,6 +42,7 @@ en:
         change: "Change avatar"
       update:
         success: "Avatar updated."
+        rate_limited: "Too many requests. Please try again later."
       destroy:
         success: "Avatar removed."
       source_label: "Avatar source"
@@ -127,3 +128,4 @@ en:
       success: "A new verification email has been sent."
       already_verified: "Your email address is already verified."
       no_email_auth: "No email authentication found."
+      rate_limited: "Too many requests. Please try again later."

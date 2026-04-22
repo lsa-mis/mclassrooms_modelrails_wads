@@ -1,4 +1,7 @@
 class EmailVerificationResendsController < ApplicationController
+  rate_limit to: 5, within: 3.minutes, only: :create,
+    with: -> { redirect_to root_path, alert: t("email_verification_resends.create.rate_limited") }
+
   def create
     authentication = Current.user.authentications.email.first
 

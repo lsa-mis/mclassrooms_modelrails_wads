@@ -25,7 +25,7 @@ module Workspaces
     def update
       @membership = @workspace.memberships.find(params[:id])
       authorize @membership
-      role = @workspace.effective_roles.find(params[:membership][:role_id])
+      role = @workspace.effective_roles.find(membership_params[:role_id])
       @membership.change_role!(role)
       redirect_to workspace_members_path(@workspace), notice: t(".success")
     end
@@ -52,6 +52,12 @@ module Workspaces
       current_membership = @workspace.memberships.kept.find_by!(user: Current.user)
       current_membership.transfer_ownership_to!(@membership)
       redirect_to workspace_members_path(@workspace), notice: t(".transferred")
+    end
+
+    private
+
+    def membership_params
+      params.require(:membership).permit(:role_id)
     end
   end
 end

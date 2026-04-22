@@ -24,6 +24,35 @@ RSpec.describe Role, type: :model do
       other = build(:role, slug: "custom", workspace: create(:workspace))
       expect(other).to be_valid
     end
+
+    describe "permissions shape" do
+      it "accepts an empty hash" do
+        expect(build(:role, permissions: {})).to be_valid
+      end
+
+      it "accepts valid string-key boolean-value hash" do
+        role = build(:role, permissions: { "manage_workspace" => true, "custom_perm" => false })
+        expect(role).to be_valid
+      end
+
+      it "rejects non-hash permissions" do
+        role = build(:role, permissions: "invalid")
+        expect(role).not_to be_valid
+        expect(role.errors[:permissions]).to include("must be a hash")
+      end
+
+      it "rejects non-boolean values" do
+        role = build(:role, permissions: { "manage_workspace" => "yes" })
+        expect(role).not_to be_valid
+        expect(role.errors[:permissions]).to include("values must be booleans")
+      end
+
+      it "coerces non-string keys to strings via JSON serialization" do
+        role = build(:role, permissions: { 123 => true })
+        expect(role).to be_valid
+        expect(role.permissions.keys).to all(be_a(String))
+      end
+    end
   end
 
   describe "system defaults" do

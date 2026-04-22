@@ -8,13 +8,13 @@ FactoryBot.define do
     trait :owner do
       name { "Owner" }
       slug { "owner" }
-      permissions { { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true } }
+      permissions { { "manage_workspace" => true, "manage_members" => true, "manage_projects" => true, "manage_settings" => true } }
     end
 
     trait :admin do
       name { "Admin" }
       slug { "admin" }
-      permissions { { manage_members: true, manage_projects: true, manage_settings: true } }
+      permissions { { "manage_members" => true, "manage_projects" => true, "manage_settings" => true } }
     end
 
     trait :viewer do

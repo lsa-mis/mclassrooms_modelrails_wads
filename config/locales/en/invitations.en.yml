@@ -36,6 +36,7 @@ en:
       resend:
         resent: "Invitation resent."
         magic_link_refreshed: "Magic link refreshed."
+        rate_limited: "Too many requests. Please try again later."
   invitation_accepts:
     show:
       title: "You've been invited"

@@ -2,6 +2,17 @@ module Account
   class AvatarsController < ApplicationController
     include CropCoordinatable
 
+    rate_limit to: 20, within: 3.minutes, only: :update,
+      with: -> {
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: error_toast(t("account.avatars.update.rate_limited")),
+                   status: :too_many_requests
+          end
+          format.html { redirect_to edit_account_profile_path, alert: t("account.avatars.update.rate_limited") }
+        end
+      }
+
     def hub
       @user = Current.user
       authorize @user, :update?, policy_class: Account::AvatarPolicy

@@ -10,6 +10,7 @@ class ApplicationController < ActionController::Base
   stale_when_importmap_changes
 
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
+  rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   private
 
@@ -24,5 +25,14 @@ class ApplicationController < ActionController::Base
       request.referer || root_path
     end
     redirect_to(destination, alert: t("errors.not_authorized"))
+  end
+
+  def record_not_found
+    respond_to do |format|
+      format.turbo_stream { render turbo_stream: error_toast(t("errors.not_found")), status: :not_found }
+      format.html { redirect_to(request.referer || root_path, alert: t("errors.not_found")) }
+      format.json { render json: { error: t("errors.not_found") }, status: :not_found }
+      format.any { head :not_found }
+    end
   end
 end

@@ -2,6 +2,9 @@ module Workspaces
   class InvitationsController < ApplicationController
     include WorkspaceScoped
 
+    rate_limit to: 10, within: 3.minutes, only: :resend,
+      with: -> { redirect_to workspace_invitations_path(@workspace), alert: t("workspaces.invitations.resend.rate_limited") }
+
     def index
       authorize Invitation
       @invitations = @workspace.invitations.includes(:role).order(created_at: :desc)
@@ -16,7 +19,7 @@ module Workspaces
     def create
       authorize Invitation
 
-      if params[:invitation][:magic_link] == "1"
+      if invitation_params[:magic_link] == "1"
         create_magic_link
       else
         create_email_invitations
@@ -47,8 +50,8 @@ module Workspaces
     private
 
     def create_email_invitations
-      emails = params[:invitation][:emails].to_s.split(/[\n,]/).map(&:strip).reject(&:blank?)
-      role = @workspace.effective_roles.find(params[:invitation][:role_id])
+      emails = invitation_params[:emails].to_s.split(/[\n,]/).map(&:strip).reject(&:blank?)
+      role = @workspace.effective_roles.find(invitation_params[:role_id])
 
       result = Invitation.bulk_invite!(
         workspace: @workspace,
@@ -62,7 +65,7 @@ module Workspaces
     end
 
     def create_magic_link
-      role = @workspace.effective_roles.find(params[:invitation][:role_id])
+      role = @workspace.effective_roles.find(invitation_params[:role_id])
       invitation = @workspace.invitations.create!(
         role: role,
         invited_by: Current.user,
@@ -72,6 +75,10 @@ module Workspaces
       redirect_to workspace_invitations_path(@workspace),
         notice: t(".magic_link_created"),
         flash: { magic_link_url: accept_invitation_url(token: invitation.token) }
+    end
+
+    def invitation_params
+      params.require(:invitation).permit(:emails, :role_id, :magic_link)
     end
   end
 end
