@@ -87,7 +87,16 @@ export default class extends Controller {
     const selection = this._cropper.getCropperSelection()
     if (!selection) return null
 
+    // Scale output by devicePixelRatio so the exported image is sharp on
+    // Retina/HiDPI displays. Without this, a 320×320 CSS-pixel selection
+    // exports at 320×320 actual pixels — blurry on a 2× display.
+    const dpr = window.devicePixelRatio || 1
+    const outputWidth = Math.round(selection.width * dpr)
+    const outputHeight = Math.round(selection.height * dpr)
+
     const canvas = await selection.$toCanvas({
+      width: outputWidth,
+      height: outputHeight,
       beforeDraw(context) {
         context.fillStyle = "#ffffff"
         context.fillRect(0, 0, context.canvas.width, context.canvas.height)
@@ -325,8 +334,10 @@ export default class extends Controller {
     if (!this.hasDimensionBadgeTarget) return
     if (!selection) return
 
-    const w = Math.round(selection.width)
-    const h = Math.round(selection.height)
+    // Show the actual export dimensions (CSS pixels × devicePixelRatio)
+    const dpr = window.devicePixelRatio || 1
+    const w = Math.round(selection.width * dpr)
+    const h = Math.round(selection.height * dpr)
     this.dimensionBadgeTarget.textContent = `${w} × ${h}px`
   }
 }

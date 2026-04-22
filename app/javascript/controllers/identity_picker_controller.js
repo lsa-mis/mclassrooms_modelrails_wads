@@ -17,7 +17,8 @@ export default class extends Controller {
     uploadFailedMessage: String,
     uploadFailedNetworkMessage: String,
     colorAnnounceTemplate: String,
-    colorNames: String
+    colorNames: String,
+    originalUrl: String
   }
 
   connect() {
@@ -89,7 +90,16 @@ export default class extends Controller {
   openCrop() {
     this._enterCropView()
     const cropper = this._getCropper()
-    if (cropper) cropper.initExisting()
+    if (cropper) {
+      // Always load the full-resolution original — the img src may be stale
+      // (e.g., revoked blob URL from a previous crop cycle) or may be the
+      // small cropped avatar if avatar_original isn't attached.
+      if (this.originalUrlValue) {
+        cropper.loadImage(this.originalUrlValue)
+      } else {
+        cropper.initExisting()
+      }
+    }
   }
 
   backToHub() {
@@ -165,6 +175,15 @@ export default class extends Controller {
 
       // Success — turbo stream updates avatars on the page; return to hub
       Turbo.renderStreamMessage(await response.text())
+      // If we uploaded a new original, keep its blob URL as the source for
+      // future re-crops within this session (the server URL won't be available
+      // until the next full page load). If re-cropping an existing image,
+      // originalUrl is already correct.
+      if (this._pendingFile) {
+        // Create a durable copy of the original for re-crop — the pending
+        // blob URL is about to be revoked.
+        this.originalUrlValue = URL.createObjectURL(this._pendingFile)
+      }
       this._releasePendingFile()
       this.hasImageValue = true
       this._exitCropView()
