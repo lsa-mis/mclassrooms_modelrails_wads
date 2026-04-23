@@ -6,6 +6,7 @@ en:
     trigger_aria_label: "Toggle accessibility-simulation menu (development only)"
     menu_aria_label: "Accessibility-simulation modes"
     footer_hint: "Esc to close · 0–5 to jump"
+    announcement_template: "Accessibility filter: %{mode}"
     modes:
       normal: "Normal"
       blur: "Blur"

@@ -544,3 +544,17 @@ dialog[open]::backdrop {
   outline: 2px solid var(--color-interactive-focus);
   outline-offset: 2px;
 }
+
+/* ==========================================================================
+   Accessibility-simulation filters (shared/_a11y_sim, development only).
+   Classes only ever applied to <body> by the a11y-sim Stimulus controller,
+   which is itself only rendered in Rails.env.development?. These rules are
+   effectively dead code in production.
+   ========================================================================== */
+
+body.a11y-sim-blur         { filter: blur(2.5px); }
+body.a11y-sim-grayscale    { filter: grayscale(1); }
+body.a11y-sim-deuteranopia { filter: url(#a11y-sim-deuteranopia); }
+body.a11y-sim-low_contrast { filter: contrast(0.5); }
+body.a11y-sim-cataract     { filter: blur(1.5px) contrast(0.8) brightness(1.1); }
+

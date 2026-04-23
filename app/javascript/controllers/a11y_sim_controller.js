@@ -5,7 +5,8 @@ const STORAGE_KEY = "a11y_sim_mode"
 const BODY_CLASS_PREFIX = "a11y-sim-"
 
 export default class extends Controller {
-  static targets = ["menu", "trigger", "triggerIcon", "triggerLabel", "item"]
+  static targets = ["menu", "trigger", "triggerIcon", "triggerLabel", "item", "announcer"]
+  static values = { announcementTemplate: { type: String, default: "Filter: %{mode}" } }
 
   connect() {
     this.handleOutsideClick = this.handleOutsideClick.bind(this)
@@ -70,6 +71,13 @@ export default class extends Controller {
 
     this.updateTrigger(normalized)
     this.updateMenuSelection(normalized)
+    this.announce(normalized)
+  }
+
+  announce(mode) {
+    if (!this.hasAnnouncerTarget) return
+    const label = this.labelFor(mode)
+    this.announcerTarget.textContent = this.announcementTemplateValue.replace("%{mode}", label)
   }
 
   updateTrigger(mode) {

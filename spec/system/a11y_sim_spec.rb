@@ -7,6 +7,18 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
     JS
   end
 
+  def trigger_button
+    find("button[aria-label='#{I18n.t('a11y_sim.trigger_aria_label')}']")
+  end
+
+  def mode_item(mode_key)
+    find("button[role='menuitemradio']", text: I18n.t("a11y_sim.modes.#{mode_key}"))
+  end
+
+  def press_key(key)
+    page.driver.with_playwright_page { |pw_page| pw_page.keyboard.press(key) }
+  end
+
   describe "outside development" do
     it "does not render the trigger" do
       visit root_path
@@ -29,8 +41,8 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
     it "opens the menu when the trigger is clicked" do
       visit root_path
       dismiss_cookie_banner
-      find("[data-a11y-sim-target='trigger']").click
-      expect(page).to have_css("[data-a11y-sim-target='menu']:not(.hidden)")
+      trigger_button.click
+      expect(page).to have_css("[role='menu']:not(.hidden)")
       I18n.t("a11y_sim.modes").each_value do |label|
         expect(page).to have_content(label)
       end
@@ -39,8 +51,8 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
     it "applies the matching body class when a mode is selected" do
       visit root_path
       dismiss_cookie_banner
-      find("[data-a11y-sim-target='trigger']").click
-      find("[data-a11y-sim-target='item'][data-mode='blur']").click
+      trigger_button.click
+      mode_item(:blur).click
 
       expect(page).to have_css("body.a11y-sim-blur")
       expect(page).not_to have_css("body.a11y-sim-deuteranopia")
@@ -49,25 +61,69 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
     it "closes the menu and clears the body class when returning to Normal" do
       visit root_path
       dismiss_cookie_banner
-      find("[data-a11y-sim-target='trigger']").click
-      find("[data-a11y-sim-target='item'][data-mode='deuteranopia']").click
+      trigger_button.click
+      mode_item(:deuteranopia).click
       expect(page).to have_css("body.a11y-sim-deuteranopia")
 
-      find("[data-a11y-sim-target='trigger']").click
-      find("[data-a11y-sim-target='item'][data-mode='normal']").click
+      trigger_button.click
+      mode_item(:normal).click
       expect(page).not_to have_css("body.a11y-sim-deuteranopia")
       expect(page).not_to have_css("body[class*='a11y-sim-']")
     end
 
-    describe "keyboard navigation" do
-      def press_key(key)
-        page.driver.with_playwright_page { |pw_page| pw_page.keyboard.press(key) }
-      end
+    it "announces the selected mode to screen readers via an aria-live region" do
+      visit root_path
+      dismiss_cookie_banner
+      trigger_button.click
+      mode_item(:grayscale).click
 
+      expected = I18n.t("a11y_sim.announcement_template", mode: I18n.t("a11y_sim.modes.grayscale"))
+      expect(page).to have_css("[role='status'][aria-live='polite']", text: expected, visible: :all)
+    end
+
+    it "toggles the menu via the Ctrl/Cmd+Shift+A keyboard shortcut" do
+      visit root_path
+      dismiss_cookie_banner
+      expect(page).to have_css("[role='menu'].hidden", visible: :all)
+
+      # Controller accepts either metaKey or ctrlKey; Control works cross-platform in Playwright.
+      press_key("Control+Shift+KeyA")
+
+      expect(page).to have_css("[role='menu']:not(.hidden)")
+    end
+
+    it "falls back to Normal when asked to apply an invalid mode" do
+      visit root_path
+      dismiss_cookie_banner
+      # Simulate a corrupted localStorage value, then ask the controller to re-apply.
+      page.execute_script(<<~JS)
+        window.localStorage.setItem('a11y_sim_mode', 'not-a-real-mode');
+      JS
+      page.refresh
+      expect(page).not_to have_css("body[class*='a11y-sim-']")
+    end
+
+    it "still applies filters when localStorage.setItem throws" do
+      visit root_path
+      dismiss_cookie_banner
+      # Override setItem to throw, simulating Safari private-browsing quota error.
+      page.execute_script(<<~JS)
+        const proto = Object.getPrototypeOf(window.localStorage);
+        Object.defineProperty(proto, 'setItem', {
+          value: () => { throw new Error('QuotaExceededError'); },
+          configurable: true
+        });
+      JS
+      trigger_button.click
+      mode_item(:blur).click
+      expect(page).to have_css("body.a11y-sim-blur")
+    end
+
+    describe "keyboard navigation" do
       it "moves focus to the next item on ArrowDown" do
         visit root_path
         dismiss_cookie_banner
-        find("[data-a11y-sim-target='trigger']").click
+        trigger_button.click
         press_key("ArrowDown")
         expect(page.evaluate_script("document.activeElement.dataset.mode")).to eq("blur")
       end
@@ -75,7 +131,7 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
       it "wraps focus to the last item when ArrowUp is pressed from the first item" do
         visit root_path
         dismiss_cookie_banner
-        find("[data-a11y-sim-target='trigger']").click
+        trigger_button.click
         press_key("ArrowUp")
         expect(page.evaluate_script("document.activeElement.dataset.mode")).to eq("cataract")
       end
@@ -83,7 +139,7 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
       it "jumps focus to the last item on End and first item on Home" do
         visit root_path
         dismiss_cookie_banner
-        find("[data-a11y-sim-target='trigger']").click
+        trigger_button.click
         press_key("End")
         expect(page.evaluate_script("document.activeElement.dataset.mode")).to eq("cataract")
         press_key("Home")
@@ -93,10 +149,10 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
       it "closes the menu when Tab is pressed" do
         visit root_path
         dismiss_cookie_banner
-        find("[data-a11y-sim-target='trigger']").click
-        expect(page).to have_css("[data-a11y-sim-target='menu']:not(.hidden)")
+        trigger_button.click
+        expect(page).to have_css("[role='menu']:not(.hidden)")
         press_key("Tab")
-        expect(page).not_to have_css("[data-a11y-sim-target='menu']:not(.hidden)")
+        expect(page).not_to have_css("[role='menu']:not(.hidden)")
       end
     end
   end

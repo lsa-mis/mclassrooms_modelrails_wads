@@ -24,6 +24,7 @@ en:
       description: "We sent a sign-in link to %{email}. Click the link in your email to continue."
       expiry: "The link expires in 15 minutes."
       try_again: "Didn't receive it? Try again"
+      opens_new_window: "(opens in new window)"
     destroy:
       success: "Signed out successfully."
   registrations:
