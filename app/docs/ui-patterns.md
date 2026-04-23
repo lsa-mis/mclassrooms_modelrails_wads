@@ -204,5 +204,64 @@ The application layout (`layouts/application.html.erb`) provides:
 2. Sticky header with navigation, theme toggle, user menu
 3. Toast container (renders flash messages)
 4. Main content area (`<main id="main-content">`)
-5. Footer with site links
-6. Cookie consent banner (Biscuit)
+5. Footer with clustered nav, centered copyright, and cookie settings button
+6. Cookie consent banner (Biscuit) — shown once on first visit
+
+## Footer Structure
+
+**Partial:** `shared/_footer.html.erb`
+
+The footer is a two-row layout with responsive behavior.
+
+### Row 1 — brand, clustered navigation, dev trigger
+
+- **Brand:** site logo + name, links to root
+- **Product cluster** (`<nav aria-label="Product">`): About, Docs
+- **Vertical divider** — 14px tall `border-l border-border`, `aria-hidden`, only rendered at `sm:` and above
+- **Legal & privacy cluster** (`<nav aria-label="Legal and privacy">`): Privacy, Contact, Cookie settings
+- **Dev-only trigger** on the far right (desktop) — the accessibility-simulation drop-up, only rendered in `Rails.env.development?`
+
+### Row 2 — centered copyright
+
+A horizontal rule (`border-t border-border`) separates the two rows, followed by a centered `text-xs text-text-muted` paragraph with the current year and the `footer.copyright` i18n key.
+
+### Responsive behavior
+
+| Breakpoint | Row 1 layout |
+| ---------- | ------------ |
+| `< 640px` (mobile) | `flex-col items-center gap-6` — brand, clusters, dev trigger stack vertically |
+| `640–1023px` (tablet) | `flex-row flex-wrap justify-center gap-4` — wraps naturally |
+| `≥ 1024px` (desktop) | `flex-row flex-nowrap justify-start gap-6` — brand left, clusters mid, `lg:flex-1` spacer pushes dev trigger to right |
+
+### Cookie settings button
+
+Biscuit's gem normally renders a `position: fixed` "Manage cookies" button in the bottom-left corner. ModelRails hides it via `.biscuit-manage-link { display: none !important; }` in `app/assets/tailwind/application.css` and replaces it with a footer-integrated `<button>` that reopens the preferences panel via `footer_controller.js`:
+
+```js
+// app/javascript/controllers/footer_controller.js
+reopenCookies(event) {
+  event.preventDefault()
+  document.querySelector(".biscuit-manage-link")?.click()
+}
+```
+
+Dispatching a synthetic click to the gem's (hidden) button decouples the footer from Biscuit's Stimulus target scope — the integration works purely through the DOM and needs no gem-side coordination.
+
+### Footer accessibility
+
+- Two named `<nav>` landmarks allow screen readers to announce and skip clusters
+- Vertical and horizontal dividers are decorative (`aria-hidden` where needed)
+- All footer links and the Cookie settings button use `inline-flex items-center min-h-[44px] px-2` — meets WCAG 2.5.5 AAA (44×44 target size)
+
+## For contributors
+
+Deeper implementation guides for developers (not rendered to end users, live under `docs/` in the repo):
+
+- **Design tokens & theming:** `docs/theming.md` — three-layer token architecture, OKLCH color mapping, workspace branding overrides
+- **Modal system:** `docs/modals.md` — native `<dialog>` integration, Stimulus controller internals, animation timing
+- **Toast system:** `docs/toasts.md` — pill vs. card routing, flash mapping, duration formula
+
+Additional contributor docs:
+
+- `docs/deployment.md` — Kamal + SSL configuration
+- `docs/superpowers/specs/` and `docs/superpowers/plans/` — feature design docs and implementation plans

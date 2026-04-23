@@ -2,6 +2,35 @@
 
 All notable changes to ModelRails are documented here, organized by phase.
 
+## v1.2.0 — Footer Cohesion + Developer Ergonomics
+
+### Footer (user-facing)
+
+- Two-row layout: brand + clustered navigation on row 1, centered copyright on row 2
+- Nav links grouped into **Product** (About, Docs) and **Legal & privacy** (Privacy, Contact, Cookie settings) clusters separated by a vertical divider
+- "Cookie settings" replaces the Biscuit gem's floating bottom-left button; the Biscuit preferences panel now reopens from an in-footer link via a 10-line `footer_controller.js` Stimulus controller that dispatches to the gem's hidden action button
+- Responsive: mobile stacks vertically, tablet wraps and centers, desktop anchors left with the dev trigger pushed right
+- WCAG 2.2 Level AAA target size: all footer links and the Cookie settings button use `min-h-[44px]`
+
+### Developer tools (development-only, never rendered in production)
+
+- **Clickable letter_opener link on "Check your email"** — the H2 on `sessions/check_email.html.erb` becomes a link to `/letter_opener` in development, opening the sent email in a new tab without leaving the auth flow
+- **Accessibility-simulation drop-up in the footer** — toggle between Normal, Blur, Grayscale, Deuteranopia, Low contrast, and Cataract filters to pressure-test pages against vision-impairment conditions. Keyboard: Cmd/Ctrl+Shift+A opens, 0–5 jump to modes, Esc / Tab closes. State persists across reloads via localStorage; live region announces mode changes for screen readers
+- **`aria-live` status region** on the a11y sim for WCAG 4.1.3 compliance
+- **`aria-hidden` SVG filter defs** inlined in the partial; body-level CSS filter classes applied to `<body>` so modals and toasts receive the filter
+
+### Fixes
+
+- Disable CSP on `LetterOpenerWeb::ApplicationController` in development. The production CSP's `frame_src: :none` and nonce-enforced `script_src` blocked the gem's email-preview iframe and inline scripts. The engine is dev-only (mounted conditionally in `config/routes.rb`), so the override is scoped safely via `Rails.application.config.to_prepare`
+
+### Infrastructure
+
+- 1025 examples, 0 failures; coverage 94.46% line / 82.05% branch
+- New view spec (`spec/views/shared/footer_spec.rb`) and system spec (`spec/system/footer_cookies_spec.rb`) covering footer structure, link clusters, and Cookie settings reopen flow
+- Design doc and implementation plan preserved at `docs/superpowers/specs/2026-04-22-footer-cohesion-design.md` and `docs/superpowers/plans/2026-04-22-footer-cohesion.md`
+
+---
+
 ## v1.1.0 — Auth Redesign: Smart Sign-In + Magic Links
 
 ### Smart Sign-In Flow
