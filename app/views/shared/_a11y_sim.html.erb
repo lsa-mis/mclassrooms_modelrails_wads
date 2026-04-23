@@ -1,0 +1,121 @@
+<%# Dev-only accessibility-simulation drop-up. Renders nothing in production. %>
+<% if Rails.env.development? %>
+  <%
+    modes = %w[normal blur grayscale deuteranopia low_contrast cataract]
+    mode_icons = {
+      "normal" => capture do %>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4" aria-hidden="true">
+          <path d="M1.5 10S5 3 10 3s8.5 7 8.5 7-3.5 7-8.5 7-8.5-7-8.5-7z" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="10" cy="10" r="2.5"/>
+        </svg>
+      <% end,
+      "blur" => capture do %>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4" aria-hidden="true">
+          <circle cx="10" cy="10" r="7" stroke-dasharray="2 2"/>
+          <circle cx="10" cy="10" r="3" stroke-dasharray="1.5 2"/>
+        </svg>
+      <% end,
+      "grayscale" => capture do %>
+        <svg viewBox="0 0 20 20" class="w-4 h-4" aria-hidden="true">
+          <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 3a7 7 0 010 14z" fill="currentColor"/>
+        </svg>
+      <% end,
+      "deuteranopia" => capture do %>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4" aria-hidden="true">
+          <circle cx="7" cy="10" r="4"/>
+          <circle cx="13" cy="10" r="4"/>
+        </svg>
+      <% end,
+      "low_contrast" => capture do %>
+        <svg viewBox="0 0 20 20" class="w-4 h-4" aria-hidden="true">
+          <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 3v14a7 7 0 000-14z" fill="currentColor"/>
+        </svg>
+      <% end,
+      "cataract" => capture do %>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4" aria-hidden="true">
+          <path d="M5 13a3 3 0 010-6 4 4 0 017.9-.5A3 3 0 0115 13H5z" stroke-linejoin="round"/>
+        </svg>
+      <% end
+    }
+  %>
+
+  <style>
+    body.a11y-sim-blur         { filter: blur(2.5px); }
+    body.a11y-sim-grayscale    { filter: grayscale(1); }
+    body.a11y-sim-deuteranopia { filter: url(#a11y-sim-deuteranopia); }
+    body.a11y-sim-low_contrast { filter: contrast(0.5); }
+    body.a11y-sim-cataract     { filter: blur(1.5px) contrast(0.8) brightness(1.1); }
+  </style>
+
+  <svg class="absolute w-0 h-0 overflow-hidden" aria-hidden="true">
+    <defs>
+      <filter id="a11y-sim-deuteranopia" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.625 0.375 0     0 0
+                                             0.700 0.300 0     0 0
+                                             0     0.300 0.700 0 0
+                                             0     0     0     1 0"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <div data-controller="a11y-sim" class="relative">
+    <button type="button"
+            data-a11y-sim-target="trigger"
+            data-action="click->a11y-sim#toggle"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-label="<%= t("a11y_sim.trigger_aria_label") %>"
+            class="inline-flex items-center gap-2 min-h-[44px] px-3 py-2 text-xs rounded-md
+                   bg-warning-surface border border-dashed border-warning
+                   text-text-body font-medium
+                   hover:brightness-105
+                   focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-warning text-warning-surface tracking-wide"
+            aria-hidden="true"><%= t("a11y_sim.dev_badge") %></span>
+      <span data-a11y-sim-target="triggerIcon" class="inline-flex"><%= mode_icons["normal"] %></span>
+      <span><%= t("a11y_sim.prefix") %></span>
+      <span data-a11y-sim-target="triggerLabel" class="font-semibold"><%= t("a11y_sim.modes.normal") %></span>
+      <span aria-hidden="true" class="text-[9px]">&#9652;</span>
+    </button>
+
+    <div data-a11y-sim-target="menu"
+         role="menu"
+         aria-label="<%= t("a11y_sim.menu_aria_label") %>"
+         class="hidden absolute right-0 bottom-full mb-2 w-64 rounded-lg
+                bg-surface border border-border shadow-lg overflow-hidden z-20">
+      <div class="flex items-center justify-between px-3 py-2 border-b border-border">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+          <%= t("a11y_sim.heading") %>
+        </span>
+        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-warning-surface text-text-body"
+              aria-hidden="true"><%= t("a11y_sim.dev_badge") %></span>
+      </div>
+
+      <% modes.each_with_index do |mode, index| %>
+        <button type="button"
+                role="menuitemradio"
+                aria-checked="<%= mode == "normal" ? "true" : "false" %>"
+                data-a11y-sim-target="item"
+                data-action="click->a11y-sim#select"
+                data-mode="<%= mode %>"
+                data-active="<%= mode == "normal" ? "true" : "false" %>"
+                class="w-full flex items-center gap-3 min-h-[44px] px-3 py-2.5 text-sm text-text-body text-left
+                       hover:bg-background
+                       focus:outline-none focus:bg-background focus:ring-2 focus:ring-inset focus:ring-interactive-focus
+                       data-[active=true]:bg-interactive-surface
+                       data-[active=true]:text-interactive
+                       data-[active=true]:font-semibold">
+          <span data-a11y-sim-icon class="inline-flex shrink-0"><%= mode_icons[mode] %></span>
+          <span data-a11y-sim-label class="flex-1"><%= t("a11y_sim.modes.#{mode}") %></span>
+          <kbd class="text-[10px] font-mono text-text-muted bg-background px-1.5 py-0.5 rounded"><%= index %></kbd>
+        </button>
+      <% end %>
+
+      <div class="px-3 py-2 border-t border-border text-[10px] text-text-muted font-mono text-right">
+        <%= t("a11y_sim.footer_hint") %>
+      </div>
+    </div>
+  </div>
+<% end %>

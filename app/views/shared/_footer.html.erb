@@ -27,9 +27,12 @@
                         focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
         </div>
       </div>
-      <p class="text-sm text-text-muted">
-        &copy; <%= Date.current.year %> <%= t("footer.copyright") %>
-      </p>
+      <div class="flex items-center gap-4">
+        <%= render "shared/a11y_sim" %>
+        <p class="text-sm text-text-muted">
+          &copy; <%= Date.current.year %> <%= t("footer.copyright") %>
+        </p>
+      </div>
     </div>
   </div>
 </footer>
