@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Footer: Manage cookies reopens Biscuit panel", type: :system do
+RSpec.describe "Footer: Manage cookies reopens Biscuit banner", type: :system do
   it "renders a Manage cookies button in the footer on public pages" do
     visit root_path
     within("footer") do
