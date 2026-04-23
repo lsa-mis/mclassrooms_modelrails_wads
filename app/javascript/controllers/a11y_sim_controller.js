@@ -57,10 +57,15 @@ export default class extends Controller {
       document.body.classList.toggle(`${BODY_CLASS_PREFIX}${m}`, m === normalized)
     })
 
-    if (normalized === "normal") {
-      window.localStorage.removeItem(STORAGE_KEY)
-    } else {
-      window.localStorage.setItem(STORAGE_KEY, normalized)
+    try {
+      if (normalized === "normal") {
+        window.localStorage.removeItem(STORAGE_KEY)
+      } else {
+        window.localStorage.setItem(STORAGE_KEY, normalized)
+      }
+    } catch (_error) {
+      // localStorage can be unavailable (Safari private browsing, quota full).
+      // The filter still applies in-memory for this page.
     }
 
     this.updateTrigger(normalized)
@@ -101,8 +106,12 @@ export default class extends Controller {
   }
 
   readStoredMode() {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    return MODES.includes(stored) ? stored : "normal"
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY)
+      return MODES.includes(stored) ? stored : "normal"
+    } catch (_error) {
+      return "normal"
+    }
   }
 
   handleOutsideClick(event) {
@@ -118,10 +127,30 @@ export default class extends Controller {
 
     if (!this.isOpen()) return
 
-    if (event.key === "Escape") {
-      event.preventDefault()
-      this.closeMenu()
-      return
+    switch (event.key) {
+      case "Escape":
+        event.preventDefault()
+        this.closeMenu()
+        return
+      case "Tab":
+        this.closeMenu()
+        return
+      case "ArrowDown":
+        event.preventDefault()
+        this.focusItemByOffset(1)
+        return
+      case "ArrowUp":
+        event.preventDefault()
+        this.focusItemByOffset(-1)
+        return
+      case "Home":
+        event.preventDefault()
+        this.itemTargets[0]?.focus()
+        return
+      case "End":
+        event.preventDefault()
+        this.itemTargets[this.itemTargets.length - 1]?.focus()
+        return
     }
 
     if (event.key >= "0" && event.key <= "5") {
@@ -133,6 +162,16 @@ export default class extends Controller {
         this.closeMenu()
       }
     }
+  }
+
+  focusItemByOffset(offset) {
+    const items = this.itemTargets
+    if (items.length === 0) return
+    const currentIndex = items.indexOf(document.activeElement)
+    const nextIndex = currentIndex === -1
+      ? (offset > 0 ? 0 : items.length - 1)
+      : (currentIndex + offset + items.length) % items.length
+    items[nextIndex]?.focus()
   }
 
   isShortcutToggle(event) {

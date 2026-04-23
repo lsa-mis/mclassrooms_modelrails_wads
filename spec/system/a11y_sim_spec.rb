@@ -58,5 +58,46 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
       expect(page).not_to have_css("body.a11y-sim-deuteranopia")
       expect(page).not_to have_css("body[class*='a11y-sim-']")
     end
+
+    describe "keyboard navigation" do
+      def press_key(key)
+        page.driver.with_playwright_page { |pw_page| pw_page.keyboard.press(key) }
+      end
+
+      it "moves focus to the next item on ArrowDown" do
+        visit root_path
+        dismiss_cookie_banner
+        find("[data-a11y-sim-target='trigger']").click
+        press_key("ArrowDown")
+        expect(page.evaluate_script("document.activeElement.dataset.mode")).to eq("blur")
+      end
+
+      it "wraps focus to the last item when ArrowUp is pressed from the first item" do
+        visit root_path
+        dismiss_cookie_banner
+        find("[data-a11y-sim-target='trigger']").click
+        press_key("ArrowUp")
+        expect(page.evaluate_script("document.activeElement.dataset.mode")).to eq("cataract")
+      end
+
+      it "jumps focus to the last item on End and first item on Home" do
+        visit root_path
+        dismiss_cookie_banner
+        find("[data-a11y-sim-target='trigger']").click
+        press_key("End")
+        expect(page.evaluate_script("document.activeElement.dataset.mode")).to eq("cataract")
+        press_key("Home")
+        expect(page.evaluate_script("document.activeElement.dataset.mode")).to eq("normal")
+      end
+
+      it "closes the menu when Tab is pressed" do
+        visit root_path
+        dismiss_cookie_banner
+        find("[data-a11y-sim-target='trigger']").click
+        expect(page).to have_css("[data-a11y-sim-target='menu']:not(.hidden)")
+        press_key("Tab")
+        expect(page).not_to have_css("[data-a11y-sim-target='menu']:not(.hidden)")
+      end
+    end
   end
 end
