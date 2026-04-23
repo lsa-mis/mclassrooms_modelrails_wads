@@ -36,6 +36,41 @@ bundle exec rspec --format documentation # Verbose output
 
 Coverage report is generated at `coverage/index.html`.
 
+## Development Tools
+
+These affordances only render in `Rails.env.development?` and are invisible in production.
+
+### Preview sent emails (letter_opener)
+
+The `letter_opener_web` engine is mounted at `/letter_opener` in development (`config/routes.rb`) and set as the mail delivery method. Every email sent in dev is captured and previewed in the browser instead of going out over SMTP.
+
+Two ways to open the inbox:
+
+- Visit `http://localhost:3000/letter_opener` directly
+- On the `sessions/check_email.html.erb` page (reached after requesting a magic link), the "Check your email" heading is itself a clickable link to the inbox, opens in a new tab. Saves a URL round-trip while iterating on auth flows.
+
+A dev-only CSP override at `config/initializers/letter_opener_web.rb` disables the app's content-security policy on the gem's controllers so its email preview iframe and inline scripts render. Safe because the engine is mounted only in development.
+
+### Accessibility simulation drop-up
+
+A dev-only widget in the footer cycles through visual-impairment filters applied to the whole page. Useful for spotting color-dependency issues, low-contrast problems, or layouts that fall apart without color.
+
+**Modes:** Normal · Blur · Grayscale · Deuteranopia · Low contrast · Cataract
+
+**Keyboard shortcuts** (active when the dropdown is open):
+
+- `Cmd/Ctrl+Shift+A` — open or close the dropdown
+- `0`–`5` — jump directly to a mode
+- `Esc` or `Tab` — close the menu
+
+State persists across reloads via `localStorage`. The filter is applied to `<body>` (so modals, toasts, and all Turbo-replaced content receive it). Deuteranopia uses an SVG color matrix (`<feColorMatrix>`); the others use CSS filters. A live region announces mode changes for screen-reader users.
+
+**Source:** `app/views/shared/_a11y_sim.html.erb`, `app/javascript/controllers/a11y_sim_controller.js`.
+
+### Cookie settings dispatch (how the footer button works)
+
+Biscuit's gem normally renders a floating "Manage cookies" button in the bottom-left corner. The app hides that button via CSS and replaces it with an in-footer button that triggers the gem's reopen action through DOM click dispatch. See `app/javascript/controllers/footer_controller.js` and the Footer Structure section of `ui-patterns.md` for the full pattern.
+
 ## Key Commands
 
 | Command | Purpose |
