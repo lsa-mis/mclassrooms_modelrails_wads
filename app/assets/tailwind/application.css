@@ -558,3 +558,12 @@ body.a11y-sim-deuteranopia { filter: url(#a11y-sim-deuteranopia); }
 body.a11y-sim-low_contrast { filter: contrast(0.5); }
 body.a11y-sim-cataract     { filter: blur(1.5px) contrast(0.8) brightness(1.1); }
 
+/* ==========================================================================
+   Override Biscuit's post-consent floating "Manage cookies" button.
+   We render our own footer-integrated link instead. The gem's button
+   remains in the DOM (footer_controller dispatches clicks to it).
+   ========================================================================== */
+
+.biscuit-manage-link {
+  display: none !important;
+}
