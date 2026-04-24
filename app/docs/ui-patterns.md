@@ -86,6 +86,16 @@ with default `210` (the app's sky base). When the column matches the
 default, the cascade computes values identical to the untouched tokens —
 no visual change. Explicit hue changes light up immediately.
 
+**Contrast caveat.** The `oklch(0.40 0.15 <hue>)` formula yields AAA-level
+(7:1) contrast on white for most hues, but perceived lightness in OKLCH
+varies by hue at a fixed `L` coordinate. Yellow-green hues in the
+~80–140 range read as lighter than the coordinate suggests and can dip
+below AAA (and in places below AA) on white backgrounds. The model
+validation allows any integer 0–360, so workspace owners who pick a hue
+in this band get buttons whose contrast is not guaranteed. This is a
+known gap and will be addressed alongside the planned OKLCH
+color-strategy unification; the default (`210`, sky) always meets AAA.
+
 ## Form Builder
 
 ModelRails includes a custom `TailwindFormBuilder` set as the default form builder. It provides:
@@ -216,7 +226,7 @@ ModelRails targets **WCAG 2.2 Level AAA**:
 |---------|---------------|
 | Touch targets | `min-h-[44px]` on all interactive elements |
 | Focus indicators | `focus:ring-2 focus:ring-interactive-focus` consistently |
-| Color contrast | Interactive token is primary-800 (7.56:1 AAA on white) |
+| Color contrast | Default interactive token is primary-800 (7.56:1 AAA on white). On workspace-branded routes, contrast varies by hue — see Workspace Branding caveat below. |
 | Skip navigation | `sr-only` link to `#main-content` at top of every page |
 | Screen readers | ARIA labels, live regions, roles on all dynamic content |
 | Motion | Animations respect `prefers-reduced-motion` |
