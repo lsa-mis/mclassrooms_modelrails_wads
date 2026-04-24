@@ -27,11 +27,13 @@
     <%= render "shared/header" %>
     <%= render "shared/toasts" %>
 
-    <%# Workspace branding (--ws-primary theming buttons/links/focus rings) is planned
-        but not yet implemented. When ready, set data-workspace-branded and --ws-primary
-        here based on a dedicated brand_color column. For now, primary_color only affects
-        the workspace icon/initials circle background via workspace_helper. %>
-    <main id="main-content" tabindex="-1" class="flex-1">
+    <main id="main-content"
+          tabindex="-1"
+          class="flex-1"
+          <% if Current.workspace %>
+            data-workspace-branded
+            style="--ws-primary: oklch(0.40 0.15 <%= Current.workspace.primary_color || 210 %>);"
+          <% end %>>
       <%= yield %>
     </main>
 
