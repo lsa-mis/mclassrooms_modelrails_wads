@@ -127,3 +127,121 @@ RSpec.describe Authentication, type: :model do
     end
   end
 end
+
+RSpec.describe Authentication, type: :model do
+  describe "verification state" do
+    let(:auth) { build(:authentication) }
+
+    describe "#verified?" do
+      it "is true when verified_at is present" do
+        auth.verified_at = Time.current
+        expect(auth.verified?).to be true
+      end
+
+      it "is false when verified_at is nil" do
+        auth.verified_at = nil
+        expect(auth.verified?).to be false
+      end
+    end
+
+    describe "#pending?" do
+      it "is true when verified_at is nil and verification_token is present" do
+        auth.verified_at = nil
+        auth.verification_token = "tok"
+        expect(auth.pending?).to be true
+      end
+
+      it "is false when verified_at is set" do
+        auth.verified_at = Time.current
+        auth.verification_token = "tok"
+        expect(auth.pending?).to be false
+      end
+
+      it "is false when verification_token is nil" do
+        auth.verified_at = nil
+        auth.verification_token = nil
+        expect(auth.pending?).to be false
+      end
+    end
+
+    describe "#token_expired?" do
+      it "is true when verification_sent_at is older than 24 hours" do
+        auth.verification_sent_at = 25.hours.ago
+        expect(auth.token_expired?).to be true
+      end
+
+      it "is false when within 24 hours" do
+        auth.verification_sent_at = 1.hour.ago
+        expect(auth.token_expired?).to be false
+      end
+
+      it "is false when verification_sent_at is nil" do
+        auth.verification_sent_at = nil
+        expect(auth.token_expired?).to be false
+      end
+    end
+
+    describe "#generate_verification_token!" do
+      let(:auth) { create(:authentication, verified_at: Time.current, verification_token: nil) }
+
+      it "sets a new token" do
+        auth.generate_verification_token!
+        expect(auth.verification_token).to be_present
+        expect(auth.verification_token.length).to be >= 32
+      end
+
+      it "sets verification_sent_at to now" do
+        freeze_time do
+          auth.generate_verification_token!
+          expect(auth.verification_sent_at).to eq(Time.current)
+        end
+      end
+
+      it "clears verified_at (token regeneration invalidates prior verification)" do
+        auth.generate_verification_token!
+        expect(auth.verified_at).to be_nil
+      end
+    end
+
+    describe "#verify!" do
+      let(:auth) do
+        create(:authentication,
+          verified_at: nil,
+          verification_token: "abc123",
+          verification_sent_at: 1.hour.ago)
+      end
+
+      it "sets verified_at to now" do
+        freeze_time do
+          auth.verify!
+          expect(auth.verified_at).to eq(Time.current)
+        end
+      end
+
+      it "clears verification_token" do
+        auth.verify!
+        expect(auth.verification_token).to be_nil
+      end
+
+      it "clears verification_sent_at" do
+        auth.verify!
+        expect(auth.verification_sent_at).to be_nil
+      end
+    end
+  end
+
+  describe "scopes" do
+    let!(:verified) { create(:authentication, verified_at: Time.current, verification_token: nil) }
+    let!(:pending)  { create(:authentication, verified_at: nil, verification_token: "tok", verification_sent_at: 1.hour.ago) }
+
+    it ".verified returns rows with verified_at set" do
+      expect(Authentication.verified).to include(verified)
+      expect(Authentication.verified).not_to include(pending)
+    end
+
+    it ".pending returns rows with verified_at nil and token present" do
+      expect(Authentication.pending).to include(pending)
+      expect(Authentication.pending).not_to include(verified)
+    end
+  end
+end
