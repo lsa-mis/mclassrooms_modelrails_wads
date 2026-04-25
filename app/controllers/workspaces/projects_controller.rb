@@ -58,7 +58,7 @@ module Workspaces
     end
 
     def project_params
-      params.require(:project).permit(:name, :description, :primary_color)
+      params.require(:project).permit(:name, :description)
     end
   end
 end
