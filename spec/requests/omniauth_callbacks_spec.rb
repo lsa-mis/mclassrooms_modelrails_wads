@@ -283,7 +283,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "redirects Eve with collision_other_user alert" do
       get "/auth/google_oauth2/callback"
-      expect(flash[:alert]).to include("already linked")
+      expect(flash[:alert]).to include("different user")
     end
   end
 
