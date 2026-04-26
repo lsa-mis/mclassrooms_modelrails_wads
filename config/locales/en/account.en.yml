@@ -74,6 +74,10 @@ en:
         success: "%{provider} linked. You can sign in with it."
         success_signed_out: "%{provider} linked. Sign in to continue."
         invalid_or_expired: "This confirmation link is invalid or expired. Sign in and request a new one from your connected accounts."
+      resend_verification:
+        resent: "We sent a fresh confirmation link to %{email}."
+        not_pending: "That sign-in method is already verified."
+        rate_limited: "Please wait a moment before requesting another confirmation email."
   identity_picker:
     preview: "Preview"
     last_updated: "Updated %{time} ago"

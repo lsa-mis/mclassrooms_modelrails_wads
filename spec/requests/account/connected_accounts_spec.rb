@@ -120,4 +120,75 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
     end
   end
+
+  describe "POST /account/connected_accounts/:id/resend_verification" do
+    let(:user) { create(:user) }
+    let(:pending_auth) do
+      user.authentications.create!(
+        provider: "google",
+        uid: "uid-2",
+        email: "pending@example.com",
+        verification_token: "old-token",
+        verification_sent_at: 1.hour.ago,
+        verified_at: nil
+      )
+    end
+    let(:verified_auth) do
+      user.authentications.create!(
+        provider: "github",
+        uid: "uid-3",
+        email: "verified@example.com",
+        verified_at: Time.current
+      )
+    end
+
+    before { sign_in(user) }
+
+    context "with a pending authentication" do
+      it "regenerates the token" do
+        old_token = pending_auth.verification_token
+        post resend_verification_account_connected_account_path(pending_auth)
+        expect(pending_auth.reload.verification_token).not_to eq(old_token)
+      end
+
+      it "enqueues a fresh verification email" do
+        expect {
+          post resend_verification_account_connected_account_path(pending_auth)
+        }.to have_enqueued_mail(AuthenticationMailer, :link_verification_email)
+      end
+
+      it "redirects to connected accounts with success" do
+        post resend_verification_account_connected_account_path(pending_auth)
+        expect(response).to redirect_to(account_connected_accounts_path)
+        expect(flash[:notice]).to include("pending@example.com")
+      end
+    end
+
+    context "with an already-verified authentication" do
+      it "does not change the auth" do
+        original_verified_at = verified_auth.verified_at
+        post resend_verification_account_connected_account_path(verified_auth)
+        expect(verified_auth.reload.verified_at).to eq(original_verified_at)
+      end
+
+      it "redirects with not_pending alert" do
+        post resend_verification_account_connected_account_path(verified_auth)
+        expect(flash[:alert]).to include("already verified")
+      end
+    end
+
+    context "rate limit" do
+      it "blocks the 4th request within 3 minutes" do
+        call_count = 0
+        allow(Rails.cache).to receive(:increment) do
+          call_count += 1
+          call_count
+        end
+
+        3.times { post resend_verification_account_connected_account_path(pending_auth) }
+        post resend_verification_account_connected_account_path(pending_auth)
+        expect(flash[:alert]).to include("wait a moment")
+      end
+    end
+  end
 end
