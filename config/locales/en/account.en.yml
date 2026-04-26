@@ -68,8 +68,8 @@ en:
         verified: "Verified"
         disconnect: "Disconnect"
       destroy:
-        success: "%{provider} has been disconnected."
-        last_method: "You cannot disconnect your only sign-in method."
+        success: "%{provider} unlinked."
+        cannot_remove_last_verified: "You can't remove your last verified sign-in method."
       verify:
         success: "%{provider} linked. You can sign in with it."
         success_signed_out: "%{provider} linked. Sign in to continue."

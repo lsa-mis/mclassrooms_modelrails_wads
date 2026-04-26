@@ -47,15 +47,15 @@ module Account
     end
 
     def destroy
-      authentication = Current.user.authentications.find(params[:id])
+      auth = Current.user.authentications.find(params[:id])
 
-      if Current.user.authentications.count <= 1
+      if auth.verified? && Current.user.authentications.verified.count <= 1
         redirect_to account_connected_accounts_path,
-          alert: t(".last_method")
+          alert: t(".cannot_remove_last_verified")
       else
-        authentication.destroy!
+        auth.destroy!
         redirect_to account_connected_accounts_path,
-          notice: t(".success", provider: authentication.provider.titleize)
+          notice: t(".success", provider: auth.provider.titleize)
       end
     end
   end

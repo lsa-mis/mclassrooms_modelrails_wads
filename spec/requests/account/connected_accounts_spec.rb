@@ -34,12 +34,12 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
 
       context "with only one auth method" do
-        let!(:email_auth) { create(:authentication, user: user, provider: "email") }
+        let!(:email_auth) { create(:authentication, :verified, user: user, provider: "email") }
 
         it "prevents unlinking the last method" do
           delete account_connected_account_path(email_auth)
           expect(response).to redirect_to(account_connected_accounts_path)
-          expect(flash[:alert]).to eq(I18n.t("account.connected_accounts.destroy.last_method"))
+          expect(flash[:alert]).to eq(I18n.t("account.connected_accounts.destroy.cannot_remove_last_verified"))
           expect(user.authentications.count).to eq(1)
         end
       end
@@ -117,6 +117,42 @@ RSpec.describe "Account Connected Accounts", type: :request do
       it "redirects with an invalid-or-expired alert" do
         get verify_account_connected_accounts_path(token: original_token)
         expect(flash[:alert]).to include("invalid or expired")
+      end
+    end
+  end
+
+  describe "DELETE /account/connected_accounts/:id (last verified method protection)" do
+    let(:user) { create(:user) }
+    before { sign_in(user) }
+
+    context "user has only one verified auth and one pending auth" do
+      let!(:verified) { user.authentications.create!(provider: "email", uid: user.email_address,
+        email: user.email_address, verified_at: Time.current) }
+      let!(:pending) { user.authentications.create!(provider: "google", uid: "g-1",
+        email: "alice.work@gmail.com",
+        verification_token: "tok", verification_sent_at: 1.hour.ago, verified_at: nil) }
+
+      it "blocks removal of the verified auth" do
+        delete account_connected_account_path(verified)
+        expect(verified.reload).to be_persisted
+        expect(flash[:alert]).to include("last verified")
+      end
+
+      it "allows cancellation of the pending auth" do
+        delete account_connected_account_path(pending)
+        expect(Authentication.exists?(pending.id)).to be false
+      end
+    end
+
+    context "user has two verified auths" do
+      let!(:auth1) { user.authentications.create!(provider: "email", uid: user.email_address,
+        email: user.email_address, verified_at: Time.current) }
+      let!(:auth2) { user.authentications.create!(provider: "google", uid: "g-1",
+        email: user.email_address, verified_at: Time.current) }
+
+      it "allows removal of one" do
+        delete account_connected_account_path(auth1)
+        expect(Authentication.exists?(auth1.id)).to be false
       end
     end
   end
