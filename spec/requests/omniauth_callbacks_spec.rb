@@ -218,6 +218,75 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
   end
 
+  describe "re-OAuth on existing pending authentication" do
+    let(:user) { create(:user, email_address: "bob@example.com") }
+    let!(:pending_auth) do
+      user.authentications.create!(
+        provider: "google", uid: "google-pending",
+        email: "bob.work@gmail.com",
+        verification_token: "old-token", verification_sent_at: 2.hours.ago,
+        verified_at: nil
+      )
+    end
+
+    before do
+      OmniAuth.config.test_mode = true
+      OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+        provider: "google", uid: "google-pending",
+        info: { email: "bob.work@gmail.com" },
+        credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
+      )
+    end
+    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
+
+    it "regenerates the verification token" do
+      old_token = pending_auth.verification_token
+      get "/auth/google_oauth2/callback"
+      expect(pending_auth.reload.verification_token).not_to eq(old_token)
+    end
+
+    it "enqueues a fresh verification email" do
+      expect {
+        get "/auth/google_oauth2/callback"
+      }.to have_enqueued_mail(AuthenticationMailer, :link_verification_email)
+    end
+
+    it "refuses to sign in (does NOT create a session)" do
+      get "/auth/google_oauth2/callback"
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:notice]).to include("fresh confirmation link")
+    end
+  end
+
+  describe "cross-user collision" do
+    let(:alice) { create(:user, email_address: "alice@example.com") }
+    let(:eve)   { create(:user, email_address: "eve@example.com") }
+
+    before do
+      alice.authentications.create!(provider: "google", uid: "shared-uid",
+        email: "alice@example.com", verified_at: Time.current)
+      sign_in(eve)
+      OmniAuth.config.test_mode = true
+      OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+        provider: "google", uid: "shared-uid",
+        info: { email: "alice@example.com" },
+        credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
+      )
+    end
+    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
+
+    it "does not transfer Alice's auth to Eve" do
+      expect {
+        get "/auth/google_oauth2/callback"
+      }.not_to change { alice.authentications.find_by(provider: "google").user_id }
+    end
+
+    it "redirects Eve with collision_other_user alert" do
+      get "/auth/google_oauth2/callback"
+      expect(flash[:alert]).to include("already linked")
+    end
+  end
+
   describe "signed-in user linking (verified flow)" do
     let(:user) { create(:user, email_address: "alice@home.com") }
 
