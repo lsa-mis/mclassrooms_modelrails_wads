@@ -308,5 +308,49 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         expect(flash[:alert]).to include("already linked")
       end
     end
+
+    context "when OAuth email matches user's primary email with different case" do
+      before do
+        OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+          provider: "google", uid: "google-case-1",
+          info: { email: "Alice@Home.com", name: "Alice" },
+          credentials: { token: "tok", refresh_token: "rtok", expires_at: 1.hour.from_now.to_i }
+        )
+      end
+
+      it "auto-verifies (case-insensitive comparison)" do
+        get "/auth/google_oauth2/callback"
+        auth = user.authentications.find_by(provider: "google")
+        expect(auth).to be_verified
+        expect(auth.verification_token).to be_nil
+      end
+    end
+
+    context "when OAuth email is missing" do
+      before do
+        OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+          provider: "google", uid: "google-noemail-1",
+          info: { email: nil, name: "Alice" },
+          credentials: { token: "tok", refresh_token: nil, expires_at: nil }
+        )
+      end
+
+      it "does not create an authentication" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change { Authentication.count }
+      end
+
+      it "does not enqueue any mail" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to have_enqueued_mail(AuthenticationMailer, :link_verification_email)
+      end
+
+      it "redirects with linking_failed alert" do
+        get "/auth/google_oauth2/callback"
+        expect(flash[:alert]).to include("couldn't link")
+      end
+    end
   end
 end

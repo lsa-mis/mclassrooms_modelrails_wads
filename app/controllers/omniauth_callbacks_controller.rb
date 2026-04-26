@@ -51,7 +51,13 @@ class OmniauthCallbacksController < ApplicationController
     end
 
     oauth_email = auth_hash.info.email
-    email_matches = oauth_email.present? && oauth_email == user.email_address
+    if oauth_email.blank?
+      redirect_to account_connected_accounts_path,
+        alert: t("omniauth_callbacks.create.linking_failed")
+      return
+    end
+
+    email_matches = oauth_email.strip.downcase == user.email_address
 
     auth = user.authentications.build(
       provider: auth_hash.provider,
@@ -66,8 +72,11 @@ class OmniauthCallbacksController < ApplicationController
       redirect_to account_connected_accounts_path,
         notice: t("omniauth_callbacks.create.linked", provider: auth_hash.provider.titleize)
     else
+      auth.assign_attributes(
+        verification_token: SecureRandom.urlsafe_base64(32),
+        verification_sent_at: Time.current
+      )
       auth.save!
-      auth.generate_verification_token!
       AuthenticationMailer.link_verification_email(auth).deliver_later
       flash[:confirming_email_for] = auth.id
       redirect_to account_connected_accounts_path,
