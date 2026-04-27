@@ -73,6 +73,8 @@ en:
         resend_action: "Resend confirmation"
         title: "Connected accounts"
         verified: "Verified"
+        pending_aria_label: "%{provider} sign-in method, pending verification"
+        verified_aria_label: "%{provider} sign-in method, verified"
       destroy:
         success: "%{provider} unlinked."
         cannot_remove_last_verified: "You can't remove your last verified sign-in method."

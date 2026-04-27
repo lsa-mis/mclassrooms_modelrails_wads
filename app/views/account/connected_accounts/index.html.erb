@@ -5,14 +5,15 @@
   </h1>
 
   <% if (auth_id = flash[:confirming_email_for]) && (pending = @authentications.find { |a| a.id == auth_id }) %>
-    <div class="mt-6 rounded-lg border border-info-border bg-info-surface p-4 text-sm text-info">
+    <div class="mt-6 rounded-lg border border-info-border bg-info-surface p-4 text-sm text-info" role="status" aria-live="polite" aria-atomic="true">
       <%= t("account.connected_accounts.index.confirming_banner_html", email: pending.email, provider: pending.display_provider) %>
     </div>
   <% end %>
 
-  <div class="mt-8 space-y-4">
+  <ul role="list" class="mt-8 space-y-4">
     <% @authentications.each do |authentication| %>
-      <div class="flex items-center justify-between p-4 border rounded-lg <%= authentication.pending? ? "bg-info-surface border-info-border" : "border-border" %>">
+      <li class="flex items-center justify-between p-4 border rounded-lg <%= authentication.pending? ? "bg-info-surface border-info-border" : "border-border" %>"
+          aria-label="<%= authentication.pending? ? t("account.connected_accounts.index.pending_aria_label", provider: authentication.display_provider) : t("account.connected_accounts.index.verified_aria_label", provider: authentication.display_provider) %>">
         <div>
           <p class="font-medium text-text-heading">
             <%= authentication.display_provider %>
@@ -60,7 +61,7 @@
                           min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2" %>
           <% end %>
         </div>
-      </div>
+      </li>
     <% end %>
-  </div>
+  </ul>
 </div>

@@ -94,14 +94,16 @@ OAuth is optional — email/password sign-up works without it.
 
 ### OAuth
 - Google and GitHub sign-in via OmniAuth
-- Automatic account linking by email for existing users
-- Signed-in users can link additional providers
+- Automatic account linking by email for new OAuth signups (matches verified existing users)
+- Signed-in users can link additional providers; if the OAuth-returned email matches the user's primary email, the link auto-verifies, otherwise a verification email is sent to the OAuth address and the link stays pending until clicked
+- Pending OAuth authentications cannot sign in. Users can resend the confirmation email (rate-limited per user) or cancel the pending link from connected accounts
+- 24-hour token expiry on verification links; cross-user collision blocked; per-user rate limit on resend
 - OAuth-only users can add email/password sign-in
 
 ### Account management
 - Profile editing (name, email)
 - Avatar upload (Active Storage) with Gravatar fallback
-- Connected accounts view with unlink protection (can't remove last sign-in method)
+- Connected accounts view with last-verified-method protection (can't remove the only verified sign-in method; pending auths can always be cancelled)
 - Theme preferences (light, dark, system) with Stimulus controller and Turbo Stream updates
 
 ### UI
