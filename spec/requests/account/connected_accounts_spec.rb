@@ -274,13 +274,13 @@ RSpec.describe "Account Connected Accounts", type: :request do
     let(:user) { create(:user) }
     before { sign_in(user) }
 
-    context "concurrency safety" do
+    context "destroy under transactional wrap (sanity check)" do
       let!(:verified1) { user.authentications.create!(provider: "email", uid: user.email_address,
         email: user.email_address, verified_at: Time.current) }
       let!(:verified2) { user.authentications.create!(provider: "google", uid: "g-1",
         email: user.email_address, verified_at: Time.current) }
 
-      it "destroys one of two verified auths" do
+      it "still destroys one of two verified auths after the transaction wrapping" do
         expect {
           delete account_connected_account_path(verified1)
         }.to change(user.authentications.verified, :count).by(-1)

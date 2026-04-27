@@ -22,6 +22,8 @@ module Account
         return
       end
 
+      # Cross-user case reuses invalid_or_expired flash deliberately:
+      # never confirm or deny that a token belongs to a different account.
       if authenticated? && Current.user.id != auth.user_id
         redirect_to account_connected_accounts_path,
           alert: t(".invalid_or_expired")
@@ -54,20 +56,25 @@ module Account
     end
 
     def destroy
-      auth = Current.user.authentications.find(params[:id])
+      destroyed_auth = nil
 
       destroyed = Authentication.transaction do
-        if auth.verified? && Current.user.authentications.lock.verified.count <= 1
+        # `.lock` issues SELECT FOR UPDATE on Postgres/MySQL. SQLite no-ops it,
+        # but BEGIN IMMEDIATE (Rails default) gives database-wide write
+        # serialization for the transaction's duration — same correctness.
+        destroyed_auth = Current.user.authentications.lock.find(params[:id])
+
+        if destroyed_auth.verified? && Current.user.authentications.verified.count <= 1
           false
         else
-          auth.destroy!
+          destroyed_auth.destroy!
           true
         end
       end
 
       if destroyed
         redirect_to account_connected_accounts_path,
-          notice: t(".success", provider: auth.provider.titleize)
+          notice: t(".success", provider: destroyed_auth.provider.titleize)
       else
         redirect_to account_connected_accounts_path,
           alert: t(".cannot_remove_last_verified")
