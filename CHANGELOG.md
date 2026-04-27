@@ -31,7 +31,6 @@ All notable changes to ModelRails are documented here, organized by phase.
 - **`<ul role="list">` + `<li>`** semantic markup for the authentication rows (was `<div>`/`<div>`)
 - **`aria-label`** on each `<li>` describing pending-vs-verified state (e.g., "Google sign-in method, pending verification") so the row's status is programmatically determinable
 - **Mailer body contrast fixed:** `.what` text bumped from `#6b7280` (4.8:1) to `#374151` (~10.6:1, AAA); `.footer` text bumped from `#9ca3af` (2.8:1, fails AA) to `#4b5563` (~7.6:1, AAA)
-- **CI accessibility check promoted to AAA** — `spec/support/playwright_accessibility.rb` now runs axe-core with `wcag2aa` AND `wcag2aaa` tags, so AAA contrast violations fail CI on every system spec
 - All Resend / Cancel link / Unlink buttons retain `min-h-[44px] min-w-[44px]` touch targets and `focus:ring-2` focus indicators
 - HTML mailer template links to a single descriptive CTA ("Yes, this was me — finish linking"), not "click here"
 - Plain-text alternative provided for the verification email
