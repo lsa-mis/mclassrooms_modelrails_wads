@@ -3,6 +3,7 @@ module Workspaces
     include WorkspaceScoped
 
     rate_limit to: 10, within: 3.minutes, only: :resend,
+      by: -> { Current.user&.id || request.remote_ip },
       with: -> { redirect_to workspace_invitations_path(@workspace), alert: t("workspaces.invitations.resend.rate_limited") }
 
     def index

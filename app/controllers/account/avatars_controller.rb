@@ -3,6 +3,7 @@ module Account
     include CropCoordinatable
 
     rate_limit to: 20, within: 3.minutes, only: :update,
+      by: -> { Current.user&.id || request.remote_ip },
       with: -> {
         respond_to do |format|
           format.turbo_stream do
