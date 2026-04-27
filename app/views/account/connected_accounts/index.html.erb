@@ -12,11 +12,13 @@
 
   <ul role="list" class="mt-8 space-y-4">
     <% @authentications.each do |authentication| %>
-      <li class="flex items-center justify-between p-4 border rounded-lg <%= authentication.pending? ? "bg-info-surface border-info-border" : "border-border" %>"
-          aria-label="<%= authentication.pending? ? t("account.connected_accounts.index.pending_aria_label", provider: authentication.display_provider) : t("account.connected_accounts.index.verified_aria_label", provider: authentication.display_provider) %>">
+      <li class="flex items-center justify-between p-4 border rounded-lg <%= authentication.pending? ? "bg-info-surface border-info-border" : "border-border" %>">
         <div>
           <p class="font-medium text-text-heading">
             <%= authentication.display_provider %>
+            <span class="sr-only">
+              <%= authentication.pending? ? t("account.connected_accounts.index.pending_state_sr") : t("account.connected_accounts.index.verified_state_sr") %>
+            </span>
           </p>
           <% if authentication.pending? %>
             <p class="text-xs text-info">
@@ -30,7 +32,9 @@
               <%= authentication.email? ? t("account.connected_accounts.index.email_provider") : (authentication.email.presence || authentication.uid) %>
             </p>
             <% if authentication.verified? %>
-              <span class="text-xs text-success"><%= t("account.connected_accounts.index.verified") %></span>
+              <span class="inline-flex items-center px-2.5 py-1 rounded bg-success-surface text-xs font-medium text-success">
+                <%= t("account.connected_accounts.index.verified") %>
+              </span>
             <% end %>
           <% end %>
         </div>
@@ -40,6 +44,7 @@
             <%= button_to t("account.connected_accounts.index.resend_action"),
                   resend_verification_account_connected_account_path(authentication),
                   method: :post,
+                  aria: { label: t("account.connected_accounts.index.resend_action_aria_label", provider: authentication.display_provider) },
                   class: "text-sm text-interactive underline hover:no-underline
                           focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded
                           min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2",
@@ -47,7 +52,8 @@
             <%= button_to t("account.connected_accounts.index.cancel_action"),
                   account_connected_account_path(authentication),
                   method: :delete,
-                  class: "text-sm text-danger underline hover:no-underline
+                  aria: { label: t("account.connected_accounts.index.cancel_action_aria_label", provider: authentication.display_provider) },
+                  class: "text-sm font-medium text-danger underline hover:no-underline
                           focus:outline-none focus:ring-2 focus:ring-danger rounded
                           min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2",
                   form: { class: "inline" } %>
@@ -56,7 +62,8 @@
                   account_connected_account_path(authentication),
                   method: :delete,
                   data: { turbo_confirm: t("account.connected_accounts.index.disconnect_confirm") },
-                  class: "text-sm text-danger underline hover:no-underline
+                  aria: { label: t("account.connected_accounts.index.disconnect_action_aria_label", provider: authentication.display_provider) },
+                  class: "text-sm font-medium text-danger underline hover:no-underline
                           focus:outline-none focus:ring-2 focus:ring-danger rounded
                           min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2" %>
           <% end %>

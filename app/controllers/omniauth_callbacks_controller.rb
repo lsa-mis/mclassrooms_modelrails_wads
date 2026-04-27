@@ -69,7 +69,7 @@ class OmniauthCallbacksController < ApplicationController
       return
     end
 
-    email_matches = oauth_email.strip.downcase == user.email_address
+    email_matches = oauth_email.strip.downcase == user.email_address.to_s.downcase
 
     auth = user.authentications.build(
       provider: normalized_provider(auth_hash),

@@ -32,10 +32,14 @@ class Authentication < ApplicationRecord
     verified_at.nil? && verification_token.present?
   end
 
+  # Returns true only if a token was sent AND is now stale. False when no token was sent.
+  # Used by the OAuth verification flow where the token must already exist (find_by(token:)).
   def token_expired?
     verification_sent_at.present? && verification_sent_at < TOKEN_LIFETIME.ago
   end
 
+  # Returns true if no token was ever sent OR the sent token is now stale.
+  # Pessimistic-nil semantics — used by registration email verification where "no token" means "expired".
   def verification_token_expired?
     verification_sent_at.nil? || token_expired?
   end
