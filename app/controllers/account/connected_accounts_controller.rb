@@ -64,7 +64,7 @@ module Account
         # serialization for the transaction's duration — same correctness.
         destroyed_auth = Current.user.authentications.lock.find(params[:id])
 
-        if destroyed_auth.verified? && Current.user.authentications.verified.count <= 1
+        if destroyed_auth.only_verified_remaining?
           false
         else
           destroyed_auth.destroy!

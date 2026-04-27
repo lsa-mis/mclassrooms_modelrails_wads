@@ -3,6 +3,17 @@ class Authentication < ApplicationRecord
 
   enum :provider, { email: "email", google: "google", github: "github" }
 
+  # Authentication needs all three lifecycle events to broadcast, but after_commit
+  # on: array does not reliably fire in Rails transactional test fixtures. Override
+  # broadcast_events to [] so the Broadcastable concern skips its default registration,
+  # then register each event explicitly using lambda form to avoid ActiveSupport's
+  # same-symbol deduplication (which would otherwise collapse three registrations to one).
+  def self.broadcast_events = []
+  include Broadcastable
+  after_create_commit  -> { broadcast_changes }
+  after_update_commit  -> { broadcast_changes }
+  after_destroy_commit -> { broadcast_changes }
+
   def self.display_name_for(provider_string)
     I18n.t("authentication.providers.#{provider_string}",
            default: provider_string.to_s.titleize)
@@ -30,6 +41,12 @@ class Authentication < ApplicationRecord
 
   def pending?
     verified_at.nil? && verification_token.present?
+  end
+
+  # True iff (a) this auth is verified AND (b) it's the only verified auth for the user.
+  # Used by the destroy guard to prevent removing the user's last verified sign-in method.
+  def only_verified_remaining?
+    verified? && user.authentications.verified.count <= 1
   end
 
   # Returns true only if a token was sent AND is now stale. False when no token was sent.
@@ -63,5 +80,11 @@ class Authentication < ApplicationRecord
       verification_token: nil,
       verification_sent_at: nil
     )
+  end
+
+  private
+
+  def broadcast_target
+    [ user, :authentications ]
   end
 end

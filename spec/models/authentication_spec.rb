@@ -269,4 +269,66 @@ RSpec.describe Authentication, type: :model do
       expect(auth.display_provider).to eq("GitHub")
     end
   end
+
+  describe "#only_verified_remaining?" do
+    let(:user) { create(:user) }
+
+    context "when this is the only verified auth for the user" do
+      let!(:auth) { user.authentications.create!(provider: "email", uid: user.email_address, email: user.email_address, verified_at: Time.current) }
+
+      it "returns true" do
+        expect(auth.only_verified_remaining?).to be true
+      end
+    end
+
+    context "when other verified auths exist for the user" do
+      let!(:auth) { user.authentications.create!(provider: "email", uid: user.email_address, email: user.email_address, verified_at: Time.current) }
+      let!(:other_verified) { user.authentications.create!(provider: "google", uid: "g-1", email: "test@example.com", verified_at: Time.current) }
+
+      it "returns false" do
+        expect(auth.only_verified_remaining?).to be false
+      end
+    end
+
+    context "when this auth is itself unverified" do
+      let!(:auth) { user.authentications.create!(provider: "email", uid: user.email_address, email: user.email_address, verified_at: nil, verification_token: "tok", verification_sent_at: 1.hour.ago) }
+
+      it "returns false (the auth being deleted isn't a verified auth, so deletion can't reduce the verified count)" do
+        expect(auth.only_verified_remaining?).to be false
+      end
+    end
+  end
+
+  describe "broadcasting" do
+    let(:user) { create(:user) }
+    # Turbo broadcasts to the stream name computed by stream_name_from([user, :authentications]),
+    # which concatenates each element's to_gid_param (or to_param) with ":".
+    let(:stream_name) { [ user, :authentications ].map { |s| s.try(:to_gid_param) || s.to_param }.join(":") }
+
+    it "broadcasts a refresh to the user's authentications stream on create" do
+      expect {
+        user.authentications.create!(provider: "google", uid: "g-broadcast-1",
+          email: "test@example.com", verified_at: Time.current)
+      }.to have_broadcasted_to(stream_name)
+    end
+
+    it "broadcasts a refresh on update (e.g., verify!)" do
+      auth = user.authentications.create!(provider: "google", uid: "g-broadcast-2",
+        email: "test@example.com",
+        verification_token: "tok", verification_sent_at: 1.hour.ago, verified_at: nil)
+
+      expect {
+        auth.verify!
+      }.to have_broadcasted_to(stream_name)
+    end
+
+    it "broadcasts a refresh on destroy (cancel pending or unlink)" do
+      auth = user.authentications.create!(provider: "google", uid: "g-broadcast-3",
+        email: "test@example.com", verified_at: Time.current)
+
+      expect {
+        auth.destroy!
+      }.to have_broadcasted_to(stream_name)
+    end
+  end
 end

@@ -1,10 +1,6 @@
 class OmniauthCallbacksController < ApplicationController
   allow_unauthenticated_access
 
-  # Maps OmniAuth strategy names to the canonical provider enum values.
-  # Real Google OAuth callbacks return "google_oauth2"; the enum accepts only "google".
-  PROVIDER_MAP = { "google_oauth2" => "google" }.freeze
-
   def create
     auth_hash = request.env["omniauth.auth"]
     resume_session
@@ -112,7 +108,7 @@ class OmniauthCallbacksController < ApplicationController
   end
 
   def normalized_provider(auth_hash)
-    PROVIDER_MAP.fetch(auth_hash.provider, auth_hash.provider)
+    OmniauthAdapters.normalize_provider(auth_hash.provider)
   end
 
   def oauth_attrs(auth_hash)
