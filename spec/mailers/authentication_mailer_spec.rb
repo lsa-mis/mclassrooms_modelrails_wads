@@ -91,5 +91,9 @@ RSpec.describe AuthenticationMailer, type: :mailer do
       expect(preheader_match).not_to be_nil, "expected a <span class='preheader'> snippet near the top of the body"
       expect(preheader_match[1].strip).to be_present
     end
+
+    it "renders exactly one <html> element (layout-wrapped, not nested)" do
+      expect(mail.html_part.body.encoded.scan(/<html[^>]*>/i).length).to eq(1)
+    end
   end
 end
