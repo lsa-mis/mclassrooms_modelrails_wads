@@ -78,5 +78,18 @@ RSpec.describe AuthenticationMailer, type: :mailer do
       expect(mail.html_part).to be_present
       expect(mail.text_part).to be_present
     end
+
+    it "wraps the HTML in a <html lang='en'> element (WCAG 3.1.1)" do
+      expect(mail.html_part.body.encoded).to include('<html lang="en">')
+    end
+
+    it "includes a preheader snippet for inbox preview" do
+      # Preheader text appears in inbox previews. Should be a hidden span
+      # near the top of the body containing a useful preview of the email.
+      html = mail.html_part.body.encoded
+      preheader_match = html.match(/<span[^>]*class="preheader"[^>]*>([^<]*)<\/span>/)
+      expect(preheader_match).not_to be_nil, "expected a <span class='preheader'> snippet near the top of the body"
+      expect(preheader_match[1].strip).to be_present
+    end
   end
 end

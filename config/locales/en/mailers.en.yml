@@ -31,3 +31,4 @@ en:
       cta: "Yes, this was me — finish linking"
       what_is_this: "We email you whenever a new sign-in method is added to your account. This protects your account from someone else linking it."
       footer: "If you didn't try to add this, ignore this email — your account stays untouched."
+      preheader: "Confirm %{email} to finish linking your sign-in method."
