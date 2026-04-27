@@ -22,14 +22,14 @@ RSpec.describe "Account Connected Accounts", type: :request do
     end
 
     describe "DELETE /account/connected_accounts/:id" do
-      context "with multiple auth methods" do
-        let!(:email_auth) { create(:authentication, user: user, provider: "email") }
-        let!(:google_auth) { create(:authentication, :google, user: user) }
+      context "with multiple verified auth methods" do
+        let!(:email_auth) { create(:authentication, :verified, user: user, provider: "email") }
+        let!(:google_auth) { create(:authentication, :google, :verified, user: user) }
 
         it "removes the provider" do
           expect {
             delete account_connected_account_path(google_auth)
-          }.to change(user.authentications, :count).by(-1)
+          }.to change(user.authentications.verified, :count).by(-1)
         end
       end
 
@@ -182,6 +182,28 @@ RSpec.describe "Account Connected Accounts", type: :request do
         expect(Authentication.exists?(auth1.id)).to be false
       end
     end
+
+    context "user has zero verified auths and one pending auth" do
+      let!(:only_pending) do
+        user.authentications.create!(
+          provider: "google",
+          uid: "g-only",
+          email: "alice.work@gmail.com",
+          verification_token: "tok",
+          verification_sent_at: 1.hour.ago,
+          verified_at: nil
+        )
+      end
+
+      it "allows cancellation of the pending auth (current behavior)" do
+        # Documenting current behavior: cancelling the only auth leaves the user with zero auths.
+        # If we ever decide to forbid this, this test should be updated rather than silently
+        # changing behavior.
+        expect {
+          delete account_connected_account_path(only_pending)
+        }.to change(user.authentications, :count).by(-1)
+      end
+    end
   end
 
   describe "POST /account/connected_accounts/:id/resend_verification" do
@@ -266,6 +288,38 @@ RSpec.describe "Account Connected Accounts", type: :request do
 
         post resend_verification_account_connected_account_path(pending_auth)
         expect(captured_key).to include(user.id.to_s)
+      end
+    end
+
+    context "with another user's authentication id (IDOR protection)" do
+      let(:other_user) { create(:user) }
+      let!(:other_pending_auth) do
+        other_user.authentications.create!(
+          provider: "google",
+          uid: "other-uid",
+          email: "other.work@example.com",
+          verification_token: "other-token",
+          verification_sent_at: 1.hour.ago,
+          verified_at: nil
+        )
+      end
+
+      it "does not process the request (IDOR protection via RecordNotFound)" do
+        # ApplicationController rescues RecordNotFound and redirects with a generic alert.
+        # This asserts that the scoped lookup (Current.user.authentications.find) blocks
+        # cross-user access — if a future refactor used Authentication.find instead, the
+        # auth would be found and the token would be regenerated (caught by the next example).
+        post resend_verification_account_connected_account_path(other_pending_auth)
+        expect(flash[:alert]).to eq(I18n.t("errors.not_found"))
+      end
+
+      it "does not regenerate the other user's token" do
+        original_token = other_pending_auth.verification_token
+        begin
+          post resend_verification_account_connected_account_path(other_pending_auth)
+        rescue ActiveRecord::RecordNotFound
+        end
+        expect(other_pending_auth.reload.verification_token).to eq(original_token)
       end
     end
   end
