@@ -298,4 +298,37 @@ RSpec.describe Authentication, type: :model do
       end
     end
   end
+
+  describe "broadcasting" do
+    let(:user) { create(:user) }
+    # Turbo broadcasts to the stream name computed by stream_name_from([user, :authentications]),
+    # which concatenates each element's to_gid_param (or to_param) with ":".
+    let(:stream_name) { [ user, :authentications ].map { |s| s.try(:to_gid_param) || s.to_param }.join(":") }
+
+    it "broadcasts a refresh to the user's authentications stream on create" do
+      expect {
+        user.authentications.create!(provider: "google", uid: "g-broadcast-1",
+          email: "test@example.com", verified_at: Time.current)
+      }.to have_broadcasted_to(stream_name)
+    end
+
+    it "broadcasts a refresh on update (e.g., verify!)" do
+      auth = user.authentications.create!(provider: "google", uid: "g-broadcast-2",
+        email: "test@example.com",
+        verification_token: "tok", verification_sent_at: 1.hour.ago, verified_at: nil)
+
+      expect {
+        auth.verify!
+      }.to have_broadcasted_to(stream_name)
+    end
+
+    it "broadcasts a refresh on destroy (cancel pending or unlink)" do
+      auth = user.authentications.create!(provider: "google", uid: "g-broadcast-3",
+        email: "test@example.com", verified_at: Time.current)
+
+      expect {
+        auth.destroy!
+      }.to have_broadcasted_to(stream_name)
+    end
+  end
 end

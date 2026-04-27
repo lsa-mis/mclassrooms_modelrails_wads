@@ -4,6 +4,8 @@
     <%= t("account.connected_accounts.index.title") %>
   </h1>
 
+  <%= turbo_stream_from Current.user, :authentications %>
+
   <% if (auth_id = flash[:confirming_email_for]) && (pending = @authentications.find { |a| a.id == auth_id }) %>
     <div class="mt-6 rounded-lg border border-info-border bg-info-surface p-4 text-sm text-info" role="status" aria-live="polite" aria-atomic="true">
       <%= t("account.connected_accounts.index.confirming_banner_html", email: pending.email, provider: pending.display_provider) %>

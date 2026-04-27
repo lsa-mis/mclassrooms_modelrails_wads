@@ -19,6 +19,13 @@ RSpec.describe "Account Connected Accounts", type: :request do
         get account_connected_accounts_path
         expect(response).to have_http_status(:ok)
       end
+
+      it "subscribes to the user's authentications stream for live updates" do
+        create(:authentication, :google, user: user)
+        get account_connected_accounts_path
+        expect(response.body).to include("turbo-cable-stream-source")
+        expect(response.body).to match(/signed-stream-name="[^"]+"/)
+      end
     end
 
     describe "DELETE /account/connected_accounts/:id" do

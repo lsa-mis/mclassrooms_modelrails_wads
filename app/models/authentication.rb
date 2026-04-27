@@ -3,6 +3,17 @@ class Authentication < ApplicationRecord
 
   enum :provider, { email: "email", google: "google", github: "github" }
 
+  # Authentication needs all three lifecycle events to broadcast, but after_commit
+  # on: array does not reliably fire in Rails transactional test fixtures. Override
+  # broadcast_events to [] so the Broadcastable concern skips its default registration,
+  # then register each event explicitly using lambda form to avoid ActiveSupport's
+  # same-symbol deduplication (which would otherwise collapse three registrations to one).
+  def self.broadcast_events = []
+  include Broadcastable
+  after_create_commit  -> { broadcast_changes }
+  after_update_commit  -> { broadcast_changes }
+  after_destroy_commit -> { broadcast_changes }
+
   def self.display_name_for(provider_string)
     I18n.t("authentication.providers.#{provider_string}",
            default: provider_string.to_s.titleize)
@@ -69,5 +80,11 @@ class Authentication < ApplicationRecord
       verification_token: nil,
       verification_sent_at: nil
     )
+  end
+
+  private
+
+  def broadcast_target
+    [ user, :authentications ]
   end
 end
