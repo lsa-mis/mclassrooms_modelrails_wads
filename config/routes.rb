@@ -24,7 +24,14 @@ Rails.application.routes.draw do
       get :hub
     end
     resource :theme_preference, only: [ :update ]
-    resources :connected_accounts, only: [ :index, :destroy ]
+    resources :connected_accounts, only: [ :index, :destroy ] do
+      member do
+        post :resend_verification
+      end
+      collection do
+        get "verify/:token", action: :verify, as: :verify
+      end
+    end
     resource :email_confirmation, only: [ :show, :destroy ]
   end
 

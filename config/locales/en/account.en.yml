@@ -63,13 +63,26 @@ en:
         invalid_theme: "Invalid theme."
     connected_accounts:
       index:
-        title: "Connected accounts"
-        email_provider: "Email and password"
-        verified: "Verified"
+        cancel_action: "Cancel link"
+        confirming_banner_html: "Almost there — we sent a confirmation link to <strong>%{email}</strong> to make sure that's really you. Click the link to finish linking %{provider}."
         disconnect: "Disconnect"
+        email_provider: "Email and password"
+        pending_help: "Check your email for a confirmation link."
+        pending_label: "Confirming %{email}"
+        resend_action: "Resend confirmation"
+        title: "Connected accounts"
+        verified: "Verified"
       destroy:
-        success: "%{provider} has been disconnected."
-        last_method: "You cannot disconnect your only sign-in method."
+        success: "%{provider} unlinked."
+        cannot_remove_last_verified: "You can't remove your last verified sign-in method."
+      verify:
+        success: "%{provider} linked. You can sign in with it."
+        success_signed_out: "%{provider} linked. Sign in to continue."
+        invalid_or_expired: "This confirmation link is invalid or expired. Sign in and request a new one from your connected accounts."
+      resend_verification:
+        resent: "We sent a fresh confirmation link to %{email}."
+        not_pending: "That sign-in method is already verified."
+        rate_limited: "Please wait a moment before requesting another confirmation email."
   identity_picker:
     preview: "Preview"
     last_updated: "Updated %{time} ago"
@@ -120,9 +133,6 @@ en:
       initials:
         title: "Initials"
         description: "A simple, colored circle with your initials"
-  omniauth_callbacks:
-    create:
-      linked: "%{provider} has been connected to your account."
   email_verification_resends:
     create:
       success: "A new verification email has been sent."

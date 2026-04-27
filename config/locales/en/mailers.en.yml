@@ -24,3 +24,10 @@ en:
       greeting: "Hi %{name},"
       body: "Someone requested to change the email address on your account to %{new_email}."
       warning: "If this wasn't you, please change your password immediately."
+    link_verification_email:
+      subject: "Confirm your %{provider} sign-in for %{app_name}"
+      greeting: "Hi %{first_name},"
+      body: "You added %{provider} as a sign-in method for %{app_name}. Confirm that %{email} belongs to you to activate it."
+      cta: "Yes, this was me — finish linking"
+      what_is_this: "We email you whenever a new sign-in method is added to your account. This protects your account from someone else linking it."
+      footer: "If you didn't try to add this, ignore this email — your account stays untouched."

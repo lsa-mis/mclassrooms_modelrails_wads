@@ -1,0 +1,11 @@
+<%= I18n.t("authentication_mailer.link_verification_email.greeting", first_name: @user.first_name) %>
+
+<%= I18n.t("authentication_mailer.link_verification_email.body", provider: @provider_name, app_name: @app_name, email: @authentication.email) %>
+
+<%= I18n.t("authentication_mailer.link_verification_email.cta") %>:
+<%= @verify_url %>
+
+<%= I18n.t("authentication_mailer.link_verification_email.what_is_this") %>
+
+---
+<%= I18n.t("authentication_mailer.link_verification_email.footer") %>

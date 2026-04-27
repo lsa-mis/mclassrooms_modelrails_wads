@@ -4,27 +4,61 @@
     <%= t("account.connected_accounts.index.title") %>
   </h1>
 
+  <% if (auth_id = flash[:confirming_email_for]) && (pending = @authentications.find { |a| a.id == auth_id }) %>
+    <div class="mt-6 rounded-lg border border-info-border bg-info-surface p-4 text-sm text-info">
+      <%= sanitize(t("account.connected_accounts.index.confirming_banner_html", email: pending.email, provider: pending.provider.titleize), tags: %w[strong em]) %>
+    </div>
+  <% end %>
+
   <div class="mt-8 space-y-4">
-    <% @authentications.each do |auth| %>
-      <div class="flex items-center justify-between p-4 border border-border rounded-lg">
+    <% @authentications.each do |authentication| %>
+      <div class="flex items-center justify-between p-4 border rounded-lg <%= authentication.pending? ? "bg-info-surface border-info-border" : "border-border" %>">
         <div>
           <p class="font-medium text-text-heading">
-            <%= auth.provider.titleize %>
+            <%= authentication.provider.titleize %>
           </p>
-          <p class="text-sm text-text-muted">
-            <%= auth.email? ? t("account.connected_accounts.index.email_provider") : auth.uid %>
-          </p>
-          <% if auth.verified? %>
-            <span class="text-xs text-success"><%= t("account.connected_accounts.index.verified") %></span>
+          <% if authentication.pending? %>
+            <p class="text-xs text-info">
+              <%= t("account.connected_accounts.index.pending_label", email: authentication.email) %>
+            </p>
+            <p class="text-xs text-text-muted mt-1">
+              <%= t("account.connected_accounts.index.pending_help") %>
+            </p>
+          <% else %>
+            <p class="text-sm text-text-muted">
+              <%= authentication.email? ? t("account.connected_accounts.index.email_provider") : (authentication.email.presence || authentication.uid) %>
+            </p>
+            <% if authentication.verified? %>
+              <span class="text-xs text-success"><%= t("account.connected_accounts.index.verified") %></span>
+            <% end %>
           <% end %>
         </div>
-        <% if @authentications.count > 1 %>
-          <%= button_to t("account.connected_accounts.index.disconnect"),
-                account_connected_account_path(auth),
-                method: :delete,
-                class: "text-sm text-danger underline hover:no-underline
-                        focus:outline-none focus:ring-2 focus:ring-danger rounded" %>
-        <% end %>
+
+        <div class="flex items-center gap-3 text-sm">
+          <% if authentication.pending? %>
+            <%= button_to t("account.connected_accounts.index.resend_action"),
+                  resend_verification_account_connected_account_path(authentication),
+                  method: :post,
+                  class: "text-sm text-interactive underline hover:no-underline
+                          focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded
+                          min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2",
+                  form: { class: "inline" } %>
+            <%= button_to t("account.connected_accounts.index.cancel_action"),
+                  account_connected_account_path(authentication),
+                  method: :delete,
+                  class: "text-sm text-danger underline hover:no-underline
+                          focus:outline-none focus:ring-2 focus:ring-danger rounded
+                          min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2",
+                  form: { class: "inline" } %>
+          <% else %>
+            <%= button_to t("account.connected_accounts.index.disconnect"),
+                  account_connected_account_path(authentication),
+                  method: :delete,
+                  class: "text-sm text-danger underline hover:no-underline
+                          focus:outline-none focus:ring-2 focus:ring-danger rounded
+                          min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2" %>
+          <% end %>
+        </div>
       </div>
     <% end %>
   </div>

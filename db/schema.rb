@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_25_020736) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_25_185818) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -68,6 +68,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_020736) do
   create_table "authentications", force: :cascade do |t|
     t.string "avatar_url"
     t.datetime "created_at", null: false
+    t.string "email"
     t.datetime "oauth_expires_at"
     t.string "oauth_refresh_token"
     t.string "oauth_token"

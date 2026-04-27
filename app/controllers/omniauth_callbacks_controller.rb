@@ -1,46 +1,114 @@
 class OmniauthCallbacksController < ApplicationController
   allow_unauthenticated_access
 
+  # Maps OmniAuth strategy names to the canonical provider enum values.
+  # Real Google OAuth callbacks return "google_oauth2"; the enum accepts only "google".
+  PROVIDER_MAP = { "google_oauth2" => "google" }.freeze
+
   def create
     auth_hash = request.env["omniauth.auth"]
-    authentication = Authentication.find_by(provider: auth_hash.provider, uid: auth_hash.uid)
     resume_session
+    existing = Authentication.find_by(provider: normalized_provider(auth_hash), uid: auth_hash.uid)
 
-    if authentication
-      # Existing OAuth link — update tokens and sign in
-      authentication.update!(oauth_attrs(auth_hash))
-      start_new_session_for(authentication.user)
-      redirect_to root_path, notice: t("sessions.create.success")
+    if existing
+      handle_existing_auth(existing, auth_hash)
     elsif Current.user
-      # Signed-in user linking a new provider
-      Current.user.authentications.create!(
-        provider: auth_hash.provider,
-        uid: auth_hash.uid,
-        verified_at: Time.current,
-        **oauth_attrs(auth_hash)
-      )
-      redirect_to account_connected_accounts_path, notice: t(".linked", provider: auth_hash.provider.titleize)
+      handle_signed_in_link(Current.user, auth_hash)
     else
-      # New OAuth — find or create user
-      user = find_verified_user_by_email(auth_hash.info.email) || create_user_from_oauth(auth_hash)
-      user.authentications.create!(
-        provider: auth_hash.provider,
-        uid: auth_hash.uid,
-        verified_at: Time.current,
-        **oauth_attrs(auth_hash)
-      )
-      start_new_session_for(user)
-      redirect_to root_path, notice: t("sessions.create.success")
+      handle_new_user_oauth(auth_hash)
     end
-  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-    redirect_to new_session_path, alert: t("sessions.create.oauth_account_exists")
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid, ArgumentError
+    redirect_to fallback_path,
+      alert: t("omniauth_callbacks.create.linking_failed")
   end
 
   def failure
-    redirect_to new_session_path, alert: t("sessions.create.oauth_failure")
+    redirect_to new_session_path,
+      alert: t("sessions.create.oauth_failure")
   end
 
   private
+
+  def handle_existing_auth(auth, auth_hash)
+    if auth.pending?
+      auth.generate_verification_token!
+      AuthenticationMailer.link_verification_email(auth).deliver_later
+      redirect_to new_session_path,
+        notice: t("omniauth_callbacks.create.pending_resent", email: auth.email)
+    elsif Current.user.present? && Current.user.id != auth.user_id
+      redirect_to account_connected_accounts_path,
+        alert: t("omniauth_callbacks.create.collision_other_user",
+                 provider: normalized_provider(auth_hash).titleize)
+    else
+      auth.update!(oauth_attrs(auth_hash))
+      start_new_session_for(auth.user)
+      redirect_to root_path, notice: t("sessions.create.success")
+    end
+  end
+
+  def handle_signed_in_link(user, auth_hash)
+    if user.authentications.exists?(provider: normalized_provider(auth_hash))
+      redirect_to account_connected_accounts_path,
+        alert: t("omniauth_callbacks.create.already_linked",
+                 provider: normalized_provider(auth_hash).titleize)
+      return
+    end
+
+    oauth_email = auth_hash.info.email
+    if oauth_email.blank?
+      redirect_to account_connected_accounts_path,
+        alert: t("omniauth_callbacks.create.linking_failed")
+      return
+    end
+
+    email_matches = oauth_email.strip.downcase == user.email_address
+
+    auth = user.authentications.build(
+      provider: normalized_provider(auth_hash),
+      uid: auth_hash.uid,
+      email: oauth_email,
+      **oauth_attrs(auth_hash)
+    )
+
+    if email_matches
+      auth.verified_at = Time.current
+      auth.save!
+      redirect_to account_connected_accounts_path,
+        notice: t("omniauth_callbacks.create.linked", provider: normalized_provider(auth_hash).titleize)
+    else
+      auth.assign_attributes(
+        verification_token: SecureRandom.urlsafe_base64(32),
+        verification_sent_at: Time.current
+      )
+      auth.save!
+      AuthenticationMailer.link_verification_email(auth).deliver_later
+      flash[:confirming_email_for] = auth.id
+      redirect_to account_connected_accounts_path,
+        notice: t("omniauth_callbacks.create.pending",
+                  email: oauth_email, provider: normalized_provider(auth_hash).titleize)
+    end
+  end
+
+  def handle_new_user_oauth(auth_hash)
+    user = find_verified_user_by_email(auth_hash.info.email) || create_user_from_oauth(auth_hash)
+    user.authentications.create!(
+      provider: normalized_provider(auth_hash),
+      uid: auth_hash.uid,
+      email: auth_hash.info.email,
+      verified_at: Time.current,
+      **oauth_attrs(auth_hash)
+    )
+    start_new_session_for(user)
+    redirect_to root_path, notice: t("sessions.create.success")
+  end
+
+  def fallback_path
+    Current.user.present? ? account_connected_accounts_path : new_session_path
+  end
+
+  def normalized_provider(auth_hash)
+    PROVIDER_MAP.fetch(auth_hash.provider, auth_hash.provider)
+  end
 
   def oauth_attrs(auth_hash)
     attrs = {
@@ -56,7 +124,7 @@ class OmniauthCallbacksController < ApplicationController
     user = User.find_by(email_address: email)
     return nil unless user
     return user if user.authentications.email.where.not(verified_at: nil).exists?
-    nil # Don't link to unverified accounts
+    nil
   end
 
   def create_user_from_oauth(auth_hash)

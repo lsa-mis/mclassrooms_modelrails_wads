@@ -2,3 +2,11 @@ en:
   oauth:
     sign_in_with: "Sign in with %{provider}"
     or: "or continue with email"
+  omniauth_callbacks:
+    create:
+      linked: "%{provider} linked successfully."
+      pending: "Almost there — we sent a confirmation link to %{email}. Click it to finish linking your %{provider} account."
+      pending_resent: "We sent a fresh confirmation link to %{email}. Click the link to finish signing in."
+      collision_other_user: "That %{provider} account is already linked to a different user."
+      already_linked: "Your account is already linked to %{provider}."
+      linking_failed: "We couldn't link that account. Please try again."
