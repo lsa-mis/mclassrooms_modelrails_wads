@@ -41,12 +41,21 @@ class Authentication < ApplicationRecord
     verification_sent_at.present? && verification_sent_at < TOKEN_LIFETIME.ago
   end
 
-  def generate_verification_token!
-    update!(
+  def verification_token_expired?
+    verification_sent_at.nil? || token_expired?
+  end
+
+  def assign_verification_token
+    assign_attributes(
       verification_token: SecureRandom.urlsafe_base64(32),
       verification_sent_at: Time.current,
       verified_at: nil
     )
+  end
+
+  def generate_verification_token!
+    assign_verification_token
+    save!
   end
 
   def verify!
@@ -55,10 +64,5 @@ class Authentication < ApplicationRecord
       verification_token: nil,
       verification_sent_at: nil
     )
-  end
-
-  def verification_token_expired?
-    return true if verification_sent_at.nil?
-    verification_sent_at < 24.hours.ago
   end
 end

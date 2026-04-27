@@ -76,10 +76,7 @@ class OmniauthCallbacksController < ApplicationController
       redirect_to account_connected_accounts_path,
         notice: t("omniauth_callbacks.create.linked", provider: Authentication.display_name_for(normalized_provider(auth_hash)))
     else
-      auth.assign_attributes(
-        verification_token: SecureRandom.urlsafe_base64(32),
-        verification_sent_at: Time.current
-      )
+      auth.assign_verification_token
       auth.save!
       AuthenticationMailer.link_verification_email(auth).deliver_later
       flash[:confirming_email_for] = auth.id
