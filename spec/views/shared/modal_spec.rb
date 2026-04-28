@@ -86,8 +86,8 @@ RSpec.describe "shared/_modal", type: :view do
     end
 
     it "has a 44px close button" do
-      # Reads --form-input-height token (Design System Primitives v2 sweep)
-      expect(rendered).to have_css("button.min-h-\\[var\\(--form-input-height\\)\\].min-w-\\[var\\(--form-input-height\\)\\]")
+      # Reads --form-input-height token via .btn-touch-target utility (Design System Primitives v2 — utility adoption)
+      expect(rendered).to have_css("button.btn-touch-target")
     end
 
     it "close button has aria-label" do
