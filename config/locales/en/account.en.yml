@@ -90,6 +90,7 @@ en:
         resent: "We sent a fresh confirmation link to %{email}."
         already_verified: "That sign-in method is already verified."
         rate_limited: "Please wait a moment before requesting another confirmation email."
+        token_collision: "We hit a temporary collision generating your verification link. Please try again in a moment."
   identity_picker:
     preview: "Preview"
     last_updated: "Updated %{time} ago"

@@ -201,6 +201,47 @@ RSpec.describe Authentication, type: :model do
         auth.generate_verification_token!
         expect(auth.verified_at).to be_nil
       end
+
+      context "when the generated token collides with an existing auth's verification_token" do
+        let!(:existing_auth) do
+          create(:authentication, :google,
+                 verification_token: "fixed-collision-token",
+                 verification_sent_at: Time.current,
+                 verified_at: nil)
+        end
+
+        it "retries with a fresh token and persists successfully" do
+          # First call to SecureRandom returns the colliding token (forces
+          # RecordNotUnique on the unique index). Retry generates a fresh value.
+          allow(SecureRandom).to receive(:urlsafe_base64)
+            .and_return("fixed-collision-token", "unique-token-after-retry")
+
+          auth.generate_verification_token!
+
+          expect(auth.verification_token).to eq("unique-token-after-retry")
+          expect(auth).to be_persisted
+        end
+
+        it "raises RecordNotUnique after exhausting the retry budget" do
+          # Every attempt returns the same colliding token — retry budget can't help.
+          allow(SecureRandom).to receive(:urlsafe_base64).and_return("fixed-collision-token")
+
+          expect {
+            auth.generate_verification_token!
+          }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+
+        it "calls SecureRandom up to TOKEN_GENERATION_MAX_ATTEMPTS times before giving up" do
+          allow(SecureRandom).to receive(:urlsafe_base64).and_return("fixed-collision-token")
+
+          expect {
+            auth.generate_verification_token!
+          }.to raise_error(ActiveRecord::RecordNotUnique)
+
+          expect(SecureRandom).to have_received(:urlsafe_base64)
+            .exactly(Authentication::TOKEN_GENERATION_MAX_ATTEMPTS).times
+        end
+      end
     end
 
     describe "#verify!" do

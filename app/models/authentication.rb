@@ -69,9 +69,23 @@ class Authentication < ApplicationRecord
     )
   end
 
+  # Defensive retry budget for the astronomically-unlikely case where
+  # SecureRandom.urlsafe_base64(32) collides with an existing verification_token
+  # (256 bits of entropy → ~2^-256 per attempt). The unique index on
+  # verification_token would surface a collision as ActiveRecord::RecordNotUnique;
+  # we regenerate and retry rather than 500 the user.
+  TOKEN_GENERATION_MAX_ATTEMPTS = 3
+
   def generate_verification_token!
-    assign_verification_token
-    save!
+    attempts = 0
+    begin
+      assign_verification_token
+      save!
+    rescue ActiveRecord::RecordNotUnique
+      attempts += 1
+      retry if attempts < TOKEN_GENERATION_MAX_ATTEMPTS
+      raise
+    end
   end
 
   def verify!

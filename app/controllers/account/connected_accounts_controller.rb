@@ -53,6 +53,12 @@ module Account
         redirect_to account_connected_accounts_path,
           notice: t(".resent", email: auth.email)
       end
+    rescue ActiveRecord::RecordNotUnique
+      # The model retries on RecordNotUnique up to TOKEN_GENERATION_MAX_ATTEMPTS
+      # times. Reaching here means every regenerated token still collided —
+      # effectively impossible with 256 bits of entropy, but defended-in-depth.
+      redirect_to account_connected_accounts_path,
+        alert: t(".token_collision")
     end
 
     def destroy

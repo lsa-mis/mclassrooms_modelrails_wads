@@ -292,6 +292,38 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
     end
 
+    context "with a persistent verification_token collision (token race)" do
+      # Defended-in-depth scenario: the model retries up to
+      # TOKEN_GENERATION_MAX_ATTEMPTS times on RecordNotUnique. If every
+      # regenerated token still collides (effectively impossible with 256
+      # bits of entropy but possible if e.g. SecureRandom is patched in a
+      # broken way), the controller rescues and shows a graceful alert
+      # instead of letting the user see a 500.
+      it "rescues RecordNotUnique and redirects with the token_collision alert" do
+        # Force generate_verification_token! to raise after the model's
+        # internal retries exhaust.
+        allow_any_instance_of(Authentication)
+          .to receive(:generate_verification_token!)
+          .and_raise(ActiveRecord::RecordNotUnique)
+
+        post resend_verification_account_connected_account_path(pending_auth)
+
+        expect(response).to redirect_to(account_connected_accounts_path)
+        expect(flash[:alert]).to include(I18n.t("account.connected_accounts.resend_verification.token_collision"))
+        expect(response).to have_http_status(:found)
+      end
+
+      it "does NOT enqueue a verification email when the token rescue fires" do
+        allow_any_instance_of(Authentication)
+          .to receive(:generate_verification_token!)
+          .and_raise(ActiveRecord::RecordNotUnique)
+
+        expect {
+          post resend_verification_account_connected_account_path(pending_auth)
+        }.not_to have_enqueued_mail(AuthenticationMailer, :link_verification_email)
+      end
+    end
+
     context "rate limit" do
       it "blocks the 4th request within 3 minutes" do
         call_count = 0
