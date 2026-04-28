@@ -23,7 +23,8 @@ RSpec.describe TailwindFormBuilder do
     it "renders an input with base classes" do
       result = parse(builder.text_field(:first_name))
       expect(result).to have_css("input[type='text'].rounded-md")
-      expect(result).to have_css("input.min-h-\\[44px\\]")
+      # Reads --form-input-height token (Design System Primitives v2)
+      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
     end
 
     it "wraps in a div with space-y-2" do
@@ -146,7 +147,8 @@ RSpec.describe TailwindFormBuilder do
     it "renders a submit button with correct classes" do
       result = parse(builder.submit("Save"))
       expect(result).to have_css("input[type='submit'][value='Save']")
-      expect(result).to have_css("input.min-h-\\[44px\\]")
+      # Reads --form-input-height token (Design System Primitives v2)
+      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
       expect(result).to have_css("input.bg-interactive")
     end
 

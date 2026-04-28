@@ -1,0 +1,39 @@
+/* ==========================================================================
+   Semantic Spacing Tokens — CSS-var-only (NOT registered in @theme)
+   ==========================================================================
+   These tokens encode reusable composition rules for the design system.
+   They are intentionally NOT registered as Tailwind utilities.
+
+   POLICY:
+   - Consume these only inside @layer components rules in application.css.
+   - Templates should never reference them directly (no `mt-section-gap` etc.).
+   - For one-off spacing in templates, use Tailwind utilities directly (mt-3, gap-3).
+
+   PREFERRED PRIMITIVE SPACING SCALE (convention — see docs/design-system.md):
+   When choosing a Tailwind spacing utility, prefer this 9-step subset of the
+   default scale for visual rhythm:
+       0    → 0
+       1    →  4px
+       2    →  8px
+       3    → 12px
+       4    → 16px
+       6    → 24px
+       8    → 32px
+       12   → 48px
+       16   → 64px
+   The full Tailwind default scale (0.5, 1.5, 2.5, etc.) remains available
+   for cases where the rhythm requires intermediate values; reach for those
+   only when the preferred steps would compromise the layout.
+   ========================================================================== */
+
+:root {
+  /* Reusable composition tokens — consumed only inside components. */
+  --space-section-gap: 2rem;          /* 32px — vertical gap between top-level page sections */
+  --space-row-padding: 0.75rem;       /* 12px — internal vertical padding on list-row items */
+  --space-action-group-gap: 0.75rem;  /* 12px — gap between trailing action buttons */
+
+  /* Form input height — 44px matches WCAG 2.2 AAA touch-target minimum.
+     Used by `.btn-touch-target` and any form input rule so buttons and
+     inputs visually align. */
+  --form-input-height: 2.75rem;       /* 44px */
+}

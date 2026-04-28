@@ -2,6 +2,28 @@
 
 All notable changes to ModelRails are documented here, organized by phase.
 
+## [Unreleased]
+
+### Added
+
+- Design system primitives v2: semantic spacing tokens (`--space-section-gap`, `--space-row-padding`, `--space-action-group-gap`, `--form-input-height`) defined in `app/assets/tailwind/tokens/_spacing.css`. Tokens are CSS-var-only — never registered in `@theme` so they don't leak as Tailwind utility classes. Consumed inside `@layer components` rules and `TailwindFormBuilder` constants.
+- Component utilities under a new `@layer components` block in `app/assets/tailwind/application.css`: `.btn-touch-target` (44×44 minimum, reads `--form-input-height`), `.btn-text` (font-weight/underline/focus-visible base), `.btn-text-danger` and `.btn-text-interactive` (color variants), `.action-group` (inline-flex with `--space-action-group-gap`).
+- Layout utility `.page-container` (`max-w-2xl mx-auto px-4`) for narrow page wrappers — settings, account, and form-centric flows.
+- `docs/design-system.md` — single-source reference for the spacing convention, semantic tokens, component utilities, class ordering convention, and migration recipe. Linked from README.md.
+
+### Changed
+
+- Refactored `app/views/account/connected_accounts/index.html.erb` to consume the new utilities (proof refactor — same visual output as before). Subtle visual change: the Resend button now inherits `font-medium` from `.btn-text`, matching Cancel and Disconnect. This unifies a pre-existing inconsistency where Resend was visually slightly lighter than the other text buttons.
+- `TailwindFormBuilder` (`app/form_builders/tailwind_form_builder.rb`) now reads `--form-input-height` via `min-h-[var(--form-input-height)]` in three constants (`FIELD_BASE`, `SUBMIT_CLASSES`, `FILE_FIELD_CLASSES`) instead of hardcoded `min-h-[44px]`. Single source of truth for touch-target height across all form inputs, submit buttons, and file fields. Same 44px value, named source.
+- `.btn-text` uses `focus-visible:` (not `focus:`) for the focus ring, matching the project's existing `.biscuit-btn` pattern. Focus rings now appear for keyboard navigation but not for mouse clicks.
+
+### Notes / Acknowledged Limitations
+
+- **First unification, not last.** This branch unifies touch-target height across `TailwindFormBuilder` (form inputs, submit buttons, file uploads) and the new `.btn-touch-target` utility — four consumers reading from `--form-input-height`. Approximately 30 view partials in `app/views/shared/` and various workspace pages still hardcode `min-h-[44px]` directly. Those will migrate to the token as each partial is touched in subsequent branches.
+- **`app/views/sessions/email_error.html.erb` hand-rolls form-input classes** instead of going through `TailwindFormBuilder`. Its inputs do not yet read the token — flagged as design-system debt for a future refactor.
+
+---
+
 ## v1.3.0 — Verified OAuth Account Linking
 
 ### User-facing
@@ -309,4 +331,3 @@ All notable changes to ModelRails are documented here, organized by phase.
 - RSpec, FactoryBot, Capybara + Playwright test suite (77 examples)
 - SimpleCov coverage reporting
 - Devcontainer configuration for VS Code / Codespaces
-- mise-based version management via .tool-versions

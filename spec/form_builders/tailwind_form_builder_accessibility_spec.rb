@@ -185,24 +185,28 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility" do
   # Touch targets — 44px minimum (WCAG 2.5.5)
   # ---------------------------------------------------------------------------
   describe "touch target size" do
-    it "applies min-h-[44px] to text field inputs" do
+    it "applies min-h-[var(--form-input-height)] to text field inputs" do
       result = parse(builder.text_field(:first_name))
-      expect(result).to have_css("input.min-h-\\[44px\\]")
+      # Reads --form-input-height token (Design System Primitives v2)
+      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
     end
 
-    it "applies min-h-[44px] to email field inputs" do
+    it "applies min-h-[var(--form-input-height)] to email field inputs" do
       result = parse(builder.email_field(:email_address))
-      expect(result).to have_css("input.min-h-\\[44px\\]")
+      # Reads --form-input-height token (Design System Primitives v2)
+      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
     end
 
-    it "applies min-h-[44px] to password field inputs" do
+    it "applies min-h-[var(--form-input-height)] to password field inputs" do
       result = parse(builder.password_field(:password))
-      expect(result).to have_css("input.min-h-\\[44px\\]")
+      # Reads --form-input-height token (Design System Primitives v2)
+      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
     end
 
-    it "applies min-h-[44px] to submit buttons" do
+    it "applies min-h-[var(--form-input-height)] to submit buttons" do
       result = parse(builder.submit("Save"))
-      expect(result).to have_css("input[type='submit'].min-h-\\[44px\\]")
+      # Reads --form-input-height token (Design System Primitives v2)
+      expect(result).to have_css("input[type='submit'].min-h-\\[var\\(--form-input-height\\)\\]")
     end
   end
 end

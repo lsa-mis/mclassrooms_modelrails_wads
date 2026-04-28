@@ -1,5 +1,5 @@
 <% content_for(:title) { t("account.connected_accounts.index.title") } %>
-<div class="max-w-2xl mx-auto px-4 py-16">
+<div class="page-container py-16">
   <h1 class="text-2xl font-bold text-text-heading">
     <%= t("account.connected_accounts.index.title") %>
   </h1>
@@ -41,32 +41,26 @@
           <% end %>
         </div>
 
-        <div class="flex items-center gap-3 text-sm">
+        <div class="action-group">
           <% if authentication.pending? %>
             <%= button_to t("account.connected_accounts.index.resend_action"),
                   resend_verification_account_connected_account_path(authentication),
                   method: :post,
                   aria: { label: t("account.connected_accounts.index.resend_action_aria_label", provider: authentication.display_provider) },
-                  class: "text-sm text-interactive underline hover:no-underline
-                          focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded
-                          min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2",
+                  class: "btn-touch-target btn-text btn-text-interactive text-sm",
                   form: { class: "inline" } %>
             <%= button_to t("account.connected_accounts.index.cancel_action"),
                   account_connected_account_path(authentication),
                   method: :delete,
                   aria: { label: t("account.connected_accounts.index.cancel_action_aria_label", provider: authentication.display_provider) },
-                  class: "text-sm font-medium text-danger underline hover:no-underline
-                          focus:outline-none focus:ring-2 focus:ring-danger rounded
-                          min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2",
+                  class: "btn-touch-target btn-text btn-text-danger text-sm",
                   form: { class: "inline" } %>
           <% else %>
             <div data-controller="modal" class="inline">
               <button type="button"
                       data-action="click->modal#open"
                       aria-label="<%= t("account.connected_accounts.index.disconnect_action_aria_label", provider: authentication.display_provider) %>"
-                      class="text-sm font-medium text-danger underline hover:no-underline
-                             focus:outline-none focus:ring-2 focus:ring-danger rounded
-                             min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2">
+                      class="btn-touch-target btn-text btn-text-danger text-sm">
                 <%= t("account.connected_accounts.index.disconnect") %>
               </button>
 

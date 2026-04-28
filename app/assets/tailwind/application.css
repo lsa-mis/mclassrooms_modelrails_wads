@@ -8,6 +8,7 @@
 @import "./tokens/_primitives.css";
 @import "./tokens/_semantic.css";
 @import "./tokens/_signals.css";
+@import "./tokens/_spacing.css";
 
 /* Register semantic tokens as Tailwind utilities via @theme inline.
    "inline" is required because these reference CSS custom properties
@@ -83,6 +84,73 @@
   /* Modal */
   --modal-backdrop: var(--modal-backdrop);
   --modal-animation-duration: var(--modal-animation-duration);
+}
+
+/* ==========================================================================
+   Layout utilities
+   ==========================================================================
+   These wrap recurring layout primitives so templates can express intent
+   directly. Currently: narrow page-level container (max-w-2xl) suited for
+   settings, account, and form-centric flows. A wider variant
+   (.page-container-wide, max-w-4xl/6xl) can be added when a page needs it
+   — don't override max-width inline; introduce the named variant instead.
+   ========================================================================== */
+
+@layer utilities {
+  .page-container {
+    @apply max-w-2xl mx-auto px-4;
+  }
+}
+
+/* ==========================================================================
+   Component utilities
+   ==========================================================================
+   Encapsulate recurring view patterns. These are NOT theme tokens — they
+   are composition rules for repeated structural and interactive patterns.
+
+   Naming policy:
+   - .btn-text* are a color-variant family of one base text-button style.
+     They share .btn-touch-target sizing/centering when used as buttons.
+   - .action-group is a flex container with consistent inline gap; will
+     grow constraints (flex-wrap, flex-row-reverse, etc.) over time.
+   ========================================================================== */
+
+@layer components {
+  /* Touch-target sizing for interactive buttons.
+     44x44 minimum matches WCAG 2.2 AAA target size + --form-input-height,
+     so buttons paired with form inputs visually align. */
+  .btn-touch-target {
+    @apply inline-flex items-center justify-center px-2;
+    min-height: var(--form-input-height);
+    min-width: var(--form-input-height);
+  }
+
+  /* Base text-only button styling.
+     Color, font-size, and weight stay in the template — this rule only
+     handles cross-cutting concerns (focus ring base, hover behavior,
+     rounded corners, semantic underline). */
+  .btn-text {
+    @apply font-medium underline rounded;
+    @apply focus-visible:outline-none focus-visible:ring-2;
+    @apply hover:no-underline;
+  }
+
+  /* Color variants of .btn-text. Apply alongside .btn-text. */
+  .btn-text-danger {
+    @apply text-danger focus-visible:ring-danger;
+  }
+
+  .btn-text-interactive {
+    @apply text-interactive focus-visible:ring-interactive-focus;
+  }
+
+  /* Inline flex container for trailing button groups (Resend / Cancel,
+     Edit / Delete, etc.). Consumes --space-action-group-gap so spacing
+     stays consistent across the app. */
+  .action-group {
+    @apply inline-flex items-center;
+    gap: var(--space-action-group-gap);
+  }
 }
 
 /* ==========================================================================

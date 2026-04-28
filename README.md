@@ -113,6 +113,7 @@ OAuth is optional — email/password sign-up works without it.
 - 44px minimum touch targets on interactive elements
 - Dark mode support throughout
 - Accessible forms with labels, ARIA attributes, and focus rings
+- Design system primitives — see [docs/design-system.md](docs/design-system.md) for spacing tokens, component utilities, and naming conventions.
 
 ### Static pages
 - Home, About, Privacy, Contact
