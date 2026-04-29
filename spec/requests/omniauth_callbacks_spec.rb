@@ -520,6 +520,38 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       end
     end
 
+    context "when OAuth email matches user's primary email in a different Unicode form (NFC vs NFD)" do
+      # Both sides are visually identical "café@example.com" but byte-different:
+      # the user's stored email is NFC ("é" as U+00E9 single codepoint), and the
+      # OAuth strategy supplies NFD ("e" + U+0301 combining acute). Without
+      # canonical normalization, the simple `.downcase ==` would treat them as
+      # different and force the user through the "unknown email" verification
+      # flow on every OAuth sign-in — bad UX for international users.
+      let(:user) { create(:user, email_address: "café@example.com") }
+      # Explicitly NFD-encode: "é" decomposes to "e" + combining acute (U+0301).
+      let(:nfd_email) { "café@example.com".unicode_normalize(:nfd) }
+
+      before do
+        OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+          provider: "google", uid: "google-unicode-1",
+          info: { email: nfd_email, name: "Café User" },
+          credentials: { token: "tok", refresh_token: "rtok", expires_at: 1.hour.from_now.to_i }
+        )
+      end
+
+      it "auto-verifies (NFC-normalized comparison via EmailNormalizer)" do
+        # Sanity: the OAuth-supplied email is genuinely a different byte sequence
+        # than the user's stored email, even though they're visually identical.
+        expect(nfd_email.bytesize).not_to eq(user.email_address.bytesize)
+
+        get "/auth/google_oauth2/callback"
+
+        auth = user.authentications.find_by(provider: "google")
+        expect(auth).to be_verified
+        expect(auth.verification_token).to be_nil
+      end
+    end
+
     context "when OAuth email is missing" do
       before do
         OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(

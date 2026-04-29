@@ -17,8 +17,12 @@ class User < ApplicationRecord
   after_create :check_gravatar_later
   after_update_commit :check_gravatar_later, if: :saved_change_to_email_address?
 
-  normalizes :email_address, with: ->(e) { e.strip.downcase }
-  normalizes :pending_email, with: ->(e) { e&.strip&.downcase }
+  # Canonical email storage and lookup: NFC + downcase + strip via EmailNormalizer.
+  # Rails 7.1+ also applies these normalizers to `find_by(email_address:)` and
+  # `find_by(pending_email:)` lookup values, so callsites passing user input
+  # directly into find_by automatically benefit from the same normalization.
+  normalizes :email_address, with: ->(e) { EmailNormalizer.normalize(e) }
+  normalizes :pending_email, with: ->(e) { EmailNormalizer.normalize(e) }
 
   EMAIL_FORMAT = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
 
@@ -75,7 +79,7 @@ class User < ApplicationRecord
   def gravatar_url(size: 128)
     return nil if email_address.blank?
 
-    hash = Digest::SHA256.hexdigest(email_address.strip.downcase)
+    hash = Digest::SHA256.hexdigest(EmailNormalizer.normalize(email_address))
     "https://www.gravatar.com/avatar/#{hash}?s=#{size}&d=404"
   end
 
@@ -89,8 +93,8 @@ class User < ApplicationRecord
     return false unless has_password?
     return false unless authenticate(password)
 
-    normalized = new_email.strip.downcase
-    return false if normalized == email_address
+    normalized = EmailNormalizer.normalize(new_email)
+    return false if EmailNormalizer.equivalent?(normalized, email_address)
 
     self.pending_email = new_email
     self.pending_email_token = SecureRandom.urlsafe_base64(32)

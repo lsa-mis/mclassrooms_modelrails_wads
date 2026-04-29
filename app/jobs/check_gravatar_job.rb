@@ -10,7 +10,7 @@ class CheckGravatarJob < ApplicationJob
   private
 
   def gravatar_exists?(email)
-    hash = Digest::SHA256.hexdigest(email.strip.downcase)
+    hash = Digest::SHA256.hexdigest(EmailNormalizer.normalize(email))
     uri = URI("https://www.gravatar.com/avatar/#{hash}?d=404")
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 5) do |http|
       http.head(uri.request_uri)
