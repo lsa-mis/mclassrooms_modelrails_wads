@@ -4,6 +4,14 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ## [Unreleased]
 
+### Bug fixes
+
+- **`Broadcastable` concern now respects subclass `broadcast_events` overrides.** The previous `included do; after_commit :broadcast_changes, on: broadcast_events; end` evaluated `broadcast_events` at include-time, freezing it to the concern's default `[:create, :update]` and silently ignoring any subclass override placed *after* `include Broadcastable`. As a result, `ProjectMembership`'s `:destroy` override had no effect — destroys were not broadcasting. The concern now registers three independent `after_*_commit` callbacks gated by `if:` lambdas that lazily resolve the override at fire-time. Authentication's elaborate workaround (override `broadcast_events` to `[]`, then manually wire three `after_*_commit -> { broadcast_changes }` lines) is no longer needed and has been simplified to the standard pattern. New broadcast specs added to `ProjectMembership` covering all three events, locking in correct behavior and preventing silent regressions.
+
+### Maintenance
+
+- **IDN punycode normalization in `EmailNormalizer`.** The `normalize` method now punycode-encodes the domain part via `Addressable::IDNA.to_ascii`, so `user@bücher.de` and `user@xn--bcher-kva.de` collapse to the same canonical form. Closes the documented limitation called out in v1.4.0. Added `addressable ~> 2.8` as an explicit production dependency (it was already available transitively via capybara/webmock, but those are dev/test-only). Local part is intentionally NOT punycoded — RFC 6531 SMTPUTF8 lets mail servers accept Unicode local parts, and IDNA does not apply there. Conversion is wrapped in a broad rescue that falls back to the unencoded domain for malformed inputs (empty labels, double-encoded values), since validation belongs at the model layer.
+
 ### Security
 
 - **Per-recipient email throttle** (`app/lib/email_recipient_throttle.rb`). Caps how many emails of a given kind a single recipient address receives across all senders within a sliding window — orthogonal to the per-user `rate_limit` declarations that already gate controller actions. Default policy: 3 sends per recipient per kind per hour, fail-open on cache miss. Closes the gap where N attackers (or one attacker cycling accounts) could each stay under their per-user limit while collectively flooding one victim's inbox. Counter lives in `Rails.cache` (Solid Cache) keyed by SHA-256 of the canonical (NFC + downcase + strip) email plus the kind, so case/whitespace/encoding variants share a bucket. Independent buckets per kind so a flood of one type doesn't suppress legitimate sends of another. Gated callsites: every `AuthenticationMailer.link_verification_email` dispatch in `OmniauthCallbacksController` (re-OAuth on pending, signed-in mismatched-email link, unverified-email new-user) and `Account::ConnectedAccountsController#resend_verification`, plus the new `collision_alert` dispatch.

@@ -32,6 +32,11 @@ gem "pundit"
 gem "pagy"
 gem "markdowndocs"
 
+# IDN punycode conversion for email domain canonicalization (EmailNormalizer).
+# Already pulled in transitively by capybara/webmock in test, but those are
+# dev/test-only — so we declare it explicitly for production.
+gem "addressable", "~> 2.8"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 

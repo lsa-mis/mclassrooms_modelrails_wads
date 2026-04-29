@@ -77,4 +77,39 @@ RSpec.describe ProjectMembership, type: :model do
       expect(ProjectMembership.where(user: user, project: project)).to be_empty
     end
   end
+
+  describe "broadcasting" do
+    # ProjectMembership overrides broadcast_events to [:create, :update, :destroy]
+    # so the project's pinned-memberships UI updates in real time. Before the
+    # Broadcastable concern was refactored to resolve broadcast_events lazily,
+    # the destroy override was silently a no-op. These specs lock in correct
+    # behavior across all three lifecycle events.
+    let(:workspace) { create(:workspace) }
+    let(:user) { create(:user) }
+    let(:project) do
+      create(:membership, user: user, workspace: workspace)
+      create(:project, workspace: workspace, created_by: user)
+    end
+    let(:stream_name) { project.to_gid_param }
+
+    it "broadcasts a refresh to the project on create" do
+      expect {
+        project.project_memberships.create!(user: user, role: "creator")
+      }.to have_broadcasted_to(stream_name)
+    end
+
+    it "broadcasts a refresh on update (e.g., role change, pin)" do
+      pm = project.project_memberships.create!(user: user, role: "editor")
+      expect {
+        pm.update!(pinned: true)
+      }.to have_broadcasted_to(stream_name)
+    end
+
+    it "broadcasts a refresh on destroy" do
+      pm = project.project_memberships.create!(user: user, role: "editor")
+      expect {
+        pm.destroy!
+      }.to have_broadcasted_to(stream_name)
+    end
+  end
 end

@@ -87,15 +87,45 @@ RSpec.describe EmailNormalizer do
     end
   end
 
-  describe "documented limitation: IDN punycode is NOT handled" do
-    # The Unicode form and the punycode form of an IDN domain are different.
-    # Adding addressable gem (or similar) would close this; deferred unless
-    # a real interop concern surfaces.
-    it "does NOT consider Unicode and punycode forms of the same domain equivalent" do
+  describe "IDN punycode normalization" do
+    # DNS-level ASCII vs the Unicode form are functionally the same address;
+    # users may paste either form into a form. Both must collapse to the
+    # same canonical key for storage and equality comparison.
+    it "punycode-encodes the domain so Unicode and ASCII forms match" do
       unicode_form = "user@bücher.de"
       punycode_form = "user@xn--bcher-kva.de"
 
-      expect(described_class.equivalent?(unicode_form, punycode_form)).to be false
+      expect(described_class.normalize(unicode_form)).to eq("user@xn--bcher-kva.de")
+      expect(described_class.equivalent?(unicode_form, punycode_form)).to be true
+    end
+
+    it "leaves already-ASCII domains unchanged" do
+      expect(described_class.normalize("alice@example.com")).to eq("alice@example.com")
+    end
+
+    it "does not punycode the local part (SMTPUTF8 allows Unicode mailboxes)" do
+      # The local part — what comes before the @ — is not subject to IDNA.
+      # Modern mail servers (RFC 6531) accept Unicode local parts as-is.
+      expect(described_class.normalize("üser@example.com")).to eq("üser@example.com")
+    end
+
+    it "treats the same Unicode domain identically across NFC/NFD encodings" do
+      # The combining-mark composition rule still applies before punycode.
+      nfc = "user@" + "café.de"
+      nfd = "user@" + "cafe" + "́" + ".de"
+
+      expect(described_class.normalize(nfc)).to eq(described_class.normalize(nfd))
+    end
+
+    it "falls back to the unencoded domain when IDNA conversion fails" do
+      # Malformed inputs (double-encoded labels, empty labels) should not
+      # raise — return the canonical-but-unpunycoded form so the caller
+      # gets something usable.
+      expect { described_class.normalize("user@..invalid") }.not_to raise_error
+    end
+
+    it "handles inputs without an @ sign by returning the canonical form" do
+      expect(described_class.normalize("not-an-email")).to eq("not-an-email")
     end
   end
 end
