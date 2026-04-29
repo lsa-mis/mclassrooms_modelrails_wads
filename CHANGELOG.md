@@ -4,6 +4,10 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ## [Unreleased]
 
+---
+
+## v1.4.0 — OAuth Hardening & Design System Primitives v2 (2026-04-28)
+
 ### Security
 
 - Email normalization for storage and equality comparison now uses Unicode NFC + downcase + strip via a new `EmailNormalizer` module (`app/lib/email_normalizer.rb`). The `User` model's `normalizes :email_address` and `:pending_email` declarations route through it, so all `find_by` lookups and writes get canonical form (Rails 7.1 auto-applies normalizers to lookup values). The OAuth callback's "OAuth email matches user's primary email" check uses `EmailNormalizer.equivalent?` so an email like `café@example.com` matches itself across NFC vs NFD encodings — previously these would compare as different bytes despite being visually identical, forcing international users through email verification on every OAuth sign-in. Gravatar SHA-256 hashing also uses canonical form so the same email always produces the same Gravatar URL regardless of input encoding. IDN punycode conversion (e.g., `bücher.de` ↔ `xn--bcher-kva.de`) is NOT handled — explicitly deferred until a real interop concern surfaces; would require an addressable-style gem.
@@ -24,10 +28,11 @@ All notable changes to ModelRails are documented here, organized by phase.
 - `TailwindFormBuilder` (`app/form_builders/tailwind_form_builder.rb`) now reads `--form-input-height` via `min-h-[var(--form-input-height)]` in three constants (`FIELD_BASE`, `SUBMIT_CLASSES`, `FILE_FIELD_CLASSES`) instead of hardcoded `min-h-[44px]`. Single source of truth for touch-target height across all form inputs, submit buttons, and file fields. Same 44px value, named source.
 - `.btn-text` uses `focus-visible:` (not `focus:`) for the focus ring, matching the project's existing `.biscuit-btn` pattern. Focus rings now appear for keyboard navigation but not for mouse clicks.
 
-### Notes / Acknowledged Limitations
+### Fixed
 
-- **First unification, not last.** This branch unifies touch-target height across `TailwindFormBuilder` (form inputs, submit buttons, file uploads) and the new `.btn-touch-target` utility — four consumers reading from `--form-input-height`. Approximately 30 view partials in `app/views/shared/` and various workspace pages still hardcode `min-h-[44px]` directly. Those will migrate to the token as each partial is touched in subsequent branches.
-- **`app/views/sessions/email_error.html.erb` hand-rolls form-input classes** instead of going through `TailwindFormBuilder`. Its inputs do not yet read the token — flagged as design-system debt for a future refactor.
+- ERB lint job (`herb-lint`) now passes on `_a11y_sim.html.erb` after refactoring the dev-only mode-icons hash from `<% end,` syntax (rejected by herb-lint 0.9+'s `parser-no-errors` rule) to separate `capture do %>...<% end %>` assignments. Same compiled output, parser-friendly structure.
+- CI test job now installs `libvips42t64` on the Ubuntu runner so Active Storage image variants generate without `LoadError`. Affected 9 identity-picker system specs that all failed with the same shared-library load error; root cause was missing system dependency, not test logic.
+- Replaced the flaky `expect(page).not_to have_css("script")` assertion in the registration XSS-prevention spec with a deterministic raw-HTML byte check (`page.html.include?("<script>alert('xss')</script>")` plus a positive control on the escaped form). The original assertion depended on Capybara's visibility filter excluding hidden layout `<script>` tags, which Playwright sometimes computed inconsistently during page transitions.
 
 ---
 
