@@ -32,6 +32,9 @@ gem "pundit"
 gem "pagy"
 gem "markdowndocs"
 
+# User-facing notifications (in-app, email, digest) — see `app/notifiers/`.
+gem "noticed", "~> 2.5"
+
 # IDN punycode conversion for email domain canonicalization (EmailNormalizer).
 # Already pulled in transitively by capybara/webmock in test, but those are
 # dev/test-only — so we declare it explicitly for production.

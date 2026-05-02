@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_25_185818) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_01_002927) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -138,6 +138,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_185818) do
     t.index ["workspace_id"], name: "index_memberships_on_workspace_id"
   end
 
+  create_table "noticed_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "idempotency_key"
+    t.integer "notifications_count"
+    t.json "params"
+    t.bigint "record_id"
+    t.string "record_type"
+    t.string "type"
+    t.datetime "updated_at", null: false
+    t.index ["idempotency_key"], name: "index_noticed_events_on_idempotency_key", unique: true, where: "idempotency_key IS NOT NULL"
+    t.index ["record_type", "record_id"], name: "index_noticed_events_on_record"
+  end
+
+  create_table "noticed_notifications", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.datetime "read_at", precision: nil
+    t.bigint "recipient_id", null: false
+    t.string "recipient_type", null: false
+    t.datetime "seen_at", precision: nil
+    t.string "type"
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_noticed_notifications_on_event_id"
+    t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_on_recipient"
+    t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_unread", where: "read_at IS NULL"
+    t.check_constraint "recipient_type = 'User'", name: "recipient_type_user_only_v1"
+    t.check_constraint "seen_at IS NULL OR read_at IS NULL OR read_at >= seen_at", name: "seen_before_read"
+  end
+
   create_table "project_memberships", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "pinned", default: false, null: false
@@ -205,12 +234,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_185818) do
 
   create_table "user_preferences", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "digest_last_sent_at"
+    t.datetime "digest_next_due_at"
     t.string "docs_mode"
     t.string "locale"
+    t.json "notification_preferences", default: {"do_not_disturb" => false, "digest" => {"enabled" => true, "cadence" => "daily", "hour_local" => 8}, "categories" => {"security" => {"in_app" => true, "email" => true, "digest" => false}, "account_access" => {"in_app" => true, "email" => true, "digest" => false}, "workspace_activity" => {"in_app" => true, "email" => false, "digest" => true}, "project_activity" => {"in_app" => true, "email" => false, "digest" => true}, "billing" => {"in_app" => true, "email" => true, "digest" => false}}, "retention_days" => 90}, null: false
     t.string "theme", default: "system"
     t.string "timezone"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index ["digest_next_due_at"], name: "index_user_preferences_on_digest_next_due_at", where: "digest_next_due_at IS NOT NULL"
     t.index ["user_id"], name: "index_user_preferences_on_user_id"
   end
 
@@ -260,6 +293,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_25_185818) do
   add_foreign_key "memberships", "roles"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
+  add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
   add_foreign_key "project_memberships", "projects"
   add_foreign_key "project_memberships", "users"
   add_foreign_key "projects", "users", column: "created_by_id"
