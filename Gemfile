@@ -105,4 +105,4 @@ gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
 
 gem "biscuit-rails", "~> 0.2.1"
 
-gem "lexxy", "~> 0.9.9.beta"
+gem "lexxy", "~> 0.9.11.beta"
