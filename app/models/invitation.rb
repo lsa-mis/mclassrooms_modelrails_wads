@@ -17,6 +17,13 @@ class Invitation < ApplicationRecord
 
   before_create :generate_token
 
+  # Notifier triggers: fire on the accepted/declined transitions only.
+  # `<attr>_previously_changed?` is true exclusively in the after_update_commit
+  # phase of the update that wrote the new value, so we get one notification
+  # per state transition (never on subsequent unrelated updates).
+  after_update_commit :notify_accepted, if: :just_accepted?
+  after_update_commit :notify_declined, if: :just_declined?
+
   scope :pending, -> { where(status: "pending").where("expires_at > ?", Time.current) }
   scope :expired, -> { where(status: "pending").where("expires_at <= ?", Time.current) }
 
@@ -101,6 +108,27 @@ class Invitation < ApplicationRecord
     email.nil?
   end
 
+  # Hours remaining until expiry, ceiled to the next whole hour. Single source
+  # of truth for the user-facing "expires in N hours" copy in both the
+  # WorkspaceInvitationExpiringSoonNotifier message and the matching mailer.
+  # Ceil (not round/floor) so T-30min reads as "1 hour" not "0 hours" — the
+  # message is hours-remaining, and rounding down to zero is misleading UX.
+  def expires_in_hours
+    return 0 if expires_at <= Time.current
+    ((expires_at - Time.current) / 1.hour).ceil
+  end
+
+  # Resolves the workspace context for a polymorphic invitation. An invitation
+  # may target a Workspace directly or a Project — in the latter case the
+  # workspace context comes from the project. Single source of truth shared by
+  # the notifiers (Accepted / Declined / ExpiringSoon) and NotificationMailer.
+  def resolved_workspace
+    case invitable
+    when Workspace then invitable
+    when Project   then invitable.workspace
+    end
+  end
+
   private
 
   def broadcast_target
@@ -143,5 +171,30 @@ class Invitation < ApplicationRecord
 
   def generate_token
     self.token = SecureRandom.urlsafe_base64(32)
+  end
+
+  def just_accepted?
+    accepted_at_previously_changed? && accepted_at.present?
+  end
+
+  def just_declined?
+    declined_at_previously_changed? && declined_at.present?
+  end
+
+  def notify_accepted
+    return if invited_by.blank?
+    return if invited_by == accepted_by  # don't ping the inviter for their own acceptance
+    WorkspaceInvitationAcceptedNotifier.with(record: self).deliver(invited_by)
+  end
+
+  # Mirror of notify_accepted's self-recipient guard. Decline has no accepted_by
+  # column (declines come from email/magic-link, not a signed-in user), so the
+  # check is "did the inviter decline their own invitation?" — compared via
+  # EmailNormalizer.equivalent? to absorb case / Unicode-NFC / IDN punycode
+  # variation between the stored invitation email and the inviter's address.
+  def notify_declined
+    return if invited_by.blank?
+    return if EmailNormalizer.equivalent?(email, invited_by.email_address)
+    WorkspaceInvitationDeclinedNotifier.with(record: self).deliver(invited_by)
   end
 end

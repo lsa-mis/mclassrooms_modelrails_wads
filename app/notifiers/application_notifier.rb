@@ -48,8 +48,12 @@ class ApplicationNotifier < Noticed::Event
 
     private
 
+    # Delegates to ApplicationNotifier#preferences_for so per-recipient
+    # gating in `recipient_pref` shares the same fallback semantic that
+    # event-level resolvers use. See ApplicationNotifier#preferences_for
+    # for the missing-prefs rationale.
     def preferences_object
-      recipient.try(:preferences)&.notification_preferences_object || NotificationPreferences.new(nil)
+      ApplicationNotifier.preferences_for(recipient)
     end
   end
 
@@ -65,6 +69,39 @@ class ApplicationNotifier < Noticed::Event
     :delivered
   rescue ActiveRecord::RecordNotUnique
     :deduplicated
+  end
+
+  # Resolve a NotificationPreferences object for any user, including users
+  # without a persisted UserPreferences row.
+  #
+  # Why a transient `UserPreferences.new` for the missing-prefs case?
+  # The `user_preferences.notification_preferences` JSONB column has a
+  # database-level default that contains the canonical permission matrix
+  # (see db/schema.rb). Reading it via `UserPreferences.new.notification_preferences`
+  # honors that single source of truth — Rails populates the column default
+  # on the in-memory record. Hard-coding the matrix in Ruby would create a
+  # second copy that could silently drift from the schema default.
+  #
+  # The previous behavior wrapped `nil`, which made every category except
+  # `security` return false from `NotificationPreferences#allow?`. That
+  # produced a silent default-deny posture for freshly-created users with
+  # no preferences row yet — incorrect, since the schema default permits
+  # in-app delivery for every category.
+  #
+  # Available as both a class method (used by the per-recipient
+  # `recipient_pref` shim defined inside `notification_methods`) and an
+  # instance method (used by class-level `recipients` resolvers).
+  def self.preferences_for(user)
+    persisted = user.try(:preferences)
+    if persisted&.notification_preferences.present?
+      persisted.notification_preferences_object
+    else
+      NotificationPreferences.new(UserPreferences.new.notification_preferences)
+    end
+  end
+
+  def preferences_for(user)
+    self.class.preferences_for(user)
   end
 
   private

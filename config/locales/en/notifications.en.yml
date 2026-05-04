@@ -25,5 +25,36 @@ en:
       do_not_disturb_description: "Pauses most notifications. Security alerts (such as password changes and sign-in events) are always delivered."
     workspace_invitation_received:
       message: "%{inviter} invited you to %{workspace}"
+    workspace_invitation_accepted:
+      message: "%{accepter} accepted your invitation to %{workspace}"
+    workspace_invitation_declined:
+      message: "%{decliner_email} declined your invitation to %{workspace}"
+    workspace_role_changed:
+      message: "Your role in %{workspace} changed to %{new_role}"
+    workspace_invitation_expiring_soon:
+      message: "Your invitation to %{workspace} expires in %{hours_remaining} hours"
+    workspace_member_added:
+      message: "%{added_user_name} joined %{workspace}"
+    project_membership_changed:
+      message: "Your access to %{project} changed to %{new_role}"
     password_changed:
       message: "Your password was changed for your account, %{user_name}."
+  notification_mailer:
+    workspace_role_changed:
+      subject: "Your role in %{workspace} has changed"
+      heading: "Your role in %{workspace} has changed"
+      greeting: "Hi %{name},"
+      body: "Your role in %{workspace} has changed to %{role}."
+      action: "Open workspace"
+    workspace_invitation_expiring_soon:
+      subject: "Your invitation to %{workspace} is about to expire"
+      heading: "Your invitation to %{workspace} is about to expire"
+      greeting: "Hi %{name},"
+      body: "Your invitation to %{workspace} expires in %{hours_remaining} hours. Accept it before then to avoid having to request a new one."
+      action: "Accept invitation"
+    workspace_member_added:
+      subject: "You've been added to %{workspace}"
+      heading: "Welcome to %{workspace}"
+      greeting: "Hi %{name},"
+      body: "You've been added to %{workspace} as %{role}."
+      action: "Open workspace"

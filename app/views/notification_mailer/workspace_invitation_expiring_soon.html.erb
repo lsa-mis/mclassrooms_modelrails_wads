@@ -1,0 +1,7 @@
+<h1><%= t("notification_mailer.workspace_invitation_expiring_soon.heading", workspace: @workspace.name) %></h1>
+
+<p><%= t("notification_mailer.workspace_invitation_expiring_soon.greeting", name: @recipient.first_name) %></p>
+
+<p><%= t("notification_mailer.workspace_invitation_expiring_soon.body", workspace: @workspace.name, hours_remaining: @hours_remaining) %></p>
+
+<p><%= link_to t("notification_mailer.workspace_invitation_expiring_soon.action"), @accept_url %></p>

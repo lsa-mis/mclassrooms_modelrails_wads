@@ -220,4 +220,59 @@ RSpec.describe Membership, type: :model do
       expect(owner_membership.reload.role).to eq(admin_role)
     end
   end
+
+  # Locks in the self-exclusion semantic of the predicate that gates the
+  # WorkspaceMemberAddedNotifier `after_create_commit` callback. The predicate
+  # name (`workspace_has_other_owners?`) must reflect that we're asking about
+  # owners *other than this membership* — without that exclusion, the very
+  # first owner being seeded for a fresh workspace would self-trigger a
+  # "new member joined" notification with itself as the audience.
+  #
+  # Predicate is private (matches Rails conventions for callback gates); we
+  # exercise it via `send` rather than expose the method publicly just for
+  # tests.
+  describe "#workspace_has_other_owners? (self-exclusion semantic)" do
+    let(:workspace) { create(:workspace) }
+
+    it "returns false when this is the only owner-role membership in the workspace" do
+      sole_owner = create(:membership, :owner, workspace: workspace)
+      expect(sole_owner.send(:workspace_has_other_owners?)).to be false
+    end
+
+    it "returns true when another owner-role membership exists in the workspace" do
+      first_owner = create(:membership, :owner, workspace: workspace)
+      create(:membership, :owner, workspace: workspace)
+      expect(first_owner.send(:workspace_has_other_owners?)).to be true
+    end
+
+    it "returns true for a non-owner membership when another owner-role membership exists in the workspace" do
+      # The predicate is a workspace-scoped question — "are there other
+      # owners in this workspace?" — not "is THIS membership not the lone
+      # owner?". A non-owner member added to a workspace that already has
+      # an owner returns true (the gate fires the notifier).
+      create(:membership, :owner, workspace: workspace)
+      member_membership = create(:membership, workspace: workspace)
+      expect(member_membership.send(:workspace_has_other_owners?)).to be true
+    end
+
+    it "returns false when no other owner exists even with an admin sibling" do
+      sole_owner = create(:membership, :owner, workspace: workspace)
+      create(:membership, :admin, workspace: workspace)
+      expect(sole_owner.send(:workspace_has_other_owners?)).to be false
+    end
+
+    it "ignores discarded owner memberships" do
+      first_owner = create(:membership, :owner, workspace: workspace)
+      second_owner = create(:membership, :owner, workspace: workspace)
+      second_owner.discard!
+      expect(first_owner.send(:workspace_has_other_owners?)).to be false
+    end
+
+    it "ignores owners from other workspaces" do
+      sole_in_target = create(:membership, :owner, workspace: workspace)
+      other_workspace = create(:workspace)
+      create(:membership, :owner, workspace: other_workspace)
+      expect(sole_in_target.send(:workspace_has_other_owners?)).to be false
+    end
+  end
 end

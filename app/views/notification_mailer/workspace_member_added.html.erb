@@ -1,0 +1,7 @@
+<h1><%= t("notification_mailer.workspace_member_added.heading", workspace: @workspace.name) %></h1>
+
+<p><%= t("notification_mailer.workspace_member_added.greeting", name: @recipient.first_name) %></p>
+
+<p><%= t("notification_mailer.workspace_member_added.body", workspace: @workspace.name, role: @role.name) %></p>
+
+<p><%= link_to t("notification_mailer.workspace_member_added.action"), workspace_url(@workspace) %></p>

@@ -444,4 +444,58 @@ RSpec.describe Invitation, type: :model do
       expect(inv.errors[:email]).to be_empty
     end
   end
+  describe "#resolved_workspace" do
+    let(:workspace) { create(:workspace) }
+    let(:owner) { create(:user) }
+
+    it "returns the invitable when invitable is a Workspace" do
+      invitation = create(:invitation, invitable: workspace)
+      expect(invitation.resolved_workspace).to eq(workspace)
+    end
+
+    it "returns the project's workspace when invitable is a Project" do
+      create(:membership, :owner, user: owner, workspace: workspace)
+      project = create(:project, workspace: workspace, created_by: owner)
+      invitation = create(:invitation, invitable: project, project_role: "editor")
+      expect(invitation.resolved_workspace).to eq(workspace)
+    end
+  end
+  describe "#expires_in_hours" do
+    # Use ceil so "expires in 1 hour" reads naturally at T-30min instead of "0
+    # hours" — the user-facing copy is hours-remaining, not floor of hours.
+    it "ceils a fractional remaining window to the next whole hour" do
+      freeze_time do
+        invitation = build(:invitation, expires_at: 90.minutes.from_now)
+        expect(invitation.expires_in_hours).to eq(2)
+      end
+    end
+
+    it "ceils a sub-hour remaining window to 1" do
+      freeze_time do
+        invitation = build(:invitation, expires_at: 30.minutes.from_now)
+        expect(invitation.expires_in_hours).to eq(1)
+      end
+    end
+
+    it "returns the exact number when the window is exactly an integer hour" do
+      freeze_time do
+        invitation = build(:invitation, expires_at: 24.hours.from_now)
+        expect(invitation.expires_in_hours).to eq(24)
+      end
+    end
+
+    it "returns 0 when the invitation is exactly at expiry" do
+      freeze_time do
+        invitation = build(:invitation, expires_at: Time.current)
+        expect(invitation.expires_in_hours).to eq(0)
+      end
+    end
+
+    it "returns 0 when the invitation has already expired" do
+      freeze_time do
+        invitation = build(:invitation, expires_at: 5.minutes.ago)
+        expect(invitation.expires_in_hours).to eq(0)
+      end
+    end
+  end
 end

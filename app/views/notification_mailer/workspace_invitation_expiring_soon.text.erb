@@ -1,0 +1,7 @@
+<%= t("notification_mailer.workspace_invitation_expiring_soon.heading", workspace: @workspace.name) %>
+
+<%= t("notification_mailer.workspace_invitation_expiring_soon.greeting", name: @recipient.first_name) %>
+
+<%= t("notification_mailer.workspace_invitation_expiring_soon.body", workspace: @workspace.name, hours_remaining: @hours_remaining) %>
+
+<%= t("notification_mailer.workspace_invitation_expiring_soon.action") %>: <%= @accept_url %>

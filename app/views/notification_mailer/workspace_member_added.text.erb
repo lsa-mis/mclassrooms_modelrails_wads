@@ -1,0 +1,7 @@
+<%= t("notification_mailer.workspace_member_added.heading", workspace: @workspace.name) %>
+
+<%= t("notification_mailer.workspace_member_added.greeting", name: @recipient.first_name) %>
+
+<%= t("notification_mailer.workspace_member_added.body", workspace: @workspace.name, role: @role.name) %>
+
+<%= t("notification_mailer.workspace_member_added.action") %>: <%= workspace_url(@workspace) %>

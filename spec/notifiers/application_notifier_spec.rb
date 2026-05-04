@@ -154,12 +154,15 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       expect(notification.recipient_pref(:email)).to be true
     end
 
-    it "returns false for non-security when recipient has no preferences row" do
+    it "permits non-security in_app when recipient has no preferences row (schema default)" do
+      # When a user has no UserPreferences row, the fallback wraps the JSONB
+      # column's schema default — which permits in_app for account_access. This
+      # is the centralized correct behavior; the previous default-deny posture
+      # silently dropped notifications for freshly-created users.
       bare_user = create(:user)
-      # Don't create UserPreferences for this user.
       StubAccountAccessNotifier.with(record: bare_user).deliver(bare_user)
       notification = bare_user.notifications.last
-      expect(notification.recipient_pref(:in_app)).to be false
+      expect(notification.recipient_pref(:in_app)).to be true
     end
 
     it "still permits security for a recipient without preferences row" do
@@ -167,6 +170,38 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       StubSecurityNotifier.with(record: bare_user).deliver(bare_user)
       notification = bare_user.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true
+    end
+  end
+
+  describe "#preferences_for (missing-prefs fallback)" do
+    # Regression spec for the centralized fallback: a user without a
+    # UserPreferences row must wrap the schema-default JSONB blob, not a
+    # silent default-deny `NotificationPreferences.new(nil)` shell.
+    let(:bare_user) { create(:user) }
+
+    it "returns a NotificationPreferences object backed by the schema default" do
+      # The schema default permits in_app for every category; the previous
+      # `nil` wrapping returned false for everything except security. This
+      # test locks in that the canonical default matrix is honored.
+      prefs = ApplicationNotifier.new.send(:preferences_for, bare_user)
+
+      expect(prefs).to be_a(NotificationPreferences)
+      expect(prefs.allow?(category: "account_access", channel: "in_app")).to be true
+      expect(prefs.allow?(category: "workspace_activity", channel: "in_app")).to be true
+      expect(prefs.allow?(category: "billing", channel: "email")).to be true
+    end
+
+    it "returns the user's own preferences object when a UserPreferences row exists" do
+      user = create(:user)
+      user_prefs = create(:user_preferences, user: user)
+      user_prefs.update!(notification_preferences:
+        user_prefs.notification_preferences.merge("do_not_disturb" => true))
+
+      prefs = ApplicationNotifier.new.send(:preferences_for, user.reload)
+
+      # Persisted DND flag honored — proves we read THROUGH to the user's row,
+      # not a transient stand-in.
+      expect(prefs.do_not_disturb?).to be true
     end
   end
 
