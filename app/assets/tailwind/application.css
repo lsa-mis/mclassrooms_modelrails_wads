@@ -167,28 +167,28 @@
        .btn-danger    — destructive action (delete, revoke)
 
      For text-only buttons (no fill), use .btn-text + .btn-text-* (above). */
-  .btn-base {
+  .btn-primary {
     @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
     @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply bg-interactive hover:bg-interactive-hover text-text-on-interactive;
+    @apply focus:ring-interactive-focus;
     min-height: var(--form-input-height);
   }
 
-  .btn-primary {
-    @apply btn-base;
-    @apply bg-interactive hover:bg-interactive-hover text-text-on-interactive;
-    @apply focus:ring-interactive-focus;
-  }
-
   .btn-secondary {
-    @apply btn-base;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
     @apply border border-border text-text-body hover:bg-surface-sunken;
     @apply focus:ring-interactive-focus;
+    min-height: var(--form-input-height);
   }
 
   .btn-danger {
-    @apply btn-base;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
     @apply bg-danger hover:bg-danger/90 text-text-on-interactive;
     @apply focus:ring-danger;
+    min-height: var(--form-input-height);
   }
 }
 
