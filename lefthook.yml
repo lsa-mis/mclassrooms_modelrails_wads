@@ -41,3 +41,10 @@ pre-push:
       skip:
         - merge
         - rebase
+    tailwind_build:
+      tags: assets
+      skip_empty: false
+      run: mise exec -- bin/rails tailwindcss:build
+      skip:
+        - merge
+        - rebase
