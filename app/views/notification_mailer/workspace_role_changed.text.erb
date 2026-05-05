@@ -2,6 +2,6 @@
 
 <%= t("notification_mailer.workspace_role_changed.greeting", name: @recipient.first_name) %>
 
-<%= t("notification_mailer.workspace_role_changed.body", workspace: @workspace.name, role: @role.name) %>
+<%= t("notification_mailer.workspace_role_changed.body", workspace: @workspace.name, new_role: @role.name) %>
 
 <%= t("notification_mailer.workspace_role_changed.action") %>: <%= workspace_url(@workspace) %>

@@ -85,5 +85,13 @@ Rails.application.configure do
     Bullet.add_safelist(type: :n_plus_one_query,
                         class_name: "WorkspaceMemberAddedNotifier::Notification",
                         association: :recipient)
+
+    # Same delivery-layer rationale as WorkspaceMemberAddedNotifier above —
+    # WorkspaceCapacityApproachingNotifier dispatches to all workspace owners,
+    # and Noticed iterates each notification to apply the `:email` deliver_by
+    # `before_enqueue` lambda (which calls `recipient_pref`).
+    Bullet.add_safelist(type: :n_plus_one_query,
+                        class_name: "WorkspaceCapacityApproachingNotifier::Notification",
+                        association: :recipient)
   end
 end

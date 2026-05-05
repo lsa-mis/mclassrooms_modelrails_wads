@@ -52,6 +52,27 @@ class Workspace < ApplicationRecord
     memberships.detect { |m| m.role.slug == "owner" }&.user
   end
 
+  # Returns all User records currently holding an owner-role kept membership
+  # in this workspace. Used by the capacity-approaching sweep to broadcast a
+  # billing alert to every owner, and exposed for future ownership-management
+  # UIs that need the full owner roster (vs. `#owner`, which returns just one).
+  #
+  # The query joins :role and filters by slug "owner", scoped to global
+  # ("workspace_id IS NULL") and workspace-scoped owner-named roles. This
+  # mirrors the resolver in WorkspaceMemberAddedNotifier and the membership
+  # validation in Membership#validate_not_last_owner!. `.includes(:user)`
+  # preloads the user side so callers iterating `.owners.each { |u| ... }`
+  # don't N+1.
+  def owners
+    memberships
+      .kept
+      .joins(:role)
+      .where(roles: { slug: "owner" })
+      .includes(:user)
+      .map(&:user)
+      .compact
+  end
+
   def available_logo_sources
     %w[upload initials]
   end

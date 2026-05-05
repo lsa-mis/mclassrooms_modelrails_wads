@@ -28,16 +28,11 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
     added_user = record.user
     workspace = record.workspace
 
-    # Owners include both global ("workspace_id IS NULL") and any workspace-scoped owner
-    # role. The codebase currently seeds owner as a global role, but `effective_roles`
-    # convention is to query both scopes for forward-compat with custom workspace roles.
-    # `.includes(:user)` preloads the user association so the subsequent `.map(&:user)`
-    # does not N+1 — the resolver runs synchronously in the request path that triggered
-    # the membership create.
-    owner_role_ids = Role.where(slug: "owner", workspace_id: [ nil, workspace.id ]).pluck(:id)
-    owner_users = workspace.memberships.kept.where(role_id: owner_role_ids).includes(:user).map(&:user)
-
-    candidates = ([ added_user ] + owner_users).compact.uniq
+    # Delegate owner resolution to the canonical helper on Workspace (which joins
+    # :role, filters by slug "owner", and preloads :user to avoid N+1). Then
+    # `[added_user] + ...` plus `.uniq` handles the "added user is already an
+    # owner" dedup case without changing observable behavior.
+    candidates = ([ added_user ] + workspace.owners).compact.uniq
 
     # Filter out users whose workspace_activity.in_app preference is off (or DND).
     # See class-level docs above for why this is the correct gate point. The

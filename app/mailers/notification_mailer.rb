@@ -52,6 +52,35 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  # Billing alert: a workspace has crossed the 80%-of-capacity threshold for a
+  # given metric. notification.params carries `:metric`, `:current`, `:limit`
+  # from WorkspaceCapacityApproachingNotifier.with(...).
+  #
+  # Per-recipient throttle (EmailRecipientThrottle): even though billing is not
+  # a security category, capacity alerts for a busy workspace can dispatch to
+  # multiple owners simultaneously. The throttle caps repeated sends to a
+  # single recipient (e.g., an owner who owns many workspaces, all of which
+  # cross the threshold on the same sweep run). Fail-open on cache miss so a
+  # cache outage doesn't suppress legitimate alerts.
+  def workspace_capacity_approaching
+    @notification = params[:notification]
+    @recipient = params[:recipient]
+    @workspace = params[:record]
+    @metric = @notification&.params&.dig(:metric) || @notification&.params&.dig("metric")
+    @current = @notification&.params&.dig(:current) || @notification&.params&.dig("current")
+    @limit = @notification&.params&.dig(:limit) || @notification&.params&.dig("limit")
+    @settings_url = edit_workspace_settings_url(@workspace)
+
+    return unless EmailRecipientThrottle.allow!(@recipient.email_address, kind: :workspace_capacity_approaching)
+
+    mail(
+      to: @recipient.email_address,
+      subject: t("notification_mailer.workspace_capacity_approaching.subject",
+                 workspace: @workspace.name,
+                 metric: @metric)
+    )
+  end
+
   # Security alert: a sign-in arrived from a (user_agent, os) digest we haven't
   # seen for this user. The notification.params hash carries `:user_agent` and
   # `:os` from SignInFromNewDeviceNotifier.with(...).

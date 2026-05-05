@@ -97,6 +97,43 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
+  describe "#owners" do
+    let(:workspace) { create(:workspace) }
+    let(:owner_role) do
+      Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+    end
+    let(:member_role) do
+      Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
+    end
+
+    it "returns all kept users with owner role for the workspace" do
+      owner_a = create(:user)
+      owner_b = create(:user)
+      member  = create(:user)
+      create(:membership, user: owner_a, workspace: workspace, role: owner_role)
+      create(:membership, user: owner_b, workspace: workspace, role: owner_role)
+      create(:membership, user: member,  workspace: workspace, role: member_role)
+
+      expect(workspace.owners).to match_array([ owner_a, owner_b ])
+    end
+
+    it "excludes discarded owner memberships" do
+      owner_a = create(:user)
+      owner_b = create(:user)
+      create(:membership, user: owner_a, workspace: workspace, role: owner_role)
+      m2 = create(:membership, user: owner_b, workspace: workspace, role: owner_role)
+      m2.discard!
+
+      expect(workspace.owners).to match_array([ owner_a ])
+    end
+
+    it "returns an empty collection when the workspace has no owner-role memberships" do
+      member = create(:user)
+      create(:membership, user: member, workspace: workspace, role: member_role)
+      expect(workspace.owners).to be_empty
+    end
+  end
+
   describe "logo" do
     it "generates initials from name" do
       workspace = build(:workspace, name: "Acme Corp")

@@ -13,3 +13,17 @@ production:
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
+
+  workspace_invitation_expiring_sweep:
+    class: WorkspaceInvitationExpiringSweepJob
+    queue: default
+    # Sweeps every 6 hours; per-day idempotency bucket means each expiring
+    # invitation produces one notification per day until accepted/declined.
+    schedule: every 6 hours
+
+  workspace_capacity_sweep:
+    class: WorkspaceCapacitySweepJob
+    queue: default
+    # 12-hour cadence balances alert freshness with noise budget;
+    # idempotency-key is per-day so owners aren't double-notified.
+    schedule: every 12 hours

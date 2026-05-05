@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
   include ActiveJob::TestHelper
   include ActionMailer::TestHelper
+  include ActiveSupport::Testing::TimeHelpers
 
   let(:workspace) { create(:workspace) }
   let(:inviter) { create(:user) }
@@ -17,7 +18,7 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
            invitable: workspace,
            email: invitee.email_address,
            invited_by: inviter,
-           expires_at: 24.hours.from_now)
+           expires_at: 48.hours.from_now)
   end
 
   # Drain the EventJob -> per-channel delivery method -> ActionMailer chain
@@ -48,11 +49,34 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
       expect(event.params["idempotency_key"]).to be_nil
     end
 
-    it "deduplicates concurrent dispatches within the same minute" do
-      freeze_time do
+    # Day-bucket idempotency: the sweep job (`WorkspaceInvitationExpiringSweepJob`)
+    # runs every 6 hours and re-finds every invitation in the 24-hour expiring
+    # window on each tick. With the base ApplicationNotifier minute-bucket key
+    # this would dispatch ~4 notifications per invitation per day. The override
+    # collapses repeat dispatches to one per (invitation, day).
+    it "deduplicates two consecutive dispatches hours apart on the same day" do
+      midday = Time.current.beginning_of_day + 6.hours
+      first = nil
+      second = nil
+      travel_to(midday) do
+        first = described_class.with(record: invitation).deliver(invitee)
+      end
+      travel_to(midday + 6.hours) do
+        second = described_class.with(record: invitation).deliver(invitee)
+      end
+      expect(first).to eq :delivered
+      expect(second).to eq :deduplicated
+    end
+
+    it "delivers a fresh dispatch the next day for the same invitation" do
+      now = Time.current
+      travel_to(now) do
         described_class.with(record: invitation).deliver(invitee)
+      end
+
+      travel_to(now + 1.day) do
         result = described_class.with(record: invitation).deliver(invitee)
-        expect(result).to eq :deduplicated
+        expect(result).to eq :delivered
       end
     end
 

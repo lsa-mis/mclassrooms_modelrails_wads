@@ -1,0 +1,7 @@
+<h1><%= t("notification_mailer.workspace_capacity_approaching.heading", workspace: @workspace.name, metric: @metric) %></h1>
+
+<p><%= t("notification_mailer.workspace_capacity_approaching.greeting", name: @recipient.first_name) %></p>
+
+<p><%= t("notification_mailer.workspace_capacity_approaching.body", workspace: @workspace.name, metric: @metric, current: @current, limit: @limit) %></p>
+
+<p><%= link_to t("notification_mailer.workspace_capacity_approaching.action"), @settings_url %></p>
