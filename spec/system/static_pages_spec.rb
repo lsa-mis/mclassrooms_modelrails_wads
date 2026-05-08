@@ -187,27 +187,29 @@ RSpec.describe "Static pages", type: :system do
   end
 
   describe "accessibility (axe-core)" do
-    let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aa" ] } } }
+    # Audits at WCAG 2.2 AAA — the project standard. `axe_clean_in_both_themes?`
+    # toggles to light, runs axe; toggles to dark, runs axe; ANDs the result.
+    let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
     %w[home about privacy contact].each do |page_name|
-      it "#{page_name} page passes automated accessibility checks" do
+      it "#{page_name} page passes automated accessibility checks (light + dark)" do
         path = page_name == "home" ? root_path : send(:"#{page_name}_path")
         visit path
-        expect(axe_clean?(axe_options)).to be(true),
-          "Accessibility violations found:\n#{axe_violations(axe_options).join("\n")}"
+        expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+          "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
       end
     end
 
-    it "sign-in page passes automated accessibility checks" do
+    it "sign-in page passes automated accessibility checks (light + dark)" do
       visit new_session_path
-      expect(axe_clean?(axe_options)).to be(true),
-        "Accessibility violations found:\n#{axe_violations(axe_options).join("\n")}"
+      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+        "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
     end
 
-    it "sign-up page passes automated accessibility checks" do
+    it "sign-up page passes automated accessibility checks (light + dark)" do
       visit new_registration_path
-      expect(axe_clean?(axe_options)).to be(true),
-        "Accessibility violations found:\n#{axe_violations(axe_options).join("\n")}"
+      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+        "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
     end
   end
 end

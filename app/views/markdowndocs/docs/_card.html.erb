@@ -1,0 +1,8 @@
+<%# Host override of markdowndocs gem's docs/_card — semantic tokens. %>
+<%# locals: (doc:) %>
+<div class="bg-surface-raised rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 p-6 h-full flex flex-col">
+  <h3 class="text-lg font-semibold text-text-heading mb-2 hover:text-accent transition-colors">
+    <%= link_to doc.title, markdowndocs.doc_path(doc.slug) %>
+  </h3>
+  <p class="text-text-body text-sm line-clamp-3"><%= doc.description %></p>
+</div>

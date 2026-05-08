@@ -40,9 +40,9 @@
 
 .dark {
   /* --- Danger (red) --- */
-  --color-danger:          oklch(70.4% 0.191 22.216);   /* ~red-400 */
+  --color-danger:          oklch(80.8% 0.114 19.571);   /* ~red-300 — was red-400 (6.18:1 on slate-950) — red-300 reaches AAA 7:1 */
   --color-danger-surface:  oklch(25.8% 0.092 26.042);   /* ~red-950 */
-  --color-danger-icon:     oklch(70.4% 0.191 22.216);   /* ~red-400 */
+  --color-danger-icon:     oklch(80.8% 0.114 19.571);   /* ~red-300 — same AAA bump as text */
   --color-danger-hover:    oklch(29.6% 0.093 25.166);   /* ~red-900 */
   --color-danger-progress: oklch(63.7% 0.237 25.331);   /* ~red-500 */
   --color-danger-border:   oklch(44.4% 0.177 26.899);   /* ~red-700 */

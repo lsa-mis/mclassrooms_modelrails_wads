@@ -1,0 +1,83 @@
+<%# Host override of markdowndocs gem's docs/show — uses host design tokens
+    (bg-surface-raised, text-text-heading, etc.) so colors flow through the
+    same OKLCH variable system as the rest of the app and flip cleanly with
+    .dark on <html>. The gem's literal bg-white/dark:bg-slate-800 fights with
+    bg-white in dark mode; semantic tokens have no competing utility. %>
+<div class="min-h-screen bg-surface">
+  <div class="max-w-7xl mx-auto px-4 py-12
+        sm:px-6
+        lg:px-8">
+    <!-- Back link -->
+    <div class="mb-6">
+      <%= link_to markdowndocs.root_path, class: "inline-flex items-center text-accent transition-colors
+            hover:text-accent-hover" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        <%= t("markdowndocs.back_to_documentation") %>
+      <% end %>
+    </div>
+
+    <!-- Breadcrumb -->
+    <%= render "markdowndocs/docs/breadcrumb", category: @doc.category, title: @doc.title %>
+
+    <!-- Mobile navigation (hamburger dropdown, hidden on desktop) -->
+    <div class="lg:hidden mb-6" data-controller="docs-sidebar">
+      <button
+        type="button"
+        class="w-full px-4 py-2 bg-surface-raised rounded-lg shadow-sm text-text-body transition-colors flex items-center justify-between
+            hover:bg-surface-sunken"
+        aria-label="<%= t("markdowndocs.navigation_sidebar") %>"
+        aria-expanded="false"
+        aria-controls="mobile-sidebar"
+        data-action="docs-sidebar#toggle">
+        <span class="font-medium"><%= t("markdowndocs.navigation_sidebar") %></span>
+        <!-- Hamburger icon (shown when closed) -->
+        <svg class="w-5 h-5" data-docs-sidebar-target="iconOpen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <!-- X icon (shown when open) -->
+        <svg class="w-5 h-5 hidden" data-docs-sidebar-target="iconClose" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <div id="mobile-sidebar"
+           data-docs-sidebar-target="sidebar"
+           class="overflow-hidden transition-all duration-300 ease-in-out mt-2"
+           style="max-height: 0px;">
+        <%= render "markdowndocs/docs/navigation",
+          rendered_content: @rendered_content,
+          related_docs: @related_docs,
+          current_mode: @docs_mode,
+          available_modes: @available_modes,
+          toc_items: @toc_items %>
+      </div>
+    </div>
+
+    <!-- Two-column layout -->
+    <div class="grid grid-cols-1 gap-8
+          lg:grid-cols-12">
+      <!-- Main content -->
+      <main class="lg:col-span-8">
+        <article class="bg-surface-raised rounded-lg shadow-sm p-8">
+          <div class="prose prose-indigo dark:prose-invert max-w-none">
+            <%= safe_html @rendered_content %>
+          </div>
+        </article>
+      </main>
+
+      <!-- Desktop sidebar (hidden on mobile, shown in grid on desktop) -->
+      <div class="hidden lg:block lg:col-span-4">
+        <div class="lg:sticky lg:top-8">
+          <%= render "markdowndocs/docs/navigation",
+            rendered_content: @rendered_content,
+            related_docs: @related_docs,
+            current_mode: @docs_mode,
+            available_modes: @available_modes,
+            toc_items: @toc_items %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

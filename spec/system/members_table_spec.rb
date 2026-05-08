@@ -85,16 +85,17 @@ RSpec.describe "Members table", type: :system do
   end
 
   describe "accessibility (axe-core)" do
-    let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aa" ] } } }
+    # Audits at WCAG 2.2 AAA — the project standard. Both light and dark.
+    let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
     let!(:alice) { create(:user, first_name: "Alice", last_name: "Anderson") }
     let!(:alice_membership) { create(:membership, :admin, user: alice, workspace: workspace) }
 
-    it "members page passes automated accessibility checks" do
+    it "members page passes automated accessibility checks (light + dark)" do
       visit workspace_members_path(workspace)
       # Dismiss any toast notification before running axe
       page.execute_script("document.querySelectorAll('[data-controller=\"toast-pill\"], [data-controller=\"toast-card\"]').forEach(el => el.remove())")
-      expect(axe_clean?(axe_options)).to be(true),
-        "Accessibility violations found:\n#{axe_violations(axe_options).join("\n")}"
+      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+        "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
     end
   end
 

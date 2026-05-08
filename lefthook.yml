@@ -16,21 +16,26 @@ pre-commit:
       stage_fixed: true
 
 pre-push:
-  parallel: true
+  # Sequential ordering with stop-on-first-failure. Critical because
+  # `tailwind_build` rewrites app/assets/builds/tailwind.css and `rspec`'s
+  # Playwright system tests load that file from the dev server. Running the
+  # two in parallel produced a race window (~1-2s) where early specs read a
+  # partial CSS file and axe-core reported phantom contrast violations on
+  # static, members, and docs pages. Ordering tailwind_build first
+  # guarantees rspec sees the freshly-built CSS deterministically.
+  piped: true
   commands:
+    tailwind_build:
+      tags: assets
+      skip_empty: false
+      run: mise exec -- bin/rails tailwindcss:build
+      skip:
+        - merge
+        - rebase
     brakeman:
       tags: security
       skip_empty: false
       run: mise exec -- bundle exec brakeman --no-pager -q
-      skip:
-        - merge
-        - rebase
-    rspec:
-      tags: test
-      skip_empty: false
-      env:
-        CI: "true"
-      run: mise exec -- bundle exec rspec
       skip:
         - merge
         - rebase
@@ -41,10 +46,12 @@ pre-push:
       skip:
         - merge
         - rebase
-    tailwind_build:
-      tags: assets
+    rspec:
+      tags: test
       skip_empty: false
-      run: mise exec -- bin/rails tailwindcss:build
+      env:
+        CI: "true"
+      run: mise exec -- bundle exec rspec
       skip:
         - merge
         - rebase

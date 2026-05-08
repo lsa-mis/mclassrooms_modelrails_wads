@@ -1,0 +1,30 @@
+<%# Host override of markdowndocs gem's docs/_breadcrumb — semantic tokens. %>
+<%# locals: (category:, title:) %>
+<%
+  breadcrumb_items = [
+    { name: "Docs", path: markdowndocs.root_path, current: false },
+    { name: category, path: "#{markdowndocs.root_path}##{category.parameterize}", current: false },
+    { name: title, path: nil, current: true }
+  ]
+%>
+<nav aria-label="Breadcrumb" class="mb-6">
+  <ol class="flex items-center space-x-2 text-sm text-text-body">
+    <% breadcrumb_items.each_with_index do |item, index| %>
+      <li class="flex items-center">
+        <% if index > 0 %>
+          <svg class="w-4 h-4 mx-2 text-text-body" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+          </svg>
+        <% end %>
+
+        <% if item[:current] %>
+          <span class="font-medium text-text-heading" aria-current="page"><%= item[:name] %></span>
+        <% elsif item[:path] %>
+          <%= link_to item[:name], item[:path], class: "hover:text-accent transition-colors" %>
+        <% else %>
+          <span class="text-text-body"><%= item[:name] %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</nav>

@@ -26,8 +26,8 @@
   --color-interactive-subtle: var(--primary-50);
 
   /* --- Accent (secondary highlights, prose links) --- */
-  --color-accent:       var(--secondary-600);
-  --color-accent-hover: var(--secondary-700);
+  --color-accent:       var(--secondary-700);
+  --color-accent-hover: var(--secondary-800);
 
   /* --- Borders --- */
   --color-border:        var(--neutral-200);
@@ -68,8 +68,8 @@
   --color-interactive-subtle: var(--primary-950);
 
   /* --- Accent --- */
-  --color-accent:       var(--secondary-400);
-  --color-accent-hover: var(--secondary-300);
+  --color-accent:       var(--secondary-300);
+  --color-accent-hover: var(--secondary-200);
 
   /* --- Borders --- */
   --color-border:        var(--neutral-700);
