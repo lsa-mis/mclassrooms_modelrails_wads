@@ -69,10 +69,11 @@ RSpec.describe "User menu dropdown", type: :system do
     it "ArrowDown moves focus to next item" do
       send_dropdown_key("ArrowDown")
       focused_text = page.evaluate_script("document.activeElement?.textContent?.trim()")
-      expect(focused_text).to eq(I18n.t("navigation.sign_out"))
+      expect(focused_text).to eq(I18n.t("navigation.notifications"))
     end
 
     it "ArrowDown wraps from last to first item" do
+      send_dropdown_key("ArrowDown")
       send_dropdown_key("ArrowDown")
       send_dropdown_key("ArrowDown")
       focused_text = page.evaluate_script("document.activeElement?.textContent?.trim()")

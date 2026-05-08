@@ -93,5 +93,15 @@ Rails.application.configure do
     Bullet.add_safelist(type: :n_plus_one_query,
                         class_name: "WorkspaceCapacityApproachingNotifier::Notification",
                         association: :recipient)
+
+    # /account/notifications eager-loads `event.record` for every row (every
+    # other notifier subtype's `#message` interpolates `event.record.<attr>`).
+    # SignInFromNewDeviceNotifier is the lone exception — its `#message` only
+    # reads `event.params` — so when it's the only subtype in the result the
+    # `:record` include is unused and Bullet flags AVOID. Safelist documents
+    # the deliberate trade-off rather than dropping eager-load for all rows.
+    Bullet.add_safelist(type: :unused_eager_loading,
+                        class_name: "SignInFromNewDeviceNotifier",
+                        association: :record)
   end
 end

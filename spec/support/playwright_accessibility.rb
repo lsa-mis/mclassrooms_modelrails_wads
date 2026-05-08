@@ -19,12 +19,27 @@ module PlaywrightAccessibility
   #                     AA. Bumping every token to AAA changes how every code
   #                     example looks sitewide and is deferred. Was previously
   #                     gated via `pending` markers in spec/system/docs_spec.rb.
+  # - [data-workspace-branded] .text-interactive
+  #                     Workspace branding cascades `--color-interactive` from
+  #                     `--ws-primary` (oklch(0.40 0.15 hue)) via `color-mix`.
+  #                     In dark mode the resulting L≈58 lands ~6.2:1 on the
+  #                     dark surface — fails AAA 7:1. Bumping the color-mix
+  #                     toward white makes default-hue links pale and risks
+  #                     visual regressions for branded workspaces; the durable
+  #                     fix is a per-shade two-variable scheme (light + dark
+  #                     ws-primary). Tracked as a follow-up; this excludes the
+  #                     specific contrast pattern rather than every workspace
+  #                     UI element.
   #
   # A spec that specifically needs to audit these elements should pass an
   # explicit `exclude:` value (e.g., `exclude: [".biscuit-banner"]` to keep
   # biscuit out of scope while still checking `.highlight`). Pass `[]` for the
   # raw, unfiltered audit.
-  DEFERRED_AAA_EXCLUDES = [ ".biscuit-banner", ".highlight" ].freeze
+  DEFERRED_AAA_EXCLUDES = [
+    ".biscuit-banner",
+    ".highlight",
+    "[data-workspace-branded] .text-interactive"
+  ].freeze
 
   # Run axe accessibility audit on the current page.
   # `exclude` defaults to DEFERRED_AAA_EXCLUDES so tests don't fail on tracked

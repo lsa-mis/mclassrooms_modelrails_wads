@@ -1,0 +1,36 @@
+<%# locals: (notification:) -%>
+<li id="<%= dom_id(notification) %>"
+    data-notification-type="<%= notification.type %>"
+    class="px-4 py-4 flex flex-col gap-3
+           sm:px-6
+           sm:flex-row sm:items-start sm:justify-between">
+  <div class="min-w-0 flex-1">
+    <p class="text-sm <%= notification.read_at? ? "text-text-body" : "text-text-heading font-medium" %>">
+      <%= notification.message %>
+    </p>
+    <p class="mt-1 text-xs text-text-muted">
+      <time datetime="<%= notification.created_at.iso8601 %>">
+        <%= time_ago_in_words(notification.created_at) %>
+      </time>
+    </p>
+  </div>
+
+  <div class="flex flex-wrap gap-2 shrink-0">
+    <% if notification.read_at? %>
+      <%= button_to t("notifications.index.item.mark_unread"),
+            account_notification_path(notification),
+            method: :patch,
+            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+    <% else %>
+      <%= button_to t("notifications.index.item.mark_read"),
+            account_notification_path(notification, read_at: "now"),
+            method: :patch,
+            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+    <% end %>
+
+    <%= button_to t("notifications.index.item.delete"),
+          account_notification_path(notification),
+          method: :delete,
+          class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-danger border border-border transition-colors hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+  </div>
+</li>

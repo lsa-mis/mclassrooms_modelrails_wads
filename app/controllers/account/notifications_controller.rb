@@ -7,20 +7,20 @@ module Account
 
     def index
       authorize Noticed::Notification, :index?, policy_class: NotificationPolicy
+      # `event.record` is the polymorphic notifiable each notifier's `#message`
+      # interpolates into its locale string. Eager-loaded across all subtypes
+      # because the common case interpolates record. SignInFromNewDeviceNotifier
+      # is the lone exception (reads only `event.params`); its unused `:record`
+      # is safelisted in `config/environments/test.rb` to keep Bullet quiet.
       scope = policy_scope(Noticed::Notification, policy_scope_class: NotificationPolicy::Scope)
+                .includes(:recipient, event: :record)
                 .order(created_at: :desc)
       scope = scope.where(read_at: nil) if params[:filter] == "unread"
       if params[:category].present?
         scope = scope.where(type: ApplicationNotifier.notification_types_for(params[:category]))
       end
+      @current_filter = current_filter_key
       @pagy, @notifications = pagy(scope, limit: 25)
-      # NOTE: per-row eager-loading (event, event.record, recipient) is not
-      # applied here because the notifier subtypes vary in which associations
-      # their `#message` traverses (e.g. SignInFromNewDevice reads only
-      # event.params, while WorkspaceInvitationAccepted traverses
-      # event.record.invited_by). Task 12's per-row partial wires the
-      # right-shaped includes once the per-subtype rendering surface is
-      # finalized.
     end
 
     def update
@@ -78,6 +78,12 @@ module Account
     # as a timestamp; we always stamp `Time.current` server-side.
     def mark_read?
       params[:read_at].present?
+    end
+
+    def current_filter_key
+      return "unread" if params[:filter] == "unread"
+      return params[:category] if params[:category].present?
+      "all"
     end
   end
 end

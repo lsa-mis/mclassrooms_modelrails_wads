@@ -1,25 +1,24 @@
-<%# Placeholder index for the notifications hub. Task 12 (PR-3 batch 2) %>
-<%# replaces this with the per-row partial, filter chips, bulk-action %>
-<%# buttons, and the eager-loading shape needed for #message rendering. %>
-<%# Kept structural-only here so request specs can verify routing, %>
-<%# Pundit scoping, filtering, and pagination without dragging in the %>
-<%# per-subtype #message dependencies. %>
-<section aria-labelledby="notifications-heading" class="px-4 py-6">
-  <h1 id="notifications-heading" class="text-2xl font-semibold mb-4">
+<section aria-labelledby="notifications-heading"
+         class="max-w-3xl mx-auto px-4 py-8
+                sm:px-6
+                lg:px-8">
+  <h1 id="notifications-heading"
+      class="text-2xl font-semibold text-text-heading mb-6">
     <%= t("notifications.index.heading") %>
   </h1>
 
+  <%= render "filter_chips", current_filter: @current_filter %>
+
+  <%= render "bulk_actions" %>
+
   <% if @notifications.empty? %>
-    <p class="text-base"><%= t("notifications.index.empty_all") %></p>
+    <p class="text-text-body">
+      <%= t("notifications.index.empty_all") %>
+    </p>
   <% else %>
-    <ul class="divide-y" aria-label="<%= t("notifications.index.heading") %>">
-      <% @notifications.each do |notification| %>
-        <li class="py-3" id="<%= dom_id(notification) %>" data-notification-type="<%= notification.type %>">
-          <p class="text-sm text-on-surface-variant">
-            <%= time_ago_in_words(notification.created_at) %>
-          </p>
-        </li>
-      <% end %>
+    <ul class="bg-surface-raised border border-border rounded-lg divide-y divide-border overflow-hidden"
+        aria-label="<%= t("notifications.index.heading") %>">
+      <%= render partial: "item", collection: @notifications, as: :notification %>
     </ul>
   <% end %>
 </section>

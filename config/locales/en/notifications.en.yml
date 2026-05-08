@@ -47,6 +47,7 @@ en:
       message: "We noticed a new sign-in from %{os}. If this wasn't you, please review your account."
     index:
       heading: "Notifications"
+      filters_aria: "Filter notifications"
       filters:
         all: "All"
         unread: "Unread"
@@ -57,11 +58,18 @@ en:
         billing: "Billing"
       empty_all: "You're all caught up."
       empty_filter: "Nothing matches this filter."
+      item:
+        mark_read: "Mark as read"
+        mark_unread: "Mark as unread"
+        delete: "Delete"
       mark_all_read:
         action: "Mark all as read"
+        title: "Mark all as read?"
+        confirm: "Mark all your unread notifications as read?"
         success: "All notifications marked as read."
       destroy_all_read:
         action: "Delete all read"
+        title: "Delete all read notifications?"
         confirm: "Delete all your read notifications?"
         success: "Read notifications deleted."
     destroy:
