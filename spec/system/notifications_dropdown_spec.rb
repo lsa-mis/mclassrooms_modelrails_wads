@@ -236,4 +236,31 @@ RSpec.describe "Notifications bell + dropdown", type: :system do
       expect(notification.reload.read_at).to be_present
     end
   end
+
+  # The shared header (and therefore the bell + dropdown) renders inside the
+  # markdowndocs engine layout when a signed-in user visits /docs/*. Engine
+  # views run in their own routing context, so any unprefixed main-app route
+  # helper (account_notifications_path, open_account_notification_path) raises
+  # NameError. The dropdown partial must use `main_app.` like every other
+  # shared partial does.
+  describe "rendering inside the markdowndocs engine" do
+    it "renders without raising on /docs and links 'see all' to the main-app route" do
+      notification = deliver_n_security_notifications(1).first
+
+      visit "/docs/getting-started"
+
+      expect(page).to have_css("article", text: /Getting Started/i)
+      expect(page).to have_css("button[data-notifications-bell-trigger]")
+
+      find("button[data-notifications-bell-trigger]").click
+
+      within "[data-notification-dropdown-target='panel']" do
+        see_all = find_link(I18n.t("notifications.bell.see_all"))
+        expect(see_all[:href]).to end_with(account_notifications_path)
+
+        item_link = find("##{ActionView::RecordIdentifier.dom_id(notification, :dropdown)} a")
+        expect(item_link[:href]).to end_with(open_account_notification_path(notification))
+      end
+    end
+  end
 end
