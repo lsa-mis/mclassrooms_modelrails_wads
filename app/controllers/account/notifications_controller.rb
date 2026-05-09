@@ -2,8 +2,8 @@
 
 module Account
   class NotificationsController < ApplicationController
-    before_action :set_notification, only: [ :update, :destroy ]
-    before_action :authorize_notification, only: [ :update, :destroy ]
+    before_action :set_notification, only: [ :update, :destroy, :open ]
+    before_action :authorize_notification, only: [ :update, :destroy, :open ]
 
     def index
       authorize Noticed::Notification, :index?, policy_class: NotificationPolicy
@@ -34,6 +34,15 @@ module Account
     def destroy
       @notification.destroy!
       redirect_to account_notifications_path, notice: t("notifications.destroy.success")
+    end
+
+    # GET /account/notifications/:id/open
+    # Bell-dropdown click handler: marks the notification as read (idempotent)
+    # and redirects to the notifier's `#url`. Each notifier subclass owns its
+    # destination via `notification_methods do; def url; ...; end; end`.
+    def open
+      @notification.update!(read_at: Time.current) if @notification.read_at.nil?
+      redirect_to @notification.url
     end
 
     def mark_all_read

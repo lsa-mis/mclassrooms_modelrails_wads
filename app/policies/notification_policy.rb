@@ -25,6 +25,12 @@ class NotificationPolicy < ApplicationPolicy
     update?
   end
 
+  # Bell-dropdown click — marks read + redirects to the notifier's URL.
+  # Same recipient gate as update/destroy.
+  def open?
+    update?
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       scope.where(recipient: user)

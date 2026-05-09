@@ -38,7 +38,12 @@ RSpec.describe "Workspace Members", type: :request do
 
         it "excludes non-matching members" do
           get workspace_members_path(workspace, q: "Zzzzz")
-          expect(response.body).not_to include("Alice")
+          # Scope to the members table — chrome surfaces (e.g. the
+          # notifications-bell dropdown) may legitimately surface "Alice"
+          # when the workspace-member-added notifier mentions her.
+          doc = Nokogiri::HTML(response.body)
+          members_frame = doc.at_css("turbo-frame#members_results").to_s
+          expect(members_frame).not_to include("Alice")
         end
       end
 

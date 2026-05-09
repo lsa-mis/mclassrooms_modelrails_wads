@@ -1,0 +1,50 @@
+<%# Bell-dropdown panel. Hidden by default; the parent Stimulus controller
+    toggles `hidden` via the `panel` target. Click handling on items is
+    a follow-up cycle. %>
+<% recent = recent_notifications_for_dropdown(Current.user) %>
+<div data-notification-dropdown-target="panel"
+     role="region"
+     aria-labelledby="notifications-dropdown-heading"
+     class="hidden absolute right-0 mt-2 w-screen max-w-sm rounded-lg
+            bg-surface-raised border border-border shadow-lg z-50
+            sm:w-96">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-border">
+    <h2 id="notifications-dropdown-heading"
+        class="text-sm font-semibold text-text-heading">
+      <%= t("notifications.bell.label") %>
+    </h2>
+    <%= link_to t("notifications.bell.see_all"),
+          account_notifications_path,
+          class: "text-sm text-interactive hover:text-interactive-hover
+                  focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-interactive-focus rounded" %>
+  </div>
+
+  <% if recent.any? %>
+    <ul class="divide-y divide-border max-h-96 overflow-y-auto">
+      <% recent.each do |notification| %>
+        <li data-notification-item
+            data-notification-read="<%= notification.read_at? %>"
+            id="<%= dom_id(notification, :dropdown) %>"
+            class="<%= "bg-surface-sunken" unless notification.read_at? %>">
+          <%= link_to open_account_notification_path(notification),
+                class: "block px-4 py-3 text-text-body
+                        hover:bg-surface focus:bg-surface
+                        focus:outline-none focus:ring-2 focus:ring-inset focus:ring-interactive-focus" do %>
+            <p class="text-sm">
+              <%= notification.message %>
+            </p>
+            <p class="mt-1 text-xs text-text-muted">
+              <time datetime="<%= notification.created_at.iso8601 %>">
+                <%= time_ago_in_words(notification.created_at) %>
+              </time>
+            </p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <div class="p-4 text-sm text-text-body">
+      <%= t("notifications.bell.empty") %>
+    </div>
+  <% end %>
+</div>

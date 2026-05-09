@@ -34,6 +34,9 @@ Rails.application.routes.draw do
     end
     resource :email_confirmation, only: [ :show, :destroy ]
     resources :notifications, only: [ :index, :update, :destroy ] do
+      member do
+        get :open
+      end
       collection do
         post :mark_all_read
         delete :destroy_all_read
