@@ -9,6 +9,15 @@ class ApplicationNotifier < Noticed::Event
 
   before_create :populate_idempotency_key
 
+  # Broadcast a Turbo Stream replacing the bell frame to each recipient's
+  # `[user, :notifications]` stream after the event's transaction commits.
+  # Hooks here (on the Event) rather than on Noticed::Notification because
+  # Noticed v2 uses `notifications.insert_all!` which bypasses callbacks on
+  # the Notification class. By the time this `after_create_commit` fires,
+  # the bulk-inserted notification rows are already persisted and the page
+  # can pick up fresh state.
+  after_create_commit :broadcast_notifications_arrival
+
   notification_methods do
     def recipient_pref(channel)
       preferences_object.allow?(category: event.class.category_name, channel: channel.to_s)
@@ -128,6 +137,41 @@ class ApplicationNotifier < Noticed::Event
   end
 
   private
+
+  def broadcast_notifications_arrival
+    # Query `Noticed::Notification` directly (not `self.notifications`) so
+    # the parent-child `inverse_of` link doesn't make Bullet think `event`
+    # is preloaded for every Notification subtype — false-AVOID-warning
+    # noise across every spec that dispatches a notifier. The SQL is the
+    # same; we lose the auto-set parent reference we don't use anyway.
+    recipient_ids = Noticed::Notification
+                      .where(event_id: id, recipient_type: "User")
+                      .pluck(:recipient_id)
+    return if recipient_ids.empty?
+
+    User.where(id: recipient_ids).find_each do |user|
+      Turbo::StreamsChannel.broadcast_replace_to(
+        [ user, :notifications ],
+        target: "notifications_bell_frame",
+        partial: "shared/notifications_bell_button",
+        locals: { user: user }
+      )
+
+      # Drop the announcement into the page-level aria-live region so the
+      # arrival is narrated by assistive tech without competing for focus.
+      # `polite` + `atomic` (set on the slot itself) re-reads the full
+      # message every time it changes.
+      Turbo::StreamsChannel.broadcast_update_to(
+        [ user, :notifications ],
+        target: "notifications-live",
+        content: I18n.t("notifications.bell.arrival_announcement")
+      )
+    end
+  rescue StandardError
+    # Same rationale as `Broadcastable`: a broadcast adapter outage must
+    # never block notification creation. The notification rows still
+    # persist; the user picks up the new badge on next page load.
+  end
 
   # Populates noticed_events.idempotency_key from the polymorphic `record`
   # that Noticed assigns from `with(record: ...)`. Noticed strips :record

@@ -1,39 +1,15 @@
-<%# Notifications bell trigger + dropdown panel scoped under one Stimulus
-    controller. The panel partial is rendered as a sibling so the
-    controller's `panel` target finds it via the shared element subtree. %>
-<%
-  unread_count = Current.user.notifications.where(read_at: nil).count
-  badge_text = unread_count > 9 ? "10+" : unread_count.to_s
-  aria_label = if unread_count.zero?
-    t("notifications.bell.label")
-  else
-    "#{t('notifications.bell.label')}: #{t('notifications.bell.unread_count', count: unread_count)}"
-  end
-%>
+<%# locals: (user: Current.user) -%>
+<%# Composition: the visible bell button is wrapped in a turbo-frame so the
+    after_create_commit broadcast can replace just the button (cheap COUNT
+    query) without re-rendering the dropdown panel (heavier list query).
+    Both elements share the same `notification-dropdown` Stimulus scope so
+    open/close behavior continues to work after a broadcast. %>
+<% bell_user = local_assigns.fetch(:user) { Current.user } %>
 <div data-controller="notification-dropdown"
      class="relative">
-  <button type="button"
-          data-notifications-bell-trigger
-          data-notification-dropdown-target="trigger"
-          data-action="click->notification-dropdown#toggle"
-          aria-label="<%= aria_label %>"
-          aria-haspopup="true"
-          aria-expanded="false"
-          class="btn-touch-target relative rounded-full text-text-body
-                 hover:text-interactive
-                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
-                 cursor-pointer">
-    <%= icon(:bell, size: :md) %>
-    <% if unread_count.positive? %>
-      <span data-notifications-bell-badge
-            aria-hidden="true"
-            class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 inline-flex items-center justify-center
-                   rounded-full text-xs font-semibold
-                   bg-info text-text-on-interactive">
-        <%= badge_text %>
-      </span>
-    <% end %>
-  </button>
+  <turbo-frame id="notifications_bell_frame">
+    <%= render "shared/notifications_bell_button", user: bell_user %>
+  </turbo-frame>
 
-  <%= render "shared/notifications_dropdown" %>
+  <%= render "shared/notifications_dropdown", user: bell_user %>
 </div>

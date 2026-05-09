@@ -5,6 +5,7 @@ en:
       label: "Notifications"
       empty: "You're all caught up."
       see_all: "See all notifications"
+      arrival_announcement: "New notification"
       unread_count:
         zero:  "No new notifications"
         one:   "1 unread"

@@ -39,5 +39,21 @@
 
     <%= render "shared/footer" %>
     <%= biscuit_banner %>
+
+    <% if authenticated? %>
+      <%# Subscribe to the recipient's notifications stream. After-create
+          callback on Noticed::Notification broadcasts a turbo-stream that
+          replaces the bell frame and (cycle C) updates the live region. %>
+      <%= turbo_stream_from [Current.user, :notifications] %>
+    <% end %>
+
+    <%# Screen-reader announcement slot for real-time notification arrivals.
+        Empty by default; broadcasts (Task 14 cycle C) update its content,
+        and the polite-atomic combo causes assistive tech to re-read the
+        full message each time it changes. %>
+    <div id="notifications-live"
+         aria-live="polite"
+         aria-atomic="true"
+         class="sr-only"></div>
   </body>
 </html>

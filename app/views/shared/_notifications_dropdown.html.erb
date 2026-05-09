@@ -1,7 +1,10 @@
+<%# locals: (user: Current.user) -%>
 <%# Bell-dropdown panel. Hidden by default; the parent Stimulus controller
-    toggles `hidden` via the `panel` target. Click handling on items is
-    a follow-up cycle. %>
-<% recent = recent_notifications_for_dropdown(Current.user) %>
+    toggles `hidden` via the `panel` target. `user:` is passed by the bell
+    partial so broadcasts (Task 14) can render with `recipient` instead of
+    relying on `Current.user`. %>
+<% dropdown_user = local_assigns.fetch(:user) { Current.user } %>
+<% recent = recent_notifications_for_dropdown(dropdown_user) %>
 <div data-notification-dropdown-target="panel"
      role="region"
      aria-labelledby="notifications-dropdown-heading"
