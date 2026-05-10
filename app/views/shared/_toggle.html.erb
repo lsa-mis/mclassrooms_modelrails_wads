@@ -1,0 +1,50 @@
+<%# locals: (name:, label:, checked: false, disabled: false, value: "true", help: nil, hidden_value: nil) -%>
+<%# Switch-style toggle. Wraps a hidden checkbox inside a styled label so
+    screen readers get the proper input semantics + the visual is a sliding
+    pill. Used by the notifications-preferences UI; could be reused
+    anywhere else once the project has more toggle surfaces (single
+    callsite for v1, so it stays a partial per project convention). %>
+<%
+  toggle_id = "toggle-#{name.to_s.parameterize.tr('_', '-')}-#{SecureRandom.hex(2)}"
+  knob_classes = checked ? "translate-x-5 bg-surface-raised" : "translate-x-0 bg-surface-raised"
+  track_classes = if disabled
+    checked ? "bg-interactive opacity-50 cursor-not-allowed" : "bg-surface-sunken opacity-50 cursor-not-allowed"
+  else
+    checked ? "bg-interactive" : "bg-surface-sunken"
+  end
+%>
+<label for="<%= toggle_id %>"
+       class="inline-flex items-center gap-3 cursor-pointer
+              <%= "cursor-not-allowed" if disabled %>">
+  <input type="checkbox"
+         id="<%= toggle_id %>"
+         name="<%= name %>"
+         value="<%= value %>"
+         <% if checked %>checked<% end %>
+         <% if disabled %>disabled<% end %>
+         data-action="change->auto-submit#submit"
+         class="sr-only peer">
+  <%# A `disabled` checkbox doesn't submit a value, so when the security
+      row needs to assert "true" server-side we attach a hidden field with
+      the same name. Caller passes `hidden_value` for that case. %>
+  <% if hidden_value && disabled %>
+    <input type="hidden" name="<%= name %>" value="<%= hidden_value %>">
+  <% end %>
+  <span aria-hidden="true"
+        class="relative inline-block w-11 h-6 rounded-full transition-colors
+               <%= track_classes %>
+               peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-interactive-focus">
+    <span class="absolute top-0.5 left-0.5 inline-block w-5 h-5 rounded-full shadow transition-transform
+                 <%= knob_classes %>"></span>
+  </span>
+  <span class="flex flex-col">
+    <span class="text-sm <%= disabled ? "text-text-muted" : "text-text-body" %>">
+      <%= label %>
+    </span>
+    <% if help.present? %>
+      <span class="text-xs text-text-muted">
+        <%= help %>
+      </span>
+    <% end %>
+  </span>
+</label>

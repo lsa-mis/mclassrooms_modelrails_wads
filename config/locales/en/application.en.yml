@@ -15,6 +15,7 @@ en:
     sign_out: "Sign out"
     profile: "Profile"
     notifications: "Notifications"
+    notification_preferences: "Notification preferences"
     connected_accounts: "Accounts"
     workspaces: "Workspaces"
     new_workspace: "New workspace"

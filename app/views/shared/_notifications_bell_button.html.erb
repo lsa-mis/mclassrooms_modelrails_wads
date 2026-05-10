@@ -5,11 +5,21 @@
     dropdown helper's heavier `.includes(event: :record)` query. %>
 <%
   unread_count = user.notifications.where(read_at: nil).count
+  prefs_object = user.preferences&.notification_preferences_object
+  dnd_active = prefs_object&.do_not_disturb? && unread_count.positive?
   badge_text = unread_count > 9 ? "10+" : unread_count.to_s
   aria_label = if unread_count.zero?
     t("notifications.bell.label")
   else
     "#{t('notifications.bell.label')}: #{t('notifications.bell.unread_count', count: unread_count)}"
+  end
+  # When DND is on AND the user has unread, surface that fact via a native
+  # title tooltip so they don't lose track of suppressed activity. Hidden
+  # count is approximated by total unread (every unread under DND is by
+  # definition hidden from non-security badges); a more precise count
+  # would require a per-category query, deferred.
+  title_text = if dnd_active
+    t("notifications.bell.unread_with_dnd", count: unread_count, hidden: unread_count)
   end
 %>
 <button type="button"
@@ -17,6 +27,7 @@
         data-notification-dropdown-target="trigger"
         data-action="click->notification-dropdown#toggle"
         aria-label="<%= aria_label %>"
+        <% if title_text %>title="<%= title_text %>"<% end %>
         aria-haspopup="true"
         aria-expanded="false"
         class="btn-touch-target relative rounded-full text-text-body

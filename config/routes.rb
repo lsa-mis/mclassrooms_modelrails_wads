@@ -24,6 +24,7 @@ Rails.application.routes.draw do
       get :hub
     end
     resource :theme_preference, only: [ :update ]
+    resource :notification_preferences, only: [ :edit, :update ]
     resources :connected_accounts, only: [ :index, :destroy ] do
       member do
         post :resend_verification

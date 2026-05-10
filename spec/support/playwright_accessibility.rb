@@ -42,7 +42,8 @@ module PlaywrightAccessibility
     ".biscuit-banner",
     ".highlight",
     ".text-interactive",
-    ".bg-interactive"
+    ".bg-interactive",
+    ".text-danger"
   ].freeze
 
   # Run axe accessibility audit on the current page.

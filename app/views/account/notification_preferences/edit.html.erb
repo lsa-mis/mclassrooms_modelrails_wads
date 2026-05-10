@@ -1,0 +1,181 @@
+<%
+  prefs_object = @preferences.notification_preferences_object
+  prefs = @preferences.notification_preferences
+  categories = NotificationPreferences::CATEGORIES
+  channels = NotificationPreferences::CHANNELS
+  tz_name = @preferences.timezone.presence || "UTC"
+%>
+<section aria-labelledby="notification-preferences-heading"
+         class="max-w-3xl mx-auto px-4 py-8 space-y-10
+                sm:px-6
+                lg:px-8">
+  <header>
+    <h1 id="notification-preferences-heading"
+        class="text-2xl font-semibold text-text-heading">
+      <%= t("notifications.preferences.heading") %>
+    </h1>
+  </header>
+
+  <%# === Master DND ============================================== %>
+  <%= form_with url: account_notification_preferences_path,
+        method: :patch,
+        data: { controller: "auto-submit" } do |f| %>
+    <fieldset class="bg-surface-raised border border-border rounded-lg p-6">
+      <legend class="sr-only"><%= t("notifications.preferences.master_section") %></legend>
+      <%= render "shared/toggle",
+            name: "notification_preferences[do_not_disturb]",
+            label: t("notifications.preferences.master_section"),
+            help: t("notifications.preferences.master_help"),
+            checked: prefs_object.do_not_disturb? %>
+    </fieldset>
+  <% end %>
+
+  <%# === 5×3 matrix ============================================== %>
+  <section aria-labelledby="matrix-heading"
+           class="bg-surface-raised border border-border rounded-lg p-6">
+    <h2 id="matrix-heading"
+        class="text-lg font-semibold text-text-heading mb-4">
+      <%= t("notifications.preferences.matrix_heading") %>
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full" aria-label="<%= t("notifications.preferences.matrix_aria") %>">
+        <thead>
+          <tr>
+            <th scope="col" class="text-left text-sm font-medium text-text-heading pb-3 pr-4">
+              <span class="sr-only">Category</span>
+            </th>
+            <% channels.each do |channel| %>
+              <th scope="col" class="text-left text-sm font-medium text-text-heading pb-3 px-4">
+                <%= t("notifications.preferences.channels.#{channel}") %>
+              </th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          <% categories.each do |category| %>
+            <tr>
+              <th scope="row"
+                  class="text-left text-sm font-medium text-text-body py-4 pr-4">
+                <%= t("notifications.preferences.categories.#{category}") %>
+              </th>
+              <% channels.each do |channel| %>
+                <% security_locked = (category == "security" && %w[in_app email].include?(channel)) %>
+                <% checked = security_locked || prefs.dig("categories", category, channel) == true %>
+                <td class="py-4 px-4">
+                  <%= form_with url: account_notification_preferences_path,
+                        method: :patch,
+                        data: { controller: "auto-submit" },
+                        class: "inline-block" do |f| %>
+                    <%# A disabled checkbox doesn't submit, so we hide-field the
+                        always-on value for security cells. NotificationPreferences#allow?
+                        also forces true for security regardless, so the JSONB
+                        value is informational here. %>
+                    <%= render "shared/toggle",
+                          name: "notification_preferences[categories][#{category}][#{channel}]",
+                          label: t("notifications.preferences.categories.#{category}"),
+                          help: (security_locked ? t("notifications.preferences.always_on") : nil),
+                          checked: checked,
+                          disabled: security_locked,
+                          hidden_value: (security_locked ? "true" : nil) %>
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# === Digest controls ========================================= %>
+  <section aria-labelledby="digest-heading"
+           class="bg-surface-raised border border-border rounded-lg p-6">
+    <h2 id="digest-heading"
+        class="text-lg font-semibold text-text-heading mb-4">
+      <%= t("notifications.preferences.digest.heading") %>
+    </h2>
+    <%= form_with url: account_notification_preferences_path,
+          method: :patch,
+          data: { controller: "auto-submit" },
+          class: "flex flex-wrap items-end gap-6" do |f| %>
+      <fieldset>
+        <legend class="block text-sm font-medium text-text-heading mb-2">
+          <%= t("notifications.preferences.digest.cadence") %>
+        </legend>
+        <div class="flex gap-4">
+          <% %w[daily weekly].each do |cadence| %>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio"
+                     name="notification_preferences[digest][cadence]"
+                     value="<%= cadence %>"
+                     <% if prefs_object.digest_cadence == cadence %>checked<% end %>
+                     autocomplete="off"
+                     data-action="change->auto-submit#submit"
+                     class="w-4 h-4 text-interactive border-border-strong
+                            focus:ring-interactive-focus focus:ring-2">
+              <span class="text-sm text-text-body">
+                <%= t("notifications.preferences.digest.cadence_options.#{cadence}") %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+      <div>
+        <label for="digest-hour-local"
+               class="block text-sm font-medium text-text-heading mb-2">
+          <%= t("notifications.preferences.digest.time") %>
+        </label>
+        <input type="time"
+               id="digest-hour-local"
+               name="notification_preferences[digest][hour_local]"
+               value="<%= format("%02d:00", prefs_object.digest_hour_local) %>"
+               step="3600"
+               autocomplete="off"
+               data-action="change->auto-submit#submit"
+               class="min-h-[44px] px-3 rounded-md bg-surface text-text-body border border-border-strong
+                      focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+      </div>
+    <% end %>
+    <p class="mt-3 text-xs text-text-muted">
+      <%= t("notifications.preferences.digest.timezone", timezone: tz_name) %>
+    </p>
+  </section>
+
+  <%# === Retention =============================================== %>
+  <section aria-labelledby="retention-heading"
+           class="bg-surface-raised border border-border rounded-lg p-6">
+    <h2 id="retention-heading"
+        class="text-lg font-semibold text-text-heading mb-4">
+      <%= t("notifications.preferences.retention.heading") %>
+    </h2>
+    <%= form_with url: account_notification_preferences_path,
+          method: :patch,
+          data: { controller: "auto-submit" },
+          class: "flex items-center gap-3" do |f| %>
+      <label for="retention-days"
+             class="text-sm text-text-body">
+        <%= t("notifications.preferences.retention.label") %>
+      </label>
+      <select id="retention-days"
+              name="notification_preferences[retention_days]"
+              autocomplete="off"
+              data-action="change->auto-submit#submit"
+              class="min-h-[44px] px-3 rounded-md bg-surface text-text-body border border-border-strong
+                     focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+        <% [ 30, 60, 90, 180, 365 ].each do |days| %>
+          <option value="<%= days %>"
+                  <% if prefs_object.retention_days == days %>selected<% end %>>
+            <%= t("notifications.preferences.retention.options.#{days}") %>
+          </option>
+        <% end %>
+        <option value=""
+                <% if prefs_object.retention_days.nil? %>selected<% end %>>
+          <%= t("notifications.preferences.retention.options.never") %>
+        </option>
+      </select>
+    <% end %>
+    <p class="mt-3 text-xs text-text-muted">
+      <%= t("notifications.preferences.retention.help") %>
+    </p>
+  </section>
+</section>

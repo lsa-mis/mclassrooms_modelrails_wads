@@ -73,9 +73,8 @@ RSpec.describe "User menu dropdown", type: :system do
     end
 
     it "ArrowDown wraps from last to first item" do
-      send_dropdown_key("ArrowDown")
-      send_dropdown_key("ArrowDown")
-      send_dropdown_key("ArrowDown")
+      # Menu items: Profile → Notifications → Notification preferences → Sign out
+      4.times { send_dropdown_key("ArrowDown") }
       focused_text = page.evaluate_script("document.activeElement?.textContent?.trim()")
       expect(focused_text).to eq(I18n.t("navigation.profile"))
     end
