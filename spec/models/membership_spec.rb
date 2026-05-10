@@ -72,6 +72,27 @@ RSpec.describe Membership, type: :model do
     it "prevents deactivating the last owner" do
       expect { membership.deactivate! }.to raise_error(ActiveRecord::RecordInvalid)
     end
+
+    # Race-safety net for last-owner check. Pre-flight validate_not_last_owner!
+    # runs against the workspace snapshot before discard; under concurrency two
+    # owner-deactivations can both observe count==2 and proceed, leaving the
+    # workspace ownerless. The post-discard invariant re-checks inside the
+    # transaction (after our own discard), so a true race trips it.
+    it "rolls back the deactivation if it would leave the workspace ownerless" do
+      owner_a = create(:membership, :owner, workspace: workspace)
+      owner_b = create(:membership, :owner, workspace: workspace)
+      owner_a.discard!  # workspace now has 1 kept owner: owner_b
+
+      # Bypass pre-flight to simulate a racer whose validate_not_last_owner!
+      # passed against stale state.
+      allow(owner_b).to receive(:validate_not_last_owner!)
+
+      expect { owner_b.deactivate! }.to raise_error(ActiveRecord::RecordInvalid)
+      expect(owner_b.reload).not_to be_discarded
+      expect(
+        workspace.memberships.kept.joins(:role).where(roles: { slug: "owner" })
+      ).to exist
+    end
   end
 
   describe "reactivation" do
@@ -102,6 +123,28 @@ RSpec.describe Membership, type: :model do
       membership = build(:membership, workspace: workspace)
       expect(workspace).to receive(:lock!).and_call_original
       membership.save
+    end
+
+    # Race-safety net: panel review flagged that the pre-flight validator's
+    # workspace.lock! is a no-op across SQLite connections (per-connection
+    # locking), so two concurrent invitation accepts could both pass count==N
+    # and INSERT members N+1 + N+2. The post-create invariant runs inside the
+    # create transaction with the row already inserted; SQLite's writer lock
+    # serializes INSERTs, so by the time we COUNT we see the actual committed
+    # state. Over-capacity → raise → roll back.
+    it "rolls back the create when a racing transaction has filled capacity" do
+      workspace = create(:workspace, max_members: 2)
+      role = Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
+      2.times { create(:membership, workspace: workspace) }
+
+      user = create(:user)
+      membership = Membership.new(workspace: workspace, user: user, role: role)
+
+      # save!(validate: false) bypasses the pre-flight validator, simulating a
+      # racing transaction whose validator passed against stale state. The
+      # after_create invariant must catch the violation and roll back.
+      expect { membership.save!(validate: false) }.to raise_error(ActiveRecord::RecordInvalid)
+      expect(Membership.where(workspace: workspace, user: user)).not_to exist
     end
   end
 
@@ -218,6 +261,26 @@ RSpec.describe Membership, type: :model do
       admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
       owner_membership.transfer_ownership_to!(target_membership)
       expect(owner_membership.reload.role).to eq(admin_role)
+    end
+
+    # Race-safety: panel review flagged that two concurrent transfers from
+    # the same owner could leave the workspace with two owners (both target
+    # promotions succeed, demote-self is idempotent). Demote must be an
+    # atomic conditional update guarded by current role; if a racer already
+    # demoted us, abort *before* promoting target.
+    it "raises and leaves target unpromoted if current role is no longer owner" do
+      admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
+      # Out-of-band demote simulates a racing transfer that already won;
+      # stub reload so the in-memory role stays "owner" (modelling a stale
+      # snapshot read on a different connection).
+      Membership.where(id: owner_membership.id).update_all(role_id: admin_role.id)
+      allow(owner_membership).to receive(:reload) { owner_membership }
+
+      expect {
+        owner_membership.transfer_ownership_to!(target_membership)
+      }.to raise_error(ActiveRecord::RecordInvalid)
+
+      expect(target_membership.reload.role.slug).not_to eq("owner")
     end
   end
 
