@@ -113,6 +113,14 @@ en:
     destroy:
       success: "Notification deleted."
   notification_mailer:
+    digest:
+      subject:
+        daily: "Your daily %{app_name} digest"
+        weekly: "Your weekly %{app_name} digest"
+      preheader: "%{count} updates from your workspaces."
+      heading_daily: "Today's updates"
+      heading_weekly: "This week's updates"
+      footer: "You can change digest cadence or pause notifications in your preferences."
     workspace_role_changed:
       subject: "Your role in %{workspace} has changed"
       heading: "Your role in %{workspace} has changed"

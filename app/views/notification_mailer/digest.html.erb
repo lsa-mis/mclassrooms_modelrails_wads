@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>">
+  <head>
+    <meta charset="utf-8">
+    <title><%= t("notification_mailer.digest.subject.#{@cadence}", app_name: @app_name) %></title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
+    <p style="color: #64748b; font-size: 14px; margin: 0 0 16px;">
+      <%= t("notification_mailer.digest.preheader", count: @count) %>
+    </p>
+
+    <h1 style="font-size: 24px; margin: 0 0 24px;">
+      <%= @cadence == "weekly" ? t("notification_mailer.digest.heading_weekly") : t("notification_mailer.digest.heading_daily") %>
+    </h1>
+
+    <%# Group by Notifier category. The mapping is computed from the STI
+        `type` column rather than loading the event association — saves
+        a round-trip per row when the digest covers many notifications. %>
+    <%
+      grouped = @notifications.group_by do |notification|
+        notifier_class = notification.type.sub(/::Notification\z/, "").constantize
+        notifier_class.category_name || "other"
+      end
+    %>
+
+    <% grouped.each do |category, notifications| %>
+      <% next if notifications.empty? %>
+      <h2 style="font-size: 16px; color: #475569; margin: 24px 0 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+        <%= t("notifications.preferences.categories.#{category}", default: category.humanize) %>
+      </h2>
+      <ul style="list-style: none; padding: 0; margin: 0;">
+        <% notifications.each do |notification| %>
+          <li style="padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+            <p style="margin: 0 0 4px; font-size: 14px;">
+              <%= notification.render_safe_or_placeholder { notification.message } %>
+            </p>
+            <%
+              destination = notification.render_safe_or_placeholder { notification.url }
+            %>
+            <% if destination.present? && destination != t("notifications.placeholder") %>
+              <a href="<%= destination %>"
+                 style="font-size: 13px; color: #0369a1; text-decoration: underline;">
+                <%= t("notifications.bell.see_all", default: "View") %>
+              </a>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <hr style="margin: 32px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+    <p style="font-size: 12px; color: #64748b; margin: 0;">
+      <%= t("notification_mailer.digest.footer") %>
+      <a href="<%= @preferences_url %>" style="color: #0369a1;">
+        <%= t("navigation.notification_preferences", default: "Notification preferences") %>
+      </a>
+    </p>
+  </body>
+</html>

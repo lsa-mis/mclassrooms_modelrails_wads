@@ -1,0 +1,28 @@
+<%= @cadence == "weekly" ? t("notification_mailer.digest.heading_weekly") : t("notification_mailer.digest.heading_daily") %>
+============================================================
+
+<%= t("notification_mailer.digest.preheader", count: @count) %>
+
+<%
+  grouped = @notifications.group_by do |notification|
+    notifier_class = notification.type.sub(/::Notification\z/, "").constantize
+    notifier_class.category_name || "other"
+  end
+-%>
+<% grouped.each do |category, notifications| -%>
+<% next if notifications.empty? -%>
+
+## <%= t("notifications.preferences.categories.#{category}", default: category.humanize) %>
+
+<% notifications.each do |notification| -%>
+- <%= notification.render_safe_or_placeholder { notification.message } %>
+<% destination = notification.render_safe_or_placeholder { notification.url } -%>
+<% if destination.present? && destination != t("notifications.placeholder") -%>
+  <%= destination %>
+<% end -%>
+<% end -%>
+<% end -%>
+
+------------------------------------------------------------
+<%= t("notification_mailer.digest.footer") %>
+<%= @preferences_url %>

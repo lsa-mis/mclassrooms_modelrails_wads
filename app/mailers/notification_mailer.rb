@@ -109,4 +109,24 @@ class NotificationMailer < ApplicationMailer
       subject: t("notification_mailer.sign_in_from_new_device.subject", os: @os)
     )
   end
+
+  # Daily/weekly digest. Unlike the per-event mailers above, `digest` takes
+  # positional args (user + array of notifications) because it's invoked
+  # directly by `DigestMailerJob`, not through Noticed's `deliver_by :email`
+  # parameterized pipeline. Subject reflects the user's chosen cadence;
+  # template lays out notifications grouped by category. Task 23 fleshes
+  # out the HTML/text templates.
+  def digest(user, notifications)
+    @user = user
+    @notifications = notifications
+    @cadence = user.preferences&.notification_preferences_object&.digest_cadence || "daily"
+    @app_name = t("application.name", default: "ModelRails")
+    @count = notifications.size
+    @preferences_url = edit_account_notification_preferences_url
+
+    mail(
+      to: user.email_address,
+      subject: t("notification_mailer.digest.subject.#{@cadence}", app_name: @app_name)
+    )
+  end
 end
