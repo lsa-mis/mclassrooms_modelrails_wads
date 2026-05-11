@@ -46,6 +46,17 @@ pre-push:
       skip:
         - merge
         - rebase
+    erb_lint:
+      # Matches CI's lint_docs job. herb-lint must be on PATH — install with
+      # `npm install -g @herb-tools/linter` if you hit "command not found".
+      # Catches rules that bit PR #78: erb-no-output-in-attribute-position,
+      # html-no-empty-attributes, and friends.
+      tags: style
+      skip_empty: false
+      run: mise exec -- bundle exec rake erb:check
+      skip:
+        - merge
+        - rebase
     rspec:
       tags: test
       skip_empty: false
