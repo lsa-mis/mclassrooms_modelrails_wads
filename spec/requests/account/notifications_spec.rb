@@ -30,10 +30,21 @@ RSpec.describe "Account Notifications", type: :request do
     # association, idempotency key — everything the index renders — is exactly
     # what production builds. Using PasswordChangedNotifier (security category)
     # for the default; tests that need account_access dispatch their own.
+    #
+    # `@notification_offset` is a monotonic per-example counter that travels
+    # each dispatch forward by 5 minutes from the last. This guarantees every
+    # call lands in a distinct one-minute idempotency bucket — required
+    # because the previous `rand(1..1000).minutes` approach had a ~1/1000
+    # collision probability that flaked the "renders only unread" assertion
+    # (a collision dedup-drops the 2nd dispatch, leaving the test's "unread"
+    # pointer addressing the read row instead). Counter is shared across
+    # both helpers so cross-helper call orderings are still deterministic.
+    # Resets per example because instance vars don't persist across RSpec
+    # examples — exactly the scoping we want.
     def deliver_security_notification(recipient = user)
-      # Travel forward by random minutes to avoid the 1-minute idempotency
-      # bucket from collapsing repeat dispatches in the same example.
-      travel_to(Time.current + rand(1..1000).minutes) do
+      @notification_offset ||= 0
+      @notification_offset += 5
+      travel_to(Time.current + @notification_offset.minutes) do
         PasswordChangedNotifier.with(record: recipient).deliver(recipient)
       end
       recipient.notifications.reload.last
@@ -46,7 +57,9 @@ RSpec.describe "Account Notifications", type: :request do
                           invitable: workspace,
                           email: "x#{SecureRandom.hex(4)}@example.com",
                           invited_by: inviter)
-      travel_to(Time.current + rand(1..1000).minutes) do
+      @notification_offset ||= 0
+      @notification_offset += 5
+      travel_to(Time.current + @notification_offset.minutes) do
         WorkspaceInvitationResentNotifier.with(record: invitation).deliver(recipient)
       end
       recipient.notifications.reload.last
