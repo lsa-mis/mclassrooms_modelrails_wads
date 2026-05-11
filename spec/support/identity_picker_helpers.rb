@@ -19,11 +19,13 @@ module IdentityPickerHelpers
   # Open the identity picker modal from a profile or branding edit page.
   # Both pages place the trigger inside a [data-controller="modal"] container.
   # The hub is loaded via a lazy turbo frame, so we wait for content to appear.
+  # 10s budget — same as wait_for_crop_view/hub_view — to match observed CI
+  # runner contention rather than ideal-conditions timing.
   def open_identity_picker
     find("[data-controller='modal'] button[data-action*='modal#open']", match: :first).click
-    expect(page).to have_css("dialog[open]", wait: 3)
+    expect(page).to have_css("dialog[open]", wait: 10)
     # Wait for the hub turbo frame to load its content
-    expect(page).to have_css("#identity-picker-hub [role='radiogroup']", wait: 5)
+    expect(page).to have_css("#identity-picker-hub [role='radiogroup']", wait: 10)
   end
 
   # Click a source card by the visible title text ("Photo", "Gravatar", "Initials").
@@ -35,10 +37,10 @@ module IdentityPickerHelpers
       click_link title
     end
     # Wait for the turbo frame to finish loading (Turbo removes [busy] when done)
-    expect(page).to have_no_css("#identity-picker-hub[busy]", wait: 5)
+    expect(page).to have_no_css("#identity-picker-hub[busy]", wait: 10)
     # Wait for the selected source to be active
     expect(page).to have_css(
-      "#identity-picker-hub a[aria-checked='true']", text: title, wait: 5
+      "#identity-picker-hub a[aria-checked='true']", text: title, wait: 10
     )
   end
 
@@ -71,16 +73,38 @@ module IdentityPickerHelpers
     JS
   end
 
-  # Wait for crop view to become visible. Cropper.js v2 renders Web Components
-  # (cropper-canvas) after initialization — waiting on that guarantees ready-to-act.
+  # Wait for crop view to become visible AND the cropper to be fully ready.
+  # Cropper.js v2's init path is async (dynamic `import("cropperjs")` + web
+  # component mount + base transform capture + event listener registration);
+  # under CI runner contention the chain has exceeded the previous 5s budget
+  # and flaked across several specs. Two assertions:
+  #
+  #   1. `cropSection` is unhidden — confirms the mode switch completed.
+  #   2. `data-image-cropper-ready="true"` is set — confirms
+  #      `image_cropper_controller#_initCropper` reached the end of init
+  #      (after `_initialized = true`, all listeners attached, slider reset).
+  #      Cleared in `_destroy()` so re-inits have to re-publish — stale
+  #      attribute can't satisfy this wait.
+  #
+  # 10s timeout is intentionally generous; CI's slowest observed init was
+  # in the upload-then-crop path which adds a POST request to the budget.
   def wait_for_crop_view
-    expect(page).to have_css("[data-identity-picker-target='cropSection']:not([hidden])", wait: 5)
-    expect(page).to have_css("cropper-canvas", wait: 5)
+    expect(page).to have_css(
+      "[data-identity-picker-target='cropSection']:not([hidden])", wait: 10
+    )
+    expect(page).to have_css(
+      "[data-controller~='image-cropper'][data-image-cropper-ready='true']",
+      wait: 10
+    )
   end
 
   # Wait for hub view to become visible (after a mode switch back to hub).
+  # 10s budget matches wait_for_crop_view — under CI runner contention the
+  # exit-crop → unhide-hub round trip has been observed to exceed 5s and
+  # flake the subsequent title assertion (which is synchronous with the
+  # unhide, so the wait IS what budgets it).
   def wait_for_hub_view
-    expect(page).to have_css("#identity-picker-hub:not([hidden])", wait: 5)
+    expect(page).to have_css("#identity-picker-hub:not([hidden])", wait: 10)
   end
 
   # Build a user with a cropped avatar and its original, source set to "upload".
