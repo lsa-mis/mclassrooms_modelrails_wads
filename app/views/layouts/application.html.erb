@@ -45,6 +45,15 @@
           callback on Noticed::Notification broadcasts a turbo-stream that
           replaces the bell frame and (cycle C) updates the live region. %>
       <%= turbo_stream_from [Current.user, :notifications] %>
+
+      <%# Timezone beacon: reads the browser's IANA timezone via
+          Intl.DateTimeFormat on Stimulus connect and PATCHes it to the
+          server. Idempotent server-side — never clobbers an explicit
+          user choice. Authenticated-only. %>
+      <div data-controller="timezone-beacon"
+           data-timezone-beacon-url-value="<%= account_preferences_timezone_path %>"
+           data-timezone-beacon-token-value="<%= form_authenticity_token %>"
+           hidden></div>
     <% end %>
 
     <%# Screen-reader announcement slot for real-time notification arrivals.

@@ -26,6 +26,28 @@ RSpec.describe "Account Notification Preferences", type: :request do
         get edit_account_notification_preferences_path
         expect(response).to have_http_status(:ok)
       end
+
+      # Phase 0.5: the page surfaces the user's currently-stored timezone
+      # prominently, with a native <select> for the Change action. The
+      # form posts to the same timezone endpoint with override=true so it
+      # bypasses the beacon's no-overwrite guard.
+      it "renders the detected/stored timezone with a Change action that posts to the timezone endpoint with override=true" do
+        user.preferences.update!(timezone: "America/Chicago")
+
+        get edit_account_notification_preferences_path
+
+        expect(response.body).to include("America/Chicago")
+        expect(response.body).to include(%Q(action="#{account_preferences_timezone_path}"))
+        expect(response.body).to include(%Q(name="override" value="true"))
+      end
+
+      it "renders the timezone select with regional optgroups (Americas, Europe, etc.)" do
+        get edit_account_notification_preferences_path
+
+        expect(response.body).to include(%Q(<optgroup label="Americas">))
+        expect(response.body).to include(%Q(<optgroup label="Europe">))
+        expect(response.body).to include(%Q(<optgroup label="Pacific">))
+      end
     end
 
     describe "PATCH /account/notification_preferences" do

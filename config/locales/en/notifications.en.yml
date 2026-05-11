@@ -25,6 +25,13 @@ en:
       do_not_disturb: "Do Not Disturb"
       do_not_disturb_description: "Pauses most notifications. Security alerts (such as password changes and sign-in events) are always delivered."
       heading: "Notification preferences"
+      timezone:
+        heading: "Your timezone"
+        detected: "Detected: %{timezone}"
+        change: "Change"
+        cancel: "Cancel"
+        picker_label: "Timezone"
+        save: "Save"
       master_section: "Pause non-essential notifications"
       master_help: "Security alerts always go through."
       always_on: "Always on"

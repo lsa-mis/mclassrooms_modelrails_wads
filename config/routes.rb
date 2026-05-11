@@ -25,6 +25,9 @@ Rails.application.routes.draw do
     end
     resource :theme_preference, only: [ :update ]
     resource :notification_preferences, only: [ :edit, :update ]
+    namespace :preferences do
+      resource :timezone, only: [ :update ]
+    end
     resources :connected_accounts, only: [ :index, :destroy ] do
       member do
         post :resend_verification
