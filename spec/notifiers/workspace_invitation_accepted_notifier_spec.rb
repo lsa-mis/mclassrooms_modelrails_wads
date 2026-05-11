@@ -61,19 +61,18 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
 
     it "still routes through workspace_activity (does NOT bypass DND)" do
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.recipient_pref(:in_app)).to be false
       expect(notification.recipient_pref(:email)).to be false
     end
 
-    it "permits in-app + digest under default preferences (workspace_activity)" do
+    it "permits in-app + email under default preferences (workspace_activity)" do
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true
-      expect(notification.recipient_pref(:digest)).to be true
-      expect(notification.recipient_pref(:email)).to be false
+      expect(notification.recipient_pref(:email)).to be true
     end
   end
 

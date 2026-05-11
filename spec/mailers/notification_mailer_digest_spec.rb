@@ -28,10 +28,12 @@ RSpec.describe NotificationMailer, type: :mailer do
       end
 
       it "uses the weekly subject when cadence is weekly" do
-        prefs = user.preferences.notification_preferences
-        user.preferences.update!(
-          notification_preferences: prefs.deep_merge("digest" => { "cadence" => "weekly" })
-        )
+        # v2: digest cadence is derived from delivery_methods.email.frequency.
+        # frequency = "weekly" → digest_cadence = "weekly". The v1
+        # `digest.cadence` key is gone.
+        np = user.preferences.notification_preferences.deep_dup
+        np["delivery_methods"]["email"]["frequency"] = "weekly"
+        user.preferences.update!(notification_preferences: np)
         notification = deliver_workspace_invitation_accepted
         mail = described_class.digest(user, [ notification ])
 

@@ -39,7 +39,7 @@ RSpec.describe PasswordChangedNotifier, type: :notifier do
 
     it "still delivers email under DND" do
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
       described_class.with(record: user).deliver(user)
       notification = user.notifications.last
       expect(notification.recipient_pref(:email)).to be true
@@ -47,7 +47,7 @@ RSpec.describe PasswordChangedNotifier, type: :notifier do
 
     it "still permits in-app under DND" do
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
       described_class.with(record: user).deliver(user)
       notification = user.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true

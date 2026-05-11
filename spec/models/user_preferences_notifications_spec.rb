@@ -8,33 +8,42 @@ RSpec.describe UserPreferences, "notification_preferences columns" do
     it "populates a fully-formed JSONB hash on a new row" do
       np = prefs.notification_preferences
       expect(np).to be_a(Hash)
-      expect(np.keys).to include("do_not_disturb", "digest", "categories", "retention_days")
+      expect(np.keys).to include("notification_types", "delivery_methods", "quiet_hours", "retention_days")
     end
 
-    it "has do_not_disturb defaulting to false" do
-      expect(prefs.notification_preferences["do_not_disturb"]).to eq false
+    it "has quiet_hours.enabled defaulting to false (DND off by default)" do
+      expect(prefs.notification_preferences.dig("quiet_hours", "enabled")).to eq false
     end
 
-    it "has digest enabled with daily cadence and 8am hour_local" do
-      digest = prefs.notification_preferences["digest"]
-      expect(digest).to eq("enabled" => true, "cadence" => "daily", "hour_local" => 8)
+    it "has email channel enabled at instant frequency by default (digest off)" do
+      email = prefs.notification_preferences.dig("delivery_methods", "email")
+      expect(email).to eq("enabled" => true, "frequency" => "instant")
     end
 
-    it "has all 5 expected categories with 3-channel toggles" do
-      cats = prefs.notification_preferences["categories"]
-      expect(cats.keys).to match_array(%w[security account_access workspace_activity project_activity billing])
-      cats.each do |_, channels|
-        expect(channels.keys).to match_array(%w[in_app email digest])
-      end
+    it "has all 5 expected notification_types as booleans" do
+      types = prefs.notification_preferences["notification_types"]
+      expect(types.keys).to match_array(%w[security account_access workspace_activity project_activity billing])
+      types.each_value { |v| expect(v).to be(true).or be(false) }
     end
 
-    it "applies the documented default channel matrix" do
-      cats = prefs.notification_preferences["categories"]
-      expect(cats["security"]).to            eq("in_app" => true, "email" => true,  "digest" => false)
-      expect(cats["account_access"]).to      eq("in_app" => true, "email" => true,  "digest" => false)
-      expect(cats["workspace_activity"]).to  eq("in_app" => true, "email" => false, "digest" => true)
-      expect(cats["project_activity"]).to    eq("in_app" => true, "email" => false, "digest" => true)
-      expect(cats["billing"]).to             eq("in_app" => true, "email" => true,  "digest" => false)
+    it "applies the documented v2 default (everything-on, instant, quiet hours off)" do
+      np = prefs.notification_preferences
+      # All 5 categories opted in by default — IA shift means users tune by
+      # exception (turn off what they don't want) rather than opt-in.
+      expect(np["notification_types"]).to eq(
+        "security" => true, "account_access" => true, "workspace_activity" => true,
+        "project_activity" => true, "billing" => true
+      )
+      # Both delivery channels on; email is instant (digest opt-in, not default).
+      expect(np["delivery_methods"]).to eq(
+        "in_app" => { "enabled" => true },
+        "email" => { "enabled" => true, "frequency" => "instant" }
+      )
+      # Quiet hours scheduled but disabled — schedule is the schema default
+      # so toggling enabled is the only step the user needs.
+      expect(np["quiet_hours"]).to eq(
+        "enabled" => false, "start" => "22:00", "end" => "07:00", "allow_urgent" => true
+      )
     end
 
     it "has retention_days defaulting to 90" do

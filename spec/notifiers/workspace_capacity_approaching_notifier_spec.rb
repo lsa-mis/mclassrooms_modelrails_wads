@@ -128,7 +128,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
 
     it "suppresses both in-app and email under DND for that owner (billing does NOT bypass)" do
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
 
       described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
       drain_noticed_jobs
@@ -140,11 +140,11 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
                                           type: "#{described_class.name}::Notification").count).to eq 1
     end
 
-    it "fires in-app but skips email when billing.email is false" do
-      categories = prefs.notification_preferences["categories"].deep_dup
-      categories["billing"]["email"] = false
+    it "fires in-app but skips email when the email channel is disabled" do
+      delivery_methods = prefs.notification_preferences["delivery_methods"].deep_dup
+      delivery_methods["email"]["enabled"] = false
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("categories" => categories))
+        prefs.notification_preferences.merge("delivery_methods" => delivery_methods))
 
       described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
 

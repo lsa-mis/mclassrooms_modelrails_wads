@@ -45,7 +45,9 @@ class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_capacity_approaching
-    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) }
+    # `== true` to abort on the :digest tri-state sentinel; see
+    # WorkspaceMemberAddedNotifier for the full rationale.
+    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
     config.enqueue = true
   end
 

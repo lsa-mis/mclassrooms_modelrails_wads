@@ -8,6 +8,6 @@ class UserPreferences < ApplicationRecord
   validates :docs_mode, length: { maximum: 20 }, allow_nil: true
 
   def notification_preferences_object
-    NotificationPreferences.new(notification_preferences)
+    NotificationPreferences.new(notification_preferences, user: user)
   end
 end

@@ -53,9 +53,13 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_member_added
+    # `recipient_pref(:email)` is tri-state in v2: true (deliver now),
+    # false (drop), :digest (queue for DigestMailerJob). Compare to `true`
+    # explicitly so the :digest sentinel aborts the immediate enqueue —
+    # otherwise digest items would silently fire as instant emails.
     config.before_enqueue = lambda {
       throw(:abort) unless recipient_id == event.record.user_id
-      throw(:abort) unless recipient_pref(:email)
+      throw(:abort) unless recipient_pref(:email) == true
     }
     config.enqueue = true
   end

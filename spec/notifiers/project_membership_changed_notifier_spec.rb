@@ -59,22 +59,26 @@ RSpec.describe ProjectMembershipChangedNotifier, type: :notifier do
   describe "preferences gating" do
     let!(:prefs) { create(:user_preferences, user: user) }
 
-    it "respects DND for project_activity (does NOT bypass)" do
+    it "respects DND (quiet hours active) for project_activity (does NOT bypass)" do
+      # v2: DND is now time-windowed via quiet_hours. Set an always-active
+      # window (00:00..23:59) to model the v1 "DND on" semantic.
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge(
+          "quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }
+        ))
       described_class.with(record: project_membership).deliver(user)
       notification = user.notifications.last
       expect(notification.recipient_pref(:in_app)).to be false
       expect(notification.recipient_pref(:email)).to be false
-      expect(notification.recipient_pref(:digest)).to be false
     end
 
-    it "permits in-app + digest under default preferences (project_activity)" do
+    it "permits in-app + email (instant) under default preferences (project_activity)" do
+      # v2: defaults have email.frequency = "instant", so emails fire
+      # immediately rather than queuing for digest.
       described_class.with(record: project_membership).deliver(user)
       notification = user.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true
-      expect(notification.recipient_pref(:digest)).to be true
-      expect(notification.recipient_pref(:email)).to be false
+      expect(notification.recipient_pref(:email)).to be true
     end
   end
 

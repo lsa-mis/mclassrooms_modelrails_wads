@@ -94,7 +94,7 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
 
     it "suppresses both in-app and email under DND (account_access does NOT bypass)" do
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
 
       expect {
         described_class.with(record: invitation).deliver(invitee)
@@ -106,11 +106,11 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
       expect(notification.recipient_pref(:email)).to be false
     end
 
-    it "fires in-app but skips email when account_access.email is false" do
-      categories = prefs.notification_preferences["categories"].deep_dup
-      categories["account_access"]["email"] = false
+    it "fires in-app but skips email when the email channel is disabled" do
+      delivery_methods = prefs.notification_preferences["delivery_methods"].deep_dup
+      delivery_methods["email"]["enabled"] = false
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("categories" => categories))
+        prefs.notification_preferences.merge("delivery_methods" => delivery_methods))
 
       expect {
         described_class.with(record: invitation).deliver(invitee)

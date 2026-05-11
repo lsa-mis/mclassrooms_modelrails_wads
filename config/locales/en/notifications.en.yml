@@ -32,11 +32,6 @@ en:
         cancel: "Cancel"
         picker_label: "Timezone"
         save: "Save"
-      master_section: "Pause non-essential notifications"
-      master_help: "Security alerts always go through."
-      always_on: "Always on"
-      matrix_heading: "Notifications by category"
-      matrix_aria: "Notification preferences matrix"
       categories:
         security: "Security & sign-in"
         account_access: "Account & access"
@@ -46,26 +41,60 @@ en:
       channels:
         in_app: "In-app"
         email: "Email"
-        digest: "Daily digest"
-      digest:
-        heading: "Digest"
-        cadence: "How often"
-        cadence_options:
-          daily: "Daily"
-          weekly: "Weekly"
-        time: "Time of day"
-        timezone: "Times shown in %{timezone}."
-      retention:
-        heading: "Auto-delete read notifications"
-        label: "After"
-        options:
+      notification_types:
+        heading: "Notification types"
+        description: "Choose which kinds of notifications you receive."
+        always_on: "Always on"
+        items:
+          security:
+            title: "Security & sign-in"
+            description: "Password changes, new device sign-ins, account security events."
+          account_access:
+            title: "Account & access"
+            description: "Role changes and invitation reminders."
+          workspace_activity:
+            title: "Workspace activity"
+            description: "Members joining or changing roles."
+          project_activity:
+            title: "Project activity"
+            description: "Changes to projects you belong to."
+          billing:
+            title: "Billing"
+            description: "Plan changes and usage warnings."
+      delivery_methods:
+        heading: "Delivery method"
+        description: "How you receive enabled notifications."
+        items:
+          in_app:
+            title: "In-app"
+            description: "Show notifications in the app's bell."
+          email:
+            title: "Email"
+            description: "Receive notifications at your account email."
+        frequency:
+          label: "Frequency"
+          options:
+            instant: "Instant"
+            daily: "Daily digest"
+            weekly: "Weekly digest"
+      quiet_hours:
+        heading: "Quiet hours"
+        description: "Pause non-security notifications during set hours each day."
+        enabled_label: "Enable quiet hours"
+        start_label: "From"
+        end_label: "Until"
+        security_reassurance: "Security alerts will always come through."
+      advanced:
+        heading: "Advanced"
+        retention_label: "Auto-delete read notifications after"
+        retention_help: "Security alerts are kept for at least 1 year regardless of this setting."
+        retention_options:
           "30": "30 days"
           "60": "60 days"
           "90": "90 days"
           "180": "180 days"
           "365": "1 year"
           never: "Never"
-        help: "Security alerts are kept for at least 1 year regardless of this setting."
       update:
         success: "Saved."
         saved_announcement: "Preferences saved"

@@ -21,7 +21,14 @@ RSpec.describe DigestMailerJob, type: :job do
 
   describe "#perform" do
     context "user is due for digest" do
-      before { user.preferences.update!(digest_next_due_at: 1.minute.ago) }
+      before do
+        # v2 default frequency is "instant" — digest_enabled? would return
+        # false and the job would short-circuit. Bump the user into "daily"
+        # to exercise the digest delivery path.
+        np = user.preferences.notification_preferences.deep_dup
+        np["delivery_methods"]["email"]["frequency"] = "daily"
+        user.preferences.update!(notification_preferences: np, digest_next_due_at: 1.minute.ago)
+      end
 
       it "enqueues the digest mailer when there are unseen eligible notifications" do
         WorkspaceInvitationAcceptedNotifier
@@ -50,7 +57,7 @@ RSpec.describe DigestMailerJob, type: :job do
           .with(record: invitation)
           .deliver(user)
         prefs = user.preferences.notification_preferences
-        user.preferences.update!(notification_preferences: prefs.merge("do_not_disturb" => true))
+        user.preferences.update!(notification_preferences: prefs.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
         previous_due = user.preferences.digest_next_due_at
 
         expect {
@@ -61,14 +68,15 @@ RSpec.describe DigestMailerJob, type: :job do
         expect(user.preferences.reload.digest_next_due_at).to be > previous_due
       end
 
-      it "skips when digest is disabled in preferences" do
+      it "skips when digest is disabled in preferences (frequency back to instant)" do
         WorkspaceInvitationAcceptedNotifier
           .with(record: invitation)
           .deliver(user)
-        prefs = user.preferences.notification_preferences
-        user.preferences.update!(
-          notification_preferences: prefs.deep_merge("digest" => { "enabled" => false })
-        )
+        # The before block sets frequency = "daily"; flip it back to "instant"
+        # to disable digest for this user. digest_enabled? is now false.
+        np = user.preferences.notification_preferences.deep_dup
+        np["delivery_methods"]["email"]["frequency"] = "instant"
+        user.preferences.update!(notification_preferences: np)
 
         expect {
           described_class.perform_now

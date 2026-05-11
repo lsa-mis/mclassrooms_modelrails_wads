@@ -14,7 +14,12 @@ class SignInFromNewDeviceNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :sign_in_from_new_device
-    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) }
+    # `== true` to abort on the :digest tri-state sentinel; see
+    # WorkspaceMemberAddedNotifier for the full rationale. Security-category
+    # users effectively never see :digest because allow? returns true at Step 1
+    # before frequency check, but the guard matches sibling notifiers so the
+    # pattern is uniform.
+    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
     config.enqueue = true
   end
 

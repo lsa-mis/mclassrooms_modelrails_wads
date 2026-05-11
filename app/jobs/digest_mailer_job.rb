@@ -61,14 +61,17 @@ class DigestMailerJob < ApplicationJob
 
   def digest_scope(user)
     floor = user.preferences.digest_last_sent_at || 24.hours.ago
-    eligible_types = ApplicationNotifier
-                       .descendants
-                       .select { |c| NotificationPreferences::DIGEST_ELIGIBLE_CATEGORIES.include?(c.category_name) }
-                       .map { |c| "#{c.name}::Notification" }
+    # v2: every category except security is digestable when the user has
+    # email.frequency != "instant". Security always goes instant (per spec
+    # decision #7), so exclude it from the digest scope here. The v1
+    # DIGEST_ELIGIBLE_CATEGORIES allow-list was replaced by a security-only
+    # exclude-list because v2's "user opts into digest" gate moved up to
+    # `prefs.digest_enabled?` (checked in send_digest_for).
+    excluded_types = ApplicationNotifier.notification_types_for("security")
 
     user.notifications
         .where(seen_at: nil)
-        .where(type: eligible_types)
+        .where.not(type: excluded_types)
         .where("noticed_notifications.created_at >= ?", floor)
   end
 

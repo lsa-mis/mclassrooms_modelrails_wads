@@ -3,6 +3,7 @@
 module Account
   class NotificationPreferencesController < ApplicationController
     ALLOWED_RETENTION_DAYS = [ 30, 60, 90, 180, 365 ].freeze
+    HH_MM_REGEX = /\A([01]\d|2[0-3]):([0-5]\d)\z/
 
     before_action :set_preferences
 
@@ -35,18 +36,33 @@ module Account
     end
 
     # Returns truthy when something failed validation; the caller responds 422.
-    # Mutates `target` in place via deep_merge!.
+    # Mutates `target` in place via deep_merge!. Every validation runs BEFORE
+    # the merge so a single bad key leaves the entire JSONB untouched —
+    # callers don't see half-applied changes.
     def apply_changes!(target)
       raw = params[:notification_preferences]
       return nil if raw.blank?
 
       changes = raw.to_unsafe_h.deep_stringify_keys
 
-      # Retention is the only key with a constrained allowlist; validate
-      # before merging so an invalid value never lands in the JSONB.
       if changes.key?("retention_days")
         return :rejected unless valid_retention?(changes["retention_days"])
         changes["retention_days"] = normalize_retention(changes["retention_days"])
+      end
+
+      if changes.key?("notification_types")
+        unknown = changes["notification_types"].keys - NotificationPreferences::CATEGORIES
+        return :rejected if unknown.any?
+      end
+
+      if (freq = changes.dig("delivery_methods", "email", "frequency"))
+        return :rejected unless NotificationPreferences::EMAIL_FREQUENCIES.include?(freq)
+      end
+
+      if changes.key?("quiet_hours")
+        qh = changes["quiet_hours"]
+        return :rejected if qh["start"].present? && !qh["start"].match?(HH_MM_REGEX)
+        return :rejected if qh["end"].present?   && !qh["end"].match?(HH_MM_REGEX)
       end
 
       coerce_booleans!(changes)
@@ -84,7 +100,10 @@ module Account
     end
 
     def digest_changed?
-      params.dig(:notification_preferences, :digest).present?
+      # v2: digest scheduling is driven by delivery_methods.email.frequency.
+      # When the user changes frequency, recompute next_due_at so the next
+      # cycle reflects the new cadence.
+      params.dig(:notification_preferences, :delivery_methods, :email, :frequency).present?
     end
 
     def recompute_digest_due_at!

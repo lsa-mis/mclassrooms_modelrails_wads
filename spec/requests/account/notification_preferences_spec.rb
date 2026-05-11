@@ -51,51 +51,47 @@ RSpec.describe "Account Notification Preferences", type: :request do
     end
 
     describe "PATCH /account/notification_preferences" do
-      it "flips the do_not_disturb flag in the JSONB column" do
-        expect(user.preferences.notification_preferences["do_not_disturb"]).to eq(false)
+      it "flips quiet_hours.enabled in the JSONB column" do
+        expect(user.preferences.notification_preferences.dig("quiet_hours", "enabled")).to eq(false)
 
         patch account_notification_preferences_path, params: {
-          notification_preferences: { do_not_disturb: "true" }
+          notification_preferences: { quiet_hours: { enabled: "true" } }
         }
 
-        expect(user.preferences.reload.notification_preferences["do_not_disturb"]).to eq(true)
+        expect(user.preferences.reload.notification_preferences.dig("quiet_hours", "enabled")).to eq(true)
       end
 
-      it "deep-merges a single category × channel toggle and preserves siblings" do
-        original_categories = user.preferences.notification_preferences["categories"].deep_dup
+      it "deep-merges a single notification_types toggle and preserves siblings" do
+        original_types = user.preferences.notification_preferences["notification_types"].deep_dup
 
         patch account_notification_preferences_path, params: {
           notification_preferences: {
-            categories: { workspace_activity: { email: "true" } }
+            notification_types: { workspace_activity: "false" }
           }
         }
 
         prefs = user.preferences.reload.notification_preferences
-        expect(prefs.dig("categories", "workspace_activity", "email")).to eq(true)
-        # Every other key untouched.
-        expect(prefs.dig("categories", "workspace_activity", "in_app")).to eq(original_categories.dig("workspace_activity", "in_app"))
-        expect(prefs.dig("categories", "workspace_activity", "digest")).to eq(original_categories.dig("workspace_activity", "digest"))
-        expect(prefs["categories"].keys.sort).to eq(original_categories.keys.sort)
+        expect(prefs.dig("notification_types", "workspace_activity")).to eq(false)
+        # Every other type untouched.
         %w[security account_access project_activity billing].each do |other|
-          expect(prefs.dig("categories", other)).to eq(original_categories[other])
+          expect(prefs.dig("notification_types", other)).to eq(original_types[other])
         end
       end
 
-      it "updates digest config and recomputes digest_next_due_at" do
+      it "updates email.frequency and recomputes digest_next_due_at" do
         user.preferences.update!(digest_next_due_at: 1.year.from_now)
         original_due = user.preferences.digest_next_due_at
 
         patch account_notification_preferences_path, params: {
           notification_preferences: {
-            digest: { cadence: "weekly", hour_local: "14" }
+            delivery_methods: { email: { frequency: "weekly" } }
           }
         }
 
         user.preferences.reload
-        expect(user.preferences.notification_preferences.dig("digest", "cadence")).to eq("weekly")
-        expect(user.preferences.notification_preferences.dig("digest", "hour_local")).to eq(14)
-        # Recomputed against user timezone — should be near-future, not the
-        # 1-year-out value we seeded.
+        expect(user.preferences.notification_preferences.dig("delivery_methods", "email", "frequency")).to eq("weekly")
+        # Recomputed against user timezone — should be in the near future
+        # (cadence is daily/weekly), not the 1-year-out value we seeded.
         expect(user.preferences.digest_next_due_at).to be < 14.days.from_now
         expect(user.preferences.digest_next_due_at).not_to eq(original_due)
       end
@@ -126,7 +122,7 @@ RSpec.describe "Account Notification Preferences", type: :request do
 
       it "responds with turbo_stream when requested" do
         patch account_notification_preferences_path,
-          params: { notification_preferences: { do_not_disturb: "true" } },
+          params: { notification_preferences: { quiet_hours: { enabled: "true" } } },
           headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
         expect(response.media_type).to eq("text/vnd.turbo-stream.html")
@@ -138,11 +134,109 @@ RSpec.describe "Account Notification Preferences", type: :request do
       # confirmation announcement.
       it "the turbo_stream response updates the live region with a save announcement" do
         patch account_notification_preferences_path,
-          params: { notification_preferences: { do_not_disturb: "true" } },
+          params: { notification_preferences: { quiet_hours: { enabled: "true" } } },
           headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
         expect(response.body).to include('target="notifications-live"')
         expect(response.body).to include(I18n.t("notifications.preferences.update.saved_announcement"))
+      end
+
+      describe "v2 input validation" do
+        # The plan calls for 8 new validation tests covering quiet_hours,
+        # email.frequency, and notification_types. Each invalid shape must
+        # return 422 and leave the JSONB untouched (no half-applied changes).
+
+        it "accepts a valid HH:MM start/end pair for quiet_hours" do
+          patch account_notification_preferences_path, params: {
+            notification_preferences: {
+              quiet_hours: { enabled: "true", start: "22:00", end: "07:00" }
+            }
+          }
+
+          qh = user.preferences.reload.notification_preferences["quiet_hours"]
+          expect(qh["start"]).to eq("22:00")
+          expect(qh["end"]).to eq("07:00")
+          expect(qh["enabled"]).to eq(true)
+        end
+
+        it "rejects an invalid quiet_hours.start format with 422" do
+          patch account_notification_preferences_path, params: {
+            notification_preferences: {
+              quiet_hours: { start: "25:00" }
+            }
+          }
+
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
+
+        it "rejects a non-HH:MM quiet_hours.end with 422" do
+          patch account_notification_preferences_path, params: {
+            notification_preferences: {
+              quiet_hours: { end: "7am" }
+            }
+          }
+
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
+
+        it "stores allow_urgent without behavioral side effects (currently inert v1)" do
+          patch account_notification_preferences_path, params: {
+            notification_preferences: {
+              quiet_hours: { allow_urgent: "false" }
+            }
+          }
+
+          qh = user.preferences.reload.notification_preferences["quiet_hours"]
+          expect(qh["allow_urgent"]).to eq(false)
+          # No code path reads allow_urgent in v1 (decision #13) — pinning
+          # the storage round-trip without asserting behavior.
+        end
+
+        it "accepts each valid email.frequency value" do
+          %w[instant daily weekly].each do |freq|
+            patch account_notification_preferences_path, params: {
+              notification_preferences: {
+                delivery_methods: { email: { frequency: freq } }
+              }
+            }
+
+            expect(user.preferences.reload.notification_preferences.dig("delivery_methods", "email", "frequency"))
+              .to eq(freq)
+          end
+        end
+
+        it "rejects an invalid email.frequency value with 422" do
+          patch account_notification_preferences_path, params: {
+            notification_preferences: {
+              delivery_methods: { email: { frequency: "monthly" } }
+            }
+          }
+
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
+
+        it "rejects notification_types with an unknown category key with 422" do
+          patch account_notification_preferences_path, params: {
+            notification_preferences: {
+              notification_types: { mystery_category: "true" }
+            }
+          }
+
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
+
+        it "leaves the JSONB untouched when validation rejects the request" do
+          original = user.preferences.notification_preferences.deep_dup
+
+          patch account_notification_preferences_path, params: {
+            notification_preferences: {
+              delivery_methods: { email: { frequency: "monthly" } }
+            }
+          }
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(user.preferences.reload.notification_preferences).to eq(original)
+        end
       end
     end
   end

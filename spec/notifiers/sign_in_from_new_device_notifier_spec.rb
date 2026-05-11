@@ -90,7 +90,7 @@ RSpec.describe SignInFromNewDeviceNotifier, type: :notifier do
 
     before do
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
     end
 
     it "still permits in-app under DND" do
@@ -109,17 +109,23 @@ RSpec.describe SignInFromNewDeviceNotifier, type: :notifier do
 
   describe "preferences gating" do
     # NOTE: security category is structurally non-suppressible per
-    # NotificationPreferences#allow? — even if a user toggles security.email
-    # to false in the JSONB, the value object short-circuits and returns
-    # true. This test pins that load-bearing invariant in place: the security
-    # notifier ignores per-channel opt-outs by design.
+    # NotificationPreferences#allow? — even if a user disables every channel
+    # AND turns off the security notification type AND activates quiet hours,
+    # the value object short-circuits at Step 1 and returns true. This test
+    # pins that load-bearing invariant in place: security ignores every opt-out
+    # mechanism by design.
     let!(:prefs) { create(:user_preferences, user: user) }
 
-    it "still enqueues email even when security.email is explicitly set to false" do
-      categories = prefs.notification_preferences["categories"].deep_dup
-      categories["security"]["email"] = false
-      prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("categories" => categories))
+    it "still enqueues email when the security category is disabled and quiet hours are active" do
+      # v2 contract: security bypasses notification_types[security]=false AND
+      # quiet_hours. (It DOES respect delivery_methods.email.enabled=false —
+      # see NotificationPreferences#allow? line 54 — a deliberate trade-off
+      # so a user who disables email globally isn't forced to receive
+      # security email anyway. In-app stays on regardless.)
+      np = prefs.notification_preferences.deep_dup
+      np["notification_types"]["security"] = false
+      np["quiet_hours"] = { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => false }
+      prefs.update!(notification_preferences: np)
 
       expect {
         described_class.with(record: user, user_agent: user_agent, os: os).deliver(user)

@@ -99,14 +99,10 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
     it "enqueues exactly one NotificationMailer.workspace_member_added targeting the added user" do
       added_user_email = added_user.email_address
 
-      # User must opt in: workspace_activity.email defaults to false. The
-      # opt-in / default-off split is also covered explicitly in the
-      # preference-gating block; here we exercise the happy path.
-      prefs = create(:user_preferences, user: added_user)
-      categories = prefs.notification_preferences["categories"].deep_dup
-      categories["workspace_activity"]["email"] = true
-      prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("categories" => categories))
+      # v2 default prefs have workspace_activity on + email channel on at
+      # "instant" frequency, so the happy path needs no explicit setup.
+      # The opt-out side of this split is covered in the preference-gating
+      # block below.
 
       expect {
         add_member!
@@ -160,14 +156,10 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
     end
   end
 
-  # Spec case 7: Email gating — when added user has email enabled vs. disabled.
-  describe "preference gating — added user email channel" do
-    it "enqueues the email when the added user explicitly enables workspace_activity.email" do
-      prefs = create(:user_preferences, user: added_user)
-      categories = prefs.notification_preferences["categories"].deep_dup
-      categories["workspace_activity"]["email"] = true
-      prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("categories" => categories))
+  # Spec case 7: Email gating — workspace_activity on (default) vs disabled.
+  describe "preference gating — added user workspace_activity category" do
+    it "enqueues the email under v2 defaults (workspace_activity on, email channel on)" do
+      create(:user_preferences, user: added_user) # v2 default: everything on
 
       expect {
         add_member!
@@ -175,8 +167,28 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
       }.to have_enqueued_mail(NotificationMailer, :workspace_member_added).once
     end
 
-    it "does not enqueue the email when the added user has workspace_activity.email disabled (the default)" do
-      create(:user_preferences, user: added_user) # default has workspace_activity.email = false
+    it "does not enqueue the email when the added user disables the workspace_activity category" do
+      prefs = create(:user_preferences, user: added_user)
+      np = prefs.notification_preferences.deep_dup
+      np["notification_types"]["workspace_activity"] = false
+      prefs.update!(notification_preferences: np)
+
+      expect {
+        add_member!
+        drain_noticed_jobs
+      }.not_to have_enqueued_mail(NotificationMailer, :workspace_member_added)
+    end
+
+    it "defers the email when email frequency is non-instant (DigestMailerJob picks it up)" do
+      # v2 tri-state contract: when allow?(email) returns :digest, the immediate
+      # mailer must NOT enqueue — DigestMailerJob's next cycle delivers it. A
+      # truthy-check `unless recipient_pref(:email)` would treat :digest as
+      # truthy and incorrectly fire the immediate send, breaking the entire
+      # frequency feature. Pins the `== true` guard contract.
+      prefs = create(:user_preferences, user: added_user)
+      np = prefs.notification_preferences.deep_dup
+      np["delivery_methods"]["email"]["frequency"] = "daily"
+      prefs.update!(notification_preferences: np)
 
       expect {
         add_member!
@@ -185,15 +197,15 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
     end
   end
 
-  # Spec case 8: Owner with workspace_activity.in_app=false does NOT get an in-app row;
+  # Spec case 8: Owner who disables the in_app channel does NOT get an in-app row;
   # other owners + added user are unaffected.
   describe "preference gating — owner in-app channel" do
     it "skips in-app for the disabling owner; other owners + added user still receive theirs" do
       prefs_a = create(:user_preferences, user: owner_user_a)
-      categories = prefs_a.notification_preferences["categories"].deep_dup
-      categories["workspace_activity"]["in_app"] = false
+      delivery_methods = prefs_a.notification_preferences["delivery_methods"].deep_dup
+      delivery_methods["in_app"]["enabled"] = false
       prefs_a.update!(notification_preferences:
-        prefs_a.notification_preferences.merge("categories" => categories))
+        prefs_a.notification_preferences.merge("delivery_methods" => delivery_methods))
 
       add_member!
 
@@ -211,7 +223,7 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
     it "suppresses both email and in-app for the added user (workspace_activity does NOT bypass DND)" do
       prefs = create(:user_preferences, user: added_user)
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
 
       expect {
         add_member!

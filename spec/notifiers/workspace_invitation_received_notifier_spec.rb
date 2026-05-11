@@ -48,7 +48,7 @@ RSpec.describe WorkspaceInvitationReceivedNotifier, type: :notifier do
 
     it "respects DND for non-security categories" do
       prefs.update!(notification_preferences:
-        prefs.notification_preferences.merge("do_not_disturb" => true))
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
       described_class.with(record: invitation).deliver(invited_user)
       notification = invited_user.notifications.last
       expect(notification.recipient_pref(:email)).to be false
