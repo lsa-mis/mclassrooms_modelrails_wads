@@ -378,6 +378,30 @@ RSpec.describe "Account Notifications", type: :request do
 
         get open_account_notification_path(notification)
       end
+
+      it "broadcasts a bell-button refresh on DELETE when notification was unread" do
+        # Deleting an unread notification drops the user's unread count, so
+        # other tabs need a fresh bell-button render to update their badge.
+        expect(notification.read_at).to be_nil
+
+        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+          .with([ user, :notifications ],
+                target: "notifications_bell_frame",
+                partial: "shared/notifications_bell_button",
+                locals: hash_including(user: user))
+
+        delete account_notification_path(notification)
+      end
+
+      it "does NOT broadcast a bell refresh on DELETE when notification was already read" do
+        # Deleting a read notification doesn't change the unread count, so no
+        # broadcast is needed — the badge on other tabs is already correct.
+        notification.update!(read_at: 1.hour.ago)
+
+        expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
+
+        delete account_notification_path(notification)
+      end
     end
   end
 end

@@ -324,5 +324,47 @@ RSpec.describe "Account Notification Preferences", type: :request do
         expect(response.body).not_to include(I18n.t("notifications.preferences.migration_banner.message"))
       end
     end
+
+    # Pundit wiring: stubbing the policy to deny the action proves authorize
+    # is actually being invoked. If the controller skipped authorize the
+    # policy would never run, the action would proceed, and the not_authorized
+    # flash would never be set. This is a behavioral test of the wiring, not
+    # the policy's logic — that lives in spec/policies/account/.
+    describe "Pundit authorization wiring" do
+      it "raises NotAuthorizedError → redirects when the policy denies edit" do
+        allow_any_instance_of(Account::NotificationPreferencesPolicy)
+          .to receive(:edit?).and_return(false)
+
+        get edit_account_notification_preferences_path
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
+      end
+
+      it "raises NotAuthorizedError → redirects when the policy denies update" do
+        allow_any_instance_of(Account::NotificationPreferencesPolicy)
+          .to receive(:update?).and_return(false)
+
+        patch account_notification_preferences_path, params: {
+          notification_preferences: { quiet_hours: { enabled: "true" } }
+        }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
+        # Preferences must NOT have been mutated.
+        expect(user.preferences.reload.notification_preferences.dig("quiet_hours", "enabled")).to eq(false)
+      end
+
+      it "raises NotAuthorizedError → redirects when the policy denies dismiss_banner" do
+        allow_any_instance_of(Account::NotificationPreferencesPolicy)
+          .to receive(:dismiss_banner?).and_return(false)
+
+        post dismiss_banner_account_notification_preferences_path
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
+        expect(user.preferences.reload.dismissed_notifications_redesign_banner_at).to be_nil
+      end
+    end
   end
 end

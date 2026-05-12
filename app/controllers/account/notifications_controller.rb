@@ -33,7 +33,13 @@ module Account
     end
 
     def destroy
+      # Capture read-state before destroy! so we can decide whether other
+      # tabs need a bell-button refresh. Destroying an unread notification
+      # drops the user's unread count; destroying a read one doesn't change
+      # the badge so we skip the broadcast to avoid pointless work.
+      was_unread = @notification.read_at.nil?
       @notification.destroy!
+      broadcast_bell_refresh if was_unread
       redirect_to account_notifications_path, notice: t("notifications.destroy.success")
     end
 

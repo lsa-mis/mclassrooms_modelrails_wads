@@ -8,9 +8,12 @@ module Account
     before_action :set_preferences
 
     def edit
+      authorize @preferences, policy_class: Account::NotificationPreferencesPolicy
     end
 
     def update
+      authorize @preferences, policy_class: Account::NotificationPreferencesPolicy
+
       new_prefs = @preferences.notification_preferences.deep_dup
 
       if (rejected = apply_changes!(new_prefs))
@@ -34,6 +37,8 @@ module Account
     # calls are no-ops so the original dismissal time is preserved (matters
     # for any analytics that watch first-dismissal latency).
     def dismiss_banner
+      authorize @preferences, policy_class: Account::NotificationPreferencesPolicy
+
       if @preferences.dismissed_notifications_redesign_banner_at.nil?
         @preferences.update!(dismissed_notifications_redesign_banner_at: Time.current)
       end
