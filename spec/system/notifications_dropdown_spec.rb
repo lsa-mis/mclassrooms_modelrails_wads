@@ -269,6 +269,109 @@ RSpec.describe "Notifications bell + dropdown", type: :system do
 
   # The shared header (and therefore the bell + dropdown) renders inside the
   # markdowndocs engine layout when a signed-in user visits /docs/*. Engine
+  # Arrow-key cycling through dropdown items so keyboard-only users don't have
+  # to Tab through unrelated chrome to reach each notification. Mirrors the
+  # user-menu pattern (see spec/system/user_menu_spec.rb). The Playwright
+  # KeyboardEvent dispatch doesn't reliably reach Stimulus listeners through
+  # main-world boundaries, so we invoke the controller's handleKeydown
+  # directly — same workaround the user-menu spec documents.
+  describe "arrow-key navigation within the open dropdown" do
+    def send_dropdown_key(key)
+      page.driver.with_playwright_page do |pw_page|
+        pw_page.evaluate(<<~JS)
+          (function() {
+            var el = document.querySelector('[data-controller~="notification-dropdown"]');
+            var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'notification-dropdown');
+            if (c) c.handleKeydown(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
+          })()
+        JS
+      end
+    end
+
+    def focused_dom_id
+      page.evaluate_script("document.activeElement?.closest('[data-notification-item]')?.id || document.activeElement?.id")
+    end
+
+    it "focuses the first notification item when the dropdown opens" do
+      notifications = deliver_n_security_notifications(3)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      first_dom_id = ActionView::RecordIdentifier.dom_id(notifications.last, :dropdown)
+      expect(focused_dom_id).to eq(first_dom_id)
+    end
+
+    it "ArrowDown moves focus to the next item" do
+      notifications = deliver_n_security_notifications(3)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      send_dropdown_key("ArrowDown")
+
+      second_newest = notifications.reverse[1]
+      expect(focused_dom_id).to eq(ActionView::RecordIdentifier.dom_id(second_newest, :dropdown))
+    end
+
+    it "ArrowDown wraps from last item back to the first" do
+      notifications = deliver_n_security_notifications(3)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      3.times { send_dropdown_key("ArrowDown") }
+
+      first_dom_id = ActionView::RecordIdentifier.dom_id(notifications.last, :dropdown)
+      expect(focused_dom_id).to eq(first_dom_id)
+    end
+
+    it "ArrowUp wraps from the first item back to the last" do
+      notifications = deliver_n_security_notifications(3)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      send_dropdown_key("ArrowUp")
+
+      last_dom_id = ActionView::RecordIdentifier.dom_id(notifications.first, :dropdown)
+      expect(focused_dom_id).to eq(last_dom_id)
+    end
+
+    it "Home key focuses the first item" do
+      notifications = deliver_n_security_notifications(3)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+      send_dropdown_key("ArrowDown")
+      send_dropdown_key("ArrowDown")
+
+      send_dropdown_key("Home")
+
+      first_dom_id = ActionView::RecordIdentifier.dom_id(notifications.last, :dropdown)
+      expect(focused_dom_id).to eq(first_dom_id)
+    end
+
+    it "End key focuses the last item" do
+      notifications = deliver_n_security_notifications(3)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      send_dropdown_key("End")
+
+      last_dom_id = ActionView::RecordIdentifier.dom_id(notifications.first, :dropdown)
+      expect(focused_dom_id).to eq(last_dom_id)
+    end
+
+    it "is a no-op when the dropdown is empty (no items, no focus change)" do
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      trigger_id_before = page.evaluate_script("document.activeElement?.getAttribute('data-notifications-bell-trigger')")
+
+      send_dropdown_key("ArrowDown")
+      send_dropdown_key("End")
+
+      trigger_id_after = page.evaluate_script("document.activeElement?.getAttribute('data-notifications-bell-trigger')")
+      expect(trigger_id_after).to eq(trigger_id_before)
+    end
+  end
+
   # views run in their own routing context, so any unprefixed main-app route
   # helper (account_notifications_path, open_account_notification_path) raises
   # NameError. The dropdown partial must use `main_app.` like every other

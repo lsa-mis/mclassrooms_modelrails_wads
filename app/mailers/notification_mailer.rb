@@ -114,8 +114,7 @@ class NotificationMailer < ApplicationMailer
   # positional args (user + array of notifications) because it's invoked
   # directly by `DigestMailerJob`, not through Noticed's `deliver_by :email`
   # parameterized pipeline. Subject reflects the user's chosen cadence;
-  # template lays out notifications grouped by category. Task 23 fleshes
-  # out the HTML/text templates.
+  # template lays out notifications grouped by category.
   def digest(user, notifications)
     @user = user
     @notifications = notifications
