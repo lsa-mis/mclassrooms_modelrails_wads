@@ -190,6 +190,21 @@
     @apply focus:ring-danger;
     min-height: var(--form-input-height);
   }
+
+  /* Base styling for <select> and <input type="time"|"text"|...> form
+     controls. Absorbs the repeated `min-h-[44px] px-3 rounded-md bg-surface
+     text-text-body border border-border-strong focus:outline-none focus:ring-2
+     focus:ring-interactive-focus` chain that appeared on 6+ inputs across
+     the preferences page (panel review — Steve Schoger + Adam Wathan). The
+     min-height variable keeps controls visually aligned with .btn-* siblings
+     at the 44px AAA-target line; `py-2` gives consistent optical sizing for
+     browser-default vertical padding that doesn't always match the 44px box. */
+  .form-input {
+    @apply px-3 py-2 rounded-md cursor-pointer;
+    @apply bg-surface text-text-body border border-border-strong;
+    @apply focus:outline-none focus:ring-2 focus:ring-interactive-focus;
+    min-height: var(--form-input-height);
+  }
 }
 
 /* ==========================================================================

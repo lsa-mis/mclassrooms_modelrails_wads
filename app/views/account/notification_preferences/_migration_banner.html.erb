@@ -4,20 +4,24 @@
     this frame with an empty one, so the banner vanishes without a full
     page reload. -%>
 <%= turbo_frame_tag "notifications_redesign_banner" do %>
-  <div class="rounded-lg bg-info-surface border border-info text-info
-              flex items-start gap-3 px-4 py-3 mb-2">
+  <%# `rounded-2xl` to match preferences-card corner radius. `mb-2` is
+      dropped — the parent's `space-y-6` already manages vertical rhythm. -%>
+  <div class="rounded-2xl bg-info-surface border border-info text-info
+              flex items-start gap-3 px-4 py-3">
     <%= icon(:information_circle, size: :sm, class: "shrink-0 mt-0.5") %>
     <p class="flex-1 text-sm">
       <%= t("notifications.preferences.migration_banner.message") %>
     </p>
+    <%# `btn-touch-target` provides the AAA 44x44 sizing; `hover:text-info-hover`
+        uses the existing semantic token instead of an opacity modifier. -%>
     <%= button_to dismiss_banner_account_notification_preferences_path,
           method: :post,
           form: { data: { turbo_frame: "notifications_redesign_banner" } },
           aria: { label: t("notifications.preferences.migration_banner.dismiss_aria") },
-          class: "shrink-0 text-sm text-info underline
-                  hover:text-info/80
+          class: "btn-touch-target shrink-0 text-sm text-info underline
+                  hover:text-info-hover
                   focus:outline-none focus:ring-2 focus:ring-interactive-focus
-                  min-h-[var(--form-input-height)] px-2 rounded bg-transparent border-0 cursor-pointer" do %>
+                  rounded bg-transparent border-0 cursor-pointer" do %>
       <%= t("notifications.preferences.migration_banner.dismiss") %>
     <% end %>
   </div>

@@ -124,8 +124,7 @@
                   name="notification_preferences[delivery_methods][email][frequency]"
                   autocomplete="off"
                   data-action="change->auto-submit#submit"
-                  class="min-h-[44px] px-3 rounded-md bg-surface text-text-body border border-border-strong
-                         focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                  class="form-input">
             <% NotificationPreferences::EMAIL_FREQUENCIES.each do |freq| %>
               <option value="<%= freq %>"
                       <% if prefs.dig("delivery_methods", "email", "frequency") == freq %>selected<% end %>>
@@ -176,7 +175,7 @@
             class: "flex flex-wrap gap-4 items-end" do |f| %>
         <div>
           <label for="quiet-hours-start"
-                 class="block text-sm font-medium text-text-heading mb-1">
+                 class="block text-sm font-medium text-text-heading mb-2">
             <%= t("notifications.preferences.quiet_hours.start_label") %>
           </label>
           <input type="time"
@@ -185,12 +184,11 @@
                  value="<%= prefs.dig("quiet_hours", "start") || "22:00" %>"
                  autocomplete="off"
                  data-action="change->auto-submit#submit"
-                 class="min-h-[44px] px-3 rounded-md bg-surface text-text-body border border-border-strong
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                 class="form-input">
         </div>
         <div>
           <label for="quiet-hours-end"
-                 class="block text-sm font-medium text-text-heading mb-1">
+                 class="block text-sm font-medium text-text-heading mb-2">
             <%= t("notifications.preferences.quiet_hours.end_label") %>
           </label>
           <input type="time"
@@ -199,8 +197,7 @@
                  value="<%= prefs.dig("quiet_hours", "end") || "07:00" %>"
                  autocomplete="off"
                  data-action="change->auto-submit#submit"
-                 class="min-h-[44px] px-3 rounded-md bg-surface text-text-body border border-border-strong
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                 class="form-input">
         </div>
       <% end %>
 
@@ -274,7 +271,7 @@
       toggles will land here too. -%>
   <%= render layout: "shared/preferences_card",
         locals: { title: t("notifications.preferences.advanced.heading") } do %>
-    <div class="px-6 py-5 space-y-2">
+    <div class="px-6 py-5 space-y-4">
       <%= form_with url: account_notification_preferences_path,
             method: :patch,
             data: { controller: "auto-submit" },
@@ -287,8 +284,7 @@
                 name="notification_preferences[retention_days]"
                 autocomplete="off"
                 data-action="change->auto-submit#submit"
-                class="min-h-[44px] px-3 rounded-md bg-surface text-text-body border border-border-strong
-                       focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                class="form-input">
           <% [ 30, 60, 90, 180, 365 ].each do |days| %>
             <option value="<%= days %>"
                     <% if prefs_object.retention_days == days %>selected<% end %>>
