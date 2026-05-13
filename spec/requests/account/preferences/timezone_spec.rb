@@ -99,5 +99,23 @@ RSpec.describe "Account Preferences — Timezone beacon", type: :request do
         expect(response.body).to include(I18n.t("notifications.preferences.timezone.saved_announcement"))
       end
     end
+
+    # Pundit gates the endpoint. Stubbing the policy to deny proves
+    # authorize is actually being invoked — applies to both the beacon
+    # path AND the explicit-user path (same controller action).
+    describe "Pundit authorization wiring" do
+      it "raises NotAuthorizedError → redirects when the policy denies update" do
+        user.create_preferences!(timezone: "Europe/London")
+        allow_any_instance_of(Account::TimezonePolicy)
+          .to receive(:update?).and_return(false)
+
+        patch account_preferences_timezone_path,
+          params: { timezone: "America/New_York" }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
+        expect(user.preferences.reload.timezone).to eq("Europe/London")
+      end
+    end
   end
 end

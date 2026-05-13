@@ -35,5 +35,21 @@ RSpec.describe "Account Theme Preferences", type: :request do
         expect(response).to redirect_to(edit_account_profile_path)
       end
     end
+
+    # Stubbing the policy to deny proves authorize is actually being
+    # invoked. Without it, the action would proceed and never set the
+    # not_authorized flash.
+    describe "Pundit authorization wiring" do
+      it "raises NotAuthorizedError → redirects when the policy denies update" do
+        allow_any_instance_of(Account::ThemePreferencesPolicy)
+          .to receive(:update?).and_return(false)
+
+        patch account_theme_preference_path, params: { user_preferences: { theme: "dark" } }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
+        expect(user.preferences.reload.theme).to eq("system")
+      end
+    end
   end
 end

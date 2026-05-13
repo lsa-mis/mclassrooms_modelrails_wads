@@ -2,6 +2,7 @@ module Account
   class ThemePreferencesController < ApplicationController
     def update
       preferences = Current.user.preferences || Current.user.create_preferences!
+      authorize preferences, policy_class: Account::ThemePreferencesPolicy
       preferences.update!(theme: params[:theme] || theme_params[:theme])
 
       respond_to do |format|

@@ -29,6 +29,7 @@ module Account
         return head :unprocessable_entity unless VALID_IANA_NAMES.include?(tz)
 
         @preferences = Current.user.preferences || Current.user.create_preferences!
+        authorize @preferences, policy_class: Account::TimezonePolicy
         override = params[:override].to_s == "true"
 
         if @preferences.timezone.blank? || override
