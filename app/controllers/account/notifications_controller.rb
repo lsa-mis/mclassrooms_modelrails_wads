@@ -107,6 +107,18 @@ module Account
         partial: "shared/notifications_dropdown_list",
         locals: { user: Current.user }
       )
+
+      # SR parity with ApplicationNotifier#broadcast_notifications_arrival:
+      # without an aria-live update, screen-reader users in Tab B receive
+      # the visual frame replacements but no audible signal that anything
+      # changed. Same target (#notifications-live) the arrival announcement
+      # uses, so the page-level live region is the single SR signal source
+      # for any notification state change.
+      Turbo::StreamsChannel.broadcast_update_to(
+        [ Current.user, :notifications ],
+        target: "notifications-live",
+        content: I18n.t("notifications.bell.read_state_announcement")
+      )
     end
 
     def set_notification

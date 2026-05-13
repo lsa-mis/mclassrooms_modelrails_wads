@@ -394,8 +394,38 @@ RSpec.describe "Account Notifications", type: :request do
         notification.update!(read_at: 1.hour.ago)
 
         expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).not_to receive(:broadcast_update_to)
 
         get open_account_notification_path(notification)
+      end
+
+      # SR parity with new-arrival broadcasts: ApplicationNotifier announces
+      # arrivals via the page-level aria-live region (#notifications-live).
+      # Without an equivalent announcement on read-state changes, SR users
+      # in Tab B would see Tab A's mark/destroy happen silently. This
+      # closes that gap.
+      it "broadcasts a read-state aria-live announcement on PATCH (mark read)" do
+        notification
+
+        allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+          .with([ user, :notifications ],
+                target: "notifications-live",
+                content: I18n.t("notifications.bell.read_state_announcement"))
+
+        patch account_notification_path(notification), params: { read_at: "now" }
+      end
+
+      it "broadcasts a read-state aria-live announcement on POST mark_all_read" do
+        notification
+
+        allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+          .with([ user, :notifications ],
+                target: "notifications-live",
+                content: I18n.t("notifications.bell.read_state_announcement"))
+
+        post mark_all_read_account_notifications_path
       end
 
       it "broadcasts bell-button + dropdown-list refresh on DELETE when notification was unread" do

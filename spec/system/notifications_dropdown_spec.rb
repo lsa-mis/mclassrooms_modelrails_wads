@@ -370,6 +370,44 @@ RSpec.describe "Notifications bell + dropdown", type: :system do
       trigger_id_after = page.evaluate_script("document.activeElement?.getAttribute('data-notifications-bell-trigger')")
       expect(trigger_id_after).to eq(trigger_id_before)
     end
+
+    # Focus restoration after a broadcast lands. Without this, a SR user
+    # tab-navigating through items would lose their place every time the
+    # dropdown frame re-rendered (e.g., a new notification arriving, or
+    # a cross-tab read-state change). The Stimulus controller hooks
+    # turbo:before-stream-render to capture the focused item's dom id
+    # and restore focus to the same id after the replacement completes.
+    it "preserves focus on the same notification item after a broadcast re-renders the dropdown list" do
+      notifications = deliver_n_security_notifications(3)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      # Move focus to the second-newest item via arrow nav.
+      send_dropdown_key("ArrowDown")
+      focused_item_id = page.evaluate_script(
+        "document.activeElement?.closest('[data-notification-item]')?.id"
+      )
+      expect(focused_item_id).not_to be_nil
+
+      # Trigger a fresh notification — broadcasts a dropdown frame replace.
+      # Use a far-future offset to avoid colliding with the existing
+      # idempotency buckets from deliver_n_security_notifications.
+      travel_to(Time.current + 99.minutes) do
+        PasswordChangedNotifier.with(record: user).deliver(user)
+      end
+
+      # Wait for the dropdown to grow by 1 item (the broadcast landed).
+      using_wait_time(5) do
+        expect(page).to have_css("[data-notification-item]", minimum: 4)
+      end
+
+      # Focus must still be on the item with the same dom id — proves
+      # focus was captured pre-render and reapplied post-render.
+      preserved_focused_id = page.evaluate_script(
+        "document.activeElement?.closest('[data-notification-item]')?.id"
+      )
+      expect(preserved_focused_id).to eq(focused_item_id)
+    end
   end
 
   # views run in their own routing context, so any unprefixed main-app route

@@ -32,16 +32,25 @@ export default class extends Controller {
     this.handleOutsideClick = this.handleOutsideClick.bind(this)
     this.handleKeydown = this.handleKeydown.bind(this)
     this.handleGlobalShortcut = this.handleGlobalShortcut.bind(this)
+    this.handleStreamRender = this.handleStreamRender.bind(this)
 
     // Global toggle is bound on connect so it works from anywhere on the
     // page; outside-click + scoped keydown only attach while open.
     document.addEventListener("keydown", this.handleGlobalShortcut)
+    // Focus restoration: when a broadcast replaces the dropdown list
+    // frame mid-keyboard-navigation, the active element gets nuked and
+    // focus falls back to <body>. We capture the focused item's id
+    // pre-render and reapply post-render so SR/keyboard users don't
+    // lose their place across cross-tab read-state changes or new
+    // notification arrivals.
+    document.addEventListener("turbo:before-stream-render", this.handleStreamRender)
   }
 
   disconnect() {
     document.removeEventListener("click", this.handleOutsideClick, true)
     document.removeEventListener("keydown", this.handleKeydown)
     document.removeEventListener("keydown", this.handleGlobalShortcut)
+    document.removeEventListener("turbo:before-stream-render", this.handleStreamRender)
   }
 
   toggle() {
@@ -127,6 +136,33 @@ export default class extends Controller {
     if (list.length === 0) return
     const wrapped = ((index % list.length) + list.length) % list.length
     list[wrapped].focus()
+  }
+
+  // Capture focus pre-render and restore it post-render when a Turbo
+  // Stream replaces the dropdown-list frame. Notification items have
+  // stable `dom_id(notification, :dropdown)` ids on the wrapping <li>,
+  // so we look up the same id in the freshly-rendered DOM and focus
+  // its <a> child. If the previously-focused item is gone (e.g., it
+  // was removed in the broadcast — currently not a case in this app
+  // but defensive), focus falls back to whatever the post-render
+  // active element is.
+  handleStreamRender(event) {
+    const streamEl = event.target
+    if (streamEl.getAttribute("target") !== "notifications_dropdown_frame") return
+
+    const focused = document.activeElement
+    const focusedItem = focused?.closest("[data-notification-item]")
+    if (!focusedItem) return
+
+    const focusedItemId = focusedItem.id
+    const originalRender = event.detail.render
+
+    event.detail.render = async (targetElement) => {
+      await originalRender(targetElement)
+      const restored = document.getElementById(focusedItemId)
+      const link = restored?.querySelector("a")
+      link?.focus()
+    }
   }
 
   // Global Cmd/Ctrl + Shift + N toggle. Lowercase comparison covers cases
