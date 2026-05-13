@@ -162,6 +162,38 @@ RSpec.describe "Notification preferences", type: :system do
     end
   end
 
+  describe "timezone change drawer closes on save" do
+    # Prior to fix: TimezonesController returned 204 No Content for every
+    # path including the explicit-user-save flow, so Turbo got an empty
+    # response and the <details> drawer stayed open, the summary still
+    # showed the OLD timezone, and there was no save confirmation. Now
+    # the override path returns a Turbo Stream that re-renders the
+    # timezone surface (no `open` attribute, new value in summary) and
+    # updates the page-level aria-live region.
+    it "closes the drawer + updates the visible timezone summary on save" do
+      user.preferences.update!(timezone: "America/Chicago")
+      visit edit_account_notification_preferences_path
+
+      # Open the drawer by clicking the summary.
+      find("summary", text: I18n.t("notifications.preferences.timezone.heading", default: "Your timezone")).click
+      expect(page).to have_css("details[open]", count: 1)
+
+      # Pick a different timezone and save. Option labels are the raw IANA
+      # identifier (the picker helper uses no friendly-label mapping).
+      within "details[open]" do
+        select "America/Los_Angeles", from: I18n.t("notifications.preferences.timezone.picker_label")
+        click_button I18n.t("notifications.preferences.timezone.save")
+      end
+
+      # Drawer closes (no details element has the `open` attribute).
+      expect(page).to have_no_css("details[open]")
+      # Summary reflects the new value without a page reload.
+      expect(page).to have_text("America/Los_Angeles")
+      # Server-side persistence.
+      expect(user.preferences.reload.timezone).to eq("America/Los_Angeles")
+    end
+  end
+
   describe "bell tooltip when DND is on" do
     it "shows the unread-with-dnd title on the bell when DND is active and user has unread" do
       # Seed DND on + an unread notification so the tooltip surfaces.

@@ -82,6 +82,22 @@ RSpec.describe "Account Preferences — Timezone beacon", type: :request do
         expect(response).to have_http_status(:unprocessable_entity)
         expect(user.preferences.reload.timezone).to eq("Europe/London")
       end
+
+      # The explicit-user-save path returns a Turbo Stream that closes the
+      # <details> drawer + re-renders the timezone summary + announces the
+      # save via aria-live. The beacon path still returns 204 (asserted
+      # above) since it has no UI to update.
+      it "responds with turbo_stream when the override path requests it" do
+        user.create_preferences!(timezone: "Europe/London")
+
+        patch account_preferences_timezone_path,
+          params: { timezone: "America/Los_Angeles", override: "true" },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("America/Los_Angeles")
+        expect(response.body).to include(I18n.t("notifications.preferences.timezone.saved_announcement"))
+      end
     end
   end
 end

@@ -20,6 +20,7 @@ en:
         cancel: "Cancel"
         picker_label: "Timezone"
         save: "Save"
+        saved_announcement: "Timezone updated"
       categories:
         security: "Security & sign-in"
         account_access: "Account & access"

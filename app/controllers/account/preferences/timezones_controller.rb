@@ -8,6 +8,14 @@ module Account
     # is blank, so an explicit user choice is never clobbered by the
     # browser's reading. The preferences-page Change action sets
     # `override=true` to bypass the guard.
+    #
+    # Two response shapes:
+    #   - Beacon path (no override): 204 No Content. The beacon doesn't
+    #     render UI; its only job is the silent write-on-blank.
+    #   - Explicit-user path (override=true): Turbo Stream that re-renders
+    #     the timezone surface (closing the <details> drawer + refreshing
+    #     the visible summary value) and updates the page-level aria-live
+    #     region. Falls back to an HTML redirect with flash notice.
     class TimezonesController < ApplicationController
       # TZInfo::Timezone.all_identifiers is the full IANA database (~598
       # entries) — what Intl.DateTimeFormat returns in the browser.
@@ -20,14 +28,24 @@ module Account
         tz = params[:timezone].to_s
         return head :unprocessable_entity unless VALID_IANA_NAMES.include?(tz)
 
-        preferences = Current.user.preferences || Current.user.create_preferences!
+        @preferences = Current.user.preferences || Current.user.create_preferences!
         override = params[:override].to_s == "true"
 
-        if preferences.timezone.blank? || override
-          preferences.update!(timezone: tz)
+        if @preferences.timezone.blank? || override
+          @preferences.update!(timezone: tz)
         end
 
-        head :no_content
+        if override
+          respond_to do |format|
+            format.turbo_stream
+            format.html do
+              redirect_to edit_account_notification_preferences_path,
+                notice: t("notifications.preferences.timezone.saved_announcement")
+            end
+          end
+        else
+          head :no_content
+        end
       end
     end
   end
