@@ -1,9 +1,15 @@
 <%# Host override of markdowndocs gem's docs/_mode_switcher — semantic tokens.
     Selected-state cyan signals are kept as-is (they're an intentional UI
-    affordance, not a theme token). %>
+    affordance, not a theme token).
+
+    No `id=` on the root: the show page renders this partial twice (mobile
+    + desktop sidebars), so a hardcoded id would produce duplicate ids in
+    the DOM (WCAG 4.1.1 violation). Stimulus already scopes itself via
+    `data-controller="docs-mode"`, which is unique per controller scope
+    and works fine when the partial appears twice. Tests select on the
+    data attribute (see spec/system/docs_mode_persistence_spec.rb). %>
 <%# locals: (current_mode:, available_modes:) %>
 <div
-  id="docs-mode-switcher"
   class="
     bg-surface-raised
     rounded-lg

@@ -30,12 +30,14 @@ RSpec.describe "Docs mode persistence (markdowndocs gem)", type: :system do
 
   # The mode switcher renders inside the sidebar navigation on doc SHOW
   # pages (the gem's _navigation partial is only embedded in show.html.erb,
-  # not index.html.erb).
+  # not index.html.erb). show.html.erb renders the navigation twice (mobile
+  # + desktop sidebar) so the switcher appears in the DOM twice; we use
+  # `match: :first` since both instances are functionally equivalent.
   it "persists the chosen mode to user_preferences.docs_mode" do
     visit "/docs/getting-started"
     expect(user.preferences.reload.docs_mode).to be_nil
 
-    within "#docs-mode-switcher" do
+    within first("[data-controller='docs-mode']") do
       click_button I18n.t("markdowndocs.modes.technical")
     end
 
@@ -55,7 +57,7 @@ RSpec.describe "Docs mode persistence (markdowndocs gem)", type: :system do
     visit "/docs/getting-started"
 
     # The switcher reflects the DB-stored mode, not the gem default.
-    within "#docs-mode-switcher" do
+    within first("[data-controller='docs-mode']") do
       expect(page).to have_css(
         "button[role='radio'][aria-checked='true']",
         text: I18n.t("markdowndocs.modes.technical")

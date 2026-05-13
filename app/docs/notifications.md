@@ -160,6 +160,7 @@ No. Deleted notifications are permanently removed. Use this when you're certain 
 
 ## Related
 
+- **Implementation details** for system administrators — switch to **Developer Guide** in the sidebar to see the technical reference (schema, broadcast pipeline, background jobs, operational tuning)
 - **Account management** — for changing your email, password, and avatar, see the [Account Management guide](/docs/accounts)
 - **Workspaces** — for inviting members and configuring workspace settings, see the [Workspace Administration guide](/docs/workspaces)
 

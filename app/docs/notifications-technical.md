@@ -7,7 +7,7 @@ audience: technical
 
 # Notifications — Technical Reference
 
-Implementation reference for the notifications subsystem. The end-user view of the same feature is documented in the [Notifications guide](/docs/notifications).
+Implementation reference for the notifications subsystem. The end-user view of the same feature is in the **User Guide** version of this doc — switch the mode in the sidebar to view it.
 
 ## Stack at a glance
 
@@ -299,6 +299,6 @@ The category macro and `with` parameter are enough to route the new notifier thr
 
 ## Related
 
-- **End-user guide** — [Notifications](/docs/notifications)
+- **End-user instructions** for the same feature — switch to **User Guide** in the sidebar to view the user-facing companion to this doc
 - **Architecture overview** — [Architecture](/docs/architecture)
 - **Email flows** — [Email Flows](/docs/emails)
