@@ -212,7 +212,11 @@
           always submitted as an array (so when zero boxes are checked, the
           controller still sees `active_days=[""]` and strips the sentinel
           to land on `[]`). -%>
-      <fieldset>
+      <%# `aria-describedby` points at the empty-days warning below so SR
+          users navigating into the fieldset hear the explanation when
+          the deceptive state is active (warning's text content is only
+          present when the warning is visible). -%>
+      <fieldset aria-describedby="quiet-hours-empty-days-warning">
         <legend class="block text-sm font-medium text-text-heading mb-2">
           <%= t("notifications.preferences.quiet_hours.active_days_label") %>
         </legend>
@@ -252,7 +256,8 @@
           controller when QH is enabled but no days are checked. Initial
           `hidden` class is removed on connect() if the server-rendered
           state is already deceptive. -%>
-      <p class="text-xs text-warning hidden"
+      <p id="quiet-hours-empty-days-warning"
+         class="text-xs text-warning hidden"
          data-quiet-hours-warning-target="warning"
          role="status">
         <%= t("notifications.preferences.quiet_hours.empty_days_warning") %>

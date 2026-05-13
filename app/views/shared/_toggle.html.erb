@@ -7,6 +7,7 @@
     round-trip. The server remains the source of truth on next render. %>
 <%
   toggle_id = "toggle-#{name.to_s.parameterize.tr('_', '-')}-#{SecureRandom.hex(2)}"
+  help_id = "#{toggle_id}-help" if help.present?
 %>
 <label for="<%= toggle_id %>"
        class="inline-flex items-center gap-3 cursor-pointer group
@@ -17,6 +18,7 @@
          value="<%= value %>"
          <% if checked %>checked<% end %>
          <% if disabled %>disabled<% end %>
+         <% if help_id %>aria-describedby="<%= help_id %>"<% end %>
          data-action="change->auto-submit#submit"
          class="sr-only peer">
   <%# A `disabled` checkbox doesn't submit a value, so when the security
@@ -39,7 +41,7 @@
       <%= label %>
     </span>
     <% if help.present? %>
-      <span class="text-xs text-text-muted">
+      <span id="<%= help_id %>" class="text-xs text-text-muted">
         <%= help %>
       </span>
     <% end %>

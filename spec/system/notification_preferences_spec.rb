@@ -242,6 +242,45 @@ RSpec.describe "Notification preferences", type: :system do
     end
   end
 
+  describe "screen-reader semantic relationships (panel-review accessibility cluster)" do
+    # When a toggle is rendered as disabled-but-always-on (the security
+    # category), the visual help text says "Always on" — but without
+    # programmatic association, SR users hear "Security, dimmed, checked"
+    # with no idea why it's locked. aria-describedby points at the help
+    # span so it's announced together with the control.
+    it "the disabled+always-on security toggle has aria-describedby linking to its help text" do
+      visit edit_account_notification_preferences_path
+
+      security_checkbox = find(
+        'input[type="checkbox"][name="notification_preferences[notification_types][security]"][disabled]',
+        visible: :all
+      )
+      described_by_id = security_checkbox["aria-describedby"]
+      expect(described_by_id).to be_present, "security toggle must describe its disabled state to SR users"
+      help = find("##{described_by_id}", visible: :all)
+      expect(help.text).to include(I18n.t("notifications.preferences.notification_types.always_on"))
+    end
+
+    # When the deceptive empty-active-days state is visible, the warning
+    # explains what's wrong. SR users navigating the day-chip fieldset
+    # have no signal the warning is tied to *this* fieldset — fix via
+    # fieldset[aria-describedby] pointing at the warning's id.
+    it "the Quiet Hours day-chip fieldset references the empty-days warning via aria-describedby" do
+      user.preferences.update!(
+        notification_preferences: user.preferences.notification_preferences.merge(
+          "quiet_hours" => { "enabled" => true, "active_days" => [] }
+        )
+      )
+      visit edit_account_notification_preferences_path
+
+      fieldset = find("fieldset", text: I18n.t("notifications.preferences.quiet_hours.active_days_label"))
+      described_by_id = fieldset["aria-describedby"]
+      expect(described_by_id).to be_present, "fieldset must point at the warning so SR users link the two"
+      warning = find("##{described_by_id}")
+      expect(warning.text).to include(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
+    end
+  end
+
   describe "bell tooltip when DND is on" do
     it "shows the unread-with-dnd title on the bell when DND is active and user has unread" do
       # Seed DND on + an unread notification so the tooltip surfaces.

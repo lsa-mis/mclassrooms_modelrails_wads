@@ -6,7 +6,8 @@
     so broadcasts can replace it without re-rendering the panel chrome
     (header + see-all link) or disturbing the Stimulus open/closed state. %>
 <% dropdown_user = local_assigns.fetch(:user) { Current.user } %>
-<div data-notification-dropdown-target="panel"
+<div id="notifications-dropdown-panel"
+     data-notification-dropdown-target="panel"
      role="region"
      aria-labelledby="notifications-dropdown-heading"
      class="hidden absolute right-0 mt-2 w-screen max-w-sm rounded-lg

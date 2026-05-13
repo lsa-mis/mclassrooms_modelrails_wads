@@ -414,6 +414,65 @@ RSpec.describe "Notifications bell + dropdown", type: :system do
   # helper (account_notifications_path, open_account_notification_path) raises
   # NameError. The dropdown partial must use `main_app.` like every other
   # shared partial does.
+  # Panel-review blockers (Léonie Watson, audit round 2) — accessibility
+  # semantics that go beyond visual + keyboard nav: programmatic
+  # relationships SR users rely on to understand where they are and what
+  # state the controls are in.
+  describe "screen-reader semantic relationships" do
+    it "bell trigger's aria-controls points at the dropdown panel's id" do
+      visit root_path
+
+      trigger = find("button[data-notifications-bell-trigger]")
+      panel_id = trigger["aria-controls"]
+      expect(panel_id).to be_present, "bell trigger must declare aria-controls so SR users hear the trigger↔panel relationship"
+      expect(page).to have_css("##{panel_id}", visible: :all)
+    end
+
+    it "the dropdown's notification list has an accessible name via aria-labelledby" do
+      deliver_n_security_notifications(1)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      list = find("[data-notification-dropdown-target='panel'] ul")
+      labelled_by_id = list["aria-labelledby"]
+      expect(labelled_by_id).to be_present, "list must be labelled so SR users know what list they entered"
+      expect(page).to have_css("##{labelled_by_id}")
+    end
+
+    it "unread items carry SR-visible 'Unread' text so the read-state is announced" do
+      notification = deliver_n_security_notifications(1).first
+      expect(notification.read_at).to be_nil
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      # `have_text` doesn't accept visible: filters; use have_css on the
+      # sr-only span containing the label so we catch visually-hidden
+      # SR-only content (exposed to AT, hidden from sighted users).
+      within "##{ActionView::RecordIdentifier.dom_id(notification, :dropdown)}" do
+        expect(page).to have_css(
+          "span.sr-only",
+          text: I18n.t("notifications.bell.unread_sr_label"),
+          visible: :all
+        )
+      end
+    end
+
+    it "read items do NOT carry the 'Unread' SR text" do
+      notification = deliver_n_security_notifications(1).first
+      notification.update!(read_at: 1.minute.ago)
+      visit root_path
+      find("button[data-notifications-bell-trigger]").click
+
+      within "##{ActionView::RecordIdentifier.dom_id(notification, :dropdown)}" do
+        expect(page).not_to have_css(
+          "span.sr-only",
+          text: I18n.t("notifications.bell.unread_sr_label"),
+          visible: :all
+        )
+      end
+    end
+  end
+
   describe "rendering inside the markdowndocs engine" do
     it "renders without raising on /docs and links 'see all' to the main-app route" do
       notification = deliver_n_security_notifications(1).first

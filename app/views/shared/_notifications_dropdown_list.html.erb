@@ -6,7 +6,13 @@
     state — both of which live OUTSIDE the inner broadcast frame. %>
 <% recent = recent_notifications_for_dropdown(user) %>
 <% if recent.any? %>
-  <ul class="divide-y divide-border max-h-96 overflow-y-auto">
+  <%# `aria-labelledby` names the list ("Notifications" from the panel
+      heading) so SR users entering the list know what they're in. The
+      `bg-surface-sunken` on unread rows is invisible to AT; the
+      sr-only "Unread:" prefix inside each unread item announces that
+      state explicitly. %>
+  <ul aria-labelledby="notifications-dropdown-heading"
+      class="divide-y divide-border max-h-96 overflow-y-auto">
     <% recent.each do |notification| %>
       <li data-notification-item
           data-notification-read="<%= notification.read_at? %>"
@@ -16,6 +22,9 @@
               class: "block px-4 py-3 text-text-body
                       hover:bg-surface focus:bg-surface
                       focus:outline-none focus:ring-2 focus:ring-inset focus:ring-interactive-focus" do %>
+          <% unless notification.read_at? %>
+            <span class="sr-only"><%= t("notifications.bell.unread_sr_label") %>:</span>
+          <% end %>
           <p class="text-sm">
             <%= notification.message %>
           </p>

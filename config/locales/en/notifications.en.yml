@@ -7,6 +7,7 @@ en:
       see_all: "See all notifications"
       arrival_announcement: "New notification"
       read_state_announcement: "Notifications updated"
+      unread_sr_label: "Unread"
       unread_count:
         zero:  "No new notifications"
         one:   "1 unread"
