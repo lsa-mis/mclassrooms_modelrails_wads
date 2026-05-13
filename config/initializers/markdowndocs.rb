@@ -9,7 +9,12 @@ Markdowndocs.configure do |config|
   config.categories = {
     "Getting Started" => %w[getting-started],
     "Architecture" => %w[architecture],
-    "Features" => %w[accounts workspaces projects identity-system emails],
+    # `notifications` (audience: guide) and `notifications-technical`
+    # (audience: technical) are paired companion docs — the mode switcher
+    # shows whichever matches the viewer's mode, with no cross-category
+    # split. Listing both here keeps the topic discoverable from the
+    # canonical "Features" category in either mode.
+    "Features" => %w[accounts workspaces projects identity-system emails notifications notifications-technical],
     "Guides" => %w[extending security ui-patterns]
   }
 
