@@ -16,6 +16,14 @@
 # 10k-row delete in one statement could block incoming notifications for
 # seconds. Per-batch transactions release the write lock between rounds,
 # capping any single block to ~10ms.
+#
+# Per-batch deletion uses `delete_all` rather than `destroy_all`: Aaron
+# Patterson confirmed in the panel review that Noticed::Notification has
+# no destroy callbacks and no outgoing `dependent:` cascades (the only
+# cascade is INBOUND from noticed_events). `destroy_all` would instantiate
+# every doomed row, fire (non-existent) callbacks, and DELETE row-by-row —
+# slower with no behavioral difference. Same justification the
+# destroy_all_read controller action already documents.
 class NotificationCleanupJob < ApplicationJob
   queue_as :default
 
@@ -56,6 +64,6 @@ class NotificationCleanupJob < ApplicationJob
       scope
     end
 
-    scope.in_batches(of: 100, &:destroy_all)
+    scope.in_batches(of: 100, &:delete_all)
   end
 end
