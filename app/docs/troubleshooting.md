@@ -2,6 +2,7 @@
 title: Troubleshooting
 description: Recovery procedures for dev-environment issues that aren't caught by tests
 keywords: troubleshooting stimulus controller assets clobber precompile importmap propshaft tailwind dark mode markdowndocs
+audience: [guide, technical]
 ---
 
 # Troubleshooting

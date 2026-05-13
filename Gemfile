@@ -30,7 +30,7 @@ gem "omniauth-rails_csrf_protection"
 gem "pwned"
 gem "pundit"
 gem "pagy"
-gem "markdowndocs", "~> 0.5.0"
+gem "markdowndocs", "~> 0.6.0"
 
 # User-facing notifications (in-app, email, digest) — see `app/notifiers/`.
 gem "noticed", "~> 3.0"

@@ -2,6 +2,7 @@
 title: Account Management
 description: Profile editing, email changes, passwords, avatars, themes, and connected accounts
 keywords: account profile email password avatar theme preferences connected accounts oauth gravatar initials crop
+audience: [guide, technical]
 ---
 
 # Account Management

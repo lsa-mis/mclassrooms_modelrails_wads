@@ -2,6 +2,7 @@
 title: Identity System
 description: Avatar and logo management with upload, crop, Gravatar, initials, and color customization
 keywords: avatar logo identity picker crop upload gravatar initials color hue oklch image cropper active storage
+audience: [guide, technical]
 ---
 
 # Identity System

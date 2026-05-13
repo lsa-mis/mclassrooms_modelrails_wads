@@ -2,6 +2,7 @@
 title: UI Patterns & Design Tokens
 description: Form builder, icons, modals, toasts, design token architecture, and accessibility patterns
 keywords: tailwind design tokens oklch dark mode form builder icons modal toast accessibility wcag aria focus
+audience: [guide, technical]
 ---
 
 # UI Patterns & Design Tokens

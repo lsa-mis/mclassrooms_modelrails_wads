@@ -2,6 +2,7 @@
 title: Email Flows
 description: All transactional emails, their triggers, token expiry windows, and customization
 keywords: email mailer authentication invitation magic link password reset verification token expiry smtp
+audience: [guide, technical]
 ---
 
 # Email Flows

@@ -2,6 +2,7 @@
 title: Workspace Administration
 description: Creating and managing workspaces, members, invitations, roles, branding, and ownership
 keywords: workspace members invitations roles branding ownership transfer settings capacity limits soft delete discard
+audience: [guide, technical]
 ---
 
 # Workspace Administration
