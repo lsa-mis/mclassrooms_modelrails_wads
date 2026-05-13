@@ -52,6 +52,21 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
     }.not_to raise_error
   end
 
+  # Panel-review blocker #1: bare `rescue StandardError` swallowed broadcast
+  # errors silently. A genuine bug in the partial (e.g., a NoMethodError
+  # introduced by a refactor) would disappear with zero signal to ops.
+  # Swallow remains correct — notification creation must not block on a
+  # broadcast outage — but the failure must reach error tracking.
+  it "logs + reports broadcast errors so silent failures reach error tracking" do
+    error = StandardError.new("cable down")
+    allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to).and_raise(error)
+
+    expect(Rails.logger).to receive(:warn).with(/cable down/).at_least(:once)
+    expect(Rails.error).to receive(:report).with(error, hash_including(handled: true)).at_least(:once)
+
+    PasswordChangedNotifier.with(record: user).deliver(user)
+  end
+
   it "broadcasts an aria-live announcement update to the recipient" do
     allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
     expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(

@@ -13,8 +13,17 @@ RSpec.describe "Notifications index page", type: :system do
     expect(page).to have_text(I18n.t("sessions.create.success"))
   end
 
+  # Monotonic per-example offset: every dispatch lands 5 minutes after the
+  # previous one, so each notification gets a distinct idempotency bucket
+  # without relying on rand. Same pattern as
+  # spec/requests/account/notifications_spec.rb. See project memory
+  # `project_flaky_tests_followup.md` for the rand-bucket-collision history:
+  # 1/1000 collisions would dedup-drop retries and flake "renders only unread"
+  # assertions.
   def deliver_security_notification(recipient = user)
-    travel_to(Time.current + rand(1..1000).minutes) do
+    @notification_offset ||= 0
+    @notification_offset += 5
+    travel_to(Time.current + @notification_offset.minutes) do
       PasswordChangedNotifier.with(record: recipient).deliver(recipient)
     end
     recipient.notifications.reload.last

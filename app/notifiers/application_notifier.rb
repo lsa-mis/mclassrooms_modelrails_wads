@@ -180,10 +180,18 @@ class ApplicationNotifier < Noticed::Event
         content: I18n.t("notifications.bell.arrival_announcement")
       )
     end
-  rescue StandardError
+  rescue StandardError => e
     # Same rationale as `Broadcastable`: a broadcast adapter outage must
     # never block notification creation. The notification rows still
     # persist; the user picks up the new badge on next page load.
+    #
+    # Swallowing the error is intentional, but logging + error-reporting
+    # it is not optional — a NoMethodError in the partial introduced by a
+    # refactor would otherwise vanish without trace. Use Rails.error so
+    # whatever subscriber the app has (Sentry, Honeybadger, etc.) picks
+    # this up as a handled exception, not a crash.
+    Rails.logger.warn("notification broadcast failed: #{e.class}: #{e.message}")
+    Rails.error.report(e, handled: true, severity: :warning, context: { source: "ApplicationNotifier#broadcast_notifications_arrival" })
   end
 
   # Populates noticed_events.idempotency_key from the polymorphic `record`
