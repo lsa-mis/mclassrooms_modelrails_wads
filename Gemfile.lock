@@ -253,7 +253,7 @@ GEM
       net-pop
       net-smtp
     marcel (1.1.0)
-    markdowndocs (0.6.0)
+    markdowndocs (0.6.1)
       commonmarker (>= 1.0)
       rails (>= 7.1)
       rails-html-sanitizer (~> 1.6)
@@ -597,7 +597,7 @@ DEPENDENCIES
   letter_opener
   letter_opener_web
   lexxy (~> 0.9.11.beta)
-  markdowndocs (~> 0.6.0)
+  markdowndocs (~> 0.6.1)
   noticed (~> 3.0)
   omniauth
   omniauth-github
@@ -719,7 +719,7 @@ CHECKSUMS
   loofah (2.25.1) sha256=d436c73dbd0c1147b16c4a41db097942d217303e1f7728704b37e4df9f6d2e04
   mail (2.9.0) sha256=6fa6673ecd71c60c2d996260f9ee3dd387d4673b8169b502134659ece6d34941
   marcel (1.1.0) sha256=fdcfcfa33cc52e93c4308d40e4090a5d4ea279e160a7f6af988260fa970e0bee
-  markdowndocs (0.6.0) sha256=393d51bc3120827233867ac1cfd4f071940530dcd9292f3f34bfb7b0b950dfb3
+  markdowndocs (0.6.1) sha256=6283719315699004fd452bdf06ffbcdc80b2e0868f0eba022faa7709ea7b3ecd
   matrix (0.4.3) sha256=a0d5ab7ddcc1973ff690ab361b67f359acbb16958d1dc072b8b956a286564c5b
   mime-types (3.7.0) sha256=dcebf61c246f08e15a4de34e386ebe8233791e868564a470c3fe77c00eed5e56
   mime-types-data (3.2026.0414) sha256=461c4c655373a44bd6c5fe54bcf5b7776026ea96e808144b1ec465c4b99148cc
