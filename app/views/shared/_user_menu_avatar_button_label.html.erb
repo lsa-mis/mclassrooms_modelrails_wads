@@ -1,0 +1,17 @@
+<%# locals: (user:, summary: nil) -%>
+<%# Visually-hidden span referenced by the avatar button's
+    `aria-labelledby`. Lives in its own broadcast frame
+    (`notifications_avatar_button_label_frame`) so the button stays
+    stable across notification arrivals — replacing the label leaves
+    the focusable button intact, so clicks landing during a broadcast
+    still hit a live element.
+
+    Accepts an optional pre-computed `summary:` local so a parent
+    partial (e.g. `_user_menu.html.erb`) can share ONE
+    `unread_notification_breakdown` query across the avatar button,
+    the bell, and the menu count span. Falls back to its own query
+    when rendered standalone (e.g. via Turbo Stream broadcast). %>
+<% summary ||= unread_notification_summary(user) %>
+<span id="user_menu_button_label" class="sr-only">
+  <%= avatar_button_aria_label(user, summary) %>
+</span>

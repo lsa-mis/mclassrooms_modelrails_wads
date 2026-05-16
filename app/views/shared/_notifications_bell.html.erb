@@ -29,7 +29,7 @@
                colors[:icon],
                "motion-safe:animate-pulse-danger" => summary[:severity] == :danger
              ),
-             data: { bell_severity: summary[:severity] },
+             data: { bell_severity: canonical_severity(summary[:severity]) },
              aria_label: nil) %>
   <% end %>
 </turbo-frame>

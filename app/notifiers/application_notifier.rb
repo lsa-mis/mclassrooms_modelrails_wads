@@ -12,12 +12,27 @@ class ApplicationNotifier < Noticed::Event
   # silently return false.
   class_attribute :severity_name, instance_accessor: false, default: :info
 
+  # Canonical severity set consumed by NotificationBellHelper (SEVERITY_RANK
+  # and SEVERITY_CLASSES). Any value declared via `severity :foo` MUST be one
+  # of these — otherwise the helper's `SEVERITY_RANK.fetch(_1)` raises
+  # KeyError at render time, far from the typo's source.
+  VALID_SEVERITIES = %i[danger warning info success].freeze
+
   def self.category(name)
     self.category_name = name.to_s
   end
 
+  # Declares a severity for this Notifier. Raises at class-load time on an
+  # unknown value so typos fail loud at boot rather than silently storing a
+  # bad symbol and exploding later at render. See VALID_SEVERITIES above.
   def self.severity(name)
-    self.severity_name = name.to_sym
+    symbol = name.to_sym
+    unless VALID_SEVERITIES.include?(symbol)
+      raise ArgumentError,
+        "Invalid severity #{name.inspect} for #{self.name}. " \
+        "Must be one of: #{VALID_SEVERITIES.map(&:inspect).join(', ')}."
+    end
+    self.severity_name = symbol
   end
 
   before_create :populate_idempotency_key

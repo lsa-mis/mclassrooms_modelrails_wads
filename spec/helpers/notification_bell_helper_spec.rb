@@ -58,6 +58,27 @@ RSpec.describe NotificationBellHelper, type: :helper do
       expect(result[:severity]).to eq(:info)
       expect(result[:count]).to eq(1)
     end
+
+    it "logs a warning for each stale notifier class and resolves around them" do
+      # Mixes two stale classes with a valid one to prove the resolver doesn't
+      # short-circuit on the first stale class and still computes the highest
+      # severity across the remaining valid notifier(s). WorkspaceMemberAdded
+      # is severity :success; stale classes fall back to :info. :info ranks
+      # higher than :success in SEVERITY_RANK, so :info wins.
+      allow(user).to receive(:unread_notification_breakdown).and_return(
+        "DeletedNotifierA"             => 1,
+        "DeletedNotifierB"             => 2,
+        "WorkspaceMemberAddedNotifier" => 1
+      )
+
+      expect(Rails.logger).to receive(:warn).with(/Stale notifier class.*DeletedNotifierA/)
+      expect(Rails.logger).to receive(:warn).with(/Stale notifier class.*DeletedNotifierB/)
+
+      result = helper.unread_notification_summary(user)
+
+      expect(result[:severity]).to eq(:info)
+      expect(result[:count]).to eq(4)
+    end
   end
 
   describe "#notification_bell_classes" do
@@ -77,6 +98,20 @@ RSpec.describe NotificationBellHelper, type: :helper do
       it "returns the expected classes for #{severity.inspect}" do
         expect(helper.notification_bell_classes(severity)).to eq(classes)
       end
+    end
+  end
+
+  describe "#canonical_severity" do
+    it "returns the severity unchanged when it's canonical" do
+      %i[danger warning info success].each do |sev|
+        expect(helper.canonical_severity(sev)).to eq(sev)
+      end
+    end
+
+    it "falls back to :info for off-canonical severities" do
+      expect(helper.canonical_severity(:critical)).to eq(:info)
+      expect(helper.canonical_severity(nil)).to eq(:info)
+      expect(helper.canonical_severity(:made_up)).to eq(:info)
     end
   end
 

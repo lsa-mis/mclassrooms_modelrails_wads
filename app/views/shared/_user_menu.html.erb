@@ -26,9 +26,16 @@
   <div class="hidden md:flex items-center gap-2">
     <div data-controller="dropdown"
          class="relative">
-      <turbo-frame id="notifications_avatar_button_frame">
-        <%= render "shared/user_menu_avatar_button", user: Current.user, summary: summary %>
+      <%# The accessible name (aria-label text) lives in its own
+          broadcast frame, separate from the focusable button. When a
+          notification arrives, NotificationBroadcaster replaces this
+          label frame only — the button itself is never detached, so
+          clicks landing during a broadcast still hit a live target. %>
+      <turbo-frame id="notifications_avatar_button_label_frame">
+        <%= render "shared/user_menu_avatar_button_label", user: Current.user, summary: summary %>
       </turbo-frame>
+
+      <%= render "shared/user_menu_avatar_button", user: Current.user, summary: summary %>
 
       <div data-dropdown-target="menu"
            id="user-menu"

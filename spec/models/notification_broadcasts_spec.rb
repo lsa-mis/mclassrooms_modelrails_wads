@@ -3,11 +3,11 @@ require "rails_helper"
 RSpec.describe "Notification Turbo Stream broadcasts" do
   let(:user) { create(:user) }
 
-  it "broadcasts the avatar-button + bell-indicator + menu-count quartet replaces to each recipient on event commit" do
+  it "broadcasts the avatar-button-label + bell-indicator + menu-count quartet replaces to each recipient on event commit" do
     expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
       [ a_kind_of(User), :notifications ],
-      target: "notifications_avatar_button_frame",
-      partial: "shared/user_menu_avatar_button",
+      target: "notifications_avatar_button_label_frame",
+      partial: "shared/user_menu_avatar_button_label",
       locals: hash_including(user: a_kind_of(User), summary: hash_including(:count, :severity))
     )
     expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(

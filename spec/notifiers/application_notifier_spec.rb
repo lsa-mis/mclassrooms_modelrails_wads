@@ -69,6 +69,24 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       end
       expect(klass.severity_name).to be_a(Symbol)
     end
+
+    it "raises ArgumentError when severity is not in the canonical set" do
+      expect {
+        Class.new(ApplicationNotifier) { severity :critical }
+      }.to raise_error(ArgumentError, /Invalid severity :critical.*danger.*warning.*info.*success/)
+    end
+
+    it "raises ArgumentError when severity is a string outside the canonical set" do
+      expect {
+        Class.new(ApplicationNotifier) { severity "urgent" }
+      }.to raise_error(ArgumentError, /Invalid severity "urgent"/)
+    end
+
+    it "accepts all four canonical severities without raising" do
+      %i[danger warning info success].each do |sev|
+        expect { Class.new(ApplicationNotifier) { severity sev } }.not_to raise_error
+      end
+    end
   end
 
   describe "automatic idempotency-key population (column)" do

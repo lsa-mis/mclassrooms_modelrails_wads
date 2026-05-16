@@ -15,7 +15,7 @@ Implementation reference for the notifications subsystem. The end-user view of t
 |---|---|
 | Event + recipient persistence | [Noticed v2](https://github.com/excid3/noticed) — `noticed_events` + `noticed_notifications` tables |
 | Per-event delivery rules | Notifier subclasses under `app/notifiers/` |
-| In-app real-time | Turbo Streams broadcast on `[user, :notifications]` channel via `NotificationBroadcaster` |
+| In-app real-time | Turbo Streams 4-target broadcast on `[user, :notifications]` channel via `NotificationBroadcaster` |
 | Email delivery | `NotificationMailer` (per-event + `digest`); cadence on per-user `notification_preferences` |
 | Per-user config | `NotificationPreferences` value object wrapping `user_preferences.notification_preferences` JSONB |
 | Background jobs | `DigestMailerJob` (15-min poll), `NotificationCleanupJob` (daily 3 AM UTC) |
@@ -39,9 +39,9 @@ One row per `(event, recipient)` pair. `recipient` is polymorphic (always `User`
 | `recipient_type` / `recipient_id` | Polymorphic recipient |
 | `type` | STI shape — e.g., `PasswordChangedNotifier::Notification` |
 | `read_at` | Nullable timestamp; the read/unread state |
-| `seen_at` | Reserved for the panel-on-open semantic — currently unused |
+| `seen_at` | First time the recipient surfaced the row in chrome; set by `mark_seen!` from the notification methods mixin |
 
-There's a composite index `(recipient_id, read_at, created_at)` to back the dropdown's "recent unread + recent read" query, the index page's `?filter=unread`, and the cleanup job's `read_at < cutoff` scan.
+There's a composite index `(recipient_id, read_at, created_at)` to back the `/account/notifications` index page (default sort + `?filter=unread`), the per-user unread breakdown that drives the bell indicator, and the cleanup job's `read_at < cutoff` scan.
 
 ### `user_preferences.notification_preferences` (JSONB)
 
@@ -74,11 +74,12 @@ A user with no `user_preferences` row at all still gets sane defaults because `A
 
 ## Notifier subclasses
 
-All inherit from `ApplicationNotifier` (which extends `Noticed::Event`). Each declares its category via the `category` macro:
+All inherit from `ApplicationNotifier` (which extends `Noticed::Event`). Each declares its `category` (drives preference opt-in/opt-out) and its `severity` (drives the bell indicator color) via DSL macros:
 
 ```ruby
 class PasswordChangedNotifier < ApplicationNotifier
   category :security
+  severity :danger
 
   deliver_by :email, mailer: "NotificationMailer", method: :password_changed,
              if: ->(recipient) { recipient_pref(:email) == true }
@@ -90,23 +91,61 @@ class PasswordChangedNotifier < ApplicationNotifier
 end
 ```
 
-| Notifier | Category | What it dispatches on |
-|---|---|---|
-| `PasswordChangedNotifier` | `security` | `User#password_digest` change |
-| `SignInFromNewDeviceNotifier` | `security` | Login from a previously-unseen browser fingerprint |
-| `WorkspaceInvitationReceivedNotifier` | `account_access` | `Invitation` created targeting this user |
-| `WorkspaceInvitationAcceptedNotifier` | `account_access` | An invitee accepts the inviter's invitation |
-| `WorkspaceInvitationDeclinedNotifier` | `account_access` | An invitee declines |
-| `WorkspaceInvitationResentNotifier` | `account_access` | Inviter manually resends |
-| `WorkspaceInvitationExpiringSoonNotifier` | `account_access` | Sweep job finds invitations within 24 hours of expiry |
-| `WorkspaceRoleChangedNotifier` | `account_access` | Owner changes a member's role |
-| `WorkspaceMemberAddedNotifier` | `workspace_activity` | New member joins (fans out to all owners) |
-| `ProjectMembershipChangedNotifier` | `project_activity` | Project member role changed |
-| `WorkspaceCapacityApproachingNotifier` | `billing` | Sweep job finds a workspace approaching its plan limit |
+`category` stores as a `String` (compared against JSONB preference keys); `severity` stores as a `Symbol` (used to index into `NotificationBellHelper::SEVERITY_RANK`/`SEVERITY_CLASSES`). Default `severity` is `:info` when a subclass doesn't declare one.
+
+| Notifier | Category | Severity | What it dispatches on |
+|---|---|---|---|
+| `PasswordChangedNotifier` | `security` | `danger` | `User#password_digest` change |
+| `SignInFromNewDeviceNotifier` | `security` | `danger` | Login from a previously-unseen browser fingerprint |
+| `WorkspaceInvitationReceivedNotifier` | `account_access` | `info` | `Invitation` created targeting this user |
+| `WorkspaceInvitationAcceptedNotifier` | `workspace_activity` | `success` | An invitee accepts the inviter's invitation |
+| `WorkspaceInvitationDeclinedNotifier` | `workspace_activity` | `info` | An invitee declines |
+| `WorkspaceInvitationResentNotifier` | `account_access` | `info` | Inviter manually resends |
+| `WorkspaceInvitationExpiringSoonNotifier` | `account_access` | `warning` | Sweep job finds invitations within 24 hours of expiry |
+| `WorkspaceRoleChangedNotifier` | `account_access` | `info` | Owner changes a member's role |
+| `WorkspaceMemberAddedNotifier` | `workspace_activity` | `success` | New member joins (fans out to all owners) |
+| `ProjectMembershipChangedNotifier` | `project_activity` | `info` | Project member role changed |
+| `WorkspaceCapacityApproachingNotifier` | `billing` | `warning` | Sweep job finds a workspace approaching its plan limit |
 
 ### Category → notifier types
 
 `ApplicationNotifier.notification_types_for(category)` returns the `Noticed::Notification` STI type strings for that category — used by `NotificationsController#index` for `?category=foo` filtering, and by `NotificationPreferences.security_notifier_types` for retention-floor enforcement.
+
+## Bell indicator + helper
+
+The bell IS the indicator — there is no separate dropdown panel. A small solid bell glyph sits at the bottom-right of the avatar when there are unread notifications; the glyph color encodes the highest-severity unread.
+
+### `User#unread_notification_breakdown`
+
+One indexed `GROUP BY` query that returns `{ notifier_class_name => unread_count, ... }` for the user — count + severity-source data in a single DB hit:
+
+```ruby
+def unread_notification_breakdown
+  notifications
+    .where(read_at: nil)
+    .joins("INNER JOIN noticed_events ON noticed_events.id = noticed_notifications.event_id")
+    .group("noticed_events.type")
+    .count
+end
+```
+
+### `NotificationBellHelper`
+
+The helper owns view-token mapping + severity orchestration. The three public surfaces consumers care about:
+
+| Method | Returns | Used by |
+|---|---|---|
+| `unread_notification_summary(user)` | `{ count:, severity: }` (severity nil when count zero) | The three partial-rendering broadcasts (avatar button, bell, menu count); passed in as a `summary:` local from `NotificationBroadcaster` to avoid redundant queries |
+| `notification_bell_classes(severity)` | `{ icon: "text-<severity>" }` | The bell partial — maps severity to the saturated `--color-{severity}` token already used by toasts |
+| `avatar_button_aria_label(user, summary = …)` | I18n-composed string ("User menu for Dave. 3 unread notifications, including a security alert.") | The avatar button partial; accepts a precomputed summary so the broadcaster's shared query isn't redone |
+
+`SEVERITY_RANK = { danger: 4, warning: 3, info: 2, success: 1 }` — higher rank wins when multiple severities are unread. `canonical_severity(severity)` clamps any input to one of the four canonical values (defensive coverage for non-production paths; production is already guarded by `ApplicationNotifier.severity`'s DSL).
+
+The helper uses `extend self` so every method is callable BOTH as a module method (`NotificationBellHelper.unread_notification_summary(user)`, used by `NotificationBroadcaster` which has no view context) AND as a public instance method when mixed into a view. Unlike `module_function`, instance-mixed methods stay public, so `helper.foo` works in specs.
+
+### Forced-colors fallback for AAA
+
+Windows High Contrast / `forced-colors: active` overrides author colors with system colors, so the bell's severity fill collapses to a single system color. The partial forces `text-[ButtonText]` under `forced-colors:` so the glyph stays visible (WCAG 1.4.11 non-text contrast under that accommodation). A stacked white drop-shadow outline (three 2px white shadows; black in dark mode) keeps the bell legible against arbitrary avatar backgrounds.
 
 ## Idempotency
 
@@ -143,15 +182,18 @@ Every authenticated page subscribes via the layout:
 <%= turbo_stream_from [Current.user, :notifications] %>
 ```
 
-### The three broadcasts
+### The four broadcasts
 
-`NotificationBroadcaster.refresh_for(user, announcement_key:)` (in `app/lib/notification_broadcaster.rb`) issues a three-broadcast trio per call:
+`NotificationBroadcaster.refresh_for(user, announcement_key:)` (in `app/lib/notification_broadcaster.rb`) issues a four-target broadcast quartet per call. Each broadcast targets an independent slim partial wrapped in its own turbo-frame, so the surfaces refresh atomically without rewiring unrelated chrome.
 
-1. **`broadcast_replace_to`** → `target: "notifications_bell_frame"`, renders `shared/_notifications_bell_button` — updates the badge count
-2. **`broadcast_replace_to`** → `target: "notifications_dropdown_frame"`, renders `shared/_notifications_dropdown_list` — refreshes the open-dropdown's recent list
-3. **`broadcast_update_to`** → `target: "notifications-live"`, content from `announcement_key` (`notifications.bell.arrival_announcement` or `notifications.bell.read_state_announcement`) — the page-level aria-live region for SR users
+1. **`broadcast_replace_to`** → `target: "notifications_avatar_button_frame"`, renders `shared/_user_menu_avatar_button` — refreshes the avatar button's `aria-label` so AT users hear the new unread count + severity phrase on their next focus traversal
+2. **`broadcast_replace_to`** → `target: "notifications_bell_indicator_frame"`, renders `shared/_notifications_bell` — refreshes the severity-colored bell glyph overlaid at the bottom-right of the avatar
+3. **`broadcast_replace_to`** → `target: "notifications_menu_count_frame"`, renders `shared/_notifications_menu_count_span` — refreshes the "(3)" count next to the user menu's "Notifications" link
+4. **`broadcast_update_to`** → `target: "notifications-live"`, content from `announcement_key` (`notifications.bell.arrival_announcement` or `notifications.bell.read_state_announcement`) — updates the page-level `aria-live="polite"` region for SR users
 
-The whole method is wrapped in `rescue StandardError`, which `Rails.logger.warn`s + `Rails.error.report(handled: true)`s the failure. A cable adapter outage never blocks notification creation OR controller responses, but the failure reaches your error tracker as a handled exception with a `source:` context tag.
+Each broadcast runs in its own `safe_broadcast` rescue scope. A failure on ONE surface must NOT abort the other three: the real failure mode this prevents is a transient cable adapter hiccup or a partial-rendering exception in the first broadcast silently dropping the rest of the refresh. Each failed broadcast is `Rails.logger.warn`'d and `Rails.error.report(handled: true)`'d with a `source: "NotificationBroadcaster.<surface>"` context tag, so cable outages reach your error tracker per-surface.
+
+Performance: the unread breakdown summary is computed ONCE at the top of `refresh_for` and passed to each receiving partial as a `summary:` local — avoids 3 redundant `unread_notification_breakdown` queries that would otherwise fire (one per partial that needs it).
 
 ### Two call sites
 
@@ -170,14 +212,14 @@ Noticed v2 uses `notifications.insert_all!` to fan out per-recipient rows — th
 
 | Frame ID | Lives in | Replaced by |
 |---|---|---|
-| `notifications_bell_frame` | `shared/_notifications_bell.html.erb` | `_notifications_bell_button.html.erb` |
-| `notifications_dropdown_frame` | `shared/_notifications_dropdown.html.erb`, with `target="_top"` so notification links break out of the frame on click | `_notifications_dropdown_list.html.erb` |
+| `notifications_avatar_button_frame` | `shared/_user_menu.html.erb` | `_user_menu_avatar_button.html.erb` |
+| `notifications_bell_indicator_frame` | `shared/_user_menu_avatar_button.html.erb` (nested inside the avatar button) | `_notifications_bell.html.erb` |
+| `notifications_menu_count_frame` | `shared/_user_menu.html.erb` (wraps the count span on the "Notifications" menu link) | `_notifications_menu_count_span.html.erb` |
+| `notifications-live` | Layout-level `aria-live="polite"` region | Plain text content via `broadcast_update_to` |
 
-The dropdown frame uses `target="_top"` so clicking a notification link navigates the full page (not into the frame), and the panel chrome (header + "See all" link) lives OUTSIDE the broadcast frame so it's never disturbed.
+The bell-indicator frame is nested INSIDE the avatar-button frame in the initial render — a single broadcast can replace the outer frame and bring a fresh bell along with it. The standalone `bell_indicator_frame` broadcast exists for the inverse case: refreshing only the bell color/count without re-rendering the surrounding button (e.g., when state changes but the aria-label phrase is identical).
 
-### Focus restoration on broadcast
-
-`notification_dropdown_controller.js` listens for `turbo:before-stream-render` and, when the stream targets `notifications_dropdown_frame`, captures the currently-focused `[data-notification-item]` id pre-render and reapplies focus to the same item post-render. Without this, a user keyboard-navigating with arrow keys would lose focus to `<body>` on every cross-tab read-state change.
+There is no longer a dropdown panel; the avatar opens the existing user menu, and the only path to read history is `/account/notifications`.
 
 ## NotificationPreferences value object
 
@@ -260,14 +302,15 @@ Uses `delete_all` (not `destroy_all`) because `Noticed::Notification` has no des
 
 ## Bullet safelists (test env)
 
-`config/environments/test.rb` has several Bullet safelist entries specific to the notifications surface. They're not "ignored warnings" — each documents a deliberate trade-off:
+`config/environments/test.rb` has several Bullet safelist entries specific to the notifications surface. They're not "ignored warnings" — each documents a deliberate trade-off on the `/account/notifications` index page (which eager-loads `includes(:recipient, event: :record)` for every row):
 
-- **`StubAccountAccessNotifier` / `StubSecurityNotifier` unused_eager_loading on `:event` / `:record`** — broadcast renders the dropdown helper which eager-loads `event: :record`; stub notifiers don't traverse those in `#message`, so single-row tests look "unused" to Bullet. Real notifier subtypes do traverse them.
-- **`SignInFromNewDeviceNotifier` unused_eager_loading on `:record`** — same pattern, but for the index page which always eager-loads `event.record` for ALL rows. SignInFromNewDevice reads only `event.params`, so when it's the only subtype in a result the include looks wasted.
-- **`Invitation :accepted_by` / `:invitable` n_plus_one_query** — `WorkspaceInvitationAcceptedNotifier#message` traverses both; Rails' polymorphic `includes(event: :record)` can't transitively eager-load these without a per-subtype preload step.
-- **`Membership :user` / `:workspace` n_plus_one_query** — `WorkspaceMemberAddedNotifier#message` traverses `event.record.user.first_name`; same polymorphic limit.
+- **`WorkspaceMemberAddedNotifier::Notification` n_plus_one_query on `:recipient`** — Noticed v2's `EventJob` iterates `event.notifications.each` and accesses each notification's `recipient` (for the `deliver_by :email` lambda's `recipient_pref` check). The library doesn't expose a hook to eager-load `:recipient` on the notifications relation, so this is a structural constraint of the gem. Covers WorkspaceMemberAdded's fan-out to every workspace owner.
+- **`WorkspaceCapacityApproachingNotifier::Notification` n_plus_one_query on `:recipient`** — same delivery-layer rationale as above; capacity alerts dispatch to all workspace owners.
+- **`SignInFromNewDeviceNotifier` unused_eager_loading on `:record`** — the index page eager-loads `event.record` for every row because every other notifier's `#message` interpolates `event.record.<attr>`. SignInFromNewDevice reads only `event.params`, so when it's the only subtype in a result the include looks wasted. The safelist documents the deliberate trade-off rather than dropping eager-load for all rows.
+- **`Membership :user` / `:workspace` n_plus_one_query** — `WorkspaceMemberAddedNotifier#message` traverses `event.record.user.first_name` (record is a Membership). Rails' polymorphic `includes(event: :record)` can't transitively eager-load grandchild associations without a per-subtype preload step.
+- **`Invitation :accepted_by` / `:invitable` n_plus_one_query** — `WorkspaceInvitationAcceptedNotifier#message` traverses both (record is an Invitation). Same polymorphic-deep-include limit.
 
-The dropdown surface is capped at 15 rows (10 unread + 5 read), so the N+1 trade-off is bounded.
+Accepting the per-row traversal cost is the right trade-off versus building a per-subtype preload pipeline for what is fundamentally a polymorphic STI tree.
 
 ## Operational concerns
 
@@ -289,13 +332,14 @@ Watch for:
 
 1. Subclass `ApplicationNotifier` under `app/notifiers/`
 2. Declare `category :name` (one of `security`, `account_access`, `workspace_activity`, `project_activity`, `billing`)
-3. Define `notification_methods do; def message; def url; end` (use `event.record.*` for context)
-4. Add `deliver_by :email, ... if:` guards if you want email
-5. Add I18n keys under `notifications.<notifier_snake_case>.message`
-6. If the notifier's `#message` traverses deep polymorphic associations, expect Bullet flags — safelist entries match the pattern above
-7. Dispatch with `NotifierClass.with(record: ...).deliver(recipients)` from wherever the triggering event happens
+3. Declare `severity :level` (one of `:danger`, `:warning`, `:info`, `:success`) — drives the bell color; omitting it defaults to `:info`
+4. Define `notification_methods do; def message; def url; end` (use `event.record.*` for context)
+5. Add `deliver_by :email, ... if:` guards if you want email
+6. Add I18n keys under `notifications.<notifier_snake_case>.message`
+7. If the notifier's `#message` traverses deep polymorphic associations, expect Bullet flags — safelist entries match the pattern above
+8. Dispatch with `NotifierClass.with(record: ...).deliver(recipients)` from wherever the triggering event happens
 
-The category macro and `with` parameter are enough to route the new notifier through the existing preference gates, idempotency, broadcasts, retention, and digest pipeline. No controller or view changes needed.
+The `category` + `severity` macros and the `with` parameter are enough to route the new notifier through the existing preference gates, bell-indicator severity selection, idempotency, broadcasts, retention, and digest pipeline. No controller or view changes needed.
 
 ## Related
 

@@ -94,23 +94,24 @@ Rails.application.configure do
                         class_name: "WorkspaceCapacityApproachingNotifier::Notification",
                         association: :recipient)
 
-    # /account/notifications eager-loads `event.record` for every row (every
-    # other notifier subtype's `#message` interpolates `event.record.<attr>`).
-    # SignInFromNewDeviceNotifier is the lone exception — its `#message` only
-    # reads `event.params` — so when it's the only subtype in the result the
-    # `:record` include is unused and Bullet flags AVOID. Safelist documents
-    # the deliberate trade-off rather than dropping eager-load for all rows.
+    # /account/notifications eager-loads `event.record` for every row via
+    # `includes(:recipient, event: :record)` in `Account::NotificationsController#index`,
+    # because every other notifier subtype's `#message` interpolates
+    # `event.record.<attr>`. SignInFromNewDeviceNotifier is the lone
+    # exception — its `#message` only reads `event.params` — so when it's
+    # the only subtype in the result the `:record` include is unused and
+    # Bullet flags AVOID. Safelist documents the deliberate trade-off
+    # rather than dropping eager-load for all rows.
     Bullet.add_safelist(type: :unused_eager_loading,
                         class_name: "SignInFromNewDeviceNotifier",
                         association: :record)
 
-    # The notifications-bell dropdown renders up to 15 notifications across
-    # mixed notifier subtypes. WorkspaceMemberAddedNotifier traverses
+    # /account/notifications can render up to a full page of notifications
+    # across mixed notifier subtypes. WorkspaceMemberAddedNotifier traverses
     # `event.record.user.first_name` (record is a Membership), which Rails'
     # polymorphic `includes(event: :record)` can't transitively eager-load
-    # without a per-subtype preload step. The query depth is capped at 15
-    # rows by `recent_notifications_for_dropdown`, so accepting the N+1 on
-    # this single chrome surface is the right trade-off.
+    # without a per-subtype preload step. Accepting the N+1 on this page
+    # is the right trade-off versus a per-subtype preload pipeline.
     Bullet.add_safelist(type: :n_plus_one_query,
                         class_name: "Membership",
                         association: :user)
@@ -119,34 +120,13 @@ Rails.application.configure do
                         association: :workspace)
     # Same polymorphic-deep-include rationale: WorkspaceInvitationAcceptedNotifier
     # traverses `event.record.accepted_by` and `event.record.invitable` (record
-    # is an Invitation). Now that the dropdown list is also broadcast on
-    # read-state mutations, this N+1 surfaces whenever an Accepted notification
-    # is among the dropdown's recent items at the moment of the broadcast.
+    # is an Invitation) when rendering its `#message` on the notifications
+    # index page.
     Bullet.add_safelist(type: :n_plus_one_query,
                         class_name: "Invitation",
                         association: :accepted_by)
     Bullet.add_safelist(type: :n_plus_one_query,
                         class_name: "Invitation",
                         association: :invitable)
-
-    # ApplicationNotifier#broadcast_notifications_arrival renders the
-    # `notifications_dropdown_frame` partial on every dispatch, which calls
-    # `recent_notifications_for_dropdown` and eager-loads `event: :record`.
-    # In tests using stub notifiers (StubAccountAccessNotifier / StubSecurityNotifier),
-    # the stub's `#message` doesn't traverse `event.record`, so Bullet sees
-    # the eager load as "unused" for that single-row scenario. Real notifier
-    # subtypes don't trip this because their `#message` methods read
-    # `event.params` / `event.record.*`. Same rationale as the
-    # SignInFromNewDeviceNotifier safelist above — accepting the trade-off
-    # rather than dropping eager-loading for all rows.
-    Bullet.add_safelist(type: :unused_eager_loading,
-                        class_name: "StubAccountAccessNotifier::Notification",
-                        association: :event)
-    Bullet.add_safelist(type: :unused_eager_loading,
-                        class_name: "StubAccountAccessNotifier",
-                        association: :record)
-    Bullet.add_safelist(type: :unused_eager_loading,
-                        class_name: "StubSecurityNotifier",
-                        association: :record)
   end
 end

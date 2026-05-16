@@ -328,8 +328,11 @@ RSpec.describe "Account Notifications", type: :request do
     # Cross-tab read-state sync: when read_at changes on any of the user's
     # notifications, THREE frames are broadcast to the user's
     # `[user, :notifications]` Turbo channel:
-    #   1. `notifications_avatar_button_frame` — the user-menu avatar trigger,
-    #      whose aria-label embeds the unread count + severity phrase.
+    #   1. `notifications_avatar_button_label_frame` — sr-only span sibling
+    #      of #user-menu-button (linked via aria-labelledby) holding the
+    #      unread count + severity phrase. The button itself is NEVER in a
+    #      broadcast frame so clicks landing mid-broadcast still hit a live
+    #      target.
     #   2. `notifications_bell_indicator_frame` — the severity-colored bell
     #      icon overlay rendered on top of the avatar.
     #   3. `notifications_menu_count_frame` — the count text in the user-menu
@@ -337,7 +340,7 @@ RSpec.describe "Account Notifications", type: :request do
     # Tab A's direct response also refreshes all three; the broadcasts cover
     # Tab B and beyond. Each frame is independent so the surfaces can update
     # in isolation (e.g., the chip re-renders even when the menu is closed).
-    describe "cross-tab read-state sync (avatar button + bell indicator + menu count broadcasts)" do
+    describe "cross-tab read-state sync (avatar button label + bell indicator + menu count broadcasts)" do
       let(:notification) { deliver_security_notification }
 
       it "broadcasts avatar-button + bell-indicator + menu-count refresh on PATCH (mark single notification read)" do
@@ -345,8 +348,8 @@ RSpec.describe "Account Notifications", type: :request do
 
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],
-                target: "notifications_avatar_button_frame",
-                partial: "shared/user_menu_avatar_button",
+                target: "notifications_avatar_button_label_frame",
+                partial: "shared/user_menu_avatar_button_label",
                 locals: hash_including(user: user))
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],
@@ -367,8 +370,8 @@ RSpec.describe "Account Notifications", type: :request do
 
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],
-                target: "notifications_avatar_button_frame",
-                partial: "shared/user_menu_avatar_button",
+                target: "notifications_avatar_button_label_frame",
+                partial: "shared/user_menu_avatar_button_label",
                 locals: hash_including(user: user))
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],
@@ -389,8 +392,8 @@ RSpec.describe "Account Notifications", type: :request do
 
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],
-                target: "notifications_avatar_button_frame",
-                partial: "shared/user_menu_avatar_button",
+                target: "notifications_avatar_button_label_frame",
+                partial: "shared/user_menu_avatar_button_label",
                 locals: hash_including(user: user))
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],
@@ -453,8 +456,8 @@ RSpec.describe "Account Notifications", type: :request do
 
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],
-                target: "notifications_avatar_button_frame",
-                partial: "shared/user_menu_avatar_button",
+                target: "notifications_avatar_button_label_frame",
+                partial: "shared/user_menu_avatar_button_label",
                 locals: hash_including(user: user))
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with([ user, :notifications ],

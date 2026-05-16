@@ -33,12 +33,17 @@ RSpec.describe "Notifications a11y plumbing", type: :system do
       visit root_path
 
       expect(page).to have_css("turbo-cable-stream-source", visible: :all)
-      # The new avatar-bell design exposes three broadcast targets that
+      # The avatar-bell design exposes three broadcast targets that
       # `NotificationBroadcaster.refresh_for` replaces, plus the live region
-      # (asserted in its own example above).
-      expect(page).to have_css("turbo-frame#notifications_avatar_button_frame")
+      # (asserted in its own example above). The avatar button itself is a
+      # stable sibling of the label frame — only the sr-only label is
+      # broadcast-replaced, so the focusable button never gets detached.
+      expect(page).to have_css("turbo-frame#notifications_avatar_button_label_frame", visible: :all)
       expect(page).to have_css("turbo-frame#notifications_bell_indicator_frame", visible: :all)
       expect(page).to have_css("turbo-frame#notifications_menu_count_frame", visible: :all)
+      # The button is OUTSIDE any broadcast frame; assert that explicitly so
+      # a regression that re-wraps it would fail this test.
+      expect(page).to have_no_css("turbo-frame#notifications_avatar_button_label_frame #user-menu-button")
     end
 
     it "does NOT render the subscription on unauthenticated pages" do

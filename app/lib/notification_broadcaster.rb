@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 # Refreshes a user's four independent notification surfaces:
-#   - avatar button frame  (refreshes aria-label so AT narrative stays
-#                           coherent with the severity-colored chip overlay)
+#   - avatar button LABEL frame (sr-only aria-label text — sibling of the
+#                                button, NOT the button itself; replacing
+#                                the label keeps the focusable button stable
+#                                so clicks landing mid-broadcast still hit
+#                                a live target)
 #   - bell indicator frame (severity-colored chip overlay on the avatar)
 #   - menu count frame     (Notifications menu-link count text, e.g. "(3)")
 #   - aria-live region     (SR announcement)
@@ -40,11 +43,11 @@ module NotificationBroadcaster
     stream_key = [ user, :notifications ]
     summary = NotificationBellHelper.unread_notification_summary(user)
 
-    safe_broadcast(stream_key, source: "avatar_button") do
+    safe_broadcast(stream_key, source: "avatar_button_label") do
       Turbo::StreamsChannel.broadcast_replace_to(
         stream_key,
-        target: "notifications_avatar_button_frame",
-        partial: "shared/user_menu_avatar_button",
+        target: "notifications_avatar_button_label_frame",
+        partial: "shared/user_menu_avatar_button_label",
         locals: { user: user, summary: summary }
       )
     end

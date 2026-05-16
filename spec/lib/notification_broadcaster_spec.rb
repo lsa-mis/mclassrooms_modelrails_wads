@@ -4,11 +4,11 @@ RSpec.describe NotificationBroadcaster do
   let(:user) { create(:user) }
 
   describe ".refresh_for" do
-    it "broadcasts the avatar button, bell indicator, menu count, and aria-live quartet for the given user" do
+    it "broadcasts the avatar button label, bell indicator, menu count, and aria-live quartet for the given user" do
       expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
         [ user, :notifications ],
-        target: "notifications_avatar_button_frame",
-        partial: "shared/user_menu_avatar_button",
+        target: "notifications_avatar_button_label_frame",
+        partial: "shared/user_menu_avatar_button_label",
         locals: hash_including(user: user, summary: hash_including(:count, :severity))
       )
       expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
@@ -74,12 +74,12 @@ RSpec.describe NotificationBroadcaster do
     # Per-broadcast rescue: each surface is independent. A failure on the
     # FIRST broadcast must NOT abort the other three. Prevents the bell +
     # count + aria-live region from silently going stale when only the
-    # avatar button partial fails to render.
+    # avatar button label partial fails to render.
     it "continues other broadcasts when one fails (per-broadcast rescue)" do
-      # First broadcast (avatar button) raises; subsequent broadcasts must
-      # still attempt.
+      # First broadcast (avatar button label) raises; subsequent broadcasts
+      # must still attempt.
       expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
-        anything, hash_including(target: "notifications_avatar_button_frame")
+        anything, hash_including(target: "notifications_avatar_button_label_frame")
       ).and_raise(StandardError, "simulated cable failure")
 
       expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
@@ -94,7 +94,7 @@ RSpec.describe NotificationBroadcaster do
         anything, hash_including(target: "notifications-live")
       ).at_least(:once)
 
-      expect(Rails.logger).to receive(:warn).with(/notification broadcast failed.*avatar_button/)
+      expect(Rails.logger).to receive(:warn).with(/notification broadcast failed.*avatar_button_label/)
 
       expect {
         described_class.refresh_for(user, announcement_key: "notifications.bell.arrival_announcement")
