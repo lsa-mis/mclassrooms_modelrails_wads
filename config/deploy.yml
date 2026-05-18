@@ -82,10 +82,12 @@ builder:
 
   # # Build image via remote server (useful for faster amd64 builds on arm64 computers)
   # remote: ssh://docker@docker-builder-server
-  #
-  # # Pass arguments and secrets to the Docker build process
-  # args:
-  #   RUBY_VERSION: ruby-4.0.2
+
+  # Pass the Ruby version through so the production image always matches the
+  # version Bundler enforces via Gemfile.lock. Keep in sync with .tool-versions.
+  args:
+    RUBY_VERSION: "4.0.4"
+
   # secrets:
   #   - GITHUB_TOKEN
   #   - RAILS_MASTER_KEY

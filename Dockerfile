@@ -7,8 +7,11 @@
 
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=4.0.2
+# Make sure RUBY_VERSION matches the Ruby version in .tool-versions.
+# When invoked via Kamal, config/deploy.yml passes RUBY_VERSION as a build arg
+# so the production image always matches the version Bundler enforces in
+# Gemfile.lock (see Gemfile's `ruby file: ".tool-versions"` directive).
+ARG RUBY_VERSION=4.0.4
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 # Rails app lives here
@@ -24,8 +27,9 @@ RUN apt-get update -qq && \
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development" \
-    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
+    BUNDLE_WITHOUT="development:test" \
+    LD_PRELOAD="/usr/local/lib/libjemalloc.so" \
+    MALLOC_CONF="dirty_decay_ms:1000,muzzy_decay_ms:0"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -35,14 +39,18 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Install application gems
-COPY vendor/* ./vendor/
+# Install application gems FIRST so the bundle install layer survives changes
+# to vendor/ (including the markdowndocs symlink used for Tailwind scanning).
 COPY Gemfile Gemfile.lock ./
 
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
     # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
     bundle exec bootsnap precompile -j 1 --gemfile
+
+# Vendor contents come after the bundle install layer so a vendor tweak
+# doesn't bust the gem cache.
+COPY vendor/ ./vendor/
 
 # Copy application code
 COPY . .

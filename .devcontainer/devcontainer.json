@@ -1,19 +1,37 @@
 {
   "name": "ModelRails",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "image": "docker.io/library/ruby:4.0.4-slim",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {},
     "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/jdx/devcontainer-feature/mise:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "mounts": [
+    "source=modelrails-bundle-cache,target=/usr/local/bundle,type=volume",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
+  ],
+  "remoteEnv": {
+    "BINDING": "0.0.0.0"
   },
   "postCreateCommand": "bash .devcontainer/setup.sh",
-  "forwardPorts": [3000],
+  "forwardPorts": [3000, 1080],
+  "portsAttributes": {
+    "3000": {
+      "label": "Rails",
+      "onAutoForward": "notify"
+    },
+    "1080": {
+      "label": "Letter Opener Web",
+      "onAutoForward": "silent"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
         "Shopify.ruby-lsp",
         "bradlc.vscode-tailwindcss",
-        "dbaeumer.vscode-eslint"
+        "dbaeumer.vscode-eslint",
+        "qwtel.sqlite-viewer"
       ],
       "settings": {
         "editor.tabSize": 2,
