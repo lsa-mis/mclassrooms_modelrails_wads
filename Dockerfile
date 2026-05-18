@@ -50,7 +50,9 @@ RUN apt-get update -qq && \
 
 # Install application gems FIRST so the bundle install layer survives changes
 # to vendor/ (including the markdowndocs symlink used for Tailwind scanning).
-COPY Gemfile Gemfile.lock ./
+# .tool-versions is required by Gemfile's `ruby file:` directive — Bundler
+# parses it during bundle install, so it must arrive in the same layer.
+COPY Gemfile Gemfile.lock .tool-versions ./
 
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \

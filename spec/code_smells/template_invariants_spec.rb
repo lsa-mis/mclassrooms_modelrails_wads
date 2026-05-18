@@ -111,6 +111,26 @@ RSpec.describe "Template invariants" do
         "across vendor/ changes (e.g., markdowndocs symlink updates)"
     end
 
+    it "COPYs .tool-versions alongside Gemfile so the `ruby file:` directive resolves at bundle install" do
+      # The Gemfile uses `ruby file: ".tool-versions"` (asserted above). When
+      # Bundler parses the Gemfile inside `RUN bundle install`, it must be
+      # able to resolve that file — so .tool-versions has to land in /rails
+      # before bundle install runs, not later via `COPY . .`.
+      #
+      # Caught by the manual `docker build .` smoke test post-#129. The build
+      # failed with: "Could not find version file .tool-versions. Bundler
+      # cannot continue."
+      gemfile_copy_line_index = dockerfile_lines.find_index { |l| l.match?(/^COPY Gemfile/) }
+      expect(gemfile_copy_line_index).not_to be_nil, "expected a `COPY Gemfile ...` line"
+
+      copy_line = dockerfile_lines[gemfile_copy_line_index]
+      expect(copy_line).to include(".tool-versions"),
+        "Gemfile uses `ruby file: \".tool-versions\"`, so the Dockerfile must COPY " \
+        ".tool-versions alongside Gemfile or `bundle install` aborts. Current COPY at " \
+        "Dockerfile:#{gemfile_copy_line_index + 1}: `#{copy_line.strip}`. " \
+        "Fix: `COPY Gemfile Gemfile.lock .tool-versions ./`"
+    end
+
     it "gates bootsnap precompile parallelism on cross-arch detection (Aaron Patterson)" do
       # rails/bootsnap#495 requires -j 1 only when cross-compiling under QEMU
       # emulation (TARGETPLATFORM != BUILDPLATFORM). On native CI builds the
