@@ -31,14 +31,16 @@ class WorkspacesController < ApplicationController
 
   def edit
     authorize @workspace
+    # Workspace name/capacity/branding live on one unified settings page.
+    redirect_to edit_workspace_settings_path(@workspace)
   end
 
   def update
     authorize @workspace
     if @workspace.update(workspace_params)
-      redirect_to workspace_path(@workspace), notice: t(".success")
+      redirect_to edit_workspace_settings_path(@workspace), notice: t(".success")
     else
-      render :edit, status: :unprocessable_entity
+      render "workspaces/settings/edit", status: :unprocessable_entity
     end
   end
 

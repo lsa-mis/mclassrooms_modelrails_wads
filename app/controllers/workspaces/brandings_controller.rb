@@ -38,6 +38,8 @@ module Workspaces
 
     def edit
       authorize @workspace, policy_class: Workspaces::BrandingPolicy
+      # Branding is now a section of the unified workspace settings page.
+      redirect_to edit_workspace_settings_path(@workspace)
     end
 
     def update
@@ -52,7 +54,7 @@ module Workspaces
               locals: { type: :error, message: t("workspaces.brandings.source_unavailable") }),
                    status: :forbidden
           end
-          format.html { redirect_to edit_workspace_branding_path(@workspace), alert: t("workspaces.brandings.source_unavailable") }
+          format.html { redirect_to edit_workspace_settings_path(@workspace), alert: t("workspaces.brandings.source_unavailable") }
         end
         return
       end
@@ -105,7 +107,7 @@ module Workspaces
       if @workspace.update(branding_params)
         respond_to do |format|
           format.turbo_stream
-          format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
+          format.html { redirect_to edit_workspace_settings_path(@workspace), notice: t(".success") }
         end
       else
         @workspace.logo.purge if cropped_image.present?
@@ -120,7 +122,7 @@ module Workspaces
               locals: { type: :error, message: error_message }),
                    status: :unprocessable_content
           end
-          format.html { render :edit, status: :unprocessable_content }
+          format.html { render "workspaces/settings/edit", status: :unprocessable_content }
         end
       end
     end
@@ -134,14 +136,17 @@ module Workspaces
 
       respond_to do |format|
         format.turbo_stream
-        format.html { redirect_to edit_workspace_branding_path(@workspace), notice: t(".success") }
+        format.html { redirect_to edit_workspace_settings_path(@workspace), notice: t(".success") }
       end
     end
 
     private
 
     def branding_params
-      params.fetch(:workspace, {}).permit(:primary_color)
+      # Workspace identity (name + primary_color) lives in this form. The
+      # logo is handled separately via direct attachment in #update, not
+      # through strong params. BrandingPolicy gates the whole concern.
+      params.fetch(:workspace, {}).permit(:name, :primary_color)
     end
   end
 end

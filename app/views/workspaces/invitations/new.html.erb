@@ -1,6 +1,6 @@
 <% content_for(:title) { t("workspaces.invitations.new.title") } %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-text-heading">
+  <h1 class="text-3xl font-bold text-text-heading">
     <%= t("workspaces.invitations.new.title") %>
   </h1>
 
@@ -14,8 +14,6 @@
           @roles.map { |r| [r.name, r.id] },
           { label: t("workspaces.invitations.new.role_label") },
           {} %>
-
-    <%= form.check_box :magic_link, label: t("workspaces.invitations.new.magic_link_label") %>
 
     <%= form.submit t("workspaces.invitations.new.submit"), class: "w-full" %>
   <% end %>

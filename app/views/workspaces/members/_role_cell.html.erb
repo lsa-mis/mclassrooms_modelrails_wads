@@ -1,0 +1,4 @@
+<%# locals: (membership:) %>
+<%= turbo_frame_tag dom_id(membership, :role) do %>
+  <%= membership.role.name %>
+<% end %>

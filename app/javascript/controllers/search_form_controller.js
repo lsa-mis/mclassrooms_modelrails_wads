@@ -10,6 +10,13 @@ export default class extends Controller {
     }, this.delayValue)
   }
 
+  // Immediate submit (no debounce) — used by dropdown change events where
+  // the user has made a deliberate single choice. Replaces inline
+  // onchange="this.form.requestSubmit()" handlers that the CSP blocks.
+  submit() {
+    this.element.requestSubmit()
+  }
+
   clear(event) {
     if (event.key === "Escape") {
       event.target.value = ""

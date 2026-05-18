@@ -18,6 +18,10 @@ en:
         actions: "Actions"
         magic_link: "Magic link"
         magic_link_label: "Share this link to invite members:"
+        magic_link_section_title: "Generate a shareable magic link"
+        magic_link_section_hint: "Anyone with the link can join with the role you select."
+        magic_link_role_label: "Role"
+        generate_magic_link: "Generate link"
         resend: "Resend"
         revoke: "Revoke"
         table_label: "Workspace invitations"
@@ -26,7 +30,6 @@ en:
         emails_label: "Email addresses"
         emails_hint: "One email per line, or comma-separated."
         role_label: "Role"
-        magic_link_label: "Generate a shareable magic link instead"
         submit: "Send invitations"
       create:
         sent: "%{sent} invitation(s) sent. %{skipped} skipped."

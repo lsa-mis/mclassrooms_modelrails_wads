@@ -144,10 +144,12 @@ RSpec.describe "Workspace Members", type: :request do
                  invited_by: user)
         end
 
-        it "shows pending invitations on members page" do
+        it "shows pending invitations interleaved in the members table" do
           get workspace_members_path(workspace)
+          # The pending invitation row is rendered inline in the unified
+          # members tbody — its email and "Pending" status badge are present.
           expect(response.body).to include("newperson@example.com")
-          expect(response.body).to include(I18n.t("workspaces.members.index.pending_invitations.title"))
+          expect(response.body).to include(I18n.t("workspaces.members.index.pending_invitations.pending"))
         end
 
         it "shows magic link label for magic link invitations" do

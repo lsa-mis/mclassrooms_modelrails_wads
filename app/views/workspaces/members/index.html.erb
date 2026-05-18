@@ -1,7 +1,7 @@
 <% content_for(:title) { t("workspaces.members.index.title") } %>
 <div class="max-w-4xl mx-auto px-4 py-16">
   <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-text-heading">
+    <h1 class="text-3xl font-bold text-text-heading">
       <%= t("workspaces.members.index.title") %>
     </h1>
     <% if policy(Invitation).create? %>
@@ -17,7 +17,7 @@
     <%# Filter bar — a plain GET form inside the Turbo Frame %>
     <%= form_with url: workspace_members_path(@workspace),
           method: :get,
-          data: { controller: "search-form", turbo_frame: "members_results" },
+          data: { controller: "search-form", turbo_frame: "members_results", turbo_action: "advance" },
           class: "mt-6 flex flex-col gap-3 sm:flex-row sm:items-end" do |form| %>
       <div class="flex-1">
         <%= form.search_field :q,
@@ -36,17 +36,18 @@
                 params[:role]
               ),
               { label: t("workspaces.members.index.filter_by_role") },
-              { onchange: "this.form.requestSubmit()" } %>
+              { data: { action: "change->search-form#submit" } } %>
 
         <%= form.select :status,
               options_for_select(
                 [[t("workspaces.members.index.filter_by_status"), ""],
                  [t("workspaces.members.index.status_active"), "active"],
+                 [t("workspaces.members.index.status_pending"), "pending"],
                  [t("workspaces.members.index.status_deactivated"), "deactivated"]],
                 params[:status]
               ),
               { label: t("workspaces.members.index.filter_by_status") },
-              { onchange: "this.form.requestSubmit()" } %>
+              { data: { action: "change->search-form#submit" } } %>
       </div>
 
       <%# Preserve sort params through filter changes %>
@@ -54,8 +55,8 @@
       <%= hidden_field_tag :direction, params[:direction] if params[:direction].present? %>
     <% end %>
 
-    <%# Results table %>
-    <% if @memberships.any? %>
+    <%# Results table — paginated, mixed rows (active members + pending invitations) %>
+    <% if @rows.any? %>
       <div class="mt-6 bg-surface-raised rounded-lg border border-border shadow-sm overflow-hidden">
         <table class="w-full" aria-label="<%= t('workspaces.members.index.table_label') %>">
           <thead>
@@ -93,8 +94,15 @@
             </tr>
           </thead>
           <tbody>
-            <% @memberships.each do |membership| %>
-              <%= render "workspaces/members/member_row", membership: membership, workspace: @workspace %>
+            <%# Rows are a mix of Membership and Invitation, pre-paginated by
+                the controller via pagy(:array, combined). Type detection picks
+                the right partial. %>
+            <% @rows.each do |row| %>
+              <% if row.is_a?(Invitation) %>
+                <%= render "workspaces/members/invitation_row", workspace: @workspace, invitation: row %>
+              <% else %>
+                <%= render "workspaces/members/member_row", membership: row, workspace: @workspace %>
+              <% end %>
             <% end %>
           </tbody>
         </table>
@@ -108,7 +116,39 @@
     <% end %>
   <% end %>
 
-  <%= render "workspaces/members/pending_invitations",
-        workspace: @workspace,
-        pending_invitations: @pending_invitations %>
+  <%# Magic-link generation — separate surface from the email invite button
+      above (Jason Fried: kill the "one form pretending to be two" pattern). %>
+  <% if policy(Invitation).create? && @roles.present? %>
+    <%= form_with model: Invitation.new, url: workspace_invitations_path(@workspace),
+          method: :post, class: "mt-8 p-4 bg-surface-sunken rounded-lg" do |form| %>
+      <%= form.hidden_field :magic_link, value: "1" %>
+      <h2 class="text-base font-semibold text-text-heading">
+        <%= t("workspaces.invitations.index.magic_link_section_title") %>
+      </h2>
+      <p class="mt-1 text-sm text-text-muted">
+        <%= t("workspaces.invitations.index.magic_link_section_hint") %>
+      </p>
+      <div class="mt-3 flex items-end gap-3">
+        <div class="flex-1">
+          <%= form.select :role_id,
+                @roles.map { |r| [r.name, r.id] },
+                { label: t("workspaces.invitations.index.magic_link_role_label") },
+                {} %>
+        </div>
+        <%= form.submit t("workspaces.invitations.index.generate_magic_link"),
+              class: "btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if flash[:magic_link_url].present? %>
+    <div class="mt-4 p-4 bg-info-surface rounded-lg" role="alert">
+      <p class="text-sm font-medium text-interactive">
+        <%= t("workspaces.invitations.index.magic_link_label") %>
+      </p>
+      <code class="mt-1 block text-sm text-interactive break-all">
+        <%= flash[:magic_link_url] %>
+      </code>
+    </div>
+  <% end %>
 </div>

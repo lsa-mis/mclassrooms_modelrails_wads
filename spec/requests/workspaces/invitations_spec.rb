@@ -19,10 +19,10 @@ RSpec.describe "Workspace Invitations", type: :request do
     end
 
     describe "GET /workspaces/:workspace_slug/invitations" do
-      it "lists invitations" do
+      it "redirects to the unified members page (invitations merged into members)" do
         create(:invitation, invitable: workspace, invited_by: user)
         get workspace_invitations_path(workspace)
-        expect(response).to have_http_status(:ok)
+        expect(response).to redirect_to(workspace_members_path(workspace))
       end
     end
 

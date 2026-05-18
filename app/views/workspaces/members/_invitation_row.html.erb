@@ -1,6 +1,10 @@
 <%# locals: (workspace:, invitation:) %>
+<%# Renders a pending invitation as a row in the unified members table.
+    Columns mirror _member_row.html.erb (Name, Email, Role, Status, Actions)
+    so invitation and member rows interleave in a single <tbody>. %>
 <tr id="<%= dom_id(invitation) %>" class="border-b border-border">
-  <td class="py-3 px-2 text-text-heading">
+  <td class="py-3 px-2 text-text-muted italic">—</td>
+  <td class="py-3 px-2 text-text-muted">
     <%= invitation.magic_link? ?
           t("workspaces.members.index.pending_invitations.magic_link") :
           invitation.email %>
@@ -14,22 +18,20 @@
       <%= t("workspaces.members.index.pending_invitations.pending") %>
     </span>
   </td>
-  <td class="py-3 px-2">
+  <td class="py-3 px-2 space-x-2">
     <% if policy(invitation).resend? %>
-      <div class="flex gap-2">
-        <%= button_to t("workspaces.members.index.pending_invitations.resend"),
-              resend_workspace_invitation_path(workspace, invitation),
-              method: :post,
-              class: "text-sm text-interactive hover:text-interactive-hover bg-transparent border-0 cursor-pointer p-0
-                      focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
-        <% if policy(invitation).destroy? %>
-          <%= button_to t("workspaces.members.index.pending_invitations.revoke"),
-                workspace_invitation_path(workspace, invitation),
-                method: :delete,
-                class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer p-0
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
-        <% end %>
-      </div>
+      <%= button_to t("workspaces.members.index.pending_invitations.resend"),
+            resend_workspace_invitation_path(workspace, invitation),
+            method: :post,
+            class: "text-sm text-interactive hover:text-interactive-hover bg-transparent border-0 cursor-pointer p-0
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+    <% end %>
+    <% if policy(invitation).destroy? %>
+      <%= button_to t("workspaces.members.index.pending_invitations.revoke"),
+            workspace_invitation_path(workspace, invitation),
+            method: :delete,
+            class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer p-0
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
     <% end %>
   </td>
 </tr>

@@ -6,7 +6,7 @@
       <%= workspace_icon_for(@workspace, size: :lg) %>
     </span>
     <div>
-      <h1 class="text-2xl font-bold text-text-heading">
+      <h1 class="text-3xl font-bold text-text-heading">
         <%= @workspace.name %>
       </h1>
       <p class="text-sm text-text-muted"><%= @workspace.plan.titleize %></p>
@@ -26,23 +26,9 @@
                   border border-border text-text-body font-medium
                   hover:bg-surface-sunken
                   focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
-    <% if policy(Invitation).create? %>
-      <%= link_to t("workspaces.show.invitations"),
-            workspace_invitations_path(@workspace),
-            class: "min-h-[var(--form-input-height)] flex items-center px-4 py-2 rounded-md
-                    border border-border text-text-body font-medium
-                    hover:bg-surface-sunken
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
-    <% end %>
     <% if policy(@workspace).update? %>
       <%= link_to t("workspaces.show.settings"),
             edit_workspace_settings_path(@workspace),
-            class: "min-h-[var(--form-input-height)] flex items-center px-4 py-2 rounded-md
-                    border border-border text-text-body font-medium
-                    hover:bg-surface-sunken
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
-      <%= link_to t("workspaces.show.branding"),
-            edit_workspace_branding_path(@workspace),
             class: "min-h-[var(--form-input-height)] flex items-center px-4 py-2 rounded-md
                     border border-border text-text-body font-medium
                     hover:bg-surface-sunken

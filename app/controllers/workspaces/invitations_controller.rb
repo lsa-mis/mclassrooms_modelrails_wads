@@ -8,7 +8,9 @@ module Workspaces
 
     def index
       authorize Invitation
-      @invitations = @workspace.invitations.includes(:role).order(created_at: :desc)
+      # Invitations have been merged into the unified members surface
+      # — one page shows active members + pending invitations together.
+      redirect_to workspace_members_path(@workspace)
     end
 
     def new

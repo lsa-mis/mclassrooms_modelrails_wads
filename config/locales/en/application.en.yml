@@ -19,6 +19,8 @@ en:
     connected_accounts: "Accounts"
     workspaces: "Workspaces"
     new_workspace: "New workspace"
+    back_to_workspace: "Back to %{workspace}"
+    workspace_context_label: "%{workspace} workspace navigation"
     toggle_menu: "Toggle navigation menu"
     toggle_theme: "Toggle theme"
     user_menu_label: "User menu for %{name}"

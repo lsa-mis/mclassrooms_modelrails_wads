@@ -1,27 +1,15 @@
 <% content_for(:title) { t("workspaces.settings.edit.title") } %>
-<div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-text-heading">
+<%# Unified workspace settings page. Each section is its own form posting to
+    the appropriate controller (workspaces#update, settings#update, brandings#update).
+    Replaces the previous three standalone edit pages. %>
+<div class="max-w-2xl mx-auto px-4 py-16">
+  <h1 class="text-3xl font-bold text-text-heading">
     <%= t("workspaces.settings.edit.title") %>
   </h1>
 
-  <%= form_with model: @workspace, url: workspace_settings_path(@workspace), method: :patch, class: "mt-8 space-y-6" do |form| %>
-    <%= form.number_field :max_members,
-          label: t("workspaces.settings.edit.max_members_label"),
-          min: 1,
-          required: true %>
-
-    <%= form.number_field :max_projects,
-          label: t("workspaces.settings.edit.max_projects_label"),
-          min: 1,
-          required: true %>
-
-    <div class="p-4 bg-surface rounded-lg">
-      <p class="text-sm text-text-muted">
-        <strong><%= t("workspaces.settings.edit.plan_label") %>:</strong>
-        <%= @workspace.plan.titleize %>
-      </p>
-    </div>
-
-    <%= form.submit t("workspaces.settings.edit.submit"), class: "w-full" %>
-  <% end %>
+  <div class="mt-8 space-y-12">
+    <%= render "workspaces/settings/branding_section", workspace: @workspace %>
+    <hr class="border-border">
+    <%= render "workspaces/settings/capacity_section", workspace: @workspace %>
+  </div>
 </div>

@@ -2,7 +2,9 @@
 <tr id="<%= dom_id(membership) %>" class="border-b border-border hover:bg-surface-sunken transition-colors">
   <td class="py-3 px-2 text-text-heading"><%= membership.user.full_name %></td>
   <td class="py-3 px-2 text-text-muted"><%= membership.user.email_address %></td>
-  <td class="py-3 px-2 text-text-muted"><%= membership.role.name %></td>
+  <td class="py-3 px-2 text-text-muted">
+    <%= render "role_cell", membership: membership %>
+  </td>
   <td class="py-3 px-2">
     <% if membership.discarded? %>
       <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-danger-surface text-danger dark:text-danger-strong">
@@ -18,6 +20,7 @@
     <% if policy(membership).update? %>
       <%= link_to t("workspaces.members.index.edit_role"),
             edit_workspace_member_path(workspace, membership),
+            data: { turbo_frame: dom_id(membership, :role) },
             class: "text-sm text-interactive hover:text-interactive-hover
                     focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
     <% end %>

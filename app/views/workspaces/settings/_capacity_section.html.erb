@@ -1,0 +1,24 @@
+<%# locals: (workspace:) %>
+<section class="space-y-4" aria-labelledby="settings-capacity-heading">
+  <h2 id="settings-capacity-heading" class="text-lg font-semibold text-text-heading">
+    <%= t("workspaces.settings.edit.sections.capacity_title") %>
+  </h2>
+  <%= form_with model: workspace, url: workspace_settings_path(workspace), method: :patch,
+        class: "space-y-4" do |form| %>
+    <%= form.number_field :max_members,
+          label: t("workspaces.settings.edit.max_members_label"),
+          min: 1,
+          required: true %>
+    <%= form.number_field :max_projects,
+          label: t("workspaces.settings.edit.max_projects_label"),
+          min: 1,
+          required: true %>
+    <div class="p-4 bg-surface rounded-lg">
+      <p class="text-sm text-text-muted">
+        <strong><%= t("workspaces.settings.edit.plan_label") %>:</strong>
+        <%= workspace.plan.titleize %>
+      </p>
+    </div>
+    <%= form.submit t("workspaces.settings.edit.submit"), class: "btn-primary" %>
+  <% end %>
+</section>

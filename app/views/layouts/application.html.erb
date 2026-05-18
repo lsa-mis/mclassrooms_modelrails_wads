@@ -35,6 +35,7 @@
             data-workspace-branded
             style="--ws-primary-light: oklch(0.40 0.15 <%= ws_hue %>); --ws-primary-dark: oklch(0.78 0.10 <%= ws_hue %>);"
           <% end %>>
+      <%= render "shared/workspace_back_link" %>
       <%= yield %>
     </main>
 

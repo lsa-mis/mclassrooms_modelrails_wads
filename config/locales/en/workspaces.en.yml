@@ -35,6 +35,7 @@ en:
         filter_by_role: "All roles"
         filter_by_status: "All statuses"
         status_active: "Active"
+        status_pending: "Pending"
         status_deactivated: "Deactivated"
         name: "Name"
         email: "Email"
@@ -81,6 +82,10 @@ en:
         max_projects_label: "Maximum projects"
         plan_label: "Plan"
         submit: "Save settings"
+        sections:
+          identity_title: "Identity"
+          identity_submit: "Save identity"
+          capacity_title: "Capacity"
       update:
         success: "Settings updated."
     brandings:

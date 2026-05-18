@@ -16,9 +16,9 @@ RSpec.describe "Workspace Brandings", type: :request do
     before { sign_in(user) }
 
     describe "GET /workspaces/:workspace_slug/branding/edit" do
-      it "renders the branding form" do
+      it "redirects to the unified workspace settings page" do
         get edit_workspace_branding_path(workspace)
-        expect(response).to have_http_status(:ok)
+        expect(response).to redirect_to(edit_workspace_settings_path(workspace))
       end
     end
 
@@ -34,7 +34,7 @@ RSpec.describe "Workspace Brandings", type: :request do
         patch workspace_branding_path(workspace), params: {
           workspace: { primary_color: 270 }
         }
-        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+        expect(response).to redirect_to(edit_workspace_settings_path(workspace))
       end
     end
 
@@ -81,13 +81,13 @@ RSpec.describe "Workspace Brandings", type: :request do
       it "removes the logo via DELETE" do
         delete workspace_branding_path(workspace)
         expect(workspace.reload.logo).not_to be_attached
-        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+        expect(response).to redirect_to(edit_workspace_settings_path(workspace))
       end
 
       it "redirects for HTML requests" do
         delete workspace_branding_path(workspace)
 
-        expect(response).to redirect_to(edit_workspace_branding_path(workspace))
+        expect(response).to redirect_to(edit_workspace_settings_path(workspace))
         workspace.reload
         expect(workspace.logo_source).to eq("initials")
       end
@@ -322,7 +322,7 @@ RSpec.describe "Workspace Brandings", type: :request do
         viewer = create(:user)
         create(:membership, user: viewer, workspace: workspace, role: viewer_role)
         sign_in(viewer)
-        get edit_workspace_branding_path(workspace)
+        get edit_workspace_settings_path(workspace)
         expect(response).to redirect_to(workspace_path(workspace))
       end
     end

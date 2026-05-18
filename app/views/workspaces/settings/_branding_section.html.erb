@@ -1,15 +1,19 @@
-<% content_for(:title) { t("workspaces.brandings.edit.title") } %>
-<div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-text-heading">
-    <%= t("workspaces.brandings.edit.title") %>
-  </h1>
+<%# locals: (workspace:)
+    Identity section — workspace name, logo, and primary color in one form.
+    Posts to brandings#update (BrandingPolicy gates the whole concern). %>
+<section class="space-y-4" aria-labelledby="settings-identity-heading">
+  <h2 id="settings-identity-heading" class="text-lg font-semibold text-text-heading">
+    <%= t("workspaces.settings.edit.sections.identity_title") %>
+  </h2>
+  <%= form_with model: workspace, url: workspace_branding_path(workspace), method: :patch,
+        class: "space-y-6" do |form| %>
+    <%= form.error_summary %>
 
-  <%# Branding form %>
-  <%= form_with model: @workspace, url: workspace_branding_path(@workspace), method: :patch,
-        class: "mt-8 space-y-6" do |form| %>
+    <%= form.text_field :name,
+          label: t("workspaces.edit.name_label"),
+          required: true %>
 
-    <%# Logo section — identity picker modal %>
-    <div class="mt-8 space-y-2">
+    <div class="space-y-2">
       <p class="block text-sm font-medium text-text-body">
         <%= t("workspaces.brandings.edit.logo_label") %>
       </p>
@@ -20,7 +24,7 @@
                 class="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2
                        focus:ring-interactive-focus cursor-pointer group">
           <span id="workspace_logo_branding" class="block relative">
-            <%= workspace_icon_for(@workspace, size: :lg) %>
+            <%= workspace_icon_for(workspace, size: :lg) %>
             <span class="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20
                          transition-colors flex items-center justify-center">
               <%= icon(:pencil, size: :sm,
@@ -38,15 +42,15 @@
 
         <%= render "shared/modal", title: t("identity_picker.choose_workspace_logo"), size: :lg do %>
           <%= render "shared/identity_picker",
-                model: @workspace,
-                form_url: workspace_branding_path(@workspace),
-                hub_url: hub_workspace_branding_path(@workspace),
+                model: workspace,
+                form_url: workspace_branding_path(workspace),
+                hub_url: hub_workspace_branding_path(workspace),
                 hub_title: t("identity_picker.choose_workspace_logo"),
                 crop_title: t("identity_picker.adjust_workspace_logo") %>
         <% end %>
       </div>
     </div>
 
-    <%= form.submit t("workspaces.brandings.edit.submit"), class: "w-full" %>
+    <%= form.submit t("workspaces.settings.edit.sections.identity_submit"), class: "btn-primary" %>
   <% end %>
-</div>
+</section>

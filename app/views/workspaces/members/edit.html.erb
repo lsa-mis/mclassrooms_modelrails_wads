@@ -1,6 +1,9 @@
 <% content_for(:title) { t("workspaces.members.edit.title") } %>
+<%# When loaded as a Turbo Frame target from the members index, Turbo extracts
+    just the matching <turbo-frame> below and replaces it inline. Non-Turbo
+    requests get the full standalone page wrapper. %>
 <div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-bold text-text-heading">
+  <h1 class="text-3xl font-bold text-text-heading">
     <%= t("workspaces.members.edit.title") %>
   </h1>
 
@@ -8,12 +11,19 @@
     <%= @membership.user.full_name %> (<%= @membership.user.email_address %>)
   </p>
 
-  <%= form_with url: workspace_member_path(@workspace, @membership), method: :patch, class: "mt-8 space-y-6" do |form| %>
-    <%= form.select :role_id,
-          @roles.map { |r| [r.name, r.id] },
-          { label: t("workspaces.members.edit.role_label"), selected: @membership.role_id },
-          {} %>
+  <div class="mt-8">
+    <%= turbo_frame_tag dom_id(@membership, :role) do %>
+      <%= form_with model: @membership, url: workspace_member_path(@workspace, @membership),
+            method: :patch, class: "flex items-end gap-3" do |form| %>
+        <div class="flex-1">
+          <%= form.select :role_id,
+                @roles.map { |r| [r.name, r.id] },
+                { label: t("workspaces.members.edit.role_label"), selected: @membership.role_id },
+                {} %>
+        </div>
 
-    <%= form.submit t("workspaces.members.edit.submit"), class: "w-full" %>
-  <% end %>
+        <%= form.submit t("workspaces.members.edit.submit"), class: "btn-primary" %>
+      <% end %>
+    <% end %>
+  </div>
 </div>

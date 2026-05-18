@@ -111,9 +111,9 @@ RSpec.describe "Workspaces", type: :request do
       let(:workspace) { create(:workspace) }
       let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
 
-      it "renders the edit form" do
+      it "redirects to the unified settings page" do
         get edit_workspace_path(workspace)
-        expect(response).to have_http_status(:ok)
+        expect(response).to redirect_to(edit_workspace_settings_path(workspace))
       end
     end
 
