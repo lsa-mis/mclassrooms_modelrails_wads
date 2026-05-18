@@ -28,6 +28,35 @@ rails db:seed       # Seeds default roles
 bin/dev             # Start development server
 ```
 
+### Ruby version as single source of truth
+
+`.tool-versions` is the canonical pin for Ruby (and Node). It feeds three downstream consumers automatically:
+
+| Consumer | Mechanism |
+|---|---|
+| **Local mise / asdf** | Reads `.tool-versions` directly when you `mise install` |
+| **Bundler** | `Gemfile`'s `ruby file: ".tool-versions"` directive — Bundler refuses to install gems if the running Ruby doesn't match. `Gemfile.lock` captures it in the `RUBY VERSION` block. |
+| **Production Docker image** | `Dockerfile`'s `ARG RUBY_VERSION` defaults to the same value; `config/deploy.yml` `builder.args.RUBY_VERSION` passes it to `kamal build` |
+
+Bump Ruby in `.tool-versions`, run `bundle install`, and the lockfile + production builds all pick it up. If you ever break this invariant — e.g., editing `Dockerfile` `ARG` without `.tool-versions` — the integration spec at `spec/code_smells/template_invariants_spec.rb` fails with a specific actionable error.
+
+### Dev Container (optional, VS Code)
+
+This template ships a Dev Container configuration so you can develop in an isolated environment that matches production runtime closely. Open the project in VS Code and accept the "Reopen in Container" prompt, or run **Dev Containers: Rebuild Container** from the command palette.
+
+The container is built on `ruby:4.0.4-slim` — the **same base image as the production `Dockerfile`** (Option C: shared base, separate files). That means libvips, glibc, SQLite, and OpenSSL versions all match prod. Bugs that depend on those library versions surface in dev rather than only in production.
+
+Capabilities baked in:
+
+- **`docker-outside-of-docker`** feature → `kamal deploy` works *from inside* the devcontainer (your machine's Docker daemon is exposed)
+- **Named bundle cache volume** → gems survive container rebuilds; no 5-min reinstall on each rebuild
+- **SSH agent forwarding** → `kamal deploy` SSHes to target hosts using your existing keys
+- **Port forwarding** → `:3000` (Rails) and `:1080` (Letter Opener Web) labeled in VS Code's Ports panel
+
+When the container first boots, `.devcontainer/setup.sh` invokes `bin/setup` (the canonical Rails setup script) plus installs system packages mirroring the production Dockerfile. It ends with explicit next-steps guidance — copy `.env.example`, run `bin/dev`, visit `localhost:3000`.
+
+Native development (no devcontainer) continues to work the same way as before — `mise install`, `bin/setup`, `bin/dev`. The devcontainer is an addition, not a replacement.
+
 ## Running Tests
 
 ```bash
@@ -113,6 +142,7 @@ Runs the same checks plus additional linting:
 | `lint` | RuboCop with GitHub annotations |
 | `lint_docs` | markdownlint + herb ERB linter |
 | `test` | Full RSpec with Playwright, axe accessibility, screenshot artifacts on failure |
+| `docker_build` | Verifies the production `Dockerfile` builds successfully on every PR (catches build-time regressions that structural specs cannot). Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/deployment). |
 
 ### Development Workflow
 

@@ -388,4 +388,53 @@ RSpec.describe "Template invariants" do
         "queue-level observability (was on `default` — sharing with DB sweep jobs)"
     end
   end
+
+  describe "Devops architecture is documented for forkers (app/docs surface)" do
+    # The template's devcontainer, deployment, and Solid Queue topology are
+    # load-bearing decisions that propagate to every fork. Forkers need to
+    # find this in app/docs/ (rendered at /docs via markdowndocs), not buried
+    # in deploy.yml comments or a design spec. These assertions catch the
+    # case where we change config but forget to update the doc surface.
+    let(:deployment_doc_path) { root.join("app/docs/deployment.md") }
+    let(:background_jobs_doc_path) { root.join("app/docs/background-jobs.md") }
+    let(:getting_started_doc_path) { root.join("app/docs/getting-started.md") }
+
+    it "app/docs/deployment.md exists and explains the Kamal+SQLite topology" do
+      expect(File.exist?(deployment_doc_path)).to be(true),
+        "expected app/docs/deployment.md so forkers find deployment guidance via /docs " \
+        "(not just deploy.yml comments they only read mid-deploy)"
+
+      content = File.read(deployment_doc_path)
+      expect(content).to match(/max-replicas/i),
+        "expected deployment.md to explain max-replicas: 1 SQLite constraint"
+      expect(content).to match(/SOLID_QUEUE_IN_PUMA/),
+        "expected deployment.md to document SOLID_QUEUE_IN_PUMA topology + graduation"
+      expect(content).to match(/[Gg]raduation/),
+        "expected deployment.md to spell out the graduation path from SQLite/Puma defaults"
+      expect(content).to match(/stop_wait_time/),
+        "expected deployment.md to explain stop_wait_time tuning for Solid Queue drain"
+    end
+
+    it "app/docs/background-jobs.md exists and documents Solid Queue topology" do
+      expect(File.exist?(background_jobs_doc_path)).to be(true),
+        "expected app/docs/background-jobs.md so forkers find queue topology + recurring " \
+        "job guidance via /docs (not just queue.yml comments)"
+
+      content = File.read(background_jobs_doc_path)
+      expect(content).to match(/[Ss]olid [Qq]ueue/),
+        "expected background-jobs.md to reference Solid Queue"
+      expect(content).to match(/mailers/i),
+        "expected background-jobs.md to document the `mailers` named queue"
+      expect(content).to match(/default/i),
+        "expected background-jobs.md to document the `default` queue convention"
+    end
+
+    it "app/docs/getting-started.md mentions the docker_build CI job" do
+      content = File.read(getting_started_doc_path)
+      expect(content).to match(/docker_build/),
+        "expected getting-started.md Gate 2 CI table to include the `docker_build` job " \
+        "added in #134. Without this, forkers don't realize their PRs are CI-verified " \
+        "against a real production build."
+    end
+  end
 end
