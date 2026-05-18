@@ -270,4 +270,45 @@ RSpec.describe "Template invariants" do
         "expected config.yjit = true in config/application.rb (Rails 8.1+ free perf on supported Ruby)"
     end
   end
+
+  describe "CI verifies the production image actually builds (closes #129/#132 gap)" do
+    # Structural specs cannot detect build-time bugs like the .tool-versions
+    # COPY regression from #129 (fixed in #132). The only safety net for that
+    # class of bug is running `docker build .` in CI. These assertions ensure
+    # that safety net stays wired up.
+    let(:ci_workflow_path) { root.join(".github/workflows/ci.yml") }
+    let(:ci_workflow) { YAML.safe_load(File.read(ci_workflow_path), aliases: true) }
+    let(:docker_build_job) { ci_workflow.dig("jobs", "docker_build") }
+
+    it "has a docker_build job in .github/workflows/ci.yml" do
+      expect(docker_build_job).not_to be_nil,
+        "expected a `docker_build` job in CI so the production Dockerfile is verified to " \
+        "build on every PR. Without this, build-time regressions can ship to main (see #129 -> #132)."
+    end
+
+    it "docker_build job uses Buildx + build-push-action for native GHA layer caching" do
+      next if docker_build_job.nil?
+
+      uses_steps = Array(docker_build_job["steps"]).map { |s| s["uses"].to_s }
+
+      expect(uses_steps).to include(match(%r{docker/setup-buildx-action})),
+        "expected docker/setup-buildx-action to enable BuildKit features (cache-from/cache-to gha)"
+      expect(uses_steps).to include(match(%r{docker/build-push-action})),
+        "expected docker/build-push-action to run the build (with GHA cache integration)"
+    end
+
+    it "docker_build caches layers across CI runs (otherwise it's a 3-5 min wall on every PR)" do
+      next if docker_build_job.nil?
+
+      build_step = Array(docker_build_job["steps"]).find do |s|
+        s["uses"].to_s.include?("docker/build-push-action")
+      end
+      next if build_step.nil?
+
+      cache_from = build_step.dig("with", "cache-from").to_s
+      expect(cache_from).to include("type=gha"),
+        "expected cache-from: type=gha for layer reuse across CI runs " \
+        "(without it, every PR pays the full 3-5 min cold build cost)"
+    end
+  end
 end

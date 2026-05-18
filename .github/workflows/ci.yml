@@ -139,3 +139,31 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+
+  docker_build:
+    # Verify the production Dockerfile actually builds. Structural integration
+    # specs catch file-content and ordering bugs, but only running an actual
+    # `docker build .` catches build-time regressions like the .tool-versions
+    # COPY bug from #129 (fixed in #132). See #133 for context.
+    #
+    # GHA cache (type=gha) keeps subsequent builds at ~30-60s wall clock by
+    # reusing the apt-get, bundle install, and asset precompile layers.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: false
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: modelrails_base:ci-${{ github.sha }}
