@@ -34,6 +34,15 @@ ENV RAILS_ENV="production" \
 # Throw-away build stage to reduce size of final image
 FROM base AS build
 
+# BuildKit auto-populates these from the build platform. We use them below to
+# gate bootsnap precompile parallelism: -j 1 is required only under QEMU
+# cross-arch emulation (rails/bootsnap#495); native builds use full parallelism.
+# Empty values (legacy Docker without BuildKit) compare equal and take the
+# native-parallel path, which is the desired fallback.
+# https://docs.docker.com/build/building/variables/#multi-platform-build-arguments
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
 # Install packages needed to build gems
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config && \
@@ -45,8 +54,13 @@ COPY Gemfile Gemfile.lock ./
 
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
-    # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
-    bundle exec bootsnap precompile -j 1 --gemfile
+    # Parallel bootsnap precompile on native builds; -j 1 only under QEMU
+    # cross-arch emulation (rails/bootsnap#495).
+    if [ "$TARGETPLATFORM" = "$BUILDPLATFORM" ]; then \
+      bundle exec bootsnap precompile --gemfile; \
+    else \
+      bundle exec bootsnap precompile -j 1 --gemfile; \
+    fi
 
 # Vendor contents come after the bundle install layer so a vendor tweak
 # doesn't bust the gem cache.
@@ -55,9 +69,13 @@ COPY vendor/ ./vendor/
 # Copy application code
 COPY . .
 
-# Precompile bootsnap code for faster boot times.
-# -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
-RUN bundle exec bootsnap precompile -j 1 app/ lib/
+# Precompile bootsnap code for faster boot times. Same cross-arch gate as
+# above: parallel on native, -j 1 only when emulating a different architecture.
+RUN if [ "$TARGETPLATFORM" = "$BUILDPLATFORM" ]; then \
+      bundle exec bootsnap precompile app/ lib/; \
+    else \
+      bundle exec bootsnap precompile -j 1 app/ lib/; \
+    fi
 
 # Precompiling assets for production without requiring secret RAILS_MASTER_KEY
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile

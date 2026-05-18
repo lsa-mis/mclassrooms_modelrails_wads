@@ -110,6 +110,23 @@ RSpec.describe "Template invariants" do
         "bundle install must run before COPY vendor/ to preserve layer cache " \
         "across vendor/ changes (e.g., markdowndocs symlink updates)"
     end
+
+    it "gates bootsnap precompile parallelism on cross-arch detection (Aaron Patterson)" do
+      # rails/bootsnap#495 requires -j 1 only when cross-compiling under QEMU
+      # emulation (TARGETPLATFORM != BUILDPLATFORM). On native CI builds the
+      # default parallel compilation is a real wall-clock win.
+      expect(dockerfile).to match(/^ARG TARGETPLATFORM/),
+        "expected `ARG TARGETPLATFORM` in Dockerfile so BuildKit populates the value " \
+        "(required to gate bootsnap parallelism on cross-arch detection)"
+      expect(dockerfile).to match(/^ARG BUILDPLATFORM/),
+        "expected `ARG BUILDPLATFORM` in Dockerfile to pair with TARGETPLATFORM"
+
+      # The conditional must reference both ARGs together (any comparison
+      # form: equality on native, inequality on cross-arch).
+      expect(dockerfile).to match(/TARGETPLATFORM.*BUILDPLATFORM|BUILDPLATFORM.*TARGETPLATFORM/),
+        "expected Dockerfile to compare TARGETPLATFORM and BUILDPLATFORM to decide " \
+        "whether bootsnap precompile uses -j 1 (cross-compile) or default parallelism (native)"
+    end
   end
 
   describe "Devcontainer matches production runtime (Option C: shared base image)" do
