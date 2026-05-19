@@ -17,30 +17,23 @@ RSpec.describe "Docs (markdowndocs gem)", type: :system do
     # The show page renders user-authored Markdown that includes fenced code
     # blocks. Those code blocks pick up the host's Rouge syntax-highlighting
     # palette (--syntax-builtin, --syntax-comment, --syntax-name, --syntax-string,
-    # --syntax-tag) which currently sits at AA contrast, not AAA. Bumping every
-    # token to AAA is a design-aesthetic call (it changes how every code example
-    # in every doc looks) and is being deferred to a follow-up. The gem-side
-    # template fixes (containers, headings, links, sidebar) are exercised by the
-    # /docs index assertions below and by direct visual inspection of show-page
-    # chrome.
-    # The two specs below intentionally re-enable .highlight (Rouge syntax
-    # tokens) by passing a narrowed `exclude:` that only filters out the
-    # biscuit GDPR banner — itself separately deferred. They remain `pending`
-    # because Rouge tokens still don't meet AAA contrast; they exist as
-    # canaries that will start failing-as-pending once the Rouge palette is
-    # tightened, prompting us to remove the deferral.
-    it "passes axe-core at WCAG 2.2 AAA in light mode (deferred: Rouge tokens)" do
+    # --syntax-tag, etc.) declared in app/assets/tailwind/application.css.
+    #
+    # All foreground syntax tokens are tuned to clear WCAG 2.2 AAA (7:1) against
+    # the surface background — L* ≤ 38% on light mode, L* ≥ 85% on dark mode.
+    # The two specs below re-enable .highlight (Rouge syntax tokens) by passing
+    # a narrowed `exclude:` that only filters out the biscuit GDPR banner —
+    # itself separately deferred. They lock in the AAA token contract.
+    it "passes axe-core at WCAG 2.2 AAA in light mode (Rouge syntax tokens)" do
       visit "/docs/getting-started"
       ensure_light_mode
-      pending "Rouge syntax-token AAA tightening — see PR description Deferred section"
       expect(axe_clean?(axe_options, exclude: [ ".biscuit-banner" ])).to be(true),
         "Light-mode AAA violations:\n#{axe_violations(axe_options, exclude: [ ".biscuit-banner" ]).join("\n")}"
     end
 
-    it "passes axe-core at WCAG 2.2 AAA in dark mode (deferred: Rouge tokens)" do
+    it "passes axe-core at WCAG 2.2 AAA in dark mode (Rouge syntax tokens)" do
       visit "/docs/getting-started"
       ensure_dark_mode
-      pending "Rouge syntax-token AAA tightening — see PR description Deferred section"
       expect(axe_clean?(axe_options, exclude: [ ".biscuit-banner" ])).to be(true),
         "Dark-mode AAA violations:\n#{axe_violations(axe_options, exclude: [ ".biscuit-banner" ]).join("\n")}"
     end

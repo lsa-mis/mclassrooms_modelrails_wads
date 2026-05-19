@@ -415,20 +415,23 @@ dialog[open]::backdrop {
    ========================================================================== */
 
 :root {
-  --syntax-comment:    var(--neutral-500);
-  --syntax-comment-alt: var(--neutral-500);
-  --syntax-keyword:    oklch(49.6% 0.155 313.029);   /* ~purple-700 */
-  --syntax-string:     oklch(52.7% 0.154 150.069);   /* ~green-700 */
-  --syntax-number:     oklch(48.8% 0.153 232.652);   /* ~blue-700 */
-  --syntax-error:      oklch(50.5% 0.213 27.518);    /* ~red-700 */
-  --syntax-error-bg:   oklch(97.1% 0.013 17.38);     /* ~red-50 */
-  --syntax-type:       oklch(57.7% 0.245 27.325);    /* ~red-600 */
-  --syntax-operator:   var(--neutral-600);
-  --syntax-name:       oklch(47.3% 0.136 202.677);   /* ~cyan-700 */
-  --syntax-builtin:    oklch(55.8% 0.158 313.556);   /* ~purple-600 */
-  --syntax-function:   oklch(48.8% 0.153 232.652);   /* ~blue-700 */
-  --syntax-escape:     oklch(55.3% 0.174 38.402);    /* ~orange-600 */
-  --syntax-tag:        oklch(52.7% 0.154 150.069);   /* ~green-700 */
+  /* All foreground syntax tokens land at L* ≤ ~38% to clear WCAG 2.2 AAA
+     (7:1) against the light surface background. Hue/chroma preserved from
+     the Tailwind reference palette — only lightness is tightened. */
+  --syntax-comment:    var(--neutral-700);                 /* tighten for AAA */
+  --syntax-comment-alt: var(--neutral-700);
+  --syntax-keyword:    oklch(38% 0.155 313.029);   /* ~purple-800 */
+  --syntax-string:     oklch(38% 0.154 150.069);   /* ~green-800 */
+  --syntax-number:     oklch(38% 0.153 232.652);   /* ~blue-800 */
+  --syntax-error:      oklch(38% 0.213 27.518);    /* ~red-800 */
+  --syntax-error-bg:   oklch(97.1% 0.013 17.38);   /* ~red-50 (background, unchanged) */
+  --syntax-type:       oklch(38% 0.18 27.325);     /* ~red-800 (chroma slightly reduced for gamut at L* 38) */
+  --syntax-operator:   var(--neutral-700);
+  --syntax-name:       oklch(38% 0.136 202.677);   /* ~cyan-800 */
+  --syntax-builtin:    oklch(38% 0.158 313.556);   /* ~purple-800 */
+  --syntax-function:   oklch(38% 0.153 232.652);   /* ~blue-800 */
+  --syntax-escape:     oklch(38% 0.174 38.402);    /* ~orange-800 */
+  --syntax-tag:        oklch(38% 0.154 150.069);   /* ~green-800 */
   --syntax-heading:    var(--neutral-900);
   --syntax-namespace:  var(--neutral-800);
   --syntax-insert-bg:  oklch(98.2% 0.018 155.826);   /* ~green-50 */
@@ -437,25 +440,28 @@ dialog[open]::backdrop {
 }
 
 .dark {
-  --syntax-comment:    var(--neutral-500);
-  --syntax-comment-alt: var(--neutral-400);
-  --syntax-keyword:    oklch(71.4% 0.163 310.872);   /* ~purple-400 */
-  --syntax-string:     oklch(79.2% 0.209 151.711);   /* ~green-400 */
-  --syntax-number:     oklch(79.6% 0.15 235.169);    /* ~blue-400 */
-  --syntax-error:      oklch(70.4% 0.191 22.216);    /* ~red-400 */
+  /* All foreground syntax tokens land at L* ≥ ~85% to clear WCAG 2.2 AAA
+     (7:1) against the dark surface background. Chroma reduced slightly at
+     the higher L* to stay within sRGB gamut. */
+  --syntax-comment:    var(--neutral-300);                 /* tighten for AAA */
+  --syntax-comment-alt: var(--neutral-300);
+  --syntax-keyword:    oklch(85% 0.13 310.872);   /* ~purple-300 */
+  --syntax-string:     oklch(85% 0.13 151.711);   /* ~green-300 */
+  --syntax-number:     oklch(85% 0.12 235.169);   /* ~blue-300 */
+  --syntax-error:      oklch(85% 0.13 22.216);    /* ~red-300 */
   --syntax-error-bg:   transparent;
-  --syntax-type:       oklch(70.4% 0.191 22.216);    /* ~red-400 */
-  --syntax-operator:   var(--neutral-400);
-  --syntax-name:       oklch(78.9% 0.154 211.53);    /* ~cyan-400 */
-  --syntax-builtin:    oklch(71.4% 0.163 310.872);   /* ~purple-400 */
-  --syntax-function:   oklch(79.6% 0.15 235.169);    /* ~blue-400 */
-  --syntax-escape:     oklch(79.2% 0.171 55.613);    /* ~orange-400 */
-  --syntax-tag:        oklch(79.2% 0.209 151.711);   /* ~green-400 */
+  --syntax-type:       oklch(85% 0.13 22.216);    /* ~red-300 */
+  --syntax-operator:   var(--neutral-300);
+  --syntax-name:       oklch(85% 0.12 211.53);    /* ~cyan-300 */
+  --syntax-builtin:    oklch(85% 0.13 310.872);   /* ~purple-300 */
+  --syntax-function:   oklch(85% 0.12 235.169);   /* ~blue-300 */
+  --syntax-escape:     oklch(85% 0.13 55.613);    /* ~orange-300 */
+  --syntax-tag:        oklch(85% 0.13 151.711);   /* ~green-300 */
   --syntax-heading:    var(--neutral-100);
   --syntax-namespace:  var(--neutral-100);
   --syntax-insert-bg:  transparent;
   --syntax-whitespace: var(--neutral-600);
-  --syntax-prompt:     var(--neutral-500);
+  --syntax-prompt:     var(--neutral-300);
 }
 
 .highlight {
