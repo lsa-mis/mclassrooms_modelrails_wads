@@ -437,4 +437,15 @@ RSpec.describe "Template invariants" do
         "against a real production build."
     end
   end
+
+  describe "Repo-level documentation surfaces exist" do
+    # Forkers consult CHANGELOG.md to see what's changed between fork points.
+    # Asserting its existence here prevents accidental deletion during repo
+    # cleanup — a class of mistake easier to make than to spot.
+    it "CHANGELOG.md exists at the repo root" do
+      expect(File.exist?(root.join("CHANGELOG.md"))).to be(true),
+        "expected CHANGELOG.md at the repo root so forkers can see what's changed " \
+        "between fork points. Use Keep a Changelog format (https://keepachangelog.com)."
+    end
+  end
 end

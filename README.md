@@ -4,17 +4,19 @@ A multi-tenant SaaS starter kit built on Rails 8.1.
 
 ## Tech Stack
 
-- **Framework:** Rails 8.1, Ruby 4.0
-- **Database:** SQLite
+- **Framework:** Rails 8.1, Ruby 4.0.4
+- **Database:** SQLite (Solid Queue/Cache/Cable in-process)
 - **Frontend:** TailwindCSS 4, Turbo, Stimulus
 - **Assets:** Propshaft, Importmaps
 - **Auth:** Rails 8 authentication generator, magic links, OmniAuth (Google, GitHub), Pundit
 - **Real-Time:** Turbo Stream broadcasts (morph-based refresh)
 - **Content:** Action Text (Trix rich text editor)
-- **Docs:** Markdowndocs engine at `/docs`
-- **Testing:** RSpec, FactoryBot, Capybara, Playwright, Bullet (N+1 detection)
+- **Docs:** Markdowndocs engine at `/docs` (deployment, background jobs, getting started, architecture, security, …)
+- **Testing:** RSpec, FactoryBot, Capybara, Playwright, axe-core (WCAG 2.2 AAA), Bullet (N+1 detection)
 - **Security:** Rate limiting, security headers, CSP, Pwned password check
-- **Version Management:** [mise](https://mise.jdx.dev/) (see `.tool-versions`)
+- **Deployment:** Kamal → GitHub Container Registry; CI verifies the production image builds on every PR
+- **Version Management:** [mise](https://mise.jdx.dev/) (see `.tool-versions`; `Gemfile` reads from it so Bundler enforces the Ruby version everywhere)
+- **Dev Container:** Optional VS Code Dev Container ships with `ruby:4.0.4-slim` base (matches production), `docker-outside-of-docker` for in-container `kamal deploy`, named bundle cache volume
 
 ## Setup
 
