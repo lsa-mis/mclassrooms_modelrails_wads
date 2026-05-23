@@ -36,6 +36,11 @@ jobs:
         with:
           bundler-cache: true
 
+      - name: Install libvips (loaded at Rails boot via active_storage_validations)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips42t64
+
       - name: Scan for security vulnerabilities in JavaScript dependencies
         run: bin/importmap audit
 
@@ -76,6 +81,11 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+
+      - name: Install libvips (loaded at Rails boot via active_storage_validations)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips42t64
 
       - name: Install markdownlint-cli
         run: npm install -g markdownlint-cli

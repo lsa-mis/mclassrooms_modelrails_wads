@@ -60,7 +60,15 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.0"
+# image_processing 2.0 dropped the transitive backend dep; libvips is installed in CI
+# (.github/workflows/ci.yml) and the production Dockerfile, and Rails 8.1 defaults
+# active_storage.variant_processor to :vips, so we declare ruby-vips explicitly.
+# require: false skips Bundler.require — Active Storage's image_processing
+# transformer pulls in `vips` lazily on first variant call. active_storage_validations
+# also eager-loads its vips analyzer at Rails boot, so libvips must be installed in
+# every job that boots Rails (test, scan_js, lint_docs).
+gem "ruby-vips", require: false
 gem "active_storage_validations"
 
 group :development, :test do
