@@ -12,8 +12,12 @@
         aria-expanded="false"
         aria-controls="user-menu"
         aria-label="<%= t("navigation.user_menu_label_simple", name: user.full_name) %>"
-        class="btn-touch-target rounded-full
+        class="btn-touch-target gap-1 rounded-full
+               text-text-body
                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
                cursor-pointer">
   <span id="user_avatar_header"><%= avatar_for(user, size: :md) %></span>
+  <%= icon(:chevron_down, size: :sm,
+        data: { test: "user-menu-chevron" },
+        class: "text-text-muted") %>
 </button>

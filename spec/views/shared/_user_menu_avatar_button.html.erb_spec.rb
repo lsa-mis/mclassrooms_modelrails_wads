@@ -47,4 +47,14 @@ RSpec.describe "shared/_user_menu_avatar_button.html.erb", type: :view do
     expect(rendered).to match(/focus:ring-offset-2/)
     expect(rendered).to match(/focus:ring-interactive-focus/)
   end
+
+  it "renders a chevron-down affordance so the avatar reads as a menu trigger" do
+    # Wathan's D1 design-panel note: a bare avatar reads as a static
+    # identity badge, not as an interactive control. The chevron is the
+    # universal "this opens a menu" hint and matches the workspace
+    # switcher's pattern. data-test attribute provides a stable selector
+    # without baking icon-internal SVG markup into the spec.
+    render partial: "shared/user_menu_avatar_button", locals: { user: user }
+    expect(rendered).to have_css('#user-menu-button [data-test="user-menu-chevron"]')
+  end
 end
