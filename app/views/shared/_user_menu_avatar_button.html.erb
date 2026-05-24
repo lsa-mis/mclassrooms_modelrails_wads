@@ -1,10 +1,12 @@
 <%# locals: (user:) -%>
-<%# The avatar trigger button. D1: no longer renders the notifications
-    bell overlay or carries notification state — the bell is now a
-    standalone header affordance (see _notifications_bell_link). The
-    avatar carries a static identity-only aria-label, so the button is
-    always stable (no broadcast frames to keep its accessible name
-    swappable mid-click). %>
+<%# The avatar trigger button. v2: carries a severity-colored indicator
+    dot at the avatar's bottom-right, positioned as a SIBLING of the
+    avatar image inside the user_avatar_header wrapper (not inside the
+    button's accessible-name path) — preserves D1's a11y lesson while
+    restoring the bell-on-avatar UX. The button's aria-label remains
+    static identity-only; notification semantics live in the user-menu
+    Notifications row's aria-live region. %>
+<% summary ||= unread_notification_summary(user) %>
 <button data-dropdown-target="button"
         data-action="click->dropdown#toggle"
         id="user-menu-button"
@@ -16,7 +18,12 @@
                text-text-body
                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
                cursor-pointer">
-  <span id="user_avatar_header"><%= avatar_for(user, size: :md) %></span>
+  <span id="user_avatar_header" class="relative inline-flex">
+    <%= avatar_for(user, size: :md) %>
+    <turbo-frame id="notifications_indicator_avatar">
+      <%= render "shared/notifications_indicator", summary: summary, surface: :avatar %>
+    </turbo-frame>
+  </span>
   <%= icon(:chevron_down, size: :sm,
         data: { test: "user-menu-chevron" },
         class: "text-text-muted") %>

@@ -28,7 +28,12 @@ module AvatarHelper
     return render_initials_avatar(user, config, aria_label) unless user.avatar.attached?
 
     variant = user.avatar.variant(resize_to_fill: [ config[:px], config[:px] ])
-    image_tag variant,
+    # main_app.url_for is required because the shared header renders inside
+    # the markdowndocs engine layout too — and `image_tag variant` from a
+    # non-main-app context fails (Active Storage routes live on main_app,
+    # not engine routers). Pre-anchoring the URL through main_app keeps the
+    # helper engine-context-safe.
+    image_tag main_app.url_for(variant),
       class: "#{config[:css]} rounded-full object-cover",
       **avatar_aria_attrs(aria_label, alt: "")
   end

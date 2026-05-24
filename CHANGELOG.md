@@ -8,6 +8,10 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 - `config/deploy.yml` `servers.web` schema changed from a flat host list to a `hosts:` + `options:` form to support `max-replicas: 1` (#135). Forks that customized `deploy.yml` between v1.4.0 and now must update the structure — see the migration note in `app/docs/deployment.md`.
 
+### Changed
+
+- Avatar notification indicator restored as a severity-colored dot (v2 — supersedes D1's split). Avatar carries the dot on desktop; hamburger button on mobile. Standalone header bell removed; the in-menu Notifications row is the canonical triage entry point. Live updates target three new frames (`notifications_indicator_avatar`, `notifications_indicator_hamburger`, `notifications_menu_count_frame`) plus the aria-live region. AAA contrast preserved via `--color-danger-strong` (the project's graphic-accent token).
+
 ### Added
 
 - Appearance destination time-zone picker — explicit `override=true` submit to `Account::Preferences::TimezonesController#update`; the existing browser beacon's write-on-blank guard preserves the explicit choice on subsequent visits (closes #154).

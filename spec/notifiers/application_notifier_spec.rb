@@ -418,22 +418,30 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     end
   end
 
-  describe "#broadcast_notifications_arrival menu count refresh (D1: removed)" do
+  describe "#broadcast_notifications_arrival menu count refresh (v2: restored)" do
     let(:user) { create(:user) }
     let(:resource) { create(:user) }
 
-    # D1 deleted the menu-count broadcast: the user-menu dropdown no longer
-    # carries a Notifications link with an inline count. Lock that change
-    # in so a regression that re-adds the broadcast (or restores the
-    # corresponding partial) fails this spec.
-    it "does NOT broadcast a menu-count refresh (the frame and consumer were removed)" do
-      allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
-      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-
-      expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to).with(
+    # v2 (2026-05-23) restored the menu-count broadcast that D1 had dropped:
+    # the user-menu dropdown now carries the canonical Notifications link
+    # with a live aria-announced count badge. Refreshes target
+    # `notifications_menu_count_frame` and render the
+    # `_user_menu_notifications_row` partial.
+    it "broadcasts a menu-count refresh to notifications_menu_count_frame on event commit" do
+      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
         anything,
-        hash_including(target: "notifications_menu_count_frame")
+        hash_including(
+          target: "notifications_menu_count_frame",
+          partial: "shared/user_menu_notifications_row"
+        )
       )
+
+      # Allow the other v2 broadcasts (avatar dot, hamburger dot, aria-live).
+      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        .with(anything, hash_including(target: "notifications_indicator_avatar"))
+      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        .with(anything, hash_including(target: "notifications_indicator_hamburger"))
+      allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
 
       StubAccountAccessNotifier.with(record: resource).deliver(user)
     end

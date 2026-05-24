@@ -3,30 +3,36 @@ require "rails_helper"
 RSpec.describe "Notification Turbo Stream broadcasts" do
   let(:user) { create(:user) }
 
-  it "broadcasts the bell-label + bell-indicator pair replaces to each recipient on event commit" do
+  it "broadcasts the v2 trio (avatar dot + hamburger dot + user-menu count row) to each recipient on event commit" do
     expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
       [ a_kind_of(User), :notifications ],
-      target: "notifications_bell_label_frame",
-      partial: "shared/notifications_bell_label",
-      locals: hash_including(user: a_kind_of(User), summary: hash_including(:count, :severity))
+      target: "notifications_indicator_avatar",
+      partial: "shared/notifications_indicator",
+      locals: hash_including(summary: hash_including(:count, :severity), surface: :avatar)
     )
     expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
       [ a_kind_of(User), :notifications ],
-      target: "notifications_bell_indicator_frame",
-      partial: "shared/notifications_bell",
+      target: "notifications_indicator_hamburger",
+      partial: "shared/notifications_indicator",
+      locals: hash_including(summary: hash_including(:count, :severity), surface: :hamburger)
+    )
+    expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      [ a_kind_of(User), :notifications ],
+      target: "notifications_menu_count_frame",
+      partial: "shared/user_menu_notifications_row",
       locals: hash_including(user: a_kind_of(User), summary: hash_including(:count, :severity))
     )
 
     PasswordChangedNotifier.with(record: user).deliver(user)
   end
 
-  it "broadcasts both frames once per recipient when fanned out" do
-    # 2 recipients × 2 frames (bell-label + bell-indicator) = 4 total replaces.
-    # D1 dropped the menu-count broadcast — the user menu no longer carries
-    # a Notifications link with an inline count.
+  it "broadcasts all three frames once per recipient when fanned out" do
+    # 2 recipients × 3 frames (avatar dot + hamburger dot + menu count) = 6 replaces.
+    # v2 restored the menu-count broadcast that D1 had dropped, because the
+    # user menu carries the canonical Notifications link with a live count badge.
     other = create(:user)
 
-    expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).exactly(4).times
+    expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).exactly(6).times
 
     PasswordChangedNotifier.with(record: user).deliver([ user, other ])
   end

@@ -1,6 +1,6 @@
 <header class="sticky top-0 z-40 bg-surface-raised border-b border-border"
         data-controller="mobile-menu"
-        data-action="keydown@window->mobile-menu#close">
+        data-action="keydown@window->mobile-menu#close click@window->mobile-menu#closeOnOutsideClick">
   <nav aria-label="<%= t("navigation.aria_label") %>"
        class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
@@ -10,12 +10,11 @@
         <%= render "shared/site_logo", size: :small, show_name: true %>
       <% end %>
 
-      <%# Right cluster. The bell (D1) is rendered ONCE here so its broadcast
-          frames (notifications_bell_label_frame + notifications_bell_indicator_frame)
-          appear exactly once in the DOM — IDs must stay unique. The bell
-          sits to the left of the avatar (desktop) AND to the left of the
-          hamburger (mobile). Theme toggle is desktop-only in this row;
-          mobile gets a labeled theme toggle inside the accordion. %>
+      <%# Right cluster. v2 (2026-05-23): the standalone notifications bell
+          is removed; the avatar and hamburger button each carry a severity-
+          colored indicator dot, and the canonical triage entry point is the
+          Notifications row inside the user menu. Theme toggle is desktop-
+          only in this row; mobile gets a labeled toggle inside the accordion. %>
       <div class="flex items-center gap-2">
         <% unless authenticated? %>
           <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
@@ -26,9 +25,6 @@
         <div class="hidden md:block">
           <%= render "shared/theme_toggle", style: :icon %>
         </div>
-        <% if authenticated? %>
-          <%= render "shared/notifications_bell_link", user: Current.user %>
-        <% end %>
         <%= render "shared/user_menu", context: :desktop %>
 
         <%# Mobile menu button. Header-accordion pattern (Path Z) — tapping
@@ -47,10 +43,22 @@
                 data-mobile-menu-close-label-value="<%= t("navigation.mobile_menu.close") %>"
                 aria-expanded="false"
                 aria-controls="mobile-menu-panel"
-                class="btn-touch-target md:hidden text-text-body
+                class="btn-touch-target relative md:hidden text-text-body
                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
           <span class="sr-only" data-mobile-menu-target="label"><%= t("navigation.mobile_menu.open") %></span>
           <%= icon(:bars_3, size: :lg) %>
+          <% if authenticated? %>
+            <%# v2: severity-colored indicator dot. Mirrors the avatar's
+                indicator (also a positioned sibling, not inside the
+                button's accessible-name path) so AT users get notification
+                state via the in-menu Notifications row aria-live region,
+                not via the hamburger's "Open/Close menu" label. %>
+            <turbo-frame id="notifications_indicator_hamburger">
+              <%= render "shared/notifications_indicator",
+                    summary: unread_notification_summary(Current.user),
+                    surface: :hamburger %>
+            </turbo-frame>
+          <% end %>
         </button>
       </div>
     </div>

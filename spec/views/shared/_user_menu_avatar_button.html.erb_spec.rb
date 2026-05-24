@@ -31,14 +31,35 @@ RSpec.describe "shared/_user_menu_avatar_button.html.erb", type: :view do
     expect(rendered).to include('id="user_avatar_header"')
   end
 
-  it "does NOT render the notifications-bell overlay (D1: bell relocated to header)" do
-    # An unread notification used to render the severity-colored bell overlay
-    # inside the avatar button. After D1 the overlay lives on the standalone
-    # header bell link instead.
+  it "does NOT render the legacy D1 bell-overlay markup (v2: replaced by a calm indicator dot)" do
+    # Regression guard against re-introducing the D1 bell partials. The
+    # indicator-v2 work removes notifications_bell_indicator_frame and
+    # data-bell-severity entirely; if a future change brings them back,
+    # this assertion catches it.
     PasswordChangedNotifier.with(record: user).deliver(user)
     render partial: "shared/user_menu_avatar_button", locals: { user: user }
     expect(rendered).not_to include('notifications_bell_indicator_frame')
     expect(rendered).not_to include('data-bell-severity')
+  end
+
+  describe "notification indicator (v2)" do
+    it "wraps the avatar in a relative inline-flex span so the indicator dot can position against it" do
+      render partial: "shared/user_menu_avatar_button", locals: { user: user }
+      expect(rendered).to match(%r{<span [^>]*id="user_avatar_header"[^>]*class="[^"]*\brelative\b[^"]*"})
+      expect(rendered).to match(%r{<span [^>]*id="user_avatar_header"[^>]*class="[^"]*\binline-flex\b[^"]*"})
+    end
+
+    it "renders the indicator dot inside the avatar wrapper when the user has unread notifications" do
+      PasswordChangedNotifier.with(record: user).deliver(user)
+      render partial: "shared/user_menu_avatar_button", locals: { user: user }
+      expect(rendered).to match(/data-severity="danger"/)
+      expect(rendered).to match(/bg-danger-strong/)
+    end
+
+    it "renders no indicator dot when the user has no unread notifications" do
+      render partial: "shared/user_menu_avatar_button", locals: { user: user }
+      expect(rendered).not_to match(/data-severity=/)
+    end
   end
 
   it "applies the AAA focus ring (ring-2, ring-offset-2, ring-interactive-focus)" do

@@ -1,0 +1,28 @@
+<%# locals: (user:, summary:) -%>
+<%# Desktop user-menu Notifications row content. Extracted to its own
+    partial so NotificationBroadcaster can swap it inside
+    `notifications_menu_count_frame` when a new notification arrives —
+    refreshes the [N new] count badge without re-rendering the whole menu.
+
+    The frame element itself lives in `_user_menu.html.erb`; this partial
+    only renders its CONTENTS. Locals match the broadcaster's contract
+    (user: + summary: pre-computed once at the call site). -%>
+<%= link_to main_app.account_notifications_path,
+      role: "menuitem", tabindex: "-1",
+      data: { turbo_prefetch: "true" },
+      class: "flex items-center justify-between gap-3 min-h-[var(--form-input-height)] px-4 py-2
+              text-sm text-text-body
+              hover:bg-surface hover:text-interactive
+              focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:text-interactive" do %>
+  <span class="flex items-center gap-3">
+    <%= icon(:bell, size: :sm) %>
+    <%= t("navigation.notifications") %>
+  </span>
+  <% if summary[:count]&.positive? %>
+    <span class="text-xs font-medium text-text-muted"
+          aria-live="polite"
+          aria-label="<%= t("navigation.notifications_count_aria", count: summary[:count]) %>">
+      <%= t("navigation.notifications_count", count: summary[:count]) %>
+    </span>
+  <% end %>
+<% end %>

@@ -1,28 +1,26 @@
 # frozen_string_literal: true
 
-# Refreshes a user's three independent notification surfaces (D1):
-#   - bell LABEL frame      (sr-only aria-label text — sibling of the bell
-#                            link, NOT the link itself; replacing the label
-#                            keeps the focusable link stable so clicks
-#                            landing mid-broadcast still hit a live target)
-#   - bell indicator frame  (severity-colored chip overlay rendered inside
-#                            the bell link)
-#   - aria-live region      (SR announcement)
+# Refreshes a user's notification surfaces (v2 — supersedes D1's bell-link
+# broadcaster). Four broadcasts per refresh:
+#
+#   - notifications_indicator_avatar     → severity-colored dot on the avatar
+#   - notifications_indicator_hamburger  → severity-colored dot on the mobile
+#                                          hamburger button
+#   - notifications_menu_count_frame     → the [N new] badge inside the user-menu
+#                                          Notifications row
+#   - notifications-live                 → aria-live SR announcement
 #
 # Each broadcast runs in its own rescue scope: a failure on ONE surface
-# must NOT abort the others. Real failure mode this prevents: a transient
-# cable adapter hiccup or a partial-rendering exception on the first
-# broadcast used to silently drop the indicator + aria-live refresh,
-# leaving the UI stale.
+# must NOT abort the others. The signature use case this prevents is a
+# transient cable adapter hiccup or partial-rendering exception silently
+# dropping the other broadcasts mid-refresh, leaving the UI stale.
 #
-# D1 dropped the `notifications_menu_count_frame` broadcast: the user
-# menu no longer carries a Notifications link with an inline count (the
-# bell is now a standalone header affordance with the count baked into
-# its aria-label).
-#
-# D1 renamed the label frame: `notifications_avatar_button_label_frame`
-# → `notifications_bell_label_frame`, matching its new home on the bell
-# rather than the avatar.
+# Architecture note (v2 supersedes D1): we now have FOUR broadcast targets
+# vs D1's three, because the standalone bell with severity-glyph + aria-label
+# was split into two indicator surfaces (avatar + hamburger) plus an in-menu
+# count badge. D1's `notifications_bell_label_frame` is retired — the avatar
+# and hamburger now carry static identity-only aria-labels, and notification
+# meaning is exposed via the user-menu Notifications row's aria-live region.
 #
 # `announcement_key` is an I18n key passed straight to `I18n.t`. Two
 # canonical values exist today:
@@ -36,10 +34,6 @@
 #      Current.user after a read-state mutation (mark/unmark, mark_all_read,
 #      open, destroy-when-unread).
 #
-# The swallow-log-report contract from PR #97 lives here too (per
-# broadcast): a cable adapter outage doesn't propagate back to notification
-# creation or controller actions but still reaches error tracking.
-#
 # Performance: the unread breakdown summary is computed ONCE at the top of
 # refresh_for and passed to each receiving partial as a `summary:` local.
 # This avoids redundant `unread_notification_breakdown` queries that would
@@ -51,20 +45,29 @@ module NotificationBroadcaster
     stream_key = [ user, :notifications ]
     summary = NotificationBellHelper.unread_notification_summary(user)
 
-    safe_broadcast(stream_key, source: "bell_label") do
+    safe_broadcast(stream_key, source: "indicator_avatar") do
       Turbo::StreamsChannel.broadcast_replace_to(
         stream_key,
-        target: "notifications_bell_label_frame",
-        partial: "shared/notifications_bell_label",
-        locals: { user: user, summary: summary }
+        target: "notifications_indicator_avatar",
+        partial: "shared/notifications_indicator",
+        locals: { summary: summary, surface: :avatar }
       )
     end
 
-    safe_broadcast(stream_key, source: "bell_indicator") do
+    safe_broadcast(stream_key, source: "indicator_hamburger") do
       Turbo::StreamsChannel.broadcast_replace_to(
         stream_key,
-        target: "notifications_bell_indicator_frame",
-        partial: "shared/notifications_bell",
+        target: "notifications_indicator_hamburger",
+        partial: "shared/notifications_indicator",
+        locals: { summary: summary, surface: :hamburger }
+      )
+    end
+
+    safe_broadcast(stream_key, source: "menu_count_row") do
+      Turbo::StreamsChannel.broadcast_replace_to(
+        stream_key,
+        target: "notifications_menu_count_frame",
+        partial: "shared/user_menu_notifications_row",
         locals: { user: user, summary: summary }
       )
     end

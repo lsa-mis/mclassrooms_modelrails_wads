@@ -21,7 +21,12 @@ module WorkspaceHelper
 
   def render_workspace_logo(workspace, config)
     variant = workspace.logo.variant(resize_to_fill: [ config[:px], config[:px] ])
-    image_tag variant,
+    # main_app.url_for is required because the shared header / workspace
+    # switcher render inside the markdowndocs engine layout too — and
+    # `image_tag variant` from a non-main-app context fails (Active Storage
+    # routes live on main_app, not engine routers). See avatar_helper for
+    # the same fix; same pattern, same reason.
+    image_tag main_app.url_for(variant),
       class: "#{config[:css]} rounded-full object-cover",
       alt: workspace.name,
       aria: { hidden: true }

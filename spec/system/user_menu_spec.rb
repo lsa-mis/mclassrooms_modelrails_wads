@@ -100,10 +100,9 @@ RSpec.describe "User menu dropdown", type: :system do
       end
     end
 
-    it "does NOT render a Notifications link (relocated to standalone header bell)" do
+    it "renders a Notifications link (v2: standalone bell removed; user menu is the canonical triage entry)" do
       within "#user-menu" do
-        expect(page).not_to have_link(I18n.t("navigation.notifications"))
-        expect(page).not_to have_link(href: account_notifications_path)
+        expect(page).to have_link(I18n.t("navigation.notifications"), href: account_notifications_path)
       end
     end
 
@@ -126,13 +125,21 @@ RSpec.describe "User menu dropdown", type: :system do
       expect(focused_href).to eq(edit_account_profile_path)
     end
 
-    it "ArrowDown moves focus from identity to All workspaces (second item)" do
+    it "ArrowDown moves focus from identity to Notifications (second item, v2)" do
       send_dropdown_key("ArrowDown")
+      focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
+      expect(focused_href).to eq(account_notifications_path)
+    end
+
+    it "ArrowDown twice moves focus to All workspaces (third item)" do
+      send_dropdown_key("ArrowDown") # identity → Notifications
+      send_dropdown_key("ArrowDown") # Notifications → All workspaces
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
       expect(focused_href).to eq(workspaces_path)
     end
 
-    it "ArrowDown twice moves focus to sign-out (third and final item)" do
+    it "ArrowDown thrice moves focus to sign-out (fourth and final item)" do
+      send_dropdown_key("ArrowDown")
       send_dropdown_key("ArrowDown")
       send_dropdown_key("ArrowDown")
       focused_text = page.evaluate_script("document.activeElement?.textContent?.trim()")
@@ -140,7 +147,8 @@ RSpec.describe "User menu dropdown", type: :system do
     end
 
     it "ArrowDown wraps from last to first item" do
-      send_dropdown_key("ArrowDown") # identity → All workspaces
+      send_dropdown_key("ArrowDown") # identity → Notifications
+      send_dropdown_key("ArrowDown") # Notifications → All workspaces
       send_dropdown_key("ArrowDown") # All workspaces → sign-out
       send_dropdown_key("ArrowDown") # sign-out → wraps to identity
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")

@@ -63,6 +63,24 @@ export default class extends Controller {
     }
   }
 
+  // Click-outside-to-dismiss. Wired at the controller's root element
+  // (the <header>) via `click@window->mobile-menu#closeOnOutsideClick`,
+  // so every click in the document bubbles up to this handler. We
+  // short-circuit when the panel is already closed OR when the click
+  // originated inside the header — covers the hamburger, theme toggle,
+  // avatar trigger, and anything else in chrome.
+  // Unlike close(), we do NOT refocus the hamburger button: the user is
+  // interacting with something elsewhere on the page; stealing focus
+  // back to the toggle would be jarring and would steal their click's
+  // intended target focus.
+  closeOnOutsideClick(event) {
+    if (this.menuTarget.classList.contains("hidden")) return
+    if (this.element.contains(event.target)) return
+    this.menuTarget.classList.add("hidden")
+    this.buttonTarget.setAttribute("aria-expanded", "false")
+    this.#setLabel(this.openLabelValue)
+  }
+
   #setLabel(text) {
     if (this.hasLabelTarget && text) this.labelTarget.textContent = text
   }

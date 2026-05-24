@@ -338,61 +338,43 @@ RSpec.describe "Account Notifications", type: :request do
     # Tab B and beyond. Each frame is independent so the surfaces can update
     # in isolation (e.g., the chip re-renders even when the bell label is
     # already current).
-    describe "cross-tab read-state sync (bell label + bell indicator broadcasts)" do
+    describe "cross-tab read-state sync (v2 avatar/hamburger/menu broadcasts)" do
       let(:notification) { deliver_security_notification }
 
-      it "broadcasts bell-label + bell-indicator refresh on PATCH (mark single notification read)" do
-        notification # ensure dispatched
+      # Helper: assert that all three v2 broadcast targets fire. The v2
+      # broadcaster (lib/notification_broadcaster.rb) fans out to avatar,
+      # hamburger, and menu-count frames on every refresh.
+      def expect_v2_refresh_broadcasts
+        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+          .with([ user, :notifications ], hash_including(target: "notifications_indicator_avatar"))
+        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+          .with([ user, :notifications ], hash_including(target: "notifications_indicator_hamburger"))
+        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+          .with([ user, :notifications ], hash_including(target: "notifications_menu_count_frame"))
+      end
 
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_label_frame",
-                partial: "shared/notifications_bell_label",
-                locals: hash_including(user: user))
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_indicator_frame",
-                partial: "shared/notifications_bell",
-                locals: hash_including(user: user))
+      it "broadcasts the v2 refresh trio on PATCH (mark single notification read)" do
+        notification # ensure dispatched
+        expect_v2_refresh_broadcasts
 
         patch account_notification_path(notification), params: { read_at: "now" }
       end
 
-      it "broadcasts bell-label + bell-indicator refresh on POST mark_all_read" do
+      it "broadcasts the v2 refresh trio on POST mark_all_read" do
         notification
-
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_label_frame",
-                partial: "shared/notifications_bell_label",
-                locals: hash_including(user: user))
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_indicator_frame",
-                partial: "shared/notifications_bell",
-                locals: hash_including(user: user))
+        expect_v2_refresh_broadcasts
 
         post mark_all_read_account_notifications_path
       end
 
-      it "broadcasts bell-label + bell-indicator refresh on GET /:id/open (notification-open from triage)" do
+      it "broadcasts the v2 refresh trio on GET /:id/open (notification-open from triage)" do
         notification
-
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_label_frame",
-                partial: "shared/notifications_bell_label",
-                locals: hash_including(user: user))
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_indicator_frame",
-                partial: "shared/notifications_bell",
-                locals: hash_including(user: user))
+        expect_v2_refresh_broadcasts
 
         get open_account_notification_path(notification)
       end
 
-      it "does NOT broadcast either frame on GET /:id/open when notification is already read (idempotent no-op)" do
+      it "does NOT broadcast on GET /:id/open when notification is already read (idempotent no-op)" do
         notification.update!(read_at: 1.hour.ago)
 
         expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
@@ -401,15 +383,17 @@ RSpec.describe "Account Notifications", type: :request do
         get open_account_notification_path(notification)
       end
 
-      # D1 regression guard: the menu-count broadcast was dropped because the
-      # user menu no longer carries a Notifications link with an inline count.
-      it "does NOT broadcast to the deprecated notifications_menu_count_frame on any read-state mutation" do
+      # v2 (2026-05-23): the menu-count broadcast was restored. The user-menu
+      # Notifications row carries a live aria-announced count badge, so every
+      # read-state mutation that affects unread count refreshes
+      # notifications_menu_count_frame too.
+      it "DOES broadcast to notifications_menu_count_frame on read-state mutations (v2)" do
         notification
 
         allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
         allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
 
-        expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
           .with(anything, hash_including(target: "notifications_menu_count_frame"))
 
         patch account_notification_path(notification), params: { read_at: "now" }
@@ -444,22 +428,12 @@ RSpec.describe "Account Notifications", type: :request do
         post mark_all_read_account_notifications_path
       end
 
-      it "broadcasts bell-label + bell-indicator refresh on DELETE when notification was unread" do
+      it "broadcasts the v2 refresh trio on DELETE when notification was unread" do
         # Deleting an unread notification drops the user's unread count, so
-        # other tabs need fresh bell-label + bell-indicator renders to update
-        # their badge/chip.
+        # other tabs need fresh avatar/hamburger/menu renders to update.
         expect(notification.read_at).to be_nil
 
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_label_frame",
-                partial: "shared/notifications_bell_label",
-                locals: hash_including(user: user))
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-          .with([ user, :notifications ],
-                target: "notifications_bell_indicator_frame",
-                partial: "shared/notifications_bell",
-                locals: hash_including(user: user))
+        expect_v2_refresh_broadcasts
 
         delete account_notification_path(notification)
       end

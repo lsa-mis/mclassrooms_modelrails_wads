@@ -31,11 +31,13 @@ RSpec.describe "Notifications index page", type: :system do
 
   before { sign_in_via_form(user) }
 
-  describe "discoverability from the header" do
-    it "exposes a Notifications bell link in the header (D1: standalone bell)" do
+  describe "discoverability (v2: canonical path is the user-menu Notifications row)" do
+    it "exposes a Notifications link inside the user-menu dropdown" do
       visit root_path
-      expect(page).to have_link(href: account_notifications_path)
-      expect(page).to have_css("#notifications-bell-link")
+      find("#user-menu-button").click
+      within "#user-menu" do
+        expect(page).to have_link(I18n.t("navigation.notifications"), href: account_notifications_path)
+      end
     end
   end
 

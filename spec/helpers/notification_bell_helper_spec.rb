@@ -99,6 +99,38 @@ RSpec.describe NotificationBellHelper, type: :helper do
         expect(helper.notification_bell_classes(severity)).to eq(classes)
       end
     end
+
+    describe "variant: :dot — for the avatar notification indicator" do
+      # Calibrated for WCAG 1.4.11 non-text-contrast 3:1 (graphics target),
+      # NOT 1.4.6 text 7:1. The indicator dot is decorative; severity meaning
+      # is also exposed in the user-menu Notifications row aria-live region.
+      it "returns bg-danger-strong + pulse:true for :danger" do
+        expect(helper.notification_bell_classes(:danger, variant: :dot))
+          .to eq(bg: "bg-danger-strong", pulse: true)
+      end
+
+      it "returns bg-warning + pulse:false for :warning" do
+        expect(helper.notification_bell_classes(:warning, variant: :dot))
+          .to eq(bg: "bg-warning", pulse: false)
+      end
+
+      it "returns bg-info + pulse:false for :info" do
+        expect(helper.notification_bell_classes(:info, variant: :dot))
+          .to eq(bg: "bg-info", pulse: false)
+      end
+
+      it "falls back to :info classes for an unknown severity" do
+        expect(helper.notification_bell_classes(:unknown, variant: :dot))
+          .to eq(bg: "bg-info", pulse: false)
+      end
+
+      # Existing call sites pass severity without keyword arg; their behavior
+      # must be unchanged (regression guard for the :icon variant default).
+      it "defaults to :icon variant when variant kwarg is omitted" do
+        expect(helper.notification_bell_classes(:danger))
+          .to eq(icon: "text-danger dark:text-danger-strong")
+      end
+    end
   end
 
   describe "#canonical_severity" do

@@ -5,9 +5,10 @@
     for the authenticated? guard. -%>
 
 <%# Subscribe to the recipient's notifications stream. After-create
-    callback on Noticed::Event broadcasts a turbo-stream that replaces
-    the bell frames (notifications_bell_label_frame +
-    notifications_bell_indicator_frame). %>
+    callback on Noticed::Event broadcasts a turbo-stream that refreshes
+    the v2 indicator frames (notifications_indicator_avatar,
+    notifications_indicator_hamburger, notifications_menu_count_frame)
+    plus the page-level #notifications-live aria-live region. %>
 <%= turbo_stream_from [Current.user, :notifications] %>
 
 <%# Subscribe to the current workspace's stream in org context so

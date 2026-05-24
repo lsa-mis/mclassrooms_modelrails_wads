@@ -27,19 +27,23 @@ RSpec.describe "Notifications a11y plumbing", type: :system do
     end
   end
 
-  describe "bell frame turbo-stream subscription" do
-    it "renders a turbo-stream-from subscription in the layout for authenticated users" do
+  describe "indicator-frame turbo-stream subscription (v2)" do
+    it "renders a turbo-stream-from subscription + the v2 indicator frames for authenticated users" do
       sign_in_via_form(user)
       visit root_path
 
       expect(page).to have_css("turbo-cable-stream-source", visible: :all)
-      # D1: bell broadcast targets are notifications_bell_label_frame (sr-only
-      # label inside the standalone header bell) and notifications_bell_indicator_frame
-      # (severity overlay). The bell link itself is OUTSIDE any broadcast
-      # frame so clicks landing mid-broadcast still hit a live target.
-      expect(page).to have_css("turbo-frame#notifications_bell_label_frame", visible: :all)
-      expect(page).to have_css("turbo-frame#notifications_bell_indicator_frame", visible: :all)
-      expect(page).to have_no_css("turbo-frame#notifications_bell_label_frame #notifications-bell-link")
+      # v2 frames (supersedes D1's notifications_bell_label_frame +
+      # notifications_bell_indicator_frame):
+      #   notifications_indicator_avatar    — severity dot on avatar
+      #   notifications_indicator_hamburger — severity dot on hamburger
+      #   notifications_menu_count_frame    — [N new] badge in the user menu
+      # Each lives OUTSIDE the focusable button's accessible-name path so AT
+      # users get notification state via the user-menu aria-live region rather
+      # than via a swapping aria-label mid-click (D1's lesson preserved).
+      expect(page).to have_css("turbo-frame#notifications_indicator_avatar", visible: :all)
+      expect(page).to have_css("turbo-frame#notifications_indicator_hamburger", visible: :all)
+      expect(page).to have_css("turbo-frame#notifications_menu_count_frame", visible: :all)
     end
 
     it "does NOT render the subscription on unauthenticated pages" do

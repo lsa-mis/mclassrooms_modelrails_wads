@@ -1,9 +1,12 @@
 <%# locals: (context: :desktop) -%>
-<%# D1: user menu collapses to two items per context — a clickable
-    identity block (avatar + name + email linking to the personal-context
-    profile) and a sign-out button. Notifications relocate to the
-    standalone header bell; notification preferences remain accessible
-    via the Settings hub sidebar. -%>
+<%# v2 (2026-05-23): the user menu is the canonical triage entry point
+    for notifications. The standalone header bell is removed; the avatar
+    + hamburger carry severity-colored indicator dots, and tapping into
+    the menu surfaces the Notifications row with a live aria-announced
+    count. Notification preferences remain inside Settings → Notifications. -%>
+<% if authenticated?
+     summary = unread_notification_summary(Current.user)
+   end %>
 <% if authenticated? %>
   <% if context == :desktop %>
   <div class="hidden md:flex items-center gap-2">
@@ -31,6 +34,15 @@
             <p class="text-xs text-text-muted truncate"><%= Current.user.email_address %></p>
           </div>
         <% end %>
+
+        <%# v2 Notifications row — the canonical triage entry point.
+            Wrapped in notifications_menu_count_frame so the broadcaster
+            can swap just the count without re-rendering the whole menu. %>
+        <div class="border-t border-border">
+          <turbo-frame id="notifications_menu_count_frame">
+            <%= render "shared/user_menu_notifications_row", user: Current.user, summary: summary %>
+          </turbo-frame>
+        </div>
 
         <%# "All workspaces" — the only in-product path to the workspaces
             index on non-workspace-scoped pages (marketing landing, auth
@@ -78,6 +90,26 @@
         <p class="text-sm font-semibold text-text-heading truncate"><%= Current.user.full_name %></p>
         <p class="text-xs text-text-muted truncate"><%= Current.user.email_address %></p>
       </div>
+    <% end %>
+    <%# v2 Notifications row — see desktop branch for context. Mobile version
+        styles match the surrounding mobile menuitems. %>
+    <%= link_to main_app.account_notifications_path,
+          data: { turbo_prefetch: "true" },
+          class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center justify-between gap-3 px-3 py-2
+                  text-sm text-text-body
+                  hover:bg-surface-sunken hover:text-interactive-hover rounded
+                  focus:outline-none focus:ring-2 focus:ring-interactive-focus" do %>
+      <span class="flex items-center gap-3">
+        <%= icon(:bell, size: :sm) %>
+        <%= t("navigation.notifications") %>
+      </span>
+      <% if summary[:count]&.positive? %>
+        <span class="text-xs font-medium text-text-muted"
+              aria-live="polite"
+              aria-label="<%= t("navigation.notifications_count_aria", count: summary[:count]) %>">
+          <%= t("navigation.notifications_count", count: summary[:count]) %>
+        </span>
+      <% end %>
     <% end %>
     <%# "All workspaces" — see desktop branch above for rationale. %>
     <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,

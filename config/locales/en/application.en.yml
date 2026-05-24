@@ -15,6 +15,12 @@ en:
     sign_out: "Sign out"
     profile: "Profile"
     notifications: "Notifications"
+    notifications_count:
+      one: "1 new"
+      other: "%{count} new"
+    notifications_count_aria:
+      one: "1 unread notification"
+      other: "%{count} unread notifications"
     notification_preferences: "Notification preferences"
     connected_accounts: "Accounts"
     all_workspaces: "All workspaces"

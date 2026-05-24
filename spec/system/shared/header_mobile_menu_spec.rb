@@ -40,10 +40,64 @@ RSpec.describe "Shared header — mobile menu auto-close", type: :system, js: tr
     JS
 
     # The closeOnLinkClick handler runs synchronously on bubble; before any
-    # Turbo navigation completes, the menu should already carry .hidden.
-    final_classes = page.evaluate_script(
-      "document.querySelector(\"[data-mobile-menu-target='menu']\").className"
+    # Turbo navigation completes, the menu should already carry the bare
+    # `hidden` class. Use classList.contains rather than a string-include
+    # check because the panel's permanent `md:hidden` modifier would false-
+    # positive an include("hidden") substring match.
+    has_hidden_class = page.evaluate_script(
+      "document.querySelector(\"[data-mobile-menu-target='menu']\").classList.contains('hidden')"
     )
-    expect(final_classes).to include("hidden")
+    expect(has_hidden_class).to be(true)
+  end
+
+  it "closes the panel when the user clicks anywhere outside the header" do
+    visit root_path
+
+    # The header element declares a window-level click handler so taps
+    # outside the header dismiss the panel — the classic click-outside-
+    # to-close pattern. Wired at the controller's root element so the
+    # handler can use `this.element.contains(event.target)` to
+    # distinguish inside-vs-outside.
+    expect(page).to have_css(
+      "header[data-controller='mobile-menu'][data-action*='click@window->mobile-menu#closeOnOutsideClick']"
+    )
+
+    # Open the panel.
+    find("[data-mobile-menu-target='button']").click
+    expect(page).to have_css("[data-mobile-menu-target='menu']:not(.hidden)")
+
+    # Dispatch a click on the page's main content area (outside the header).
+    # We send a bubbling MouseEvent so the window-level listener catches it.
+    page.execute_script(<<~JS)
+      const target = document.querySelector("main") || document.body
+      target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+    JS
+
+    has_hidden_class = page.evaluate_script(
+      "document.querySelector(\"[data-mobile-menu-target='menu']\").classList.contains('hidden')"
+    )
+    expect(has_hidden_class).to be(true)
+  end
+
+  it "does NOT close when the click is INSIDE the header (e.g., user adjusting theme)" do
+    visit root_path
+
+    find("[data-mobile-menu-target='button']").click
+    expect(page).to have_css("[data-mobile-menu-target='menu']:not(.hidden)")
+
+    # Click on the header itself (between elements) — should NOT close.
+    # Picking the <header> tag directly (not a focusable child) so we test
+    # the inside-the-controller-element discrimination, not link-click logic.
+    page.execute_script(<<~JS)
+      const header = document.querySelector("header[data-controller='mobile-menu']")
+      header.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+    JS
+
+    # Check classList rather than substring-include — the panel's permanent
+    # `md:hidden` class would false-positive an include("hidden") check.
+    has_hidden_class = page.evaluate_script(
+      "document.querySelector(\"[data-mobile-menu-target='menu']\").classList.contains('hidden')"
+    )
+    expect(has_hidden_class).to be(false), "panel should still be open after clicking inside the header"
   end
 end
