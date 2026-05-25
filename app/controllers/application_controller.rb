@@ -12,6 +12,14 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
+  helper_method :signups_open?
+
+  def signups_open?
+    return @signups_open if defined?(@signups_open)
+
+    @signups_open = SignupPolicy.allows_signup?(token: session[:pending_invitation_token])
+  end
+
   private
 
   def current_user

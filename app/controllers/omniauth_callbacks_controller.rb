@@ -102,6 +102,13 @@ class OmniauthCallbacksController < ApplicationController
   end
 
   def handle_new_user_oauth(auth_hash)
+    unless signups_open?
+      redirect_to new_registration_path,
+                  alert: t("registrations.closed.oauth_blocked"),
+                  status: :see_other
+      return
+    end
+
     if oauth_email_verified?(auth_hash)
       user = find_verified_user_by_email(auth_hash.info.email) || create_user_from_oauth(auth_hash)
       user.authentications.create!(

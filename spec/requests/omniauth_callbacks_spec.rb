@@ -1,6 +1,11 @@
 require "rails_helper"
 
 RSpec.describe "OmniAuth Callbacks", type: :request do
+  # Default all existing tests to open signup mode so Branch 3 (new-user OAuth)
+  # tests are unaffected by the invite-only gate added in Task 10.
+  # Explicit invite_only tests are nested in the "SIGNUP_MODE gate" describe below.
+  before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open) }
+
   let(:google_auth_hash) do
     OmniAuth::AuthHash.new(
       provider: "google",
@@ -834,6 +839,90 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       auth = Authentication.find_by(provider: "google", uid: "verified-google-uid")
       expect(auth.verified_at).to be_present
       expect(response).to redirect_to(root_path)
+    end
+  end
+
+  describe "SIGNUP_MODE gate behavior" do
+    let(:auth_hash) do
+      OmniAuth::AuthHash.new(
+        provider: "google",
+        uid: "gate-test-uid",
+        info: { email: "newuser@example.com", first_name: "New", last_name: "User", email_verified: true },
+        credentials: { token: "tok", refresh_token: "rtok", expires_at: 1.hour.from_now.to_i }
+      )
+    end
+
+    before do
+      OmniAuth.config.test_mode = true
+      OmniAuth.config.mock_auth[:google_oauth2] = auth_hash
+    end
+
+    after do
+      OmniAuth.config.mock_auth.clear
+      OmniAuth.config.test_mode = false
+    end
+
+    context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new user)" do
+      before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only) }
+
+      it "redirects with 303 and creates no User or Authentication" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change(User, :count)
+
+        expect(Authentication.find_by(uid: "gate-test-uid")).to be_nil
+        expect(response).to redirect_to(new_registration_path)
+        expect(response).to have_http_status(:see_other)
+        expect(flash[:alert]).to include(I18n.t("registrations.closed.oauth_blocked"))
+      end
+    end
+
+    context "when SIGNUP_MODE is :invite_only with a valid invitation token in session (Branch 3, allowed)" do
+      let(:invitation) { create(:invitation, email: "newuser@example.com") }
+
+      before do
+        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+        post accept_invitation_path(token: invitation.token)
+      end
+
+      it "creates a new user via OAuth and signs in" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.to change(User, :count).by(1)
+      end
+    end
+
+    # === CRITICAL REGRESSION: Branch 1 (existing identity) must NOT be blocked ===
+    context "when SIGNUP_MODE is :invite_only and an existing user signs in via OAuth (Branch 1)" do
+      let!(:user) { create(:user) }
+      let!(:authentication) do
+        user.authentications.create!(
+          provider: "google",
+          uid: "existing-gate-uid",
+          verified_at: Time.current
+        )
+      end
+      let(:existing_auth_hash) do
+        OmniAuth::AuthHash.new(
+          provider: "google",
+          uid: "existing-gate-uid",
+          info: { email: user.email_address },
+          credentials: { token: "tok", refresh_token: nil, expires_at: nil }
+        )
+      end
+
+      before do
+        OmniAuth.config.mock_auth[:google_oauth2] = existing_auth_hash
+        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+      end
+
+      it "signs in the existing user without creating a new one" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change(User, :count)
+
+        expect(response).to have_http_status(:redirect)
+      end
     end
   end
 end

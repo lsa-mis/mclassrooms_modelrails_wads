@@ -114,6 +114,10 @@ class Invitation < ApplicationRecord
     )
   end
 
+  def acceptable?
+    pending? && !expired?
+  end
+
   def expired?
     expires_at <= Time.current
   end

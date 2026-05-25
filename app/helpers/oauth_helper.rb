@@ -8,9 +8,9 @@ module OauthHelper
     PROVIDER_CONFIG.select do |provider_key, _config|
       case provider_key
       when :google_oauth2
-        Rails.application.credentials.dig(:google, :client_id).present?
+        Rails.application.credentials.dig(:oauth, :google, :client_id).present?
       when :github
-        Rails.application.credentials.dig(:github, :client_id).present?
+        Rails.application.credentials.dig(:oauth, :github, :client_id).present?
       end
     end
   end

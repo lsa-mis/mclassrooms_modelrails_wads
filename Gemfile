@@ -98,6 +98,7 @@ group :test do
   gem "capybara-playwright-driver"
   gem "simplecov", require: false
   gem "webmock"
+  gem "rails-controller-testing"
 end
 
 group :development do

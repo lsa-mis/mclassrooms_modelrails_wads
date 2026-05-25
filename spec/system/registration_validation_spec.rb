@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Registration form validation", type: :system do
+  before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open) }
+
   describe "error display" do
     it "shows error summary and inline errors on invalid submission" do
       visit new_registration_path

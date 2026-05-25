@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Sign up", type: :system do
+  before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open) }
+
   it "allows a visitor to create an account" do
     visit new_registration_path
 

@@ -40,5 +40,7 @@ module ModelrailsBase
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    config.x.signup.mode = ENV.fetch("SIGNUP_MODE", "invite_only").to_sym
   end
 end

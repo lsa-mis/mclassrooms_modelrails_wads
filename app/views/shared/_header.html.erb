@@ -17,10 +17,12 @@
           only in this row; mobile gets a labeled toggle inside the accordion. %>
       <div class="flex items-center gap-2">
         <% unless authenticated? %>
-          <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
-                class: "hidden md:inline-flex min-h-[var(--form-input-height)] items-center px-4 rounded-md
-                        bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+          <% if signups_open? %>
+            <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
+                  class: "hidden md:inline-flex min-h-[var(--form-input-height)] items-center px-4 rounded-md
+                          bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+          <% end %>
         <% end %>
         <div class="hidden md:block">
           <%= render "shared/theme_toggle", style: :icon %>
@@ -92,10 +94,12 @@
                 class: "min-h-[var(--form-input-height)] flex items-center px-2 text-text-body
                         hover:text-interactive-hover rounded
                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
-          <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
-                class: "min-h-[var(--form-input-height)] flex items-center px-4 rounded-md
-                        bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+          <% if signups_open? %>
+            <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
+                  class: "min-h-[var(--form-input-height)] flex items-center px-4 rounded-md
+                          bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+          <% end %>
         <% end %>
         <%= render "shared/theme_toggle", style: :labeled %>
       </div>

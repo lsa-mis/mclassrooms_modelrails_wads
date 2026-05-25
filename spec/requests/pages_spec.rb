@@ -19,6 +19,31 @@ RSpec.describe "Pages", type: :request do
     end
   end
 
+  describe "sign-up CTA visibility" do
+    context "when SIGNUP_MODE is :open" do
+      before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open) }
+
+      it "shows the Sign up CTA on the landing page" do
+        get root_path
+        expect(response.body).to include(new_registration_path)
+      end
+    end
+
+    context "when SIGNUP_MODE is :invite_only without a token" do
+      before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only) }
+
+      it "does NOT show the Sign up CTA on the landing page" do
+        get root_path
+        expect(response.body).not_to include(new_registration_path)
+      end
+
+      it "still shows the Sign in CTA" do
+        get root_path
+        expect(response.body).to include(new_session_path)
+      end
+    end
+  end
+
   describe "GET /about" do
     it "returns the about page with mission" do
       get about_path

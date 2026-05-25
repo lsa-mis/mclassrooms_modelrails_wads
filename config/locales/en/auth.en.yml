@@ -44,6 +44,15 @@ en:
     create:
       success: "Welcome! Your account has been created."
       rate_limited: "Too many attempts. Please try again later."
+      invitation_consumed: "That invitation is no longer valid. Please ask your workspace administrator for a new one."
+    closed:
+      title: "Sign-ups are by invitation only"
+      body_html: |
+        If your team uses %{app_name}, ask your workspace administrator
+        to send you an invitation. Already have an invitation email?
+        Click the link in that message to get started.
+      sign_in_link: "Sign in to an existing account"
+      oauth_blocked: "Sign-ups are by invitation only. Please ask your workspace administrator for an invitation."
   errors:
     form_errors:
       one: "1 error prevented this form from being saved:"

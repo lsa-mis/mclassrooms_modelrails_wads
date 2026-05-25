@@ -1,6 +1,6 @@
 Rails.application.config.middleware.use OmniAuth::Builder do
-  google_id = Rails.application.credentials.dig(:google, :client_id)
-  google_secret = Rails.application.credentials.dig(:google, :client_secret)
+  google_id = Rails.application.credentials.dig(:oauth, :google, :client_id)
+  google_secret = Rails.application.credentials.dig(:oauth, :google, :client_secret)
   if google_id.present? || Rails.env.test?
     provider :google_oauth2,
       google_id || "test",
@@ -8,8 +8,8 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       scope: "email,profile"
   end
 
-  github_id = Rails.application.credentials.dig(:github, :client_id)
-  github_secret = Rails.application.credentials.dig(:github, :client_secret)
+  github_id = Rails.application.credentials.dig(:oauth, :github, :client_id)
+  github_secret = Rails.application.credentials.dig(:oauth, :github, :client_secret)
   if github_id.present? || Rails.env.test?
     provider :github,
       github_id || "test",

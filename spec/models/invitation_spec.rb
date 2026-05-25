@@ -460,6 +460,33 @@ RSpec.describe Invitation, type: :model do
       expect(invitation.resolved_workspace).to eq(workspace)
     end
   end
+  describe "#acceptable?" do
+    it "returns true for a pending, non-expired invitation" do
+      invitation = build(:invitation)
+      expect(invitation.acceptable?).to be true
+    end
+
+    it "returns false for an expired invitation" do
+      invitation = build(:invitation, :expired)
+      expect(invitation.acceptable?).to be false
+    end
+
+    it "returns false for an accepted invitation" do
+      invitation = build(:invitation, :accepted)
+      expect(invitation.acceptable?).to be false
+    end
+
+    it "returns false for a declined invitation" do
+      invitation = build(:invitation, :declined)
+      expect(invitation.acceptable?).to be false
+    end
+
+    it "returns false for a revoked invitation" do
+      invitation = build(:invitation, :revoked)
+      expect(invitation.acceptable?).to be false
+    end
+  end
+
   describe "#expires_in_hours" do
     # Use ceil so "expires in 1 hour" reads naturally at T-30min instead of "0
     # hours" — the user-facing copy is hours-remaining, not floor of hours.

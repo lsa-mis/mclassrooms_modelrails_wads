@@ -1,0 +1,17 @@
+<% content_for(:title) { t("registrations.closed.title") } %>
+
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-3xl font-bold text-text-heading">
+    <%= t("registrations.closed.title") %>
+  </h1>
+
+  <p class="mt-6 text-base text-text-body">
+    <%= safe_html(t("registrations.closed.body_html", app_name: t("app_name"))) %>
+  </p>
+
+  <div class="mt-12">
+    <%= link_to t("registrations.closed.sign_in_link"),
+                new_session_path,
+                class: "btn-primary" %>
+  </div>
+</div>

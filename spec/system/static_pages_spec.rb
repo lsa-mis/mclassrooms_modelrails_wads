@@ -123,7 +123,9 @@ RSpec.describe "Static pages", type: :system do
       expect(page).to have_text(I18n.t("pages.home.hero.subtitle"))
     end
 
-    it "has call-to-action buttons" do
+    it "has call-to-action buttons when signups are open" do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
+      visit root_path
       expect(page).to have_link(I18n.t("pages.home.hero.cta_primary"))
       expect(page).to have_link(I18n.t("pages.home.hero.cta_secondary"))
     end
