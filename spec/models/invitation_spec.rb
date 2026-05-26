@@ -564,4 +564,38 @@ RSpec.describe Invitation, type: :model do
       end
     end
   end
+
+  # Shared consumption core used by both the session-based (Signupable) and
+  # column-based (Authentication#claim_pending_invitation!) acceptance paths.
+  describe ".consume!" do
+    let(:user) { create(:user) }
+    let(:workspace) { create(:workspace) }
+
+    it "accepts the matching invitation and returns it" do
+      invitation = create(:invitation, invitable: workspace)
+
+      result = Invitation.consume!(token: invitation.token, user: user)
+
+      expect(result).to eq(invitation)
+      expect(invitation.reload).to be_accepted
+      expect(workspace.memberships.kept.exists?(user: user)).to be true
+    end
+
+    it "returns nil when the token is blank" do
+      expect(Invitation.consume!(token: nil, user: user)).to be_nil
+      expect(Invitation.consume!(token: "", user: user)).to be_nil
+    end
+
+    it "returns nil when no invitation matches the token" do
+      expect(Invitation.consume!(token: "does-not-exist", user: user)).to be_nil
+    end
+
+    it "raises Invitation::NotAcceptable when the invitation is no longer acceptable" do
+      invitation = create(:invitation, :accepted, invitable: workspace)
+
+      expect {
+        Invitation.consume!(token: invitation.token, user: user)
+      }.to raise_error(Invitation::NotAcceptable)
+    end
+  end
 end

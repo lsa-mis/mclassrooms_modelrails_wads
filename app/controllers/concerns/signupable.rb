@@ -28,13 +28,7 @@ module Signupable
   # is present. Raises Invitation::NotAcceptable if the invitation is no
   # longer acceptable. Session token is deleted ONLY on successful acceptance.
   def accept_pending_invitation!(user)
-    token = session[:pending_invitation_token]
-    return if token.blank?
-
-    invitation = Invitation.find_by(token: token)
-    return if invitation.nil?
-
-    invitation.accept!(user)
-    session.delete(:pending_invitation_token)
+    consumed = Invitation.consume!(token: session[:pending_invitation_token], user: user)
+    session.delete(:pending_invitation_token) if consumed
   end
 end

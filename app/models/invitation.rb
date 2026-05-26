@@ -80,6 +80,23 @@ class Invitation < ApplicationRecord
     { sent: sent, skipped: skipped }
   end
 
+  # Shared consumption core for both signup acceptance paths: the session-based
+  # one (Signupable#accept_pending_invitation!) and the column-based one
+  # (Authentication#claim_pending_invitation!). Centralizing it keeps both flows
+  # on identical acceptance semantics. Returns the invitation on success, or nil
+  # when the token is blank or matches nothing. Propagates Invitation::NotAcceptable
+  # when the invitation exists but is no longer acceptable, so callers can surface
+  # the race; #accept! still owns the pessimistic lock and state transition.
+  def self.consume!(token:, user:)
+    return if token.blank?
+
+    invitation = find_by(token: token)
+    return if invitation.nil?
+
+    invitation.accept!(user)
+    invitation
+  end
+
   def accept!(user)
     transaction do
       lock!
