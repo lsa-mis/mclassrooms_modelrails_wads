@@ -45,6 +45,7 @@ en:
       success: "Welcome! Your account has been created."
       rate_limited: "Too many attempts. Please try again later."
       invitation_consumed: "That invitation is no longer valid. Please ask your workspace administrator for a new one."
+      invitation_email_mismatch: "You're signed in, but that invitation was sent to a different email address. Ask your workspace administrator to invite this one."
     closed:
       title: "Sign-ups are by invitation only"
       body_html: |

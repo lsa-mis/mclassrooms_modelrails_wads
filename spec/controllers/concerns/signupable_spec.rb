@@ -132,17 +132,19 @@ RSpec.describe Signupable, type: :controller do
       expect(controller.session[:pending_invitation_token]).to be_nil
     end
 
-    it "skips a mismatched invitation without raising, and clears the token" do
+    it "skips a mismatched invitation without raising, clears the token, and flashes why" do
       invitation = create(:invitation, email: "invited@example.com")
       controller.session[:pending_invitation_token] = invitation.token
       # `user`'s email differs from the invitation address; a mismatch must not
-      # abort the (otherwise legitimate) signup.
+      # abort the (otherwise legitimate) signup, but the user should be told the
+      # invited workspace wasn't joined.
       expect {
         controller.send(:accept_pending_invitation!, user)
       }.not_to raise_error
 
       expect(invitation.reload).to be_pending
       expect(controller.session[:pending_invitation_token]).to be_nil
+      expect(controller.flash[:alert]).to eq(I18n.t("registrations.create.invitation_email_mismatch"))
     end
   end
 end

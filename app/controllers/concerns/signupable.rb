@@ -37,7 +37,10 @@ module Signupable
   rescue Invitation::EmailMismatch
     # The invitation was addressed to a different email than the one being
     # registered here. Skip it rather than aborting an otherwise legitimate
-    # signup, and drop the token so it isn't retried.
+    # signup, drop the token so it isn't retried, and tell the user why they
+    # weren't added to the invited workspace. (These callers redirect, so a
+    # persistent flash — not flash.now — survives to the landing page.)
     session.delete(:pending_invitation_token)
+    flash[:alert] = I18n.t("registrations.create.invitation_email_mismatch")
   end
 end
