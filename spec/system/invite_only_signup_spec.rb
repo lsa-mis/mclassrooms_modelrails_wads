@@ -39,7 +39,7 @@ RSpec.describe "Invite-only signup flow", type: :system do
     expect(page).to have_current_path(new_registration_path, wait: 5)
   end
 
-  scenario "invited user signs up successfully" do
+  scenario "invited user signs up, then joins the workspace after verifying email" do
     invitation = create(:invitation, email: "newuser@example.com")
     workspace  = invitation.invitable
 
@@ -64,13 +64,21 @@ RSpec.describe "Invite-only signup flow", type: :system do
     # Successful registration redirects to root.
     expect(page).to have_current_path(root_path)
 
-    # Verify the invitation was consumed.
-    expect(invitation.reload).to be_accepted
-
-    # Verify workspace membership was created.
     new_user = User.find_by(email_address: "newuser@example.com")
     expect(new_user).to be_present
-    expect(new_user.workspaces).to include(workspace)
+
+    # Deferred: the email is unproven, so the invitation is parked on the new
+    # email authentication rather than consumed, and no membership is granted yet.
+    expect(invitation.reload).to be_pending
+    expect(new_user.workspaces).not_to include(workspace)
+
+    # Simulate clicking the verification link delivered to the invited address.
+    auth = new_user.authentications.email.first
+    visit verify_account_connected_accounts_path(token: auth.verification_token)
+
+    # Proving email ownership claims the invitation and grants membership.
+    expect(invitation.reload).to be_accepted
+    expect(new_user.reload.workspaces).to include(workspace)
   end
 
   scenario "uninvited visitor sees the closed page on /registration/new" do

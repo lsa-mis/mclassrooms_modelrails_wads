@@ -1,6 +1,4 @@
 class RegistrationsController < ApplicationController
-  include Signupable
-
   allow_unauthenticated_access
   require_unauthenticated_access only: :new
   rate_limit to: 10, within: 3.minutes, only: :create,
@@ -23,21 +21,27 @@ class RegistrationsController < ApplicationController
     @user = User.new(registration_params)
     authentication = nil
 
-    success = commit_signup_atomically(@user) do |user|
-      authentication = user.authentications.create!(
+    ApplicationRecord.transaction do
+      @user.save!
+      authentication = @user.authentications.create!(
         provider: "email",
-        uid: user.email_address
+        uid: @user.email_address,
+        # Park the pending invitation instead of consuming it now: the typed
+        # email is unverified, so the invitation is claimed only once the user
+        # proves ownership via the verification link
+        # (Account::ConnectedAccountsController#verify). Mirrors the
+        # unverified-OAuth signup path.
+        pending_invitation_token: session[:pending_invitation_token]
       )
       authentication.generate_verification_token!
     end
 
-    if success
-      AuthenticationMailer.verification_email(authentication).deliver_later
-      start_new_session_for(@user)
-      redirect_to root_path, notice: t(".success")
-    else
-      render :new, status: :unprocessable_entity
-    end
+    session.delete(:pending_invitation_token)
+    AuthenticationMailer.verification_email(authentication).deliver_later
+    start_new_session_for(@user)
+    redirect_to root_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid
+    render :new, status: :unprocessable_entity
   end
 
   private

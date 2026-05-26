@@ -205,7 +205,8 @@ RSpec.describe "Registrations", type: :request do
     end
 
     context "when SIGNUP_MODE is :invite_only with a valid token" do
-      let(:invitation) { create(:invitation) }
+      let(:workspace) { create(:workspace) }
+      let(:invitation) { create(:invitation, invitable: workspace, email: "newuser@example.com") }
 
       before do
         allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
@@ -225,47 +226,38 @@ RSpec.describe "Registrations", type: :request do
         }
       end
 
-      it "creates the user and accepts the invitation" do
+      it "creates the user" do
         expect {
           post registration_path, params: valid_params
         }.to change(User, :count).by(1)
+      end
+
+      it "defers invitation acceptance until the email is verified" do
+        post registration_path, params: valid_params
+
+        # The typed email is unproven at signup, so the invitation is NOT
+        # consumed yet — the token is parked on the new email authentication
+        # for the verify step to claim.
+        expect(invitation.reload).to be_pending
+
+        auth = User.find_by(email_address: "newuser@example.com").authentications.email.first
+        expect(auth.pending_invitation_token).to eq(invitation.token)
+        expect(auth.verified_at).to be_nil
+      end
+
+      it "grants the invited workspace membership only after email verification" do
+        post registration_path, params: valid_params
+        user = User.find_by(email_address: "newuser@example.com")
+        auth = user.authentications.email.first
+
+        # Signed in, but not yet a member of the invited workspace.
+        expect(user.reload.workspaces).not_to include(workspace)
+
+        # Verifying the email proves control and claims the invitation.
+        get verify_account_connected_accounts_path(token: auth.verification_token)
 
         expect(invitation.reload).to be_accepted
-      end
-    end
-
-    describe "POST /signup race condition handling" do
-      let(:invitation) { create(:invitation, email: "racer@example.com") }
-      let(:valid_params) do
-        {
-          user: {
-            email_address: "racer@example.com",
-            first_name: "Racer",
-            last_name: "Test",
-            password: "supersecret123",
-            password_confirmation: "supersecret123"
-          }
-        }
-      end
-
-      before do
-        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
-        # Stash the token via the real invitation acceptance route.
-        post accept_invitation_path(token: invitation.token)
-        expect(response).to have_http_status(:found).or have_http_status(:see_other)
-      end
-
-      it "rolls back user creation when invitation acceptance fails (race detection)" do
-        # Simulate the invitation being consumed between gate-pass and accept!
-        allow_any_instance_of(Invitation).to receive(:accept!).and_raise(
-          ActiveRecord::RecordInvalid.new(invitation)
-        )
-
-        expect {
-          post registration_path, params: valid_params
-        }.not_to change(User, :count)
-
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(user.reload.workspaces).to include(workspace)
       end
     end
   end

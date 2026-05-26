@@ -54,8 +54,8 @@ RSpec.describe "Invitation Accepts", type: :request do
     end
   end
 
-  describe "registration auto-accept" do
-    it "auto-joins workspace after registration with pending invitation" do
+  describe "registration with a pending invitation (deferred until verification)" do
+    it "parks the invitation at registration and joins the workspace after email verification" do
       post accept_invitation_path(token: invitation.token)
 
       post registration_path, params: {
@@ -69,7 +69,14 @@ RSpec.describe "Invitation Accepts", type: :request do
       }
 
       new_user = User.find_by(email_address: "newuser@example.com")
-      expect(new_user.workspaces).to include(workspace)
+      # Email unproven at registration — not joined, invitation still pending.
+      expect(new_user.workspaces).not_to include(workspace)
+      expect(invitation.reload).to be_pending
+
+      auth = new_user.authentications.email.first
+      get verify_account_connected_accounts_path(token: auth.verification_token)
+
+      expect(new_user.reload.workspaces).to include(workspace)
       expect(invitation.reload).to be_accepted
     end
   end
@@ -90,7 +97,7 @@ RSpec.describe "Invitation Accepts", type: :request do
       )
     end
 
-    it "unauthenticated user accepts project invitation, registers, joins workspace + project" do
+    it "unauthenticated user registers, then joins workspace + project after email verification" do
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(new_registration_path)
 
@@ -105,8 +112,15 @@ RSpec.describe "Invitation Accepts", type: :request do
       }
 
       new_user = User.find_by(email_address: "new-project-user@example.com")
-      expect(new_user.workspaces).to include(workspace)
-      expect(new_user.projects).to include(project)
+      # Email unproven at registration — not joined, invitation still pending.
+      expect(new_user.workspaces).not_to include(workspace)
+      expect(invitation.reload).to be_pending
+
+      auth = new_user.authentications.email.first
+      get verify_account_connected_accounts_path(token: auth.verification_token)
+
+      expect(new_user.reload.workspaces).to include(workspace)
+      expect(new_user.reload.projects).to include(project)
       expect(invitation.reload).to be_accepted
     end
   end
