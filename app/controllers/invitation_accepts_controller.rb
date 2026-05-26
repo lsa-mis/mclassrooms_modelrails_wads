@@ -12,12 +12,18 @@ class InvitationAcceptsController < ApplicationController
 
     if authenticated?
       begin
-        @invitation.accept!(Current.user)
+        # Route through consume! so the signed-in accept path inherits the same
+        # email-match guard as signup/verification — an invitation addressed to
+        # a specific email can't be claimed by a signed-in user with a different
+        # one. (Emailless magic-link invitations stay bearer.)
+        Invitation.consume!(token: @invitation.token, user: Current.user, expected_email: Current.user.email_address)
         if @invitation.invitable_type == "Project"
           redirect_to workspace_project_path(@invitation.invitable.workspace, @invitation.invitable), notice: t(".success")
         else
           redirect_to workspace_path(@invitation.invitable), notice: t(".success")
         end
+      rescue Invitation::EmailMismatch
+        redirect_to root_path, alert: t(".email_mismatch")
       rescue Invitation::NotAcceptable, ActiveRecord::RecordInvalid
         redirect_to root_path, alert: t(".acceptance_failed")
       end

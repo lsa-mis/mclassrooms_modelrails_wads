@@ -25,6 +25,8 @@ RSpec.describe "Invitation Accepts", type: :request do
 
   describe "POST /invitations/:token/accept (authenticated)" do
     let(:user) { create(:user) }
+    # Invitation addressed to the signed-in user's email — the legitimate case.
+    let!(:invitation) { create(:invitation, invitable: workspace, email: user.email_address) }
     before { sign_in(user) }
 
     it "accepts the invitation and creates membership" do
@@ -38,12 +40,21 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(response).to redirect_to(workspace_path(workspace))
     end
 
-    it "rejects already accepted invitation" do
-      invitation.accept!(user)
-      other_user = create(:user)
-      sign_in(other_user)
+    it "rejects an already-accepted invitation" do
+      invitation.accept!(create(:user))
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
+    end
+
+    it "refuses an invitation addressed to a different email" do
+      mismatched = create(:invitation, invitable: workspace, email: "someone-else@example.com")
+
+      expect {
+        post accept_invitation_path(token: mismatched.token)
+      }.not_to change(Membership, :count)
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_accepts.create.email_mismatch"))
     end
   end
 

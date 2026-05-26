@@ -88,9 +88,9 @@ Verification can be resent from the profile page if the original email was lost.
 
 1. Admin creates invitation → `InvitationMailer.invite` sent.
 2. Invitee clicks accept link.
-3. If authenticated: invitation accepted immediately.
-4. If not authenticated: redirected to sign-in/sign-up, then auto-accepted.
-5. `Invitation#accept!` creates workspace membership (and project membership if applicable).
+3. If authenticated: accepted immediately, provided the account's email matches the invited address.
+4. If not authenticated: the token is stashed, the invitee registers, and the invitation is claimed when they verify the invited email — not at signup.
+5. All paths go through `Invitation.consume!`, which enforces the email match (emailless magic-link invitations excepted) before `Invitation#accept!` creates the workspace membership (and project membership if applicable).
 
 ## Configuration
 

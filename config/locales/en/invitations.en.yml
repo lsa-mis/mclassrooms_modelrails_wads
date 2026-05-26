@@ -54,6 +54,7 @@ en:
       invalid_token: "This invitation link is invalid."
       expired_or_used: "This invitation has expired or has already been used."
       acceptance_failed: "This invitation could not be accepted. The workspace may be at capacity or you may already be a member."
+      email_mismatch: "This invitation was sent to a different email address than the one on your account. Ask your workspace administrator to invite this address."
   invitation_declines:
     show:
       title: "Decline invitation"

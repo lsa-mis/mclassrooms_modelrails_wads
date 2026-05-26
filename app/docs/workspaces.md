@@ -85,8 +85,9 @@ Creates a shareable URL (no email required). Share the link directly — anyone 
 
 ### Accepting an Invitation
 
-- **Existing users:** click the link, sign in if needed, and the invitation is accepted.
-- **New users:** click the link, complete registration, and the invitation is auto-accepted.
+- **Existing users:** click the link and sign in if needed; the invitation is accepted as long as your account's email matches the address it was sent to.
+- **New users:** click the link, complete registration, then confirm your email — the invitation is claimed once you verify the address it was sent to, not at signup.
+- **Email must match:** an emailed invitation can only be accepted from an account whose verified email matches the invited address — a leaked link can't be redeemed by someone else. (Magic-link invitations carry no email and remain shareable.)
 - **Deactivated members:** accepting re-activates the existing membership.
 
 ### Managing Invitations

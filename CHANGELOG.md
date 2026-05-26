@@ -11,7 +11,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Security
 
-- Invitation acceptance is now bound to the invited email and deferred until that email is verified — a leaked invite link can no longer be redeemed, even from a different verified address (#175, #176). Magic-link invitations remain intentionally bearer.
+- Invitation acceptance is now bound to the invited email across every path — new-user signup, OAuth, magic-link, and signed-in accept — and deferred until that email is verified. A leaked invite link can no longer be redeemed by someone else, even from a different verified or signed-in account (#175, #176). Magic-link invitations remain intentionally bearer.
 
 ### Changed
 
@@ -32,7 +32,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 - YJIT enabled in production (#129).
 - CI builds the production Docker image on every PR (#134).
 - New deployment, background-jobs, and dev-environment docs at `/docs` (#136).
-- Verification surfaces a clear notice when an invitation was addressed to a different email than the one verified, instead of failing silently (#177).
+- A clear notice when an invitation was addressed to a different email than the one being used — shown on verification, on signup, and on signed-in accept, instead of failing silently (#177, #180).
 
 ### Changed
 
