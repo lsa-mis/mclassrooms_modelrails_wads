@@ -118,21 +118,23 @@
         <% end %>
       </ul>
 
-      <div class="border-t border-border">
-        <%= link_to new_workspace_path,
-              role: "menuitem",
-              tabindex: "-1",
-              class: "min-h-[44px] flex items-center gap-3 px-3 py-2 text-sm text-interactive
-                      motion-safe:transition-colors motion-safe:duration-150
-                      hover:bg-surface-sunken
-                      focus:outline-none focus:bg-surface-sunken" do %>
-          <span class="shrink-0 w-8 h-8 rounded-md flex items-center justify-center bg-surface-sunken"
-                aria-hidden="true">
-            <span class="text-lg leading-none font-semibold">+</span>
-          </span>
-          <span class="font-medium"><%= t("settings.sidebar.switcher.create_workspace") %></span>
-        <% end %>
-      </div>
+      <% if TenancyConfig.workspace_creation_enabled? %>
+        <div class="border-t border-border">
+          <%= link_to new_workspace_path,
+                role: "menuitem",
+                tabindex: "-1",
+                class: "min-h-[44px] flex items-center gap-3 px-3 py-2 text-sm text-interactive
+                        motion-safe:transition-colors motion-safe:duration-150
+                        hover:bg-surface-sunken
+                        focus:outline-none focus:bg-surface-sunken" do %>
+            <span class="shrink-0 w-8 h-8 rounded-md flex items-center justify-center bg-surface-sunken"
+                  aria-hidden="true">
+              <span class="text-lg leading-none font-semibold">+</span>
+            </span>
+            <span class="font-medium"><%= t("settings.sidebar.switcher.create_workspace") %></span>
+          <% end %>
+        </div>
+      <% end %>
     </div>
   </div>
 <% end %>

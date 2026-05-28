@@ -2,6 +2,7 @@ class WorkspacesController < ApplicationController
   include WorkspaceScoped
   include CropCoordinatable
   skip_before_action :set_workspace, only: [ :index, :new, :create ]
+  before_action :ensure_workspace_creation_enabled, only: [ :new, :create ]
 
   layout "settings", only: [ :edit, :update, :identity_picker_hub ]
 
@@ -171,6 +172,14 @@ class WorkspacesController < ApplicationController
   end
 
   private
+
+  # Posture gate: under TENANCY_WORKSPACE_CREATION=disabled (typically the
+  # :shared preset), additional workspace creation is forbidden. UI omits the
+  # links, but a direct URL still needs to be refused. See app/docs/presets.md.
+  def ensure_workspace_creation_enabled
+    return if TenancyConfig.workspace_creation_enabled?
+    redirect_to root_path, alert: t("workspaces.creation_disabled")
+  end
 
   def create_params
     params.require(:workspace).permit(:name)

@@ -106,6 +106,27 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
+    describe "workspace creation disabled (TENANCY_WORKSPACE_CREATION=disabled)" do
+      before do
+        allow(Rails.configuration.x.tenancy).to receive(:workspace_creation).and_return(:disabled)
+      end
+
+      it "redirects GET /workspaces/new to root with an alert" do
+        get new_workspace_path
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("workspaces.creation_disabled"))
+      end
+
+      it "refuses POST /workspaces" do
+        expect {
+          post workspaces_path, params: { workspace: { name: "Blocked Workspace" } }
+        }.not_to change(Workspace, :count)
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("workspaces.creation_disabled"))
+      end
+    end
+
     describe "GET /workspaces/:slug" do
       let(:workspace) { create(:workspace) }
       let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }

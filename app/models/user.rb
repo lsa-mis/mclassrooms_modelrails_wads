@@ -14,7 +14,7 @@ class User < ApplicationRecord
   has_many :project_memberships, dependent: :destroy
   has_many :projects, through: :project_memberships
 
-  after_create :create_personal_workspace
+  after_create :onboard_workspace
   after_create :check_gravatar_later
   after_update_commit :check_gravatar_later, if: :saved_change_to_email_address?
 
@@ -199,6 +199,15 @@ class User < ApplicationRecord
     CheckGravatarJob.perform_later(self)
   end
 
+  # Dispatches to the right onboarding strategy based on the tenancy preset.
+  # See app/docs/presets.md for the contract.
+  def onboard_workspace
+    case TenancyConfig.onboarding
+    when :personal then create_personal_workspace
+    when :shared   then join_shared_workspace
+    end
+  end
+
   def create_personal_workspace
     return if personal_workspace_id.present?
 
@@ -209,6 +218,20 @@ class User < ApplicationRecord
     end
     workspace.memberships.create!(user: self, role: owner_role)
     update_column(:personal_workspace_id, workspace.id)
+  end
+
+  # :shared posture: every new user joins the configured shared workspace as
+  # a Member. No personal workspace is created. Owners + Admins are seeded
+  # separately (see db/seeds.rb), so :member is the safe self-onboarding role.
+  def join_shared_workspace
+    workspace = TenancyConfig.shared_workspace
+    raise "Shared workspace #{TenancyConfig.shared_workspace_slug.inspect} not found — has the tenancy seed run?" unless workspace
+
+    member_role = Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
+      r.name = "Member"
+      r.permissions = { manage_projects: true }
+    end
+    workspace.memberships.create!(user: self, role: member_role)
   end
 
   def password_not_pwned

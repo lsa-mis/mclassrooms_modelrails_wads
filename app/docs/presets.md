@@ -87,9 +87,73 @@ Browser verification (optional, requires `SIGNUP_MODE=open` or a valid invitatio
 
 ## Single-tenant
 
-*Reshape 1 — not yet built. Tracked at [#181](https://github.com/dschmura/modelrails_base/issues/181).*
+**What it is.** One shared workspace, no personal workspaces, the tenancy UI suppressed. Every authenticated user is a member of the same workspace; new signups land there automatically. There is no workspace switcher, no "New workspace" UI, and no way for users to create additional workspaces.
 
-The internal-company-tool shape: one shared workspace, no personal workspaces, no tenancy UI. Setup steps will be documented here when it ships.
+**Who it's for.** Internal company tools, one-org deployments, classroom/cohort tools with central administration — any product where "the workspace" is implicit and there's no need to expose tenancy as a user-facing concept.
+
+**What you get when configured.**
+
+| Knob | Value | Mechanism |
+|---|---|---|
+| `signup.mode` | typically `:invite_only` (your call) | `config/initializers/signup.rb` |
+| `tenancy.onboarding` | `:shared` | `User#onboard_workspace` dispatches to `join_shared_workspace` |
+| `tenancy.workspace_creation` | `:disabled` | `WorkspacesController` `before_action` redirects `:new`/`:create` |
+| `permitted_join_strategies` | `[:invite]` *(implicit — only mechanism built)* | `Invitation.consume!` is the single membership-grant path |
+
+The workspace switcher auto-hides under this preset because every user has exactly one membership (the existing #145 "hide personal from switcher" logic plus the single-membership-no-switcher rule combine naturally — no extra suppression needed).
+
+**Setup steps.**
+
+1. Set the ENV vars before running `bin/setup` (or before deploying):
+
+   | Variable | Required? | Example | Purpose |
+   |---|---|---|---|
+   | `TENANCY_ONBOARDING` | yes | `shared` | Selects this preset |
+   | `TENANCY_WORKSPACE_CREATION` | yes | `disabled` | Turns off "New workspace" UI + route |
+   | `TENANCY_SHARED_WORKSPACE_SLUG` | yes | `acme` | URL-safe slug of the shared workspace |
+   | `TENANCY_SHARED_WORKSPACE_NAME` | no | `Acme Inc.` | Display name (defaults to titleized slug) |
+   | `TENANCY_OWNER_EMAIL` | yes | `admin@acme.com` | Email of the initial Owner |
+   | `TENANCY_OWNER_FIRST_NAME` | no | `Admin` | Display first name (default `Workspace`) |
+   | `TENANCY_OWNER_LAST_NAME` | no | `User` | Display last name (default `Owner`) |
+   | `SIGNUP_MODE` | yes | `invite_only` | Lock account creation to invitations |
+
+2. Run `bin/setup` (or `bin/rails db:seed` on an existing app). The seed is idempotent — safe to re-run.
+
+3. The seed creates the shared workspace, the Owner user (with a verified email Authentication and an Owner Membership), and sends a password-set link to `TENANCY_OWNER_EMAIL`. In `production`, the link is logged instead of mailed (see the `bin/rails log` output) so the operator can deliver it out-of-band on first boot.
+
+4. The Owner clicks the password-set link, sets a password, signs in. They can then invite other users via the normal invitation flow — each invitee joins the shared workspace as a Member.
+
+**How to verify your setup is Single-tenant.** After running the seed:
+
+```bash
+bin/rails console
+```
+
+```ruby
+TenancyConfig.shared?                          # => true
+TenancyConfig.shared_workspace.slug            # => "acme" (your slug)
+TenancyConfig.shared_workspace.personal?       # => false
+TenancyConfig.shared_workspace.memberships.count  # => 1 (the seeded Owner)
+
+owner = User.find_by!(email_address: ENV["TENANCY_OWNER_EMAIL"])
+owner.workspaces                               # => [<Workspace slug: "acme">]
+owner.personal_workspace_id                    # => nil
+owner.memberships.first.role.slug              # => "owner"
+```
+
+In the browser, after the Owner has set their password and signed in:
+
+1. They land directly in the shared workspace (no switcher, no chooser).
+2. The header workspace switcher does not appear.
+3. `/workspaces/new` redirects to root with the alert `Workspace creation is disabled on this instance.`
+4. Invited new users (via the standard invitation flow) verify their email and become Members of the same shared workspace.
+
+**When to switch presets.**
+
+- *"Users should each get their own personal workspace; this is too restrictive."* → **Solo-default**.
+- *"Each customer should have their own workspace, and signup should be public."* → **Open SaaS** (Reshape 2+).
+
+**Switching presets on a live app is a migration, not a config edit.** Flipping `TENANCY_ONBOARDING` later doesn't migrate existing data — for example, `:personal`→`:shared` leaves every user's personal workspace intact and adds them to the shared one. Pick a preset at setup time; mid-life changes require a deliberate migration plan.
 
 ---
 

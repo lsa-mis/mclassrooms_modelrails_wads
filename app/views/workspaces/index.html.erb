@@ -4,10 +4,12 @@
     <h1 class="text-3xl font-bold text-text-heading">
       <%= t("workspaces.index.title") %>
     </h1>
-    <%= link_to t("workspaces.index.new_workspace"), new_workspace_path,
-          class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
-                  bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+    <% if TenancyConfig.workspace_creation_enabled? %>
+      <%= link_to t("workspaces.index.new_workspace"), new_workspace_path,
+            class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
+                    bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+    <% end %>
   </div>
 
   <% if @current_membership.present? %>
@@ -35,16 +37,18 @@
     <div class="mt-8">
       <%= render "shared/empty_state",
             message: t("workspaces.index.empty"),
-            action_text: t("workspaces.index.new_workspace"),
-            action_url: new_workspace_path %>
+            action_text: TenancyConfig.workspace_creation_enabled? ? t("workspaces.index.new_workspace") : nil,
+            action_url: TenancyConfig.workspace_creation_enabled? ? new_workspace_path : nil %>
     </div>
   <% end %>
 
-  <div class="mt-12 text-center">
-    <%= link_to t("workspaces.index.create_workspace_cta"), new_workspace_path,
-          class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
-                  text-sm font-medium text-interactive
-                  hover:bg-surface-sunken
-                  focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
-  </div>
+  <% if TenancyConfig.workspace_creation_enabled? %>
+    <div class="mt-12 text-center">
+      <%= link_to t("workspaces.index.create_workspace_cta"), new_workspace_path,
+            class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
+                    text-sm font-medium text-interactive
+                    hover:bg-surface-sunken
+                    focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
+    </div>
+  <% end %>
 </div>

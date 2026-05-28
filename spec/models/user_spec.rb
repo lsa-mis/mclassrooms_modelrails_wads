@@ -549,4 +549,33 @@ RSpec.describe User, type: :model do
       }.to raise_error(ActiveRecord::RecordNotUnique)
     end
   end
+
+  describe "#onboard_workspace under :shared posture" do
+    let!(:shared_workspace) { create(:workspace, slug: "acme", name: "Acme", personal: false) }
+
+    before do
+      allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared_workspace.slug)
+    end
+
+    it "joins the configured shared workspace instead of creating a personal one" do
+      user = create(:user)
+
+      expect(user.personal_workspace_id).to be_nil
+      expect(user.workspaces).to contain_exactly(shared_workspace)
+    end
+
+    it "joins as a Member (not Owner)" do
+      user = create(:user)
+
+      membership = shared_workspace.memberships.find_by!(user: user)
+      expect(membership.role.slug).to eq("member")
+    end
+
+    it "raises when the configured shared workspace doesn't exist" do
+      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return("missing")
+
+      expect { create(:user) }.to raise_error(/shared workspace/i)
+    end
+  end
 end

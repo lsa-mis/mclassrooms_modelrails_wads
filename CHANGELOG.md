@@ -33,6 +33,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 - CI builds the production Docker image on every PR (#134).
 - New deployment, background-jobs, and dev-environment docs at `/docs` (#136).
 - A clear notice when an invitation was addressed to a different email than the one being used — shown on verification, on signup, and on signed-in accept, instead of failing silently (#177, #180).
+- **Single-tenant preset** (`TENANCY_ONBOARDING=shared`) — one shared workspace, no personal workspaces, tenancy UI suppressed. Setup is env-driven with a seed that bootstraps the workspace + initial Owner and mails a password-set link. See `app/docs/presets.md`.
 
 ### Changed
 

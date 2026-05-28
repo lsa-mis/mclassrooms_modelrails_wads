@@ -2,6 +2,7 @@ en:
   workspaces:
     not_found: "Workspace not found."
     unauthorized: "You don't have permission to do that."
+    creation_disabled: "Workspace creation is disabled on this instance."
     sidebar:
       aria_label: "Workspace navigation"
       section_label: "Workspace"
