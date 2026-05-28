@@ -233,7 +233,7 @@ GEM
       letter_opener (~> 1.9)
       railties (>= 6.1)
       rexml
-    lexxy (0.9.12.beta)
+    lexxy (0.9.14.beta)
       rails (>= 8.0.2)
     lint_roller (1.1.0)
     listen (3.10.0)
@@ -596,7 +596,7 @@ DEPENDENCIES
   lefthook (~> 2.1)
   letter_opener
   letter_opener_web
-  lexxy (~> 0.9.11.beta)
+  lexxy (~> 0.9.14.beta)
   markdowndocs (~> 0.6.1)
   noticed (~> 3.0)
   omniauth
@@ -715,7 +715,7 @@ CHECKSUMS
   lefthook (2.1.8) sha256=05217291786157dc0c59ca8331bc96bee96afaca8d03cf175a0090f80c3a83e2
   letter_opener (1.10.0) sha256=2ff33f2e3b5c3c26d1959be54b395c086ca6d44826e8bf41a14ff96fdf1bdbb2
   letter_opener_web (3.0.0) sha256=3f391efe0e8b9b24becfab5537dfb17a5cf5eb532038f947daab58cb4b749860
-  lexxy (0.9.12.beta) sha256=390415a8a421c5c00f71244fcbd985b2124c11f6f2bf1ef8a8e5190881ab6641
+  lexxy (0.9.14.beta) sha256=a81135817b5c48fc72c45b8e973255ea6ad63e177347a9f72022bb7c128c6fa5
   lint_roller (1.1.0) sha256=2c0c845b632a7d172cb849cc90c1bce937a28c5c8ccccb50dfd46a485003cc87
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
