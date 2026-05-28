@@ -57,6 +57,10 @@ When the container first boots, `.devcontainer/setup.sh` invokes `bin/setup` (th
 
 Native development (no devcontainer) continues to work the same way as before — `mise install`, `bin/setup`, `bin/dev`. The devcontainer is an addition, not a replacement.
 
+## Choose your app preset
+
+modelrails_base supports several distinct product shapes — solo prosumer, internal single-tenant, multi-tenant SaaS — all built on the same multi-tenant data layer underneath. Before you start customizing, read [App Presets](presets.md) to identify which shape matches what you're building. The defaults you just installed are the **Solo-default** preset; additional presets ship as they're built.
+
 ## Running Tests
 
 ```bash
