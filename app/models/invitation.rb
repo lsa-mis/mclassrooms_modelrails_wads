@@ -189,27 +189,11 @@ class Invitation < ApplicationRecord
   end
 
   def accept_workspace_invitation!(user)
-    invitable.lock!
-    existing = invitable.memberships.find_by(user: user)
-    if existing&.discarded?
-      existing.undiscard!
-    elsif existing && !existing.discarded?
-      # Under :shared, the User#onboard_workspace callback pre-creates a
-      # placeholder Member membership during signup. Reconcile: adopt the
-      # invitation's role rather than treating it as duplicate-accept.
-      # Solo-default (:personal) semantics are preserved — an already-kept
-      # membership there really is a duplicate-accept.
-      if TenancyConfig.shared?
-        existing.update!(role: role) unless existing.role_id == role.id
-      else
-        raise ActiveRecord::RecordInvalid.new(self), "User is already a member"
-      end
-    else
-      if invitable.memberships.kept.count >= invitable.max_members
-        raise ActiveRecord::RecordInvalid.new(self), "Workspace is at capacity"
-      end
-      invitable.memberships.create!(user: user, role: role)
-    end
+    # Delegate to the single membership-grant entry point. Locking, capacity,
+    # discarded-reactivation, and :shared-posture role reconciliation all live
+    # in Workspace#admit so the open-link self-join flow (Reshape 2) shares
+    # identical semantics.
+    invitable.admit(user, role: role)
   end
 
   def accept_project_invitation!(user)

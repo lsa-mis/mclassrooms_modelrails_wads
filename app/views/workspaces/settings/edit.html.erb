@@ -9,4 +9,10 @@
   <div class="mt-8">
     <%= render "workspaces/settings/capacity_section", workspace: @workspace %>
   </div>
+
+  <% unless TenancyConfig.shared? %>
+    <div class="mt-8">
+      <%= render "workspaces/settings/join_policy_section", workspace: @workspace %>
+    </div>
+  <% end %>
 </div>

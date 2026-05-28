@@ -159,6 +159,39 @@ In the browser, after the Owner has set their password and signed in:
 
 ## Open SaaS
 
-*Reshape 2+ — not yet built. Tracked at [#181](https://github.com/dschmura/modelrails_base/issues/181).*
+The public-SaaS / multi-workspace shape: per-workspace control over how new members join. Workspace admins choose between **invite-only** and a **shareable open link** for each workspace they own. Built incrementally across Reshape 2 slices.
 
-Public SaaS shape with per-workspace join strategies (`open_link`, `domain`). Setup steps will be documented here when each slice ships.
+**Current status (Reshape 2a shipped):**
+
+| Capability | Status |
+|---|---|
+| Per-workspace `join_policy` (invite / open_link) | ✅ |
+| `WorkspaceJoinLink` model + atomic rotate + revoke | ✅ |
+| Workspace settings UI (radio + active link + copy/rotate/revoke) | ✅ |
+| Instance allowlist (`SIGNUP_PERMITTED_JOIN_STRATEGIES`) | ✅ |
+| Flow A — *existing* authenticated user joins via link | ✅ |
+| Flow B — *new* user via link (link opens the signup gate) | ⏳ Reshape 2b |
+| `:domain` strategy (verified-email-domain auto-join) | ⏳ Reshape 3 |
+
+**Setup (Reshape 2a — Flow A):**
+
+1. Set `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` (default is `invite` alone — preserves Solo-default).
+2. Owner/Admin opens their workspace's `/workspaces/:slug/settings/edit` and selects "Shareable join link" under Join policy.
+3. The settings page shows the active link with **Copy / Rotate / Revoke** controls. The link follows the form `/workspaces/:slug/joins/:token`.
+4. Share the link with anyone who has an account on this instance — clicking lands them on a confirmation page; the Join button admits them as a Member.
+
+**Key behaviors (Reshape 2a):**
+
+- **Personal workspaces are hard-guarded** — `Workspace#open_join?` returns `false` for personal workspaces regardless of `join_policy`. A personal workspace cannot be configured as `open_link` (validation rejects).
+- **Instance allowlist enforced at two layers** — model validation (admins can't *set* `:open_link` when the instance forbids it) AND runtime guard (`Workspace#open_join?` re-checks defense-in-depth).
+- **Atomic rotate** — clicking "Rotate" revokes the current link and creates a new one in one transaction. The previous link stops working immediately.
+- **Capacity respected** — `Workspace#admit` honors `max_members`; an over-capacity join surfaces a clean error.
+- **Single membership-grant entry point** — both invitation acceptance and link self-join go through `Workspace#admit`, sharing the same lock, capacity, and (under `:shared` posture) role-reconciliation logic.
+- **Settings UI auto-hidden under `:shared` posture** — single-tenant deployments don't see the join-policy section.
+
+**Setup (Reshape 2b — Flow B):** *Not yet built.* When shipped, this will let *new* users (no account yet) use the link to open the signup gate, register, verify their email, and land in the workspace as Member. Track at [#181](https://github.com/dschmura/modelrails_base/issues/181) and `docs/reshape-2-per-workspace-join-policy-spec.md`.
+
+**When to switch presets.**
+
+- *"I want to lock signup entirely; users should only join via admin invitation."* → keep `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite` and the per-workspace radio defaults to invite — this *is* Solo-default with no further changes.
+- *"Everyone should be in one shared workspace with no join UI at all."* → **Single-tenant** preset (Reshape 1).

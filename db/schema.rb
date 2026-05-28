@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_26_174726) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_28_163308) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -274,9 +274,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_26_174726) do
     t.index ["personal_workspace_id"], name: "index_users_on_personal_workspace_id_unique", unique: true, where: "personal_workspace_id IS NOT NULL"
   end
 
+  create_table "workspace_join_links", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "created_by_id", null: false
+    t.datetime "revoked_at"
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_workspace_join_links_on_created_by_id"
+    t.index ["token"], name: "index_workspace_join_links_on_token", unique: true
+    t.index ["workspace_id", "revoked_at"], name: "index_workspace_join_links_on_workspace_id_and_revoked_at"
+    t.index ["workspace_id"], name: "index_workspace_join_links_on_workspace_id"
+  end
+
   create_table "workspaces", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "discarded_at"
+    t.string "join_policy", default: "invite", null: false
     t.string "logo_source", default: "initials", null: false
     t.integer "max_members", default: 5, null: false
     t.integer "max_projects", default: 3, null: false
@@ -287,6 +301,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_26_174726) do
     t.string "slug", null: false
     t.datetime "updated_at", null: false
     t.index ["discarded_at"], name: "index_workspaces_on_discarded_at"
+    t.index ["join_policy"], name: "index_workspaces_on_join_policy"
     t.index ["slug"], name: "index_workspaces_on_slug", unique: true
   end
 
@@ -312,4 +327,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_26_174726) do
   add_foreign_key "sessions", "users"
   add_foreign_key "user_preferences", "users"
   add_foreign_key "users", "workspaces", column: "personal_workspace_id", on_delete: :nullify
+  add_foreign_key "workspace_join_links", "users", column: "created_by_id"
+  add_foreign_key "workspace_join_links", "workspaces"
 end

@@ -261,4 +261,158 @@ RSpec.describe Workspace, type: :model do
       expect(workspace).to be_valid
     end
   end
+
+  describe "join_policy" do
+    it "defaults to 'invite'" do
+      workspace = create(:workspace)
+      expect(workspace.join_policy).to eq("invite")
+      expect(workspace).to be_invite
+    end
+
+    it "can be set to 'open_link' when the instance permits it" do
+      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
+      workspace = build(:workspace, join_policy: "open_link", personal: false)
+      expect(workspace).to be_valid
+      expect(workspace).to be_open_link
+    end
+  end
+
+  describe "#open_join?" do
+    before { allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link]) }
+
+    it "is true for an org workspace with join_policy 'open_link' when instance permits it" do
+      workspace = build(:workspace, join_policy: "open_link", personal: false)
+      expect(workspace).to be_open_join
+    end
+
+    it "is false on a personal workspace, regardless of policy (hard guard)" do
+      # Build without validation so we can simulate a malformed row reaching the predicate.
+      workspace = build(:workspace, personal: true)
+      workspace.join_policy = "open_link"
+      expect(workspace).not_to be_open_join
+    end
+
+    it "is false when the instance allowlist excludes :open_link" do
+      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite])
+      workspace = build(:workspace, personal: false)
+      workspace.join_policy = "open_link"
+      expect(workspace).not_to be_open_join
+    end
+
+    it "is false for invite policy" do
+      workspace = build(:workspace, join_policy: "invite", personal: false)
+      expect(workspace).not_to be_open_join
+    end
+  end
+
+  describe "personal-workspace hard guard validation" do
+    it "rejects join_policy 'open_link' on a personal workspace" do
+      workspace = build(:workspace, personal: true, join_policy: "open_link")
+      expect(workspace).not_to be_valid
+      expect(workspace.errors[:join_policy]).to be_present
+    end
+
+    it "permits join_policy 'invite' on a personal workspace" do
+      workspace = build(:workspace, personal: true, join_policy: "invite")
+      expect(workspace).to be_valid
+    end
+  end
+
+  describe "instance allowlist validation" do
+    it "rejects setting join_policy to a strategy the instance doesn't permit" do
+      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite])
+      workspace = build(:workspace, personal: false, join_policy: "open_link")
+      expect(workspace).not_to be_valid
+      expect(workspace.errors[:join_policy]).to include(/not permitted/i)
+    end
+
+    it "permits setting join_policy to a strategy in the allowlist" do
+      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
+      workspace = build(:workspace, personal: false, join_policy: "open_link")
+      expect(workspace).to be_valid
+    end
+  end
+
+  # Single membership-grant entry point — extracted from Invitation so the
+  # open-link self-join path can share the same lock + capacity + discarded-
+  # reactivation + role-reconciliation logic.
+  describe "#admit" do
+    let(:workspace) { create(:workspace, max_members: 3, personal: false) }
+    let(:user) { create(:user) }
+    let!(:owner_role) {
+      Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
+        r.name = "Owner"
+        r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+      }
+    }
+    let!(:member_role) {
+      Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
+        r.name = "Member"
+        r.permissions = { manage_projects: true }
+      }
+    }
+
+    it "creates a membership for a new user at the specified role" do
+      expect {
+        workspace.admit(user, role: member_role)
+      }.to change(workspace.memberships, :count).by(1)
+
+      expect(workspace.memberships.find_by!(user: user).role).to eq(member_role)
+    end
+
+    it "reactivates a discarded membership without overwriting its role" do
+      # Seed the workspace with an Owner so deactivating doesn't violate
+      # "must keep at least one owner" rules — and create a regular member
+      # to deactivate as the test subject.
+      other_owner = create(:user)
+      workspace.memberships.create!(user: other_owner, role: owner_role)
+      discarded = workspace.memberships.create!(user: user, role: member_role)
+      discarded.deactivate!
+
+      expect {
+        workspace.admit(user, role: member_role)
+      }.not_to change(workspace.memberships, :count)
+
+      expect(discarded.reload).not_to be_discarded
+    end
+
+    it "raises RecordInvalid when the workspace is at capacity" do
+      # Fill the workspace to max_members.
+      workspace.update!(max_members: 1)
+      workspace.memberships.create!(user: create(:user), role: owner_role)
+
+      expect {
+        workspace.admit(user, role: member_role)
+      }.to raise_error(ActiveRecord::RecordInvalid, /capacity/i)
+    end
+
+    context "when user is already a kept member" do
+      before { workspace.memberships.create!(user: user, role: member_role) }
+
+      it "raises under :personal (duplicate-accept error)" do
+        expect {
+          workspace.admit(user, role: owner_role)
+        }.to raise_error(ActiveRecord::RecordInvalid, /already a member/i)
+      end
+
+      context "under :shared posture" do
+        before do
+          allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+          allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+        end
+
+        it "updates the role when it differs (placeholder reconciliation)" do
+          expect {
+            workspace.admit(user, role: owner_role)
+          }.not_to raise_error
+
+          expect(workspace.memberships.find_by!(user: user).role).to eq(owner_role)
+        end
+
+        it "no-ops when the role matches" do
+          expect { workspace.admit(user, role: member_role) }.not_to raise_error
+        end
+      end
+    end
+  end
 end

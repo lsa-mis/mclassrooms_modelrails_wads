@@ -14,6 +14,13 @@ class Workspace < ApplicationRecord
 
   enum :plan, { free: "free", pro: "pro", enterprise: "enterprise" }
 
+  # Per-workspace join policy. Composes with the instance-level
+  # SignupPolicy.permits_strategy? allowlist. See app/docs/presets.md
+  # and docs/reshape-2-per-workspace-join-policy-spec.md.
+  enum :join_policy, { invite: "invite", open_link: "open_link" }, default: "invite"
+
+  has_many :join_links, class_name: "WorkspaceJoinLink", dependent: :destroy
+
   validates :name, presence: true, length: { maximum: 255 }
   validates :logo,
     content_type: %w[image/png image/jpeg image/gif image/webp],
@@ -26,6 +33,8 @@ class Workspace < ApplicationRecord
   validates :max_projects, numericality: { greater_than: 0 }
   validates :primary_color, inclusion: { in: 0..360 }, allow_nil: true
   validates :logo_source, inclusion: { in: %w[upload initials] }
+  validate :personal_workspaces_are_invite_only
+  validate :join_policy_must_be_permitted_by_instance
 
   def self.broadcast_events
     [ :update ]
@@ -87,5 +96,57 @@ class Workspace < ApplicationRecord
     Role.where(workspace_id: [ nil, id ])
   end
 
+  # True iff this workspace exposes a shareable join link AND personal
+  # workspaces are excluded (hard guard) AND the instance allowlist permits
+  # :open_link. Composes the three layers so callers don't have to.
+  def open_join?
+    open_link? && !personal? && SignupPolicy.permits_strategy?(:open_link)
+  end
+
+  # Role granted to users self-joining via an open-link. Pinned to the
+  # lowest-privilege system role for safety (Reshape 1 reasoning); per-link
+  # or per-workspace role customization is deferred until requested.
+  def default_self_join_role
+    Role.find_by!(slug: "member", workspace_id: nil)
+  end
+
+  # Single membership-grant entry point. Both the Invitation flow and the
+  # open-link self-join flow (Reshape 2) call this — keeping the lock,
+  # capacity check, discarded-reactivation, and :shared-posture role
+  # reconciliation in one place. Wrapped in a transaction so direct callers
+  # are safe; nested calls join the surrounding transaction.
+  def admit(user, role:)
+    transaction do
+      lock!
+      existing = memberships.find_by(user: user)
+      if existing&.discarded?
+        existing.undiscard!
+      elsif existing && !existing.discarded?
+        if TenancyConfig.shared?
+          # Under :shared, the User#onboard_workspace callback pre-creates a
+          # placeholder Member membership. Reconcile: adopt the new role
+          # rather than treating it as duplicate-accept. Solo-default
+          # (:personal) semantics are preserved exactly.
+          existing.update!(role: role) unless existing.role_id == role.id
+        else
+          raise ActiveRecord::RecordInvalid.new(self), "User is already a member"
+        end
+      else
+        raise ActiveRecord::RecordInvalid.new(self), "Workspace is at capacity" if memberships.kept.count >= max_members
+        memberships.create!(user: user, role: role)
+      end
+    end
+  end
+
   private
+
+  def personal_workspaces_are_invite_only
+    return unless personal? && !invite?
+    errors.add(:join_policy, :personal_must_be_invite, message: I18n.t("errors.messages.personal_must_be_invite", default: "must be 'invite' for personal workspaces"))
+  end
+
+  def join_policy_must_be_permitted_by_instance
+    return if SignupPolicy.permits_strategy?(join_policy)
+    errors.add(:join_policy, :not_permitted_by_instance, message: I18n.t("errors.messages.not_permitted_by_instance", default: "is not permitted by this instance"))
+  end
 end

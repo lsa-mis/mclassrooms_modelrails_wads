@@ -34,6 +34,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 - New deployment, background-jobs, and dev-environment docs at `/docs` (#136).
 - A clear notice when an invitation was addressed to a different email than the one being used — shown on verification, on signup, and on signed-in accept, instead of failing silently (#177, #180).
 - **Single-tenant preset** (`TENANCY_ONBOARDING=shared`) — one shared workspace, no personal workspaces, tenancy UI suppressed. Setup is env-driven with a seed that bootstraps the workspace + initial Owner and mails a password-set link. See `app/docs/presets.md`.
+- **Per-workspace `join_policy`** (`invite` or `open_link`) with `WorkspaceJoinLink` (`has_secure_token`, revocable, atomically rotatable). Settings UI surfaces the radio + copy/rotate/revoke under `/workspaces/:slug/settings/edit`. Existing-user self-join via the link is wired (Flow A); new-user-via-link (Flow B) is the next slice. Instance ceiling via `SIGNUP_PERMITTED_JOIN_STRATEGIES` (default `invite`); personal workspaces are hard-guarded. Membership grants consolidate into `Workspace#admit`. See `app/docs/presets.md` (Open SaaS) and `app/docs/workspaces.md` (Join Policies).
 
 ### Bug fixes
 

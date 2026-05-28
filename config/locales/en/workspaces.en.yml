@@ -3,6 +3,21 @@ en:
     not_found: "Workspace not found."
     unauthorized: "You don't have permission to do that."
     creation_disabled: "Workspace creation is disabled on this instance."
+    join_links:
+      create:
+        rotated: "Shareable join link rotated. Previous link no longer works."
+      destroy:
+        revoked: "Shareable join link revoked."
+    joins:
+      invalid_or_revoked: "That join link is invalid, revoked, or no longer accepts joins."
+      show:
+        title: "Join %{workspace}"
+        prompt: "You're about to join %{workspace} as a Member."
+        join_button: "Join %{workspace}"
+        cancel: "Cancel"
+      create:
+        joined: "Welcome to %{workspace}."
+        already_member: "You're already a member of %{workspace}."
     sidebar:
       aria_label: "Workspace navigation"
       section_label: "Workspace"
@@ -121,6 +136,24 @@ en:
           identity_title: "Identity"
           identity_submit: "Save identity"
           capacity_title: "Capacity"
+      join_policy:
+        heading: "Join policy"
+        description: "Control how new members join this workspace."
+        invite_label: "Invitation only"
+        invite_help: "Members can only join through an admin-issued email invitation."
+        open_link_label: "Shareable join link"
+        open_link_help: "Anyone with the link can join this workspace (as a Member). The link can be rotated or revoked."
+        open_link_disabled_explanation: "Shareable join links are not permitted on this deployment. Ask the operator to add :open_link to SIGNUP_PERMITTED_JOIN_STRATEGIES."
+        save: "Save join policy"
+        active_link_heading: "Active link"
+        no_active_link: "No active link yet. Generate one to share."
+        generate: "Generate link"
+        rotate: "Rotate link"
+        rotate_confirm: "Rotating will invalidate the current link. Continue?"
+        revoke: "Revoke link"
+        revoke_confirm: "Revoking will disable the current link. Continue?"
+        copy: "Copy"
+        link_aria: "Workspace join link"
       update:
         success: "Settings updated."
     brandings:

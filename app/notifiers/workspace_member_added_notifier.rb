@@ -35,6 +35,12 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
     # owner" dedup case without changing observable behavior.
     candidates = ([ added_user ] + workspace.owners).compact.uniq
 
+    # Preload :preferences in one query — `preferences_for(user)` accesses
+    # `user.preferences` per-user, which without preloading is N+1 when the
+    # candidate set has more than one user. Surfaced by the Reshape 2a
+    # open-link self-join request specs (Bullet caught it).
+    ActiveRecord::Associations::Preloader.new(records: candidates, associations: :preferences).call
+
     # Filter out users whose workspace_activity.in_app preference is off (or DND).
     # See class-level docs above for why this is the correct gate point. The
     # `preferences_for` helper wraps the schema-default JSONB blob for users

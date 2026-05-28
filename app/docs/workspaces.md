@@ -97,6 +97,21 @@ Creates a shareable URL (no email required). Share the link directly — anyone 
 | Resend | Regenerates the token and extends expiry by 7 days |
 | Revoke | Marks the invitation as revoked (link stops working) |
 
+## Join Policies
+
+A workspace's `join_policy` controls how new members can join, layered on the instance-level signup gate. Two values are supported (see `app/docs/presets.md` for the full preset matrix):
+
+- **`invite`** *(default)* — members can only join through an admin-issued email invitation. This is the safe default for every workspace; matches Slack/Linear/GitHub conventions.
+- **`open_link`** — workspace admins can mint a single shareable join link. Anyone with an account on this instance can click it and join as a Member. The link is **revocable** and **atomically rotatable** (rotate = revoke-old + create-new in one click).
+
+**Configured at:** `/workspaces/:slug/settings/edit` — "Join policy" section. Permission: `manage_settings` (Owner, Admin).
+
+**Instance ceiling.** The operator decides which strategies workspaces are *allowed* to use via the `SIGNUP_PERMITTED_JOIN_STRATEGIES` env var (default `invite`). When the instance doesn't permit `open_link`, the radio is shown disabled with an explanation — the operator's posture stays visible to admins without surprising them with a missing option.
+
+**Hard guard:** personal workspaces can never be open-joinable, regardless of `join_policy`. `Workspace#open_join?` enforces `!personal?` as the first check; model validation rejects setting `open_link` on a personal workspace.
+
+**Single membership-grant entry point.** Both invitation acceptance and open-link self-join go through `Workspace#admit(user, role:)`, which handles workspace locking, capacity, discarded-membership reactivation, and (under the `:shared` tenancy preset) role reconciliation.
+
 ## Roles & Permissions
 
 Roles use a flat JSON permissions structure:

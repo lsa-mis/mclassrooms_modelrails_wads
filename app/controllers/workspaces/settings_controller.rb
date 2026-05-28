@@ -20,7 +20,7 @@ module Workspaces
     private
 
     def settings_params
-      params.require(:workspace).permit(:max_members, :max_projects)
+      params.require(:workspace).permit(:max_members, :max_projects, :join_policy)
     end
   end
 end

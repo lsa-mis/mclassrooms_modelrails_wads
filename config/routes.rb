@@ -66,6 +66,12 @@ Rails.application.routes.draw do
           post :resend
         end
       end
+      resources :join_links, only: [ :create, :destroy ]
+      # Token in URL so the link is shareable; GET shows a confirmation page
+      # (prevents URL prefetch / link unfurlers from triggering a join), POST
+      # executes. Both use the same `workspace_join_path` helper.
+      get  "joins/:token", to: "joins#show",   as: :join
+      post "joins/:token", to: "joins#create"
       resource :settings, only: [ :edit, :update ]
       resources :projects, param: :slug do
         scope module: :projects do
