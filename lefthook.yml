@@ -57,6 +57,18 @@ pre-push:
       skip:
         - merge
         - rebase
+    markdown_lint:
+      # Mirrors CI's lint_docs job (`bundle exec rake markdown:check`). Was
+      # absent locally until #193 caught a trailing-space MD009 violation in
+      # workspaces.md — same drift pattern as PR #78's erb_lint miss
+      # (see memory: project_ci_lefthook_drift). Markdownlint runs in <1s,
+      # so this adds negligible push latency.
+      tags: style
+      skip_empty: false
+      run: mise exec -- bundle exec rake markdown:check
+      skip:
+        - merge
+        - rebase
     rspec:
       tags: test
       skip_empty: false

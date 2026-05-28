@@ -3,3 +3,7 @@ vendor/
 agent-os/
 .agent-os/
 docs/superpowers/
+# Working-dir drafts that may exist in a developer's checkout but aren't
+# tracked. CI doesn't see them; without this, the local Lefthook
+# markdown_lint gate would fail on every push for anyone with drafts here.
+working_files/
