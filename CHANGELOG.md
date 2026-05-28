@@ -35,6 +35,10 @@ All notable changes to ModelRails are documented here, organized by phase.
 - A clear notice when an invitation was addressed to a different email than the one being used — shown on verification, on signup, and on signed-in accept, instead of failing silently (#177, #180).
 - **Single-tenant preset** (`TENANCY_ONBOARDING=shared`) — one shared workspace, no personal workspaces, tenancy UI suppressed. Setup is env-driven with a seed that bootstraps the workspace + initial Owner and mails a password-set link. See `app/docs/presets.md`.
 
+### Bug fixes
+
+- Single-tenant preset: invitation-driven signups now adopt the invitation's role instead of being stuck at the `onboard_workspace` callback's placeholder Member. Solo-default (`:personal`) semantics are unchanged.
+
 ### Changed
 
 - Workspaces index (`/workspaces`) rewritten from a phonebook into a workbench per Jason Fried's "weak index" critique. Pinned-current row (by most-recently-accessed) with CURRENT badge; "Other workspaces" section sorted by `memberships.last_accessed_at DESC NULLS LAST, name ASC`. Each row carries plan badge, role badge, member count (from preloaded relation, no counter cache), last-accessed timestamp, Switch + Leave inline verbs (Leave gated by `MembershipPolicy#destroy?` which now permits self-leave under personal-workspace + last-owner safety guards). Adds `memberships.last_accessed_at` column + composite index, plus a `WorkspaceScoped` before_action that touches the timestamp on every workspace-scoped request (single UPDATE per request, silently rescued). Single-membership users see only the pinned section without an "Other workspaces" heading.

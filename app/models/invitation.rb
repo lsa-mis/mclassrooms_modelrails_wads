@@ -194,7 +194,16 @@ class Invitation < ApplicationRecord
     if existing&.discarded?
       existing.undiscard!
     elsif existing && !existing.discarded?
-      raise ActiveRecord::RecordInvalid.new(self), "User is already a member"
+      # Under :shared, the User#onboard_workspace callback pre-creates a
+      # placeholder Member membership during signup. Reconcile: adopt the
+      # invitation's role rather than treating it as duplicate-accept.
+      # Solo-default (:personal) semantics are preserved — an already-kept
+      # membership there really is a duplicate-accept.
+      if TenancyConfig.shared?
+        existing.update!(role: role) unless existing.role_id == role.id
+      else
+        raise ActiveRecord::RecordInvalid.new(self), "User is already a member"
+      end
     else
       if invitable.memberships.kept.count >= invitable.max_members
         raise ActiveRecord::RecordInvalid.new(self), "Workspace is at capacity"

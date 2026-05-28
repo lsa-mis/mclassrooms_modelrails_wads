@@ -121,7 +121,7 @@ The workspace switcher auto-hides under this preset because every user has exact
 
 3. The seed creates the shared workspace, the Owner user (with a verified email Authentication and an Owner Membership), and sends a password-set link to `TENANCY_OWNER_EMAIL`. In `production`, the link is logged instead of mailed (see the `bin/rails log` output) so the operator can deliver it out-of-band on first boot.
 
-4. The Owner clicks the password-set link, sets a password, signs in. They can then invite other users via the normal invitation flow — each invitee joins the shared workspace as a Member.
+4. The Owner clicks the password-set link, sets a password, signs in. They can then invite other users via the normal invitation flow — **each invitation specifies the role the invitee receives** (Member, Admin, etc.). The Owner remains the single source of new-role-granting authority for the shared workspace; roles can also be changed after signup via the members UI at `/workspaces/:slug/members`.
 
 **How to verify your setup is Single-tenant.** After running the seed:
 

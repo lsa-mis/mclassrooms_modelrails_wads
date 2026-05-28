@@ -644,4 +644,62 @@ RSpec.describe Invitation, type: :model do
       end
     end
   end
+
+  # Reshape 1 reconciliation: under :shared posture, User#onboard_workspace
+  # pre-creates a Member membership at signup. The invitation flow must then
+  # adopt the invitation's role rather than treating the existing membership
+  # as a duplicate-accept error. Solo-default (:personal) semantics unchanged.
+  describe "#accept! reconciles role under :shared posture" do
+    let!(:shared_workspace) { create(:workspace, slug: "acme", personal: false) }
+    let!(:admin_role) {
+      Role.find_or_create_by!(slug: "admin", workspace_id: nil) do |r|
+        r.name = "Admin"
+        r.permissions = { manage_members: true, manage_projects: true, manage_settings: true }
+      end
+    }
+    let!(:member_role) {
+      Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
+        r.name = "Member"
+        r.permissions = { manage_projects: true }
+      end
+    }
+    let(:inviter) { create(:user) }
+
+    before do
+      allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared_workspace.slug)
+    end
+
+    it "promotes the placeholder Member to the invitation's Admin role" do
+      invitee = create(:user, email_address: "newbie@example.com")
+      # Callback created a Member membership; verify state before reconciliation.
+      placeholder = shared_workspace.memberships.find_by!(user: invitee)
+      expect(placeholder.role).to eq(member_role)
+
+      invitation = create(:invitation,
+                          invitable: shared_workspace,
+                          role: admin_role,
+                          email: "newbie@example.com",
+                          invited_by: inviter)
+
+      expect {
+        invitation.accept!(invitee)
+      }.not_to raise_error
+
+      expect(shared_workspace.memberships.where(user: invitee).count).to eq(1)
+      expect(placeholder.reload.role).to eq(admin_role)
+    end
+
+    it "no-ops when the invitation's role matches the placeholder Member role" do
+      invitee = create(:user, email_address: "samerole@example.com")
+      invitation = create(:invitation,
+                          invitable: shared_workspace,
+                          role: member_role,
+                          email: "samerole@example.com",
+                          invited_by: inviter)
+
+      expect { invitation.accept!(invitee) }.not_to raise_error
+      expect(shared_workspace.memberships.where(user: invitee).count).to eq(1)
+    end
+  end
 end
