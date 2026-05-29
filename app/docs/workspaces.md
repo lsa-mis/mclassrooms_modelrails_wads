@@ -7,7 +7,7 @@ audience: [guide, technical]
 
 # Workspace Administration
 
-A workspace is the top-level organizational boundary. Users, projects, invitations, and roles are all scoped to a workspace.
+A workspace is the top-level organizational boundary — users, projects, invitations, and roles are all scoped to one. How workspaces *present* to users (one workspace or many, whether a switcher appears) depends on your [app preset](/docs/presets). For the underlying data model and how scoping is enforced at request time (`Current.workspace`, the `Tenanted` concern), see [Architecture](/docs/architecture).
 
 ## Creating a Workspace
 

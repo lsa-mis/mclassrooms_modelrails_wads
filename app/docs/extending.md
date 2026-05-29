@@ -253,6 +253,6 @@ For fine-grained access (e.g., "can view Document A but not Document B"):
 
 ## Next steps
 
-- **[Architecture](architecture.md)** — the request flow, tenancy model, and key directories your new code plugs into.
-- **[Deployment](deployment.md)** — ship it with Kamal once your feature is built.
+- **[Architecture](/docs/architecture)** — the request flow, tenancy model, and key directories your new code plugs into.
+- **[Deployment](/docs/deployment)** — ship it with Kamal once your feature is built.
 - Browse the full **[docs index](/docs)** for feature-specific references (workspaces, notifications, identity, background jobs).

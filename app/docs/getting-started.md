@@ -61,7 +61,7 @@ Native development (no devcontainer) continues to work the same way as before �
 
 ## Choose your app preset
 
-modelrails_base supports several distinct product shapes — solo prosumer, internal single-tenant, multi-tenant SaaS — all built on the same multi-tenant data layer underneath. Before you start customizing, read [App Presets](presets.md) to identify which shape matches what you're building. The defaults you just installed are the **Solo-default** preset; additional presets ship as they're built.
+modelrails_base supports several distinct product shapes — solo prosumer, internal single-tenant, multi-tenant SaaS — all built on the same multi-tenant data layer underneath. Before you start customizing, read [App Presets](/docs/presets) to identify which shape matches what you're building. The defaults you just installed are the **Solo-default** preset; additional presets ship as they're built.
 
 ## Running Tests
 
@@ -129,8 +129,8 @@ Runs automatically when you `git push`. No setup needed beyond `bundle exec left
 | Check | Tool |
 |-------|------|
 | Security scan | Brakeman |
-| Full test suite | RSpec (566+ examples) |
-| Accessibility audit | axe-core WCAG 2AA on every system spec |
+| Full test suite | RSpec (full suite) |
+| Accessibility audit | axe-core WCAG 2.2 AAA on every system spec |
 | Code style | RuboCop |
 
 Pre-commit hooks also auto-fix Ruby style issues on staged files.
@@ -204,5 +204,5 @@ github:
 
 ## Next steps
 
-1. **[Choose your app shape →](presets.md)** — Solo, Single-tenant, or Open SaaS. This is the most important decision; it sets signup, onboarding, and workspace behavior.
-2. **[Extend the framework →](extending.md)** — add your own workspace-scoped models, authorization, and features.
+1. **[Choose your app shape →](/docs/presets)** — Solo, Single-tenant, or Open SaaS. This is the most important decision; it sets signup, onboarding, and workspace behavior.
+2. **[Extend the framework →](/docs/extending)** — add your own workspace-scoped models, authorization, and features.

@@ -262,4 +262,4 @@ Their already-issued join links stay in the table but are inert (`open_join?` is
 
 ## Next steps
 
-With your app shape chosen, **[Extending ModelRails →](extending.md)** walks through adding your own workspace-scoped models, authorization, and features on top of it.
+With your app shape chosen, **[Extending ModelRails →](/docs/extending)** walks through adding your own workspace-scoped models, authorization, and features on top of it.
