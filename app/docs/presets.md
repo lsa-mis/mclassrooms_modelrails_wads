@@ -15,7 +15,7 @@ A **preset** is a named combination of four configuration knobs that collapses t
 |---|---|---|---|---|
 | **[Solo-default](#solo-default)** *(ships today)* | Prosumer / multi-workspace tools (Notion-style); private betas | Open or invite-only | A personal workspace (auto-created) | Yes |
 | **[Single-tenant](#single-tenant)** *(Reshape 1 — see [#181](https://github.com/dschmura/modelrails_base/issues/181))* | Internal company tools; one-org deployments | Invite-only or SSO | The one shared workspace | No |
-| **[Open SaaS](#open-saas)** *(Reshape 2+ — see [#181](https://github.com/dschmura/modelrails_base/issues/181))* | B2B SaaS with per-customer orgs; community products | Open | An org they create or join | Yes |
+| **[Open SaaS](#open-saas)** *(Reshape 2+ — see [#181](https://github.com/dschmura/modelrails_base/issues/181))* | B2B SaaS with per-customer orgs; community products | Open *or* link-gated | An org they create or join | Yes |
 
 The four configuration knobs and the full design rationale are documented in [#181](https://github.com/dschmura/modelrails_base/issues/181); each preset below pins specific values for them.
 
@@ -178,6 +178,43 @@ The public-SaaS / multi-workspace shape: per-workspace control over how new memb
 | Flow A — *existing* authenticated user joins via link | ✅ |
 | Flow B — *new* user via link (link opens the signup gate) | ✅ |
 | `:domain` strategy (verified-email-domain auto-join) | ⏳ Reshape 3 |
+
+**What you get when configured.**
+
+| Knob | Value | Mechanism |
+|---|---|---|
+| `signup.mode` | `:open` *or* `:invite_only` — see posture below | `config/initializers/signup.rb` (`SIGNUP_MODE`) |
+| `tenancy.onboarding` | `:personal` — each user gets a personal workspace, then creates/joins orgs | `User#onboard_workspace` |
+| `tenancy.workspace_creation` | `:enabled` — users can create org workspaces | `WorkspacesController#new` |
+| `permitted_join_strategies` | `[:invite, :open_link]` | `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` |
+
+Open SaaS is **Solo-default's tenancy** (personal onboarding, workspace creation on) **plus the `open_link` join strategy** — so a workspace Owner can hand out a shareable join link instead of inviting people one by one.
+
+### Signup posture — pick one
+
+Open SaaS supports two front-door postures. They differ *only* in whether a stranger can create an account with no invitation and no link; both give workspace Owners/Admins identical control over their own members.
+
+| | **Fully public** | **Controlled-growth** |
+|---|---|---|
+| `SIGNUP_MODE` | `open` | `invite_only` |
+| `SIGNUP_PERMITTED_JOIN_STRATEGIES` | `invite,open_link` | `invite,open_link` |
+| Who can create an account | anyone, at `/sign-up` | only via an invitation or a valid open-link token |
+| Good for | self-serve products, communities | B2B, controlled betas, "every user vouched-for" |
+
+Choose by whether you want an **anonymous front door**. `open` maximizes self-serve discovery. `invite_only + open_link` means every account traces to an invitation or a shared link — no cold signup — at the cost of no organic self-registration.
+
+> **`SIGNUP_MODE` is not how you "get an admin."** It only controls the anonymous front door. Your admin account, and the power to invite / approve / remove members, come from a workspace **Owner/Admin role** (`manage_members`) — present in *either* posture. There is no instance-wide super-admin: administration is per-workspace, so a user who self-registers under `open` owns and administers their own workspace. If you need cross-instance user administration, that's a feature to build, not a `SIGNUP_MODE` setting.
+
+**Verify the strategy is enabled.** With `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` set, in `bin/rails console`:
+
+```ruby
+SignupPolicy.permits_strategy?(:open_link)   # => true
+
+w = Workspace.create!(name: "Acme", personal: false, join_policy: "open_link")
+w.open_join?                                  # => true (open to link-joins)
+```
+
+If `permits_strategy?(:open_link)` is `false`, the env var isn't set — links will be inert and the join-policy radio won't offer "Shareable join link".
 
 **Setup (Reshape 2a — Flow A):**
 
