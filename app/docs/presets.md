@@ -116,10 +116,11 @@ The workspace switcher auto-hides under this preset because every user has exact
    | `TENANCY_OWNER_FIRST_NAME` | no | `Admin` | Display first name (default `Workspace`) |
    | `TENANCY_OWNER_LAST_NAME` | no | `User` | Display last name (default `Owner`) |
    | `SIGNUP_MODE` | yes | `invite_only` | Lock account creation to invitations |
+   | `APP_HOST` | no | `app.acme.com` | Host used in the logged workspace URL and in `tenancy:owner_setup_link`'s sign-in link (default `localhost` — set this on staging/prod) |
 
 2. Run `bin/setup` (or `bin/rails db:seed` on an existing app). The seed is idempotent — safe to re-run.
 
-3. The seed creates the shared workspace and the Owner user (with a verified email Authentication and an Owner Membership). In dev/test it emails a password-set link. In `production` it deliberately does **not** put a credential in the logs (a logged token would linger in log retention past its short expiry); instead it logs the workspace URL and points you to an on-demand task. Mint the Owner's sign-in link when you're ready to use it:
+3. The seed creates the shared workspace and the Owner user (with a verified email Authentication and an Owner Membership). In development the password-set email is captured by **Letter Opener** — open `/letter_opener` to see it (it isn't sent over SMTP). In `production` it deliberately does **not** put a credential in the logs (a logged token would linger in log retention past its short expiry); instead it logs the workspace URL and points you to an on-demand task. Mint the Owner's sign-in link when you're ready to use it:
 
    ```bash
    bin/rails tenancy:owner_setup_link
@@ -128,6 +129,8 @@ The workspace switcher auto-hides under this preset because every user has exact
    This prints a fresh, short-lived password-set URL — the expiry clock starts when you run it, not at deploy time. Deliver it to the Owner out-of-band (or run it yourself if you're claiming the account). It doubles as a break-glass Owner login if email delivery is ever down.
 
 4. The Owner opens the password-set link, sets a password, signs in. They can then invite other users via the normal invitation flow — **each invitation specifies the role the invitee receives** (Member, Admin, etc.). The Owner remains the single source of new-role-granting authority for the shared workspace; roles can also be changed after signup via the members UI at `/workspaces/:slug/members`.
+
+> **Re-inviting under `:shared` updates the role, it doesn't error.** Because `:shared` onboarding pre-creates a placeholder membership for every new user, `Workspace#admit` *reconciles* — admitting an existing member to a new role updates their role rather than raising "already a member" (the behavior you'd get under the default `:personal` posture). So re-inviting someone at a higher role is a valid way to promote them.
 
 **How to verify your setup is Single-tenant.** After running the seed:
 
@@ -202,6 +205,8 @@ Open SaaS supports two front-door postures. They differ *only* in whether a stra
 | Good for | self-serve products, communities | B2B, controlled betas, "every user vouched-for" |
 
 Choose by whether you want an **anonymous front door**. `open` maximizes self-serve discovery. `invite_only + open_link` means every account traces to an invitation or a shared link — no cold signup — at the cost of no organic self-registration.
+
+**The two knobs are independent.** `SIGNUP_MODE` controls *who may create an account*; `SIGNUP_PERMITTED_JOIN_STRATEGIES` controls *which join mechanisms exist*. Setting `SIGNUP_MODE=open` does **not** enable shareable links — you still need `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` for that. Both postures above set the strategies allowlist explicitly for exactly this reason.
 
 > **`SIGNUP_MODE` is not how you "get an admin."** It only controls the anonymous front door. Your admin account, and the power to invite / approve / remove members, come from a workspace **Owner/Admin role** (`manage_members`) — present in *either* posture. There is no instance-wide super-admin: administration is per-workspace, so a user who self-registers under `open` owns and administers their own workspace. If you need cross-instance user administration, that's a feature to build, not a `SIGNUP_MODE` setting.
 
