@@ -34,6 +34,19 @@ RSpec.describe Membership, type: :model do
       duplicate = build(:membership, user: membership.user, workspace: membership.workspace)
       expect(duplicate).not_to be_valid
     end
+
+    it "enforces uniqueness at the DATABASE level too (the concurrency backstop)" do
+      membership = create(:membership)
+      duplicate = build(:membership, user: membership.user, workspace: membership.workspace)
+
+      # Bypass the app-level uniqueness validation on purpose. Under concurrent
+      # admits, two transactions can both pass the model validation before
+      # either commits — the unique index on (user_id, workspace_id) is what
+      # actually prevents a duplicate membership row, making a double-claim of a
+      # join-link/invitation token harmless. This guards against the index being
+      # dropped and the invariant silently degrading to app-validation-only.
+      expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
   end
 
   describe "Discardable" do
