@@ -398,8 +398,11 @@ dialog[open]::backdrop {
   @apply mb-6 p-4 bg-surface border border-border rounded-lg overflow-x-auto;
 }
 
+/* Wide tables scroll within the content column instead of spilling under the
+   right TOC sidebar. `display:block` turns the table into its own scroll
+   container (same pattern as `.prose pre`); the inner rows keep table layout. */
 .prose table {
-  @apply w-full mb-6;
+  @apply block w-full max-w-full mb-6 overflow-x-auto;
   border-collapse: collapse;
 }
 
