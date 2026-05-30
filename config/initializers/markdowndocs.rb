@@ -4,15 +4,20 @@ Markdowndocs.configure do |config|
   # Path to markdown files
   config.docs_path = Rails.root.join("app", "docs")
 
+  # Allow hand-authored inline SVG diagrams in docs. The sanitizer still
+  # strips scripts/handlers; see markdowndocs CHANGELOG 0.8.0.
+  config.allow_svg = true
+
   # Category → slug mapping
   # Maps category names to arrays of markdown file slugs (filenames without .md)
   # NOTE: every file in app/docs/ must appear in exactly one category here, or
   # it renders only by direct URL and is invisible on the /docs index.
   # spec/docs/index_coverage_spec.rb fails CI if a doc is left orphaned.
   config.categories = {
-    # `presets` sits with `getting-started` so "choose your app shape" is part
-    # of the onboarding cluster (and the two become each other's related docs).
-    "Getting Started" => %w[getting-started presets],
+    "Getting Started" => %w[getting-started],
+    # The presets hub + its three per-preset spokes form their own cluster,
+    # placed second so it reads as the next step after "getting started".
+    "Presets" => %w[presets presets-solo presets-single-tenant presets-open-saas],
     "Architecture" => %w[architecture],
     # `notifications` (audience: guide) and `notifications-technical`
     # (audience: technical) are paired companion docs — the mode switcher
