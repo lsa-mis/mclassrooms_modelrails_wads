@@ -9,72 +9,40 @@ module AvatarHelper
     xl: { css: "w-32 h-32", px: 128, text: "text-3xl" }
   }.freeze
 
+  # Model-aware adapter: decides the avatar source (upload / gravatar / initials),
+  # handles Active Storage variants, gravatar URLs, and the primary_color hue —
+  # then renders the gem-maintained UI::AvatarComponent for presentation. The
+  # component owns sizing, rounded-full, hue initials, and ARIA semantics.
   def avatar_for(user, size: :md, aria_label: nil)
-    config = AVATAR_SIZES.fetch(size)
+    px = AVATAR_SIZES.fetch(size)[:px]
 
     case user.avatar_source
     when "upload"
-      render_upload_avatar(user, config, aria_label)
+      return render_initials_avatar(user, size, aria_label) unless user.avatar.attached?
+
+      # main_app.url_for keeps the URL engine-context-safe (the shared header also
+      # renders inside the markdowndocs engine layout, where AS routes aren't mounted).
+      src = main_app.url_for(user.avatar.variant(resize_to_fill: [ px, px ]))
+      render UI::AvatarComponent.new(src: src, size: size, aria_label: aria_label)
     when "gravatar"
-      render_gravatar_avatar(user, config, aria_label)
+      url = user.gravatar_url(size: px)
+      return render_initials_avatar(user, size, aria_label) if url.nil?
+
+      render UI::AvatarComponent.new(src: url, size: size, aria_label: aria_label, loading: "lazy")
     else
-      render_initials_avatar(user, config, aria_label)
+      render_initials_avatar(user, size, aria_label)
     end
   end
 
   private
 
-  def render_upload_avatar(user, config, aria_label)
-    return render_initials_avatar(user, config, aria_label) unless user.avatar.attached?
-
-    variant = user.avatar.variant(resize_to_fill: [ config[:px], config[:px] ])
-    # main_app.url_for is required because the shared header renders inside
-    # the markdowndocs engine layout too — and `image_tag variant` from a
-    # non-main-app context fails (Active Storage routes live on main_app,
-    # not engine routers). Pre-anchoring the URL through main_app keeps the
-    # helper engine-context-safe.
-    image_tag main_app.url_for(variant),
-      class: "#{config[:css]} rounded-full object-cover",
-      **avatar_aria_attrs(aria_label, alt: "")
-  end
-
-  def render_gravatar_avatar(user, config, aria_label)
-    url = user.gravatar_url(size: config[:px])
-    return render_initials_avatar(user, config, aria_label) if url.nil?
-
-    image_tag url,
-      class: "#{config[:css]} rounded-full object-cover",
-      loading: "lazy",
-      **avatar_aria_attrs(aria_label, alt: "")
-  end
-
-  def render_initials_avatar(user, config, aria_label)
+  def render_initials_avatar(user, size, aria_label)
     custom_color = user.respond_to?(:primary_color) && user.primary_color.present? && user.primary_color != 210
-
-    classes = "#{config[:css]} #{config[:text]} rounded-full flex items-center justify-center font-semibold"
-    if custom_color
-      classes += " bg-hue-initials text-white"
-      style = "--hue: #{user.primary_color}"
-    else
-      classes += " bg-interactive text-text-on-interactive"
-      style = nil
-    end
-
-    attrs = avatar_aria_attrs(aria_label)
-    attrs[:style] = style if style
-
-    content_tag :span, user.initials, class: classes, **attrs
-  end
-
-  def avatar_aria_attrs(aria_label, alt: nil)
-    if aria_label
-      attrs = { role: "img", aria: { label: aria_label } }
-      attrs[:alt] = aria_label if alt == ""
-      attrs
-    else
-      attrs = { aria: { hidden: true } }
-      attrs[:alt] = "" if alt == ""
-      attrs
-    end
+    render UI::AvatarComponent.new(
+      fallback: user.initials,
+      size: size,
+      hue: (custom_color ? user.primary_color : nil),
+      aria_label: aria_label
+    )
   end
 end

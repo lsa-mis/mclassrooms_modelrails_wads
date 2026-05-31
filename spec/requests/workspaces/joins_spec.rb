@@ -1,7 +1,11 @@
 require "rails_helper"
 
 RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", type: :request do
-  let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
+  # Deterministic name with an apostrophe: Faker::Company.name intermittently
+  # produces HTML-special chars (e.g. "O'Kon" -> "O&#39;Kon"), which broke the
+  # raw response.body string match below. Pin it so the escaping path is always
+  # exercised and the spec is no longer data-dependent.
+  let(:workspace) { create(:workspace, personal: false, join_policy: "open_link", name: "O'Brien Logistics") }
   let(:owner)     { create(:user) }
   let(:newcomer)  { create(:user) }
   let!(:owner_role) {
@@ -91,7 +95,7 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
     it "renders a confirmation page for a valid active link" do
       get workspace_join_path(workspace, token: link.token)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(workspace.name)
+      expect(Capybara.string(response.body)).to have_text(workspace.name)
     end
 
     it "redirects with an error for a revoked link" do
@@ -108,7 +112,7 @@ end
 # routes the visitor through the registration flow. After email
 # verification, claim_pending_join_link! admits them to the workspace.
 RSpec.describe "Workspaces::Joins (Flow B: unauthenticated user via link)", type: :request do
-  let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
+  let(:workspace) { create(:workspace, personal: false, join_policy: "open_link", name: "O'Brien Logistics") }
   let(:owner) { create(:user) }
   let!(:owner_role) {
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
@@ -142,6 +146,6 @@ RSpec.describe "Workspaces::Joins (Flow B: unauthenticated user via link)", type
   it "GET renders the confirmation page without requiring auth" do
     get workspace_join_path(workspace, token: link.token)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include(workspace.name)
+    expect(Capybara.string(response.body)).to have_text(workspace.name)
   end
 end

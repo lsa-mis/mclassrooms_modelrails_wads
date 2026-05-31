@@ -20,6 +20,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Added
 
+- Vendored `UI::*` ViewComponents (button, input, textarea, file_input, dialog, avatar) via the dev-only `modelrails_ui` scaffolding gem; the form-field builder, `shared/_modal`, and `avatar_for` delegate to them with no rendered-output change — `view_component` is a runtime dependency, `modelrails_ui` is development-only.
 - Appearance destination time-zone picker — explicit `override=true` submit to `Account::Preferences::TimezonesController#update`; the existing browser beacon's write-on-blank guard preserves the explicit choice on subsequent visits (closes #154).
 - Settings hub destinations: disambiguated H1s + descriptions on each sidebar destination, shared `shared/_settings_page_header.html.erb` partial, and Appearance page (closes #150 — sidebar link no longer 405s).
 - Settings hub mobile drawer: hamburger toggle below 768px slides the sidebar in as an off-canvas drawer with overlay, focus trap, ESC + click-outside dismiss, and auto-close on sidebar navigation (closes #148).

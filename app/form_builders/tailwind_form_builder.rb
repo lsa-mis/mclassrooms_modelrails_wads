@@ -22,57 +22,57 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
 
   def text_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "text", opts)
     end
   end
 
   def email_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "email", opts)
     end
   end
 
   def password_field(method, options = {})
     options[:autocomplete] ||= "new-password"
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "password", opts)
     end
   end
 
   def url_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "url", opts)
     end
   end
 
   def tel_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "tel", opts)
     end
   end
 
   def number_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "number", opts)
     end
   end
 
   def date_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "date", opts)
     end
   end
 
   def search_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_input(method, "search", opts)
     end
   end
 
   def text_area(method, options = {})
     options[:rows] ||= 4
     field_wrapper(method, options) do |opts|
-      super(method, field_options(method, opts))
+      ui_textarea(method, opts)
     end
   end
 
@@ -123,7 +123,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
 
   def file_field(method, options = {})
     field_wrapper(method, options) do |opts|
-      super(method, opts.merge(class: merge_classes(FILE_FIELD_CLASSES, opts[:class])))
+      ui_file(method, opts)
     end
   end
 
@@ -229,6 +229,91 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     attrs[:"aria-describedby"] = describedby.join(" ") if describedby.any?
 
     attrs
+  end
+
+  # Render the form control via UI::InputComponent (the shared component system),
+  # while this builder retains ownership of the label, help text, error message,
+  # and ARIA wiring (via field_wrapper). The component reproduces the app's field
+  # styling exactly, so this delegation is visually invisible.
+  def ui_input(method, type, opts)
+    required = opts.delete(:required)
+    help = opts.delete(:help)
+    custom_class = opts.delete(:class)
+    value = opts.key?(:value) ? opts.delete(:value) : current_field_value(method)
+    id = opts.delete(:id) || field_id(method)
+    name = opts.delete(:name) || field_name(method)
+    # Advertise required state via aria-required ONLY (component required: false), to
+    # match the app's existing fields: a native HTML `required` would let the browser
+    # block empty submits before they reach the server, suppressing the server-rendered
+    # error summary/inline errors (see spec/system/registration_validation_spec.rb).
+    opts["aria-required"] = "true" if required
+
+    @template.render(UI::InputComponent.new(
+      type: type,
+      required: false,
+      invalid: has_errors?(method),
+      describedby: ui_describedby(method, help: help),
+      id: id,
+      name: name,
+      value: value,
+      class: custom_class,
+      **opts
+    ))
+  end
+
+  def ui_textarea(method, opts)
+    required = opts.delete(:required)
+    help = opts.delete(:help)
+    custom_class = opts.delete(:class)
+    value = opts.key?(:value) ? opts.delete(:value) : current_field_value(method)
+    id = opts.delete(:id) || field_id(method)
+    name = opts.delete(:name) || field_name(method)
+    # aria-required only — same parity reasoning as ui_input above.
+    opts["aria-required"] = "true" if required
+
+    @template.render(UI::TextareaComponent.new(
+      value: value,
+      required: false,
+      invalid: has_errors?(method),
+      describedby: ui_describedby(method, help: help),
+      id: id,
+      name: name,
+      class: custom_class,
+      **opts
+    ))
+  end
+
+  def ui_file(method, opts)
+    required = opts.delete(:required)
+    help = opts.delete(:help)
+    custom_class = opts.delete(:class)
+    accept = opts.delete(:accept)
+    multiple = opts.delete(:multiple)
+    id = opts.delete(:id) || field_id(method)
+    name = opts.delete(:name) || field_name(method, multiple: !!multiple)
+
+    @template.render(UI::FileInputComponent.new(
+      accept: accept,
+      multiple: !!multiple,
+      required: !!required,
+      invalid: has_errors?(method),
+      describedby: ui_describedby(method, help: help),
+      id: id,
+      name: name,
+      class: custom_class,
+      **opts
+    ))
+  end
+
+  def ui_describedby(method, help:)
+    ids = []
+    ids << "#{field_id(method)}-help" if help
+    ids << "#{field_id(method)}-error" if has_errors?(method)
+    ids.join(" ").presence
+  end
+
+  def current_field_value(method)
+    object.respond_to?(method) ? object.public_send(method) : nil
   end
 
   def has_errors?(method)

@@ -1,44 +1,15 @@
 <%# locals: (title:, id: nil, size: :md, description: nil) -%>
-<%
-  modal_id = id || "modal-#{SecureRandom.hex(4)}"
-  size_class = case size
-               when :sm then "max-w-sm"
-               when :md then "max-w-lg"
-               when :lg then "max-w-2xl"
-               when :full then "max-w-4xl"
-               else "max-w-lg"
-               end
-%>
-<dialog data-modal-target="dialog"
-        id="<%= modal_id %>"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="<%= modal_id %>-title"
-        <% if description %>aria-describedby="<%= modal_id %>-description"<% end %>
-        class="bg-transparent backdrop:bg-transparent w-full max-w-full p-4 sm:p-6">
-  <div data-modal-target="panel"
-       class="relative w-full <%= size_class %> mx-auto rounded-lg
-              bg-surface-overlay border border-border shadow-xl
-              max-h-[calc(100vh-3rem)] flex flex-col
-              opacity-0 scale-95">
-    <header class="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-      <h2 id="<%= modal_id %>-title"
-          class="text-lg font-semibold text-text-heading">
-        <%= title %>
-      </h2>
-      <button data-action="click->modal#close"
-              aria-label="<%= t('modals.close') %>"
-              class="btn-touch-target rounded-md -m-2 hover:bg-surface-sunken
-                     text-text-muted hover:text-text-body
-                     focus:outline-none focus:ring-2 focus:ring-interactive-focus">
-        <%= icon(:x_mark, size: :md) %>
-      </button>
-    </header>
-    <div id="modal-body" class="px-6 py-4 overflow-y-auto flex-1">
-      <% if description %>
-        <p id="<%= modal_id %>-description" class="text-sm text-text-muted mb-4"><%= description %></p>
-      <% end %>
-      <%= yield %>
-    </div>
-  </div>
-</dialog>
+<%#
+  Thin adapter over the gem-maintained UI::DialogComponent. Renders the <dialog>
+  only (wrapper: false) because callers own the surrounding data-controller="modal"
+  wrapper + trigger button. body_id stays "modal-body" to preserve the Turbo Stream
+  contract (turbo_stream.append "modal-body"). Existing call sites are unchanged.
+-%>
+<%= render UI::DialogComponent.new(
+      title: title,
+      id: id,
+      size: size,
+      description: description,
+      wrapper: false,
+      body_id: "modal-body"
+    ) do %><%= yield %><% end %>

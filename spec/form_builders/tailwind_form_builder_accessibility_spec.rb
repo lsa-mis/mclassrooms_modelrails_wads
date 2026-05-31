@@ -41,6 +41,22 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility" do
       result = parse(builder.email_field(:email_address))
       expect(result).not_to have_css("input[aria-required]")
     end
+
+    # Required state is advertised via aria-required ONLY, never the native HTML
+    # `required` attribute. A native `required` lets the browser block empty
+    # submits before they reach the server, suppressing the app's server-rendered
+    # error summary/inline errors (see spec/system/registration_validation_spec.rb).
+    it "does not emit a native HTML required attribute on inputs when required" do
+      result = parse(builder.text_field(:first_name, required: true))
+      expect(result).to have_css("input[aria-required='true']")
+      expect(result).not_to have_css("input[required]")
+    end
+
+    it "does not emit a native HTML required attribute on text areas when required" do
+      result = parse(builder.text_area(:first_name, required: true))
+      expect(result).to have_css("textarea[aria-required='true']")
+      expect(result).not_to have_css("textarea[required]")
+    end
   end
 
   # ---------------------------------------------------------------------------

@@ -1,0 +1,47 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+# Parity: UI::ButtonComponent reproduces the app's .btn-* button system
+# (app/assets/tailwind/application.css @layer components) so new code can use the
+# gem component and look identical to existing .btn-primary/.btn-secondary/etc.
+RSpec.describe UI::ButtonComponent, "app .btn-* parity", type: :component do
+  it "primary matches .btn-primary" do
+    render_inline(described_class.new("Save", variant: :primary))
+    b = page.find("button")
+    expect(b.text).to eq("Save")
+    cls = b[:class]
+    expect(cls).to include("bg-interactive")
+    expect(cls).to include("hover:bg-interactive-hover")
+    expect(cls).to include("text-text-on-interactive")
+    expect(cls).to include("min-h-[var(--form-input-height)]")
+    expect(cls).to include("focus:ring-interactive-focus")
+  end
+
+  it "secondary matches .btn-secondary (bordered, neutral)" do
+    render_inline(described_class.new("Cancel", variant: :secondary))
+    cls = page.find("button")[:class]
+    expect(cls).to include("border")
+    expect(cls).to include("text-text-body")
+    expect(cls).to include("hover:bg-surface-sunken")
+  end
+
+  it "danger matches .btn-danger" do
+    render_inline(described_class.new("Delete", variant: :danger))
+    cls = page.find("button")[:class]
+    expect(cls).to include("bg-danger")
+    expect(cls).to include("focus:ring-danger")
+  end
+
+  it "text_interactive matches .btn-text + .btn-text-interactive" do
+    render_inline(described_class.new("Learn more", variant: :text_interactive))
+    cls = page.find("button")[:class]
+    expect(cls).to include("underline")
+    expect(cls).to include("text-interactive")
+  end
+
+  it "renders as a link when href is given" do
+    render_inline(described_class.new("Home", href: "/", variant: :primary))
+    expect(page).to have_css('a[href="/"]', text: "Home")
+  end
+end

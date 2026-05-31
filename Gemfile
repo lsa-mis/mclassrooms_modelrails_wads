@@ -117,3 +117,14 @@ gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
 gem "biscuit-rails", "~> 0.2.1"
 
 gem "lexxy", "~> 0.9.14.beta"
+
+# Runtime dependency: the vendored app/components/ui/* are ViewComponents and are
+# loaded in production. This MUST stay a top-level gem — modelrails_ui (below) only
+# GENERATES the components in development and is excluded from production.
+gem "view_component", "~> 4.0"
+
+# Dev-only scaffolding tool that generates app/components/ui/*. Not shipped to
+# production; the host app vendors and owns the generated files.
+group :development do
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.1.0.modelrails.2"
+end
