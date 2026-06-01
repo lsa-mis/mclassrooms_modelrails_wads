@@ -44,4 +44,18 @@ RSpec.describe UI::ButtonComponent, "app .btn-* parity", type: :component do
     render_inline(described_class.new("Home", href: "/", variant: :primary))
     expect(page).to have_css('a[href="/"]', text: "Home")
   end
+
+  it "raises ArgumentError on an unknown variant (fail-loud in dev/test)" do
+    expect {
+      described_class.new("Save", variant: :bogus)
+    }.to raise_error(ArgumentError, /unknown variant :bogus/)
+  end
+
+  it "falls back to :primary in production instead of raising" do
+    # Replace Rails.env with a fresh production inquirer for this example rather than
+    # stubbing a method on the shared, memoized Rails.env object.
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+    render_inline(described_class.new("Save", variant: :bogus))
+    expect(page.find("button")[:class]).to include("bg-interactive") # primary styling
+  end
 end

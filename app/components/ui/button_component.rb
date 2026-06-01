@@ -28,7 +28,7 @@ module UI
     # href  — renders an <a> tag; sets tag: :a automatically.
     def initialize(label = nil, variant: :primary, size: :default, href: nil, **html_attrs)
       @label = label || html_attrs.delete(:label)
-      @variant = variant.to_sym
+      @variant = coerce_variant(variant.to_sym)
       @size = size.to_sym
       @tag = html_attrs.delete(:tag)
       @extra_class = html_attrs.delete(:class)
@@ -49,6 +49,21 @@ module UI
     end
 
     private
+
+    # Fail loud on an unknown variant in development/test so misuse is caught
+    # immediately; fall back to :primary in production so a bad variant never
+    # 500s a page. `defined?(Rails)` keeps this correct in the gem's Rails-less tests.
+    def coerce_variant(variant)
+      return variant if VARIANTS.key?(variant)
+
+      unless defined?(Rails) && Rails.env.production?
+        raise ArgumentError,
+          "UI::ButtonComponent: unknown variant #{variant.inspect}. " \
+          "Expected one of: #{VARIANTS.keys.join(", ")}."
+      end
+
+      :primary
+    end
 
     def component_classes
       cn(VARIANTS.fetch(@variant, VARIANTS[:primary]), SIZES.fetch(@size, SIZES[:default]), @extra_class)
