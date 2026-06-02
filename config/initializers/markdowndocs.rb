@@ -25,7 +25,7 @@ Markdowndocs.configure do |config|
     # split. Listing both here keeps the topic discoverable from the
     # canonical "Features" category in either mode.
     "Features" => %w[accounts workspaces projects identity-system emails notifications notifications-technical],
-    "Guides" => %w[extending security ui-patterns deployment background-jobs troubleshooting]
+    "Guides" => %w[extending security ui-patterns components deployment background-jobs troubleshooting]
   }
 
   # Available documentation modes (default: %w[guide technical])
