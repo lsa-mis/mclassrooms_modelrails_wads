@@ -123,6 +123,19 @@ RSpec.describe "Project Resources", type: :request do
         }
         expect(response).to have_http_status(:unprocessable_entity)
       end
+
+      it "re-renders the edit form with a destructive alert listing the errors" do
+        patch workspace_project_resource_path(workspace, project, resource), params: {
+          resource: { title: "" }
+        }
+
+        expect(response).to have_http_status(:unprocessable_entity)
+
+        html = Capybara.string(response.body)
+        expect(html).to have_css("[role='alert'][aria-live='assertive']")
+        expect(html).to have_css("[role='alert'] [data-slot='alert-description'] li",
+                                 text: "Title can't be blank")
+      end
     end
 
     describe "DELETE destroy" do

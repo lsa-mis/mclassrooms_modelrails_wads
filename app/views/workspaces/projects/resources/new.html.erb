@@ -8,13 +8,15 @@
     <%= hidden_field_tag "resource[type]", @type %>
 
     <% if @resource.errors.any? %>
-      <div class="rounded-md bg-danger-surface p-4" role="alert">
-        <ul class="list-disc list-inside text-sm text-danger">
-          <% @resource.errors.full_messages.each do |message| %>
-            <li><%= message %></li>
-          <% end %>
-        </ul>
-      </div>
+      <%= ui :alert, variant: :destructive do |alert| %>
+        <% alert.with_alert_description do %>
+          <ul class="list-disc list-inside">
+            <% @resource.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
     <% end %>
 
     <div>

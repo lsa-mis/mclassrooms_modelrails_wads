@@ -1,0 +1,9 @@
+<%= ui :alert, variant: :destructive do |alert| %>
+  <% alert.with_alert_title { "2 errors prevented saving" } %>
+  <% alert.with_alert_description do %>
+    <ul class="list-disc list-inside">
+      <li>Title can't be blank</li>
+      <li>Status is not included in the list</li>
+    </ul>
+  <% end %>
+<% end %>

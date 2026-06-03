@@ -86,11 +86,14 @@ A few surfaces carry known AAA-contrast debt that is tracked rather than allowed
 |----------|--------------------|
 | `.biscuit-banner` | The GDPR consent banner's OKLCH-derived button sits at ~4.8:1; tightening it without desaturating every workspace hue is a follow-up |
 | `.highlight` | The Rouge syntax-highlighting palette sits at AA; raising it to AAA changes how every code sample looks sitewide |
-| `.text-danger` | Danger text on default surfaces dips below AAA in dark mode under specific hue cascades |
 
 This list is a visible, documented ledger — not a silent bypass. Two rules keep it honest:
 
 1. Every entry names a concrete reason and is meant to shrink, never grow.
 2. To audit an excluded surface deliberately, pass an explicit `exclude:` argument; use `exclude: []` for the raw, unfiltered audit.
+
+### Resolved
+
+- **`.text-danger`** (resolved on `feat/ui-alert-exemplar`) — dark-mode danger text sat at 6.84:1 on `bg-surface-raised` (the lightest dark surface, neutral-800), below AAA's 7:1. Fixed at the token level by raising dark `--color-danger` / `--color-danger-icon` from `L=0.808` to `L=0.825` (now 7.08:1 measured on surface-raised, higher on the darker surfaces). The exclusion was retired and danger text is now held to AAA app-wide in both themes; `spec/system/ui/alert_component_spec.rb` proves it unscoped on the alert.
 
 When you add UI, assume it must pass at AAA with no new exclusion. Reach for the ledger only for genuinely tracked debt — and write down why.

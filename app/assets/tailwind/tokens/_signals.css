@@ -41,10 +41,10 @@
 
 .dark {
   /* --- Danger (red) --- */
-  --color-danger:          oklch(80.8% 0.16 22);        /* L=0.808 preserves AAA 7:1 on slate-950; hue 22 leans toward light-mode danger's warm-red character (light is hue 26.9) without re-entering the coral zone */
+  --color-danger:          oklch(82.5% 0.16 22);        /* L=0.825 preserves AAA 7:1 on neutral-800 (surface-raised, the lightest dark surface danger text appears on — axe-measured 7.08:1); also clears AAA on the darker surface/sunken (8.66:1/9.79:1). L=0.808 was tuned only for slate-950 (sunken) and fell to 6.84:1 on surface-raised. hue 22 leans toward light-mode danger's warm-red character (light is hue 26.9) without re-entering the coral zone */
   --color-danger-strong:   oklch(65% 0.22 25);          /* Fire-engine red for graphics + opt-in elements. L=0.65 sits below the AAA text threshold (~4-5:1 on slate-950, AA only) — DO NOT use for general text content. Designed for the avatar bell + similar graphic indicators where 1.4.11 (3:1) is the applicable spec. */
   --color-danger-surface:  oklch(25.8% 0.092 26.042);   /* ~red-950 */
-  --color-danger-icon:     oklch(80.8% 0.16 22);        /* matches --color-danger for AAA + warm-red character — keep both in sync */
+  --color-danger-icon:     oklch(82.5% 0.16 22);        /* matches --color-danger for AAA + warm-red character — keep both in sync */
   --color-danger-hover:    oklch(29.6% 0.093 25.166);   /* ~red-900 */
   --color-danger-progress: oklch(63.7% 0.237 25.331);   /* ~red-500 */
   --color-danger-border:   oklch(44.4% 0.177 26.899);   /* ~red-700 */

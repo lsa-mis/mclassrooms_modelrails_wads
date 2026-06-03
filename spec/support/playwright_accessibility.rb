@@ -19,9 +19,15 @@ module PlaywrightAccessibility
   #                     AA. Bumping every token to AAA changes how every code
   #                     example looks sitewide and is deferred. Was previously
   #                     gated via `pending` markers in spec/system/docs_spec.rb.
-  # - .text-danger      Danger signal text on default surfaces under specific
-  #                     hue cascades sits below AAA in dark mode. Tracked
-  #                     separately from workspace-branded interactive debt.
+  #
+  # `.text-danger` was previously deferred here: dark-mode danger text sat below
+  # AAA on `bg-surface-raised` (the lightest dark surface, neutral-800) at
+  # 6.84:1. Fixed at the TOKEN level on branch `feat/ui-alert-exemplar` by
+  # raising dark `--color-danger`/`--color-danger-icon` from L=0.808 to L=0.825
+  # (now 7.08:1 measured on surface-raised, higher on the darker surfaces). It
+  # is no longer excluded — every danger-text usage app-wide is held to AAA in
+  # both themes. `spec/system/ui/alert_component_spec.rb` proves it unscoped on
+  # the alert.
   #
   # `.text-interactive` and `.bg-interactive` were previously deferred under
   # the workspace-branded color-mix umbrella; the durable two-variable scheme
@@ -35,30 +41,42 @@ module PlaywrightAccessibility
   # raw, unfiltered audit.
   DEFERRED_AAA_EXCLUDES = [
     ".biscuit-banner",
-    ".highlight",
-    ".text-danger"
+    ".highlight"
   ].freeze
 
   # Run axe accessibility audit on the current page.
   # `exclude` defaults to DEFERRED_AAA_EXCLUDES so tests don't fail on tracked
   # debt. Pass an explicit array (or `[]`) to override.
   #
+  # `include` scopes the audit to one or more DOM subtrees (axe `context`
+  # selectors). Use it to audit a single COMPONENT rather than the whole page —
+  # e.g. a preview-host page whose minimal layout emits `best-practice`
+  # advisories (landmark-one-main, page-has-heading-one) that are not WCAG and
+  # not about the component under test. Scoping to the component keeps those
+  # host-chrome advisories out of scope WITHOUT excluding any rule. Do NOT use
+  # it to scope a real color-contrast failure out of the audit.
+  #
   # Color-contrast violations are enriched with a `_debug` payload (ancestor
   # chain computed styles, theme state, in-flight animations) so failure
   # messages reveal the cascade reality at scan time. See §2b flake
   # investigation for the motivating case.
-  def run_axe_audit(options = {}, exclude: DEFERRED_AAA_EXCLUDES)
+  def run_axe_audit(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
     Capybara.current_session.driver.with_playwright_page do |playwright_page|
       inject_axe(playwright_page)
 
       exclude_list = Array(exclude)
+      include_list = Array(include)
 
       playwright_page.evaluate(<<~JAVASCRIPT)
         (async () => {
           const options = #{options.to_json};
           const exclude = #{exclude_list.to_json};
-          const results = exclude.length > 0
-            ? await axe.run({ exclude }, options)
+          const include = #{include_list.to_json};
+          const context = {};
+          if (include.length > 0) context.include = include;
+          if (exclude.length > 0) context.exclude = exclude;
+          const results = (context.include || context.exclude)
+            ? await axe.run(context, options)
             : await axe.run(options);
 
           const findNode = (target) => {
@@ -121,15 +139,15 @@ module PlaywrightAccessibility
   end
 
   # Check if page has any accessibility violations
-  def axe_clean?(options = {}, exclude: DEFERRED_AAA_EXCLUDES)
-    results = run_axe_audit(options, exclude: exclude)
+  def axe_clean?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+    results = run_axe_audit(options, exclude: exclude, include: include)
     results["violations"].empty?
   end
 
   # Get formatted violation messages. Color-contrast violations include the
   # ancestor-chain / theme / animation debug payload captured by `run_axe_audit`.
-  def axe_violations(options = {}, exclude: DEFERRED_AAA_EXCLUDES)
-    results = run_axe_audit(options, exclude: exclude)
+  def axe_violations(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+    results = run_axe_audit(options, exclude: exclude, include: include)
     Array(results["violations"]).map { |v| format_violation(v) }
   end
 
@@ -186,21 +204,21 @@ module PlaywrightAccessibility
 
   # Run axe in both light and dark mode and AND the results.
   # Returns true only when both passes have zero violations.
-  def axe_clean_in_both_themes?(options = {}, exclude: DEFERRED_AAA_EXCLUDES)
+  def axe_clean_in_both_themes?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
     ensure_light_mode
-    light_clean = axe_clean?(options, exclude: exclude)
+    light_clean = axe_clean?(options, exclude: exclude, include: include)
     ensure_dark_mode
-    dark_clean = axe_clean?(options, exclude: exclude)
+    dark_clean = axe_clean?(options, exclude: exclude, include: include)
     light_clean && dark_clean
   end
 
   # Combined violations from both light and dark mode passes, prefixed with the
   # active theme so failure output makes the offending mode obvious.
-  def axe_violations_in_both_themes(options = {}, exclude: DEFERRED_AAA_EXCLUDES)
+  def axe_violations_in_both_themes(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
     ensure_light_mode
-    light = axe_violations(options, exclude: exclude).map { |v| "[LIGHT]#{v}" }
+    light = axe_violations(options, exclude: exclude, include: include).map { |v| "[LIGHT]#{v}" }
     ensure_dark_mode
-    dark = axe_violations(options, exclude: exclude).map { |v| "[DARK]#{v}" }
+    dark = axe_violations(options, exclude: exclude, include: include).map { |v| "[DARK]#{v}" }
     light + dark
   end
 
