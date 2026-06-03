@@ -29,17 +29,16 @@ module UI
   class TextareaComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # Prescribed path: render inside a form via the TailwindFormBuilder, which owns
+    # the label, help text, error message, and ARIA wiring.
+    def in_a_form; end
+
     # Multi-line input at rest — the baseline appearance.
-    def default
-      ui :textarea, name: "demo_body", value: "Hello there.", rows: 4
-    end
+    def default; end
 
     # Error state: red border + `aria-invalid="true"`. In a real form the builder
     # sets both automatically when an ActiveModel error is present.
-    def invalid
-      ui :textarea, name: "demo_body", invalid: true,
-         describedby: "demo-body-error", value: "too short"
-    end
+    def invalid; end
 
     # ## Don't — hand-rolled `<textarea>` tag
     #
@@ -47,8 +46,6 @@ module UI
     # and the automatic ARIA wiring. Always go through the form builder
     # (`f.text_area :attr`) or, for standalone controls, `ui :textarea`.
     # @label Don't · raw <textarea> tag
-    def dont_raw_textarea
-      ui :textarea, name: "demo_raw" # ✗ use f.text_area inside a form_with
-    end
+    def dont_raw_textarea; end
   end
 end

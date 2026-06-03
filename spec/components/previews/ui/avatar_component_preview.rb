@@ -30,22 +30,21 @@ module UI
   class AvatarComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # Prescribed path for user avatars: the avatar_for helper decides upload /
+    # gravatar / initials and bakes in sizing + ARIA. In a real view you pass your
+    # own model (avatar_for(current_user)); the preview builds a throwaway user.
+    def for_a_user; end
+
     # Photo avatar: pass `src:` with an image URL. The element renders as `<img>`.
-    def image
-      ui :avatar, src: "https://i.pravatar.cc/128", size: :lg
-    end
+    def image; end
 
     # Initials avatar: pass `fallback:` with the initials string. Uses the default
     # interactive color token.
-    def initials
-      ui :avatar, fallback: "JD", size: :md
-    end
+    def initials; end
 
     # Custom hue: `hue:` accepts an OKLCH integer (0–360), tinting the background
     # with `--hue-initials`. Useful for workspace or org avatars.
-    def custom_hue
-      ui :avatar, fallback: "JD", hue: 280
-    end
+    def custom_hue; end
 
     # Explore size and initials interactively.
     # @param size select [xs, sm, md, lg, xl]
@@ -61,8 +60,6 @@ module UI
     # `ui :avatar, src: url, size: :sm, aria_label: "Open Dave's profile"`.
     # For user avatars, prefer `avatar_for(user, size: :sm)` — it sets the label for you.
     # @label Don't · interactive avatar with no label
-    def dont_interactive_no_label
-      ui :avatar, src: "https://i.pravatar.cc/128", size: :sm # ✗ wrap in a button? add aria_label:
-    end
+    def dont_interactive_no_label; end
   end
 end

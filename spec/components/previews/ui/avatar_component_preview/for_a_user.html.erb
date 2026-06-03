@@ -1,0 +1,3 @@
+<%# In a real view: avatar_for(current_user). The preview builds a throwaway user. %>
+<% user = User.new(first_name: "Jane", last_name: "Doe") %>
+<%= avatar_for(user, size: :lg) %>
