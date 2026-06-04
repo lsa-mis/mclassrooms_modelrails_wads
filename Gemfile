@@ -116,7 +116,7 @@ gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
 
 gem "biscuit-rails", "~> 0.2.1"
 
-gem "lexxy", "~> 0.9.14.beta"
+gem "lexxy", "~> 0.9.15.alpha"
 
 # Runtime dependency: the vendored app/components/ui/* are ViewComponents and are
 # loaded in production. This MUST stay a top-level gem — modelrails_ui (below) only

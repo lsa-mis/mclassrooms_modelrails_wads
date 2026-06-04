@@ -248,7 +248,7 @@ GEM
       letter_opener (~> 1.9)
       railties (>= 6.1)
       rexml
-    lexxy (0.9.15.alpha.2)
+    lexxy (0.9.15.alpha.4)
       rails (>= 8.0.2)
     lint_roller (1.1.0)
     listen (3.10.0)
@@ -377,7 +377,7 @@ GEM
       actionpack (>= 7.0.0)
       activesupport (>= 7.0.0)
       rack
-    psych (5.3.1)
+    psych (5.4.0)
       date
       stringio
     public_suffix (7.0.5)
@@ -633,7 +633,7 @@ DEPENDENCIES
   lefthook (~> 2.1)
   letter_opener
   letter_opener_web
-  lexxy (~> 0.9.14.beta)
+  lexxy (~> 0.9.15.alpha)
   lookbook
   markdowndocs (~> 0.8.0)
   modelrails_ui!
@@ -759,7 +759,7 @@ CHECKSUMS
   lefthook (2.1.9) sha256=2d4d2e028d4ac4b265675c1180fe1f7c50230200630e65c3aff7d3ed90a1a334
   letter_opener (1.10.0) sha256=2ff33f2e3b5c3c26d1959be54b395c086ca6d44826e8bf41a14ff96fdf1bdbb2
   letter_opener_web (3.0.0) sha256=3f391efe0e8b9b24becfab5537dfb17a5cf5eb532038f947daab58cb4b749860
-  lexxy (0.9.15.alpha.2) sha256=4bcbc2d1e6d6462707fdf34ead5f4a916d226b089695c1446099a17ba7386432
+  lexxy (0.9.15.alpha.4) sha256=7a0ee226537eca2e17a5466073dd4f6215a00339fcde78e54425e8150b55c125
   lint_roller (1.1.0) sha256=2c0c845b632a7d172cb849cc90c1bce937a28c5c8ccccb50dfd46a485003cc87
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
@@ -808,7 +808,7 @@ CHECKSUMS
   prettyprint (0.2.0) sha256=2bc9e15581a94742064a3cc8b0fb9d45aae3d03a1baa6ef80922627a0766f193
   prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
   propshaft (1.3.2) sha256=1d56a3e56a92c21bfc29caf07406b5386b00d4c47ddf357cf989a5a234b1389e
-  psych (5.3.1) sha256=eb7a57cef10c9d70173ff74e739d843ac3b2c019a003de48447b2963d81b1974
+  psych (5.4.0) sha256=14f72d69a611af663d7d70e4a7b67d9eb1f3ae9f8d916b478961d5a0075ba5b7
   public_suffix (7.0.5) sha256=1a8bb08f1bbea19228d3bed6e5ed908d1cb4f7c2726d18bd9cadf60bc676f623
   puma (8.0.2) sha256=c8ed871dfbbe66448ea9ffd46692342d9804d4071522b52b5331b7b6e7b686fb
   pundit (2.5.2) sha256=e374152baa24f90b630428293faf4b4c5468fc3cc010165f7d8fcb44ce108bbd
