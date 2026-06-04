@@ -1,0 +1,5 @@
+<%# Error state: aria-invalid="true" + aria-describedby wired to the sibling error. %>
+<label for="demo_volume_err" class="block text-sm font-medium text-text-heading mb-1">Volume</label>
+<%= ui :range, id: "demo_volume_err", name: "demo_volume_err", min: 0, max: 100, step: 1,
+   value: 95, invalid: true, describedby: "demo-volume-error" %>
+<p id="demo-volume-error" class="mt-1 text-sm text-danger">Please choose a lower volume.</p>

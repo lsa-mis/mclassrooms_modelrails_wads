@@ -1,0 +1,6 @@
+<%# ✗ the * is decorative (aria-hidden); the input has no aria-required, so screen %>
+<%# readers never announce the field as mandatory. Convey it on the control. %>
+<div class="grid gap-2">
+  <%= ui :label, "Phone number", for: "user_phone", required: true %>
+  <%= ui :input, type: "tel", name: "phone", id: "user_phone" %>
+</div>

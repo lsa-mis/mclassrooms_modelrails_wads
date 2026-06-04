@@ -1,0 +1,4 @@
+<%# `disabled: true` passes straight through via **html_attrs. %>
+<label for="demo_volume_disabled" class="block text-sm font-medium text-text-heading mb-1">Volume</label>
+<%= ui :range, id: "demo_volume_disabled", name: "demo_volume_disabled", min: 0, max: 100, step: 1,
+   value: 40, disabled: true %>

@@ -1,0 +1,5 @@
+<%# invalid: true sets aria-invalid; describedby: wires the hint message id. %>
+<div>
+  <%= ui :search_input, name: "q", invalid: true, describedby: "search_hint", placeholder: "Search…" %>
+  <p id="search_hint" class="mt-1 text-sm text-danger">No results match that query.</p>
+</div>

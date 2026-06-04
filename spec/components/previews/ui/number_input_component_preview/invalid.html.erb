@@ -1,0 +1,6 @@
+<%# invalid:true sets aria-invalid; describedby wires the field to its error id. %>
+<%# Standalone, the control needs an external <label for> (its accessible name). %>
+<label for="demo_price" class="block text-sm font-medium text-text-heading mb-1">Price</label>
+<%= ui :number_input, id: "demo_price", name: "demo_price", invalid: true,
+   describedby: "demo-price-error", value: "-5" %>
+<p id="demo-price-error" class="mt-1 text-sm text-danger">Price must be positive.</p>

@@ -1,0 +1,5 @@
+<%# Error state: aria-invalid="true" activates the aria-invalid: style hooks, and %>
+<%# aria-describedby points at the sibling error element below the field. %>
+<%= ui :floating_label, label: "Email address", type: "email", name: "demo_email_err",
+   id: "demo_email_err", invalid: true, describedby: "demo-email-error" %>
+<p id="demo-email-error" class="mt-1 text-sm text-danger">Enter a valid email address.</p>

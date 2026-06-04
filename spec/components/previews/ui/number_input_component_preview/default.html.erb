@@ -1,0 +1,4 @@
+<%# Bounded numeric entry; step:5 constrains values between min and max. %>
+<%# Standalone, the control needs an external <label for> (its accessible name). %>
+<label for="demo_qty" class="block text-sm font-medium text-text-heading mb-1">Quantity</label>
+<%= ui :number_input, id: "demo_qty", name: "demo_qty", min: 0, max: 100, step: 5, value: 10 %>

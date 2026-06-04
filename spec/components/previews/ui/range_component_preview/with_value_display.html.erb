@@ -1,0 +1,4 @@
+<%# `show_value: true` adds an associated <output> readout that mirrors the slider.
+    Drag the thumb and the number updates live (synced by the `range` controller). %>
+<label for="demo_volume_display" class="block text-sm font-medium text-text-heading mb-1">Volume</label>
+<%= ui :range, id: "demo_volume_display", name: "demo_volume_display", min: 0, max: 100, step: 1, value: 60, show_value: true %>

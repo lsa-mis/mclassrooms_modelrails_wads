@@ -1,0 +1,4 @@
+<%# ✗ Anti-pattern: filled stars on a raw color (e.g. text-yellow-400) bypass the
+    theme's AAA graphic-contrast token and dark-mode mapping. The hardened
+    component below uses the semantic text-warning-icon token instead. %>
+<%= ui :rating_input, value: 5, label: "Rating" %>

@@ -1,0 +1,5 @@
+<%# required: adds the decorative * on the caption; the input's required: conveys it (aria-required) %>
+<div class="grid gap-2">
+  <%= ui :label, "Full name", for: "user_name", required: true %>
+  <%= ui :input, name: "name", id: "user_name", required: true %>
+</div>

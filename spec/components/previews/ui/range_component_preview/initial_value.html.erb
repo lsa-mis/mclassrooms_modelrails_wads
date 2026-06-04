@@ -1,0 +1,4 @@
+<%# `value:` only PRE-POSITIONS the thumb (here 60 of 100). It does NOT display the
+    number — for a visible readout pass `show_value: true` (see with_value_display). %>
+<label for="demo_volume_val" class="block text-sm font-medium text-text-heading mb-1">Volume</label>
+<%= ui :range, id: "demo_volume_val", name: "demo_volume_val", min: 0, max: 100, step: 1, value: 60 %>

@@ -1,0 +1,4 @@
+<%# required:true emits the native `required` attribute AND aria-required="true". %>
+<%# Standalone, the control needs an external <label for> (its accessible name). %>
+<label for="demo_age" class="block text-sm font-medium text-text-heading mb-1">Age</label>
+<%= ui :number_input, id: "demo_age", name: "demo_age", min: 0, required: true %>
