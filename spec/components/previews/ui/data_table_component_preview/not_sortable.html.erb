@@ -1,0 +1,13 @@
+<%# No sortable columns: plain <th>s, no sort buttons, no aria-sort. Search still filters. %>
+<%= ui :data_table,
+      caption: "Recent events",
+      columns: [
+        { key: :event, label: "Event" },
+        { key: :actor, label: "Actor" },
+        { key: :at,    label: "When" }
+      ],
+      rows: [
+        { event: "Signed in",      actor: "ada@example.com",  at: "2m ago" },
+        { event: "Updated profile", actor: "alan@example.com", at: "1h ago" },
+        { event: "Invited member", actor: "grace@example.com", at: "3h ago" }
+      ] %>

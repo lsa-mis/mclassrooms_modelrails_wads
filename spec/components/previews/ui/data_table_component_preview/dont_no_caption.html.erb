@@ -1,0 +1,10 @@
+<%# ✗ no caption — the table has no accessible name; screen-reader users get no context. Always pass caption:. %>
+<%= ui :data_table,
+      columns: [
+        { key: :name, label: "Name", sortable: true },
+        { key: :role, label: "Role" }
+      ],
+      rows: [
+        { name: "Ada Lovelace", role: "Owner" },
+        { name: "Alan Turing",  role: "Admin" }
+      ] %>

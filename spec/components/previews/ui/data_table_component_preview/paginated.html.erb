@@ -1,0 +1,18 @@
+<%# Small per_page forces the pager; the footer label and live region are localized. %>
+<%= ui :data_table,
+      caption: "Products",
+      per_page: 3,
+      columns: [
+        { key: :sku,   label: "SKU",   sortable: true },
+        { key: :name,  label: "Name",  sortable: true },
+        { key: :price, label: "Price", sortable: true }
+      ],
+      rows: [
+        { sku: "A-100", name: "Widget",   price: "$9.00" },
+        { sku: "A-101", name: "Gadget",   price: "$14.00" },
+        { sku: "A-102", name: "Gizmo",    price: "$7.50" },
+        { sku: "A-103", name: "Doohickey", price: "$22.00" },
+        { sku: "A-104", name: "Thingamajig", price: "$3.25" },
+        { sku: "A-105", name: "Contraption", price: "$48.00" },
+        { sku: "A-106", name: "Whatsit",  price: "$11.75" }
+      ] %>
