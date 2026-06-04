@@ -1,0 +1,71 @@
+# Restores the Gemfile.lock CHECKSUMS section on Dependabot PRs.
+#
+# Why this exists:
+#   Rails 8 generates Gemfile.lock with a `CHECKSUMS` section (gem-integrity
+#   verification — a supply-chain feature). Dependabot's bundler regenerates the
+#   lockfile WITHOUT that section, leaving orphaned checksum lines that bundler
+#   misparses. `bundle install` then fails in frozen/deployment mode (the Docker
+#   build and CI), so EVERY Dependabot bump PR fails before any test runs. This
+#   job re-adds the section so the bump can pass CI.
+#
+# Why `pull_request_target`:
+#   Dependabot `pull_request` runs get a READ-ONLY GITHUB_TOKEN, so they cannot
+#   push a fix. `pull_request_target` runs from main's (trusted) copy of this
+#   file with a writable token. It is strictly gated to the dependabot[bot] actor
+#   and only runs `bundle lock` (which resolves the dependency graph; it does not
+#   build native extensions or execute gem code), so checking out the PR head is
+#   safe here.
+#
+# CAVEAT — re-running the other checks:
+#   A commit pushed with GITHUB_TOKEN does NOT re-trigger the PR's other checks
+#   (GitHub loop-prevention). So the lockfile is fixed automatically, but the
+#   already-failed `test` / `docker_build` checks need one manual
+#   "Re-run failed jobs" click. For FULL automation, create a fine-grained PAT
+#   with `contents: write`, add it as a *Dependabot* secret (Settings → Secrets
+#   and variables → Dependabot) named `DEPENDABOT_CHECKSUMS_PAT`, and the push
+#   below will use it — a PAT-pushed commit DOES re-trigger CI.
+
+name: Dependabot lockfile checksums
+
+on:
+  pull_request_target:
+    paths:
+      - Gemfile.lock
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dependabot-checksums-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  restore-checksums:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the PR branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.DEPENDABOT_CHECKSUMS_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: false
+
+      - name: Restore Gemfile.lock CHECKSUMS section
+        run: bundle lock --add-checksums
+
+      - name: Commit and push if the lockfile changed
+        run: |
+          if git diff --quiet Gemfile.lock; then
+            echo "Gemfile.lock already has its CHECKSUMS section — nothing to do."
+            exit 0
+          fi
+          git config user.name "dependabot[bot]"
+          git config user.email "49699333+dependabot[bot]@users.noreply.github.com"
+          git add Gemfile.lock
+          git commit -m "Restore Gemfile.lock CHECKSUMS section (Dependabot strips it)"
+          git push
