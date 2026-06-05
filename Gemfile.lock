@@ -1,7 +1,7 @@
 GIT
   remote: https://github.com/dschmura/modelrails_ui.git
-  revision: 6bbf5cf373eebc97241b72707067acd4069f3755
-  tag: v0.2.0
+  revision: 7c49d4306dce770f4456baa4cf23d01825aed981
+  branch: modelrails/harden
   specs:
     modelrails_ui (0.2.0)
       railties (>= 7.1)

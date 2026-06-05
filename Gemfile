@@ -132,7 +132,12 @@ gem "tailwind_merge"
 # Dev-only scaffolding tool that generates app/components/ui/*. Not shipped to
 # production; the host app vendors and owns the generated files.
 group :development do
-  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.2.0"
+  # Pinned to the modelrails/harden integration branch (not a released tag) to pull the
+  # `modelrails_ui:agent_rules` generator (gem PR #17). Re-pin to a stable tag after the
+  # next gem release. Dev-only, so no production/runtime impact.
+  # Setup: run `rails g modelrails_ui:agent_rules` to scaffold your local agent rules
+  # (.modelrails_ui/ + a CLAUDE.md import — kept local, like CLAUDE.md itself).
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", branch: "modelrails/harden"
 
   # Living documentation / component explorer for the vendored UI::* components
   # (scaffolded by `rails g modelrails_ui:lookbook`). Mounted at /lookbook in
