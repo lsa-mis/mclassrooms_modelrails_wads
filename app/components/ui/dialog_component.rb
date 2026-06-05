@@ -1,11 +1,32 @@
 # frozen_string_literal: true
 
 module UI
+  # # Dialog
+  #
+  # A native `<dialog>` modal — focus-trapped, `aria-modal`, with native Escape
+  # (cancel event) and `::backdrop`. The native element is chosen over a div so
+  # focus-trapping and the inert background come for free. Behavior lives in the
+  # `modal` Stimulus controller shipped alongside this component.
+  #
+  # ## Use when
+  # - You need a focus-trapped modal for a confirmation, form, or detail overlay.
+  # - You are building a custom wrapper (pass `wrapper: false` and own the
+  #   `data-controller="modal"` element + trigger).
+  #
+  # ## Don't use when
+  # - The action is a destructive non-GET — keep the submit in a `button_to` form;
+  #   the dialog is the container, not the action mechanism.
+  # - You need a non-blocking notification — use the toast / notification system.
+  #
+  # ## Accessibility contract
+  # - **Guarantees:** native `<dialog>` semantics (`role="dialog"`, `aria-modal="true"`),
+  #   `aria-labelledby` wired to the heading, `aria-describedby` when `description:` is
+  #   given, an accessible close button, and focus trap + restore via the `modal`
+  #   controller.
+  # - **You supply:** a `title:` (required — it is the accessible name). With
+  #   `wrapper: true` (default) the `trigger` slot is the open button; `wrapper: false`
+  #   requires you to wire `data-controller="modal"` and a trigger yourself.
   class DialogComponent < ApplicationComponent
-    # Native-<dialog> modal adopted from the host app's shared/_modal + modal_controller.
-    # Chosen over a div-based dialog because the native element gives free focus-trapping,
-    # an inert background, native Escape (cancel event) and ::backdrop — meeting the app's
-    # accessibility standard. Behavior lives in modal_controller.js (shipped alongside).
     renders_one :trigger
     renders_one :footer
 
