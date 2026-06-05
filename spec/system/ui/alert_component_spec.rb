@@ -20,6 +20,9 @@ require "rails_helper"
 RSpec.describe "Alert component accessibility", type: :system do
   {
     "default"     => "status",
+    "info"        => "status",
+    "success"     => "status",
+    "warning"     => "status",
     "destructive" => "alert",
     "with_slots"  => "alert"
   }.each do |scenario, role|

@@ -15,6 +15,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Changed
 
+- Unified the UI signal vocabulary to a canonical `info·success·warning·danger` ladder (`destructive`/`error` kept as non-breaking aliases); alert gains all four levels and badge signal chips move from solid base-token fills to tinted surfaces, fixing the low-contrast muddy-brown warning badge. Indicator `warning` count text moved off the non-adaptive `text-text-heading` to the adaptive `text-text-on-interactive`.
 - Avatar notification indicator restored as a severity-colored dot (v2 — supersedes D1's split). Avatar carries the dot on desktop; hamburger button on mobile. Standalone header bell removed; the in-menu Notifications row is the canonical triage entry point. Live updates target three new frames (`notifications_indicator_avatar`, `notifications_indicator_hamburger`, `notifications_menu_count_frame`) plus the aria-live region. AAA contrast preserved via `--color-danger-strong` (the project's graphic-accent token).
 - Email/password signup defers invitation acceptance — the pending invitation is parked on the new email authentication and claimed when the email is verified, rather than granted at signup (#175).
 

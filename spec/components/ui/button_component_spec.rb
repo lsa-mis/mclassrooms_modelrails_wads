@@ -33,6 +33,17 @@ RSpec.describe UI::ButtonComponent, "app .btn-* parity", type: :component do
     expect(cls).to include("focus:ring-danger")
   end
 
+  # `destructive` is a non-breaking alias for the canonical `danger` — identical render.
+  it "renders the destructive alias identically to danger" do
+    render_inline(described_class.new("Delete", variant: :danger))
+    danger_class = page.find("button")[:class]
+
+    render_inline(described_class.new("Delete", variant: :destructive))
+    destructive_class = page.find("button")[:class]
+
+    expect(destructive_class).to eq(danger_class)
+  end
+
   it "text_interactive matches .btn-text + .btn-text-interactive" do
     render_inline(described_class.new("Learn more", variant: :text_interactive))
     cls = page.find("button")[:class]

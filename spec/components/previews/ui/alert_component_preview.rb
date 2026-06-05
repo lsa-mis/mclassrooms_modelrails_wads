@@ -19,7 +19,8 @@ module UI
   # - **You supply:** a title and/or description, and a valid `variant`.
   #
   # ## Variants
-  # `default` · `destructive`
+  # `default` · `info` · `success` · `warning` · `danger`
+  # (`destructive` is a non-breaking alias for `danger`.)
   class AlertComponentPreview < ViewComponent::Preview
     include UIHelper
 
@@ -27,7 +28,20 @@ module UI
     def default
     end
 
+    # Informational signal on the info-tinted surface — announced politely (role=status).
+    def info
+    end
+
+    # Success / confirmation on the success-tinted surface — announced politely (role=status).
+    def success
+    end
+
+    # Warning on the warning-tinted surface — announced politely (role=status).
+    def warning
+    end
+
     # Error / destructive message — announced assertively (role=alert).
+    # `variant: :destructive` is a non-breaking alias for `:danger`.
     def destructive
     end
 

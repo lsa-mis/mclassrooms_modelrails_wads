@@ -17,14 +17,17 @@ module UI
   #
   # ## Accessibility contract
   # - **Guarantees:** AAA-contrast text on every variant's surface, including the
-  #   adaptive `destructive` treatment (which stays legible in dark mode).
+  #   adaptive signal treatments (`danger`/`success`/`info`/`warning`) which stay
+  #   legible in dark mode.
   # - **You supply:** if the badge conveys status that isn't already in the
-  #   surrounding text (e.g. a color-coded "destructive" pill), give it an accessible
+  #   surrounding text (e.g. a color-coded "danger" pill), give it an accessible
   #   name so screen-reader users get the same signal. A valid `variant` is required —
   #   an unknown one raises in development.
   #
   # ## Variants
-  # `default` · `secondary` · `destructive` · `outline` · `ghost` · `link`
+  # Signal levels: `info` · `success` · `warning` · `danger` (tinted chips).
+  # Style levels: `default` · `secondary` · `outline` · `ghost` · `link`.
+  # (`destructive` is a non-breaking alias for `danger`.)
   class BadgeComponent < ApplicationComponent
     BASE = "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full " \
            "border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap " \
@@ -33,19 +36,29 @@ module UI
            "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
            "[&>svg]:pointer-events-none [&>svg]:size-3"
 
-    # `text-text-on-interactive` (not `text-white`) on destructive: the adaptive token
-    # is white in light mode and a dark neutral in dark mode, so it keeps AAA contrast
-    # against the light-pink dark-mode `--color-danger` — exactly how the danger button
-    # handles it. Raw `text-white` would fail AAA on that dark surface.
+    # Signal levels use the TINTED treatment (soft `*-surface` background + saturated
+    # `text-<level>` + `*-border`), matching the alert + toast cards. The `--color-<level>`
+    # base tokens are TEXT colors (dark in light mode for AAA-on-light readability), so
+    # using them as solid fills produces dark, muddy chips — e.g. `bg-warning` is amber-900
+    # (a dark brown), which reads nothing like "warning." The tinted pairing is what the
+    # `*-surface` tokens are for, and `text-<level>` on `bg-<level>-surface` is AAA-proven
+    # on the toast cards. (info/success on their tinted surfaces: CI-verify.)
     VARIANTS = {
       default: "bg-interactive text-text-on-interactive [a&]:hover:bg-interactive-hover",
       secondary: "bg-interactive-subtle text-interactive [a&]:hover:bg-interactive-subtle",
-      destructive: "bg-danger text-text-on-interactive focus-visible:ring-danger " \
-                   "  [a&]:hover:bg-danger-hover",
+      info: "bg-info-surface text-info border-info-border [a&]:hover:bg-info-hover",
+      success: "bg-success-surface text-success border-success-border [a&]:hover:bg-success-hover",
+      warning: "bg-warning-surface text-warning border-warning-border [a&]:hover:bg-warning-hover",
+      danger: "bg-danger-surface text-danger border-danger-border focus-visible:ring-danger " \
+              "[a&]:hover:bg-danger-hover",
       outline: "border-border text-text-heading [a&]:hover:bg-surface-sunken [a&]:hover:text-text-heading",
       ghost: "[a&]:hover:bg-surface-sunken [a&]:hover:text-text-heading",
       link: "text-interactive underline-offset-4 [a&]:hover:underline"
     }.freeze
+
+    # `destructive` is a non-breaking alias for the canonical `danger`. Resolved in
+    # coerce_variant before lookup.
+    VARIANT_ALIASES = { destructive: :danger }.freeze
 
     # label — positional or keyword shorthand for plain-text badges without a block.
     # href  — renders an <a> tag (a clickable tag/filter link); sets tag: :a automatically.
@@ -76,12 +89,13 @@ module UI
     # module is defined but Rails.env isn't booted (the gem's Rails-less tests load
     # rails/generators, which defines Rails without Rails.env).
     def coerce_variant(variant)
+      variant = VARIANT_ALIASES.fetch(variant, variant)
       return variant if VARIANTS.key?(variant)
 
       unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
         raise ArgumentError,
           "UI::BadgeComponent: unknown variant #{variant.inspect}. " \
-          "Expected one of: #{VARIANTS.keys.join(", ")}."
+          "Expected one of: #{VARIANTS.keys.join(", ")} (alias: destructive→danger)."
       end
 
       :default

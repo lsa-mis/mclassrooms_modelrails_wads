@@ -24,6 +24,10 @@ module UI
     # so default is empty; kept for API symmetry / future use).
     SIZES = { default: "" }.freeze
 
+    # `destructive` is a non-breaking alias for the canonical `danger`, so the whole
+    # UI vocabulary speaks one severity ladder. Resolved in coerce_variant before lookup.
+    VARIANT_ALIASES = { destructive: :danger }.freeze
+
     # label — positional or keyword shorthand for plain-text buttons without a block.
     # href  — renders an <a> tag; sets tag: :a automatically.
     def initialize(label = nil, variant: :primary, size: :default, href: nil, **html_attrs)
@@ -56,12 +60,13 @@ module UI
     # module is defined but Rails.env isn't booted (the gem's Rails-less tests load
     # rails/generators, which defines Rails without Rails.env).
     def coerce_variant(variant)
+      variant = VARIANT_ALIASES.fetch(variant, variant)
       return variant if VARIANTS.key?(variant)
 
       unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
         raise ArgumentError,
           "UI::ButtonComponent: unknown variant #{variant.inspect}. " \
-          "Expected one of: #{VARIANTS.keys.join(", ")}."
+          "Expected one of: #{VARIANTS.keys.join(", ")} (alias: destructive→danger)."
       end
 
       :primary

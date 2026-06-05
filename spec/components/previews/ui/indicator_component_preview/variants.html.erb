@@ -1,11 +1,16 @@
+<%# Counts on every level so the AAA audit measures count-text contrast on each
+    solid dot fill — warning included (its count text is the contrast risk). %>
 <div class="flex items-center gap-6">
-  <%= ui :indicator, variant: :success do %>
+  <%= ui :indicator, variant: :info, count: 2 do %>
+    <span class="inline-flex size-9 items-center justify-center rounded-md bg-surface-sunken text-text-body">Info</span>
+  <% end %>
+  <%= ui :indicator, variant: :success, count: 7 do %>
     <span class="inline-flex size-9 items-center justify-center rounded-md bg-surface-sunken text-text-body">OK</span>
   <% end %>
-  <%= ui :indicator, variant: :warning do %>
+  <%= ui :indicator, variant: :warning, count: 9 do %>
     <span class="inline-flex size-9 items-center justify-center rounded-md bg-surface-sunken text-text-body">Warn</span>
   <% end %>
-  <%= ui :indicator, variant: :destructive do %>
+  <%= ui :indicator, variant: :danger, count: 4 do %>
     <span class="inline-flex size-9 items-center justify-center rounded-md bg-surface-sunken text-text-body">Err</span>
   <% end %>
 </div>

@@ -24,13 +24,24 @@ module UI
     DOT_BASE = "absolute flex items-center justify-center rounded-full text-[10px] font-medium leading-none"
 
     # `text-text-on-interactive` (not `text-white`) on filled dots: the adaptive token
-    # stays AAA-legible in both themes. success/warning graphic contrast: CI-verify.
+    # stays AAA-legible in both themes. info/success/warning graphic contrast: CI-verify.
+    # Dots use a SOLID fill (like the brand `default`): a dot must be a visible graphic,
+    # so the tinted chip treatment used by alert/badge would be near-invisible at dot
+    # size. `text-text-on-interactive` (adaptive — white in light, dark in dark) keeps
+    # the count text AAA on the dark-enough base fills. `warning` uses it too — NOT the
+    # non-adaptive `text-text-heading`, which went low-contrast in BOTH themes (it tracked
+    # the fill's lightness instead of opposing it). Dot graphic contrast: CI-verify.
     VARIANTS = {
-      default:     "bg-interactive text-text-on-interactive",
-      destructive: "bg-danger text-text-on-interactive",
-      success:     "bg-success text-text-on-interactive",
-      warning:     "bg-warning text-text-heading"
+      default: "bg-interactive text-text-on-interactive",
+      info:    "bg-info text-text-on-interactive",
+      success: "bg-success text-text-on-interactive",
+      warning: "bg-warning text-text-on-interactive",
+      danger:  "bg-danger text-text-on-interactive"
     }.freeze
+
+    # `destructive` is a non-breaking alias for the canonical `danger`. Resolved in
+    # coerce_variant before lookup.
+    VARIANT_ALIASES = { destructive: :danger }.freeze
 
     POSITIONS = {
       top_right:    "-top-1 -right-1",
@@ -70,12 +81,13 @@ module UI
     # module is defined but Rails.env isn't booted (the gem's Rails-less tests load
     # rails/generators, which defines Rails without Rails.env).
     def coerce_variant(variant)
+      variant = VARIANT_ALIASES.fetch(variant, variant)
       return variant if VARIANTS.key?(variant)
 
       unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
         raise ArgumentError,
           "UI::IndicatorComponent: unknown variant #{variant.inspect}. " \
-          "Expected one of: #{VARIANTS.keys.join(", ")}."
+          "Expected one of: #{VARIANTS.keys.join(", ")} (alias: destructive→danger)."
       end
 
       :default

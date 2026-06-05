@@ -14,11 +14,14 @@ require "rails_helper"
 # including the adaptive `destructive` (white -> text-on-interactive) and the
 # context-dependent `ghost`/`outline` — would FAIL here, not be hidden.
 #
-# `destructive` is the headline fix: it uses `text-text-on-interactive` (a dark neutral
-# in dark mode), not `text-white`, so it must clear AAA on the light-pink dark-mode
-# `--color-danger` fill. `ghost`/`outline` are audited because the reviewer flagged them
-# context-dependent; if either genuinely fails AAA on this host surface that is a real
-# token/variant finding, not something to exclude.
+# The four signal levels (`info`/`success`/`warning`/`danger`) are audited here because
+# they MUST be: each renders text on a soft `*-surface` tint, and a contrast failure on
+# any of them is invisible to render-tests. A warning badge that read `text-text-heading`
+# on `bg-warning` shipped past CI precisely because warning-with-text was not in this
+# audited set — it is now. `destructive` (alias of `danger`) and the context-dependent
+# `ghost`/`outline` (no self fill — contrast derives from the host surface) round out the
+# set; if any genuinely fails AAA on this host surface that is a real token/variant
+# finding, not something to exclude.
 #
 # The preview host's minimal layout emits axe best-practice advisories
 # (landmark-one-main, page-has-heading-one) that are NOT WCAG and NOT about the badge.
@@ -33,6 +36,10 @@ RSpec.describe "Badge component accessibility", type: :system do
   {
     "default"     => "span",
     "secondary"   => "span",
+    "info"        => "span",
+    "success"     => "span",
+    "warning"     => "span",
+    "danger"      => "span",
     "destructive" => "span",
     "outline"     => "span",
     "ghost"       => "span",

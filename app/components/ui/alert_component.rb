@@ -16,28 +16,39 @@ module UI
   #
   # ## Accessibility contract
   # - **Guarantees:** a live region matched to urgency — `role="status"`/`aria-live="polite"`
-  #   for the neutral `default`, `role="alert"`/`aria-live="assertive"` for `destructive` —
-  #   and AAA-contrast text on the banner surface.
+  #   for the neutral `default` (and `info`/`success`/`warning`), `role="alert"`/
+  #   `aria-live="assertive"` for `danger` — and AAA-contrast text on the banner surface.
   # - **You supply:** a title and/or description (kwargs or the `alert_title` /
   #   `alert_description` slots) and a valid `variant` (an unknown one raises in development).
   #
   # ## Variants
-  # `default` · `destructive`
+  # `default` · `info` · `success` · `warning` · `danger`
+  # (`destructive` is a non-breaking alias for `danger`.)
   class AlertComponent < ApplicationComponent
     OUTER_CLASSES = "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border " \
                     "px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] " \
                     "has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current"
 
-    # `text-danger` (not `text-danger/90`): an opacity modifier strictly lowers
-    # contrast and risks the AAA 7:1 floor on the description text.
+    # Signal levels share the tinted-surface treatment used by the toast cards
+    # (`bg-<level>-surface` + `border-<level>-border` + `text-<level>`), so an alert
+    # reads its severity the same way a toast does. `text-<level>` (no `/90` opacity
+    # modifier — that would lower contrast below the AAA 7:1 floor on the description).
     VARIANTS = {
       default: "bg-surface-raised text-text-body",
-      destructive: "bg-surface-raised text-danger [&>svg]:text-current *:data-[slot=alert-description]:text-danger"
+      info:    "bg-info-surface border-info-border text-info [&>svg]:text-current *:data-[slot=alert-description]:text-info",
+      success: "bg-success-surface border-success-border text-success [&>svg]:text-current *:data-[slot=alert-description]:text-success",
+      warning: "bg-warning-surface border-warning-border text-warning [&>svg]:text-current *:data-[slot=alert-description]:text-warning",
+      danger:  "bg-danger-surface border-danger-border text-danger [&>svg]:text-current *:data-[slot=alert-description]:text-danger"
     }.freeze
 
-    # Live-region semantics by urgency: neutral announces politely, errors assertively.
-    ROLES = { default: "status", destructive: "alert" }.freeze
-    LIVE  = { default: "polite", destructive: "assertive" }.freeze
+    # `destructive` is a non-breaking alias for the canonical `danger` (matching the
+    # signal tokens). Resolved in coerce_variant before lookup.
+    VARIANT_ALIASES = { destructive: :danger }.freeze
+
+    # Live-region semantics by urgency: only `danger` is urgent (assertive); the
+    # neutral default and info/success/warning announce politely.
+    ROLES = { default: "status", info: "status", success: "status", warning: "status", danger: "alert" }.freeze
+    LIVE  = { default: "polite", info: "polite", success: "polite", warning: "polite", danger: "assertive" }.freeze
 
     renders_one :alert_title, "UI::AlertComponent::TitleComponent"
     renders_one :alert_description, "UI::AlertComponent::DescriptionComponent"
@@ -85,12 +96,13 @@ module UI
     # module is defined but Rails.env isn't booted (the gem's Rails-less tests load
     # rails/generators, which defines Rails without Rails.env).
     def coerce_variant(variant)
+      variant = VARIANT_ALIASES.fetch(variant, variant)
       return variant if VARIANTS.key?(variant)
 
       unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
         raise ArgumentError,
           "UI::AlertComponent: unknown variant #{variant.inspect}. " \
-          "Expected one of: #{VARIANTS.keys.join(", ")}."
+          "Expected one of: #{VARIANTS.keys.join(", ")} (alias: destructive→danger)."
       end
 
       :default

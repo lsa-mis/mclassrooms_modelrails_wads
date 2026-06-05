@@ -28,7 +28,11 @@ module UI
     def with_count
     end
 
-    # The semantic variants side by side.
+    # An informational dot — solid info fill.
+    def info
+    end
+
+    # The semantic variants side by side (info · success · warning · danger).
     def variants
     end
 

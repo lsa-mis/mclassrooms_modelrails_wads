@@ -17,14 +17,40 @@ RSpec.describe UI::BadgeComponent, type: :component do
     expect(page).to have_css("span.text-text-on-interactive")
   end
 
-  # Per-surface dark-AAA fix: destructive must use the adaptive
-  # text-text-on-interactive token, NOT text-white (white-on-light-pink fails
-  # AAA in dark mode).
-  it "uses the adaptive on-interactive token for destructive (not text-white)" do
+  # The canonical `danger` signal uses the TINTED treatment (soft danger-surface +
+  # saturated text-danger + danger-border), not a solid fill. text-danger on
+  # bg-danger-surface is AAA-proven on the toast cards; never raw palette / text-white.
+  # Danger uniquely keeps a danger-colored focus ring as a destructive-action cue.
+  it "renders danger as a tinted danger surface (not text-white)" do
+    render_inline(described_class.new("Error", variant: :danger))
+
+    expect(page).to have_css("span.bg-danger-surface.text-danger.border-danger-border")
+    expect(page).to have_css('span.focus-visible\\:ring-danger')
+    expect(page).not_to have_css("span.text-white")
+  end
+
+  # `destructive` is a non-breaking alias for the canonical `danger`.
+  it "renders the destructive alias as danger" do
     render_inline(described_class.new("Error", variant: :destructive))
 
-    expect(page).to have_css("span.bg-danger")
-    expect(page).to have_css("span.text-text-on-interactive")
+    expect(page).to have_css("span.bg-danger-surface.text-danger.border-danger-border")
+  end
+
+  # Signal levels use the TINTED treatment (soft *-surface background + saturated
+  # text-<level> + *-border), matching the alert + toast cards. The --color-<level>
+  # base tokens are TEXT colors (dark in light mode), so a solid bg-<level> fill reads
+  # as a muddy dark chip — e.g. bg-warning is amber-900 (a dark brown), nothing like
+  # "warning." Only AAA semantic tokens, never raw palette.
+  it "renders the signal levels with tinted semantic surfaces" do
+    render_inline(described_class.new("Info", variant: :info))
+    expect(page).to have_css("span.bg-info-surface.text-info.border-info-border")
+
+    render_inline(described_class.new("Done", variant: :success))
+    expect(page).to have_css("span.bg-success-surface.text-success.border-success-border")
+
+    render_inline(described_class.new("Pending", variant: :warning))
+    expect(page).to have_css("span.bg-warning-surface.text-warning.border-warning-border")
+
     expect(page).not_to have_css("span.text-white")
   end
 

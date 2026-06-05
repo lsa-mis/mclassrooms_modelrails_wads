@@ -15,12 +15,15 @@ module UI
   #
   # ## Accessibility contract
   # - **Guarantees:** AAA-contrast text on every variant, including the adaptive
-  #   `destructive` treatment that stays legible in dark mode.
+  #   signal treatments (`danger`/`success`/`info`/`warning`) that stay legible in dark mode.
   # - **You supply:** an accessible name when the badge conveys status not already in
   #   the surrounding text, and a valid `variant` (an unknown one raises in development).
   #
   # ## Variants
-  # `default` · `secondary` · `destructive` · `outline` · `ghost` · `link`
+  # Signal levels: `info` · `success` · `warning` · `danger` (tinted chips —
+  # soft `*-surface` + saturated `text-<level>`, matching the alert + toast cards).
+  # Style levels: `default` · `secondary` · `outline` · `ghost` · `link`.
+  # (`destructive` is a non-breaking alias for `danger`.)
   class BadgeComponentPreview < ViewComponent::Preview
     include UIHelper
 
@@ -32,7 +35,23 @@ module UI
     def secondary
     end
 
-    # Error / removed / failed status. Uses the adaptive on-interactive token (AAA in dark mode).
+    # Informational signal — tinted info chip.
+    def info
+    end
+
+    # Success / completed status — tinted success chip.
+    def success
+    end
+
+    # Warning status — tinted warning chip (soft amber surface + dark amber text).
+    def warning
+    end
+
+    # Error / removed / failed status — tinted danger chip; keeps a danger focus ring.
+    def danger
+    end
+
+    # `variant: :destructive` is a non-breaking alias for `:danger`.
     def destructive
     end
 
@@ -54,7 +73,7 @@ module UI
 
     # Edit `label` and `variant` live to explore the component.
     # @param label text
-    # @param variant select [default, secondary, destructive, outline, ghost, link]
+    # @param variant select [default, secondary, info, success, warning, danger, destructive, outline, ghost, link]
     def playground(label: "Badge", variant: :default)
       ui :badge, label, variant: variant.to_sym
     end

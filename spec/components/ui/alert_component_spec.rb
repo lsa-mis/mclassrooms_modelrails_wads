@@ -9,10 +9,23 @@ RSpec.describe UI::AlertComponent, type: :component do
     expect(page).to have_css("div[role='status'][aria-live='polite']", text: "Heads up")
   end
 
-  it "renders a destructive variant as an assertive alert region" do
+  it "renders a danger variant as an assertive alert on the danger surface" do
+    render_inline(described_class.new(variant: :danger, title: "Couldn't save"))
+
+    expect(page).to have_css("div[role='alert'][aria-live='assertive'].bg-danger-surface", text: "Couldn't save")
+  end
+
+  # `destructive` is a non-breaking alias for the canonical `danger`.
+  it "renders the destructive alias identically to danger" do
     render_inline(described_class.new(variant: :destructive, title: "Couldn't save"))
 
-    expect(page).to have_css("div[role='alert'][aria-live='assertive']", text: "Couldn't save")
+    expect(page).to have_css("div[role='alert'][aria-live='assertive'].bg-danger-surface", text: "Couldn't save")
+  end
+
+  it "renders a warning variant as a polite status on the warning surface" do
+    render_inline(described_class.new(variant: :warning, title: "Heads up"))
+
+    expect(page).to have_css("div[role='status'][aria-live='polite'].bg-warning-surface", text: "Heads up")
   end
 
   it "renders title and description slots" do

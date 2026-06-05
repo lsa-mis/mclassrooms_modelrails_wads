@@ -6,12 +6,15 @@ Rails.application.config.toasts = ActiveSupport::InheritableOptions.new(
     max_ms: 15000,
     stagger_ms: 2000
   },
+  # Canonical severity ladder: info · success · warning · danger.
+  # notice/alert/error are kept as Rails-flash aliases (flash[:notice]/[:alert]/[:error])
+  # mapping to success/warning/danger styling, so existing flash calls keep working.
   types: {
-    notice: {
+    info: {
       tier: :pill,
-      icon: :check_circle,
-      icon_color: "text-success-icon",
-      progress: "bg-success-progress"
+      icon: :information_circle,
+      icon_color: "text-info-icon",
+      progress: "bg-info-progress"
     },
     success: {
       tier: :pill,
@@ -19,11 +22,30 @@ Rails.application.config.toasts = ActiveSupport::InheritableOptions.new(
       icon_color: "text-success-icon",
       progress: "bg-success-progress"
     },
-    info: {
+    warning: {
+      tier: :card,
+      icon: :exclamation_triangle,
+      icon_color: "text-warning-icon",
+      bg: "bg-warning-surface",
+      border: "border-warning-border",
+      text: "text-warning",
+      close_hover: "hover:bg-warning-hover"
+    },
+    danger: {
+      tier: :card,
+      icon: :exclamation_circle,
+      icon_color: "text-danger-icon",
+      bg: "bg-danger-surface",
+      border: "border-danger-border",
+      text: "text-danger",
+      close_hover: "hover:bg-danger-hover"
+    },
+    # Rails-flash aliases (unchanged): notice→success, alert→warning, error→danger.
+    notice: {
       tier: :pill,
-      icon: :information_circle,
-      icon_color: "text-info-icon",
-      progress: "bg-info-progress"
+      icon: :check_circle,
+      icon_color: "text-success-icon",
+      progress: "bg-success-progress"
     },
     alert: {
       tier: :card,
