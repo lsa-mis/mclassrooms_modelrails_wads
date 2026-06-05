@@ -11,5 +11,17 @@
   </head>
   <body class="bg-surface-raised text-text-body p-6">
     <%= yield %>
+    <%# Dev-only light/dark toggle. Rendered AFTER yield (it's position:fixed, so DOM
+        order doesn't affect placement) so component content is always first in the
+        DOM — specs that use first-match querySelector find the component, not this chrome. %>
+    <div data-controller="preview-theme" class="fixed right-2 top-2 z-50">
+      <button type="button"
+              data-action="click->preview-theme#toggle"
+              aria-label="Toggle light or dark preview"
+              class="inline-flex min-h-[var(--form-input-height)] items-center gap-2 rounded-md border border-border bg-surface-raised px-3 text-sm font-medium text-text-body shadow-sm hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-interactive-focus">
+        <span aria-hidden="true">◐</span>
+        <span data-preview-theme-target="label">Light</span>
+      </button>
+    </div>
   </body>
 </html>
