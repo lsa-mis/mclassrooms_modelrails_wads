@@ -206,6 +206,32 @@
     @apply focus:outline-none focus:ring-2 focus:ring-interactive-focus;
     min-height: var(--form-input-height);
   }
+
+  /* Two field-control variants — pick by surface context, not by element:
+     - .form-field  (raised: bg-surface-raised + text-text-heading): form-builder-managed
+       inputs / textareas / selects. Error state is attribute-driven (.form-field[aria-invalid]).
+     - .form-input  (flat:   bg-surface + text-text-body): inline / chrome controls
+       (header search, user-menu, footer) sitting directly on the page surface.
+     Both are AAA-tuned and aligned to --form-input-height. */
+  .form-field {
+    @apply block w-full rounded-md border px-3 py-2 placeholder:text-text-muted focus:outline-none focus:ring-2 min-h-[var(--form-input-height)];
+    @apply border-border-strong bg-surface-raised text-text-heading focus:ring-interactive-focus disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .form-field[aria-invalid="true"] {
+    @apply border-danger ring-2 ring-danger bg-danger-surface text-danger focus:ring-danger;
+  }
+
+  /* File input — the file:* button styling; error state via aria-invalid:* utilities
+     (a 1:1 move of the component's former FILE_FIELD_CLASSES). */
+  .form-file {
+    @apply block w-full text-sm text-text-body;
+    @apply file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium;
+    @apply file:bg-interactive file:text-text-on-interactive hover:file:bg-interactive-hover;
+    @apply file:cursor-pointer file:min-h-[var(--form-input-height)];
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply aria-invalid:border-danger-border aria-invalid:ring-danger;
+  }
 }
 
 /* ==========================================================================

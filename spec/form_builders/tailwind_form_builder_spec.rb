@@ -20,11 +20,9 @@ RSpec.describe TailwindFormBuilder do
   end
 
   describe "#text_field" do
-    it "renders an input with base classes" do
+    it "renders an input with the form-field class" do
       result = parse(builder.text_field(:first_name))
-      expect(result).to have_css("input[type='text'].rounded-md")
-      # Reads --form-input-height token (Design System Primitives v2)
-      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
+      expect(result).to have_css("input[type='text'].form-field")
     end
 
     it "wraps in a div with space-y-2" do
@@ -61,9 +59,9 @@ RSpec.describe TailwindFormBuilder do
   describe "#text_field with errors" do
     before { user.errors.add(:first_name, "can't be blank") }
 
-    it "applies error classes to the input" do
+    it "sets aria-invalid on the input so .form-field[aria-invalid] error styling triggers" do
       result = parse(builder.text_field(:first_name))
-      expect(result).to have_css("input.ring-danger")
+      expect(result).to have_css("input[aria-invalid='true']")
     end
 
     it "renders an inline error message" do
@@ -144,17 +142,14 @@ RSpec.describe TailwindFormBuilder do
   end
 
   describe "#submit" do
-    it "renders a submit button with correct classes" do
+    it "renders a submit button with the btn-primary class" do
       result = parse(builder.submit("Save"))
-      expect(result).to have_css("input[type='submit'][value='Save']")
-      # Reads --form-input-height token (Design System Primitives v2)
-      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
-      expect(result).to have_css("input.bg-interactive")
+      expect(result).to have_css("input[type='submit'][value='Save'].btn-primary")
     end
 
-    it "merges custom classes" do
+    it "merges custom classes alongside btn-primary" do
       result = parse(builder.submit("Save", class: "w-full"))
-      expect(result).to have_css("input.w-full.bg-interactive")
+      expect(result).to have_css("input.w-full.btn-primary")
     end
   end
 

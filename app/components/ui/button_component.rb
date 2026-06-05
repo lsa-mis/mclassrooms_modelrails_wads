@@ -2,22 +2,18 @@
 
 module UI
   class ButtonComponent < ApplicationComponent
-    # Reproduces the host app's .btn-* button system (app/assets/tailwind/application.css
-    # @layer components). Filled family (primary/secondary/danger) + text family
-    # (text/text_interactive/text_danger). All AAA-tuned, aligned to --form-input-height.
-    FILLED = "inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer " \
-             "focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[var(--form-input-height)]"
-
-    TEXT = "inline-flex items-center justify-center px-2 min-h-[var(--form-input-height)] min-w-[var(--form-input-height)] " \
-           "font-medium underline rounded focus-visible:outline-none focus-visible:ring-2 hover:no-underline"
-
+    # Applies the host app's .btn-* button classes (see VARIANTS).
+    # Applies the app's .btn-* classes (app/assets/tailwind/application.css @layer
+    # components). This app-local copy intentionally diverges from modelrails_ui's
+    # self-contained (raw-utility) ButtonComponent: this app owns its design tokens,
+    # so the component points at the canonical CSS classes instead of re-listing them.
     VARIANTS = {
-      primary: "#{FILLED} bg-interactive hover:bg-interactive-hover text-text-on-interactive focus:ring-interactive-focus",
-      secondary: "#{FILLED} border border-border text-text-body hover:bg-surface-sunken focus:ring-interactive-focus",
-      danger: "#{FILLED} bg-danger hover:bg-danger/90 text-text-on-interactive focus:ring-danger",
-      text: "#{TEXT} text-interactive focus-visible:ring-interactive-focus",
-      text_interactive: "#{TEXT} text-interactive focus-visible:ring-interactive-focus",
-      text_danger: "#{TEXT} text-danger focus-visible:ring-danger"
+      primary: "btn-primary",
+      secondary: "btn-secondary",
+      danger: "btn-danger",
+      text: "btn-touch-target btn-text btn-text-interactive",
+      text_interactive: "btn-touch-target btn-text btn-text-interactive",
+      text_danger: "btn-touch-target btn-text btn-text-danger"
     }.freeze
 
     # Optional size overrides (the app uses a single size keyed to --form-input-height,

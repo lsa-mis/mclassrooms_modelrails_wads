@@ -2,15 +2,10 @@
 
 module UI
   class FileInputComponent < ApplicationComponent
-    # Matches the host app's FILE_FIELD_CLASSES (state-independent). a11y params
-    # added so the builder can wire aria-invalid/describedby — closing the gap
-    # where the app's plain file_field skipped ARIA.
-    BASE = "block w-full text-sm text-text-body " \
-           "file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium " \
-           "file:bg-interactive file:text-text-on-interactive hover:file:bg-interactive-hover " \
-           "file:cursor-pointer file:min-h-[var(--form-input-height)] " \
-           "disabled:cursor-not-allowed disabled:opacity-50 " \
-           "aria-invalid:border-danger-border aria-invalid:ring-danger"
+    # Applies the app's `.form-file` class (file:* styling + aria-invalid error
+    # utilities, defined in application.css). a11y params added so the builder
+    # can wire aria-invalid/describedby — closing the gap where the app's plain
+    # file_field skipped ARIA.
 
     # accept:   MIME types or extensions, e.g. "image/*" or ".pdf,.docx"
     # multiple: allow selecting multiple files
@@ -26,7 +21,7 @@ module UI
     end
 
     def call
-      attrs = { type: "file", class: cn(BASE, @extra_class) }
+      attrs = { type: "file", class: cn("form-file", @extra_class) }
       attrs[:accept] = @accept if @accept
       attrs[:multiple] = true if @multiple
       if @required

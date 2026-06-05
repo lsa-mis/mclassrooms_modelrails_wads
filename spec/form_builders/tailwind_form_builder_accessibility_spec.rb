@@ -176,14 +176,9 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility" do
   describe "error indication beyond color alone" do
     before { user.errors.add(:first_name, "can't be blank") }
 
-    it "applies a ring border class to the input (structural indicator)" do
+    it "sets aria-invalid so .form-field[aria-invalid] CSS triggers structural error styling" do
       result = parse(builder.text_field(:first_name))
-      expect(result).to have_css("input.ring-danger")
-    end
-
-    it "applies a background tint class to the input" do
-      result = parse(builder.text_field(:first_name))
-      expect(result).to have_css("input.bg-danger-surface")
+      expect(result).to have_css("input[aria-invalid='true']")
     end
 
     it "renders a visible text error message" do
@@ -201,28 +196,24 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility" do
   # Touch targets — 44px minimum (WCAG 2.5.5)
   # ---------------------------------------------------------------------------
   describe "touch target size" do
-    it "applies min-h-[var(--form-input-height)] to text field inputs" do
+    it "applies .form-field to text field inputs (form-field defines min-h token)" do
       result = parse(builder.text_field(:first_name))
-      # Reads --form-input-height token (Design System Primitives v2)
-      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
+      expect(result).to have_css("input.form-field")
     end
 
-    it "applies min-h-[var(--form-input-height)] to email field inputs" do
+    it "applies .form-field to email field inputs" do
       result = parse(builder.email_field(:email_address))
-      # Reads --form-input-height token (Design System Primitives v2)
-      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
+      expect(result).to have_css("input.form-field")
     end
 
-    it "applies min-h-[var(--form-input-height)] to password field inputs" do
+    it "applies .form-field to password field inputs" do
       result = parse(builder.password_field(:password))
-      # Reads --form-input-height token (Design System Primitives v2)
-      expect(result).to have_css("input.min-h-\\[var\\(--form-input-height\\)\\]")
+      expect(result).to have_css("input.form-field")
     end
 
-    it "applies min-h-[var(--form-input-height)] to submit buttons" do
+    it "applies .btn-primary to submit buttons (btn-primary defines min-h token)" do
       result = parse(builder.submit("Save"))
-      # Reads --form-input-height token (Design System Primitives v2)
-      expect(result).to have_css("input[type='submit'].min-h-\\[var\\(--form-input-height\\)\\]")
+      expect(result).to have_css("input[type='submit'].btn-primary")
     end
   end
 end
