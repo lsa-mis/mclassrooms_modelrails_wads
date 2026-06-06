@@ -34,47 +34,28 @@ module UI
                   "group-hover:opacity-100 group-focus-within:opacity-100 " \
                   "group-data-[dismissed]:opacity-0!"
 
-    # Each side carries: an always-on gap margin; the modern anchor-positioning path
-    # (gated behind `supports-[position-area]`) — `fixed` so the viewport is the containing
-    # block, `position-area` to place it, `position-try-fallbacks` to auto-flip on overflow;
-    # and the pre-Baseline fallback (`not-supports-`) — `absolute` offsets vs the wrapper.
+    # Placement on the `position-area` grid — 4 edges + 4 corners. Each value carries the
+    # gap margin, the modern path (gated by `supports-[position-area]`: `fixed` + a
+    # `position-area` value + `position-try-fallbacks` to keep it on-screen), and the
+    # pre-Baseline `absolute` fallback offsets (`not-supports-`). Corners fall back to a
+    # corner-aligned edge on browsers without anchor positioning. A Tailwind class table —
+    # one line per placement keeps it scannable.
+    # rubocop:disable Layout/LineLength
     POSITIONS = {
-      top:    "mb-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:top_center] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-block] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:bottom-full " \
-              "not-supports-[position-area:bottom]:left-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-x-1/2",
-      bottom: "mt-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:bottom_center] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-block] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:top-full " \
-              "not-supports-[position-area:bottom]:left-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-x-1/2",
-      left:   "mr-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:center_left] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:right-full " \
-              "not-supports-[position-area:bottom]:top-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-y-1/2",
-      right:  "ml-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:center_right] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:left-full " \
-              "not-supports-[position-area:bottom]:top-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-y-1/2"
+      top:          "mb-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_center] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:left-1/2 not-supports-[position-area:bottom]:-translate-x-1/2",
+      bottom:       "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_center] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-1/2 not-supports-[position-area:bottom]:-translate-x-1/2",
+      left:         "mr-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:center_left] supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:right-full not-supports-[position-area:bottom]:top-1/2 not-supports-[position-area:bottom]:-translate-y-1/2",
+      right:        "ml-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:center_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:left-full not-supports-[position-area:bottom]:top-1/2 not-supports-[position-area:bottom]:-translate-y-1/2",
+      top_left:     "mb-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_left] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:left-0",
+      top_right:    "mb-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:right-0",
+      bottom_left:  "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_left] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0",
+      bottom_right: "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:right-0"
     }.freeze
+    # rubocop:enable Layout/LineLength
 
     # text: the hint (the bubble's content); id: bubble id (→ aria-describedby + anchor);
-    # side: :top | :bottom | :left | :right
+    # side: edge :top | :bottom | :left | :right, or corner :top_left | :top_right |
+    #       :bottom_left | :bottom_right
     def initialize(text:, id: nil, side: :top, **html_attrs)
       @text        = text
       @id          = id || "tooltip-#{SecureRandom.hex(4)}"

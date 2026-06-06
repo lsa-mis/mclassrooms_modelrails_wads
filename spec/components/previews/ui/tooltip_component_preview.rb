@@ -20,9 +20,9 @@ module UI
 
     # Edit `text` and `side` live to explore placement.
     # @param text text
-    # @param side select [top, bottom, left, right]
+    # @param side select [top, bottom, left, right, top_left, top_right, bottom_left, bottom_right]
     def playground(text: "Saved to your library", side: :top)
-      ui(:tooltip, text: text, side: side.to_sym) { "Hover or focus me" }
+      render_with_template(locals: { text: text, side: side.to_sym })
     end
   end
 end

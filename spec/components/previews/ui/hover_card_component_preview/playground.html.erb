@@ -1,0 +1,6 @@
+<div class="flex min-h-64 items-center justify-center p-12">
+  <%= render(UI::HoverCardComponent.new(label: label, side: side)) do |c| %>
+    <% c.with_trigger { "@dave" } %>
+    Profile preview content.
+  <% end %>
+</div>

@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/dschmura/modelrails_ui.git
-  revision: 8be834be525ded5c58e3dad80c7ba5cbce273579
+  revision: ffe5e8a44c52e6323b22504f8ca00c62a0f0887f
   branch: modelrails/harden
   specs:
     modelrails_ui (0.2.0)

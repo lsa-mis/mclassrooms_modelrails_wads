@@ -29,46 +29,26 @@ module UI
                 "invisible opacity-0 transition-opacity duration-200 " \
                 "group-data-[state=open]:visible group-data-[state=open]:opacity-100"
 
-    # Anchor positioning (modern, gated by `supports-`): `fixed` so the viewport is the
-    # containing block, `position-area` to place it, `position-try-fallbacks` to keep it on
-    # screen. Pre-Baseline fallback (`not-supports-`): `absolute` offsets vs the wrapper.
+    # Placement on the `position-area` grid — 4 edges + 4 corners. Each value carries the
+    # gap margin, the modern path (gated by `supports-[position-area]`: `fixed` + a
+    # `position-area` value + `position-try-fallbacks` to keep it on-screen), and the
+    # pre-Baseline `absolute` fallback offsets (`not-supports-`). A Tailwind class table —
+    # one line per placement keeps it scannable.
+    # rubocop:disable Layout/LineLength
     POSITIONS = {
-      bottom: "mt-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:bottom_center] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-block] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:top-full " \
-              "not-supports-[position-area:bottom]:left-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-x-1/2",
-      top:    "mb-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:top_center] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-block] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:bottom-full " \
-              "not-supports-[position-area:bottom]:left-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-x-1/2",
-      left:   "mr-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:center_left] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:right-full " \
-              "not-supports-[position-area:bottom]:top-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-y-1/2",
-      right:  "ml-2 " \
-              "supports-[position-area:bottom]:fixed " \
-              "supports-[position-area:bottom]:[position-area:center_right] " \
-              "supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] " \
-              "not-supports-[position-area:bottom]:absolute " \
-              "not-supports-[position-area:bottom]:left-full " \
-              "not-supports-[position-area:bottom]:top-1/2 " \
-              "not-supports-[position-area:bottom]:-translate-y-1/2"
+      bottom:       "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_center] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-1/2 not-supports-[position-area:bottom]:-translate-x-1/2",
+      top:          "mb-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_center] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:left-1/2 not-supports-[position-area:bottom]:-translate-x-1/2",
+      left:         "mr-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:center_left] supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:right-full not-supports-[position-area:bottom]:top-1/2 not-supports-[position-area:bottom]:-translate-y-1/2",
+      right:        "ml-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:center_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:left-full not-supports-[position-area:bottom]:top-1/2 not-supports-[position-area:bottom]:-translate-y-1/2",
+      top_left:     "mb-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_left] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:left-0",
+      top_right:    "mb-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:right-0",
+      bottom_left:  "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_left] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0",
+      bottom_right: "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:right-0"
     }.freeze
+    # rubocop:enable Layout/LineLength
 
     # id: card id; label: optional accessible name (→ role=group + aria-label);
-    # side: :bottom | :top | :left | :right
+    # side: edge :bottom | :top | :left | :right, or corner :top_left | :top_right | :bottom_left | :bottom_right
     def initialize(id: nil, label: nil, side: :bottom, **html_attrs)
       @id          = id || "hovercard-#{SecureRandom.hex(4)}"
       @label       = label

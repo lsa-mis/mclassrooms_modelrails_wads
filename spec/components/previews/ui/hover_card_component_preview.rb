@@ -20,12 +20,9 @@ module UI
 
     # Edit `side` and `label` live.
     # @param label text
-    # @param side select [bottom, top, left, right]
+    # @param side select [bottom, top, left, right, top_left, top_right, bottom_left, bottom_right]
     def playground(label: "User card", side: :bottom)
-      ui(:hover_card, label: label, side: side.to_sym) do |c|
-        c.with_trigger { "@dave" }
-        "Profile preview content."
-      end
+      render_with_template(locals: { label: label, side: side.to_sym })
     end
   end
 end
