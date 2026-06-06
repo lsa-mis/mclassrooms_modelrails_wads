@@ -137,7 +137,7 @@ group :development do
   # next gem release. Dev-only, so no production/runtime impact.
   # Setup: run `rails g modelrails_ui:agent_rules` to scaffold your local agent rules
   # (.modelrails_ui/ + a CLAUDE.md import — kept local, like CLAUDE.md itself).
-  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", branch: "harden/wave4-overlays" # (temp: Wave 4 overlays; re-pin to modelrails/harden after gem PR #18 merges)
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", branch: "modelrails/harden"
 
   # Living documentation / component explorer for the vendored UI::* components
   # (scaffolded by `rails g modelrails_ui:lookbook`). Mounted at /lookbook in

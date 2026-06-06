@@ -1,7 +1,7 @@
 GIT
   remote: https://github.com/dschmura/modelrails_ui.git
-  revision: 1781edf43538c81534f7ef862a726f88fc6c95d8
-  branch: harden/wave4-overlays
+  revision: 6161307ec15a7f412435405b7dd277d795f4eed3
+  branch: modelrails/harden
   specs:
     modelrails_ui (0.2.0)
       railties (>= 7.1)
