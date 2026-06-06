@@ -1,0 +1,6 @@
+<div class="p-24 flex justify-center">
+  <%= render(UI::PopoverComponent.new(label: "Filters", side: :bottom, align: :end)) do |c| %>
+    <% c.with_trigger { "Filters" } %>
+    <p class="text-text-body">Filter options go here.</p>
+  <% end %>
+</div>

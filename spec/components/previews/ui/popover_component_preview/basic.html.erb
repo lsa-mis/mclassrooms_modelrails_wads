@@ -1,0 +1,10 @@
+<div class="p-24 flex justify-center">
+  <%= render(UI::PopoverComponent.new(label: "Account menu")) do |c| %>
+    <% c.with_trigger { "Open popover" } %>
+    <div class="space-y-2">
+      <p class="font-medium text-text-heading">Signed in as Dave</p>
+      <a href="#" class="block text-text-body underline">Account settings</a>
+      <a href="#" class="block text-text-body underline">Sign out</a>
+    </div>
+  <% end %>
+</div>
