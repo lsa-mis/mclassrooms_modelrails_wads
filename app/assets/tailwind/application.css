@@ -180,6 +180,38 @@
     @apply disabled:cursor-not-allowed disabled:opacity-50;
     @apply aria-invalid:border-danger-border aria-invalid:ring-danger;
   }
+
+  /* Pagy series_nav, styled to the design system (AAA both themes).
+     Pagy emits: <nav class="pagy series-nav"> with <a> children.
+     Current page: <a role="link" aria-disabled="true" aria-current="page">N</a>
+     Gap:          <a role="separator" aria-disabled="true">…</a>
+     Disabled prev/next (at boundary): <a role="link" aria-disabled="true" aria-label="...">Prev/Next</a>
+     Task 7 proves AAA on a real paginated view. */
+  .pagy.series-nav {
+    @apply flex items-center gap-1;
+  }
+
+  .pagy.series-nav a {
+    @apply inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-md px-3 text-sm font-medium text-text-body outline-none transition-colors;
+    @apply hover:bg-surface-sunken hover:text-text-heading;
+    @apply focus-visible:ring-1 focus-visible:ring-interactive-focus;
+  }
+
+  /* Active/current page pill — solid interactive fill. */
+  .pagy.series-nav a[aria-current="page"] {
+    @apply bg-interactive text-text-on-interactive;
+    @apply hover:bg-interactive hover:text-text-on-interactive;
+  }
+
+  /* Disabled prev/next (boundary) — not the current-page pill. */
+  .pagy.series-nav a[role="link"][aria-disabled="true"]:not([aria-current="page"]) {
+    @apply pointer-events-none opacity-50;
+  }
+
+  /* Gap/ellipsis separator. */
+  .pagy.series-nav a[role="separator"] {
+    @apply pointer-events-none text-text-muted;
+  }
 }
 
 /* bg-hue-initials: per-workspace dynamic color via style="--hue: N" (avoids inline
