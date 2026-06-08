@@ -1,0 +1,23 @@
+<div class="min-h-96 p-12">
+  <%= render(UI::MenubarComponent.new(label: "Main")) do |bar| %>
+    <% bar.with_menu(label: "File") do |m| %>
+      <% m.with_item { "New file" } %>
+      <% m.with_item { "Open…" } %>
+      <% m.with_item(disabled: true) { "Open recent" } %>
+      <% m.with_item(separator: true) %>
+      <% m.with_item(href: "#") { "Settings" } %>
+    <% end %>
+    <% bar.with_menu(label: "Edit") do |m| %>
+      <% m.with_item { "Undo" } %>
+      <% m.with_item { "Redo" } %>
+      <% m.with_item(separator: true) %>
+      <% m.with_item { "Cut" } %>
+      <% m.with_item { "Copy" } %>
+      <% m.with_item { "Paste" } %>
+    <% end %>
+    <% bar.with_menu(label: "View") do |m| %>
+      <% m.with_item { "Zoom in" } %>
+      <% m.with_item { "Zoom out" } %>
+    <% end %>
+  <% end %>
+</div>
