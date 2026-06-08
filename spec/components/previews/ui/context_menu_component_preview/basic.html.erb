@@ -1,0 +1,14 @@
+<div class="flex min-h-96 items-center justify-center p-12">
+  <%= render(UI::ContextMenuComponent.new(label: "Card actions")) do |c| %>
+    <% c.with_trigger do %>
+      <div class="rounded-md border border-border bg-surface p-10 text-text-body">
+        Right-click me (or focus + Shift+F10)
+      </div>
+    <% end %>
+    <% c.with_item { "Edit" } %>
+    <% c.with_item { "Duplicate" } %>
+    <% c.with_item(disabled: true) { "Archive" } %>
+    <% c.with_item(separator: true) %>
+    <% c.with_item(href: "#") { "Open docs" } %>
+  <% end %>
+</div>

@@ -147,4 +147,31 @@ export default class extends Controller {
     }
     this.close()
   }
+
+  // --- context_menu: pointer / keyboard positioning -----------------------
+  // (used by context_menu via EXTRA_STIMULUS; dropdown_menu never wires these)
+
+  // Right-click: open the menu at the pointer. Re-opens at the new point if
+  // already open (a second right-click moves the menu).
+  openAt(event) {
+    event.preventDefault()
+    this.positionAt(event.clientX, event.clientY)
+    this.openValue ? this.focusFirst() : this.open()
+  }
+
+  // Keyboard parity (Shift+F10 or the ContextMenu key) while the host has focus —
+  // right-click is pointer-only, so this is required (WCAG 2.1.1). No pointer
+  // coordinates, so position near the host (the trigger target's rect).
+  openContextKey(event) {
+    if (!((event.shiftKey && event.key === "F10") || event.key === "ContextMenu")) return
+    event.preventDefault()
+    const rect = this.triggerTarget.getBoundingClientRect()
+    this.positionAt(rect.left, rect.bottom)
+    this.openValue ? this.focusFirst() : this.open()
+  }
+
+  positionAt(x, y) {
+    this.menuTarget.style.left = `${x}px`
+    this.menuTarget.style.top = `${y}px`
+  }
 }
