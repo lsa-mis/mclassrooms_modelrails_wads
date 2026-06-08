@@ -1,0 +1,22 @@
+<div class="min-h-96 p-12">
+  <%= render(UI::TabsComponent.new(label: "Account settings")) do |t| %>
+    <% t.with_tab(title: "Profile") do %>
+      <div class="rounded-md border border-border bg-surface-raised p-4 text-text-body">
+        <h3 class="font-medium text-text-heading">Profile</h3>
+        <p class="mt-1 text-sm">Manage your public profile and avatar.</p>
+      </div>
+    <% end %>
+    <% t.with_tab(title: "Password") do %>
+      <div class="rounded-md border border-border bg-surface-raised p-4 text-text-body">
+        <h3 class="font-medium text-text-heading">Password</h3>
+        <p class="mt-1 text-sm">Change your password and review active sessions.</p>
+      </div>
+    <% end %>
+    <% t.with_tab(title: "Notifications", disabled: true) do %>
+      <div class="rounded-md border border-border bg-surface-raised p-4 text-text-body">
+        <h3 class="font-medium text-text-heading">Notifications</h3>
+        <p class="mt-1 text-sm">Coming soon.</p>
+      </div>
+    <% end %>
+  <% end %>
+</div>
