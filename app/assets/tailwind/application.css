@@ -94,6 +94,17 @@
   }
 }
 
+/* AAA focus indicator (converged-conventions B5): an OFFSET OUTLINE, not a ring.
+   outline is OS-drawn → survives overflow:hidden clipping AND forced-colors/High-Contrast
+   (box-shadow rings vanish in both → WCAG 2.4.7 fail). Uniform --color-interactive-focus
+   regardless of control tone. Apply as `focus-ring` on any focusable control. */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-interactive-focus);
+    outline-offset: 2px;
+  }
+}
+
 /* Component utilities — composition rules for repeated view patterns (not theme tokens). */
 
 @layer components {
@@ -107,17 +118,17 @@
   /* Text-only button base; color/size stay at the call site. */
   .btn-text {
     @apply font-medium underline rounded;
-    @apply focus-visible:outline-none focus-visible:ring-2;
+    @apply focus-ring;
     @apply hover:no-underline;
   }
 
   /* Color variants of .btn-text. Apply alongside .btn-text. */
   .btn-text-danger {
-    @apply text-danger focus-visible:ring-danger;
+    @apply text-danger;
   }
 
   .btn-text-interactive {
-    @apply text-interactive focus-visible:ring-interactive-focus;
+    @apply text-interactive;
   }
 
   /* Trailing button-group container; --space-action-group-gap keeps inline spacing consistent. */
@@ -130,25 +141,22 @@
      Usage + variant guidance: Lookbook / UI::ButtonComponent / .modelrails_ui/agent-rules.md. */
   .btn-primary {
     @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply focus-ring;
     @apply bg-interactive hover:bg-interactive-hover text-text-on-interactive;
-    @apply focus:ring-interactive-focus;
     min-height: var(--form-input-height);
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply focus-ring;
     @apply border border-border text-text-body hover:bg-surface-sunken;
-    @apply focus:ring-interactive-focus;
     min-height: var(--form-input-height);
   }
 
   .btn-danger {
     @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply focus-ring;
     @apply bg-danger hover:bg-danger/90 text-text-on-interactive;
-    @apply focus:ring-danger;
     min-height: var(--form-input-height);
   }
 
@@ -156,19 +164,23 @@
   .form-input {
     @apply px-3 py-2 rounded-md cursor-pointer;
     @apply bg-surface text-text-body border border-border-strong;
-    @apply focus:outline-none focus:ring-2 focus:ring-interactive-focus;
+    @apply focus-ring;
     min-height: var(--form-input-height);
   }
 
   /* Two field variants by surface context: .form-field (raised — builder inputs/selects;
      error via [aria-invalid]) vs .form-input (flat — inline/chrome controls). See PR #238. */
   .form-field {
-    @apply block w-full rounded-md border px-3 py-2 placeholder:text-text-muted focus:outline-none focus:ring-2 min-h-[var(--form-input-height)];
-    @apply border-border-strong bg-surface-raised text-text-heading focus:ring-interactive-focus disabled:cursor-not-allowed disabled:opacity-50;
+    @apply block w-full rounded-md border px-3 py-2 placeholder:text-text-muted min-h-[var(--form-input-height)];
+    @apply border-border-strong bg-surface-raised text-text-heading disabled:cursor-not-allowed disabled:opacity-50;
+    @apply focus-ring;
   }
 
+  /* Invalid state: persistent danger border + ring (always-on error indicator) and danger
+     tint. Focus is already the uniform outline from the base .form-field `@apply focus-ring`
+     (B5) — no per-state focus ring on top. */
   .form-field[aria-invalid="true"] {
-    @apply border-danger ring-2 ring-danger bg-danger-surface text-danger focus:ring-danger;
+    @apply border-danger ring-2 ring-danger bg-danger-surface text-danger;
   }
 
   /* File input — file:* styling; error via aria-invalid:* utilities. See PR #238. */
@@ -194,7 +206,7 @@
   .pagy.series-nav a {
     @apply inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-md px-3 text-sm font-medium text-text-body outline-none transition-colors;
     @apply hover:bg-surface-sunken hover:text-text-heading;
-    @apply focus-visible:ring-1 focus-visible:ring-interactive-focus;
+    @apply focus-ring;
   }
 
   /* Active/current page pill — solid interactive fill. */

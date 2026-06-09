@@ -14,7 +14,7 @@ RSpec.describe UI::CheckboxComponent, type: :component do
     render_inline(described_class.new(label: "Accept terms", name: "terms"))
 
     expect(page).to have_css("input.border-border-strong")
-    expect(page).to have_css('input.focus-visible\\:ring-interactive-focus')
+    expect(page).to have_css("input.focus-ring")
     expect(page).to have_css('input.checked\\:bg-interactive')
   end
 

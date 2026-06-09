@@ -43,7 +43,7 @@ module UI
            "min-h-[var(--form-input-height)] " \
            "transition-[color,box-shadow] outline-none " \
            "placeholder:text-text-muted " \
-           "focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+           "focus-visible:border-border-focus focus-ring " \
            "aria-invalid:border-danger-border aria-invalid:ring-danger " \
            "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 " \
            "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none " \

@@ -32,7 +32,7 @@ module UI
     BASE = "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full " \
            "border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap " \
            "transition-[color,box-shadow] " \
-           "focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+           "focus-ring " \
            "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
            "[&>svg]:pointer-events-none [&>svg]:size-3"
 
@@ -49,8 +49,7 @@ module UI
       info: "bg-info-surface text-info border-info-border [a&]:hover:bg-info-hover",
       success: "bg-success-surface text-success border-success-border [a&]:hover:bg-success-hover",
       warning: "bg-warning-surface text-warning border-warning-border [a&]:hover:bg-warning-hover",
-      danger: "bg-danger-surface text-danger border-danger-border focus-visible:ring-danger " \
-              "[a&]:hover:bg-danger-hover",
+      danger: "bg-danger-surface text-danger border-danger-border [a&]:hover:bg-danger-hover",
       outline: "border-border text-text-heading [a&]:hover:bg-surface-sunken [a&]:hover:text-text-heading",
       ghost: "[a&]:hover:bg-surface-sunken [a&]:hover:text-text-heading",
       link: "text-interactive underline-offset-4 [a&]:hover:underline"

@@ -16,7 +16,7 @@ RSpec.describe UI::SelectComponent, type: :component do
     render_inline(described_class.new(options: %w[A B]))
 
     expect(page).to have_css("select.border-border-strong")
-    expect(page).to have_css('select.focus-visible\\:ring-interactive-focus')
+    expect(page).to have_css("select.focus-ring")
   end
 
   # WCAG 2.5.5 target size: the control sits at the 44px floor (--form-input-height).

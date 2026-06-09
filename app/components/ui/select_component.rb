@@ -26,7 +26,7 @@ module UI
   # No fail-loud guard — there's no enum axis to validate.
   class SelectComponent < ApplicationComponent
     BASE = "flex min-h-[var(--form-input-height)] w-full rounded-md border border-border-strong bg-transparent px-3 py-1 text-sm shadow-sm " \
-           "outline-none focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+           "outline-none focus-visible:border-border-focus focus-ring " \
            "aria-invalid:border-danger-border aria-invalid:ring-danger " \
            "disabled:cursor-not-allowed disabled:opacity-50"
 

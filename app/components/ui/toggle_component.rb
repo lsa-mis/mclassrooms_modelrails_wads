@@ -32,7 +32,7 @@ module UI
     BASE = "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap " \
            "transition-[color,box-shadow] outline-none " \
            "data-[state=off]:hover:bg-surface-sunken data-[state=off]:hover:text-text-body " \
-           "focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+           "focus-ring " \
            "disabled:pointer-events-none disabled:opacity-50 " \
            "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
            "data-[state=on]:bg-interactive-subtle data-[state=on]:text-interactive " \

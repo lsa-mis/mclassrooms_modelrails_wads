@@ -125,8 +125,7 @@ module UI
         type: "button",
         "aria-label": close_label,
         data: { action: "click->modal#close" },
-        class: "btn-touch-target rounded-md -m-2 hover:bg-surface-sunken text-text-muted hover:text-text-body " \
-               "focus:outline-none focus:ring-2 focus:ring-interactive-focus")
+        class: "btn-touch-target rounded-md -m-2 hover:bg-surface-sunken text-text-muted hover:text-text-body focus-ring")
     end
 
     def body

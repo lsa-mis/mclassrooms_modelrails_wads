@@ -82,7 +82,7 @@ module UI
     def radio_input(item, id)
       attrs = { type: "radio", name: @name, value: item[:value], id: id,
                 class: "h-4 w-4 border border-interactive text-interactive accent-interactive " \
-                       "focus-visible:outline-none focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+                       "focus-ring " \
                        "disabled:cursor-not-allowed disabled:opacity-50" }
       attrs[:checked] = true if item[:checked]
       attrs[:disabled] = true if item[:disabled]

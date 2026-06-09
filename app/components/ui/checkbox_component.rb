@@ -28,7 +28,7 @@ module UI
   # guard here — unlike the enum-driven components (alert, button).
   class CheckboxComponent < ApplicationComponent
     BASE = "peer size-4 shrink-0 rounded-[4px] border border-border-strong shadow-xs transition-shadow outline-none " \
-           "focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+           "focus-ring " \
            "disabled:cursor-not-allowed disabled:opacity-50 " \
            "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
            "checked:border-interactive checked:bg-interactive checked:text-text-on-interactive " \

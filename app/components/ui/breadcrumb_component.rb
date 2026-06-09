@@ -14,9 +14,9 @@ module UI
   # - **You supply:** `items:` (`[{ label:, href: }, …, { label: }]` — the LAST item, with no
   #   `href`, is the current page).
   class BreadcrumbComponent < ApplicationComponent
-    LINK = "rounded-sm text-text-muted transition-colors outline-none " \
+    LINK = "rounded-sm text-text-muted transition-colors " \
            "hover:text-text-heading " \
-           "focus-visible:ring-1 focus-visible:ring-interactive-focus focus-visible:text-text-heading"
+           "focus-ring focus-visible:text-text-heading"
     CURRENT = "font-medium text-text-heading"
 
     # items: [{ label:, href: }, ..., { label: }] — last item is the current page (no href).

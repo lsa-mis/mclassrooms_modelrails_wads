@@ -14,7 +14,7 @@ RSpec.describe UI::FloatingLabelComponent, type: :component do
     render_inline(described_class.new(label: "Email"))
 
     expect(page).to have_css("input.border-border-strong")
-    expect(page).to have_css('input.focus-visible\\:ring-interactive-focus')
+    expect(page).to have_css("input.focus-ring")
   end
 
   it "renders the label text" do

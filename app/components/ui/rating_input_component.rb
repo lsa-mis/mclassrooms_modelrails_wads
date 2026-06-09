@@ -99,7 +99,7 @@ module UI
         # graphic contrast in a real browser.
         class: cn(
           "min-h-11 min-w-11 inline-flex items-center justify-center",
-          "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-interactive-focus rounded-sm",
+          "transition-colors focus-ring rounded-sm",
           filled ? "text-warning-icon" : "text-text-muted"
         ),
         data: {

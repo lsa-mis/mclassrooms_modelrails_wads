@@ -8,7 +8,7 @@ module UI
     # then rises above when the input is focused or has a value (:not(:placeholder-shown)).
     INPUT_BASE = "peer h-12 w-full min-w-0 rounded-md border border-border-strong bg-transparent px-3 pb-1.5 pt-4 " \
                  "text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-transparent " \
-                 "focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+                 "focus-ring " \
                  "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
                  "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 " \
                  "md:text-sm "

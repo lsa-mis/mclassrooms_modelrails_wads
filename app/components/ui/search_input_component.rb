@@ -39,7 +39,7 @@ module UI
     INPUT_BASE = "h-11 w-full min-w-0 rounded-md border border-border-strong bg-surface-raised py-1 pl-9 pr-3 text-base text-text-heading shadow-xs " \
                  "transition-[color,box-shadow] outline-none " \
                  "placeholder:text-text-muted " \
-                 "focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-interactive-focus " \
+                 "focus-visible:border-border-focus focus-ring " \
                  "aria-invalid:border-danger-border aria-invalid:ring-danger " \
                  "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 " \
                  "md:text-sm "

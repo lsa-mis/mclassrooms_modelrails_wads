@@ -11,7 +11,7 @@ require "rails_helper"
 #
 #   TRACK: bg-surface-sunken  ->  peer-checked:bg-interactive
 #   THUMB: translate-x-0      ->  peer-checked:translate-x-[calc(100%-2px)]
-#   TRACK focus ring:             peer-focus-visible:ring-[3px] ...
+#   TRACK focus outline:          an AAA outline on peer focus-visible (B5)
 #
 # The render harness only verifies class STRINGS are present — it cannot see
 # whether `.peer:checked ~ .track` actually matches and recomputes the cascade.
@@ -128,29 +128,30 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
     end
   end
 
-  # Proves peer-focus-visible:ring-[3px] + peer-focus-visible:ring-interactive-focus
-  # apply. The input is `sr-only` but focusable; the visible focus indicator lives
-  # on the TRACK via the peer-focus-visible cascade.
+  # Proves the AAA focus outline applies on the TRACK via the peer-focus-visible
+  # cascade (converged-conventions B5). The input is `sr-only` but focusable; the
+  # visible focus indicator lives on the TRACK. B5 uses an OUTLINE (not a box-shadow
+  # ring) so the indicator survives overflow:hidden clipping and forced-colors mode.
   #
   # Approach: programmatic `.focus()` does not reliably trigger `:focus-visible` in
   # Chromium, so we ask for keyboard-originated focus (`focus({ focusVisible: true })`)
   # and fall back to simulating the keyboard modality so the heuristic latches.
   #
-  # We assert on Tailwind 4's `--tw-ring-shadow` custom property rather than the
-  # composed `box-shadow` shorthand: TW4 builds the ring from `--tw-ring-shadow`,
-  # and `getComputedStyle().boxShadow` only weakly reflects it (a zero-size layer)
-  # until paint, whereas the custom property is the load-bearing source of truth —
-  # it resolves to the full `0 0 0 3px <color>` ring exactly when focus-visible is on.
-  describe "focus-visible ring (peer-focus-visible cascade)" do
-    it "renders a 3px focus ring on the track when the switch input is keyboard-focused" do
+  # The TRACK carries `transition-all`, which ANIMATES the (animatable) outline-width
+  # 0 -> 2px over the transition duration. We poll a few frames until it settles so we
+  # read the resolved focus indicator, not a mid-transition frame. (The old box-shadow
+  # ring proof never needed this because it read the non-animated --tw-ring-shadow
+  # custom property; an outline's longhands are real animatable computed values.)
+  describe "focus-visible outline (peer-focus-visible cascade)" do
+    it "renders the AAA focus outline on the track when the switch input is keyboard-focused" do
       visit "#{PREVIEW}/off"
       expect(page).to have_css('input[role="switch"]')
 
-      unfocused_ring = track_ring_shadow
+      unfocused = track_outline
 
-      ring = Capybara.current_session.driver.with_playwright_page do |pw|
+      focused = Capybara.current_session.driver.with_playwright_page do |pw|
         pw.evaluate(<<~JS)
-          (() => {
+          (async () => {
             const input = document.querySelector('input[role="switch"]');
             // Focus from keyboard intent so :focus-visible matches (programmatic
             // .focus() is ambiguous for the heuristic). focusVisible:true asks the
@@ -163,55 +164,68 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
               input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
               input.focus();
             }
-            document.body.offsetHeight; // force reflow before reading
             const track = document.querySelector(#{TRACK_SELECTOR.to_json});
-            const cs = getComputedStyle(track);
+            // Poll until the transitioned outline-width settles at its 2px target
+            // (or a generous deadline, so a genuine no-outline bug still fails loudly).
+            let cs = getComputedStyle(track);
+            const deadline = performance.now() + 800;
+            while (cs.outlineWidth !== "2px" && performance.now() < deadline) {
+              await new Promise((r) => requestAnimationFrame(r));
+              cs = getComputedStyle(track);
+            }
             return {
               focusVisible: input.matches(":focus-visible"),
               focused: document.activeElement === input,
-              ringShadow: cs.getPropertyValue("--tw-ring-shadow").trim(),
-              ringColor: cs.getPropertyValue("--tw-ring-color").trim()
+              outlineStyle: cs.outlineStyle,
+              outlineWidth: cs.outlineWidth,
+              outlineColor: cs.outlineColor
             };
           })()
         JS
       end
 
-      expect(ring["focused"]).to be(true), "switch input did not receive focus"
-      expect(ring["focusVisible"]).to(
+      expect(focused["focused"]).to be(true), "switch input did not receive focus"
+      expect(focused["focusVisible"]).to(
         be(true),
         "the engine did not latch :focus-visible for the focused switch input, " \
         "so the peer-focus-visible cascade cannot be exercised here"
       )
 
-      # Unfocused: TW4's ring var is the inert `0 0 #0000` (no ring).
-      expect(unfocused_ring).to match(/#0000\z/),
-        "expected no ring when unfocused, got #{unfocused_ring.inspect}"
+      # Unfocused: no outline (the track gets its outline only on peer focus-visible).
+      expect(unfocused[:style]).to(
+        eq("none"),
+        "expected no outline when unfocused, got style=#{unfocused[:style].inspect}"
+      )
 
-      # Focus-visible: the ring var resolves to a real 3px ring in the interactive
-      # focus color. This is the actual proof peer-focus-visible:ring-[3px] applies.
-      expect(ring["ringShadow"]).not_to(
-        eq(unfocused_ring),
-        "track ring did not change on focus-visible — peer-focus-visible:ring did not apply. " \
-        "unfocused=#{unfocused_ring.inspect} focused=#{ring["ringShadow"].inspect}"
+      # Focus-visible: the track resolves the AAA 2px solid outline in the interactive
+      # focus color. This is the actual proof the peer-focus-visible outline applies.
+      expect(focused["outlineStyle"]).to(
+        eq("solid"),
+        "track outline did not become solid on focus-visible — the peer focus outline did not apply. " \
+        "unfocused=#{unfocused.inspect} focused style=#{focused["outlineStyle"].inspect}"
       )
-      expect(ring["ringShadow"]).to(
-        include("3px"),
-        "focused ring should be the 3px ring; got #{ring["ringShadow"].inspect}"
+      expect(focused["outlineWidth"]).to(
+        eq("2px"),
+        "focused outline should be 2px; got #{focused["outlineWidth"].inspect}"
       )
-      expect(ring["ringColor"]).not_to(
-        be_empty,
-        "peer-focus-visible:ring-interactive-focus should set --tw-ring-color on focus"
+      expect(focused["outlineColor"]).not_to(
+        satisfy { |c| c.nil? || c.to_s.empty? || c == "transparent" || c.to_s.include?("rgba(0, 0, 0, 0)") },
+        "the outline color should resolve to the interactive focus token on focus, " \
+        "got #{focused["outlineColor"].inspect}"
       )
     end
   end
 
-  # Reads the track's TW4 ring custom property off the live page.
-  def track_ring_shadow
-    Capybara.current_session.driver.with_playwright_page do |pw|
+  # Reads the track's computed outline longhands off the live page.
+  def track_outline
+    result = Capybara.current_session.driver.with_playwright_page do |pw|
       pw.evaluate(<<~JS)
-        getComputedStyle(document.querySelector(#{TRACK_SELECTOR.to_json}))
-          .getPropertyValue("--tw-ring-shadow").trim()
+        (() => {
+          const cs = getComputedStyle(document.querySelector(#{TRACK_SELECTOR.to_json}));
+          return { style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
+        })()
       JS
     end
+    result.transform_keys(&:to_sym)
   end
 end

@@ -45,8 +45,7 @@ module UI
     # The sort trigger is a real <button>: focusable + Enter/Space-activatable
     # for free. It spans the cell (left-aligned) and fills the >=44px height.
     SORT_BTN   = "flex min-h-11 w-full items-center gap-1 -mx-4 px-4 text-left font-medium " \
-                 "cursor-pointer select-none hover:text-text-heading focus-visible:outline-none " \
-                 "focus-visible:ring-[3px] focus-visible:ring-interactive-focus transition-colors"
+                 "cursor-pointer select-none hover:text-text-heading focus-ring transition-colors"
     TR_CLS     = "border-t border-border transition-colors hover:bg-surface-sunken/30"
     TD_CLS     = "px-4 py-3 align-middle"
     FOOTER_CLS = "flex items-center justify-between border-t border-border bg-surface-raised px-4 py-3 " \
@@ -54,8 +53,7 @@ module UI
     # h-11 w-11 keeps the pager buttons at the AAA 44px target floor.
     PAGE_BTN   = "inline-flex h-11 w-11 items-center justify-center rounded-md border border-border " \
                  "hover:bg-surface-sunken hover:text-text-heading disabled:pointer-events-none " \
-                 "disabled:opacity-40 focus-visible:outline-none focus-visible:ring-[3px] " \
-                 "focus-visible:ring-interactive-focus transition"
+                 "disabled:opacity-40 focus-ring transition"
     SORT_ASC   = "▲"
     SORT_DESC  = "▼"
 

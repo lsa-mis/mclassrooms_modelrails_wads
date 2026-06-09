@@ -40,7 +40,7 @@ module UI
     WRAPPER = "relative inline-flex h-[1.15rem] w-8 shrink-0"
     TRACK   = "pointer-events-none absolute inset-0 rounded-full border border-transparent shadow-xs " \
               "transition-all bg-surface-sunken peer-checked:bg-interactive " \
-              "peer-focus-visible:border-border-focus peer-focus-visible:ring-[3px] peer-focus-visible:ring-interactive-focus " \
+              "peer-focus-visible:[outline:2px_solid_var(--color-interactive-focus)] peer-focus-visible:[outline-offset:2px] " \
               "peer-aria-invalid:ring-2 peer-aria-invalid:ring-danger " \
               "peer-disabled:opacity-50"
     THUMB   = "pointer-events-none absolute inset-y-0 left-px my-auto z-10 block size-4 rounded-full " \

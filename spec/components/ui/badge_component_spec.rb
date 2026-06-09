@@ -20,12 +20,12 @@ RSpec.describe UI::BadgeComponent, type: :component do
   # The canonical `danger` signal uses the TINTED treatment (soft danger-surface +
   # saturated text-danger + danger-border), not a solid fill. text-danger on
   # bg-danger-surface is AAA-proven on the toast cards; never raw palette / text-white.
-  # Danger uniquely keeps a danger-colored focus ring as a destructive-action cue.
+  # Focus is the uniform focus-ring outline (B5) — no per-tone danger ring.
   it "renders danger as a tinted danger surface (not text-white)" do
     render_inline(described_class.new("Error", variant: :danger))
 
     expect(page).to have_css("span.bg-danger-surface.text-danger.border-danger-border")
-    expect(page).to have_css('span.focus-visible\\:ring-danger')
+    expect(page).to have_css("span.focus-ring")
     expect(page).not_to have_css("span.text-white")
   end
 

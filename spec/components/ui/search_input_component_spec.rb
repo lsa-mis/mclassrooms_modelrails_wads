@@ -31,7 +31,7 @@ RSpec.describe UI::SearchInputComponent, type: :component do
     render_inline(described_class.new(name: "q"))
 
     expect(page).to have_css("input.border-border-strong")
-    expect(page).to have_css('input.focus-visible\\:ring-interactive-focus')
+    expect(page).to have_css("input.focus-ring")
   end
 
   # WCAG 2.5.5 target size: the control sits at the 44px floor (h-11).
