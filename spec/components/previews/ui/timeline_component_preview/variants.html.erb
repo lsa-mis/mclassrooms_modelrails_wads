@@ -1,0 +1,10 @@
+<div id="tl-scope" class="max-w-md">
+  <%= ui :timeline do |t| %>
+    <% t.with_item(date: "09:01", title: "Build queued", variant: :muted) %>
+    <% t.with_item(date: "09:04", title: "Tests passed", variant: :success) %>
+    <% t.with_item(date: "09:06", title: "Slow query flagged", variant: :warning,
+         description: "Members index exceeded the latency budget.") %>
+    <% t.with_item(date: "09:09", title: "Deploy failed", variant: :danger,
+         description: "Rolled back automatically.") %>
+  <% end %>
+</div>

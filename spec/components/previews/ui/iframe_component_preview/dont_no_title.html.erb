@@ -1,0 +1,13 @@
+<div id="if-scope" class="max-w-md">
+  <%# ✗ An iframe with no (or a blank) title has no accessible name — a hard WCAG
+      failure. This component fails loud rather than render one, so the wrong call
+      below is shown as a non-executing sample: it would raise ArgumentError. %>
+  <div class="space-y-3 text-text-body">
+    <p>An iframe <strong>must</strong> carry a <code>title:</code> (its accessible name). These calls all fail loud:</p>
+    <pre class="overflow-x-auto rounded-lg bg-surface-sunken p-4 text-sm"><code><%#
+%>ui :iframe, src: map_url                  # raises: missing keyword: :title
+ui :iframe, src: map_url, title: ""        # raises: blank title
+ui :iframe, src: map_url, title: "   "     # raises: blank title</code></pre>
+    <p>Always supply a real description, e.g. <code>title: "Map of the office location"</code>.</p>
+  </div>
+</div>

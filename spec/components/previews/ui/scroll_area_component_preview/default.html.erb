@@ -1,0 +1,5 @@
+<%= ui :scroll_area, max_h: "max-h-48", aria_label: "Release notes", class: "rounded-lg border border-border p-3" do %>
+  <% 30.times do |i| %>
+    <p class="text-sm text-text-body py-1">Release note line <%= i + 1 %></p>
+  <% end %>
+<% end %>

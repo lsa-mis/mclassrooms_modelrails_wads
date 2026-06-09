@@ -1,0 +1,10 @@
+<div id="ma-scope" class="max-w-md">
+  <%= ui :map_area,
+        src: "https://picsum.photos/id/1018/600/400",
+        alt: "Mountain valley — two labeled regions",
+        width: 600, height: 400,
+        areas: [
+          { shape: :rect,   coords: "0,0,300,400",   href: "#peak",  alt: "Mountain peak" },
+          { shape: :rect,   coords: "300,0,600,400", href: "#lake",  alt: "Valley lake" }
+        ] %>
+</div>

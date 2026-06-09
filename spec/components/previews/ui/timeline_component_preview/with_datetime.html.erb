@@ -1,0 +1,10 @@
+<div id="tl-scope" class="max-w-md">
+  <%# date: is the human label; datetime: feeds <time datetime> for AT and tooling. %>
+  <%= ui :timeline do |t| %>
+    <% t.with_item(date: "January 2025", datetime: "2025-01", title: "Project kickoff") %>
+    <% t.with_item(date: "February 2025", datetime: "2025-02", title: "Alpha release",
+         variant: :success) %>
+    <% t.with_item(date: "March 2025", datetime: "2025-03", title: "v1.0 launched",
+         variant: :success) %>
+  <% end %>
+</div>

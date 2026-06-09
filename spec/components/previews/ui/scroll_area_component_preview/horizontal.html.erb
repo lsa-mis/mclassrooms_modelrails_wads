@@ -1,0 +1,9 @@
+<%= ui :scroll_area, orientation: :horizontal, max_h: nil, max_w: "max-w-sm", aria_label: "Image gallery", class: "rounded-lg border border-border p-3" do %>
+  <div class="flex gap-4 w-max">
+    <% 12.times do |i| %>
+      <div class="flex size-24 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-sm text-text-body">
+        Tile <%= i + 1 %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

@@ -37,7 +37,24 @@ module UI
     private
 
     def config
-      SIZES.fetch(@size, SIZES[:md])
+      SIZES.fetch(coerce_size(@size))
+    end
+
+    # Fail loud on an unknown size in development/test so misuse is caught
+    # immediately; fall back to :md in production so a bad size never 500s a page.
+    # The Rails.respond_to?(:env) guard stays correct even when the Rails module is
+    # defined but Rails.env isn't booted (the gem's Rails-less tests load
+    # rails/generators, which defines Rails without Rails.env).
+    def coerce_size(size)
+      return size if SIZES.key?(size)
+
+      unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
+        raise ArgumentError,
+          "UI::AvatarComponent: unknown size #{size.inspect}. " \
+          "Expected one of: #{SIZES.keys.join(", ")}."
+      end
+
+      :md
     end
 
     def image_avatar

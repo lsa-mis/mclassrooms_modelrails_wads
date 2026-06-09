@@ -1,0 +1,7 @@
+<%# ✗ focusable: false drops the tab stop + name — a keyboard-only user cannot %>
+<%# reach or arrow-scroll this prose region (WCAG 2.1.1 failure). %>
+<%= ui :scroll_area, focusable: false, max_h: "max-h-48", class: "rounded-lg border border-border p-3" do %>
+  <% 30.times do |i| %>
+    <p class="text-sm text-text-body py-1">Unreachable line <%= i + 1 %></p>
+  <% end %>
+<% end %>

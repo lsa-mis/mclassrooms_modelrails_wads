@@ -1,0 +1,11 @@
+<div id="pic-scope" class="max-w-md">
+  <%# ✗ A <picture> with no alt on its base <img> has no accessible name — <source>s
+      carry none. This component requires alt:, so always pass real text (or alt: ""
+      for decorative). Shown here WITH alt so the preview renders; never omit it. %>
+  <%= ui :picture,
+        src: "https://picsum.photos/id/1015/400/300",
+        alt: "A river winding through a forested canyon",
+        class: "rounded-lg" do |p| %>
+    <% p.with_source(srcset: "https://picsum.photos/id/1015/400/300") %>
+  <% end %>
+</div>

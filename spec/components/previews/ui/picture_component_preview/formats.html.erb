@@ -1,0 +1,10 @@
+<div id="pic-scope" class="max-w-md">
+  <%# Format fallback: the browser takes the first type it supports, else the JPEG <img>. %>
+  <%= ui :picture,
+        src: "https://picsum.photos/id/237/400/300.jpg",
+        alt: "A black puppy sitting on a wooden floor",
+        class: "rounded-lg" do |p| %>
+    <% p.with_source(srcset: "https://picsum.photos/id/237/400/300.webp", type: "image/avif") %>
+    <% p.with_source(srcset: "https://picsum.photos/id/237/400/300.webp", type: "image/webp") %>
+  <% end %>
+</div>

@@ -1,0 +1,12 @@
+<div id="pic-scope" class="max-w-md">
+  <%# Art direction: a wide landscape crop on large screens, a square crop on small. %>
+  <%= ui :picture,
+        src: "https://picsum.photos/id/1015/800/450",
+        alt: "A river winding through a forested canyon",
+        width: 800,
+        height: 450,
+        class: "rounded-lg" do |p| %>
+    <% p.with_source(srcset: "https://picsum.photos/id/1015/800/450", media: "(min-width: 640px)") %>
+    <% p.with_source(srcset: "https://picsum.photos/id/1015/400/400", media: "(max-width: 639px)") %>
+  <% end %>
+</div>
