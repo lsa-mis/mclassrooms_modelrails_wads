@@ -16,14 +16,16 @@ module UI
   #
   # ## Accessibility contract
   # - **Guarantees:** a live region matched to urgency — `role="status"`/`aria-live="polite"`
-  #   for the neutral `default` (and `info`/`success`/`warning`), `role="alert"`/
+  #   for the neutral tone (and `info`/`success`/`warning`), `role="alert"`/
   #   `aria-live="assertive"` for `danger` — and AAA-contrast text on the banner surface.
   # - **You supply:** a title and/or description (kwargs or the `alert_title` /
-  #   `alert_description` slots) and a valid `variant` (an unknown one raises in development).
+  #   `alert_description` slots) and a valid `tone` (an unknown one raises in development).
   #
-  # ## Variants
-  # `default` · `info` · `success` · `warning` · `danger`
-  # (`destructive` is a non-breaking alias for `danger`.)
+  # ## Tone
+  # An alert is always a filled banner — it has no shape axis, only a tone:
+  # `neutral` · `info` · `success` · `warning` · `danger`
+  # (`variant:` is accepted as a deprecated alias for `tone:` — `default`→`neutral`,
+  # `destructive`→`danger`, the rest 1:1.)
   class AlertComponent < ApplicationComponent
     OUTER_CLASSES = "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border " \
                     "px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] " \
@@ -34,21 +36,21 @@ module UI
     # reads its severity the same way a toast does. `text-<level>` (no `/90` opacity
     # modifier — that would lower contrast below the AAA 7:1 floor on the description).
     VARIANTS = {
-      default: "bg-surface-raised text-text-body",
+      neutral: "bg-surface-raised text-text-body",
       info:    "bg-info-surface border-info-border text-info [&>svg]:text-current *:data-[slot=alert-description]:text-info",
       success: "bg-success-surface border-success-border text-success [&>svg]:text-current *:data-[slot=alert-description]:text-success",
       warning: "bg-warning-surface border-warning-border text-warning [&>svg]:text-current *:data-[slot=alert-description]:text-warning",
       danger:  "bg-danger-surface border-danger-border text-danger [&>svg]:text-current *:data-[slot=alert-description]:text-danger"
     }.freeze
 
-    # `destructive` is a non-breaking alias for the canonical `danger` (matching the
-    # signal tokens). Resolved in coerce_variant before lookup.
-    VARIANT_ALIASES = { destructive: :danger }.freeze
+    # Deprecated `variant:` alias → `tone:`. The old flat `variant` enum maps 1:1 onto
+    # tone except `default`→`neutral` and `destructive`→`danger`. Resolved in coerce_tone.
+    VARIANT_ALIASES = { default: :neutral, destructive: :danger }.freeze
 
     # Live-region semantics by urgency: only `danger` is urgent (assertive); the
-    # neutral default and info/success/warning announce politely.
-    ROLES = { default: "status", info: "status", success: "status", warning: "status", danger: "alert" }.freeze
-    LIVE  = { default: "polite", info: "polite", success: "polite", warning: "polite", danger: "assertive" }.freeze
+    # neutral tone and info/success/warning announce politely.
+    ROLES = { neutral: "status", info: "status", success: "status", warning: "status", danger: "alert" }.freeze
+    LIVE  = { neutral: "polite", info: "polite", success: "polite", warning: "polite", danger: "assertive" }.freeze
 
     renders_one :alert_title, "UI::AlertComponent::TitleComponent"
     renders_one :alert_description, "UI::AlertComponent::DescriptionComponent"
@@ -56,8 +58,8 @@ module UI
     # title: and description: are kwarg shorthands for plain-text content.
     # Use slots (with_alert_title / with_alert_description) for rich HTML.
     # Slots take precedence over kwargs when both are provided.
-    def initialize(variant: :default, title: nil, description: nil, **html_attrs)
-      @variant = coerce_variant(variant.to_sym)
+    def initialize(tone: :neutral, variant: nil, title: nil, description: nil, **html_attrs)
+      @tone = coerce_tone(tone, variant)
       @title = title
       @description = description
       @extra_class = html_attrs.delete(:class)
@@ -67,9 +69,9 @@ module UI
     def call
       content_tag(:div, safe_join([ resolved_title, resolved_description ].compact),
         **@html_attrs,
-        role: ROLES.fetch(@variant),
-        "aria-live": LIVE.fetch(@variant),
-        class: cn(OUTER_CLASSES, VARIANTS.fetch(@variant), @extra_class))
+        role: ROLES.fetch(@tone),
+        "aria-live": LIVE.fetch(@tone),
+        class: cn(OUTER_CLASSES, VARIANTS.fetch(@tone), @extra_class))
     end
 
     class TitleComponent < ApplicationComponent
@@ -90,22 +92,28 @@ module UI
 
     private
 
-    # Fail loud on an unknown variant in development/test so misuse is caught
-    # immediately; fall back to :default in production so a bad variant never
-    # 500s a page. The Rails.respond_to?(:env) guard stays correct even when the Rails
-    # module is defined but Rails.env isn't booted (the gem's Rails-less tests load
-    # rails/generators, which defines Rails without Rails.env).
-    def coerce_variant(variant)
-      variant = VARIANT_ALIASES.fetch(variant, variant)
-      return variant if VARIANTS.key?(variant)
+    # Resolve the tone, accepting the deprecated `variant:` alias. When `variant:` is
+    # passed (non-nil) it wins (legacy call sites) and is mapped onto a tone via
+    # VARIANT_ALIASES (default→neutral, destructive→danger, the rest 1:1); otherwise
+    # the new `tone:` axis is used.
+    #
+    # Fail loud on an unknown tone in development/test so misuse is caught immediately;
+    # fall back to :neutral in production so a bad tone never 500s a page. The
+    # Rails.respond_to?(:env) guard stays correct even when the Rails module is defined
+    # but Rails.env isn't booted (the gem's Rails-less tests load rails/generators,
+    # which defines Rails without Rails.env).
+    def coerce_tone(tone, variant)
+      tone = variant.nil? ? tone.to_sym : VARIANT_ALIASES.fetch(variant.to_sym, variant.to_sym)
+      return tone if VARIANTS.key?(tone)
 
       unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
         raise ArgumentError,
-          "UI::AlertComponent: unknown variant #{variant.inspect}. " \
-          "Expected one of: #{VARIANTS.keys.join(", ")} (alias: destructive→danger)."
+          "UI::AlertComponent: unknown tone #{tone.inspect}. " \
+          "Expected one of: #{VARIANTS.keys.join(", ")} " \
+          "(deprecated variant: alias — default→neutral, destructive→danger)."
       end
 
-      :default
+      :neutral
     end
 
     def resolved_title
