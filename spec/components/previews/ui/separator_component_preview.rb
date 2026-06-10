@@ -18,6 +18,7 @@ module UI
   # - **Guarantees:** `aria-orientation` is emitted ONLY on a semantic separator;
   #   omitted on a decorative one (where it would be invalid).
   # - **You supply:** `decorative: false` when the divide conveys grouping.
+  # @logical_path Layout
   class SeparatorComponentPreview < ViewComponent::Preview
     include UIHelper
 

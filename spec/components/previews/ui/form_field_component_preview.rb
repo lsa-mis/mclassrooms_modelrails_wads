@@ -12,6 +12,7 @@ module UI
   # - **Guarantees:** a bound `<label for=id>`, hint/error with `#{id}-hint`/`#{id}-error`
   #   ids, and `input_attrs` carrying id + describedby + invalid + required.
   # - **You supply:** the control inside the block, spread with `**f.input_attrs`.
+  # @logical_path Forms & Inputs
   class FormFieldComponentPreview < ViewComponent::Preview
     include UIHelper
 

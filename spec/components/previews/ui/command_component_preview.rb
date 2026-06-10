@@ -28,6 +28,7 @@ module UI
   #
   # ## Sizes
   # `sm` · `md` · `lg` — the centered panel's max width.
+  # @logical_path Actions
   class CommandComponentPreview < ViewComponent::Preview
     include UIHelper
 

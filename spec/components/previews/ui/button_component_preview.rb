@@ -23,6 +23,7 @@ module UI
   #
   # ## Variants
   # `primary` · `secondary` · `danger` · `text` · `text_interactive` · `text_danger`
+  # @logical_path Actions
   class ButtonComponentPreview < ViewComponent::Preview
     include UIHelper
 

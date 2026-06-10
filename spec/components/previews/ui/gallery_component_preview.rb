@@ -13,6 +13,7 @@ module UI
   #   accessible name ("Enlarge %{alt}") and the `focus-ring` utility; the lightbox
   #   is a native focus-trapped `<dialog>` with an accessible close button.
   # - **You supply:** a non-blank `alt:` per image when lightbox is on (fail-loud).
+  # @logical_path Media
   class GalleryComponentPreview < ViewComponent::Preview
     include UIHelper
 

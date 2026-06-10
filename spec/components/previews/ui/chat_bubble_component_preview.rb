@@ -24,6 +24,7 @@ module UI
   #   avatar.
   # - **You supply:** the body via slot content; optionally `author:`, `timestamp:`,
   #   and an `avatar:` URL (received only).
+  # @logical_path Data Display
   class ChatBubbleComponentPreview < ViewComponent::Preview
     include UIHelper
 

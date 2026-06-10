@@ -21,6 +21,7 @@ module UI
   # - **You supply:** a group `label:` (or `labelledby:`), `items:` as
   #   `[{ value:, label:, checked?:, disabled?: }]`, and on error `invalid:` +
   #   `describedby:`.
+  # @logical_path Forms & Inputs
   class RadioGroupComponentPreview < ViewComponent::Preview
     include UIHelper
 

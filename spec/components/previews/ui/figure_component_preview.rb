@@ -18,6 +18,7 @@ module UI
   # - **Guarantees:** semantic figure/figcaption; caption rendered only when given.
   #   Caption uses `text-text-muted` (AAA — same neutral as body in this token system).
   # - **You supply:** real `alt` on any inner image.
+  # @logical_path Media
   class FigureComponentPreview < ViewComponent::Preview
     include UIHelper
 

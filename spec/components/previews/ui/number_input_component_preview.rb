@@ -29,6 +29,7 @@ module UI
   #   `required` + `aria-required="true"` when `required: true`.
   # - **You supply (when standalone):** a visible `<label>` associated via `for:/id:`,
   #   and a `name:` attribute. The form builder supplies both automatically.
+  # @logical_path Forms & Inputs
   class NumberInputComponentPreview < ViewComponent::Preview
     include UIHelper
 

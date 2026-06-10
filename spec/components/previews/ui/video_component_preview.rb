@@ -10,6 +10,7 @@ module UI
   # - **Guarantees:** native browser controls (keyboard-operable, UA-labelled);
   #   a `<track kind="captions">` is exposed to the UA's captions menu.
   # - **You supply:** at least one playable `source` and — for AAA media — captions.
+  # @logical_path Media
   class VideoComponentPreview < ViewComponent::Preview
     include UIHelper
 

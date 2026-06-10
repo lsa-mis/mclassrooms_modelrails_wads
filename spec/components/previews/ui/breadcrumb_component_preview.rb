@@ -4,6 +4,7 @@ module UI
   # # Breadcrumb
   #
   # A breadcrumb trail. The last item is the current page (aria-current=page, not a link).
+  # @logical_path Navigation
   class BreadcrumbComponentPreview < ViewComponent::Preview
     include UIHelper
 

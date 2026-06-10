@@ -26,6 +26,7 @@ module UI
   #   `aria-describedby` wired when `describedby:` is supplied.
   # - **You supply (when standalone):** a visible `<label>` associated via `for:/id:`,
   #   and a `name:` attribute. The form builder supplies both automatically.
+  # @logical_path Forms & Inputs
   class TextareaComponentPreview < ViewComponent::Preview
     include UIHelper
 

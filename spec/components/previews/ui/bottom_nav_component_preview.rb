@@ -11,6 +11,7 @@ module UI
   #   override via `label:`), the AAA `focus-ring` on every item, and
   #   `aria-current="page"` on the active item.
   # - **You supply:** `items:` (`[{ label:, href:, active:, icon: }]`).
+  # @logical_path Navigation
   class BottomNavComponentPreview < ViewComponent::Preview
     include UIHelper
 

@@ -21,6 +21,7 @@ module UI
   #   `<map name>`; every interactive `<area href>` is forced to carry a non-blank
   #   `alt` (its accessible name) — an unnamed hotspot raises (WCAG 2.4.4 / 4.1.2).
   # - **You supply:** real `alt:` for the image and an `alt:` for every linked area.
+  # @logical_path Media
   class MapAreaComponentPreview < ViewComponent::Preview
     include UIHelper
 

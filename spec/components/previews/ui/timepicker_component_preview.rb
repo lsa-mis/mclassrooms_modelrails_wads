@@ -18,6 +18,7 @@ module UI
   # - **You supply:** an optional `label:` (accessible name), `name:` (to post back),
   #   and `format:` (`:h24` | `:h12`, drives the hour range + the hint; fails loud on an
   #   unknown key).
+  # @logical_path Forms & Inputs
   class TimepickerComponentPreview < ViewComponent::Preview
     include UIHelper
 

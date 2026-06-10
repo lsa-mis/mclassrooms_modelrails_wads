@@ -21,6 +21,7 @@ module UI
   #   carries `aria-current="page"`; static rows are never made focusable.
   # - **You supply:** the rows via `list_group_item` (text or block content),
   #   `href:` for navigable rows, and `active: true` on the current page.
+  # @logical_path Data Display
   class ListGroupComponentPreview < ViewComponent::Preview
     include UIHelper
 

@@ -23,6 +23,7 @@ module UI
   #   controller, and native Escape via the controller's cancel handler.
   # - **You supply:** a `title:` (required — the accessible name). Actions belong in
   #   the `with_footer` slot. The `with_trigger` slot provides the open button.
+  # @logical_path Overlays
   class DrawerComponentPreview < ViewComponent::Preview
     include UIHelper
 

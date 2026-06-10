@@ -19,6 +19,7 @@ module UI
   #   `describedby:` is supplied.
   # - **You supply:** the visible label as an external `<label for="<id>">` — unlike
   #   checkbox, this component does NOT bundle a label.
+  # @logical_path Forms & Inputs
   class SelectComponentPreview < ViewComponent::Preview
     include UIHelper
 

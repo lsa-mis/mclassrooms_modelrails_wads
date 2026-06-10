@@ -21,6 +21,7 @@ module UI
   # ## Variants
   # `default` · `info` · `success` · `warning` · `danger`
   # (`destructive` is a non-breaking alias for `danger`.)
+  # @logical_path Feedback & Status
   class AlertComponentPreview < ViewComponent::Preview
     include UIHelper
 

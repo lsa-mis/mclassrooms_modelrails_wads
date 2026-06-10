@@ -20,6 +20,7 @@ module UI
   # - **You supply:** a real `title:` describing the embedded content. Unlike an
   #   image there is no "decorative" iframe — a title-less iframe is a hard WCAG
   #   failure.
+  # @logical_path Media
   class IframeComponentPreview < ViewComponent::Preview
     include UIHelper
 

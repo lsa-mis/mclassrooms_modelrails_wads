@@ -9,6 +9,7 @@ module UI
   # ## Accessibility contract
   # - **Guarantees:** native browser controls (keyboard-operable, labelled by the UA).
   # - **You supply:** at least one playable `source`.
+  # @logical_path Media
   class AudioComponentPreview < ViewComponent::Preview
     include UIHelper
 

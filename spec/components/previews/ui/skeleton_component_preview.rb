@@ -16,6 +16,7 @@ module UI
   # ## Accessibility contract
   # - **Guarantees:** `aria-hidden="true"` and `motion-reduce:animate-none`.
   # - **You supply:** an `aria-busy`/live region on the container; size via `class:`.
+  # @logical_path Feedback & Status
   class SkeletonComponentPreview < ViewComponent::Preview
     include UIHelper
 

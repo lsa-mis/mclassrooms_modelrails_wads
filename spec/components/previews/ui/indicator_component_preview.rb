@@ -17,6 +17,7 @@ module UI
   #   `text-white`); a valid `variant` is required.
   # - **You supply:** an accessible name on the anchor when the dot is a color-only
   #   signal; the count via `count:`.
+  # @logical_path Feedback & Status
   class IndicatorComponentPreview < ViewComponent::Preview
     include UIHelper
 

@@ -28,6 +28,7 @@ module UI
   #   were absent on the legacy plain `file_field` — this component fills that gap.
   # - **You supply:** a visible `<label>` associated via `for:/id:`. The form builder
   #   supplies it automatically.
+  # @logical_path Forms & Inputs
   class FileInputComponentPreview < ViewComponent::Preview
     include UIHelper
 

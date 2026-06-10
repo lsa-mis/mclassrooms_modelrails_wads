@@ -15,6 +15,7 @@ module UI
   # - **You supply:** actions (label + optional href; an href renders an `<a>`,
   #   otherwise a `<button>`).
   # - **Fail-loud:** an unknown `position:` raises in dev.
+  # @logical_path Actions
   class SpeedDialComponentPreview < ViewComponent::Preview
     include UIHelper
 

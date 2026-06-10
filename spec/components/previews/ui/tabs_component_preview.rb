@@ -5,6 +5,7 @@ module UI
   #
   # APG tabs (automatic activation). Tab to the active tab, ←/→ to move + reveal panels,
   # Home/End to jump; the disabled tab is skipped. Tab again to enter the active panel.
+  # @logical_path Navigation
   class TabsComponentPreview < ViewComponent::Preview
     include UIHelper
 

@@ -12,6 +12,7 @@ module UI
   #   named by the trigger; `role="menuitem"` items with roving tabindex.
   # - **You supply:** a `with_trigger` slot and `with_item` slots; `aria_label:` for
   #   icon-only triggers.
+  # @logical_path Overlays
   class DropdownMenuComponentPreview < ViewComponent::Preview
     include UIHelper
 

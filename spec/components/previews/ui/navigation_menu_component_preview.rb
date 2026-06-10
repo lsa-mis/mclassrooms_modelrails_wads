@@ -16,6 +16,7 @@ module UI
   #   active link; the chevron is decorative.
   # - **You supply:** items (label, optional href, optional active) and — for flyout
   #   items — the panel links via the slot block.
+  # @logical_path Navigation
   class NavigationMenuComponentPreview < ViewComponent::Preview
     include UIHelper
 

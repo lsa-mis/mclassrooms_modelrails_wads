@@ -18,6 +18,7 @@ module UI
   # - **Guarantees:** `alt:` is required on the base `<img>`; `<source>`s carry no
   #   `alt`, so the name comes solely from the `<img>`. Invalid `loading:` → `:lazy`.
   # - **You supply:** real `alt:` for meaningful images, `alt: ""` for decorative.
+  # @logical_path Media
   class PictureComponentPreview < ViewComponent::Preview
     include UIHelper
 

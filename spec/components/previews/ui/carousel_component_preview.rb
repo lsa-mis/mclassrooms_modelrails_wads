@@ -14,6 +14,7 @@ module UI
   #   `focus-ring` utility, and (with autoplay) a 2.2.2 pause mechanism that flips
   #   the live region to `polite` when stopped.
   # - **You supply:** an accessible `label:` and the slide content.
+  # @logical_path Media
   class CarouselComponentPreview < ViewComponent::Preview
     include UIHelper
 

@@ -19,6 +19,7 @@ module UI
   # - **Guarantees:** AAA-contrast text on `bg-surface-sunken` and a
   #   non-interactive, unselectable chip.
   # - **You supply:** the key text (positional arg, `label:`, or slot content).
+  # @logical_path Data Display
   class KbdComponentPreview < ViewComponent::Preview
     include UIHelper
 

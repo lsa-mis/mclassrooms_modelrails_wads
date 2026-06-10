@@ -31,6 +31,7 @@ module UI
   #
   # ## Sizes
   # `sm` · `md` · `lg` — the input height.
+  # @logical_path Forms & Inputs
   class ComboboxComponentPreview < ViewComponent::Preview
     include UIHelper
 

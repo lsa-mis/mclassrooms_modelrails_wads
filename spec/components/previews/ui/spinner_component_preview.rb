@@ -16,6 +16,7 @@ module UI
   # ## Accessibility contract
   # - **Guarantees:** `role="status"` + sr-only i18n loading label.
   # - **You supply:** nothing; override copy via `modelrails_ui.spinner.loading`.
+  # @logical_path Feedback & Status
   class SpinnerComponentPreview < ViewComponent::Preview
     include UIHelper
 

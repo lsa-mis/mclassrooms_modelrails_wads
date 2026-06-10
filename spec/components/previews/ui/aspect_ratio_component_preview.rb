@@ -21,6 +21,7 @@ module UI
   #   focus ring — it adds nothing for assistive tech to announce.
   # - **You supply:** slotted media that carries its own a11y (an `<img>` with `alt`,
   #   an `<iframe>` with `title`, etc.). The wrapper does not speak for it.
+  # @logical_path Media
   class AspectRatioComponentPreview < ViewComponent::Preview
     include UIHelper
 

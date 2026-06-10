@@ -23,6 +23,7 @@ module UI
   #   non-positive value fails loud.
   # - **You supply:** the field `name:`, the digit `length:`, an optional group
   #   `label:`, and an optional `separator:`.
+  # @logical_path Forms & Inputs
   class InputOtpComponentPreview < ViewComponent::Preview
     include UIHelper
 

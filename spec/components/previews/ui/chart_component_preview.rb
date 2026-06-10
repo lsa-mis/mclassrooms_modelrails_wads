@@ -23,6 +23,7 @@ module UI
   #   complex-image text alternative. Series default to an AAA-tuned OKLCH palette
   #   (never raw hex). An unknown `type:` fails loud.
   # - **You supply:** a meaningful `label:`, `labels:`, and `datasets:` (each named).
+  # @logical_path Data Display
   class ChartComponentPreview < ViewComponent::Preview
     include UIHelper
 

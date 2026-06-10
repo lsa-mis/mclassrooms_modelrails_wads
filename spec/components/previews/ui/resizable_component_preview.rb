@@ -14,6 +14,7 @@ module UI
   #   valuemax` range. Arrow keys resize it (← → horizontal, ↑ ↓ vertical);
   #   Home/End jump to its min/max.
   # - **You supply:** panels with optional `min`/`max`/`default` percentages.
+  # @logical_path Layout
   class ResizableComponentPreview < ViewComponent::Preview
     include UIHelper
 

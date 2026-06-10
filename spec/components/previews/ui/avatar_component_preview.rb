@@ -27,6 +27,7 @@ module UI
   # - **You supply:** an `aria_label:` when the avatar must be announced by assistive
   #   technology — for example, when it is the sole content of an interactive control
   #   such as a button or link. For image avatars, `aria_label:` also sets `alt`.
+  # @logical_path Data Display
   class AvatarComponentPreview < ViewComponent::Preview
     include UIHelper
 

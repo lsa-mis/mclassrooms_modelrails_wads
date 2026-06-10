@@ -5,6 +5,7 @@ module UI
   #
   # An app menubar (WAI-ARIA APG). Tab to it (one stop), ←/→ between items, ↓/Enter to open a
   # submenu, ↑/↓ within, Escape to close. Submenus reuse the shared `menu` controller.
+  # @logical_path Overlays
   class MenubarComponentPreview < ViewComponent::Preview
     include UIHelper
 

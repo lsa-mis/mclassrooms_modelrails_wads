@@ -11,6 +11,7 @@ module UI
   # - **Guarantees:** hover + focus-within reveal; card content Tab-reachable while open;
   #   Escape-dismiss; `role="group"` + `aria-label` when `label:` given.
   # - **You supply:** a `with_trigger` slot (a focusable link/button) and card content.
+  # @logical_path Overlays
   class HoverCardComponentPreview < ViewComponent::Preview
     include UIHelper
 

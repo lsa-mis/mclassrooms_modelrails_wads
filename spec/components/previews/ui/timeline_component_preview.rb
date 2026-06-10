@@ -23,6 +23,7 @@ module UI
   #   unknown item `variant` raises in development.
   # - **You supply:** each event's `title:` (and optional `date:`/`datetime:`,
   #   `description:`, block body, and dot `variant:`).
+  # @logical_path Data Display
   class TimelineComponentPreview < ViewComponent::Preview
     include UIHelper
 

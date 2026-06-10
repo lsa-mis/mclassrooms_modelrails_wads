@@ -16,6 +16,7 @@ module UI
   # - **Guarantees:** a `role="group"` boundary and the segmented styling.
   # - **You supply:** the child controls (each with its own accessible name) and,
   #   optionally, an `aria_label:` to name the group when context doesn't already.
+  # @logical_path Actions
   class ButtonGroupComponentPreview < ViewComponent::Preview
     include UIHelper
 

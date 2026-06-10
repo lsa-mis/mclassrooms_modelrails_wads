@@ -11,6 +11,7 @@ module UI
   # - **Guarantees:** every iframe carries a non-blank `title` (i18n, per-provider
   #   default) so screen readers announce the embedded region.
   # - **You supply:** a recognised provider `url:` (or a maps `query:`).
+  # @logical_path Media
   class EmbedComponentPreview < ViewComponent::Preview
     include UIHelper
 

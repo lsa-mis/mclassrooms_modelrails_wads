@@ -18,6 +18,7 @@ module UI
   #   bit is `aria-hidden`, and AAA semantic tokens throughout (no raw palette).
   # - **You supply:** the framed content with its own a11y — real `alt` text on a
   #   meaningful screenshot, or `alt: ""` for a decorative one.
+  # @logical_path Media
   class DeviceMockupComponentPreview < ViewComponent::Preview
     include UIHelper
 

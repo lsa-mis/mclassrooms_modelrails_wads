@@ -26,6 +26,7 @@ module UI
   #   `invalid: true`; `aria-describedby` wired when `describedby:` is supplied.
   # - **You supply:** a `label` (it doubles as the placeholder the float needs) and,
   #   on error, `invalid: true` + `describedby:` pointing at a sibling error element.
+  # @logical_path Forms & Inputs
   class FloatingLabelComponentPreview < ViewComponent::Preview
     include UIHelper
 

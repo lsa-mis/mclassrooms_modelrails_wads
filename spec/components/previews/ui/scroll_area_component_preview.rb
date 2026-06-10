@@ -19,6 +19,7 @@ module UI
   #   with a `focus-ring` indicator and a `role="region"` accessible name, so
   #   keyboard-only users can focus and arrow-scroll it and AT announces it.
   # - **You supply:** an accessible name via `aria_label:` or `aria_labelledby:`.
+  # @logical_path Layout
   class ScrollAreaComponentPreview < ViewComponent::Preview
     include UIHelper
 

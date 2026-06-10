@@ -1,0 +1,47 @@
+---
+label: Overview
+---
+
+# modelrails_ui
+
+An **AAA-proven** (7:1 contrast, verified in CI) · **OKLCH-themed** · **Hotwire-native**
+ViewComponent library. Call every component through the `ui()` facade:
+
+```erb
+<%%= ui :button, "Save changes", variant: :solid, tone: :primary %>
+```
+
+## Reach for the Rails built-in first
+
+Before reaching for a component, prefer the framework primitive:
+
+- **`f.submit`** — form submits (already styled primary)
+- **`f.text_field`** &c. — form inputs
+- **`button_to`** — destructive / non-GET actions (CSRF-protected)
+
+## The four laws
+
+1. **Semantic tokens, never raw values** — `bg-surface`, `text-text-body`, `bg-hue-*`; no hex.
+2. **Two-axis variants** — `variant:` (shape) × `tone:` (signal).
+3. **`data-slot` is the contract** — compound parts tag their roles; spacing + ARIA key off it.
+4. **Focus is an offset `outline`** — the `focus-ring` utility, never a `ring`.
+
+## Live examples
+
+<%= embed UI::ButtonComponentPreview, :primary %>
+<%= embed UI::BannerComponentPreview, :info %>
+<%= embed UI::CardComponentPreview, :default %>
+
+## Browse
+
+The sidebar groups all components into eight sections. Start typing in the sidebar
+filter to jump to any component by name.
+
+- **Forms & Inputs** — text fields, selection controls, pickers, field wrappers
+- **Actions** — buttons and command launchers
+- **Overlays** — dialogs, drawers, sheets, popovers, menus
+- **Navigation** — bars, sidebars, breadcrumbs, tabs
+- **Feedback & Status** — alerts, banners, badges, progress
+- **Data Display** — cards, tables, timelines, avatars
+- **Media** — images, audio, video, embeds
+- **Layout** — separators, scroll areas, resizables

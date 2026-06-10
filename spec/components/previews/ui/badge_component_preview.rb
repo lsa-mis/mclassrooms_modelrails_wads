@@ -24,6 +24,7 @@ module UI
   # soft `*-surface` + saturated `text-<level>`, matching the alert + toast cards).
   # Style levels: `default` · `secondary` · `outline` · `ghost` · `link`.
   # (`destructive` is a non-breaking alias for `danger`.)
+  # @logical_path Feedback & Status
   class BadgeComponentPreview < ViewComponent::Preview
     include UIHelper
 

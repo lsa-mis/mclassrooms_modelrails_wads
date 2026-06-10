@@ -16,6 +16,7 @@ module UI
   # ## Accessibility contract
   # - **Guarantees:** `role="progressbar"` + `aria-valuenow`/`min`/`max`, value clamped.
   # - **You supply:** `label:` when no visible text names the bar.
+  # @logical_path Feedback & Status
   class ProgressComponentPreview < ViewComponent::Preview
     include UIHelper
 

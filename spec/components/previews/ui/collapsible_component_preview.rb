@@ -17,6 +17,7 @@ module UI
   #
   # ## Modes
   # Closed (default) · `open: true` (render pre-expanded).
+  # @logical_path Data Display
   class CollapsibleComponentPreview < ViewComponent::Preview
     include UIHelper
 

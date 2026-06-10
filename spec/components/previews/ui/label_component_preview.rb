@@ -19,6 +19,7 @@ module UI
   #   `required:` `*` is decorative (aria-hidden) — the requirement lives on the
   #   input, never the caption.
   # - **You supply:** the caption text and, to bind it, the control's `id` via `for:`.
+  # @logical_path Forms & Inputs
   class LabelComponentPreview < ViewComponent::Preview
     include UIHelper
 

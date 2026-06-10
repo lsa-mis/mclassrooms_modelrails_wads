@@ -29,6 +29,7 @@ module UI
   # Pass `show_value: true` to render an associated `<output>` (an implicit
   # `role="status"` live region) that mirrors the slider, kept in sync by the
   # `range` Stimulus controller. The default stays a bare native slider.
+  # @logical_path Forms & Inputs
   class RangeComponentPreview < ViewComponent::Preview
     include UIHelper
 

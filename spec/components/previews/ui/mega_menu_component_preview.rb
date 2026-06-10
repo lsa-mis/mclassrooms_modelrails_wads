@@ -14,6 +14,7 @@ module UI
   #   landmark named by the trigger label; AAA `focus-ring` on the trigger and every
   #   link; a decorative (`aria-hidden`) chevron; outside-click dismissal.
   # - **You supply:** a `label:` and one or more `with_column(heading:, items:)` blocks.
+  # @logical_path Navigation
   class MegaMenuComponentPreview < ViewComponent::Preview
     include UIHelper
 

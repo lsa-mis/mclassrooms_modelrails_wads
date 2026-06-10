@@ -17,6 +17,7 @@ module UI
   # - **Guarantees:** a labelled, keyboard-operable checkbox with an AAA focus ring;
   #   the clickable label provides the larger AAA target.
   # - **You supply:** a `label` and, on error, `invalid: true` + `describedby:`.
+  # @logical_path Forms & Inputs
   class CheckboxComponentPreview < ViewComponent::Preview
     include UIHelper
 

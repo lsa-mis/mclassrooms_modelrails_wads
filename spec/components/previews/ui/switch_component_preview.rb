@@ -19,6 +19,7 @@ module UI
   #   and a >=44px clickable target (AAA 2.5.5) even though the visual track is smaller.
   # - **You supply:** an accessible name (`label:` or `aria-label:`), the initial
   #   `checked:` state, and a `name:` so the value posts.
+  # @logical_path Forms & Inputs
   class SwitchComponentPreview < ViewComponent::Preview
     include UIHelper
 

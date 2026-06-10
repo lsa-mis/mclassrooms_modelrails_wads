@@ -17,6 +17,7 @@ module UI
   #
   # ## Modes
   # `orientation: :horizontal` (default) · `orientation: :vertical`.
+  # @logical_path Feedback & Status
   class StepperComponentPreview < ViewComponent::Preview
     include UIHelper
 

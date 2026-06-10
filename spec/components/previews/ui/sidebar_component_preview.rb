@@ -12,6 +12,7 @@ module UI
   #   an i18n-labelled toggle, AAA `focus-ring` on the toggle and every item, and
   #   `aria-current="page"` on the active item.
   # - **You supply:** groups/items (label, href, optional icon, active).
+  # @logical_path Navigation
   class SidebarComponentPreview < ViewComponent::Preview
     include UIHelper
 

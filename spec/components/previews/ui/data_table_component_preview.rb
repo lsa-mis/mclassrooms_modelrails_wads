@@ -22,6 +22,7 @@ module UI
   #   targets on every control, and fully localized strings.
   # - **You supply:** a `caption:` — the table's accessible name. Pass one whenever
   #   practical so screen-reader users get context.
+  # @logical_path Data Display
   class DataTableComponentPreview < ViewComponent::Preview
     include UIHelper
 

@@ -17,6 +17,7 @@ module UI
   # - **Guarantees:** `alt:` is required; invalid `loading:` falls back to `:lazy`.
   # - **You supply:** real `alt:` for meaningful images, `alt: ""` for decorative.
   #   `alt` is not a caption — use `figure` for those.
+  # @logical_path Media
   class ImageComponentPreview < ViewComponent::Preview
     include UIHelper
 

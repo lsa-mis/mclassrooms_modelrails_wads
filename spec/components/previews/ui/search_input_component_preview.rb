@@ -20,6 +20,7 @@ module UI
   #   (`h-11`), and AAA border/focus-ring tokens.
   # - **You supply:** on error, `invalid: true` + `describedby:`; a custom `label:`
   #   when "Search" is the wrong accessible name.
+  # @logical_path Forms & Inputs
   class SearchInputComponentPreview < ViewComponent::Preview
     include UIHelper
 

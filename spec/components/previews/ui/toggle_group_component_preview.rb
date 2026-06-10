@@ -19,6 +19,7 @@ module UI
   #
   # ## Modes
   # Single-select (`type: :single`) · multi-select (`type: :multiple`).
+  # @logical_path Forms & Inputs
   class ToggleGroupComponentPreview < ViewComponent::Preview
     include UIHelper
 

@@ -11,6 +11,7 @@ module UI
   # - **Guarantees:** native disclosure semantics, an AAA `focus-ring` on each
   #   summary, and a decorative (aria-hidden) chevron.
   # - **You supply:** a `title` per row and the content.
+  # @logical_path Data Display
   class AccordionComponentPreview < ViewComponent::Preview
     include UIHelper
 

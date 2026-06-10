@@ -12,6 +12,7 @@ module UI
   #   `contextmenu` + Shift+F10 open; `role="menu"` named by the host; `role="menuitem"`
   #   items with roving tabindex.
   # - **You supply:** a `with_trigger` host slot and `with_item` slots.
+  # @logical_path Overlays
   class ContextMenuComponentPreview < ViewComponent::Preview
     include UIHelper
 

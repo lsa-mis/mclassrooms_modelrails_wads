@@ -21,6 +21,7 @@ module UI
   #   unlabelled `<svg>` (WCAG 1.1.1 / 4.1.2). The inner `<img>` is decorative
   #   (`alt=""`) so the code is announced once. Caller html_attrs can't strip the name.
   # - **You supply:** an `alt:` that describes what the code encodes, not a bare "QR code".
+  # @logical_path Media
   class QrCodeComponentPreview < ViewComponent::Preview
     include UIHelper
 

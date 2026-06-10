@@ -23,6 +23,7 @@ module UI
   #   `copyright:`, optional block content, and `label:` (i18n) to name the landmark
   #   when a page has more than one footer. Every link needs a readable `label:` (its
   #   accessible name) and an `href:`.
+  # @logical_path Navigation
   class FooterComponentPreview < ViewComponent::Preview
     include UIHelper
 
