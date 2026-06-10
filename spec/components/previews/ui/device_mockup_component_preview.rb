@@ -37,5 +37,13 @@ module UI
     # @label Don't · content image no alt
     def dont_decorative_image_no_alt
     end
+
+    # Edit `variant` live to switch the device frame (phone/browser/tablet).
+    # @param variant select [phone, browser, tablet]
+    def playground(variant: :browser)
+      ui :device_mockup, variant: variant.to_sym, url: "https://example.com/dashboard", class: "max-w-md" do
+        '<div class="flex aspect-video items-center justify-center bg-surface-sunken text-sm text-text-body">Screen content</div>'.html_safe
+      end
+    end
   end
 end

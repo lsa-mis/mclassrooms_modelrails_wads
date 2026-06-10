@@ -43,5 +43,14 @@ module UI
     # @label Bottom panel
     def side_bottom
     end
+
+    # Edit `side` live to slide the panel in from any edge.
+    # @param side select [top, right, bottom, left]
+    def playground(side: :right)
+      render(UI::SheetComponent.new(title: "Filters", side: side.to_sym)) do |c|
+        c.with_trigger { "Open sheet" }
+        "Panel slides in from the #{side} edge. Change the param to explore placement."
+      end
+    end
   end
 end

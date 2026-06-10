@@ -27,5 +27,15 @@ module UI
     # The same flow stacked vertically, with optional per-step descriptions.
     def vertical
     end
+
+    # Edit `orientation` live to compare horizontal vs vertical layout.
+    # @param orientation select [horizontal, vertical]
+    def playground(orientation: :horizontal)
+      ui :stepper, orientation: orientation.to_sym, steps: [
+        { label: "Account", status: :complete },
+        { label: "Profile", status: :current },
+        { label: "Confirm", status: :pending }
+      ]
+    end
   end
 end
