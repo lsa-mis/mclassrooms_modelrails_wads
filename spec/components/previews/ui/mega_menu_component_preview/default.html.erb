@@ -1,0 +1,14 @@
+<%= ui :mega_menu, label: "Products" do |m| %>
+  <% m.with_column(heading: "Platform", items: [
+    { title: "Overview", description: "Tour the whole product", href: "#" },
+    { title: "Pricing", description: "Plans for every team", href: "#" }
+  ]) %>
+  <% m.with_column(heading: "Solutions", items: [
+    { title: "For startups", description: "Ship faster", href: "#" },
+    { title: "For enterprise", description: "Scale securely", href: "#" }
+  ]) %>
+  <% m.with_column(heading: "Resources", items: [
+    { title: "Docs", description: "Guides and API reference", href: "#" },
+    { title: "Changelog", href: "#" }
+  ]) %>
+<% end %>

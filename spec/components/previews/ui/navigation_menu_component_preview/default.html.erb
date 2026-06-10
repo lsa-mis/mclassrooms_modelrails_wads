@@ -1,0 +1,14 @@
+<%= ui :navigation_menu, label: "Primary" do |nav| %>
+  <% nav.with_item(label: "Home", href: "#", active: true) %>
+  <% nav.with_item(label: "Docs", href: "#") %>
+  <% nav.with_item(label: "Products") do %>
+    <a href="#" class="flex flex-col gap-1 rounded-sm p-2 text-sm transition-all focus-ring hover:bg-surface-sunken hover:text-text-heading">
+      <span class="font-medium text-text-heading">Analytics</span>
+      <span class="text-text-muted">Dashboards and reports</span>
+    </a>
+    <a href="#" class="flex flex-col gap-1 rounded-sm p-2 text-sm transition-all focus-ring hover:bg-surface-sunken hover:text-text-heading">
+      <span class="font-medium text-text-heading">Automation</span>
+      <span class="text-text-muted">Workflows and triggers</span>
+    </a>
+  <% end %>
+<% end %>

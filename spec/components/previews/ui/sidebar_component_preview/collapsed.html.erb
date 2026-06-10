@@ -1,0 +1,7 @@
+<%= ui :sidebar, brand: "Acme", collapsed: true do |s| %>
+  <% s.with_group(label: "Main") do |g| %>
+    <% g.with_item(label: "Dashboard", href: "#", icon: :home, active: true) %>
+    <% g.with_item(label: "Tasks", href: "#", icon: :tasks) %>
+    <% g.with_item(label: "Team", href: "#", icon: :users) %>
+  <% end %>
+<% end %>
