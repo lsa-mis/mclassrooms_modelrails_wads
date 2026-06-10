@@ -1,0 +1,7 @@
+<%# Multi-select — several items active at once (controller toggles each item). %>
+<%# Each item's initial pressed state mirrors the group's active values via item_pressed?. %>
+<%= ui :toggle_group, type: :multiple, value: ["bold", "italic"], aria_label: "Text style" do |group| %>
+  <%= ui :toggle, "Bold",      value: "bold",      pressed: group.item_pressed?("bold") %>
+  <%= ui :toggle, "Italic",    value: "italic",    pressed: group.item_pressed?("italic") %>
+  <%= ui :toggle, "Underline", value: "underline", pressed: group.item_pressed?("underline") %>
+<% end %>

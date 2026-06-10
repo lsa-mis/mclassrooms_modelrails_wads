@@ -1,0 +1,11 @@
+<%= ui :collapsible, open: true do |c| %>
+  <% c.with_trigger do %>
+    <span class="font-medium text-text-heading">Plan details</span>
+    <span aria-hidden="true" class="text-text-muted">+</span>
+  <% end %>
+  <ul class="list-disc space-y-1 pl-4 text-text-body">
+    <li>Starter — free forever</li>
+    <li>Pro — $12/month</li>
+    <li>Enterprise — contact us</li>
+  </ul>
+<% end %>

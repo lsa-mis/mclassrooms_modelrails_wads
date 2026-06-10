@@ -1,0 +1,7 @@
+<%# Single-select — only one item active at a time (controller clears the rest). %>
+<%# Each item's initial pressed state mirrors the group's active value via item_pressed?. %>
+<%= ui :toggle_group, type: :single, value: "center", aria_label: "Text alignment" do |group| %>
+  <%= ui :toggle, "Left",   value: "left",   pressed: group.item_pressed?("left") %>
+  <%= ui :toggle, "Center", value: "center", pressed: group.item_pressed?("center") %>
+  <%= ui :toggle, "Right",  value: "right",  pressed: group.item_pressed?("right") %>
+<% end %>
