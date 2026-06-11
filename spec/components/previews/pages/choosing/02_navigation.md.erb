@@ -1,0 +1,38 @@
+---
+label: Navigation
+---
+
+# Choosing navigation
+
+Page chrome frames the whole screen; link flyouts reveal grouped destinations; the last
+fork answers "where am I". Action menus (`dropdown_menu` / `context_menu` / `menubar`)
+are commands, not navigation — see *Choosing › Overlays*.
+
+## Page chrome
+
+| Component    | Reach for it when                                                  | Otherwise →  |
+|--------------|---------------------------------------------------------------------|--------------|
+| `navbar`     | a responsive top bar — links collapse behind a hamburger on mobile  | `sidebar`    |
+| `sidebar`    | a collapsible application rail with grouped items                   | `navbar`     |
+| `bottom_nav` | fixed mobile bottom destinations (icon + label)                     | `navbar`     |
+| `footer`     | the closing contentinfo landmark with link columns                  | —            |
+
+<%= embed UI::NavbarComponentPreview %>
+
+## Link flyouts
+
+| Component         | Reach for it when                                                          | Otherwise →        |
+|-------------------|------------------------------------------------------------------------------|--------------------|
+| `navigation_menu` | a horizontal site nav with disclosure flyouts (APG navigation, not `role="menu"`) | `mega_menu`    |
+| `mega_menu`       | a full-width panel of grouped links behind one disclosure button             | `navigation_menu`  |
+
+<%= embed UI::NavigationMenuComponentPreview %>
+
+## Where am I
+
+| Component    | Reach for it when                                          | Otherwise →           |
+|--------------|-------------------------------------------------------------|-----------------------|
+| `breadcrumb` | a hierarchy trail — the last item is the current page       | `tabs`                |
+| `tabs`       | switching between in-page panels (APG tabs)                 | `breadcrumb` / `navbar` |
+
+<%= embed UI::TabsComponentPreview %>

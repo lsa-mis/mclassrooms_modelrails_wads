@@ -1,0 +1,42 @@
+---
+label: Media
+---
+
+# Choosing media
+
+Three families: first-party images, playback surfaces, and third-party embeds with
+their framing helpers.
+
+## Images
+
+| Component | Reach for it when                                                      | Otherwise →           |
+|-----------|--------------------------------------------------------------------------|-----------------------|
+| `image`   | content imagery with a forced `alt` decision, lazy loading, `srcset`      | `picture`             |
+| `picture` | art direction or format fallbacks (AVIF/WebP → JPEG)                      | `image`               |
+| `figure`  | content that needs a visible caption                                      | `image`               |
+| `gallery` | an image grid with a lightbox (reuses the modal `<dialog>`)               | `image` / `carousel`  |
+| `qr_code` | a scannable payload — pre-rendered image or rqrcode output                | `image`               |
+
+<%= embed UI::ImageComponentPreview %>
+
+## Playback
+
+| Component  | Reach for it when                                                   | Otherwise →            |
+|------------|------------------------------------------------------------------------|------------------------|
+| `video`    | native video with `<source>` fallbacks and caption `<track>`s          | `embed` (third-party)  |
+| `audio`    | native audio with `<source>` fallbacks                                 | `video`                |
+| `carousel` | a slide deck with prev/next/dots and a pause control (APG)             | `gallery`              |
+
+<%= embed UI::CarouselComponentPreview %>
+
+## Embeds & framing
+
+| Component       | Reach for it when                                                  | Otherwise →  |
+|-----------------|----------------------------------------------------------------------|--------------|
+| `embed`         | third-party content by URL — the provider is auto-detected           | `iframe`     |
+| `iframe`        | a raw sandboxed, responsive frame for anything else                  | `embed`      |
+| `aspect_ratio`  | holding media to a fixed ratio regardless of width                   | —            |
+| `device_mockup` | a decorative phone/tablet/browser shell around a screenshot          | —            |
+| `map_area`      | a legacy image map (prefer overlaid links or SVG regions when you can) | —          |
+
+<%= embed UI::DeviceMockupComponentPreview %>

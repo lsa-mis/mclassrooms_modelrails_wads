@@ -1,0 +1,72 @@
+---
+label: Forms & Inputs
+---
+
+# Choosing a form control
+
+Inside a `form_with`, reach for the form builder first — `f.text_field`, `f.select`,
+`f.file_field` already render these primitives with label/hint/error wiring. Reach for a
+primitive directly when you're outside a form or building something custom.
+
+## Free text
+
+| Component        | Reach for it when                                                      | Otherwise →       |
+|------------------|------------------------------------------------------------------------|-------------------|
+| `input`          | a one-off single-line text control outside `form_with`                 | `textarea`        |
+| `textarea`       | multi-line free text — comments, descriptions, notes                   | `input`           |
+| `floating_label` | a compact field whose label starts inside and floats on focus/value    | `input` + `label` |
+| `search_input`   | a standalone search/filter box with a built-in accessible name         | `input`           |
+
+<%= embed UI::InputComponentPreview %>
+
+## Numbers & codes
+
+| Component      | Reach for it when                                                       | Otherwise →               |
+|----------------|--------------------------------------------------------------------------|---------------------------|
+| `number_input` | an exact numeric entry with `min` / `max` / `step`                       | `range`                   |
+| `range`        | an approximate pick from a continuous, bounded range                     | `number_input`            |
+| `input_otp`    | confirming an out-of-band code — cells auto-advance and accept paste     | `input` (type: password)  |
+| `rating_input` | a 1..max star score submitted in a form                                  | `rating` (display-only)   |
+
+<%= embed UI::RangeComponentPreview %>
+
+## Choosing from a list
+
+| Component     | Reach for it when                                          | Otherwise →             |
+|---------------|-------------------------------------------------------------|-------------------------|
+| `select`      | a single choice from a short, known list                    | `combobox`              |
+| `combobox`    | a long list that needs type-to-filter                       | `select`; `command` (Actions section, ⌘K launcher) |
+| `radio_group` | a small fixed set where every option stays visible          | `select`                |
+
+<%= embed UI::SelectComponentPreview %>
+
+## On / off
+
+| Component      | Reach for it when                                             | Otherwise →            |
+|----------------|----------------------------------------------------------------|------------------------|
+| `checkbox`     | an on/off choice submitted with a form                         | `switch`               |
+| `switch`       | an immediate-effect on/off setting                             | `checkbox`             |
+| `toggle`       | a standalone pressed/unpressed action button                   | `checkbox` / `switch`  |
+| `toggle_group` | related toggles with single- or multi-active enforcement       | `toggle`               |
+
+<%= embed UI::SwitchComponentPreview %>
+
+## Date & time
+
+| Component     | Reach for it when                                        | Otherwise →    |
+|---------------|-----------------------------------------------------------|----------------|
+| `date_picker` | a disclosure button opening a calendar popover            | `calendar`     |
+| `calendar`    | an inline, always-visible month grid                      | `date_picker`  |
+| `timepicker`  | an hour/minute spinbutton popover                         | `date_picker`  |
+
+<%= embed UI::DatePickerComponentPreview %>
+
+## Field wiring & uploads
+
+| Component    | Reach for it when                                                            | Otherwise →               |
+|--------------|-------------------------------------------------------------------------------|---------------------------|
+| `label`      | captioning a control via `for:` (self-labelling `checkbox`/`radio_group` don't need it) | —              |
+| `form_field` | hand-composing a one-off labelled field with hint/error ARIA wiring           | `form_with` (the Rails form builder) |
+| `file_input` | an upload control with AAA styling + ARIA (inside `form_with`: `f.file_field`) | —                        |
+
+<%= embed UI::FormFieldComponentPreview %>

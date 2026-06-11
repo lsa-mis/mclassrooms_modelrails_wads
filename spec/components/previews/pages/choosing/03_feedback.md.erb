@@ -1,0 +1,37 @@
+---
+label: Feedback & Status
+---
+
+# Choosing feedback & status
+
+Messages speak to the user; status markers annotate other elements; the last fork covers
+waiting. Ephemeral flashes are neither — use the app's toast system (`shared/_toasts`).
+
+## Messages
+
+| Component | Reach for it when                                                       | Otherwise →  |
+|-----------|---------------------------------------------------------------------------|--------------|
+| `alert`   | an inline message tied to surrounding content (form error summary)        | `banner`     |
+| `banner`  | a page-level announcement strip — promo, cookie notice, system notice     | `alert`      |
+
+<%= embed UI::AlertComponentPreview %>
+
+## Status markers
+
+| Component   | Reach for it when                                                     | Otherwise →  |
+|-------------|-------------------------------------------------------------------------|--------------|
+| `badge`     | a compact label pill classifying nearby content (a link when `href:`)   | `indicator`  |
+| `indicator` | a corner dot or count anchored on an icon/avatar/button                 | `badge`      |
+
+<%= embed UI::BadgeComponentPreview %>
+
+## Progress & loading
+
+| Component  | Reach for it when                                              | Otherwise →  |
+|------------|------------------------------------------------------------------|--------------|
+| `progress` | determinate progress toward a known max                          | `spinner`    |
+| `spinner`  | an indeterminate wait, announced to assistive tech               | `progress`   |
+| `skeleton` | loading placeholder blocks while content arrives                 | `spinner`    |
+| `stepper`  | where-you-are in a multi-step flow (display, not links)          | `progress`   |
+
+<%= embed UI::ProgressComponentPreview %>

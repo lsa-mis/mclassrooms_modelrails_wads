@@ -1,0 +1,47 @@
+---
+label: Data Display
+---
+
+# Choosing data display
+
+Pick by the shape of the data: grouped content, disclosed sections, people & messages,
+or ordered sequences and values.
+
+## Containers & rows
+
+| Component    | Reach for it when                                                     | Otherwise →                |
+|--------------|-------------------------------------------------------------------------|----------------------------|
+| `card`       | grouping related content on a bordered, raised surface                  | `list_group` / `data_table` |
+| `list_group` | a short set of related rows or links (a real `<ul>` of `<li>`)          | `data_table` / `timeline`  |
+| `data_table` | a bounded, already-loaded set of rows worth sorting/filtering client-side | server-side pages (Pagy) |
+
+<%= embed UI::CardComponentPreview %>
+
+## Disclosure
+
+| Component     | Reach for it when                                                   | Otherwise →   |
+|---------------|----------------------------------------------------------------------|---------------|
+| `accordion`   | a stack of independent `<details>` rows (FAQs, settings groups)       | `collapsible` |
+| `collapsible` | a single CSS-only disclosure behind your own trigger                  | `accordion`   |
+
+<%= embed UI::AccordionComponentPreview %>
+
+## People & messages
+
+| Component     | Reach for it when                                                          | Otherwise →   |
+|---------------|------------------------------------------------------------------------------|---------------|
+| `avatar`      | a non-user avatar or explicit photo/initials (for `User` records: `avatar_for`) | —          |
+| `chat_bubble` | one message in a chat or comment transcript (sent vs received)               | `list_group`  |
+
+<%= embed UI::ChatBubbleComponentPreview %>
+
+## Sequences & values
+
+| Component  | Reach for it when                                                            | Otherwise →                 |
+|------------|--------------------------------------------------------------------------------|-----------------------------|
+| `timeline` | dated, ordered events — activity feed, audit trail, release history            | `list_group`                |
+| `rating`   | displaying a fixed star score the user can't change                            | `rating_input` (user picks) |
+| `chart`    | plotting a small set of series on a canvas (pin Chart.js; describe the data)   | `data_table`                |
+| `kbd`      | an inline keyboard-key chip ("Press ⌘K")                                       | `badge`                     |
+
+<%= embed UI::TimelineComponentPreview %>
