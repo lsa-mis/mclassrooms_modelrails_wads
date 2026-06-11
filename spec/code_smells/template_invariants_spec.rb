@@ -147,6 +147,32 @@ RSpec.describe "Template invariants" do
         "expected Dockerfile to compare TARGETPLATFORM and BUILDPLATFORM to decide " \
         "whether bootsnap precompile uses -j 1 (cross-compile) or default parallelism (native)"
     end
+
+    it "ships app code root-owned and chowns only the dirs Rails writes at runtime" do
+      # Defense in depth (upstream Rails 8.1 pattern): a compromised runtime
+      # process must not be able to rewrite app code or gems. `COPY --chown`
+      # of the whole /rails tree makes every file writable by the rails user;
+      # instead copy root-owned and chown only db/log/storage/tmp.
+      expect(dockerfile).not_to match(/^COPY --chown=rails:rails/),
+        "expected runtime COPYs to leave files root-owned (read-only to the rails user); " \
+        "`COPY --chown=rails:rails` makes the entire app tree writable by the runtime user"
+      expect(dockerfile).to match(/chown -R rails:rails db log storage tmp/),
+        "expected `chown -R rails:rails db log storage tmp` so the only dirs Rails " \
+        "writes at runtime (db:prepare, logs, Active Storage, bootsnap cache/pids) are writable"
+
+      copy_rails = line_index(%r{^COPY --from=build /rails /rails})
+      chown = line_index(/chown -R rails:rails/)
+      user = line_index(/^USER 1000:1000/)
+
+      expect(copy_rails).not_to be_nil, "expected `COPY --from=build /rails /rails` in the final stage"
+      expect(chown).not_to be_nil
+      expect(user).not_to be_nil
+
+      expect(copy_rails).to be < chown,
+        "the /rails COPY must land before the chown (the dirs must exist to be chowned)"
+      expect(chown).to be < user,
+        "USER 1000:1000 must come after the chown so the ownership change runs as root"
+    end
   end
 
   describe "Devcontainer matches production runtime (Option C: shared base image)" do
