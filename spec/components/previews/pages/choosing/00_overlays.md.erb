@@ -1,0 +1,40 @@
+---
+label: Overlays
+---
+
+# Choosing an overlay
+
+Pick the family first: does it **block the page** (modal surfaces), **anchor to a trigger**
+without blocking (floating panels), or present a **list of commands** (menus)? Each component
+below is one sidebar click from its full preview.
+
+## Modal surfaces — block the page with a scrim
+
+| Component      | Reach for it when                                                    | Otherwise →        |
+|----------------|----------------------------------------------------------------------|--------------------|
+| `dialog`       | a focused task (form, detail, confirm) needs a focus-trapped modal    | `drawer` / `sheet` |
+| `alert_dialog` | a destructive or irreversible action must be confirmed before it runs | `dialog`           |
+| `sheet`        | a side panel — navigation, filters, a secondary form — slides in from an edge | `drawer`   |
+| `drawer`       | a mobile-friendly bottom sheet of secondary actions slides up         | `sheet`            |
+
+<%= embed UI::DialogComponentPreview %>
+
+## Floating — anchored to a trigger, no scrim
+
+| Component    | Reach for it when                                                          | Otherwise →            |
+|--------------|----------------------------------------------------------------------------|------------------------|
+| `popover`    | interactive content sits in a panel anchored to a trigger button (click toggles) | `tooltip` / `hover_card` |
+| `hover_card` | a rich preview enhances a link on hover or focus (not the only path to it)  | `popover`              |
+| `tooltip`    | a short text hint describes an element on hover or focus                    | `hover_card`           |
+
+<%= embed UI::PopoverComponentPreview %>
+
+## Menus — a list of commands
+
+| Component       | Reach for it when                                                     | Otherwise →     |
+|-----------------|----------------------------------------------------------------------|-----------------|
+| `dropdown_menu` | actions launch from a button trigger (the WAI-ARIA menu-button)       | `context_menu`  |
+| `context_menu`  | actions open from a right-click / long-press / Shift+F10 on a region  | `dropdown_menu` |
+| `menubar`       | a persistent app menu bar (File / Edit / View) exposes grouped commands | `dropdown_menu` |
+
+<%= embed UI::DropdownMenuComponentPreview %>
