@@ -39,6 +39,12 @@
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key
+/config/credentials/*.key
+
+# SQLite databases belong in /storage (ignored above); never commit one from anywhere else.
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
 
 
 /app/assets/builds/*

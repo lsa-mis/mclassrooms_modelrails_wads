@@ -10,7 +10,7 @@ A multi-tenant SaaS starter kit built on Rails 8.1.
 - **Assets:** Propshaft, Importmaps
 - **Auth:** Rails 8 authentication generator, magic links, OmniAuth (Google, GitHub), Pundit
 - **Real-Time:** Turbo Stream broadcasts (morph-based refresh)
-- **Content:** Action Text (Trix rich text editor)
+- **Content:** Action Text with [Lexxy](https://github.com/basecamp/lexxy) (Lexical-based rich text editor)
 - **Docs:** Markdowndocs engine at `/docs` (deployment, background jobs, getting started, architecture, security, …)
 - **Testing:** RSpec, FactoryBot, Capybara, Playwright, axe-core (WCAG 2.2 AAA), Bullet (N+1 detection)
 - **Security:** Rate limiting, security headers, CSP, Pwned password check
@@ -78,6 +78,39 @@ github:
 ```
 
 OAuth is optional — email/password sign-up works without it.
+
+## Forking this template
+
+This repo is an upstream template: fork it, build your app, and periodically merge
+upstream improvements back in (`git merge upstream/main`). Before your first commit,
+rename the app identity everywhere it is hardcoded:
+
+| What | Where | Notes |
+| ---- | ----- | ----- |
+| Ruby module name | `config/application.rb` (`module ModelrailsBase`) | `bin/rails app:update` won't do this for you |
+| Kamal service name | `config/deploy.yml` (`service:`) | Tags Docker containers; collides if two apps share a host |
+| Docker image name | `config/deploy.yml` (`image:`) | Must match your registry path |
+| Storage volume names | `config/deploy.yml` (`volumes:`) | Renaming later orphans the old volume — do it before first deploy |
+| PWA app name | `public/manifest.webmanifest` + `app/views/pwa/manifest.json.erb` | Shown on the home screen if users install the PWA |
+| CI image tags | `.github/workflows/ci.yml` + `image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
+| npm lockfile name | `package-lock.json` | Auto-derived from the directory name — regenerates on `npm install` |
+| App display name | `config/locales/en/*.yml` (product/brand strings) | All UI text is I18n-keyed |
+
+Then bootstrap your own secrets — credentials are deliberately **not** committed:
+
+```bash
+# Generates config/credentials/<env>.yml.enc + .key (keys are gitignored)
+bin/rails credentials:edit --environment development
+bin/rails credentials:edit --environment production
+```
+
+Add OAuth keys (structure above) and `mailer.from` as needed. For production you'll
+also set `RAILS_HOST`, pick a tenancy preset (`TENANCY_ONBOARDING`), and choose a
+signup mode — see `.env.example` and the in-app docs at `/docs` (deployment, presets),
+which your fork inherits automatically.
+
+If multiple forks will share a cookie domain, customize the session cookie key in an
+initializer (`config/initializers/session_store.rb`).
 
 ## What's included (Phase 1)
 
