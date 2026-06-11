@@ -1,3 +1,7 @@
+<%# Deviation: the only inline script tag in a view. It must set the `dark` class
+    on the html root BEFORE first paint, so it cannot live in the `theme` Stimulus
+    controller (importmap modules are deferred and would paint the wrong theme
+    first). Nonce keeps it CSP-compliant; logic mirrors controllers/theme_controller.js. -%>
 <script nonce="<%= content_security_policy_nonce %>">
   (function() {
     var preference = document.documentElement.dataset.themeThemeValue || 'system';
