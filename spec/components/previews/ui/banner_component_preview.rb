@@ -28,6 +28,16 @@ module UI
   class BannerComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Overview
+
+    # Every AAA-proven variant on one screen.
+    def showcase
+    end
+
+    # @!endgroup
+
+    # @!group Examples
+
     # Neutral page-level announcement on the raised surface.
     def default
     end
@@ -42,9 +52,9 @@ module UI
     def dismissible
     end
 
-    # Every AAA-proven variant on one screen.
-    def showcase
-    end
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — a dismiss control without an accessible name
     #
@@ -54,5 +64,7 @@ module UI
     # @label Don't · dismiss with no label
     def dont_dismiss_no_label
     end
+
+    # @!endgroup
   end
 end

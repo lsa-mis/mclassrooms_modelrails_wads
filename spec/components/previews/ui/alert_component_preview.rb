@@ -25,6 +25,16 @@ module UI
   class AlertComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Overview
+
+    # Every AAA-proven tone on one screen.
+    def showcase
+    end
+
+    # @!endgroup
+
+    # @!group Examples
+
     # Neutral, informational message — announced politely (role=status).
     def default
     end
@@ -50,9 +60,9 @@ module UI
     def with_slots
     end
 
-    # Every AAA-proven tone on one screen.
-    def showcase
-    end
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — an empty alert
     #
@@ -61,5 +71,7 @@ module UI
     # @label Don't · empty alert
     def dont_empty
     end
+
+    # @!endgroup
   end
 end
