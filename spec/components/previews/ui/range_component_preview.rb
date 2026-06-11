@@ -33,6 +33,8 @@ module UI
   class RangeComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A native slider with a sibling label — the baseline appearance.
     def default
     end
@@ -55,5 +57,24 @@ module UI
     # Disabled control — passed straight through via `**html_attrs`.
     def disabled
     end
+
+    # @!endgroup
+
+    # @!group Reference
+
+    # Drag the value and flip `show_value` / `invalid` / `disabled`; the `<output>`
+    # readout and `aria-invalid` rewire live. (The slider's accessible name comes from
+    # `aria-label` here — real callers supply an external `<label for>`.)
+    # @param value select [0, 25, 50, 75, 100]
+    # @param show_value toggle
+    # @param invalid toggle
+    # @param disabled toggle
+    def playground(value: 50, show_value: true, invalid: false, disabled: false)
+      ui :range, id: "pg_volume", name: "pg_volume", min: 0, max: 100, step: 1,
+        value: value.to_i, show_value: show_value, invalid: invalid,
+        disabled: disabled, "aria-label": "Volume"
+    end
+
+    # @!endgroup
   end
 end

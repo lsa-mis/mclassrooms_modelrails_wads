@@ -32,6 +32,9 @@ module UI
   #   When using `wrapper: true` (the default), the `with_trigger` slot provides the
   #   open button; `wrapper: false` requires you to supply `data-controller="modal"` on
   #   a parent element and wire your own trigger.
+  #
+  # ## Related
+  # `alert_dialog` · `drawer` · `sheet`
   # @logical_path Overlays
   class DialogComponentPreview < ViewComponent::Preview
     include UIHelper

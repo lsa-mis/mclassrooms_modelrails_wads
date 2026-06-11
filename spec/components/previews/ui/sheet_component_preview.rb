@@ -24,6 +24,9 @@ module UI
   # - **You supply:** a `title:` (required — the accessible name). Actions belong in
   #   the `with_footer` slot. The `with_trigger` slot provides the open button. Pass
   #   `side:` to choose which edge the panel slides in from (`:right` default).
+  #
+  # ## Related
+  # `drawer` · `dialog`
   # @logical_path Overlays
   class SheetComponentPreview < ViewComponent::Preview
     include UIHelper

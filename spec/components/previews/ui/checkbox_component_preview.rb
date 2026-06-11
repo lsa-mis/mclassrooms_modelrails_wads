@@ -17,6 +17,9 @@ module UI
   # - **Guarantees:** a labelled, keyboard-operable checkbox with an AAA focus ring;
   #   the clickable label provides the larger AAA target.
   # - **You supply:** a `label` and, on error, `invalid: true` + `describedby:`.
+  #
+  # ## Related
+  # `switch` · `radio_group` · `toggle`
   # @logical_path Forms & Inputs
   class CheckboxComponentPreview < ViewComponent::Preview
     include UIHelper
@@ -42,6 +45,16 @@ module UI
     # @!endgroup
 
     # @!group Reference
+
+    # Flip the states and watch `checked` / `aria-invalid` / `disabled` rewire live.
+    # @param label text
+    # @param checked toggle
+    # @param invalid toggle
+    # @param disabled toggle
+    def playground(label: "Accept the terms", checked: false, invalid: false, disabled: false)
+      ui :checkbox, label: label, name: "pg_terms", checked: checked,
+        invalid: invalid, disabled: disabled
+    end
 
     # ## Don't — an unlabelled checkbox
     #

@@ -21,6 +21,9 @@ module UI
   # - **You supply:** a group `label:` (or `labelledby:`), `items:` as
   #   `[{ value:, label:, checked?:, disabled?: }]`, and on error `invalid:` +
   #   `describedby:`.
+  #
+  # ## Related
+  # `select` · `checkbox`
   # @logical_path Forms & Inputs
   class RadioGroupComponentPreview < ViewComponent::Preview
     include UIHelper
@@ -43,6 +46,14 @@ module UI
     # @!endgroup
 
     # @!group Reference
+
+    # Flip `invalid` and watch the group's `aria-invalid` rewire live.
+    # @param label text
+    # @param invalid toggle
+    def playground(label: "Billing plan", invalid: false)
+      ui :radio_group, name: "pg_plan", label: label, invalid: invalid,
+        items: [ { value: "free", label: "Free" }, { value: "pro", label: "Pro" } ]
+    end
 
     # ## Don't — a radiogroup with no accessible name
     #

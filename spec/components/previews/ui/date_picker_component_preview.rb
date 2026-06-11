@@ -17,6 +17,9 @@ module UI
   #   decorative calendar icon is `aria-hidden`.
   # - **You supply:** an optional `label:` (caption + accessible name), `name:` (to post
   #   back), and `format:` (the display + hint pattern).
+  #
+  # ## Related
+  # `calendar` · `timepicker`
   # @logical_path Forms & Inputs
   class DatePickerComponentPreview < ViewComponent::Preview
     include UIHelper

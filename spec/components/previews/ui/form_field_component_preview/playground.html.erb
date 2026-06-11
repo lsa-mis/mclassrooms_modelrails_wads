@@ -1,0 +1,8 @@
+<%# Template-backed: inline preview methods drop block-yielded slot content, so the
+    control would silently vanish — render through ERB like the other scenarios. %>
+<div id="field-scope" class="max-w-md">
+  <%= ui :form_field, label: label, hint: hint.presence, error: error.presence,
+        required: required, id: "pg_email" do |f| %>
+    <%= ui :input, type: "email", name: "email", **f.input_attrs %>
+  <% end %>
+</div>

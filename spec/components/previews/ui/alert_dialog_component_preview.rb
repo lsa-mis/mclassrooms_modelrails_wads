@@ -28,6 +28,9 @@ module UI
   #   via the `modal` Stimulus controller.
   # - **You supply:** a `title:` (required — the accessible name) and footer action
   #   buttons in the `with_footer` slot. The `with_trigger` slot provides the open button.
+  #
+  # ## Related
+  # `dialog`
   # @logical_path Overlays
   class AlertDialogComponentPreview < ViewComponent::Preview
     include UIHelper

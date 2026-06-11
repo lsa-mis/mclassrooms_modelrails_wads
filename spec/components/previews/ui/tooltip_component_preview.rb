@@ -11,6 +11,9 @@ module UI
   # - **Guarantees:** hover + focus reveal; `role="tooltip"` + `aria-describedby`;
   #   Escape-dismiss; `pointer-events-none` bubble.
   # - **You supply:** `text:` (the hint) and the trigger content.
+  #
+  # ## Related
+  # `popover` · `hover_card`
   # @logical_path Overlays
   class TooltipComponentPreview < ViewComponent::Preview
     include UIHelper

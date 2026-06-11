@@ -22,6 +22,9 @@ module UI
   #   contrast, WCAG 1.4.11), and a hidden input carrying the value in a form.
   # - **You supply:** an optional group `label:`, the initial `value:`, `max:`, and
   #   either `name:` (form post) or `url:` (direct submit).
+  #
+  # ## Related
+  # `rating`
   # @logical_path Forms & Inputs
   class RatingInputComponentPreview < ViewComponent::Preview
     include UIHelper

@@ -21,6 +21,9 @@ module UI
   #   `aria-hidden` star glyphs, and filled stars on the AAA-tuned semantic
   #   `text-warning-icon` token (3:1 graphic contrast, WCAG 1.4.11).
   # - **You supply:** the `value:` to display and the `max:` star count.
+  #
+  # ## Related
+  # `rating_input`
   # @logical_path Data Display
   class RatingComponentPreview < ViewComponent::Preview
     include UIHelper

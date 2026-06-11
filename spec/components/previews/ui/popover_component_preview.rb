@@ -12,6 +12,9 @@ module UI
   #   `aria-expanded`, and `aria-controls`; a `role="dialog"` panel named by `label:`.
   #   Non-modal — focus is not trapped.
   # - **You supply:** `label:` (the panel's accessible name) and a `with_trigger` slot.
+  #
+  # ## Related
+  # `tooltip` · `hover_card`
   # @logical_path Overlays
   class PopoverComponentPreview < ViewComponent::Preview
     include UIHelper

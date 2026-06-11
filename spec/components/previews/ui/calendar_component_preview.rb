@@ -16,6 +16,9 @@ module UI
   #   tabindex) with arrow-key navigation; i18n-labelled prev/next buttons; and
   #   the AAA offset `focus-ring` on every control.
   # - **You supply:** `selected:`/`month:` Dates and optional `min:`/`max:` bounds.
+  #
+  # ## Related
+  # `date_picker`
   # @logical_path Forms & Inputs
   class CalendarComponentPreview < ViewComponent::Preview
     include UIHelper

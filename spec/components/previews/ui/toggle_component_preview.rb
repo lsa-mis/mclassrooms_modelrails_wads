@@ -21,6 +21,9 @@ module UI
   #
   # ## Sizes
   # `default` · `sm` · `lg` — all >=44px tall.
+  #
+  # ## Related
+  # `switch` · `checkbox` · `toggle_group`
   # @logical_path Forms & Inputs
   class ToggleComponentPreview < ViewComponent::Preview
     include UIHelper

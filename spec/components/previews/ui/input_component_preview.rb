@@ -27,6 +27,9 @@ module UI
   #   `aria-describedby` wired when `describedby:` is supplied.
   # - **You supply (when standalone):** a visible `<label>` associated via `for:/id:`,
   #   and a `name:` attribute. The form builder supplies both automatically.
+  #
+  # ## Related
+  # `form_field` · `label` · `textarea` · `search_input` · `floating_label`
   # @logical_path Forms & Inputs
   class InputComponentPreview < ViewComponent::Preview
     include UIHelper
@@ -51,6 +54,17 @@ module UI
     # @!endgroup
 
     # @!group Reference
+
+    # Flip `required` / `invalid` / `disabled` and watch the attributes rewire
+    # (`required`, `aria-invalid`) live.
+    # @param placeholder text
+    # @param required toggle
+    # @param invalid toggle
+    # @param disabled toggle
+    def playground(placeholder: "you@example.com", required: false, invalid: false, disabled: false)
+      ui :input, type: "email", name: "pg_email", placeholder: placeholder,
+        required: required, invalid: invalid, disabled: disabled
+    end
 
     # ## Don't — hand-rolled `<input>` tag
     #

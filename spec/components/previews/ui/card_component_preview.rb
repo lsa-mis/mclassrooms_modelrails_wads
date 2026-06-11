@@ -22,6 +22,9 @@ module UI
   #   is non-interactive and adds no ARIA role.
   # - **You supply:** the heading via `card_title` (set `level:` so it sits correctly
   #   in the page outline) and any focusable controls inside the regions.
+  #
+  # ## Related
+  # `list_group` · `avatar` · `badge`
   # @logical_path Data Display
   class CardComponentPreview < ViewComponent::Preview
     include UIHelper

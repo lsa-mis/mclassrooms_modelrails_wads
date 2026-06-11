@@ -36,4 +36,30 @@ RSpec.describe "Component playgrounds render", type: :system do
     visit_playground("device_mockup")
     expect(page).to have_text("Screen content")
   end
+
+  it "input playground rewires ARIA from params" do
+    visit "/rails/view_components/ui/input_component/playground?required=true&invalid=true"
+    expect(page).to have_css('input[aria-invalid="true"][required]', visible: :all)
+  end
+
+  it "checkbox playground rewires aria-invalid from params" do
+    visit "/rails/view_components/ui/checkbox_component/playground?invalid=true"
+    expect(page).to have_css('input[type="checkbox"][aria-invalid="true"]', visible: :all)
+  end
+
+  it "radio_group playground rewires aria-invalid from params" do
+    visit "/rails/view_components/ui/radio_group_component/playground?invalid=true"
+    expect(page).to have_css('[role="radiogroup"][aria-invalid="true"]', visible: :all)
+  end
+
+  it "range playground renders with a live readout" do
+    visit "/rails/view_components/ui/range_component/playground"
+    expect(page).to have_css('input[type="range"]', visible: :all)
+    expect(page).to have_css("output", visible: :all)
+  end
+
+  it "form_field playground rewires describedby/invalid from params" do
+    visit "/rails/view_components/ui/form_field_component/playground?error=Required&required=true"
+    expect(page).to have_css('input[aria-invalid="true"][aria-describedby*="error"][required]', visible: :all)
+  end
 end
