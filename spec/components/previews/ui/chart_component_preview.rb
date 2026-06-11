@@ -5,7 +5,7 @@ module UI
   #
   # A data-visualization wrapper: a `<canvas>` wired to `chart_controller.js` (a
   # thin Chart.js adapter). Chart.js is NOT bundled — pin it in your importmap
-  # (`pin "chart.js", to: "https://esm.sh/chart.js@4"`) before use.
+  # (`pin "chart.js", to: "https://cdn.jsdelivr.net/npm/chart.js@4/+esm"`) before use.
   #
   # ## Use when
   # - You're plotting a small set of series (bar/line/pie/…) and can summarize the

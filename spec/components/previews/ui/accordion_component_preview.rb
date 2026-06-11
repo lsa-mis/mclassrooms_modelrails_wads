@@ -7,10 +7,16 @@ module UI
   # show/hide and the keyboard (the summary is focusable; Enter/Space toggles),
   # so the base component needs no JavaScript.
   #
+  # ## Use when
+  # - Progressively disclosing independent sections (FAQs, settings groups).
+  #
   # ## Accessibility contract
   # - **Guarantees:** native disclosure semantics, an AAA `focus-ring` on each
   #   summary, and a decorative (aria-hidden) chevron.
   # - **You supply:** a `title` per row and the content.
+  #
+  # ## Modes
+  # Independent (default) · `exclusive: true` (one open at a time, via Stimulus).
   # @logical_path Data Display
   class AccordionComponentPreview < ViewComponent::Preview
     include UIHelper

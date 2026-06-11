@@ -8,9 +8,14 @@ module UI
   # `invalid`/`required`. The control arrives as a block; spread `**f.input_attrs`
   # onto it to adopt the field's id + aria wiring.
   #
+  # ## Use when
+  # - Composing a one-off labelled field by hand. For model-backed forms, prefer the
+  #   app's form builder — it already does this wiring.
+  #
   # ## Accessibility contract
   # - **Guarantees:** a bound `<label for=id>`, hint/error with `#{id}-hint`/`#{id}-error`
-  #   ids, and `input_attrs` carrying id + describedby + invalid + required.
+  #   ids, and `input_attrs` carrying id + describedby + invalid + required. The
+  #   required `*` is a decorative aria-hidden mark on the label.
   # - **You supply:** the control inside the block, spread with `**f.input_attrs`.
   # @logical_path Forms & Inputs
   class FormFieldComponentPreview < ViewComponent::Preview
