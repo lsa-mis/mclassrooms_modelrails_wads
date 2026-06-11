@@ -1,0 +1,25 @@
+# Documented exceptions for the CI image scan (.github/workflows/image_scan.yml).
+# Every entry needs a rationale and a `Revisit:` trigger — enforced by
+# spec/code_smells/template_invariants_spec.rb.
+
+# json 2.18.0 ships INSIDE Ruby 4.0.4 as a default gem; Gemfile.lock pins the
+# fixed json (>= 2.19.2) and Bundler activates it at runtime, so the vulnerable
+# copy is dormant. Unfixable until a Ruby patch release replaces the default gem.
+# Revisit: on the next Ruby 4.0.x patch (bump .tool-versions), or 2026-09-01.
+CVE-2026-33210
+
+# net-imap 0.6.2 ships with Ruby 4.0.4 (bundled gem); Gemfile.lock pins the
+# fixed net-imap (>= 0.6.4) and Bundler activates it at runtime. The app sends
+# mail via SMTP and never opens IMAP connections. Same Ruby-patch dependency.
+# Revisit: on the next Ruby 4.0.x patch (bump .tool-versions), or 2026-09-01.
+CVE-2026-42257
+CVE-2026-42258
+CVE-2026-42245
+CVE-2026-42246
+
+# Go stdlib v1.26.3 baked into thruster 0.1.21's precompiled binary (MIME
+# header decoding DoS). Potentially reachable — thruster fronts production
+# HTTP — but 0.1.21 is the newest release; the fix needs thruster to rebuild
+# with Go >= 1.26.4. No action available to us.
+# Revisit: on the next thruster release (> 0.1.21), or 2026-09-01.
+CVE-2026-42504
