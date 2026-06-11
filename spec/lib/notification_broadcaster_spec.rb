@@ -5,21 +5,25 @@ RSpec.describe NotificationBroadcaster do
 
   describe ".refresh_for (v2 — avatar + hamburger indicator dots + user-menu count row)" do
     it "broadcasts all four v2 surfaces: avatar dot, hamburger dot, menu count row, aria-live" do
-      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      # All four use broadcast_update_to: each frame target is a <turbo-frame>
+      # whose partial renders the frame's CONTENTS, so update (swap inner, keep
+      # the frame element) is correct — replace would strip the frame and freeze
+      # the surface after the first refresh.
+      expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         [ user, :notifications ],
         target: "notifications_indicator_avatar",
         partial: "shared/notifications_indicator",
         locals: hash_including(summary: hash_including(:count, :severity), surface: :avatar)
       )
 
-      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         [ user, :notifications ],
         target: "notifications_indicator_hamburger",
         partial: "shared/notifications_indicator",
         locals: hash_including(summary: hash_including(:count, :severity), surface: :hamburger)
       )
 
-      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         [ user, :notifications ],
         target: "notifications_menu_count_frame",
         partial: "shared/user_menu_notifications_row",
@@ -44,7 +48,7 @@ RSpec.describe NotificationBroadcaster do
       [ "notifications_bell_label_frame",
         "notifications_bell_indicator_frame",
         "notifications_avatar_button_label_frame" ].each do |deprecated_target|
-        expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to).with(
+        expect(Turbo::StreamsChannel).not_to receive(:broadcast_update_to).with(
           anything, hash_including(target: deprecated_target)
         )
       end
@@ -53,7 +57,9 @@ RSpec.describe NotificationBroadcaster do
     end
 
     it "uses the announcement key to localize the aria-live content (e.g., read_state_announcement)" do
-      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+      # The frame surfaces also broadcast_update_to (with different args); allow
+      # them so the specific aria-live expectation below is the only constraint.
+      allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
       expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         [ user, :notifications ],
         target: "notifications-live",
@@ -77,7 +83,7 @@ RSpec.describe NotificationBroadcaster do
     # Inherits the same swallow-log-report contract from PR #97.
     it "swallows + logs + reports broadcast adapter errors so callers aren't blocked" do
       error = StandardError.new("cable down")
-      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to).and_raise(error)
+      allow(Turbo::StreamsChannel).to receive(:broadcast_update_to).and_raise(error)
 
       expect(Rails.logger).to receive(:warn).with(/cable down/).at_least(:once)
       expect(Rails.error).to receive(:report).with(error, hash_including(handled: true)).at_least(:once)
@@ -92,15 +98,15 @@ RSpec.describe NotificationBroadcaster do
     it "continues other broadcasts when one fails (per-broadcast rescue)" do
       # First broadcast (avatar indicator) raises; subsequent broadcasts
       # must still attempt.
-      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         anything, hash_including(target: "notifications_indicator_avatar")
       ).and_raise(StandardError, "simulated cable failure")
 
-      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         anything, hash_including(target: "notifications_indicator_hamburger")
       ).at_least(:once)
 
-      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         anything, hash_including(target: "notifications_menu_count_frame")
       ).at_least(:once)
 

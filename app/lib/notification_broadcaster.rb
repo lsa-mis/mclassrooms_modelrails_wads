@@ -45,8 +45,13 @@ module NotificationBroadcaster
     stream_key = [ user, :notifications ]
     summary = NotificationBellHelper.unread_notification_summary(user)
 
+    # broadcast_update_to (not _replace_to): each target is a <turbo-frame> and
+    # these partials render the frame's CONTENTS, not the frame itself. `replace`
+    # swaps the whole frame element away, so repeat broadcasts can't re-target it
+    # and the surfaces freeze after the first refresh. `update` swaps the frame's
+    # inner content and keeps the frame element addressable for the next refresh.
     safe_broadcast(stream_key, source: "indicator_avatar") do
-      Turbo::StreamsChannel.broadcast_replace_to(
+      Turbo::StreamsChannel.broadcast_update_to(
         stream_key,
         target: "notifications_indicator_avatar",
         partial: "shared/notifications_indicator",
@@ -55,7 +60,7 @@ module NotificationBroadcaster
     end
 
     safe_broadcast(stream_key, source: "indicator_hamburger") do
-      Turbo::StreamsChannel.broadcast_replace_to(
+      Turbo::StreamsChannel.broadcast_update_to(
         stream_key,
         target: "notifications_indicator_hamburger",
         partial: "shared/notifications_indicator",
@@ -64,7 +69,7 @@ module NotificationBroadcaster
     end
 
     safe_broadcast(stream_key, source: "menu_count_row") do
-      Turbo::StreamsChannel.broadcast_replace_to(
+      Turbo::StreamsChannel.broadcast_update_to(
         stream_key,
         target: "notifications_menu_count_frame",
         partial: "shared/user_menu_notifications_row",

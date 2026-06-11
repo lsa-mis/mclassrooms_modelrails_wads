@@ -4,19 +4,22 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
   let(:user) { create(:user) }
 
   it "broadcasts the v2 trio (avatar dot + hamburger dot + user-menu count row) to each recipient on event commit" do
-    expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+    # All surfaces use broadcast_update_to now; allow the aria-live one (asserted
+    # separately) so the three frame expectations below are the only constraints.
+    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+    expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
       [ a_kind_of(User), :notifications ],
       target: "notifications_indicator_avatar",
       partial: "shared/notifications_indicator",
       locals: hash_including(summary: hash_including(:count, :severity), surface: :avatar)
     )
-    expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+    expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
       [ a_kind_of(User), :notifications ],
       target: "notifications_indicator_hamburger",
       partial: "shared/notifications_indicator",
       locals: hash_including(summary: hash_including(:count, :severity), surface: :hamburger)
     )
-    expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+    expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
       [ a_kind_of(User), :notifications ],
       target: "notifications_menu_count_frame",
       partial: "shared/user_menu_notifications_row",
@@ -26,13 +29,15 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
     PasswordChangedNotifier.with(record: user).deliver(user)
   end
 
-  it "broadcasts all three frames once per recipient when fanned out" do
-    # 2 recipients × 3 frames (avatar dot + hamburger dot + menu count) = 6 replaces.
-    # v2 restored the menu-count broadcast that D1 had dropped, because the
-    # user menu carries the canonical Notifications link with a live count badge.
+  it "broadcasts all four surfaces once per recipient when fanned out" do
+    # 2 recipients × 4 surfaces (avatar dot + hamburger dot + menu count +
+    # aria-live) = 8 update_to calls. v2 restored the menu-count broadcast that
+    # D1 had dropped, because the user menu carries the canonical Notifications
+    # link with a live count badge. All surfaces use broadcast_update_to so the
+    # <turbo-frame> targets survive repeat refreshes.
     other = create(:user)
 
-    expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).exactly(6).times
+    expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).exactly(8).times
 
     PasswordChangedNotifier.with(record: user).deliver([ user, other ])
   end
@@ -42,7 +47,7 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
     # streams, so a broadcast there is wasted work. The SQL-level filter
     # `recipient_type: "User"` makes recipient_ids empty for non-User
     # dispatches, and the guard short-circuits before any broadcast call.
-    expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
+    expect(Turbo::StreamsChannel).not_to receive(:broadcast_update_to)
 
     notifier = PasswordChangedNotifier.with(record: user)
     notifier.save!
@@ -53,7 +58,7 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
   end
 
   it "swallows broadcast adapter errors so notification creation isn't blocked" do
-    allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to).and_raise(StandardError, "cable down")
+    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to).and_raise(StandardError, "cable down")
 
     expect {
       PasswordChangedNotifier.with(record: user).deliver(user)
@@ -67,7 +72,7 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
   # broadcast outage — but the failure must reach error tracking.
   it "logs + reports broadcast errors so silent failures reach error tracking" do
     error = StandardError.new("cable down")
-    allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to).and_raise(error)
+    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to).and_raise(error)
 
     expect(Rails.logger).to receive(:warn).with(/cable down/).at_least(:once)
     expect(Rails.error).to receive(:report).with(error, hash_including(handled: true)).at_least(:once)
@@ -76,7 +81,9 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
   end
 
   it "broadcasts an aria-live announcement update to the recipient" do
-    allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+    # The frame surfaces also broadcast_update_to (different targets); allow them
+    # so the specific aria-live expectation below is the only constraint.
+    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
     expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
       [ a_kind_of(User), :notifications ],
       target: "notifications-live",

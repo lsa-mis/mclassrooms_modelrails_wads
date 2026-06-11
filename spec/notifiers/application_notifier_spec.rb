@@ -407,7 +407,9 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     # that the announcement carries the localized arrival text so a future
     # refactor that drops/swallows the live-region update gets caught here.
     it "broadcasts the localized arrival_announcement text targeting #notifications-live" do
-      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+      # All v2 surfaces broadcast_update_to (the frame ones with different
+      # targets); allow them so the aria-live expectation is the only constraint.
+      allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
       expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         [ user, :notifications ],
         target: "notifications-live",
@@ -428,20 +430,17 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     # `notifications_menu_count_frame` and render the
     # `_user_menu_notifications_row` partial.
     it "broadcasts a menu-count refresh to notifications_menu_count_frame on event commit" do
-      expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
+      # Allow the other v2 broadcasts (avatar dot, hamburger dot, aria-live) so
+      # the menu-count expectation below is the only constraint. All surfaces use
+      # broadcast_update_to so the <turbo-frame> targets survive repeat refreshes.
+      allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+      expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         anything,
         hash_including(
           target: "notifications_menu_count_frame",
           partial: "shared/user_menu_notifications_row"
         )
       )
-
-      # Allow the other v2 broadcasts (avatar dot, hamburger dot, aria-live).
-      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-        .with(anything, hash_including(target: "notifications_indicator_avatar"))
-      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
-        .with(anything, hash_including(target: "notifications_indicator_hamburger"))
-      allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
 
       StubAccountAccessNotifier.with(record: resource).deliver(user)
     end

@@ -345,11 +345,15 @@ RSpec.describe "Account Notifications", type: :request do
       # broadcaster (lib/notification_broadcaster.rb) fans out to avatar,
       # hamburger, and menu-count frames on every refresh.
       def expect_v2_refresh_broadcasts
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        # All surfaces use broadcast_update_to (the frame ones keep the
+        # <turbo-frame> addressable across refreshes); allow the aria-live one so
+        # the three frame expectations below are the only constraints.
+        allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+        expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
           .with([ user, :notifications ], hash_including(target: "notifications_indicator_avatar"))
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
           .with([ user, :notifications ], hash_including(target: "notifications_indicator_hamburger"))
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
           .with([ user, :notifications ], hash_including(target: "notifications_menu_count_frame"))
       end
 
@@ -390,10 +394,9 @@ RSpec.describe "Account Notifications", type: :request do
       it "DOES broadcast to notifications_menu_count_frame on read-state mutations (v2)" do
         notification
 
-        allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
         allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
 
-        expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
           .with(anything, hash_including(target: "notifications_menu_count_frame"))
 
         patch account_notification_path(notification), params: { read_at: "now" }
@@ -407,7 +410,7 @@ RSpec.describe "Account Notifications", type: :request do
       it "broadcasts a read-state aria-live announcement on PATCH (mark read)" do
         notification
 
-        allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
         expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
           .with([ user, :notifications ],
                 target: "notifications-live",
@@ -419,7 +422,7 @@ RSpec.describe "Account Notifications", type: :request do
       it "broadcasts a read-state aria-live announcement on POST mark_all_read" do
         notification
 
-        allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+        allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
         expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
           .with([ user, :notifications ],
                 target: "notifications-live",
@@ -443,7 +446,7 @@ RSpec.describe "Account Notifications", type: :request do
         # broadcast is needed — the badge on other tabs is already correct.
         notification.update!(read_at: 1.hour.ago)
 
-        expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
+        expect(Turbo::StreamsChannel).not_to receive(:broadcast_update_to)
 
         delete account_notification_path(notification)
       end
