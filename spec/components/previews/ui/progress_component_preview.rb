@@ -20,6 +20,8 @@ module UI
   class ProgressComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Half-filled bar.
     def default
     end
@@ -32,6 +34,10 @@ module UI
     def complete
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — unlabeled progress bar
     #
     # This bar has no `label:` and no surrounding text, so it is unnamed for screen
@@ -39,5 +45,7 @@ module UI
     # @label Don't · unlabeled
     def dont_unlabeled
     end
+
+    # @!endgroup
   end
 end

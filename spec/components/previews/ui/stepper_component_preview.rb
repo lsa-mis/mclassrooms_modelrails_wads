@@ -21,6 +21,8 @@ module UI
   class StepperComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A horizontal 3-step flow: one complete, one current, one pending.
     def default
     end
@@ -28,6 +30,10 @@ module UI
     # The same flow stacked vertically, with optional per-step descriptions.
     def vertical
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Edit `orientation` live to compare horizontal vs vertical layout.
     # @param orientation select [horizontal, vertical]
@@ -38,5 +44,7 @@ module UI
         { label: "Confirm", status: :pending }
       ]
     end
+
+    # @!endgroup
   end
 end

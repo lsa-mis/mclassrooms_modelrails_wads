@@ -21,6 +21,8 @@ module UI
   class ImageComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A meaningful image with real alt text.
     def default
     end
@@ -33,6 +35,10 @@ module UI
     def decorative
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — alt used as a caption
     #
     # `alt` should be a terse equivalent, not a long descriptive sentence. Stuffing a
@@ -41,5 +47,7 @@ module UI
     # @label Don't · alt as caption
     def dont_alt_as_caption
     end
+
+    # @!endgroup
   end
 end

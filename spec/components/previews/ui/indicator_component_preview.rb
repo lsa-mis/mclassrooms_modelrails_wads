@@ -21,6 +21,8 @@ module UI
   class IndicatorComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A bare presence dot on an element.
     def default
     end
@@ -37,6 +39,10 @@ module UI
     def variants
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — color-only signal
     #
     # This destructive dot is the only thing conveying "error" — there's no text or
@@ -45,5 +51,7 @@ module UI
     # @label Don't · color only
     def dont_color_only
     end
+
+    # @!endgroup
   end
 end

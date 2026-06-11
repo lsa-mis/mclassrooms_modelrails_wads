@@ -25,6 +25,8 @@ module UI
   class QrCodeComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A pre-rendered QR image with a meaningful accessible name.
     def default
     end
@@ -33,6 +35,10 @@ module UI
     def block_svg
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a vague accessible name
     #
     # `alt: "QR code"` tells a screen-reader user nothing about where the code leads.
@@ -40,5 +46,7 @@ module UI
     # @label Don't · vague name
     def dont_vague_name
     end
+
+    # @!endgroup
   end
 end

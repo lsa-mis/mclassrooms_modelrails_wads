@@ -15,9 +15,15 @@ module UI
   class TooltipComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Hover or keyboard-focus the trigger to reveal the hint; Escape dismisses it.
     def basic
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Edit `text` and `side` live to explore placement.
     # @param text text
@@ -25,5 +31,7 @@ module UI
     def playground(text: "Saved to your library", side: :top)
       render_with_template(locals: { text: text, side: side.to_sym })
     end
+
+    # @!endgroup
   end
 end

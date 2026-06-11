@@ -20,6 +20,8 @@ module UI
   class SpinnerComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Default spinner.
     def default
     end
@@ -32,6 +34,10 @@ module UI
     def on_surface
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — spinner with no status text
     #
     # A hand-built spinner with no `role="status"` and no sr-only text is silent to
@@ -40,5 +46,7 @@ module UI
     # @label Don't · no status text
     def dont_no_status_text
     end
+
+    # @!endgroup
   end
 end

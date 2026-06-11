@@ -31,6 +31,8 @@ module UI
   class AvatarComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Photo avatar: pass `src:` with an image URL. The element renders as `<img>`.
     def image
     end
@@ -44,6 +46,10 @@ module UI
     # with `--hue-initials`. Useful for workspace or org avatars.
     def custom_hue
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Explore size and initials interactively.
     # @param size select [xs, sm, md, lg, xl]
@@ -61,5 +67,7 @@ module UI
     # @label Don't · interactive avatar with no label
     def dont_interactive_no_label
     end
+
+    # @!endgroup
   end
 end

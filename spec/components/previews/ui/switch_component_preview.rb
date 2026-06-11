@@ -23,6 +23,8 @@ module UI
   class SwitchComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Off — the default unchecked state.
     def off
     end
@@ -39,6 +41,10 @@ module UI
     def disabled
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a switch with no accessible name
     #
     # A label-less switch with no `aria-label:` has nothing to announce — screen-reader
@@ -46,5 +52,7 @@ module UI
     # @label Don't · no accessible name
     def dont_no_label
     end
+
+    # @!endgroup
   end
 end

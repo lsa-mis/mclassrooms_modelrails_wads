@@ -20,6 +20,8 @@ module UI
   class SkeletonComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A single text-line placeholder.
     def default
     end
@@ -32,6 +34,10 @@ module UI
     def circle
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — no surrounding busy/live region
     #
     # These skeletons are `aria-hidden`, and nothing around them announces a loading
@@ -40,5 +46,7 @@ module UI
     # @label Don't · no busy region
     def dont_no_busy_region
     end
+
+    # @!endgroup
   end
 end

@@ -22,12 +22,26 @@ module UI
   class DeviceMockupComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Portrait phone frame with a decorative top notch (default).
     def phone
     end
 
     # Browser window with decorative traffic-light dots and a fake address bar.
     def browser
+    end
+
+    # @!endgroup
+
+    # @!group Reference
+
+    # Edit `variant` live to switch the device frame (phone/browser/tablet).
+    # @param variant select [phone, browser, tablet]
+    def playground(variant: :browser)
+      ui :device_mockup, variant: variant.to_sym, url: "https://example.com/dashboard", class: "max-w-md" do
+        '<div class="flex aspect-video items-center justify-center bg-surface-sunken text-sm text-text-body">Screen content</div>'.html_safe
+      end
     end
 
     # ## Don't — a meaningful screenshot with no alt text
@@ -39,12 +53,6 @@ module UI
     def dont_decorative_image_no_alt
     end
 
-    # Edit `variant` live to switch the device frame (phone/browser/tablet).
-    # @param variant select [phone, browser, tablet]
-    def playground(variant: :browser)
-      ui :device_mockup, variant: variant.to_sym, url: "https://example.com/dashboard", class: "max-w-md" do
-        '<div class="flex aspect-video items-center justify-center bg-surface-sunken text-sm text-text-body">Screen content</div>'.html_safe
-      end
-    end
+    # @!endgroup
   end
 end

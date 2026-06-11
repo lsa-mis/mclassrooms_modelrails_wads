@@ -15,9 +15,15 @@ module UI
   class HoverCardComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Hover or focus the trigger to reveal the card; Tab through its links; Escape dismisses.
     def basic
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Edit `side` and `label` live.
     # @param label text
@@ -25,5 +31,7 @@ module UI
     def playground(label: "User card", side: :bottom)
       render_with_template(locals: { label: label, side: side.to_sym })
     end
+
+    # @!endgroup
   end
 end

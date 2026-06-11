@@ -26,6 +26,8 @@ module UI
   class CardComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Title + description in a header, with body content.
     def default
     end
@@ -33,6 +35,10 @@ module UI
     # The full composition — header, content, and a footer action bar.
     def with_footer
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — skip a heading level
     #
@@ -43,5 +49,7 @@ module UI
     # @label Don't · skip a heading level
     def dont_heading_misuse
     end
+
+    # @!endgroup
   end
 end

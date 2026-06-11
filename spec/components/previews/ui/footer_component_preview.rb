@@ -27,6 +27,8 @@ module UI
   class FooterComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Full footer — link columns plus a copyright row.
     def default
     end
@@ -34,6 +36,10 @@ module UI
     # Just a copyright / legal line — no columns.
     def minimal
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — non-semantic link rows
     #
@@ -43,5 +49,7 @@ module UI
     # @label Don't · div link rows
     def dont_div_links
     end
+
+    # @!endgroup
   end
 end

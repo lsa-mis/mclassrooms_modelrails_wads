@@ -22,6 +22,8 @@ module UI
   class TimepickerComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Standard 24-hour picker: a labelled disclosure button, a format hint, and the
     # hour/minute spinbutton popover. An initial value seeds the spinbuttons.
     def default
@@ -30,6 +32,10 @@ module UI
     # 12-hour picker: the hour spinbutton caps at 12 and an AM/PM spinbutton appears.
     def twelve_hour
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Edit `label`, `format`, `step`, and `name` live. `format:` drives BOTH the hour
     # spinbutton range and the human-readable hint (`:h24` → HH:MM 24-hour, `:h12` →
@@ -42,5 +48,7 @@ module UI
     def playground(label: "Pick time", format: :h24, step: 5, name: "event[time]")
       ui :timepicker, label: label, format: format.to_sym, step: step.to_i, name: name
     end
+
+    # @!endgroup
   end
 end

@@ -23,6 +23,8 @@ module UI
   class ScrollAreaComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A fixed-height vertical scroll area with long content. It is a keyboard tab
     # stop (Tab to it, then arrow to scroll) and named via `aria_label:`.
     def default
@@ -32,6 +34,10 @@ module UI
     def horizontal
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a scroll region with no keyboard access
     #
     # `focusable: false` removes the tab stop AND the accessible name. A keyboard-only
@@ -40,5 +46,7 @@ module UI
     # @label Don't · no keyboard access
     def dont_no_keyboard_access
     end
+
+    # @!endgroup
   end
 end

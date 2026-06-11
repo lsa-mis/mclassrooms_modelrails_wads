@@ -23,6 +23,8 @@ module UI
   class KbdComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A single key.
     def default
     end
@@ -35,6 +37,10 @@ module UI
     def in_context
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — non-keyboard text in a <kbd>
     #
     # `<kbd>` means "keyboard input". Using it for a button label or arbitrary text
@@ -42,5 +48,7 @@ module UI
     # @label Don't · non-key text
     def dont_non_key
     end
+
+    # @!endgroup
   end
 end

@@ -16,6 +16,8 @@ module UI
   class PopoverComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Standard popover: a button trigger and a labelled dialog panel.
     def basic
     end
@@ -23,6 +25,10 @@ module UI
     # `side:` and `align:` place the panel relative to the trigger.
     def positioned
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Edit `side`, `align`, and `label` live to explore placement. Popover renders
     # inline (not a full-screen modal), so the param panel is the natural way to
@@ -36,5 +42,7 @@ module UI
         "Panel anchored #{side}/#{align}. Change the params to explore placement."
       end
     end
+
+    # @!endgroup
   end
 end

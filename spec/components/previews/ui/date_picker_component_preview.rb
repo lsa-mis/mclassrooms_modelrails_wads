@@ -21,10 +21,16 @@ module UI
   class DatePickerComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Standard picker: a labelled disclosure button, a format hint, and the calendar
     # popover. No initial value, so the trigger shows the placeholder.
     def default
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Edit `label`, `format`, and `name` live. `format:` drives BOTH the initial label's
     # strftime and the human-readable hint (`:long` → MMMM D, YYYY, `:short` → M/D/YYYY,
@@ -35,5 +41,7 @@ module UI
     def playground(label: "Choose date", format: :long, name: "event[date]")
       ui :date_picker, label: label, format: format.to_sym, name: name
     end
+
+    # @!endgroup
   end
 end

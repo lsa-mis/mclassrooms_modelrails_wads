@@ -30,6 +30,8 @@ module UI
   class FloatingLabelComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # The baseline: a floating-label text field. The label sits inside the field
     # until focus or input, then rises.
     def default
@@ -45,6 +47,10 @@ module UI
     def invalid
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a floating label with no label text
     #
     # Without a `label` there's no placeholder to drive the float AND no accessible
@@ -53,5 +59,7 @@ module UI
     # @label Don't · no label
     def dont_no_label
     end
+
+    # @!endgroup
   end
 end

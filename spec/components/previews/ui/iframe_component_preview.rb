@@ -24,6 +24,8 @@ module UI
   class IframeComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A titled iframe embedding an external map.
     def default
     end
@@ -31,6 +33,10 @@ module UI
     # Aspect-ratio constrained (16/9) — the frame stays responsive at any width.
     def responsive
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — iframe with no accessible name
     #
@@ -41,5 +47,7 @@ module UI
     # @label Don't · no title
     def dont_no_title
     end
+
+    # @!endgroup
   end
 end

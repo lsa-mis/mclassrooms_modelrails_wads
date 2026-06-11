@@ -22,6 +22,8 @@ module UI
   class FigureComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # An image with a caption.
     def default
     end
@@ -29,6 +31,10 @@ module UI
     # A figure with no caption.
     def no_caption
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — caption used in place of alt
     #
@@ -38,5 +44,7 @@ module UI
     # @label Don't · caption replaces alt
     def dont_caption_replaces_alt
     end
+
+    # @!endgroup
   end
 end

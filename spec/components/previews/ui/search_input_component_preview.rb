@@ -24,6 +24,8 @@ module UI
   class SearchInputComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Baseline: a labelled search box. The accessible name defaults to "Search".
     def default
     end
@@ -36,6 +38,10 @@ module UI
     def invalid
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — strip the accessible name
     #
     # A placeholder is only a hint, not an accessible name. Blanking `label:` (or
@@ -44,5 +50,7 @@ module UI
     # @label Don't · no accessible name
     def dont_no_accessible_name
     end
+
+    # @!endgroup
   end
 end

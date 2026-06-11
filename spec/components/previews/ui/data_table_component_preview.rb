@@ -26,6 +26,8 @@ module UI
   class DataTableComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A few sortable + one non-sortable column, rows, and a caption (the
     # accessible name). Try Tab-ing to a header and pressing Enter to sort.
     def default
@@ -41,6 +43,10 @@ module UI
     def not_sortable
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a table with no caption
     #
     # A `<table>` with no `caption:` (and no other accessible name) leaves
@@ -49,5 +55,7 @@ module UI
     # @label Don't · no caption (no accessible name)
     def dont_no_caption
     end
+
+    # @!endgroup
   end
 end

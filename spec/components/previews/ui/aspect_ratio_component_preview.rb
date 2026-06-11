@@ -25,6 +25,8 @@ module UI
   class AspectRatioComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Widescreen 16:9 framing an image.
     def default
     end
@@ -33,6 +35,10 @@ module UI
     def square
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — an empty ratio box
     #
     # With no slotted content the wrapper reserves layout space for nothing and
@@ -40,5 +46,7 @@ module UI
     # @label Don't · no content
     def dont_no_content
     end
+
+    # @!endgroup
   end
 end

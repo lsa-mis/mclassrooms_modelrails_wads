@@ -22,6 +22,8 @@ module UI
   class PictureComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Art-directed sources — a wide crop on large screens, a narrow crop on small.
     def default
     end
@@ -29,6 +31,10 @@ module UI
     # Format fallback — AVIF, then WebP, then the JPEG base <img>.
     def formats
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — base <img> without alt
     #
@@ -38,5 +44,7 @@ module UI
     # @label Don't · no alt
     def dont_no_alt
     end
+
+    # @!endgroup
   end
 end

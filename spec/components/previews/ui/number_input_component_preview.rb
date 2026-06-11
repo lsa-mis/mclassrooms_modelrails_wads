@@ -33,6 +33,8 @@ module UI
   class NumberInputComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A bounded numeric input with min/max/step constraints — the baseline appearance.
     def default
     end
@@ -47,6 +49,10 @@ module UI
     def invalid
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — hand-rolled `<input type="number">` tag
     #
     # Writing a bare `<input type="number">` in ERB skips the AAA styling tokens, the
@@ -56,5 +62,7 @@ module UI
     # @label Don't · raw <input> tag
     def dont_raw_input
     end
+
+    # @!endgroup
   end
 end

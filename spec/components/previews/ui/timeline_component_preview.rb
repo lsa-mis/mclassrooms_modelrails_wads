@@ -27,6 +27,8 @@ module UI
   class TimelineComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Three events with times, titles, and bodies — a plain <ol> of <li>.
     def default
     end
@@ -40,6 +42,10 @@ module UI
     def with_datetime
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — non-semantic <div> steps
     #
     # Building the sequence as <div>s with a hand-drawn line gives assistive tech
@@ -48,5 +54,7 @@ module UI
     # @label Don't · div steps
     def dont_div_steps
     end
+
+    # @!endgroup
   end
 end

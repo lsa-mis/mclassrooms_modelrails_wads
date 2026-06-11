@@ -28,6 +28,8 @@ module UI
   class ChatBubbleComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # An outgoing message — right-aligned interactive fill.
     def sent
     end
@@ -40,6 +42,10 @@ module UI
     def with_meta
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — speaker conveyed by color/alignment only
     #
     # Sighted users read the side and fill to tell who spoke, but with no `author:`
@@ -48,5 +54,7 @@ module UI
     # @label Don't · color-only author
     def dont_color_only_author
     end
+
+    # @!endgroup
   end
 end

@@ -25,6 +25,8 @@ module UI
   class RatingComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Default — three of five stars filled; announces as "3 out of 5 stars".
     def default
     end
@@ -37,6 +39,10 @@ module UI
     def custom_scale
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — never substitute a raw color for the semantic token
     #
     # Filled stars must use the AAA-tuned `text-warning-icon` token, not a raw
@@ -46,5 +52,7 @@ module UI
     # @label Don't · raw color for filled stars
     def dont_raw_color
     end
+
+    # @!endgroup
   end
 end

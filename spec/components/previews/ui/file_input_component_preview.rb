@@ -32,6 +32,8 @@ module UI
   class FileInputComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Prescribed path: render inside a form via the TailwindFormBuilder, which owns
     # the label, help text, error message, and ARIA wiring.
     def in_a_form; end
@@ -46,6 +48,10 @@ module UI
     # in `[]` when paired with a Rails controller that expects an array.
     def multiple; end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — hand-rolled `<input type="file">` tag
     #
     # A bare `<input type="file">` in ERB skips the AAA styling tokens, the focus ring,
@@ -54,5 +60,7 @@ module UI
     # controls, `ui :file_input`.
     # @label Don't · raw <input type="file"> tag
     def dont_raw_file_input; end
+
+    # @!endgroup
   end
 end

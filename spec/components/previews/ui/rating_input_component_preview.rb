@@ -26,6 +26,8 @@ module UI
   class RatingInputComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Default — an empty 5-star rating with the default "Rating" group name.
     def default
     end
@@ -38,6 +40,10 @@ module UI
     def in_a_form
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — never substitute a raw color for the semantic token
     #
     # Filled stars must use the AAA-tuned `text-warning-icon` token, not a raw
@@ -47,5 +53,7 @@ module UI
     # @label Don't · raw color for filled stars
     def dont_raw_color
     end
+
+    # @!endgroup
   end
 end

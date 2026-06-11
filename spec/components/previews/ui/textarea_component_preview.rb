@@ -30,6 +30,8 @@ module UI
   class TextareaComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Prescribed path: render inside a form via the TailwindFormBuilder, which owns
     # the label, help text, error message, and ARIA wiring.
     def in_a_form; end
@@ -41,6 +43,10 @@ module UI
     # sets both automatically when an ActiveModel error is present.
     def invalid; end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — hand-rolled `<textarea>` tag
     #
     # Writing a bare `<textarea>` in ERB skips the AAA styling tokens, the focus ring,
@@ -48,5 +54,7 @@ module UI
     # (`f.text_area :attr`) or, for standalone controls, `ui :textarea`.
     # @label Don't · raw <textarea> tag
     def dont_raw_textarea; end
+
+    # @!endgroup
   end
 end

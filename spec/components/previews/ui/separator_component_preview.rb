@@ -22,6 +22,8 @@ module UI
   class SeparatorComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Horizontal, decorative (the default).
     def default
     end
@@ -34,6 +36,10 @@ module UI
     def semantic
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — meaningful boundary left decorative
     #
     # This separator divides two distinct groups, but it's left `decorative: true`,
@@ -42,5 +48,7 @@ module UI
     # @label Don't · decorative when semantic
     def dont_decorative_when_semantic
     end
+
+    # @!endgroup
   end
 end

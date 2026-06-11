@@ -23,6 +23,8 @@ module UI
   class SelectComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A native select with a sibling label — the baseline appearance.
     def default
     end
@@ -44,6 +46,10 @@ module UI
     def disabled
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a select with no associated label
     #
     # A `<select>` with no external `<label for="<id>">` has no accessible name —
@@ -52,5 +58,7 @@ module UI
     # @label Don't · no label
     def dont_no_label
     end
+
+    # @!endgroup
   end
 end

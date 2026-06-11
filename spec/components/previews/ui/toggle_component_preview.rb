@@ -25,6 +25,8 @@ module UI
   class ToggleComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Unpressed (off) by default — aria-pressed="false", data-state="off".
     def default
     end
@@ -37,6 +39,10 @@ module UI
     # in width/padding, lg is taller.
     def sizes
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # Edit `label`, `pressed`, and `size` live to explore the component.
     # @param label text
@@ -54,5 +60,7 @@ module UI
     # @label Don't · icon-only without a label
     def dont_icon_only_without_label
     end
+
+    # @!endgroup
   end
 end

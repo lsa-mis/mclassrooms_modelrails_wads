@@ -16,6 +16,8 @@ module UI
   class DropdownMenuComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Standard menu: a button trigger and a labelled menu with items, a disabled item,
     # a separator, and a link item.
     def basic
@@ -25,11 +27,17 @@ module UI
     def positioned
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # Edit `side` and `align` live to explore placement.
     # @param side select [bottom, top]
     # @param align select [start, end]
     def playground(side: :bottom, align: :start)
       render_with_template(locals: { side: side.to_sym, align: align.to_sym })
     end
+
+    # @!endgroup
   end
 end

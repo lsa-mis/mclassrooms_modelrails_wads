@@ -23,6 +23,8 @@ module UI
   class LabelComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A standalone caption (no association — see `for_an_input` to bind one).
     def default
     end
@@ -35,6 +37,10 @@ module UI
     def required
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a required marker without the requirement on the input
     #
     # The `*` is decorative (aria-hidden). If the input lacks `aria-required`/
@@ -43,5 +49,7 @@ module UI
     # @label Don't · marker-only requirement
     def dont_marker_only
     end
+
+    # @!endgroup
   end
 end

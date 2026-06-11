@@ -21,6 +21,8 @@ module UI
   class CheckboxComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # A labelled, unchecked checkbox.
     def default
     end
@@ -37,6 +39,10 @@ module UI
     def disabled
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — an unlabelled checkbox
     #
     # No `label` and no `aria-label` leaves an unlabelled control — screen-reader
@@ -44,5 +50,7 @@ module UI
     # @label Don't · no label
     def dont_no_label
     end
+
+    # @!endgroup
   end
 end

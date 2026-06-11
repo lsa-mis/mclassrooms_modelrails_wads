@@ -25,9 +25,15 @@ module UI
   class MapAreaComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # An image with two labeled, clickable hotspots.
     def default
     end
+
+    # @!endgroup
+
+    # @!group Reference
 
     # ## Don't — a hotspot with no accessible name
     #
@@ -37,5 +43,7 @@ module UI
     # @label Don't · area without alt
     def dont_area_no_alt
     end
+
+    # @!endgroup
   end
 end

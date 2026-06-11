@@ -36,6 +36,8 @@ module UI
   class DialogComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Renders spec/components/previews/ui/dialog_component_preview/basic.html.erb —
     # the complete, copy-paste snippet shown in Lookbook's Source tab.
     def basic; end
@@ -48,6 +50,10 @@ module UI
     # Renders spec/components/previews/ui/dialog_component_preview/confirm_destructive.html.erb
     def confirm_destructive; end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — dialog without a title
     #
     # `title:` is required. It is wired to `aria-labelledby` on the `<dialog>` element,
@@ -55,5 +61,7 @@ module UI
     # the modal is announced without context. Always pass a descriptive `title:`.
     # @label Don't · no title (breaks aria-labelledby)
     def dont_no_title; end
+
+    # @!endgroup
   end
 end

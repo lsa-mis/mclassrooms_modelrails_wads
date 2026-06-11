@@ -25,6 +25,8 @@ module UI
   class ListGroupComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Static rows — a plain <ul> of <li>, with a muted row for de-emphasis.
     def default
     end
@@ -34,6 +36,10 @@ module UI
     def links
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — non-semantic <div> rows
     #
     # Building rows as <div>s with click handlers is invisible to assistive tech
@@ -42,5 +48,7 @@ module UI
     # @label Don't · div rows
     def dont_div_rows
     end
+
+    # @!endgroup
   end
 end

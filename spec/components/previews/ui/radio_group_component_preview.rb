@@ -25,6 +25,8 @@ module UI
   class RadioGroupComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Baseline: a named group with a few options and no current selection.
     def default
     end
@@ -38,6 +40,10 @@ module UI
     def invalid
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — a radiogroup with no accessible name
     #
     # A `role="radiogroup"` with neither `label:` nor `labelledby:` exposes no
@@ -46,5 +52,7 @@ module UI
     # @label Don't · no group label
     def dont_no_group_label
     end
+
+    # @!endgroup
   end
 end

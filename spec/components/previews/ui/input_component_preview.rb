@@ -31,6 +31,8 @@ module UI
   class InputComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Prescribed path: render inside a form via the TailwindFormBuilder, which owns
     # the label, help text, error message, and ARIA wiring. This is what you paste
     # into a real form.
@@ -46,6 +48,10 @@ module UI
     # sets both automatically when an ActiveModel error is present.
     def invalid; end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # ## Don't — hand-rolled `<input>` tag
     #
     # Writing a bare `<input>` in ERB skips the AAA styling tokens, the focus ring,
@@ -53,5 +59,7 @@ module UI
     # builder (`f.text_field :attr`) or, for standalone controls, `ui :input`.
     # @label Don't · raw <input> tag
     def dont_raw_input; end
+
+    # @!endgroup
   end
 end

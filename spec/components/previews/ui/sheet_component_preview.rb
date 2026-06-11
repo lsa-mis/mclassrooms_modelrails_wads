@@ -28,6 +28,8 @@ module UI
   class SheetComponentPreview < ViewComponent::Preview
     include UIHelper
 
+    # @!group Examples
+
     # Default side panel sliding in from the right edge. The `with_trigger` slot
     # renders inside the `modal` controller wrapper so clicking the button calls
     # `modal#open` automatically.
@@ -45,6 +47,10 @@ module UI
     def side_bottom
     end
 
+    # @!endgroup
+
+    # @!group Reference
+
     # Edit `side` live to slide the panel in from any edge.
     # @param side select [top, right, bottom, left]
     def playground(side: :right)
@@ -53,5 +59,7 @@ module UI
         "Panel slides in from the #{side} edge. Change the param to explore placement."
       end
     end
+
+    # @!endgroup
   end
 end
