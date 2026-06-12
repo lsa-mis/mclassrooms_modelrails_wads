@@ -72,7 +72,7 @@ Because tokens are remapped under `.dark`, the both-themes helpers catch contras
 The fastest way to pass the gate is to never hardcode color or size:
 
 - **Use semantic tokens, not raw palette utilities.** `text-text-body`, `bg-surface`, and `border-border` resolve to AAA-verified values in both themes. Hardcoded utilities like `text-gray-400` or `bg-white` are not contrast-checked against the token system and drift over time. See [UI patterns](/docs/ui-patterns) and [Components](/docs/components).
-- **Use `focus:ring-interactive-focus` for focus rings** so the indicator stays visible and on-brand.
+- **Use the `focus-ring` utility for focus indicators** — an offset outline that stays visible in forced-colors mode and inside `overflow:hidden` ancestors, unlike `focus:ring-*` box-shadows.
 - **Give interactive elements a 44×44px minimum target.** Pad small icon buttons rather than shrinking the hit area.
 - **Let `.dark` do the theming.** Tokens remap automatically under the `.dark` selector, so markup rarely needs `dark:` variants.
 

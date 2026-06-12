@@ -7,7 +7,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
   HELP_TEXT_CLASSES = "text-sm text-text-muted".freeze
   ERROR_MESSAGE_CLASSES = "text-sm text-danger".freeze
 
-  CHECKBOX_CLASSES = "size-5 rounded border-border-strong text-interactive focus:ring-2 focus:ring-interactive-focus mt-0.5".freeze
+  CHECKBOX_CLASSES = "size-5 rounded border-border-strong text-interactive focus-ring mt-0.5".freeze
 
   def text_field(method, options = {})
     field_wrapper(method, options) do |opts|

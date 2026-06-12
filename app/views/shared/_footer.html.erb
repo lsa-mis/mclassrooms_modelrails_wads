@@ -6,7 +6,7 @@
                 lg:flex-nowrap lg:justify-start lg:gap-6">
       <%= link_to main_app.root_path,
             class: "hover:opacity-80 transition-opacity
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" do %>
+                    focus-ring rounded" do %>
         <%= render "shared/site_logo", size: :small, show_name: true %>
       <% end %>
 
@@ -16,11 +16,11 @@
           <%= link_to t("footer.about"), main_app.about_path,
                 class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
                         hover:text-interactive-hover
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                        focus-ring rounded" %>
           <%= link_to t("footer.docs"), "/docs",
                 class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
                         hover:text-interactive-hover
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                        focus-ring rounded" %>
         </nav>
 
         <div class="hidden sm:block border-l border-border h-3.5" aria-hidden="true"></div>
@@ -30,17 +30,17 @@
           <%= link_to t("footer.privacy"), main_app.privacy_path,
                 class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
                         hover:text-interactive-hover
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                        focus-ring rounded" %>
           <%= link_to t("footer.contact"), main_app.contact_path,
                 class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
                         hover:text-interactive-hover
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                        focus-ring rounded" %>
           <button type="button"
                   data-action="click->footer#reopenCookies"
                   aria-label="<%= t("footer.cookie_settings") %>"
                   class="inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
                          hover:text-interactive-hover
-                         focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
+                         focus-ring rounded">
             <%= t("footer.cookie_settings") %>
           </button>
         </nav>

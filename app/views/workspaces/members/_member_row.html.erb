@@ -27,28 +27,28 @@
               "focus-return-target": "restoreTo"
             },
             class: "text-sm text-interactive hover:text-interactive-hover
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                    focus-ring rounded" %>
     <% end %>
     <% if policy(membership).destroy? && !membership.discarded? %>
       <%= button_to t("workspaces.members.index.deactivate"),
             workspace_member_path(workspace, membership),
             method: :delete,
             class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer p-0
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                    focus-ring rounded" %>
     <% end %>
     <% if policy(membership).reactivate? && membership.discarded? %>
       <%= button_to t("workspaces.members.index.reactivate"),
             reactivate_workspace_member_path(workspace, membership),
             method: :patch,
             class: "text-sm text-success hover:opacity-80 bg-transparent border-0 cursor-pointer p-0
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                    focus-ring rounded" %>
     <% end %>
     <% if policy(membership).transfer_ownership? %>
       <%= button_to t("workspaces.members.index.transfer_ownership"),
             transfer_ownership_workspace_member_path(workspace, membership),
             method: :patch,
             class: "text-sm text-text-muted hover:text-interactive-hover bg-transparent border-0 cursor-pointer p-0
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                    focus-ring rounded" %>
     <% end %>
   </td>
 </tr>

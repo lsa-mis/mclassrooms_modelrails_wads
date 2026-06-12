@@ -71,7 +71,7 @@
                    bg-warning-surface border border-dashed border-warning
                    text-text-body font-medium
                    hover:brightness-105
-                   focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                   focus-ring">
       <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-warning-surface text-warning border border-warning tracking-wide"
             aria-hidden="true"><%= t("a11y_sim.dev_badge") %></span>
       <span data-a11y-sim-target="triggerIcon" class="inline-flex"><%= mode_icons["normal"] %></span>
@@ -103,7 +103,7 @@
                 data-active="<%= mode == "normal" ? "true" : "false" %>"
                 class="w-full flex items-center gap-3 min-h-[var(--form-input-height)] px-3 py-2.5 text-sm text-text-body text-left
                        hover:bg-surface-sunken
-                       focus:outline-none focus:bg-surface-sunken focus:ring-2 focus:ring-inset focus:ring-interactive-focus
+                       focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading
                        data-[active=true]:bg-interactive-subtle
                        data-[active=true]:text-interactive
                        data-[active=true]:font-semibold">

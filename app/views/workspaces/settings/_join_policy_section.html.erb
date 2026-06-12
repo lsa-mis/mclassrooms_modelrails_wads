@@ -14,7 +14,7 @@
   <%= form_with model: workspace, url: workspace_settings_path(workspace), method: :patch, local: true, class: "mt-4 space-y-3" do |f| %>
     <div class="flex items-start gap-2">
       <%= f.radio_button :join_policy, "invite", id: "join_policy_invite",
-            class: "mt-1 focus:ring-cyan-700" %>
+            class: "mt-1 focus-ring" %>
       <label for="join_policy_invite" class="text-sm">
         <span class="font-medium"><%= t("workspaces.settings.join_policy.invite_label") %></span>
         <span class="block text-text-muted"><%= t("workspaces.settings.join_policy.invite_help") %></span>
@@ -24,7 +24,7 @@
     <div class="flex items-start gap-2">
       <%= f.radio_button :join_policy, "open_link", id: "join_policy_open_link",
             disabled: !open_link_permitted,
-            class: "mt-1 focus:ring-cyan-700" %>
+            class: "mt-1 focus-ring" %>
       <label for="join_policy_open_link" class="text-sm <%= "opacity-60" unless open_link_permitted %>">
         <span class="font-medium"><%= t("workspaces.settings.join_policy.open_link_label") %></span>
         <span class="block text-text-muted">
@@ -42,7 +42,7 @@
       <%= f.submit t("workspaces.settings.join_policy.save"),
             class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
                     bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                    focus-ring" %>
     </div>
   <% end %>
 
@@ -65,7 +65,7 @@
                   data-action="clipboard#copy"
                   class="btn-touch-target inline-flex items-center px-3 py-2 rounded-md text-sm
                          border border-border hover:bg-surface-sunken
-                         focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                         focus-ring">
             <span data-clipboard-target="label"><%= t("workspaces.settings.join_policy.copy") %></span>
           </button>
         </div>
@@ -79,7 +79,7 @@
                 form: { data: { turbo_confirm: t("workspaces.settings.join_policy.rotate_confirm") } },
                 class: "btn-touch-target inline-flex items-center px-3 py-2 rounded-md text-sm
                         border border-border hover:bg-surface-sunken
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
+                        focus-ring" %>
 
           <%= button_to t("workspaces.settings.join_policy.revoke"),
                 workspace_join_link_path(workspace, active_link),
@@ -87,7 +87,7 @@
                 form: { data: { turbo_confirm: t("workspaces.settings.join_policy.revoke_confirm") } },
                 class: "btn-touch-target inline-flex items-center px-3 py-2 rounded-md text-sm
                         text-danger border border-danger-border hover:bg-danger-surface
-                        focus:outline-none focus:ring-2 focus:ring-danger" %>
+                        focus-ring" %>
         </div>
       <% else %>
         <p class="mt-2 text-sm text-text-muted">
@@ -99,7 +99,7 @@
                 method: :post,
                 class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
                         bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                        focus-ring" %>
         </div>
       <% end %>
     </div>

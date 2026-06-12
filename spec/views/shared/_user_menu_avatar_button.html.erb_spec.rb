@@ -62,11 +62,9 @@ RSpec.describe "shared/_user_menu_avatar_button.html.erb", type: :view do
     end
   end
 
-  it "applies the AAA focus ring (ring-2, ring-offset-2, ring-interactive-focus)" do
+  it "applies the AAA focus indicator (the focus-ring offset-outline utility)" do
     render partial: "shared/user_menu_avatar_button", locals: { user: user }
-    expect(rendered).to match(/focus:ring-2/)
-    expect(rendered).to match(/focus:ring-offset-2/)
-    expect(rendered).to match(/focus:ring-interactive-focus/)
+    expect(rendered).to match(/\bfocus-ring\b/)
   end
 
   it "renders a chevron-down affordance so the avatar reads as a menu trigger" do

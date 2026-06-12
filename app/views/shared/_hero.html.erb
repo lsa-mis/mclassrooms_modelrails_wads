@@ -13,13 +13,13 @@
       <%= link_to cta_primary, cta_primary_path,
             class: "min-h-[var(--form-input-height)] flex items-center px-6 py-3 rounded-md
                     bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium text-lg
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                    focus-ring" %>
       <% if cta_secondary %>
         <%= link_to cta_secondary, cta_secondary_path,
               class: "min-h-[var(--form-input-height)] flex items-center px-6 py-3 rounded-md
                       border border-interactive text-interactive font-medium text-lg
                       hover:bg-interactive-subtle
-                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                      focus-ring" %>
       <% end %>
     </div>
   <% end %>

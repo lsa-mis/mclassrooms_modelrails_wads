@@ -9,7 +9,7 @@
             new_workspace_invitation_path(@workspace),
             class: "min-h-[var(--form-input-height)] flex items-center px-4 rounded-md
                     bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                    focus-ring" %>
     <% end %>
   </div>
 
@@ -68,30 +68,24 @@
         <table class="w-full" aria-label="<%= t('workspaces.members.index.table_label') %>">
           <thead>
             <tr class="border-b border-border bg-surface">
-              <th scope="col" class="text-left py-3 px-2">
-                <%= render "shared/sortable_header",
-                      title: t("workspaces.members.index.name"),
-                      column: "name",
-                      current_sort: params[:sort],
-                      current_direction: params[:direction],
-                      url: ->(sort_params) { workspace_members_path(@workspace, request.query_parameters.merge(sort_params)) } %>
-              </th>
-              <th scope="col" class="text-left py-3 px-2">
-                <%= render "shared/sortable_header",
-                      title: t("workspaces.members.index.email"),
-                      column: "email",
-                      current_sort: params[:sort],
-                      current_direction: params[:direction],
-                      url: ->(sort_params) { workspace_members_path(@workspace, request.query_parameters.merge(sort_params)) } %>
-              </th>
-              <th scope="col" class="text-left py-3 px-2">
-                <%= render "shared/sortable_header",
-                      title: t("workspaces.members.index.role"),
-                      column: "role",
-                      current_sort: params[:sort],
-                      current_direction: params[:direction],
-                      url: ->(sort_params) { workspace_members_path(@workspace, request.query_parameters.merge(sort_params)) } %>
-              </th>
+              <%= render "shared/sortable_header",
+                    title: t("workspaces.members.index.name"),
+                    column: "name",
+                    current_sort: params[:sort],
+                    current_direction: params[:direction],
+                    url: ->(sort_params) { workspace_members_path(@workspace, request.query_parameters.merge(sort_params)) } %>
+              <%= render "shared/sortable_header",
+                    title: t("workspaces.members.index.email"),
+                    column: "email",
+                    current_sort: params[:sort],
+                    current_direction: params[:direction],
+                    url: ->(sort_params) { workspace_members_path(@workspace, request.query_parameters.merge(sort_params)) } %>
+              <%= render "shared/sortable_header",
+                    title: t("workspaces.members.index.role"),
+                    column: "role",
+                    current_sort: params[:sort],
+                    current_direction: params[:direction],
+                    url: ->(sort_params) { workspace_members_path(@workspace, request.query_parameters.merge(sort_params)) } %>
               <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted">
                 <%= t("workspaces.members.index.status") %>
               </th>

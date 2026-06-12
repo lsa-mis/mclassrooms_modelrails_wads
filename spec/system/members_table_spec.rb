@@ -45,6 +45,21 @@ RSpec.describe "Members table", type: :system do
       expect(page).to have_link(I18n.t("workspaces.members.index.role"))
     end
 
+    it "marks unsorted columns as sortable via aria-sort=none" do
+      visit workspace_members_path(workspace)
+      expect(page).to have_css('th[aria-sort="none"]', count: 3)
+    end
+
+    it "announces the active sort column and direction via aria-sort" do
+      visit workspace_members_path(workspace, sort: "name", direction: "asc")
+      expect(page).to have_css('th[aria-sort="ascending"]', count: 1)
+      expect(page).to have_css('th[aria-sort="none"]', count: 2)
+
+      visit workspace_members_path(workspace, sort: "email", direction: "desc")
+      expect(page).to have_css('th[aria-sort="descending"]', count: 1)
+      expect(page).to have_css('th[aria-sort="none"]', count: 2)
+    end
+
     it "shows status badges" do
       visit workspace_members_path(workspace)
       expect(page).to have_text(I18n.t("workspaces.members.index.active"))

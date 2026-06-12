@@ -29,7 +29,7 @@
             edit_workspace_project_resource_path(@workspace, @project, @resource),
             class: "min-h-[var(--form-input-height)] flex items-center px-4 rounded-md
                     bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                    focus-ring" %>
     <% end %>
   </div>
 
@@ -41,6 +41,6 @@
     <%= link_to t("workspaces.projects.resources.show.back"),
           workspace_project_resources_path(@workspace, @project),
           class: "text-interactive hover:underline
-                  focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                  focus-ring rounded" %>
   </div>
 </div>

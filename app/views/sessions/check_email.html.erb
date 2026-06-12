@@ -9,8 +9,7 @@
             target: "_blank", rel: "noopener",
             data: { turbo_frame: "_top" },
             class: "inline-block underline decoration-dotted decoration-2 underline-offset-4
-                    hover:decoration-solid focus:outline-none focus:ring-2
-                    focus:ring-interactive-focus rounded" do %>
+                    hover:decoration-solid focus-ring rounded" do %>
         <h2 class="text-xl font-semibold text-text-heading">
           <%= t("sessions.check_email.title") %>
           <span class="sr-only"><%= t("sessions.check_email.opens_new_window") %></span>
@@ -33,7 +32,7 @@
     <div class="mt-6">
       <%= link_to t("sessions.check_email.try_again"), main_app.new_session_path,
             class: "text-sm text-interactive underline hover:no-underline
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded",
+                    focus-ring rounded",
             data: { turbo_frame: "_top" } %>
     </div>
   </div>

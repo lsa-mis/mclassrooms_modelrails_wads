@@ -24,7 +24,7 @@
     class="<%= style == :icon ? "min-h-[var(--form-input-height)] min-w-[var(--form-input-height)] flex items-center justify-center" : "min-h-[var(--form-input-height)] flex items-center gap-2 px-2" %>
            text-text-body
            hover:text-interactive-hover
-           focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded"
+           focus-ring rounded"
   >
     <%# Sun icon (light mode) %>
     <%= icon(:sun, class: "hidden", data: { theme_toggle_target: "lightIcon" }) %>

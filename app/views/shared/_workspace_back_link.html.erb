@@ -9,7 +9,7 @@
     <%= link_to workspace_path(Current.workspace),
           class: "inline-flex items-center gap-1 text-sm text-text-muted
                   hover:text-text-body
-                  focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" do %>
+                  focus-ring rounded" do %>
       <%= icon(:arrow_left, size: :sm) %>
       <%= t("navigation.back_to_workspace", workspace: Current.workspace.name) %>
     <% end %>

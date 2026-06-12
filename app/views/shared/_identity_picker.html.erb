@@ -58,7 +58,7 @@
               class="inline-flex items-center gap-1.5 text-sm text-interactive
                      hover:text-interactive-hover
                      min-h-[var(--form-input-height)] px-2 rounded
-                     focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                     focus-ring">
         <%= icon(:arrow_left, size: :sm) %>
         <%= t("identity_picker.back_to_source") %>
       </button>
@@ -87,8 +87,7 @@
             role, but herb-lint flags it because it's an anti-pattern in most
             other contexts. The trailing disable comment on the role line is
             intentional and scoped to that single attribute. %>
-        <div class="cropper-container rounded-lg
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-interactive-focus focus-visible:ring-offset-2"
+        <div class="cropper-container rounded-lg focus-ring"
              data-image-cropper-target="container"
              data-action="keydown->image-cropper#handleKeydown"
              tabindex="0"
@@ -181,7 +180,7 @@
                        text-sm font-medium text-text-body
                        border border-border rounded-lg
                        hover:bg-surface-sunken
-                       focus:outline-none focus:ring-2 focus:ring-interactive-focus
+                       focus-ring
                        min-h-[var(--form-input-height)]">
           <%= icon(:arrow_path, size: :sm) %>
           <%= t("identity_picker.reset_crop") %>
@@ -212,7 +211,7 @@
                          text-sm font-medium text-text-body
                          border border-border rounded-lg
                          hover:bg-surface-sunken
-                         focus:outline-none focus:ring-2 focus:ring-interactive-focus
+                         focus-ring
                          min-h-[var(--form-input-height)]">
             <%= t("identity_picker.cancel") %>
           </button>
@@ -221,7 +220,7 @@
                   class="inline-flex items-center gap-2 px-5 py-2 rounded-lg
                          bg-interactive text-text-on-interactive font-medium text-sm
                          hover:bg-interactive-hover
-                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
+                         focus-ring
                          min-h-[var(--form-input-height)]">
             <%= t("identity_picker.save_crop") %>
           </button>
@@ -233,7 +232,7 @@
                   class="inline-flex items-center gap-1.5 text-sm text-interactive
                          hover:text-interactive-hover
                          min-h-[var(--form-input-height)] px-2 rounded
-                         focus:outline-none focus:ring-2 focus:ring-interactive-focus">
+                         focus-ring">
             <%= icon(:arrow_up_tray, size: :sm) %>
             <%= t("identity_picker.upload_new") %>
           </button>
@@ -242,7 +241,7 @@
                 class: "inline-flex items-center gap-1.5 text-sm text-danger
                         hover:text-danger/80
                         min-h-[var(--form-input-height)] px-2 rounded
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus
+                        focus-ring
                         bg-transparent border-0 cursor-pointer",
                 data: { turbo_frame: "_top" } do %>
             <%= icon(:trash, size: :sm) %>

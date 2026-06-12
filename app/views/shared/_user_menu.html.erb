@@ -24,8 +24,8 @@
               role: "menuitem", tabindex: "-1",
               data: { turbo_prefetch: "true" },
               class: "flex items-center gap-3 px-4 py-3 rounded-t-lg
-                      hover:bg-surface focus:outline-none focus:bg-surface
-                      focus:ring-2 focus:ring-inset focus:ring-interactive-focus" do %>
+                      hover:bg-surface focus:outline-none
+                      focus-visible:bg-surface-sunken focus-visible:text-text-heading" do %>
           <div class="shrink-0 w-10 h-10 rounded-full overflow-hidden">
             <%= avatar_for(Current.user, size: :md) %>
           </div>
@@ -59,7 +59,7 @@
                 class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                         text-sm text-text-body
                         hover:bg-surface hover:text-interactive
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:text-interactive" %>
+                        focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
         </div>
 
         <div class="border-t border-border">
@@ -68,7 +68,7 @@
                 class: "w-full flex items-center min-h-[var(--form-input-height)] px-4 py-2
                         text-sm text-text-body
                         hover:bg-surface hover:text-interactive
-                        focus:outline-none focus:ring-2 focus:ring-interactive-focus focus:text-interactive
+                        focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading
                         cursor-pointer" %>
         </div>
       </div>
@@ -81,8 +81,8 @@
     <%= link_to main_app.edit_account_profile_path,
           data: { turbo_prefetch: "true" },
           class: "flex items-center gap-3 px-3 py-3 rounded-md
-                  hover:bg-surface focus:outline-none focus:bg-surface
-                  focus:ring-2 focus:ring-inset focus:ring-interactive-focus" do %>
+                  hover:bg-surface focus:outline-none
+                  focus-visible:bg-surface-sunken focus-visible:text-text-heading" do %>
       <div class="shrink-0 w-10 h-10 rounded-full overflow-hidden">
         <%= avatar_for(Current.user, size: :md) %>
       </div>
@@ -98,7 +98,7 @@
           class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center justify-between gap-3 px-3 py-2
                   text-sm text-text-body
                   hover:bg-surface-sunken hover:text-interactive-hover rounded
-                  focus:outline-none focus:ring-2 focus:ring-interactive-focus" do %>
+                  focus-ring" do %>
       <span class="flex items-center gap-3">
         <%= icon(:bell, size: :sm) %>
         <%= t("navigation.notifications") %>
@@ -117,17 +117,17 @@
           class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center px-3 py-2
                   text-sm text-text-body
                   hover:bg-surface-sunken hover:text-interactive-hover rounded
-                  focus:outline-none focus:ring-2 focus:ring-interactive-focus" %>
+                  focus-ring" %>
     <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,
           class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center px-3 py-2
                   text-sm text-text-body
                   hover:bg-surface-sunken hover:text-interactive-hover rounded
-                  focus:outline-none focus:ring-2 focus:ring-interactive-focus cursor-pointer" %>
+                  focus-ring cursor-pointer" %>
   </div>
   <% end %>
 <% else %>
   <%= link_to t("navigation.sign_in"), main_app.new_session_path,
         class: "min-h-[var(--form-input-height)] flex items-center text-text-body
                 hover:text-interactive-hover
-                focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded px-2" %>
+                focus-ring rounded px-2" %>
 <% end %>

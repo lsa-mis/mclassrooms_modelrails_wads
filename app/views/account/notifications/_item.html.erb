@@ -27,20 +27,20 @@
             method: :patch,
             autofocus: focus_after_replace,
             aria: { label: t("notifications.index.item.mark_unread_aria", summary: notification.message) },
-            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus-ring" %>
     <% else %>
       <%= button_to t("notifications.index.item.mark_read"),
             account_notification_path(notification, read_at: "now"),
             method: :patch,
             autofocus: focus_after_replace,
             aria: { label: t("notifications.index.item.mark_read_aria", summary: notification.message) },
-            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus-ring" %>
     <% end %>
 
     <%= button_to t("notifications.index.item.delete"),
           account_notification_path(notification),
           method: :delete,
           aria: { label: t("notifications.index.item.delete_aria", summary: notification.message) },
-          class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-danger border border-border transition-colors hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+          class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-danger border border-border transition-colors hover:bg-danger-surface focus-ring" %>
   </div>
 </li>

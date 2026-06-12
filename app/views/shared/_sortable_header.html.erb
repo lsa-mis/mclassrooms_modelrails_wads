@@ -1,23 +1,29 @@
 <%# locals: (title:, column:, current_sort:, current_direction:, url:) %>
+<%# Renders the full <th> so aria-sort (the screen-reader sortability contract,
+    ARIA 1.2) stays adjacent to the link that drives it. %>
 <%
   active = current_sort == column
   next_direction = active && current_direction == "asc" ? "desc" : "asc"
+  aria_sort = if active
+                current_direction == "asc" ? "ascending" : "descending"
+              else
+                "none"
+              end
   arrow = if active
-            current_direction == "asc" ? "\u2191" : "\u2193"
+            current_direction == "asc" ? "↑" : "↓"
           else
             ""
           end
 %>
-<%= link_to url.call(sort: column, direction: next_direction),
-      data: { turbo_frame: "members_results" },
-      class: "group inline-flex items-center gap-1 text-sm font-medium text-text-muted
-              hover:text-interactive-hover
-              focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" do %>
-  <%= title %>
-  <% if arrow.present? %>
-    <span aria-hidden="true" class="text-interactive"><%= arrow %></span>
+<th scope="col" aria-sort="<%= aria_sort %>" class="text-left py-3 px-2">
+  <%= link_to url.call(sort: column, direction: next_direction),
+        data: { turbo_frame: "members_results" },
+        class: "group inline-flex items-center gap-1 text-sm font-medium text-text-muted
+                hover:text-interactive-hover
+                focus-ring rounded" do %>
+    <%= title %>
+    <% if arrow.present? %>
+      <span aria-hidden="true" class="text-interactive"><%= arrow %></span>
+    <% end %>
   <% end %>
-  <% if active %>
-    <span class="sr-only"><%= current_direction == "asc" ? "sorted ascending" : "sorted descending" %></span>
-  <% end %>
-<% end %>
+</th>

@@ -236,7 +236,7 @@ ModelRails targets **WCAG 2.2 Level AAA**:
 | Pattern | Implementation |
 |---------|---------------|
 | Touch targets | `--form-input-height` token (default 44px) drives `TailwindFormBuilder` inputs and the `.btn-touch-target` utility. Many existing partials still use the literal `min-h-[44px]` and migrate as touched — see `docs/design-system.md`. |
-| Focus indicators | `focus:ring-2 focus:ring-interactive-focus` consistently |
+| Focus indicators | The `focus-ring` utility (2px offset outline) consistently — never `focus:ring-*` box-shadows, which vanish in forced-colors mode |
 | Color contrast | Default interactive token is primary-800 (7.56:1 AAA on white). On workspace-branded routes, contrast varies by hue — see Workspace Branding caveat below. |
 | Skip navigation | `sr-only` link to `#main-content` at top of every page |
 | Screen readers | ARIA labels, live regions, roles on all dynamic content |

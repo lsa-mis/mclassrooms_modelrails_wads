@@ -6,7 +6,7 @@
     <div class="flex items-center justify-between h-16">
       <%= link_to main_app.root_path,
             class: "flex items-center gap-2 hover:opacity-80 transition-opacity
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" do %>
+                    focus-ring rounded" do %>
         <%= render "shared/site_logo", size: :small, show_name: true %>
       <% end %>
 
@@ -21,7 +21,7 @@
             <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
                   class: "hidden md:inline-flex min-h-[var(--form-input-height)] items-center px-4 rounded-md
                           bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                          focus-ring" %>
           <% end %>
         <% end %>
         <div class="hidden md:block">
@@ -46,7 +46,7 @@
                 aria-expanded="false"
                 aria-controls="mobile-menu-panel"
                 class="btn-touch-target relative md:hidden text-text-body
-                       focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded">
+                       focus-ring rounded">
           <span class="sr-only" data-mobile-menu-target="label"><%= t("navigation.mobile_menu.open") %></span>
           <%= icon(:bars_3, size: :lg) %>
           <% if authenticated? %>
@@ -93,12 +93,12 @@
           <%= link_to t("navigation.sign_in"), main_app.new_session_path,
                 class: "min-h-[var(--form-input-height)] flex items-center px-2 text-text-body
                         hover:text-interactive-hover rounded
-                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                        focus-ring" %>
           <% if signups_open? %>
             <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
                   class: "min-h-[var(--form-input-height)] flex items-center px-4 rounded-md
                           bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                          focus-ring" %>
           <% end %>
         <% end %>
         <%= render "shared/theme_toggle", style: :labeled %>

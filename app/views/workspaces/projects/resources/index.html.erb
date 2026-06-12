@@ -9,7 +9,7 @@
             new_workspace_project_resource_path(@workspace, @project),
             class: "min-h-[var(--form-input-height)] flex items-center px-4 rounded-md
                     bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                    focus-ring" %>
     <% end %>
   </div>
 
@@ -21,7 +21,7 @@
             <%= link_to resource.title,
                   workspace_project_resource_path(@workspace, @project, resource),
                   class: "text-interactive font-medium hover:underline
-                          focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                          focus-ring rounded" %>
             <% if resource.draft? %>
               <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
                            bg-surface text-text-muted">

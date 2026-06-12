@@ -17,19 +17,19 @@
           method: :post,
           class: "mt-8 w-full min-h-[var(--form-input-height)] rounded-md px-4 py-2
                   bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus
+                  focus-ring
                   cursor-pointer" %>
   <% else %>
     <div class="mt-8 space-y-4">
       <%= link_to t("invitation_accepts.show.sign_in"), new_session_path,
             class: "block w-full min-h-[var(--form-input-height)] flex items-center justify-center rounded-md px-4 py-2
                     bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                    focus-ring" %>
       <%= link_to t("invitation_accepts.show.register"), new_registration_path,
             class: "block w-full min-h-[var(--form-input-height)] flex items-center justify-center rounded-md px-4 py-2
                     border border-interactive text-interactive font-medium
                     hover:bg-surface
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-interactive-focus" %>
+                    focus-ring" %>
     </div>
   <% end %>
 </div>

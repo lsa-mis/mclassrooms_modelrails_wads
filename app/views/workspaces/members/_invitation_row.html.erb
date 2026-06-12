@@ -30,14 +30,14 @@
             resend_workspace_invitation_path(workspace, invitation),
             method: :post,
             class: "text-sm text-interactive hover:text-interactive-hover bg-transparent border-0 cursor-pointer p-0
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                    focus-ring rounded" %>
     <% end %>
     <% if policy(invitation).destroy? %>
       <%= button_to t("workspaces.members.index.pending_invitations.revoke"),
             workspace_invitation_path(workspace, invitation),
             method: :delete,
             class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer p-0
-                    focus:outline-none focus:ring-2 focus:ring-interactive-focus rounded" %>
+                    focus-ring rounded" %>
     <% end %>
   </td>
 </tr>
