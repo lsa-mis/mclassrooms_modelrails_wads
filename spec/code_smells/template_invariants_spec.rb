@@ -683,5 +683,17 @@ RSpec.describe "Template invariants" do
           "#{path} is marked merge=ours in .gitattributes but not mentioned in app/docs/forking.md"
       end
     end
+
+    it "hardcodes the brand name in no template-owned locale file (sweep beyond application.en.yml)" do
+      brand_name = YAML.load_file(Rails.root.join("config/locales/en/brand.en.yml"))
+        .dig("en", "application", "name")
+      fork_owned = %w[config/locales/en/brand.en.yml config/locales/en/pages.en.yml]
+        .map { |path| Rails.root.join(path).to_s }
+      Dir[Rails.root.join("config/locales/**/*.yml")].sort.reject { |file| fork_owned.include?(file) }.each do |file|
+        expect(File.read(file)).not_to include(brand_name),
+          "#{file.delete_prefix("#{Rails.root}/")} hardcodes the brand name #{brand_name.inspect} — " \
+          "brand strings live only in fork-owned brand.en.yml (see /docs/forking)"
+      end
+    end
   end
 end

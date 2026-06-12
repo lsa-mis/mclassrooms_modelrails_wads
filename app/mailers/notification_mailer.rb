@@ -119,7 +119,7 @@ class NotificationMailer < ApplicationMailer
     @user = user
     @notifications = notifications
     @cadence = user.preferences&.notification_preferences_object&.digest_cadence || "daily"
-    @app_name = t("application.name", default: "ModelRails")
+    @app_name = t("application.name")
     @count = notifications.size
     @preferences_url = edit_account_notification_preferences_url
 
