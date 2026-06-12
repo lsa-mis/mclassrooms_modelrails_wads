@@ -225,7 +225,7 @@ RSpec.describe "Template invariants" do
     it "mounts a named volume for the bundle cache (survives container rebuilds)" do
       mounts = Array(devcontainer["mounts"])
 
-      expect(mounts).to include(match(/modelrails-bundle-cache/)),
+      expect(mounts).to include(match(/bundle-cache/)),
         "expected a named volume mount for /usr/local/bundle to avoid re-installing gems " \
         "on every devcontainer rebuild. Mounts: #{mounts.inspect}"
     end
@@ -592,6 +592,87 @@ RSpec.describe "Template invariants" do
       expect(offenders).to be_empty,
         "expected no encrypted credential blobs or keys tracked in git, found: " \
         "#{offenders.join(', ')}. The template ships zero credentials; see README."
+    end
+  end
+
+  describe "Fork seams (downstream disentanglement — see /docs/forking)" do
+    it "keeps brand identity strings in the fork-owned brand locale file" do
+      brand_path = Rails.root.join("config/locales/en/brand.en.yml")
+      expect(File.exist?(brand_path)).to be(true),
+        "expected config/locales/en/brand.en.yml — the fork-owned home of brand strings (see /docs/forking)"
+      brand = YAML.load_file(brand_path)
+      expect(brand.dig("en", "application", "name")).to be_present,
+        "expected en.application.name in config/locales/en/brand.en.yml — brand identity strings live in the fork-owned file (see /docs/forking)"
+      expect(brand.dig("en", "application", "description")).to be_present,
+        "expected en.application.description in config/locales/en/brand.en.yml — brand identity strings live in the fork-owned file (see /docs/forking)"
+      expect(brand.dig("en", "footer", "copyright")).to be_present,
+        "expected en.footer.copyright in config/locales/en/brand.en.yml — brand identity strings live in the fork-owned file (see /docs/forking)"
+    end
+
+    it "defines no brand strings in template-owned locale files (forks edit brand.en.yml only)" do
+      app_locale = YAML.load_file(Rails.root.join("config/locales/en/application.en.yml"))
+      expect(app_locale.dig("en", "application", "name")).to be_nil,
+        "expected en.application.name to be absent from config/locales/en/application.en.yml — " \
+        "brand strings must live in brand.en.yml so forks edit one file without touching template-owned locales (see /docs/forking)"
+      expect(app_locale.dig("en", "application", "description")).to be_nil,
+        "expected en.application.description to be absent from config/locales/en/application.en.yml — " \
+        "brand strings must live in brand.en.yml so forks edit one file without touching template-owned locales (see /docs/forking)"
+      expect(app_locale.dig("en", "footer", "copyright")).to be_nil,
+        "expected en.footer.copyright to be absent from config/locales/en/application.en.yml — " \
+        "brand strings must live in brand.en.yml so forks edit one file without touching template-owned locales (see /docs/forking)"
+    end
+
+    it "still resolves the brand translations after the move (the views did not change)" do
+      expect(I18n.exists?("application.name")).to be(true),
+        "expected I18n key application.name to resolve — brand.en.yml must define en.application.name " \
+        "so views using t('application.name') keep working after the brand-seam split (see /docs/forking)"
+      expect(I18n.exists?("application.description")).to be(true),
+        "expected I18n key application.description to resolve — brand.en.yml must define en.application.description " \
+        "so views using t('application.description') keep working after the brand-seam split (see /docs/forking)"
+      expect(I18n.exists?("footer.copyright")).to be(true),
+        "expected I18n key footer.copyright to resolve — brand.en.yml must define en.footer.copyright " \
+        "so views using t('footer.copyright') keep working after the brand-seam split (see /docs/forking)"
+    end
+
+    it "draws product routes from the fork-owned config/routes/app.rb" do
+      expect(File.read(Rails.root.join("config/routes.rb"))).to include("draw(:app)"),
+        "expected config/routes.rb to call draw(:app) — product routes live in the fork-owned config/routes/app.rb (see /docs/forking)"
+      app_routes_path = Rails.root.join("config/routes/app.rb")
+      expect(File.exist?(app_routes_path)).to be(true),
+        "expected config/routes/app.rb — the fork-owned home of product routes (see /docs/forking)"
+      expect(File.read(app_routes_path)).to include('root "pages#home"'),
+        "expected the root route in config/routes/app.rb — it moved there from config/routes.rb (see /docs/forking)"
+    end
+
+    it "marks fork-owned paths merge=ours so upstream syncs keep the fork's version" do
+      gitattributes = File.read(Rails.root.join(".gitattributes"))
+      %w[
+        app/views/pages/**
+        app/controllers/pages_controller.rb
+        config/locales/en/pages.en.yml
+        config/locales/en/brand.en.yml
+        config/routes/app.rb
+        config/markdowndocs_categories.local.yml
+        README.md
+      ].each do |path|
+        expect(gitattributes).to match(/^#{Regexp.escape(path)} merge=ours$/),
+          "expected .gitattributes to mark #{path} merge=ours"
+      end
+    end
+
+    it "activates the fork merge driver from bin/setup, gated on the upstream remote" do
+      setup_script = File.read(Rails.root.join("bin/setup"))
+      expect(setup_script).to include("merge.ours.driver"),
+        "bin/setup must activate the merge=ours driver for forks"
+      expect(setup_script).to include("git remote get-url upstream"),
+        "driver activation must be gated on an upstream remote existing — " \
+        "the template repo itself must never set the driver"
+    end
+
+    it "marks the fork extension point in db/seeds.rb" do
+      expect(File.read(Rails.root.join("db/seeds.rb")))
+        .to include("Fork seam: add your app's domain seeds BELOW this line"),
+        "db/seeds.rb needs the end-of-template marker so forks add seeds below it (see /docs/forking)"
     end
   end
 end

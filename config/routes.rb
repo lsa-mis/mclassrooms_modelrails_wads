@@ -97,10 +97,9 @@ Rails.application.routes.draw do
   get "invitations/:token/decline", to: "invitation_declines#show", as: :decline_invitation
   post "invitations/:token/decline", to: "invitation_declines#create"
 
-  root "pages#home"
-  get "about", to: "pages#about"
-  get "privacy", to: "pages#privacy"
-  get "contact", to: "pages#contact"
+  # Fork seam: product routes (root, marketing pages, your features) live in
+  # the fork-owned config/routes/app.rb. See /docs/forking.
+  draw(:app)
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

@@ -7,3 +7,18 @@ db/schema.rb linguist-generated
 vendor/* linguist-vendored
 config/credentials/*.yml.enc diff=rails_credentials
 config/credentials.yml.enc diff=rails_credentials
+
+# Fork-owned paths — downstream forks rewrite these wholesale; upstream
+# freezes them. With the driver active in a fork (bin/setup runs
+# `git config merge.ours.driver true` when an upstream remote exists),
+# a sync where BOTH sides changed one of these files resolves to the
+# fork's version. Files the fork never touched still take upstream's
+# changes — the driver only runs on two-sided changes. See /docs/forking.
+# Inert in this repo (driver deliberately unset upstream).
+app/views/pages/** merge=ours
+app/controllers/pages_controller.rb merge=ours
+config/locales/en/pages.en.yml merge=ours
+config/locales/en/brand.en.yml merge=ours
+config/routes/app.rb merge=ours
+config/markdowndocs_categories.local.yml merge=ours
+README.md merge=ours

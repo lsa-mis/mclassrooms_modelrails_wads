@@ -15,6 +15,15 @@ FileUtils.chdir APP_ROOT do
   puts "== Installing dependencies =="
   system("bundle check") || system!("bundle install")
 
+  # Fork seam: downstream forks have an `upstream` remote (see /docs/forking).
+  # Activate the merge=ours driver for fork-owned paths there. Deliberately
+  # NOT set in the template repo itself — it would silently mis-resolve the
+  # template's own PR merges that touch fork-owned paths.
+  if system("git remote get-url upstream", out: File::NULL, err: File::NULL)
+    system! "git config merge.ours.driver true"
+    puts "\n== Fork detected (upstream remote) — merge=ours driver activated =="
+  end
+
   # puts "\n== Copying sample files =="
   # unless File.exist?("config/database.yml")
   #   FileUtils.cp "config/database.yml.sample", "config/database.yml"

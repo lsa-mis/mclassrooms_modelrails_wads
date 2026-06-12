@@ -1,7 +1,5 @@
 en:
   application:
-    name: "ModelRails"
-    description: "A multi-tenant SaaS starter kit built on Rails."
     skip_to_content: "Skip to main content"
   markdowndocs:
     default_title: "Documentation"
@@ -55,7 +53,6 @@ en:
     contact: "Contact"
     docs: "Docs"
     cookie_settings: "Cookie settings"
-    copyright: "ModelRails. All rights reserved."
     aria:
       product: "Product"
       legal: "Legal and privacy"

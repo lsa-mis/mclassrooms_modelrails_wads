@@ -70,3 +70,8 @@ if TenancyConfig.shared?
     AuthenticationMailer.password_reset_email(owner).deliver_now
   end
 end
+
+# === Template seeds end here =================================================
+# Fork seam: add your app's domain seeds BELOW this line. Upstream owns
+# everything above it; keeping your additions below the marker keeps
+# `git merge upstream/main` conflicts away. See /docs/forking.

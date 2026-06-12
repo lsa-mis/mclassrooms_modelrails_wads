@@ -1,0 +1,9 @@
+# Fork-owned: your app's identity strings live here and nowhere else.
+# Upstream (modelrails_base) freezes this file after creation — edit freely
+# in a fork without merge conflicts. See /docs/forking.
+en:
+  application:
+    name: "ModelRails"
+    description: "A multi-tenant SaaS starter kit built on Rails."
+  footer:
+    copyright: "ModelRails. All rights reserved."

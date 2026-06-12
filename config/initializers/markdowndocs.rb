@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../lib/markdowndocs_local_categories"
+
 Markdowndocs.configure do |config|
   # Path to markdown files
   config.docs_path = Rails.root.join("app", "docs")
@@ -13,7 +15,7 @@ Markdowndocs.configure do |config|
   # NOTE: every file in app/docs/ must appear in exactly one category here, or
   # it renders only by direct URL and is invisible on the /docs index.
   # spec/docs/index_coverage_spec.rb fails CI if a doc is left orphaned.
-  config.categories = {
+  template_categories = {
     "Getting Started" => %w[getting-started],
     # The presets hub + its three per-preset spokes form their own cluster,
     # placed second so it reads as the next step after "getting started".
@@ -27,6 +29,14 @@ Markdowndocs.configure do |config|
     "Features" => %w[accounts workspaces projects identity-system emails notifications notifications-technical],
     "Guides" => %w[extending security ui-patterns components accessibility deployment background-jobs troubleshooting]
   }
+
+  # Fork seam: a downstream fork registers its own docs pages in
+  # config/markdowndocs_categories.local.yml (absent upstream) instead of
+  # editing this initializer. Same-named categories append. See /docs/forking.
+  config.categories = MarkdowndocsLocalCategories.merge(
+    template_categories,
+    Rails.root.join("config/markdowndocs_categories.local.yml")
+  )
 
   # Available documentation modes (default: %w[guide technical])
   # config.modes = %w[guide technical]
