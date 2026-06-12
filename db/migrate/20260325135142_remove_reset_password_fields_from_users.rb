@@ -1,11 +1,9 @@
-# KNOWN ISSUE: This migration silently no-ops when run via `bin/rails db:migrate`
-# on SQLite 3.51+ with Rails 8.1. The columns remain in the DB despite the migration
-# being recorded as "up" in schema_migrations. Running the migration class directly
-# via `rails runner` works correctly. The root cause is under investigation — appears
-# to be a Rails/SQLite interaction with transactional DDL and remove_column.
-#
-# Workaround: if columns persist after migrate, run `bin/rails db:schema:load` from
-# a clean state, or execute the removal manually via rails runner.
+# A silent no-op of this remove_column was observed once on an existing dev DB
+# (columns persisted despite the migration recorded as "up"); it does not
+# reproduce from a clean history on Rails 8.1.3 — the from-zero migrate path is
+# now guarded by spec/migrations/fresh_database_migration_spec.rb, which proves
+# these columns are gone and the result matches schema.rb. If it ever recurs on
+# a long-lived DB: bin/rails db:schema:load from a clean state.
 class RemoveResetPasswordFieldsFromUsers < ActiveRecord::Migration[8.1]
   def change
     remove_index :users, :reset_password_token

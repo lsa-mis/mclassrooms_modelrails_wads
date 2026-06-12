@@ -1,4 +1,11 @@
 class BackfillPrimaryColorHueOnWorkspaces < ActiveRecord::Migration[8.1]
+  # Inline stub instead of the app model: the real Workspace class evolves past
+  # the schema this migration runs under (enums on not-yet-added columns broke
+  # db:migrate from zero).
+  class Workspace < ActiveRecord::Base
+    self.table_name = "workspaces"
+  end
+
   def up
     Workspace.where.not(primary_color: [ nil, "" ]).find_each do |ws|
       hex = ws.read_attribute(:primary_color)
