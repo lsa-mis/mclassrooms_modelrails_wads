@@ -187,10 +187,10 @@ To replace with your own branding, swap the files in `public/` keeping the same 
 
 ## OAuth Setup (optional)
 
-Email/password and magic-link sign-in work without this — set up OAuth only if you want Google/GitHub sign-in. Add credentials for Google and GitHub OAuth:
+Email/password and magic-link sign-in work without this — set up OAuth only if you want Google/GitHub sign-in. Add credentials for Google and GitHub OAuth (per-environment; the template ships no credential files, and the first run generates the blob and key):
 
 ```bash
-bin/rails credentials:edit
+bin/rails credentials:edit --environment development
 ```
 
 ```yaml

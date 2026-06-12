@@ -59,10 +59,11 @@ Coverage report is generated at `coverage/index.html`.
 
 ### OAuth configuration
 
-Google and GitHub OAuth require credentials. Add them via Rails credentials:
+Google and GitHub OAuth require credentials. Add them via per-environment Rails
+credentials (the template ships none; the first run generates the file and key):
 
 ```bash
-bin/rails credentials:edit
+bin/rails credentials:edit --environment development
 ```
 
 Add the following structure:
@@ -104,10 +105,12 @@ bin/rails credentials:edit --environment development
 bin/rails credentials:edit --environment production
 ```
 
-Add OAuth keys (structure above) and `mailer.from` as needed. For production you'll
-also set `RAILS_HOST`, pick a tenancy preset (`TENANCY_ONBOARDING`), and choose a
-signup mode — see `.env.example` and the in-app docs at `/docs` (deployment, presets),
-which your fork inherits automatically.
+Add OAuth keys (structure above) and `mailer.from` as needed. Your fork may commit
+its own `.yml.enc` blobs (normal for a private app — the keys stay gitignored);
+`.kamal/secrets` reads `config/credentials/production.key` at deploy time. For
+production you'll also set `RAILS_HOST`, pick a tenancy preset (`TENANCY_ONBOARDING`),
+and choose a signup mode — see `.env.example` and the in-app docs at `/docs`
+(deployment, presets), which your fork inherits automatically.
 
 If multiple forks will share a cookie domain, customize the session cookie key in an
 initializer (`config/initializers/session_store.rb`).

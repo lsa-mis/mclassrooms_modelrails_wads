@@ -104,10 +104,10 @@ Verification can be resent from the profile page if the original email was lost.
 
 ### SMTP Setup
 
-Configure SMTP credentials in Rails encrypted credentials:
+Configure SMTP credentials in Rails encrypted credentials (per-environment):
 
 ```yaml
-# bin/rails credentials:edit
+# bin/rails credentials:edit --environment production
 smtp:
   address: smtp.example.com
   port: 587

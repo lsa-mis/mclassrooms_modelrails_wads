@@ -580,4 +580,18 @@ RSpec.describe "Template invariants" do
         "between fork points. Use Keep a Changelog format (https://keepachangelog.com)."
     end
   end
+
+  describe "the template ships zero encrypted credential blobs" do
+    # A committed .yml.enc is undecryptable dead weight to every fork and a
+    # guaranteed merge conflict whenever upstream rotates a secret. Forks
+    # generate per-environment credentials on day one (README "Forking this
+    # template") and may commit their own blobs in their private repos.
+    it "tracks no credential blobs or keys in git" do
+      tracked = `git -C #{root} ls-files config`.lines.map(&:strip)
+      offenders = tracked.grep(/\.yml\.enc\z|master\.key\z|credentials\/.*\.key\z/)
+      expect(offenders).to be_empty,
+        "expected no encrypted credential blobs or keys tracked in git, found: " \
+        "#{offenders.join(', ')}. The template ships zero credentials; see README."
+    end
+  end
 end
