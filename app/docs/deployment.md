@@ -196,6 +196,22 @@ This holds:
 
 **Back this volume up off-server.** Losing it loses your entire app state. The recommended pattern is a periodic snapshot of `/var/lib/docker/volumes/modelrails_base_storage/_data` to S3-compatible storage. Migrating off SQLite to a networked DB only solves part of this — Active Storage attachments still live here unless you also configure S3 storage.
 
+## File serving is already offloaded — don't configure X-Sendfile
+
+The production image runs Thruster in front of Puma, and large-file offload is
+**automatic**: Thruster announces sendfile support on every proxied request
+(`X-Sendfile-Type: X-Sendfile`), and `Rack::Sendfile` — present in the default
+middleware stack — honors that per-request announcement. `send_file` responses,
+including Active Storage disk-service downloads, are served by Thruster's Go
+process instead of tying up a Puma thread. There is nothing to enable.
+
+**Never set `config.action_dispatch.x_sendfile_header` explicitly** (blog posts
+sometimes suggest it). The explicit form applies *unconditionally*: on any
+deploy where Thruster isn't in front — a managed platform's nginx, bare
+`rails server` — Rack::Sendfile strips the response body and file downloads
+return empty, a production-only failure CI can't catch. The announce-per-request
+mechanism is deployment-agnostic; leave it alone.
+
 ## Common commands
 
 ```bash
@@ -225,6 +241,7 @@ bin/kamal dbc               # = bin/rails dbconsole with credentials
 | Jobs disappear mid-deploy | `stop_wait_time` too short for Solid Queue drain | `config/deploy.yml` `stop_wait_time: 45` or higher |
 | `kamal deploy` from devcontainer fails with "docker: command not found" | `docker-outside-of-docker` feature not active | `.devcontainer/devcontainer.json` features; rebuild container |
 | Two containers visible during deploy | `max-replicas: 1` missing on `servers.web.options` | Restore the setting; SQLite cannot tolerate this |
+| Deploy fails "container not healthy" on a slow boot | Health-check window too tight for the app's boot time | Raise `proxy.healthcheck.timeout` / boot limit in `config/deploy.yml`; with SQLite's stop-then-start deploys, boot time is also your per-deploy downtime — measure it once with a stopwatch |
 
 ## Deploying without Kamal
 
