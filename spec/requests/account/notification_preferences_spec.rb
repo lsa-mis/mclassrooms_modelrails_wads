@@ -332,8 +332,8 @@ RSpec.describe "Account Notification Preferences", type: :request do
     # the policy's logic — that lives in spec/policies/account/.
     describe "Pundit authorization wiring" do
       it "raises NotAuthorizedError → redirects when the policy denies edit" do
-        allow_any_instance_of(Account::NotificationPreferencesPolicy)
-          .to receive(:edit?).and_return(false)
+        allow(Account::NotificationPreferencesPolicy).to receive(:new)
+          .and_return(instance_double(Account::NotificationPreferencesPolicy, edit?: false))
 
         get edit_account_notification_preferences_path
 
@@ -342,8 +342,8 @@ RSpec.describe "Account Notification Preferences", type: :request do
       end
 
       it "raises NotAuthorizedError → redirects when the policy denies update" do
-        allow_any_instance_of(Account::NotificationPreferencesPolicy)
-          .to receive(:update?).and_return(false)
+        allow(Account::NotificationPreferencesPolicy).to receive(:new)
+          .and_return(instance_double(Account::NotificationPreferencesPolicy, update?: false))
 
         patch account_notification_preferences_path, params: {
           notification_preferences: { quiet_hours: { enabled: "true" } }
@@ -356,8 +356,8 @@ RSpec.describe "Account Notification Preferences", type: :request do
       end
 
       it "raises NotAuthorizedError → redirects when the policy denies dismiss_banner" do
-        allow_any_instance_of(Account::NotificationPreferencesPolicy)
-          .to receive(:dismiss_banner?).and_return(false)
+        allow(Account::NotificationPreferencesPolicy).to receive(:new)
+          .and_return(instance_double(Account::NotificationPreferencesPolicy, dismiss_banner?: false))
 
         post dismiss_banner_account_notification_preferences_path
 

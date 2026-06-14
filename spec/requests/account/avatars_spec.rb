@@ -326,9 +326,17 @@ RSpec.describe "Account Avatars", type: :request do
 
     describe "authorization" do
       it "invokes Account::AvatarPolicy#update? via Pundit" do
-        expect_any_instance_of(Account::AvatarPolicy).to receive(:update?).and_call_original
+        real_policy = nil
+        allow(Account::AvatarPolicy).to receive(:new).and_wrap_original do |orig, *args|
+          real_policy = orig.call(*args)
+          allow(real_policy).to receive(:update?).and_call_original
+          real_policy
+        end
+
         patch account_avatar_path, params: { avatar_source: "initials" },
               headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(real_policy).to have_received(:update?)
       end
     end
 
@@ -353,8 +361,14 @@ RSpec.describe "Account Avatars", type: :request do
       let(:valid_avatar) { fixture_file_upload("avatar.png", "image/png") }
 
       before do
-        # Simulate a user whose available sources don't include "upload"
-        allow_any_instance_of(User).to receive(:available_avatar_sources).and_return(%w[gravatar initials])
+        # Simulate a user whose available sources don't include "upload".
+        # available_avatar_sources hardcodes "upload" (User#available_avatar_sources),
+        # so there is no real-data path that excludes it. Route the controller's
+        # Current.user to this signed-in user (a single class-level seam) and stub
+        # the one method on that real object — `allow` on a real instance still
+        # verifies the method exists, unlike allow_any_instance_of.
+        allow(Current).to receive(:user).and_return(user)
+        allow(user).to receive(:available_avatar_sources).and_return(%w[gravatar initials])
       end
 
       it "rejects file upload when upload is not an allowed source" do

@@ -41,8 +41,8 @@ RSpec.describe "Account Theme Preferences", type: :request do
     # not_authorized flash.
     describe "Pundit authorization wiring" do
       it "raises NotAuthorizedError → redirects when the policy denies update" do
-        allow_any_instance_of(Account::ThemePreferencesPolicy)
-          .to receive(:update?).and_return(false)
+        allow(Account::ThemePreferencesPolicy).to receive(:new)
+          .and_return(instance_double(Account::ThemePreferencesPolicy, update?: false))
 
         patch account_theme_preference_path, params: { user_preferences: { theme: "dark" } }
 

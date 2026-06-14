@@ -8,11 +8,10 @@ require "rails_helper"
 # account controllers happens in Task 9 of the Settings hub Phase 2 plan;
 # integration coverage will live in those controllers' own request specs.
 #
-# To exercise the before_action through a real request cycle while bypassing
-# cookie-based session lookup (which controller specs make awkward), the
-# anonymous controller stubs find_session_by_cookie to return a pre-built
-# Session record. That is the same surface Authenticatable#resume_session
-# uses, so we exercise the genuine before_action chain.
+# To exercise the before_action through a real request cycle, we set the real
+# signed session cookie (cookies.signed[:session_id]) so the genuine
+# Authenticatable#find_session_by_cookie resolves the Session — the same surface
+# resume_session uses. No stubbing: the real before_action chain runs end to end.
 RSpec.describe PersonalWorkspaceContext, type: :controller do
   controller(ApplicationController) do
     include PersonalWorkspaceContext
@@ -33,9 +32,7 @@ RSpec.describe PersonalWorkspaceContext, type: :controller do
     end
 
     before do
-      allow_any_instance_of(ApplicationController)
-        .to receive(:find_session_by_cookie)
-        .and_return(session_record)
+      cookies.signed[:session_id] = session_record.id
     end
 
     it "sets Current.workspace to the user's personal workspace" do

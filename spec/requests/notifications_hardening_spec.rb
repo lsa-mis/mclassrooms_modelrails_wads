@@ -55,11 +55,25 @@ RSpec.describe "Notifications hardening", type: :request do
     # Noticed v3's `Deliverable#deliver` wraps `save!` (the Event row) and
     # `notifications.insert_all!` (the per-recipient rows) in one transaction.
     # If `insert_all!` fails, the Event row rolls back too — net effect is
-    # zero new rows, never partial. Stub at the broadest `ActiveRecord::Relation`
-    # level so the targeting catches the polymorphic call.
+    # zero new rows, never partial.
+    #
+    # The `notifications` relation is built internally by Noticed, so there is
+    # no doubleable handle to stub `insert_all!` on directly (and a class-level
+    # `Noticed::Notification.insert_all!` stub does not intercept the call —
+    # it dispatches through the association proxy, not the bare class). Rather
+    # than reach into `ActiveRecord::Relation` via any_instance, we capture the
+    # notifier through constructor stubbing and inject an unknown column into the
+    # per-recipient attributes. That makes the REAL `insert_all!` fail with a
+    # genuine DB error inside the transaction, after `save!` — exercising the
+    # real rollback path with no mock on the insert itself.
     it "rolls back the Event row when notifications.insert_all! raises" do
-      allow_any_instance_of(ActiveRecord::Relation)
-        .to receive(:insert_all!).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(PasswordChangedNotifier).to receive(:new).and_wrap_original do |orig, *args, **kwargs|
+        notifier = orig.call(*args, **kwargs)
+        allow(notifier).to receive(:recipient_attributes_for).and_wrap_original do |inner, *inner_args|
+          inner.call(*inner_args).merge(nonexistent_column_to_force_insert_failure: "boom")
+        end
+        notifier
+      end
 
       expect {
         PasswordChangedNotifier.with(record: user).deliver(user) rescue nil

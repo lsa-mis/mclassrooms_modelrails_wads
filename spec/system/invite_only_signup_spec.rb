@@ -119,11 +119,15 @@ RSpec.describe "Invite-only signup flow", type: :system do
       credentials: { token: "tk", refresh_token: "rt", expires_at: 1.hour.from_now.to_i }
     )
 
-    # oauth_enabled? gates the button rendering; stub the helper so the button
-    # appears even without real credentials in the test environment.
-    allow_any_instance_of(OauthHelper).to receive(:enabled_oauth_providers).and_return(
-      { google_oauth2: { name: "Google", icon: "google" } }
-    )
+    # oauth_enabled? gates the button rendering. enabled_oauth_providers filters
+    # PROVIDER_CONFIG by which providers have a client_id in credentials
+    # (OauthHelper#enabled_oauth_providers). Stub the SOURCE so the real helper
+    # computes: google present, github absent -> only the Google button renders.
+    allow(Rails.application.credentials).to receive(:dig).and_call_original
+    allow(Rails.application.credentials).to receive(:dig)
+      .with(:oauth, :google, :client_id).and_return("test-google-client-id")
+    allow(Rails.application.credentials).to receive(:dig)
+      .with(:oauth, :github, :client_id).and_return(nil)
 
     # Stash the invitation token in session; lands on new_registration_path.
     post_accept_invitation(invitation.token)

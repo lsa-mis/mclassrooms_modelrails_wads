@@ -106,8 +106,8 @@ RSpec.describe "Account Preferences — Timezone beacon", type: :request do
     describe "Pundit authorization wiring" do
       it "raises NotAuthorizedError → redirects when the policy denies update" do
         user.create_preferences!(timezone: "Europe/London")
-        allow_any_instance_of(Account::TimezonePolicy)
-          .to receive(:update?).and_return(false)
+        allow(Account::TimezonePolicy).to receive(:new)
+          .and_return(instance_double(Account::TimezonePolicy, update?: false))
 
         patch account_preferences_timezone_path,
           params: { timezone: "America/New_York" }
