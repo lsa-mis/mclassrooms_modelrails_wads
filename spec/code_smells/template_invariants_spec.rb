@@ -306,6 +306,32 @@ RSpec.describe "Template invariants" do
       expect(application_rb).to match(/config\.yjit\s*=\s*true/),
         "expected config.yjit = true in config/application.rb (Rails 8.1+ free perf on supported Ruby)"
     end
+
+    # A fork dev copies .env.example; every ENV var the app reads that an
+    # operator can meaningfully set should be there, so they aren't rediscovered
+    # by grepping source (#298). Vars the harness/tooling sets — not a human
+    # editing .env — are excluded here with a reason.
+    excluded_env_vars = {
+      "BUNDLE_GEMFILE"      => "set by Bundler, not an operator",
+      "CI"                  => "set by the CI runner",
+      "PIDFILE"             => "set by bin/dev / Foreman",
+      "SOLID_QUEUE_IN_PUMA" => "set in config/deploy.yml env.clear, not .env (documented in deployment.md)"
+    }
+
+    it "documents every operator-settable ENV var the code reads (no rediscovery-by-grep)" do
+      env_example = File.read(env_example_path)
+      sources = Dir[root.join("{app,config,lib,db,bin}/**/*.{rb,yml,erb}")] + [ root.join("Rakefile").to_s ]
+      read_vars = sources.flat_map do |file|
+        File.read(file).scan(/ENV(?:\.fetch)?\s*[\[(]\s*["']([A-Z][A-Z0-9_]+)["']/).flatten
+      end.uniq
+
+      required = read_vars.reject { |var| excluded_env_vars.key?(var) }
+      missing = required.reject { |var| env_example.include?(var) }
+
+      expect(missing).to be_empty,
+        "These ENV vars are read by the code but absent from .env.example — add them (grouped by " \
+        "scope, with one-line comments), or add to excluded_env_vars with a reason: #{missing.sort.join(', ')}"
+    end
   end
 
   describe "CI verifies the production image actually builds (closes #129/#132 gap)" do
