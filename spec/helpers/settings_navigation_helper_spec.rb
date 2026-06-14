@@ -25,7 +25,6 @@ RSpec.describe SettingsNavigationHelper, type: :helper do
     let(:workspace) { create(:workspace) }
 
     before do
-      allow(helper).to receive(:current_user).and_return(user)
       allow(Current).to receive(:user).and_return(user)
       allow(Current).to receive(:workspace).and_return(workspace)
     end
@@ -87,7 +86,6 @@ RSpec.describe SettingsNavigationHelper, type: :helper do
     let(:user) { create(:user) }
 
     before do
-      allow(helper).to receive(:current_user).and_return(user)
       allow(Current).to receive(:user).and_return(user)
     end
 

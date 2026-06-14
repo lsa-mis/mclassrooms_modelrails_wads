@@ -25,6 +25,8 @@ class ApplicationController < ActionController::Base
 
   private
 
+  # Backs Pundit's pundit_user and is consumed by mounted engines (e.g.
+  # markdowndocs) — keep it even though app code should prefer Current.user.
   def current_user
     Current.user
   end

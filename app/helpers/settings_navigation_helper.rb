@@ -24,7 +24,7 @@ module SettingsNavigationHelper
   def render_nav_item_if_permitted(record, action:, policy_class: nil, &block)
     return nil unless block_given?
 
-    policy = policy_class ? policy_class.new(current_user, record) : Pundit.policy(current_user, record)
+    policy = policy_class ? policy_class.new(Current.user, record) : Pundit.policy(Current.user, record)
     return nil unless policy.public_send(action)
 
     capture(&block)
@@ -58,27 +58,19 @@ module SettingsNavigationHelper
     workspace = Current.workspace
     items = []
 
-    if Workspaces::ProfilePolicy.new(current_user, workspace).update?
+    if Workspaces::ProfilePolicy.new(Current.user, workspace).update?
       items << I18n.t("settings.sidebar.items.profile")
     end
-    if Pundit.policy(current_user, Membership.new(workspace: workspace)).index?
+    if Pundit.policy(Current.user, Membership.new(workspace: workspace)).index?
       items << I18n.t("settings.sidebar.items.members")
     end
-    if Pundit.policy(current_user, Invitation.new(invitable: workspace)).index?
+    if Pundit.policy(Current.user, Invitation.new(invitable: workspace)).index?
       items << I18n.t("settings.sidebar.items.invitations")
     end
-    if Workspaces::SettingsPolicy.new(current_user, workspace).update?
+    if Workspaces::SettingsPolicy.new(Current.user, workspace).update?
       items << I18n.t("settings.sidebar.items.limits_and_plan")
     end
 
     items
-  end
-
-  # ActionController exposes #current_user as a private controller method, not
-  # a view helper. Define a thin shim here so the helper is callable from any
-  # rendering context (and stubbable in helper specs) without depending on
-  # whether the controller exposed current_user via helper_method.
-  def current_user
-    Current.user
   end
 end
