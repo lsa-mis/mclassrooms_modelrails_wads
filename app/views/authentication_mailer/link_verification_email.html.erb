@@ -1,9 +1,9 @@
 <% content_for :preheader do %><%= t("authentication_mailer.link_verification_email.preheader", email: @authentication.email) %><% end %>
 <style>
-  .email-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1f2937; line-height: 1.5; max-width: 480px; margin: 24px auto; padding: 0 16px; }
-  .button { display: inline-block; padding: 12px 24px; background: #1e40af; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; }
-  .what { color: #374151; font-size: 14px; margin-top: 24px; }
-  .footer { color: #4b5563; font-size: 13px; margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+  .email-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: <%= MailerTheme::TEXT %>; line-height: 1.5; max-width: 480px; margin: 24px auto; padding: 0 16px; }
+  .button { display: inline-block; padding: 12px 24px; background: <%= MailerTheme::INTERACTIVE %>; color: <%= MailerTheme::ON_INTERACTIVE %>; text-decoration: none; border-radius: 6px; font-weight: 600; }
+  .what { color: <%= MailerTheme::SUBTLE %>; font-size: 14px; margin-top: 24px; }
+  .footer { color: <%= MailerTheme::MUTED %>; font-size: 13px; margin-top: 16px; border-top: 1px solid <%= MailerTheme::BORDER %>; padding-top: 12px; }
 </style>
 <div class="email-body">
   <p><%= t("authentication_mailer.link_verification_email.greeting", first_name: @user.first_name) %></p>
