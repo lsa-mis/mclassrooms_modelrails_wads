@@ -20,6 +20,11 @@ All notable changes to ModelRails are documented here, organized by phase.
 - Avatar notification indicator restored as a severity-colored dot (v2 — supersedes D1's split). Avatar carries the dot on desktop; hamburger button on mobile. Standalone header bell removed; the in-menu Notifications row is the canonical triage entry point. Live updates target three new frames (`notifications_indicator_avatar`, `notifications_indicator_hamburger`, `notifications_menu_count_frame`) plus the aria-live region. AAA contrast preserved via `--color-danger-strong` (the project's graphic-accent token).
 - Email/password signup defers invitation acceptance — the pending invitation is parked on the new email authentication and claimed when the email is verified, rather than granted at signup (#175).
 
+### Accessibility
+
+- Quiet-hours empty-days warning now sits in a stable `role="status"` / `aria-live="polite"` wrapper instead of carrying the live-region role on the element that toggles `display:none`. A live region that itself flips to `display:none` pops in/out of the accessibility tree and announces unreliably; keeping the wrapper always present means revealing the warning is spoken to screen readers (closes #302).
+- `autocomplete="off"` on the read-only join-link copy field (`workspaces/settings/_join_policy_section`), clearing the `html-input-require-autocomplete` warning the newly-pinned herb-lint (#299) surfaced.
+
 ### Added
 
 - Fork-owned brand-color seam: `app/assets/tailwind/tokens/_brand.css` (`merge=ours`, imported after `_primitives.css`) lets a fork swap its primary palette family without editing the template-owned defaults or hitting merge conflicts — the color twin of `brand.en.yml`. Ships empty (zero compiled bytes); see `docs/theming.md` (#313).

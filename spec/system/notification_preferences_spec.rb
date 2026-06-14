@@ -279,6 +279,33 @@ RSpec.describe "Notification preferences", type: :system do
       warning = find("##{described_by_id}")
       expect(warning.text).to include(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
     end
+
+    # A role=status live region only announces reliably when it is already in
+    # the accessibility tree before its content appears. Toggling display on
+    # the live region itself (the prior shape — role=status sat on the hidden
+    # <p>) is the known-unreliable pattern Léonie flagged: the element pops
+    # into existence and SRs may not fire. The warning must instead live inside
+    # a STABLE wrapper that stays in the tree even while the warning is hidden.
+    it "announces the empty-days warning via a stable live region, not by toggling the live region itself" do
+      # Quiet hours disabled = warning hidden = the common case. The live
+      # region must still be present and unhidden so a later reveal announces.
+      user.preferences.update!(
+        notification_preferences: user.preferences.notification_preferences.merge(
+          "quiet_hours" => { "enabled" => false, "active_days" => [] }
+        )
+      )
+      visit edit_account_notification_preferences_path
+
+      warning = find("#quiet-hours-empty-days-warning", visible: :all)
+      expect(warning[:role]).to be_blank,
+        "the toggled warning <p> must not itself be the live region — a display:none region announces unreliably"
+
+      live_region = warning.find(:xpath, "ancestor::*[@role='status'][1]")
+      expect(live_region["aria-live"]).to eq("polite"),
+        "the warning must sit inside a role=status aria-live=polite wrapper"
+      expect(live_region[:class].to_s).not_to include("hidden"),
+        "the live region wrapper must stay in the a11y tree (never hidden) so revealing the warning is announced"
+    end
   end
 
   # Bell-tooltip DND tests removed: the new avatar-bell design surfaces

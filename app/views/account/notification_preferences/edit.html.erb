@@ -248,13 +248,18 @@
       <%# Deceptive-state warning: surfaced by `quiet-hours-warning` Stimulus
           controller when QH is enabled but no days are checked. Initial
           `hidden` class is removed on connect() if the server-rendered
-          state is already deceptive. -%>
-      <p id="quiet-hours-empty-days-warning"
-         class="text-xs text-warning hidden"
-         data-quiet-hours-warning-target="warning"
-         role="status">
-        <%= t("notifications.preferences.quiet_hours.empty_days_warning") %>
-      </p>
+          state is already deceptive.
+          The role=status/aria-live region is the STABLE wrapper, not the
+          toggled <p>: a live region that itself flips display:none→block pops
+          into the a11y tree and announces unreliably. Keeping the region
+          always-present means the inner <p>'s text appearing is spoken. -%>
+      <div role="status" aria-live="polite">
+        <p id="quiet-hours-empty-days-warning"
+           class="text-xs text-warning hidden"
+           data-quiet-hours-warning-target="warning">
+          <%= t("notifications.preferences.quiet_hours.empty_days_warning") %>
+        </p>
+      </div>
 
       <p class="text-xs text-text-muted">
         <%= t("notifications.preferences.quiet_hours.security_reassurance") %>
