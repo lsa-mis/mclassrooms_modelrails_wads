@@ -109,10 +109,16 @@ class NotificationPreferences
       return false unless active_days.include?(today)
     end
 
-    cur = zone.now.strftime("%H:%M")
     s = qh["start"] || "22:00"
     e = qh["end"]   || "07:00"
 
+    # The picker's full range (00:00–23:59) means all-day quiet hours. The
+    # half-open [s, e) comparison below would otherwise leave a 1-minute hole
+    # at 23:59 (DND off) — a real UX gap, and the source of a class of flaky
+    # notifier specs that set this window to mean "DND always on".
+    return true if s == "00:00" && e == "23:59"
+
+    cur = zone.now.strftime("%H:%M")
     if s <= e
       # Same-day window: 09:00..17:00 → in-window if s <= cur < e
       cur >= s && cur < e

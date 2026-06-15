@@ -186,6 +186,20 @@ RSpec.describe NotificationPreferences do
       end
     end
 
+    context "full-day window (00:00–23:59, the picker's max range)" do
+      let(:start_t) { "00:00" }
+      let(:end_t)   { "23:59" }
+
+      # A user picking the picker's full range means "all day". The half-open
+      # [start, end) comparison would otherwise leave a 1-minute hole at 23:59
+      # (and made ~16 DND notifier specs flaky whenever CI ran in that minute).
+      it "is active even during the 23:59 minute (no all-day gap)" do
+        travel_to(tz.parse("2026-05-10 23:59:30")) do
+          expect(prefs_for(enabled_jsonb).quiet_hours_active?).to be true
+        end
+      end
+    end
+
     context "disabled" do
       it "returns false regardless of times" do
         jsonb = default_jsonb.deep_merge("quiet_hours" => { "enabled" => false, "start" => "00:00", "end" => "23:59" })
