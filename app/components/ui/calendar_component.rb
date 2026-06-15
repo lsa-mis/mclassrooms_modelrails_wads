@@ -48,7 +48,7 @@ module UI
     CELL_CLS   = "contents"
     DAY_BASE   = "h-11 w-11 rounded-md text-center text-sm transition-colors focus-ring"
     DAY_NORMAL = "hover:bg-surface-sunken hover:text-text-heading"
-    DAY_TODAY  = "font-semibold text-text-heading ring-1 ring-border"
+    DAY_TODAY  = "font-semibold ring-1 ring-border"
     DAY_SEL    = "bg-interactive text-text-on-interactive hover:bg-interactive-hover"
     DAY_MUTED  = "text-text-muted"
     DAY_DISABLED = "pointer-events-none opacity-30"
@@ -166,6 +166,10 @@ module UI
       classes = cn(DAY_BASE,
         selected ? DAY_SEL : DAY_NORMAL,
         is_today ? DAY_TODAY : nil,
+        # Today's heading-weight text emphasis applies only off a fill: on a
+        # selected (bg-interactive) cell, DAY_SEL's text-text-on-interactive must
+        # win, else heading text on the fill fails dark-mode contrast (#266 regression).
+        (is_today && !selected) ? "text-text-heading" : nil,
         outside  ? DAY_MUTED : nil,
         disabled ? DAY_DISABLED : nil)
 
