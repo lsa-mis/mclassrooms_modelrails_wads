@@ -11,9 +11,7 @@
   <% if cta_primary %>
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
       <%= link_to cta_primary, cta_primary_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-6 py-3 rounded-md
-                    bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium text-lg
-                    focus-ring" %>
+            class: "btn-primary px-6 py-3 text-lg" %>
       <% if cta_secondary %>
         <%= link_to cta_secondary, cta_secondary_path,
               class: "min-h-[var(--form-input-height)] flex items-center px-6 py-3 rounded-md

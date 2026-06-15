@@ -19,9 +19,7 @@
         <% unless authenticated? %>
           <% if signups_open? %>
             <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
-                  class: "hidden md:inline-flex min-h-[var(--form-input-height)] items-center px-4 rounded-md
-                          bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                          focus-ring" %>
+                  class: "btn-primary hidden md:inline-flex" %>
           <% end %>
         <% end %>
         <div class="hidden md:block">
@@ -96,9 +94,7 @@
                         focus-ring" %>
           <% if signups_open? %>
             <%= link_to t("navigation.sign_up"), main_app.new_registration_path,
-                  class: "min-h-[var(--form-input-height)] flex items-center px-4 rounded-md
-                          bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium
-                          focus-ring" %>
+                  class: "btn-primary" %>
           <% end %>
         <% end %>
         <%= render "shared/theme_toggle", style: :labeled %>

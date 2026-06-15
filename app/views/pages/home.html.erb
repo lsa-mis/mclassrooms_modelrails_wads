@@ -32,9 +32,7 @@
     <% if signups_open? %>
       <div class="mt-8">
         <%= link_to t("pages.home.cta.button"), new_registration_path,
-              class: "min-h-[var(--form-input-height)] inline-flex items-center px-6 py-3 rounded-md
-                      bg-interactive hover:bg-interactive-hover text-text-on-interactive font-medium text-lg
-                      focus-ring" %>
+              class: "btn-primary px-6 py-3 text-lg" %>
       </div>
     <% end %>
   </div>
