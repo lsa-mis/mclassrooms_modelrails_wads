@@ -14,7 +14,7 @@
         relation feeds both renders. content_for MUST be declared before
         render "shared/header" so the slot is populated when the header
         reads it. %>
-    <% workspaces_scope = Current.workspace ? Current.user.workspaces.kept.includes(:logo_attachment, memberships: [ :role, { user: :avatar_attachment } ]) : nil %>
+    <% workspaces_scope = Current.workspace ? sidebar_workspaces_scope : nil %>
     <% if Current.workspace %>
       <%# Mobile accordion: chrome-free contents partial so the workspace
           switcher + nav items flow inline rather than appearing as a

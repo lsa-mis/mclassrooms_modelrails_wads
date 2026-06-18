@@ -140,6 +140,10 @@ Rails.application.configure do
     # is worse than Bullet's false-positive here, so safelist all legs of the
     # conditional preload chain.
     #
+    # Note: ApplicationHelper#sidebar_workspaces_scope omits this preload under :none
+    # (no personal workspaces → the fallback never fires), so this safelist is moot
+    # under that posture — but it must stay for :personal where the preload is needed.
+    #
     # As of Path Y Phase B the same preload runs from `application.html.erb` for
     # the non-settings workspace sidebar (workspace dashboard, projects, etc.),
     # which exposes a few more render paths to the same Bullet false-positive

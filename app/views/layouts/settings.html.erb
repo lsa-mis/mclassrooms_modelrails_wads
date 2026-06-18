@@ -36,8 +36,9 @@
         a nested sidebar-within-a-menu. One eager-loaded workspaces
         relation feeds both renders to avoid an N+1 on the doubly-rendered
         contents. content_for MUST be declared before render
-        "shared/header" so the slot is populated when the header reads it. %>
-    <% workspaces_scope = Current.user.workspaces.kept.includes(:logo_attachment, memberships: [ :role, { user: :avatar_attachment } ]) %>
+        "shared/header" so the slot is populated when the header reads it.
+        Eager-load composition is posture-aware — see ApplicationHelper#sidebar_workspaces_scope. %>
+    <% workspaces_scope = sidebar_workspaces_scope %>
     <% content_for :mobile_menu_sidebar do %>
       <%= render "shared/settings_sidebar_items",
             workspaces: workspaces_scope,
