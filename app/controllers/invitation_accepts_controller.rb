@@ -3,7 +3,12 @@ class InvitationAcceptsController < ApplicationController
 
   def show
     @invitation = find_valid_invitation
-    nil unless @invitation
+    return unless @invitation
+
+    # An unauthenticated invitee will Sign in / Register next; stash the
+    # invitation so SignupPolicy opens the gate under :invite_only and
+    # Signupable consumes it on signup (email-match guarded at consume).
+    session[:pending_invitation_token] = @invitation.token unless authenticated?
   end
 
   def create
