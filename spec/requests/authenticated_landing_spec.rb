@@ -14,10 +14,10 @@ RSpec.describe "Authenticated landing seam", type: :request do
     end
 
     it "still honors a saved return_to over the home default" do
-      get edit_account_profile_path
+      get edit_settings_profile_path
       expect(response).to redirect_to(new_session_path)
       post session_path, params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" }
-      expect(response).to redirect_to(edit_account_profile_url)
+      expect(response).to redirect_to(edit_settings_profile_url)
     end
   end
 

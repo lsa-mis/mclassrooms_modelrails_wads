@@ -126,7 +126,7 @@ If `permits_strategy?(:open_link)` is `false`, the env var isn't set — links w
 2. `Workspaces::JoinsController#create` stashes the token in `session[:pending_join_token]` and redirects to `/sign-up`.
 3. `SignupPolicy.allows_signup?` checks `workspace_join_acceptable?` — the open-link token opens the gate even under `SIGNUP_MODE=invite_only`. The signup form renders.
 4. Visitor registers. `RegistrationsController#create` parks the token on the new email `Authentication` (`pending_join_link_token`), clears the session, sends the verification email.
-5. Visitor clicks the verification email link. `Account::ConnectedAccountsController#verify` proves email ownership, then `Authentication#claim_pending_join_link!` admits them to the workspace as Member via `Workspace#admit`.
+5. Visitor clicks the verification email link. `Settings::ConnectedAccountsController#verify` proves email ownership, then `Authentication#claim_pending_join_link!` admits them to the workspace as Member via `Workspace#admit`.
 
 Stale conditions at claim time (link revoked, workspace policy reverted to `:invite`, instance allowlist no longer permits `:open_link`) are silently no-op'd — email verification proceeds and the user lands signed in but without the workspace membership. Capacity errors at claim time surface as a flash without blocking sign-in.
 

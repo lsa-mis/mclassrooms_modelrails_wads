@@ -29,9 +29,9 @@ RSpec.describe "Verified OAuth account linking", type: :system do
     end
 
     # Lands on connected accounts; pending row visible
-    expect(page).to have_current_path(account_connected_accounts_path)
+    expect(page).to have_current_path(settings_connected_accounts_path)
     expect(page).to have_text("alice.work@gmail.com")
-    expect(page).to have_text(I18n.t("account.connected_accounts.index.pending_label",
+    expect(page).to have_text(I18n.t("settings.connected_accounts.index.pending_label",
                                      email: "alice.work@gmail.com"))
 
     # Verification email was sent to the OAuth-returned email
@@ -42,12 +42,12 @@ RSpec.describe "Verified OAuth account linking", type: :system do
     # Mint a verification link for the pending auth and click it
     auth = user.authentications.find_by(provider: "google")
     expect(auth).to be_pending
-    visit verify_account_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+    visit verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
 
     # Verified, redirected to connected accounts
-    expect(page).to have_current_path(account_connected_accounts_path)
+    expect(page).to have_current_path(settings_connected_accounts_path)
     expect(auth.reload).to be_verified
-    expect(page).not_to have_text(I18n.t("account.connected_accounts.index.pending_label",
+    expect(page).not_to have_text(I18n.t("settings.connected_accounts.index.pending_label",
                                          email: "alice.work@gmail.com"))
   end
 end

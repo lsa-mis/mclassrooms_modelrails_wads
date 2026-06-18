@@ -116,7 +116,7 @@ RSpec.describe AuthenticationMailer, type: :mailer do
     end
 
     it "links to the connected accounts page" do
-      expect(mail.body.encoded).to include("/account/connected_accounts")
+      expect(mail.body.encoded).to include("/settings/connected_accounts")
     end
 
     it "renders both HTML and text parts" do

@@ -73,7 +73,7 @@ RSpec.describe "User menu dropdown", type: :system do
 
     it "renders a clickable identity block linking to the personal-context profile" do
       within "#user-menu" do
-        expect(page).to have_link(href: edit_account_profile_path)
+        expect(page).to have_link(href: edit_settings_profile_path)
         # Identity block carries the user's full name + email address
         expect(page).to have_text(user.full_name)
         expect(page).to have_text(user.email_address)
@@ -102,14 +102,14 @@ RSpec.describe "User menu dropdown", type: :system do
 
     it "renders a Notifications link (v2: standalone bell removed; user menu is the canonical triage entry)" do
       within "#user-menu" do
-        expect(page).to have_link(I18n.t("navigation.notifications"), href: account_notifications_path)
+        expect(page).to have_link(I18n.t("navigation.notifications"), href: settings_notifications_path)
       end
     end
 
     it "does NOT render a Notification preferences link (accessible via Settings sidebar)" do
       within "#user-menu" do
         expect(page).not_to have_link(I18n.t("navigation.notification_preferences"))
-        expect(page).not_to have_link(href: edit_account_notification_preferences_path)
+        expect(page).not_to have_link(href: edit_settings_notification_preferences_path)
       end
     end
   end
@@ -122,13 +122,13 @@ RSpec.describe "User menu dropdown", type: :system do
 
     it "focuses first menu item (identity link) on open" do
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
-      expect(focused_href).to eq(edit_account_profile_path)
+      expect(focused_href).to eq(edit_settings_profile_path)
     end
 
     it "ArrowDown moves focus from identity to Notifications (second item, v2)" do
       send_dropdown_key("ArrowDown")
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
-      expect(focused_href).to eq(account_notifications_path)
+      expect(focused_href).to eq(settings_notifications_path)
     end
 
     it "ArrowDown twice moves focus to All workspaces (third item)" do
@@ -152,7 +152,7 @@ RSpec.describe "User menu dropdown", type: :system do
       send_dropdown_key("ArrowDown") # All workspaces → sign-out
       send_dropdown_key("ArrowDown") # sign-out → wraps to identity
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
-      expect(focused_href).to eq(edit_account_profile_path)
+      expect(focused_href).to eq(edit_settings_profile_path)
     end
 
     it "ArrowUp wraps from first to last item" do
@@ -165,7 +165,7 @@ RSpec.describe "User menu dropdown", type: :system do
       send_dropdown_key("ArrowDown")
       send_dropdown_key("Home")
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
-      expect(focused_href).to eq(edit_account_profile_path)
+      expect(focused_href).to eq(edit_settings_profile_path)
     end
 
     it "End key focuses last item" do
@@ -182,12 +182,12 @@ RSpec.describe "User menu dropdown", type: :system do
 
     it "Space key activates focused identity link" do
       send_dropdown_key(" ")
-      expect(page).to have_current_path(edit_account_profile_path)
+      expect(page).to have_current_path(edit_settings_profile_path)
     end
 
     it "Enter key activates focused identity link" do
       send_dropdown_key("Enter")
-      expect(page).to have_current_path(edit_account_profile_path)
+      expect(page).to have_current_path(edit_settings_profile_path)
     end
   end
 
@@ -195,9 +195,9 @@ RSpec.describe "User menu dropdown", type: :system do
     it "identity-block link navigates to profile page" do
       find("#user-menu-button").click
       within "#user-menu" do
-        find("a[href='#{edit_account_profile_path}']").click
+        find("a[href='#{edit_settings_profile_path}']").click
       end
-      expect(page).to have_current_path(edit_account_profile_path)
+      expect(page).to have_current_path(edit_settings_profile_path)
     end
 
     # Regression: the Notifications row lives inside
@@ -209,9 +209,9 @@ RSpec.describe "User menu dropdown", type: :system do
     it "Notifications link navigates to the full notifications index (breaks out of the count frame)" do
       find("#user-menu-button").click
       within "#user-menu" do
-        find("a[href='#{account_notifications_path}']").click
+        find("a[href='#{settings_notifications_path}']").click
       end
-      expect(page).to have_current_path(account_notifications_path)
+      expect(page).to have_current_path(settings_notifications_path)
       expect(page).to have_css("h1", text: I18n.t("notifications.index.heading"))
       expect(page).to have_no_text("Content missing")
     end

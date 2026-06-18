@@ -32,17 +32,17 @@ RSpec.describe "Settings sidebar account Profile aria-label", type: :request do
   # workspace as Current.workspace (via PersonalWorkspaceContext), so
   # settings_context_kind returns :personal and the account items render.
   describe "GET /account/profile/edit (personal context)" do
-    before { get edit_account_profile_path }
+    before { get edit_settings_profile_path }
 
     it "renders the account Profile link with a distinguishing aria-label" do
       expect(settings_sidebar).to have_link(
         I18n.t("settings.sidebar.items.profile"),
-        href: edit_account_profile_path
+        href: edit_settings_profile_path
       )
 
       profile_link = settings_sidebar.find_link(
         I18n.t("settings.sidebar.items.profile"),
-        href: edit_account_profile_path
+        href: edit_settings_profile_path
       )
 
       expect(profile_link["aria-label"]).to eq(expected_aria_label)
@@ -51,7 +51,7 @@ RSpec.describe "Settings sidebar account Profile aria-label", type: :request do
     it "aria-label is not nil or blank" do
       profile_link = settings_sidebar.find_link(
         I18n.t("settings.sidebar.items.profile"),
-        href: edit_account_profile_path
+        href: edit_settings_profile_path
       )
 
       expect(profile_link["aria-label"]).to be_present

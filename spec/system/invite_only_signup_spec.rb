@@ -74,7 +74,7 @@ RSpec.describe "Invite-only signup flow", type: :system do
 
     # Simulate clicking the verification link delivered to the invited address.
     auth = new_user.authentications.email.first
-    visit verify_account_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+    visit verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
 
     # Proving email ownership claims the invitation and grants membership.
     expect(invitation.reload).to be_accepted

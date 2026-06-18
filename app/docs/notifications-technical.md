@@ -19,7 +19,7 @@ Implementation reference for the notifications subsystem. The end-user view of t
 | Email delivery | `NotificationMailer` (per-event + `digest`); cadence on per-user `notification_preferences` |
 | Per-user config | `NotificationPreferences` value object wrapping `user_preferences.notification_preferences` JSONB |
 | Background jobs | `DigestMailerJob` (15-min poll), `NotificationCleanupJob` (daily 3 AM UTC) |
-| Authorization | `NotificationPolicy` + `Account::NotificationPreferencesPolicy` (Pundit) |
+| Authorization | `NotificationPolicy` + `Settings::NotificationPreferencesPolicy` (Pundit) |
 
 ## Schema
 
@@ -86,7 +86,7 @@ class PasswordChangedNotifier < ApplicationNotifier
 
   notification_methods do
     def message = I18n.t("notifications.password_changed.message", user_name: recipient.full_name)
-    def url     = main_app.account_connected_accounts_path
+    def url     = main_app.settings_connected_accounts_path
   end
 end
 ```
@@ -245,18 +245,18 @@ Validates a partial-change hash (the shape the preferences form posts), coerces 
 
 | Controller | Routes | Notes |
 |---|---|---|
-| `Account::NotificationsController` | `index`, `update` (read-state toggle), `destroy`, `open` (mark read + redirect), `mark_all_read`, `destroy_all_read` | Pundit-gated; calls `broadcast_bell_refresh` on every read-state mutation |
-| `Account::NotificationPreferencesController` | `edit`, `update`, `dismiss_banner` | Delegates validation to `NotificationPreferences#merge`; rescues `InvalidChange` → 422 |
-| `Account::Preferences::TimezonesController` | `update` | Beacon-path returns 204; explicit-user path (`override=true`) returns Turbo Stream that closes the drawer + announces "Timezone updated" |
+| `Settings::NotificationsController` | `index`, `update` (read-state toggle), `destroy`, `open` (mark read + redirect), `mark_all_read`, `destroy_all_read` | Pundit-gated; calls `broadcast_bell_refresh` on every read-state mutation |
+| `Settings::NotificationPreferencesController` | `edit`, `update`, `dismiss_banner` | Delegates validation to `NotificationPreferences#merge`; rescues `InvalidChange` → 422 |
+| `Settings::Preferences::TimezonesController` | `update` | Beacon-path returns 204; explicit-user path (`override=true`) returns Turbo Stream that closes the drawer + announces "Timezone updated" |
 
 ## Pundit policies
 
 | Policy | Notes |
 |---|---|
 | `NotificationPolicy` | Per-record policy gates `update?`/`destroy?`/`open?` by `record.recipient_id == user.id`. `Scope` filters all of `Noticed::Notification` to the current user |
-| `Account::NotificationPreferencesPolicy` | Trivial — `edit?`/`update?`/`dismiss_banner?` all return `user.present?` |
-| `Account::ThemePreferencesPolicy` | Same shape |
-| `Account::TimezonePolicy` | Same shape |
+| `Settings::NotificationPreferencesPolicy` | Trivial — `edit?`/`update?`/`dismiss_banner?` all return `user.present?` |
+| `Settings::ThemePreferencesPolicy` | Same shape |
+| `Settings::TimezonePolicy` | Same shape |
 
 The preference policies look "decorative" (always-true for an authenticated user), but they're the gate that protects against future actions accidentally bypassing authorization — adding a new `:id`-taking action to any of these controllers will still fail-closed.
 

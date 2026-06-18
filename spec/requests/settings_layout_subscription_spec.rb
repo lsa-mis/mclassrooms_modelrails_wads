@@ -35,7 +35,7 @@ RSpec.describe "Settings layout workspace stream subscription", type: :request d
 
   context "on a personal-context settings page" do
     it "does NOT subscribe to a workspace stream (personal workspace broadcasts are self-broadcasts)" do
-      get edit_account_profile_path
+      get edit_settings_profile_path
 
       personal = user.personal_workspace
       personal_signed_name = Turbo::StreamsChannel.signed_stream_name(personal)

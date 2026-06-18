@@ -87,7 +87,7 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(invitation.reload).to be_pending
 
       auth = new_user.authentications.email.first
-      get verify_account_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+      get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
 
       expect(new_user.reload.workspaces).to include(workspace)
       expect(invitation.reload).to be_accepted
@@ -130,7 +130,7 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(invitation.reload).to be_pending
 
       auth = new_user.authentications.email.first
-      get verify_account_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+      get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
 
       expect(new_user.reload.workspaces).to include(workspace)
       expect(new_user.reload.projects).to include(project)

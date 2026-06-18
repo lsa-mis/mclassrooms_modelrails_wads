@@ -1,0 +1,27 @@
+<% content_for(:title) { t("settings.passwords.new.title") } %>
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-3xl font-bold text-text-heading">
+    <%= t("settings.passwords.new.title") %>
+  </h1>
+
+  <p class="mt-2 text-text-muted">
+    <%= t("settings.passwords.new.instructions") %>
+  </p>
+
+  <%= form_with model: Current.user, url: settings_password_path, method: :post, class: "mt-8 space-y-6" do |form| %>
+    <%= form.error_summary %>
+
+    <%= form.password_field :password,
+          label: t("settings.passwords.new.password_label"),
+          required: true,
+          autocomplete: "new-password",
+          help: t("settings.passwords.new.password_hint") %>
+
+    <%= form.password_field :password_confirmation,
+          label: t("settings.passwords.new.password_confirmation_label"),
+          required: true,
+          autocomplete: "new-password" %>
+
+    <%= form.submit t("settings.passwords.new.submit"), class: "w-full" %>
+  <% end %>
+</div>

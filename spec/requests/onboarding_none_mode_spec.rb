@@ -38,21 +38,21 @@ RSpec.describe "Authenticated pages under :none onboarding (zero-workspace safet
 
   describe "GET /account/profile/edit (settings layout, PersonalWorkspaceContext)" do
     it "renders without a 500" do
-      get edit_account_profile_path
+      get edit_settings_profile_path
       expect(response).to have_http_status(:ok)
     end
   end
 
   describe "GET /account/notification_preferences/edit (settings layout)" do
     it "renders without a 500" do
-      get edit_account_notification_preferences_path
+      get edit_settings_notification_preferences_path
       expect(response).to have_http_status(:ok)
     end
   end
 
   describe "GET /account/connected_accounts (settings layout)" do
     it "renders without a 500" do
-      get account_connected_accounts_path
+      get settings_connected_accounts_path
       expect(response).to have_http_status(:ok)
     end
   end

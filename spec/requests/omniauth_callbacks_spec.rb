@@ -87,7 +87,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "redirects to connected accounts" do
       get "/auth/github/callback"
-      expect(response).to redirect_to(account_connected_accounts_path)
+      expect(response).to redirect_to(settings_connected_accounts_path)
     end
   end
 
@@ -261,7 +261,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
       it "redirects to connected accounts (not new_session_path)" do
         get "/auth/google_oauth2/callback"
-        expect(response).to redirect_to(account_connected_accounts_path)
+        expect(response).to redirect_to(settings_connected_accounts_path)
       end
 
       it "still sends a fresh verification email" do
@@ -438,7 +438,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "redirects to connected accounts (auto-verified path: emails match)" do
       get "/auth/google_oauth2/callback"
-      expect(response).to redirect_to(account_connected_accounts_path)
+      expect(response).to redirect_to(settings_connected_accounts_path)
       expect(flash[:notice]).to include("linked")
     end
   end
@@ -469,7 +469,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
       it "redirects to connected accounts with linked notice" do
         get "/auth/google_oauth2/callback"
-        expect(response).to redirect_to(account_connected_accounts_path)
+        expect(response).to redirect_to(settings_connected_accounts_path)
         expect(flash[:notice]).to include("linked")
       end
     end
@@ -502,7 +502,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
       it "redirects to connected accounts with pending banner flash" do
         get "/auth/google_oauth2/callback"
-        expect(response).to redirect_to(account_connected_accounts_path)
+        expect(response).to redirect_to(settings_connected_accounts_path)
         expect(flash[:notice]).to include("alice.work@gmail.com")
       end
     end
@@ -664,7 +664,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "redirects to connected accounts with linked notice (Google, not Google Oauth2)" do
       get "/auth/google_oauth2/callback"
-      expect(response).to redirect_to(account_connected_accounts_path)
+      expect(response).to redirect_to(settings_connected_accounts_path)
       expect(flash[:notice]).to include("Google")
       expect(flash[:notice]).not_to include("Google Oauth2")
     end
@@ -707,7 +707,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
       it "redirects to connected accounts with the pending notice (not the linked notice)" do
         get "/auth/google_oauth2/callback"
-        expect(response).to redirect_to(account_connected_accounts_path)
+        expect(response).to redirect_to(settings_connected_accounts_path)
         expect(flash[:notice]).to include("confirmation link")
       end
     end

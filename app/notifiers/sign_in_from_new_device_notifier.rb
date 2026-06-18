@@ -36,7 +36,7 @@ class SignInFromNewDeviceNotifier < ApplicationNotifier
     end
 
     def url
-      Rails.application.routes.url_helpers.account_connected_accounts_path
+      Rails.application.routes.url_helpers.settings_connected_accounts_path
     end
   end
 

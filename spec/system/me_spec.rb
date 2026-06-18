@@ -11,7 +11,7 @@ RSpec.describe "Me (identity home)", type: :system do
     visit me_path
 
     expect(page).to have_css("h1", text: user.full_name)
-    expect(page).to have_link(I18n.t("me.show.edit_in_settings"), href: edit_account_profile_path)
+    expect(page).to have_link(I18n.t("me.show.edit_in_settings"), href: edit_settings_profile_path)
     expect(page).to have_css("#me-workspaces-title")
     expect(page).to have_link(user.workspaces.first.name)
 

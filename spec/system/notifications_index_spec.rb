@@ -36,7 +36,7 @@ RSpec.describe "Notifications index page", type: :system do
       visit root_path
       find("#user-menu-button").click
       within "#user-menu" do
-        expect(page).to have_link(I18n.t("navigation.notifications"), href: account_notifications_path)
+        expect(page).to have_link(I18n.t("navigation.notifications"), href: settings_notifications_path)
       end
     end
   end
@@ -49,7 +49,7 @@ RSpec.describe "Notifications index page", type: :system do
         user_name: user.first_name
       )
 
-      visit account_notifications_path
+      visit settings_notifications_path
 
       expect(page).to have_css("h1", text: I18n.t("notifications.index.heading"))
       within "##{ActionView::RecordIdentifier.dom_id(notification)}" do
@@ -61,12 +61,12 @@ RSpec.describe "Notifications index page", type: :system do
       it "marks the All chip as current by default" do
         deliver_security_notification
 
-        visit account_notifications_path
+        visit settings_notifications_path
 
         within "[aria-label='#{I18n.t('notifications.index.filters_aria')}']" do
           expect(page).to have_link(
             I18n.t("notifications.index.filters.all"),
-            href: account_notifications_path
+            href: settings_notifications_path
           )
           all_chip = find_link(I18n.t("notifications.index.filters.all"))
           expect(all_chip["aria-current"]).to eq("page")
@@ -78,7 +78,7 @@ RSpec.describe "Notifications index page", type: :system do
         read_notification.update!(read_at: Time.current)
         unread_notification = deliver_security_notification
 
-        visit account_notifications_path
+        visit settings_notifications_path
         click_link I18n.t("notifications.index.filters.unread")
 
         expect(page).to have_css("##{ActionView::RecordIdentifier.dom_id(unread_notification)}")
@@ -90,7 +90,7 @@ RSpec.describe "Notifications index page", type: :system do
       it "marks an unread row as read via Turbo Stream and swaps the button" do
         notification = deliver_security_notification
 
-        visit account_notifications_path
+        visit settings_notifications_path
 
         within "##{ActionView::RecordIdentifier.dom_id(notification)}" do
           click_button I18n.t("notifications.index.item.mark_read")
@@ -103,7 +103,7 @@ RSpec.describe "Notifications index page", type: :system do
         notification = deliver_security_notification
         notification.update!(read_at: Time.current)
 
-        visit account_notifications_path
+        visit settings_notifications_path
 
         within "##{ActionView::RecordIdentifier.dom_id(notification)}" do
           click_button I18n.t("notifications.index.item.mark_unread")
@@ -115,7 +115,7 @@ RSpec.describe "Notifications index page", type: :system do
       it "deletes a row when Delete is clicked" do
         notification = deliver_security_notification
 
-        visit account_notifications_path
+        visit settings_notifications_path
         within "##{ActionView::RecordIdentifier.dom_id(notification)}" do
           click_button I18n.t("notifications.index.item.delete")
         end
@@ -129,7 +129,7 @@ RSpec.describe "Notifications index page", type: :system do
         unread_a = deliver_security_notification
         unread_b = deliver_security_notification
 
-        visit account_notifications_path
+        visit settings_notifications_path
         click_button I18n.t("notifications.index.mark_all_read.action")
         within "dialog[open]" do
           click_button I18n.t("notifications.index.mark_all_read.action")
@@ -147,7 +147,7 @@ RSpec.describe "Notifications index page", type: :system do
         read_b.update!(read_at: Time.current)
         read_ids = [ read_a.id, read_b.id ]
 
-        visit account_notifications_path
+        visit settings_notifications_path
         click_button I18n.t("notifications.index.destroy_all_read.action")
         within "dialog[open]" do
           click_button I18n.t("notifications.index.destroy_all_read.action")

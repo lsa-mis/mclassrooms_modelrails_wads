@@ -37,7 +37,7 @@ class OmniauthCallbacksController < ApplicationController
       if EmailRecipientThrottle.allow!(auth.user.email_address, kind: :collision_alert)
         AuthenticationMailer.collision_alert(auth.user, provider_name).deliver_later
       end
-      redirect_to account_connected_accounts_path,
+      redirect_to settings_connected_accounts_path,
         alert: t("omniauth_callbacks.create.collision_other_user", provider: provider_name)
     elsif auth.pending?
       if EmailRecipientThrottle.allow!(auth.email, kind: :verification)
@@ -56,12 +56,12 @@ class OmniauthCallbacksController < ApplicationController
     existing = user.authentications.find_by(provider: normalized_provider(auth_hash))
 
     if existing&.verified?
-      redirect_to account_connected_accounts_path,
+      redirect_to settings_connected_accounts_path,
         alert: t("omniauth_callbacks.create.already_linked",
                  provider: Authentication.display_name_for(normalized_provider(auth_hash)))
       return
     elsif existing&.pending?
-      redirect_to account_connected_accounts_path,
+      redirect_to settings_connected_accounts_path,
         alert: t("omniauth_callbacks.create.pending_in_progress",
                  provider: Authentication.display_name_for(normalized_provider(auth_hash)),
                  email: existing.email)
@@ -70,7 +70,7 @@ class OmniauthCallbacksController < ApplicationController
 
     oauth_email = auth_hash.info.email
     if oauth_email.blank?
-      redirect_to account_connected_accounts_path,
+      redirect_to settings_connected_accounts_path,
         alert: t("omniauth_callbacks.create.linking_failed")
       return
     end
@@ -87,7 +87,7 @@ class OmniauthCallbacksController < ApplicationController
     if email_matches && oauth_email_verified?(auth_hash)
       auth.verified_at = Time.current
       auth.save!
-      redirect_to account_connected_accounts_path,
+      redirect_to settings_connected_accounts_path,
         notice: t("omniauth_callbacks.create.linked", provider: Authentication.display_name_for(normalized_provider(auth_hash)))
     else
       auth.save!
@@ -95,7 +95,7 @@ class OmniauthCallbacksController < ApplicationController
         AuthenticationMailer.link_verification_email(auth).deliver_later
       end
       flash[:confirming_email_for] = auth.id
-      redirect_to account_connected_accounts_path,
+      redirect_to settings_connected_accounts_path,
         notice: t("omniauth_callbacks.create.pending",
                   email: oauth_email, provider: Authentication.display_name_for(normalized_provider(auth_hash)))
     end
@@ -150,7 +150,7 @@ class OmniauthCallbacksController < ApplicationController
     # accept_pending_invitation! which would consume the invitation immediately.
     # Instead, we persist the invitation token on the pending Authentication so
     # it can be claimed when the user proves email ownership by clicking the
-    # verification link (Account::ConnectedAccountsController#verify, Task 9).
+    # verification link (Settings::ConnectedAccountsController#verify, Task 9).
     auth = nil
     ApplicationRecord.transaction do
       user = create_user_from_oauth(auth_hash)
@@ -181,7 +181,7 @@ class OmniauthCallbacksController < ApplicationController
   end
 
   def fallback_path
-    Current.user.present? ? account_connected_accounts_path : new_session_path
+    Current.user.present? ? settings_connected_accounts_path : new_session_path
   end
 
   def normalized_provider(auth_hash)

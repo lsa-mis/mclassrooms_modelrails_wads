@@ -30,7 +30,7 @@
 # Two callers, one shape:
 #   1. ApplicationNotifier#broadcast_notifications_arrival (after_create_commit
 #      on the event), called per recipient.
-#   2. Account::NotificationsController#broadcast_bell_refresh, called for
+#   2. Settings::NotificationsController#broadcast_bell_refresh, called for
 #      Current.user after a read-state mutation (mark/unmark, mark_all_read,
 #      open, destroy-when-unread).
 #

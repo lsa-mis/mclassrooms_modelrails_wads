@@ -37,7 +37,7 @@ class NotificationPreferences
   ALLOWED_RETENTION_DAYS = [ 30, 60, 90, 180, 365 ].freeze
 
   # Raised by #merge when a partial-change hash violates the JSONB schema.
-  # Caller catches and responds 422 — see Account::NotificationPreferencesController#update.
+  # Caller catches and responds 422 — see Settings::NotificationPreferencesController#update.
   class InvalidChange < StandardError; end
 
   # Computed from ApplicationNotifier subclasses; consumed by

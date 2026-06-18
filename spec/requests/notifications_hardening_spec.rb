@@ -152,7 +152,7 @@ RSpec.describe "Notifications hardening", type: :request do
       end
       expect(user.notifications.where(read_at: nil).count).to eq(3)
 
-      post mark_all_read_account_notifications_path
+      post mark_all_read_settings_notifications_path
       expect(user.notifications.where(read_at: nil).count).to eq(0)
 
       # New arrival AFTER mark_all_read committed must stay unread.

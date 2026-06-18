@@ -22,7 +22,7 @@ RSpec.describe "Notification preferences", type: :system do
   end
 
   describe "page render (four-card layout)" do
-    before { visit edit_account_notification_preferences_path }
+    before { visit edit_settings_notification_preferences_path }
 
     it "renders the page heading" do
       expect(page).to have_css("h1", text: I18n.t("settings.pages.notifications.h1"))
@@ -113,7 +113,7 @@ RSpec.describe "Notification preferences", type: :system do
 
   describe "auto-save flow" do
     it "flips quiet_hours.enabled when the toggle is clicked and persists" do
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       expect(user.preferences.notification_preferences.dig("quiet_hours", "enabled")).to eq(false)
 
@@ -134,7 +134,7 @@ RSpec.describe "Notification preferences", type: :system do
     # pill appeared frozen even though the data was saved correctly. We
     # measure the knob's bounding-rect to be CSS-implementation-agnostic.
     it "moves the pill's knob horizontally when the toggle is clicked" do
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       toggle_label = find(
         'label[for^="toggle-notification-preferences-quiet-hours-enabled"]',
@@ -172,7 +172,7 @@ RSpec.describe "Notification preferences", type: :system do
     # updates the page-level aria-live region.
     it "closes the drawer + updates the visible timezone summary on save" do
       user.preferences.update!(timezone: "America/Chicago")
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       # Open the drawer by clicking the summary.
       find("summary", text: I18n.t("notifications.preferences.timezone.heading", default: "Your timezone")).click
@@ -210,28 +210,28 @@ RSpec.describe "Notification preferences", type: :system do
 
     it "shows the warning when quiet hours are enabled with zero active days" do
       set_quiet_hours(enabled: true, active_days: [])
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       expect(page).to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
     end
 
     it "hides the warning when quiet hours are enabled with at least one active day" do
       set_quiet_hours(enabled: true, active_days: %w[monday wednesday friday])
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       expect(page).not_to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
     end
 
     it "hides the warning when quiet hours are disabled regardless of days" do
       set_quiet_hours(enabled: false, active_days: [])
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       expect(page).not_to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
     end
 
     it "live: clicking the last checked day to uncheck it reveals the warning without reload" do
       set_quiet_hours(enabled: true, active_days: %w[monday])
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       expect(page).not_to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
 
@@ -249,7 +249,7 @@ RSpec.describe "Notification preferences", type: :system do
     # with no idea why it's locked. aria-describedby points at the help
     # span so it's announced together with the control.
     it "the disabled+always-on security toggle has aria-describedby linking to its help text" do
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       security_checkbox = find(
         'input[type="checkbox"][name="notification_preferences[notification_types][security]"][disabled]',
@@ -271,7 +271,7 @@ RSpec.describe "Notification preferences", type: :system do
           "quiet_hours" => { "enabled" => true, "active_days" => [] }
         )
       )
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       fieldset = find("fieldset", text: I18n.t("notifications.preferences.quiet_hours.active_days_label"))
       described_by_id = fieldset["aria-describedby"]
@@ -294,7 +294,7 @@ RSpec.describe "Notification preferences", type: :system do
           "quiet_hours" => { "enabled" => false, "active_days" => [] }
         )
       )
-      visit edit_account_notification_preferences_path
+      visit edit_settings_notification_preferences_path
 
       warning = find("#quiet-hours-empty-days-warning", visible: :all)
       expect(warning[:role]).to be_blank,

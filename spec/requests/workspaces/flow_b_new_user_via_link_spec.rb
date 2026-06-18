@@ -8,7 +8,7 @@ require "rails_helper"
 #   1. Workspaces::JoinsController#create unauthenticated → stash + redirect
 #   2. SignupPolicy.allows_signup?(join_token:) → gate opens
 #   3. RegistrationsController#create → parks pending_join_link_token on auth
-#   4. Account::ConnectedAccountsController#verify → claims via
+#   4. Settings::ConnectedAccountsController#verify → claims via
 #      Authentication#claim_pending_join_link! → workspace.admit
 RSpec.describe "Flow B: new user signs up via workspace join link", type: :request do
   let(:owner)     { create(:user) }
@@ -64,7 +64,7 @@ RSpec.describe "Flow B: new user signs up via workspace join link", type: :reque
     expect(new_user.workspaces).not_to include(workspace)
 
     # 4. Verify the email. claim_pending_join_link! admits the user as Member.
-    get verify_account_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+    get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
 
     expect(new_user.reload.workspaces).to include(workspace)
     expect(workspace.memberships.find_by!(user: new_user).role.slug).to eq("member")

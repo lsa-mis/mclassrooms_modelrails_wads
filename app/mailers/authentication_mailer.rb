@@ -22,7 +22,7 @@ class AuthenticationMailer < ApplicationMailer
 
   def email_change_verification(user)
     @user = user
-    @verification_url = account_email_confirmation_url(token: user.pending_email_token)
+    @verification_url = settings_email_confirmation_url(token: user.pending_email_token)
 
     mail(
       to: user.pending_email,
@@ -43,7 +43,7 @@ class AuthenticationMailer < ApplicationMailer
   def link_verification_email(authentication)
     @user = authentication.user
     @authentication = authentication
-    @verify_url = verify_account_connected_accounts_url(token: authentication.generate_token_for(:email_verification))
+    @verify_url = verify_settings_connected_accounts_url(token: authentication.generate_token_for(:email_verification))
     @app_name = t("application.name")
     @provider_name = authentication.display_provider
 
@@ -64,7 +64,7 @@ class AuthenticationMailer < ApplicationMailer
     @user = legitimate_user
     @provider_name = provider_display_name
     @app_name = t("application.name")
-    @connected_accounts_url = account_connected_accounts_url
+    @connected_accounts_url = settings_connected_accounts_url
 
     mail(
       to: legitimate_user.email_address,

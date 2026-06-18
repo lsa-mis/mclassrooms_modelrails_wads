@@ -51,28 +51,28 @@
   <% if settings_context_kind == :personal %>
     <%= render "shared/settings_sidebar_item",
           label: t("settings.sidebar.items.profile"),
-          href: edit_account_profile_path,
+          href: edit_settings_profile_path,
           aria_label: t("settings.sidebar.aria_labels.profile_personal"),
           icon: :user_circle,
-          active: current_page?(edit_account_profile_path) %>
+          active: current_page?(edit_settings_profile_path) %>
 
     <%= render "shared/settings_sidebar_item",
           label: t("settings.sidebar.items.notifications"),
-          href: edit_account_notification_preferences_path,
+          href: edit_settings_notification_preferences_path,
           icon: :bell,
-          active: current_page?(edit_account_notification_preferences_path) %>
+          active: current_page?(edit_settings_notification_preferences_path) %>
 
     <%= render "shared/settings_sidebar_item",
           label: t("settings.sidebar.items.security"),
-          href: account_connected_accounts_path,
+          href: settings_connected_accounts_path,
           icon: :shield_check,
-          active: current_page?(account_connected_accounts_path) %>
+          active: current_page?(settings_connected_accounts_path) %>
 
     <%= render "shared/settings_sidebar_item",
           label: t("settings.sidebar.items.appearance"),
-          href: edit_account_theme_preference_path,
+          href: edit_settings_theme_preference_path,
           icon: :color_swatch,
-          active: current_page?(edit_account_theme_preference_path) %>
+          active: current_page?(edit_settings_theme_preference_path) %>
   <% else %>
     <%# Profile routes to workspaces#edit which authorizes via
         Workspaces::ProfilePolicy (manage_settings permission) — not the

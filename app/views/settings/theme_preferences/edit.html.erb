@@ -1,0 +1,47 @@
+<% content_for(:title) { t("settings.pages.appearance.h1") } %>
+<div class="max-w-md mx-auto px-4 py-16">
+  <%= render "shared/settings_page_header",
+        title: t("settings.pages.appearance.h1"),
+        description: t("settings.pages.appearance.description") %>
+
+  <%# Theme toggle reuses shared/_theme_toggle (the same control mounted
+      in the header user menu). The :labeled style surfaces the current
+      mode name inline so this destination is meaningful on its own. %>
+  <div class="mt-6">
+    <%= render "shared/theme_toggle", style: :labeled %>
+  </div>
+
+  <%# Timezone picker. Submits to the same endpoint the layout-level
+      beacon writes to; the hidden `override=true` field bypasses the
+      controller's write-on-blank guard so an explicit choice always
+      wins. The beacon's anti-clobber semantics (write only when stored
+      timezone is blank) then preserve that choice on subsequent visits. %>
+  <% preferences = Current.user.preferences || Current.user.create_preferences! %>
+  <section class="mt-10" aria-labelledby="appearance-timezone-heading">
+    <h2 id="appearance-timezone-heading" class="text-lg font-semibold text-text-heading">
+      <%= t("settings.appearance.timezone.heading") %>
+    </h2>
+    <p class="mt-1 text-sm text-text-body">
+      <%= t("settings.appearance.timezone.description") %>
+    </p>
+
+    <%= form_with url: settings_preferences_timezone_path,
+          method: :patch,
+          class: "mt-4 flex flex-wrap items-end gap-3" do |f| %>
+      <input type="hidden" name="override" value="true">
+      <div class="flex-1 min-w-[16rem]">
+        <%= f.label :timezone,
+              t("settings.appearance.timezone.label"),
+              class: "block text-sm font-medium text-text-heading mb-1" %>
+        <%= f.select :timezone,
+              grouped_options_for_select(
+                timezone_options_for_select,
+                preferences.timezone
+              ),
+              {},
+              class: "form-input" %>
+      </div>
+      <%= f.submit t("settings.appearance.timezone.save"), class: "btn-primary" %>
+    <% end %>
+  </section>
+</div>

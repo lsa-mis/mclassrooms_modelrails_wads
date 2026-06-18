@@ -44,7 +44,7 @@ module Workspaces
     # opens the gate, then redirect through registration. The token is
     # transferred from session to the email Authentication during signup
     # (registrations_controller, omniauth_callbacks) and claimed at email
-    # verification (Account::ConnectedAccountsController#verify).
+    # verification (Settings::ConnectedAccountsController#verify).
     def stash_for_signup
       session[:pending_join_token] = @link.token
       redirect_to new_registration_path, notice: t("workspaces.joins.create.register_first", workspace: @workspace.name)

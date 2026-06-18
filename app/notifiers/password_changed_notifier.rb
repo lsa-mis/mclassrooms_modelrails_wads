@@ -18,7 +18,7 @@ class PasswordChangedNotifier < ApplicationNotifier
       # logged-in password-change route (the project's password resource is
       # `:new, :create` only, i.e. forgot-password flow). Connected accounts is
       # the closest available security-adjacent landing for now.
-      Rails.application.routes.url_helpers.account_connected_accounts_path
+      Rails.application.routes.url_helpers.settings_connected_accounts_path
     end
   end
 end

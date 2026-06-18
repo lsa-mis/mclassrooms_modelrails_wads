@@ -456,7 +456,7 @@ RSpec.describe NotificationPreferences do
   end
 
   # Validation + coerce + deep_merge moved here from
-  # Account::NotificationPreferencesController#apply_changes! per panel
+  # Settings::NotificationPreferencesController#apply_changes! per panel
   # review should-fix #7 (DHH + Chris Oliver + Dave Thomas). The controller
   # was carrying schema validation that belongs on the value object —
   # half-Result pattern (`:rejected` sentinel) made return semantics fuzzy

@@ -1,0 +1,46 @@
+<%# locals: (notification:, focus_after_replace: false) -%>
+<%# `focus_after_replace` is true only when this partial renders inside a
+    Turbo Stream replace response (see update.turbo_stream.erb). The flag
+    autofocuses the opposite-state toggle so keyboard/SR users land on the
+    same logical control after the row swaps in. Default false on initial
+    page render — autofocus on first paint would scroll-jump unexpectedly. -%>
+<li id="<%= dom_id(notification) %>"
+    data-notification-type="<%= notification.type %>"
+    class="px-4 py-4 flex flex-col gap-3
+           sm:px-6
+           sm:flex-row sm:items-start sm:justify-between">
+  <div class="min-w-0 flex-1">
+    <p class="text-sm <%= notification.read_at? ? "text-text-body" : "text-text-heading font-medium" %>">
+      <%= notification.message %>
+    </p>
+    <p class="mt-1 text-xs text-text-muted">
+      <time datetime="<%= notification.created_at.iso8601 %>">
+        <%= time_ago_in_words(notification.created_at) %>
+      </time>
+    </p>
+  </div>
+
+  <div class="flex flex-wrap gap-2 shrink-0">
+    <% if notification.read_at? %>
+      <%= button_to t("notifications.index.item.mark_unread"),
+            settings_notification_path(notification),
+            method: :patch,
+            autofocus: focus_after_replace,
+            aria: { label: t("notifications.index.item.mark_unread_aria", summary: notification.message) },
+            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus-ring" %>
+    <% else %>
+      <%= button_to t("notifications.index.item.mark_read"),
+            settings_notification_path(notification, read_at: "now"),
+            method: :patch,
+            autofocus: focus_after_replace,
+            aria: { label: t("notifications.index.item.mark_read_aria", summary: notification.message) },
+            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus-ring" %>
+    <% end %>
+
+    <%= button_to t("notifications.index.item.delete"),
+          settings_notification_path(notification),
+          method: :delete,
+          aria: { label: t("notifications.index.item.delete_aria", summary: notification.message) },
+          class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-danger border border-border transition-colors hover:bg-danger-surface focus-ring" %>
+  </div>
+</li>

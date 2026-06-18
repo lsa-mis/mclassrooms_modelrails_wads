@@ -133,8 +133,8 @@ RSpec.describe NotificationMailer, type: :mailer do
     end
 
     it "links to the connected accounts page" do
-      expect(mail.html_part.body.encoded).to include(account_connected_accounts_url)
-      expect(mail.text_part.body.encoded).to include(account_connected_accounts_url)
+      expect(mail.html_part.body.encoded).to include(settings_connected_accounts_url)
+      expect(mail.text_part.body.encoded).to include(settings_connected_accounts_url)
     end
   end
 end

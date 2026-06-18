@@ -100,7 +100,7 @@ class NotificationMailer < ApplicationMailer
     @user = params[:record]
     @os = @notification&.params&.dig(:os) || @notification&.params&.dig("os")
     @user_agent = @notification&.params&.dig(:user_agent) || @notification&.params&.dig("user_agent")
-    @account_url = account_connected_accounts_url
+    @account_url = settings_connected_accounts_url
 
     return unless EmailRecipientThrottle.allow!(@recipient.email_address, kind: :sign_in_from_new_device)
 
@@ -121,7 +121,7 @@ class NotificationMailer < ApplicationMailer
     @cadence = user.preferences&.notification_preferences_object&.digest_cadence || "daily"
     @app_name = t("application.name")
     @count = notifications.size
-    @preferences_url = edit_account_notification_preferences_url
+    @preferences_url = edit_settings_notification_preferences_url
 
     mail(
       to: user.email_address,

@@ -8,7 +8,7 @@ RSpec.describe "Settings hub — personal context", type: :system do
   before { sign_in_via_form(user) }
 
   it "renders the personal-context sidebar with all user-tier items" do
-    visit edit_account_profile_path
+    visit edit_settings_profile_path
 
     within(sidebar_selector) do
       expect(page).to have_link(I18n.t("settings.sidebar.items.profile"))
@@ -23,12 +23,12 @@ RSpec.describe "Settings hub — personal context", type: :system do
   end
 
   it "exposes the personal context via data attribute" do
-    visit edit_account_profile_path
+    visit edit_settings_profile_path
     expect(page).to have_css("[data-workspace-kind='personal']")
   end
 
   it "marks the current page in the sidebar with aria-current" do
-    visit edit_account_profile_path
+    visit edit_settings_profile_path
     within(sidebar_selector) do
       expect(page).to have_css(
         "a[aria-current='page']",
@@ -38,7 +38,7 @@ RSpec.describe "Settings hub — personal context", type: :system do
   end
 
   it "passes axe-core at WCAG 2.2 AAA in light and dark modes" do
-    visit edit_account_profile_path
+    visit edit_settings_profile_path
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"

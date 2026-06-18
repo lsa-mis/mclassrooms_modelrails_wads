@@ -20,7 +20,7 @@
            aria-labelledby="user-menu-button"
            class="hidden absolute right-0 mt-2 w-64 rounded-lg
                   bg-surface-raised border border-border shadow-lg z-50">
-        <%= link_to main_app.edit_account_profile_path,
+        <%= link_to main_app.edit_settings_profile_path,
               role: "menuitem", tabindex: "-1",
               data: { turbo_prefetch: "true" },
               class: "flex items-center gap-3 px-4 py-3 rounded-t-lg
@@ -78,7 +78,7 @@
 
   <% if context == :mobile %>
   <div class="md:hidden">
-    <%= link_to main_app.edit_account_profile_path,
+    <%= link_to main_app.edit_settings_profile_path,
           data: { turbo_prefetch: "true" },
           class: "flex items-center gap-3 px-3 py-3 rounded-md
                   hover:bg-surface focus:outline-none
@@ -93,7 +93,7 @@
     <% end %>
     <%# v2 Notifications row — see desktop branch for context. Mobile version
         styles match the surrounding mobile menuitems. %>
-    <%= link_to main_app.account_notifications_path,
+    <%= link_to main_app.settings_notifications_path,
           data: { turbo_prefetch: "true" },
           class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center justify-between gap-3 px-3 py-2
                   text-sm text-text-body

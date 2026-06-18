@@ -254,7 +254,7 @@ RSpec.describe "Registrations", type: :request do
         expect(user.reload.workspaces).not_to include(workspace)
 
         # Verifying the email proves control and claims the invitation.
-        get verify_account_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+        get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
 
         expect(invitation.reload).to be_accepted
         expect(user.reload.workspaces).to include(workspace)
@@ -288,11 +288,11 @@ RSpec.describe "Registrations", type: :request do
         # Even after proving control of attacker@example.com, the invitation
         # (addressed to invited@example.com) must not be claimable.
         auth = user.authentications.email.first
-        get verify_account_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+        get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
 
         expect(invitation.reload).to be_pending
         expect(user.reload.workspaces).not_to include(workspace)
-        expect(flash[:alert]).to eq(I18n.t("account.connected_accounts.verify.email_mismatch"))
+        expect(flash[:alert]).to eq(I18n.t("settings.connected_accounts.verify.email_mismatch"))
       end
     end
   end

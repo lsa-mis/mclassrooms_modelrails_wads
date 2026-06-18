@@ -10,7 +10,7 @@
   class="contents"
 >
   <% if authenticated? %>
-    <%= form_with url: main_app.account_theme_preference_path, method: :patch,
+    <%= form_with url: main_app.settings_theme_preference_path, method: :patch,
           data: { theme_toggle_target: "form", turbo: true },
           class: "hidden" do %>
       <input type="hidden" name="theme" data-theme-toggle-target="themeInput">

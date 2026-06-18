@@ -13,7 +13,7 @@ RSpec.describe "User menu", type: :request do
 
     it "includes a profile link in the user menu" do
       get root_path
-      expect(response.body).to include(edit_account_profile_path)
+      expect(response.body).to include(edit_settings_profile_path)
     end
 
     it "includes a sign out form in the user menu" do
@@ -57,7 +57,7 @@ RSpec.describe "User menu", type: :request do
       frame = desktop_menu.at_css('turbo-frame#notifications_menu_count_frame')
       expect(frame).not_to be_nil, "Notifications row must be wrapped in notifications_menu_count_frame so broadcasts can swap just the count"
 
-      link = frame.at_css("a[href='#{account_notifications_path}']")
+      link = frame.at_css("a[href='#{settings_notifications_path}']")
       expect(link).not_to be_nil
       expect(link["role"]).to eq("menuitem")
       expect(link.text).to include(I18n.t("navigation.notifications"))
@@ -75,8 +75,8 @@ RSpec.describe "User menu", type: :request do
         el.name == "form" ? el["action"] : el["href"]
       end
 
-      profile_idx       = hrefs.index(edit_account_profile_path)
-      notifications_idx = hrefs.index(account_notifications_path)
+      profile_idx       = hrefs.index(edit_settings_profile_path)
+      notifications_idx = hrefs.index(settings_notifications_path)
       workspaces_idx    = hrefs.index(workspaces_path)
 
       expect(profile_idx).not_to be_nil
@@ -112,7 +112,7 @@ RSpec.describe "User menu", type: :request do
       mobile_panel = doc.at_css('#mobile-menu-panel')
       expect(mobile_panel).not_to be_nil
 
-      mobile_notifications_link = mobile_panel.at_css("a[href='#{account_notifications_path}']")
+      mobile_notifications_link = mobile_panel.at_css("a[href='#{settings_notifications_path}']")
       expect(mobile_notifications_link).not_to be_nil
       expect(mobile_notifications_link.text).to include(I18n.t("navigation.notifications"))
     end

@@ -10,7 +10,7 @@
 <%# turbo_frame: "_top" — this link renders inside notifications_menu_count_frame
     (the broadcaster's count-swap target). Without _top it navigates that frame,
     and the index response has no matching frame → Turbo "Content missing". -%>
-<%= link_to main_app.account_notifications_path,
+<%= link_to main_app.settings_notifications_path,
       role: "menuitem", tabindex: "-1",
       data: { turbo_prefetch: "true", turbo_frame: "_top" },
       class: "flex items-center justify-between gap-3 min-h-[var(--form-input-height)] px-4 py-2

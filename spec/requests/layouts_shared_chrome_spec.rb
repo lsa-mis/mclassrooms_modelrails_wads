@@ -34,7 +34,7 @@ RSpec.describe "Shared layout chrome", type: :request do
   end
 
   context "settings layout" do
-    before { get edit_account_theme_preference_path }
+    before { get edit_settings_theme_preference_path }
 
     include_examples "shared layout chrome"
 

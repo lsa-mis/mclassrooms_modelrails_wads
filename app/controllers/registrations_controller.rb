@@ -28,7 +28,7 @@ class RegistrationsController < ApplicationController
         uid: @user.email_address,
         # Park both pending claims (invitation + open-link join) — neither is
         # consumed until the user proves email ownership via the verification
-        # link (Account::ConnectedAccountsController#verify). Mirrors the
+        # link (Settings::ConnectedAccountsController#verify). Mirrors the
         # unverified-OAuth signup path.
         pending_invitation_token: session[:pending_invitation_token],
         pending_join_link_token: session[:pending_join_token]

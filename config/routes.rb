@@ -20,7 +20,7 @@ Rails.application.routes.draw do
 
   resource :me, only: [ :show ], controller: :me
 
-  namespace :account do
+  namespace :settings do
     resource :profile, only: [ :edit, :update ]
     resource :password, only: [ :new, :create ]
     resource :avatar, only: [ :update, :destroy ] do
