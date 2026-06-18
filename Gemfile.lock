@@ -149,7 +149,7 @@ GEM
     commonmarker (2.8.2-arm64-darwin)
     commonmarker (2.8.2-x86_64-linux)
     commonmarker (2.8.2-x86_64-linux-musl)
-    concurrent-ruby (1.3.6)
+    concurrent-ruby (1.3.7)
     connection_pool (3.0.2)
     crack (1.0.1)
       bigdecimal
@@ -207,7 +207,7 @@ GEM
       zeitwerk
     htmlbeautifier (1.4.3)
     htmlentities (4.3.4)
-    i18n (1.14.8)
+    i18n (1.15.1)
       concurrent-ruby (~> 1.0)
     ice_nine (0.11.2)
     image_processing (2.0.2)
@@ -221,7 +221,7 @@ GEM
       prism (>= 1.3.0)
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
-    json (2.19.8)
+    json (2.19.9)
     jwt (3.2.0)
       base64
     kamal (2.11.0)
@@ -544,15 +544,15 @@ GEM
     stringio (3.2.0)
     tailwind_merge (1.5.1)
       sin_lru_redux (~> 2.5)
-    tailwindcss-rails (4.4.0)
+    tailwindcss-rails (4.6.0)
       railties (>= 7.0.0)
       tailwindcss-ruby (~> 4.0)
-    tailwindcss-ruby (4.3.0)
-    tailwindcss-ruby (4.3.0-aarch64-linux-gnu)
-    tailwindcss-ruby (4.3.0-aarch64-linux-musl)
-    tailwindcss-ruby (4.3.0-arm64-darwin)
-    tailwindcss-ruby (4.3.0-x86_64-linux-gnu)
-    tailwindcss-ruby (4.3.0-x86_64-linux-musl)
+    tailwindcss-ruby (4.3.1)
+    tailwindcss-ruby (4.3.1-aarch64-linux-gnu)
+    tailwindcss-ruby (4.3.1-aarch64-linux-musl)
+    tailwindcss-ruby (4.3.1-arm64-darwin)
+    tailwindcss-ruby (4.3.1-x86_64-linux-gnu)
+    tailwindcss-ruby (4.3.1-x86_64-linux-musl)
     thor (1.5.0)
     thread_safe (0.3.6)
     thruster (0.1.21)
@@ -709,7 +709,7 @@ CHECKSUMS
   commonmarker (2.8.2-arm64-darwin) sha256=cd7364f1fb9735d60218e4af0a4afbbeedbc465eb81cccca56f29a4efe2b5013
   commonmarker (2.8.2-x86_64-linux) sha256=42cfb6532b15dd5821ce99e47397923255f32dcfc81024ef4c17e01e66ac7d75
   commonmarker (2.8.2-x86_64-linux-musl) sha256=66568dce1c6f265e85d57ea7f749a148446527c7dd599c6ded4cdc819997c43e
-  concurrent-ruby (1.3.6) sha256=6b56837e1e7e5292f9864f34b69c5a2cbc75c0cf5338f1ce9903d10fa762d5ab
+  concurrent-ruby (1.3.7) sha256=4412caec3a5ea2e5fdc52076724c071a81f2c0593d83b2ac8cbb8ca63b3151b0
   connection_pool (3.0.2) sha256=33fff5ba71a12d2aa26cb72b1db8bba2a1a01823559fb01d29eb74c286e62e0a
   crack (1.0.1) sha256=ff4a10390cd31d66440b7524eb1841874db86201d5b70032028553130b6d4c7e
   crass (1.0.6) sha256=dc516022a56e7b3b156099abc81b6d2b08ea1ed12676ac7a5657617f012bd45d
@@ -745,13 +745,13 @@ CHECKSUMS
   hotwire-spark (0.1.13) sha256=0a24799b0942fc9b7ea3e560a5aba3f4dd9a6086958a25929894340f920fb499
   htmlbeautifier (1.4.3) sha256=b43d08f7e2aa6ae1b5a6f0607b4ed8954c8d4a8e85fd2336f975dda1e4db385b
   htmlentities (4.3.4) sha256=125a73c6c9f2d1b62100b7c3c401e3624441b663762afa7fe428476435a673da
-  i18n (1.14.8) sha256=285778639134865c5e0f6269e0b818256017e8cde89993fdfcbfb64d088824a5
+  i18n (1.15.1) sha256=505ec5de1f4e6c8a2cb028ef9700ca495f117911643455721dee5abdca797255
   ice_nine (0.11.2) sha256=5d506a7d2723d5592dc121b9928e4931742730131f22a1a37649df1c1e2e63db
   image_processing (2.0.2) sha256=d0cf990f862d64efb1a14916044bf4b5bb2bccc7e235022413cde46019799cfa
   importmap-rails (2.2.3) sha256=7101be2a4dc97cf1558fb8f573a718404c5f6bcfe94f304bf1f39e444feeb16a
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
   irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
-  json (2.19.8) sha256=6354310fd76ef69b87d5bd1f38b40d730613baf90b6803d2d0a48f618d32dfaa
+  json (2.19.9) sha256=9b9025b7cdddafa38d316eca0b2358488e42d417045c1b90d216a9fefe46b79a
   jwt (3.2.0) sha256=5419b1fe37b1da0982bd07051f573a8b8789ab724c2aa7e785e4784a3ed217d7
   kamal (2.11.0) sha256=1408864425e0dec7e0a14d712a3b13f614e9f3a425b7661d3f9d287a51d7dd75
   language_server-protocol (3.17.0.5) sha256=fd1e39a51a28bf3eec959379985a72e296e9f9acfce46f6a79d31ca8760803cc
@@ -867,13 +867,13 @@ CHECKSUMS
   stimulus-rails (1.3.4) sha256=765676ffa1f33af64ce026d26b48e8ffb2e0b94e0f50e9119e11d6107d67cb06
   stringio (3.2.0) sha256=c37cb2e58b4ffbd33fe5cd948c05934af997b36e0b6ca6fdf43afa234cf222e1
   tailwind_merge (1.5.1) sha256=cf307d491870948c0fa19a327b5af1cc799a27931bdd1dcac56c18a85c36c266
-  tailwindcss-rails (4.4.0) sha256=efa2961351a52acebe616e645a81a30bb4f27fde46cc06ce7688d1cd1131e916
-  tailwindcss-ruby (4.3.0) sha256=4fd3219d97419d2b4f8c0f52c8a73972e55e29a0e0da38fb5fe8a16bf1a68b51
-  tailwindcss-ruby (4.3.0-aarch64-linux-gnu) sha256=e43b94aba29785bba71b5868bab29b63ae48911fee038b2b5e9e5148baca3886
-  tailwindcss-ruby (4.3.0-aarch64-linux-musl) sha256=ae2aff1e8482a9ba8723b57fbfa50cbf009788587ca9763f00489f3c5639e6ef
-  tailwindcss-ruby (4.3.0-arm64-darwin) sha256=828f49ddb3f19f67b36a1c5cb5c25175f7c93619a2ecf66e95d74408db9b73fd
-  tailwindcss-ruby (4.3.0-x86_64-linux-gnu) sha256=0d1b0f491990c735d2f7bf5dbaedf33ddc635fd800b7244b39b30b25a8616cb2
-  tailwindcss-ruby (4.3.0-x86_64-linux-musl) sha256=71e83a3f5f40e1cd7c28e7e6328a9c899cb2c0c98f6b42f29de968fff221ef75
+  tailwindcss-rails (4.6.0) sha256=d99512867173d55c5ef8890427682299d8539f550cec1408b3d8667a538bd365
+  tailwindcss-ruby (4.3.1) sha256=ced3198e057da98f21cb281f4821ac8882a2899047066895ba181caf312620c1
+  tailwindcss-ruby (4.3.1-aarch64-linux-gnu) sha256=b42af5fdb7ade3f3f70cda217c288986cc6b773601437b8deb80ea229a96680c
+  tailwindcss-ruby (4.3.1-aarch64-linux-musl) sha256=2854eec6704d5773346d44cf884944e1f90b1b195327e9cfa207cba614c024ab
+  tailwindcss-ruby (4.3.1-arm64-darwin) sha256=477ef19dde7fa4db32a0f916c02398e5fcc6af7f18d5e773012d93d6b96ecfa3
+  tailwindcss-ruby (4.3.1-x86_64-linux-gnu) sha256=22a208da614b7767cee504ab9dae2ab0d8299fdf633c045c6f8357de81d0506f
+  tailwindcss-ruby (4.3.1-x86_64-linux-musl) sha256=1adcb5df5f9a6a85a81dc9e5102ce7e4f7a1415f477f1a6b22b52ee49c351ee6
   thor (1.5.0) sha256=e3a9e55fe857e44859ce104a84675ab6e8cd59c650a49106a05f55f136425e73
   thread_safe (0.3.6) sha256=9ed7072821b51c57e8d6b7011a8e282e25aeea3a4065eab326e43f66f063b05a
   thruster (0.1.21) sha256=dc67928f36e5894844579a95e45637a5091db7a7ea05468ee8c2c6eb0a3f77cf
