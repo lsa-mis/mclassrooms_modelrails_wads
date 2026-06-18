@@ -41,7 +41,10 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :letter_opener_web
 
   # Set localhost to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
+  # Port follows the PORT env var so letter_opener links match the running server
+  # (e.g. PORT=3001 bin/dev → links use 3001). bin/dev exports PORT before foreman starts;
+  # puma.rb reads the same env var, so both are always in sync.
+  config.action_mailer.default_url_options = { host: "localhost", port: ENV.fetch("PORT", 3000).to_i }
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
