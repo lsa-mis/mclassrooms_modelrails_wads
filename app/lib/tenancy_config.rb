@@ -16,6 +16,10 @@ module TenancyConfig
     onboarding == :shared
   end
 
+  def none?
+    onboarding == :none
+  end
+
   def workspace_creation_enabled?
     Rails.configuration.x.tenancy.workspace_creation == :enabled
   end

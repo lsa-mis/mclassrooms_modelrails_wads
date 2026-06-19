@@ -1,6 +1,34 @@
 require "rails_helper"
 
-RSpec.describe "Email Verifications", type: :request do
+RSpec.describe "Email verifications", type: :request do
+  describe "GET /email_verification/new" do
+    let(:user) { create(:user, :with_email_auth) }
+
+    it "renders the check-your-email screen for a signed-in user" do
+      sign_in(user)
+      get new_email_verification_path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(user.email_address)
+    end
+
+    it "requires authentication" do
+      get new_email_verification_path
+      expect(response).to redirect_to(new_session_path)
+    end
+  end
+
+  describe "POST /email_verification_resend" do
+    let(:user) { create(:user, :with_email_auth) }
+
+    it "re-enqueues the verification email and returns to the check screen" do
+      sign_in(user)
+      expect {
+        post email_verification_resend_path
+      }.to have_enqueued_mail(AuthenticationMailer, :verification_email)
+      expect(response).to redirect_to(new_email_verification_path)
+    end
+  end
+
   let(:user) { create(:user) }
   let(:authentication) { create(:authentication, user: user) }
 

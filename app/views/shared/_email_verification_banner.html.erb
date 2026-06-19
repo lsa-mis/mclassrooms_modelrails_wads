@@ -1,0 +1,12 @@
+<% if Current.user&.email_verification_pending? %>
+  <div id="verify-banner"
+       role="status"
+       class="bg-warning-surface text-warning warning-border border-b">
+    <div class="max-w-5xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <%= icon(:envelope, class: "w-4 h-4 shrink-0") %>
+      <span><%= t("email_verifications.banner.message") %></span>
+      <%= link_to t("email_verifications.banner.action"), new_email_verification_path,
+            class: "font-semibold underline hover:no-underline focus-ring rounded" %>
+    </div>
+  </div>
+<% end %>

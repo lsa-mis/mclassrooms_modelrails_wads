@@ -39,7 +39,7 @@ class RegistrationsController < ApplicationController
     session.delete(:pending_join_token)
     AuthenticationMailer.verification_email(authentication).deliver_later
     start_new_session_for(@user)
-    redirect_to after_authentication_url, notice: t(".success")
+    redirect_to new_email_verification_path, notice: t(".success")
   rescue ActiveRecord::RecordInvalid
     render :new, status: :unprocessable_entity
   end

@@ -58,7 +58,7 @@ RSpec.describe "Registration form validation", type: :system do
       # Wait for navigation away from the form (Capybara auto-waits on this matcher).
       # Without this, the raw-HTML check below could race the in-flight submission
       # and read a stale page.
-      expect(page).to have_current_path(root_path)
+      expect(page).to have_current_path(new_email_verification_path)
 
       # XSS contract: the user's payload must appear ESCAPED in the rendered HTML,
       # never as a literal `<script>` element. Check the raw HTML for the exact

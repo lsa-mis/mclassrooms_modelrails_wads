@@ -60,6 +60,18 @@ RSpec.describe TenancyConfig do
     end
   end
 
+  describe ".none?" do
+    it "is true when onboarding is :none" do
+      allow(TenancyConfig).to receive(:onboarding).and_return(:none)
+      expect(TenancyConfig.none?).to be(true)
+    end
+
+    it "is false otherwise" do
+      allow(TenancyConfig).to receive(:onboarding).and_return(:personal)
+      expect(TenancyConfig.none?).to be(false)
+    end
+  end
+
   describe "workspace_creation_enabled?" do
     it "is false when configured :disabled" do
       allow(Rails.configuration.x.tenancy).to receive(:workspace_creation).and_return(:disabled)

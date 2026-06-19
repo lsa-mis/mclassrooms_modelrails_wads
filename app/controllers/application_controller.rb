@@ -1,5 +1,6 @@
 class ApplicationController < ActionController::Base
   include Authenticatable
+  include RequiresOnboarding
   include Pundit::Authorization
   include Toastable
   include Pagy::Method

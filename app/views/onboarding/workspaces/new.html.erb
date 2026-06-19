@@ -1,0 +1,22 @@
+<% content_for(:title) { t("onboarding.workspaces.new.title") } %>
+<div class="max-w-md mx-auto px-4 py-16">
+  <%= render "onboarding/stepper", current: :workspace %>
+
+  <h1 class="mt-10 text-3xl font-bold text-text-heading">
+    <%= t("onboarding.workspaces.new.title") %>
+  </h1>
+  <p class="mt-2 text-text-body">
+    <%= t("onboarding.workspaces.new.subtitle") %>
+  </p>
+
+  <%= form_with(model: @workspace, url: onboarding_workspace_path, class: "mt-8 space-y-6") do |form| %>
+    <%= form.error_summary %>
+
+    <%= form.text_field :name,
+          label: t("onboarding.workspaces.new.name_label"),
+          required: true,
+          autofocus: true %>
+
+    <%= form.submit t("onboarding.workspaces.new.submit"), class: "w-full" %>
+  <% end %>
+</div>

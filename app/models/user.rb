@@ -68,6 +68,15 @@ class User < ApplicationRecord
     parts.map { |p| p[0].upcase }.join
   end
 
+  def email_verification_pending?
+    auth = authentications.email.first
+    auth.present? && !auth.verified?
+  end
+
+  def onboarded?
+    onboarded_at.present?
+  end
+
   def locked?
     return false if locked_at.nil?
     locked_at > LOCK_DURATION.ago

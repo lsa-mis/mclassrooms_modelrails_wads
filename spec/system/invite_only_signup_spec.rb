@@ -61,8 +61,8 @@ RSpec.describe "Invite-only signup flow", type: :system do
 
     click_button I18n.t("registrations.new.submit")
 
-    # Successful registration redirects to root.
-    expect(page).to have_current_path(root_path)
+    # Successful registration redirects to the check-your-email screen.
+    expect(page).to have_current_path(new_email_verification_path)
 
     new_user = User.find_by(email_address: "newuser@example.com")
     expect(new_user).to be_present

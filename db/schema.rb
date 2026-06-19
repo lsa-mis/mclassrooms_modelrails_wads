@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_29_020530) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_19_165009) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -262,6 +262,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_29_020530) do
     t.json "last_known_browsers", default: [], null: false
     t.string "last_name"
     t.datetime "locked_at"
+    t.datetime "onboarded_at"
     t.string "password_digest"
     t.string "pending_email"
     t.datetime "pending_email_sent_at"

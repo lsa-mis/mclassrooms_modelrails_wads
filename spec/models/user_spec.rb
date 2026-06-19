@@ -617,4 +617,32 @@ RSpec.describe User, type: :model do
       expect(user).to be_valid
     end
   end
+
+  describe "#email_verification_pending?" do
+    it "is true when the email authentication is unverified" do
+      user = create(:user, :with_email_auth)
+      expect(user.email_verification_pending?).to be(true)
+    end
+
+    it "is false when the email authentication is verified" do
+      user = create(:user, :with_email_auth)
+      user.authentications.email.first.update!(verified_at: Time.current)
+      expect(user.email_verification_pending?).to be(false)
+    end
+
+    it "is false when there is no email authentication (e.g. OAuth-only)" do
+      user = create(:user)
+      expect(user.email_verification_pending?).to be(false)
+    end
+  end
+
+  describe "#onboarded?" do
+    it "is false when onboarded_at is nil" do
+      expect(build(:user, onboarded_at: nil).onboarded?).to be(false)
+    end
+
+    it "is true when onboarded_at is set" do
+      expect(build(:user, onboarded_at: Time.current).onboarded?).to be(true)
+    end
+  end
 end

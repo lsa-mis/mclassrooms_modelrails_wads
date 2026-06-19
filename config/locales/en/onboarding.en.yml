@@ -1,0 +1,49 @@
+en:
+  onboarding:
+    steps:
+      workspace: "Workspace"
+      project: "Project"
+      team: "Team"
+    workspaces:
+      new:
+        title: "Name your workspace"
+        subtitle: "This is the workspace your team will join."
+        name_label: "Workspace name"
+        submit: "Continue"
+      create:
+        success: "Account created."
+    projects:
+      new:
+        title: "Create your first project"
+        subtitle: "Projects hold the work — you can add more later."
+        name_label: "Project name"
+        description_label: "What's it about? (optional)"
+        submit: "Continue"
+      create:
+        success: "Project created."
+    teams:
+      new:
+        title: "Invite your team"
+        subtitle: "Add teammates by email — or skip and invite them later."
+        emails_label: "Email addresses"
+        emails_placeholder: "sam@example.com, lee@example.com"
+        role_label: "Role"
+        submit: "Send invites"
+        skip: "Skip for now"
+      create:
+        sent: "Invitations sent."
+        no_emails: "Enter at least one email address, or skip for now."
+  onboardings:
+    update:
+      complete: "You're all set."
+  email_verifications:
+    banner:
+      message: "Please confirm your email address."
+      action: "Resend link"
+    new:
+      title: "Confirm your email"
+      description_html: "We sent a verification link to %{email}. Click it to confirm your address."
+      expiry: "The link expires in 24 hours."
+      resend: "Resend link"
+      continue: "Continue"
+      dev_open_inbox: "Open the dev inbox"

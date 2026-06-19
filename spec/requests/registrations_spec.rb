@@ -67,9 +67,9 @@ RSpec.describe "Registrations", type: :request do
           }.to change(User, :count).by(1)
         end
 
-        it "signs in the user" do
+        it "redirects to the check-your-email screen" do
           post registration_path, params: valid_params
-          expect(response).to redirect_to(root_path)
+          expect(response).to redirect_to(new_email_verification_path)
         end
       end
 
