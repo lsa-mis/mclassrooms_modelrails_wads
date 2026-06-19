@@ -1,0 +1,59 @@
+<%# locals: (workspace:)
+    Customize modal body for a personal workspace — name + logo in one place.
+    Opened from the Overview via a shared/_modal trigger button.
+    Posts name changes to workspaces#update (Workspaces::ProfilePolicy).
+
+    IMPORTANT: the logo picker (identity_picker_hub) opens its own <dialog>.
+    A <dialog> inside a <form> causes browsers to auto-close the form tag,
+    leaving the submit button outside the form. To avoid this, the logo section
+    lives AFTER the name form (not nested inside it). The logo picker's own
+    form_with in _identity_picker handles logo saves independently. %>
+
+<div class="space-y-6">
+  <%= form_with model: workspace, url: workspace_path(workspace), method: :patch,
+        class: "space-y-4" do |form| %>
+    <%= form.error_summary %>
+
+    <%= form.text_field :name,
+          label: t("workspaces.overview.customize.name_label"),
+          required: true %>
+
+    <%= form.submit t("workspaces.overview.customize.save"), class: "btn-primary" %>
+  <% end %>
+
+  <%# Logo section lives outside the name form — placing a <dialog> inside a
+      <form> causes browsers to implicitly close the form before the dialog,
+      which would disconnect the submit button from the form. %>
+  <div class="space-y-2">
+    <p class="block text-sm font-medium text-text-body">
+      <%= t("workspaces.overview.customize.logo_label") %>
+    </p>
+    <%# A separate modal controller drives the identity-picker dialog.
+        This does NOT nest two <dialog> elements — the outer Customize dialog and
+        the identity-picker <dialog> are siblings at the DOM level. %>
+    <div class="flex items-center gap-4" data-controller="modal">
+      <button data-action="click->modal#open"
+              type="button"
+              aria-label="<%= t('workspaces.brandings.edit.change_logo') %>"
+              class="shrink-0 rounded-full focus-ring cursor-pointer group">
+        <span id="workspace_logo_branding" class="block relative">
+          <%= workspace_icon_for(workspace, size: :lg) %>
+          <span class="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20
+                       transition-colors flex items-center justify-center">
+            <%= icon(:pencil, size: :sm,
+                  class: "text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md") %>
+          </span>
+        </span>
+      </button>
+
+      <%= render "shared/modal", title: t("identity_picker.choose_workspace_logo"), size: :lg do %>
+        <%= render "shared/identity_picker",
+              model: workspace,
+              form_url: workspace_path(workspace),
+              hub_url: identity_picker_hub_workspace_path(workspace),
+              hub_title: t("identity_picker.choose_workspace_logo"),
+              crop_title: t("identity_picker.adjust_workspace_logo") %>
+      <% end %>
+    </div>
+  </div>
+</div>

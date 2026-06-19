@@ -1,3 +1,10 @@
+<%# Replace the workspace name heading on the Overview when renamed in-context. %>
+<%= turbo_stream.replace "workspace-name-heading" do %>
+  <h1 id="workspace-name-heading" class="text-3xl font-bold text-text-heading">
+    <%= @workspace.name %>
+  </h1>
+<% end %>
+
 <%= turbo_stream.replace "workspace_logo_branding" do %>
   <span id="workspace_logo_branding" class="block relative">
     <%= workspace_icon_for(@workspace, size: :lg) %>
@@ -16,7 +23,12 @@
 <% end %>
 
 <% if @close_modal %>
+  <%# Close any open modal that targets the standard "modal-body" slot (settings edit page). %>
   <%= turbo_stream.append "modal-body" do %>
+    <div data-controller="modal-closer"></div>
+  <% end %>
+  <%# Close the Customize modal on the personal-workspace Overview (uses a stable id). %>
+  <%= turbo_stream.append "workspace-customize-body" do %>
     <div data-controller="modal-closer"></div>
   <% end %>
 <% end %>

@@ -38,12 +38,14 @@
         icon: :folder,
         active: current_page?(workspace_projects_path(current_workspace)) %>
 
-  <%# Settings link routes to workspaces#edit (Profile) which is the
-      entry point of the Settings hub. The hub's own sidebar takes
-      over once the user lands inside. %>
-  <%= render "shared/settings_sidebar_item",
-        label: t("workspaces.sidebar.settings"),
-        href: edit_workspace_path(current_workspace),
-        icon: :cog,
-        active: false %>
+  <% unless current_workspace.personal? %>
+    <%# Org workspaces: "Settings" → workspace admin hub (Profile/Members/Invitations/Limits).
+        Personal workspaces omit this item — the "Customize" affordance on the Overview
+        replaces it (workspace-settings IA Phase 1). %>
+    <%= render "shared/settings_sidebar_item",
+          label: t("workspaces.sidebar.settings"),
+          href: edit_workspace_path(current_workspace),
+          icon: :cog,
+          active: false %>
+  <% end %>
 </ul>
