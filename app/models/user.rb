@@ -68,13 +68,33 @@ class User < ApplicationRecord
     parts.map { |p| p[0].upcase }.join
   end
 
+  # True iff the user has an email sign-in awaiting verification. Existence
+  # check (Authentication's own email/pending scopes) so the layout banner
+  # that renders on every authenticated page doesn't instantiate a record.
   def email_verification_pending?
-    auth = authentications.email.first
-    auth.present? && !auth.verified?
+    authentications.email.pending.exists?
   end
 
   def onboarded?
     onboarded_at.present?
+  end
+
+  # First-run wizard helpers (:none posture). The step is derived from data —
+  # the only persisted state is onboarded_at — so dispatcher, guard, and step
+  # controllers all read it from one place instead of re-deriving it.
+  def onboarding_workspace
+    workspaces.kept.first
+  end
+
+  def onboarding_step
+    workspace = onboarding_workspace
+    if workspace.nil?
+      :workspace
+    elsif workspace.projects.kept.none?
+      :project
+    else
+      :team
+    end
   end
 
   def locked?

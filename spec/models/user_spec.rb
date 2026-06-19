@@ -645,4 +645,46 @@ RSpec.describe User, type: :model do
       expect(build(:user, onboarded_at: Time.current).onboarded?).to be(true)
     end
   end
+
+  describe "onboarding step derivation (:none wizard)" do
+    let(:owner_role) do
+      Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
+        r.name = "Owner"
+        r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+      end
+    end
+
+    def join(user, workspace)
+      workspace.memberships.create!(user: user, role: owner_role)
+      user.reload
+    end
+
+    it "#onboarding_workspace returns the first kept workspace, or nil when there is none" do
+      user = create(:user, :with_zero_workspaces)
+      expect(user.onboarding_workspace).to be_nil
+
+      workspace = create(:workspace)
+      join(user, workspace)
+      expect(user.onboarding_workspace).to eq(workspace)
+    end
+
+    it "#onboarding_step is :workspace when the user has no workspace" do
+      user = create(:user, :with_zero_workspaces)
+      expect(user.onboarding_step).to eq(:workspace)
+    end
+
+    it "#onboarding_step is :project with a workspace but no project" do
+      user = create(:user, :with_zero_workspaces)
+      join(user, create(:workspace))
+      expect(user.onboarding_step).to eq(:project)
+    end
+
+    it "#onboarding_step is :team with a workspace that has a project" do
+      user = create(:user, :with_zero_workspaces)
+      workspace = create(:workspace)
+      join(user, workspace)
+      create(:project, workspace: workspace)
+      expect(user.reload.onboarding_step).to eq(:team)
+    end
+  end
 end

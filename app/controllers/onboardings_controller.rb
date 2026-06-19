@@ -1,17 +1,14 @@
 class OnboardingsController < ApplicationController
   skip_onboarding_requirement
 
-  # Single entry point: compute the derived step and redirect to it.
+  # Single entry point: redirect to the user's derived step.
   def show
     return redirect_to(root_path) if Current.user.onboarded?
 
-    workspace = Current.user.workspaces.kept.first
-    if workspace.nil?
-      redirect_to new_onboarding_workspace_path
-    elsif workspace.projects.kept.none?
-      redirect_to new_onboarding_project_path
-    else
-      redirect_to new_onboarding_team_path
+    case Current.user.onboarding_step
+    when :workspace then redirect_to new_onboarding_workspace_path
+    when :project   then redirect_to new_onboarding_project_path
+    when :team      then redirect_to new_onboarding_team_path
     end
   end
 
@@ -19,7 +16,7 @@ class OnboardingsController < ApplicationController
   def update
     Current.user.update!(onboarded_at: Time.current) unless Current.user.onboarded?
 
-    workspace = Current.user.workspaces.kept.first
+    workspace = Current.user.onboarding_workspace
     if workspace && (project = workspace.projects.kept.first)
       redirect_to workspace_project_path(workspace, project), notice: t(".complete")
     elsif workspace

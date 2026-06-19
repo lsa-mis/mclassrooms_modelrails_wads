@@ -13,9 +13,9 @@ module Onboarding
     end
 
     # During first-run the user owns exactly one workspace; resolve it so the
-    # project/team steps run inside its tenancy scope. Nil at the account step.
+    # project/team steps run inside its tenancy scope. Nil at the workspace step.
     def set_onboarding_workspace
-      @workspace = Current.user.workspaces.kept.first
+      @workspace = Current.user.onboarding_workspace
       Current.workspace = @workspace if @workspace
     end
   end
