@@ -1,6 +1,7 @@
 module Settings
   class ProfilesController < ApplicationController
     layout "settings"
+    settings_context :identity
 
     def edit
       @user = Current.user

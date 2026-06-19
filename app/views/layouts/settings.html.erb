@@ -16,29 +16,30 @@
         (WCAG 4.1.3). Visually hidden via sr-only — do NOT use hidden,
         which removes the node from the accessibility tree. The Stimulus
         controller listens for turbo:render and writes the appropriate
-        template (personal or org) on each settings-hub navigation. %>
+        template (identity or workspace) on each settings-hub navigation. %>
     <div id="settings-aria-live"
          role="status"
          aria-live="polite"
          aria-atomic="true"
          class="sr-only"
          data-controller="settings-announcer"
-         data-settings-announcer-personal-value="<%= t("settings.sidebar.aria_live_template.personal") %>"
-         data-settings-announcer-org-value="<%= current_workspace_announcement_for_aria_live %>">
+         data-settings-announcer-identity-value="<%= t("settings.sidebar.aria_live_template.identity") %>"
+         data-settings-announcer-workspace-value="<%= current_workspace_announcement_for_aria_live %>">
     </div>
 
     <%# Settings hub layout. Path Z header-accordion pattern: at md+ the
         sidebar renders inline to the left of <main> with the <aside>
         chrome (_settings_sidebar wrapper); below md, the *chrome-free*
-        contents partial (_settings_sidebar_items) is surfaced via
-        content_for(:mobile_menu_sidebar) so the nav items flow inline
-        inside the header accordion instead of appearing as a nested
-        sidebar-within-a-menu. content_for MUST be declared before render
-        "shared/header" so the slot is populated when the header reads it.
+        contents partial is surfaced via content_for(:mobile_menu_sidebar)
+        so the nav items flow inline inside the header accordion instead of
+        appearing as a nested sidebar-within-a-menu. content_for MUST be
+        declared before render "shared/header" so the slot is populated
+        when the header reads it. The sidebar partial is selected by the
+        controller via settings_context :identity/:workspace.
         Workspace switching is handled by the header switcher — the former
         in-sidebar switcher has been removed (Phase 2c-1 Task 2). %>
     <% content_for :mobile_menu_sidebar do %>
-      <%= render "shared/settings_sidebar_items",
+      <%= render settings_sidebar_partial,
             current_workspace: Current.workspace,
             id_suffix: "-mobile" %>
     <% end %>
@@ -48,12 +49,13 @@
     <%= render "shared/toasts" %>
 
     <div class="flex-1 flex flex-col md:flex-row min-h-[calc(100vh-4rem)]"
-         data-workspace-kind="<%= settings_context_kind %>">
+         data-workspace-kind="<%= settings_context_value %>">
       <%# Desktop sidebar — hidden below md where the header accordion
-          surfaces the same _settings_sidebar partial. %>
+          surfaces the same items partial. %>
       <div class="hidden md:flex shrink-0">
         <%= render "shared/settings_sidebar",
-              current_workspace: Current.workspace %>
+              current_workspace: Current.workspace,
+              sidebar_partial: settings_sidebar_partial %>
       </div>
 
       <main id="main-content"

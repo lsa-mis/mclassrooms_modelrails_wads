@@ -12,6 +12,9 @@ require "rails_helper"
 # This spec intentionally tests *content shape*, not wording, so minor prose
 # edits don't break CI. Add a new assertion only when the team commits to
 # tracking a new invariant in the doc.
+#
+# Note: settings_context_kind was removed in Phase 2 (feat/workspace-settings-ia-phase2).
+# Its entry has been removed from the doc and this spec accordingly.
 RSpec.describe "docs/deprecations.md", type: :model do
   let(:doc_path) { Rails.root.join("docs/deprecations.md") }
   let(:content)  { doc_path.read }
@@ -20,15 +23,8 @@ RSpec.describe "docs/deprecations.md", type: :model do
     expect(doc_path).to exist
   end
 
-  # The two active presentation-layer call-sites listed in the doc must remain
-  # findable so contributors know exactly where to look when the removal
-  # trigger fires. We match on the helper/file name, not the full line.
-  # Note: _settings_sidebar_switcher was removed from both sidebars in
-  # Phase 2c-1 Tasks 2+3 (header switcher supersedes it) — no longer tracked here.
-  it "mentions settings_context_kind (settings_navigation_helper debt call-site)" do
-    expect(content).to include("settings_context_kind")
-  end
-
+  # workspace_icon_for remains the active presentation-layer call-site.
+  # We match on the helper/file name, not the full line.
   it "mentions workspace_icon_for (workspace_helper debt call-site)" do
     expect(content).to include("workspace_icon_for")
   end

@@ -2,14 +2,14 @@
 
 require "rails_helper"
 
-# Regression spec: the account (personal) "Profile" sidebar link must carry a
+# Regression spec: the identity-context "Profile" sidebar link must carry a
 # distinguishing aria-label so screen readers can tell it apart from the
-# workspace-org "Profile" link that a user also sees when switching context.
+# workspace-context "Profile" link that a user also sees when switching context.
 #
 # Without an explicit aria-label the link announces as bare "Profile" — identical
-# to the org link — which fails the WCAG 2.4.6 / 1.3.1 distinctiveness requirement.
+# to the workspace link — which fails the WCAG 2.4.6 / 1.3.1 distinctiveness requirement.
 # The fix adds `aria_label: t("settings.sidebar.aria_labels.profile_personal")`
-# to the personal-context render in shared/_settings_sidebar_items.html.erb.
+# to the identity-context render in shared/_identity_settings_sidebar_items.html.erb.
 #
 # Uses Capybara.string (no browser) to parse the real rendered HTML — matching
 # the pattern in spec/requests/settings_sidebar_visibility_spec.rb. Nokogiri
@@ -28,10 +28,10 @@ RSpec.describe "Settings sidebar account Profile aria-label", type: :request do
     I18n.t("settings.sidebar.aria_labels.profile_personal")
   end
 
-  # GET /account/profile/edit renders the settings layout with Current.workspace
-  # nil (account routes are workspace-independent), so settings_context_kind
-  # returns :personal (nil guard) and the account items render.
-  describe "GET /account/profile/edit (personal context)" do
+  # GET /account/profile/edit renders the settings layout with
+  # Settings::ProfilesController, which declares settings_context :identity,
+  # so the identity sidebar items render.
+  describe "GET /account/profile/edit (identity context)" do
     before { get edit_settings_profile_path }
 
     it "renders the account Profile link with a distinguishing aria-label" do

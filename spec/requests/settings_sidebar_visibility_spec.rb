@@ -1,7 +1,7 @@
 require "rails_helper"
 
-# Renders the org-context settings sidebar through the real request stack and
-# asserts each role sees the correct nav links. The members index uses
+# Renders the workspace-context settings sidebar through the real request stack
+# and asserts each role sees the correct nav links. The members index uses
 # layout "settings" and is reachable by every role (MembershipPolicy#index? is
 # just membership.present?), so the sidebar renders here even for lower roles —
 # unlike edit_workspace_path, which redirects them before any sidebar shows.
@@ -10,7 +10,7 @@ require "rails_helper"
 # spec/system/settings/org_context_spec.rb (which covers the Owner render, AAA,
 # and the Viewer security redirect). It locks in the role matrix — in particular
 # the Member "Profile + Limits & Plan hidden" path the system specs never reach. #151
-RSpec.describe "Settings sidebar visibility (org context)", type: :request do
+RSpec.describe "Settings sidebar visibility (workspace context)", type: :request do
   let(:workspace) { create(:workspace, name: "Acme Corp") }
 
   def org_sidebar

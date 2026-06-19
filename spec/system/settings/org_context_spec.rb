@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Settings hub — org context", type: :system do
+RSpec.describe "Settings hub — workspace context", type: :system do
   let(:owner) { create(:user) }
   let(:viewer) { create(:user) }
   let(:workspace) { create(:workspace, name: "Acme Corp") }
@@ -16,7 +16,7 @@ RSpec.describe "Settings hub — org context", type: :system do
   context "as Owner" do
     before { sign_in_via_form(owner) }
 
-    it "renders org-context sidebar with all admin items" do
+    it "renders workspace-context sidebar with all admin items" do
       visit edit_workspace_path(workspace)
 
       within(sidebar_selector) do
@@ -31,9 +31,9 @@ RSpec.describe "Settings hub — org context", type: :system do
       end
     end
 
-    it "exposes the org context via data attribute" do
+    it "exposes the workspace context via data attribute" do
       visit edit_workspace_path(workspace)
-      expect(page).to have_css("[data-workspace-kind='org']")
+      expect(page).to have_css("[data-workspace-kind='workspace']")
     end
 
     it "passes axe-core at WCAG 2.2 AAA in light and dark modes" do
@@ -52,7 +52,7 @@ RSpec.describe "Settings hub — org context", type: :system do
     # NotAuthorizedError → redirect to workspace_path with the standard
     # not_authorized flash. This is the actual security guarantee; the sidebar
     # never renders because the controller redirects before the view does.
-    it "is denied access to the org Profile settings page via Pundit" do
+    it "is denied access to the workspace Profile settings page via Pundit" do
       visit edit_workspace_path(workspace)
 
       expect(page).to have_current_path(workspace_path(workspace))

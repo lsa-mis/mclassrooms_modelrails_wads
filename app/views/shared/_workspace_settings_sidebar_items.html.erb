@@ -1,0 +1,75 @@
+<%# locals: (current_workspace:, id_suffix: "") -%>
+<%# Workspace-settings sidebar items — workspace-level settings (Profile, Members,
+    Invitations, Limits & Plan). Rendered unconditionally for the workspace context;
+    the controller declares settings_context :workspace to select this partial.
+    Pundit gates via render_nav_item_if_permitted keep sidebar visibility in lockstep
+    with destination controller authorization.
+
+    Adding a new item: add i18n keys under settings.sidebar.items.<key> and
+    settings.sidebar.aria_labels.<key>, add to visible_workspace_sidebar_items in
+    SettingsNavigationHelper (for the aria-live announcement), and add a
+    render_nav_item_if_permitted block below with the same policy/action as the
+    destination controller's authorize call. -%>
+<% section_label_id = "settings-sidebar-section-label#{id_suffix}" %>
+
+<%# Section label. Rendered as a styled <div> (not a heading) so it doesn't
+    conflict with the page's <h1>; associated with the <ul> via aria-labelledby
+    so screen readers announce "Workspace, list, N items" when entering the
+    navigation. %>
+<div id="<%= section_label_id %>"
+     class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+  <%= t("settings.sidebar.section_label.workspace") %>
+</div>
+
+<ul role="list"
+    aria-labelledby="<%= section_label_id %>"
+    class="flex flex-col gap-1">
+  <%# Profile routes to workspaces#edit which authorizes via
+      Workspaces::ProfilePolicy (manage_settings permission) — not the
+      record's default WorkspacePolicy — so pass policy_class: to keep
+      sidebar visibility matched to the destination controller's authorize. %>
+  <%= render_nav_item_if_permitted(current_workspace, action: :update?, policy_class: Workspaces::ProfilePolicy) do %>
+    <%= render "shared/settings_sidebar_item",
+          label: t("settings.sidebar.items.profile"),
+          href: edit_workspace_path(current_workspace),
+          aria_label: t("settings.sidebar.aria_labels.profile_org",
+                        workspace_name: current_workspace.name),
+          icon: :user_circle,
+          active: current_page?(edit_workspace_path(current_workspace)) %>
+  <% end %>
+
+  <%= render_nav_item_if_permitted(Membership.new(workspace: current_workspace), action: :index?) do %>
+    <%= render "shared/settings_sidebar_item",
+          label: t("settings.sidebar.items.members"),
+          href: workspace_members_path(current_workspace),
+          aria_label: t("settings.sidebar.aria_labels.members",
+                        workspace_name: current_workspace.name),
+          icon: :user_group,
+          active: current_page?(workspace_members_path(current_workspace)) %>
+  <% end %>
+
+  <%= render_nav_item_if_permitted(Invitation.new(invitable: current_workspace), action: :index?) do %>
+    <%= render "shared/settings_sidebar_item",
+          label: t("settings.sidebar.items.invitations"),
+          href: workspace_invitations_path(current_workspace),
+          aria_label: t("settings.sidebar.aria_labels.invitations",
+                        workspace_name: current_workspace.name),
+          icon: :envelope,
+          active: current_page?(workspace_invitations_path(current_workspace)) %>
+  <% end %>
+
+  <%# Limits & Plan routes to workspaces/settings#edit which authorizes via
+      Workspaces::SettingsPolicy (manage_settings permission). The default
+      WorkspacePolicy#update? checks manage_workspace — a different permission
+      held by Owners but not Admins — so pass policy_class: to keep sidebar
+      visibility matched to the destination controller's authorize call. %>
+  <%= render_nav_item_if_permitted(current_workspace, action: :update?, policy_class: Workspaces::SettingsPolicy) do %>
+    <%= render "shared/settings_sidebar_item",
+          label: t("settings.sidebar.items.limits_and_plan"),
+          href: edit_workspace_settings_path(current_workspace),
+          aria_label: t("settings.sidebar.aria_labels.limits_and_plan",
+                        workspace_name: current_workspace.name),
+          icon: :chart_bar,
+          active: current_page?(edit_workspace_settings_path(current_workspace)) %>
+  <% end %>
+</ul>

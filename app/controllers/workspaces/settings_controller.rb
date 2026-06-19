@@ -3,6 +3,7 @@ module Workspaces
     include WorkspaceScoped
 
     layout "settings"
+    settings_context :workspace
 
     def edit
       authorize @workspace, policy_class: Workspaces::SettingsPolicy

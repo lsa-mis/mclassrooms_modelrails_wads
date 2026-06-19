@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Announces settings-hub context changes (personal vs org workspace switch)
+// Announces settings-hub context changes (identity vs workspace context switch)
 // to assistive tech via the polite aria-live region this controller mounts on.
 //
 // Why turbo:render (not turbo:morph-rendered): it fires once per full page
@@ -8,15 +8,15 @@ import { Controller } from "@hotwired/stimulus"
 //
 // Why dedup on `lastKind`: the previous implementation cleared + re-wrote on
 // every render, which forced AT to re-announce even when navigating
-// personal→personal or org→org. Screen readers handle the duplicate-content
-// rule inconsistently, but the better fix is to only announce on actual
-// transitions — first entry into the hub OR a kind change. First page load
-// (no prior `lastKind`) is silent because the user knows where they just
-// landed; announcement is for *transitions*.
+// identity→identity or workspace→workspace. Screen readers handle the
+// duplicate-content rule inconsistently, but the better fix is to only
+// announce on actual transitions — first entry into the hub OR a kind change.
+// First page load (no prior `lastKind`) is silent because the user knows
+// where they just landed; announcement is for *transitions*.
 export default class extends Controller {
   static values = {
-    personal: String,
-    org: String,
+    identity: String,
+    workspace: String,
   }
 
   connect() {

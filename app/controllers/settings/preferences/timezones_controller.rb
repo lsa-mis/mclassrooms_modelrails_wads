@@ -18,6 +18,7 @@ module Settings
     #     region. Falls back to an HTML redirect with flash notice.
     class TimezonesController < ApplicationController
       layout "settings"
+      settings_context :identity
 
       # TZInfo::Timezone.all_identifiers is the full IANA database (~598
       # entries) — what Intl.DateTimeFormat returns in the browser.

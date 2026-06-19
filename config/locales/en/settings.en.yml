@@ -4,13 +4,13 @@ en:
       aria_label: "Settings navigation"
       switcher_aria_label: "Switch workspace"
       section_label:
-        personal: "You"
-        org: "Workspace"
+        identity: "You"
+        workspace: "Workspace"
       workspace_link_aria_label:
         personal: "%{name}, your workspace"
       aria_live_template:
-        personal: "Switched to your settings. Settings menu updated: Profile, Notifications, Security, Appearance."
-        org: "Switched to %{name}, %{role}. Settings menu updated: %{items}."
+        identity: "Switched to your settings. Settings menu updated: Profile, Notifications, Security, Appearance."
+        workspace: "Switched to %{name}, %{role}. Settings menu updated: %{items}."
       items:
         profile: "Profile"
         notifications: "Notifications"

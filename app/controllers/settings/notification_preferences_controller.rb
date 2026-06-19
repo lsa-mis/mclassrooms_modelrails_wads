@@ -3,6 +3,7 @@
 module Settings
   class NotificationPreferencesController < ApplicationController
     layout "settings"
+    settings_context :identity
 
     before_action :set_preferences
 

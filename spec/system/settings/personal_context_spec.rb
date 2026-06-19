@@ -1,13 +1,13 @@
 require "rails_helper"
 
-RSpec.describe "Settings hub — personal context", type: :system do
+RSpec.describe "Settings hub — identity context", type: :system do
   let(:user) { create(:user) }
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
   let(:sidebar_selector) { "aside[aria-label='#{I18n.t("settings.sidebar.aria_label")}']" }
 
   before { sign_in_via_form(user) }
 
-  it "renders the personal-context sidebar with all user-tier items" do
+  it "renders the identity-context sidebar with all user-tier items" do
     visit edit_settings_profile_path
 
     within(sidebar_selector) do
@@ -22,9 +22,9 @@ RSpec.describe "Settings hub — personal context", type: :system do
     end
   end
 
-  it "exposes the personal context via data attribute" do
+  it "exposes the identity context via data attribute" do
     visit edit_settings_profile_path
-    expect(page).to have_css("[data-workspace-kind='personal']")
+    expect(page).to have_css("[data-workspace-kind='identity']")
   end
 
   it "marks the current page in the sidebar with aria-current" do

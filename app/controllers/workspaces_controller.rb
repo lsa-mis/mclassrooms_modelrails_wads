@@ -5,6 +5,7 @@ class WorkspacesController < ApplicationController
   before_action :ensure_workspace_creation_enabled, only: [ :new, :create ]
 
   layout "settings", only: [ :edit, :update, :identity_picker_hub ]
+  settings_context :workspace
 
   def index
     authorize Workspace

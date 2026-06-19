@@ -1,6 +1,7 @@
 module Settings
   class ThemePreferencesController < ApplicationController
     layout "settings"
+    settings_context :identity
 
     def edit
       @preferences = Current.user.preferences || Current.user.build_preferences

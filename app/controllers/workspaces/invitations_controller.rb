@@ -3,6 +3,7 @@ module Workspaces
     include WorkspaceScoped
 
     layout "settings"
+    settings_context :workspace
 
     rate_limit to: 10, within: 3.minutes, only: :resend,
       by: -> { Current.user&.id || request.remote_ip },

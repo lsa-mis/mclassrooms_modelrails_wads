@@ -1,25 +1,6 @@
 require "rails_helper"
 
 RSpec.describe SettingsNavigationHelper, type: :helper do
-  describe "#settings_context_kind" do
-    it "returns :personal when Current.workspace.personal? is true" do
-      personal = build_stubbed(:workspace, personal: true)
-      allow(Current).to receive(:workspace).and_return(personal)
-      expect(helper.settings_context_kind).to eq(:personal)
-    end
-
-    it "returns :org when Current.workspace.personal? is false" do
-      org = build_stubbed(:workspace, personal: false)
-      allow(Current).to receive(:workspace).and_return(org)
-      expect(helper.settings_context_kind).to eq(:org)
-    end
-
-    it "returns :personal when Current.workspace is nil (safe default for unauthenticated edge)" do
-      allow(Current).to receive(:workspace).and_return(nil)
-      expect(helper.settings_context_kind).to eq(:personal)
-    end
-  end
-
   describe "#render_nav_item_if_permitted" do
     let(:user) { create(:user) }
     let(:workspace) { create(:workspace) }
