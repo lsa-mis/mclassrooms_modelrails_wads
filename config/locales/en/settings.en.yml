@@ -4,12 +4,12 @@ en:
       aria_label: "Settings navigation"
       switcher_aria_label: "Switch workspace"
       section_label:
-        personal: "Account"
+        personal: "You"
         org: "Workspace"
       workspace_link_aria_label:
-        personal: "%{name}, personal workspace"
+        personal: "%{name}, your workspace"
       aria_live_template:
-        personal: "Switched to your personal workspace. Settings menu updated: Profile, Notifications, Security, Appearance."
+        personal: "Switched to your settings. Settings menu updated: Profile, Notifications, Security, Appearance."
         org: "Switched to %{name}, %{role}. Settings menu updated: %{items}."
       items:
         profile: "Profile"
@@ -20,7 +20,7 @@ en:
         invitations: "Invitations"
         limits_and_plan: "Limits & Plan"
       aria_labels:
-        profile_personal: "Profile, personal workspace"
+        profile_personal: "Your profile"
         profile_org: "Profile, %{workspace_name}"
         members: "Members of %{workspace_name}"
         invitations: "Invitations for %{workspace_name}"
@@ -30,7 +30,7 @@ en:
         create_workspace: "Create workspace"
     pages:
       profile_personal:
-        h1: "Your personal profile"
+        h1: "Your profile"
         description: "Visible in every workspace. Only you can edit this."
       notifications:
         h1: "Notifications"

@@ -15,6 +15,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Changed
 
+- Retired the deferred "personal workspace"/"personal profile" settings copy → "your workspace" (the tenant) / "your profile" (identity); the personal settings section label "Account" → "You" (honest-naming, identity/tenant split).
 - Removed the half-wired dynamic-PWA scaffold (#306): the unused `app/views/pwa/manifest.json.erb` + `service-worker.js` and their commented-out routes are gone. The working static `public/manifest.webmanifest` stays (its name already matches `brand.en.yml`), so the fork-rename checklist now points at one manifest instead of two.
 - Fork-readiness code-quality cleanup (#305): policies resolve the project via `respond_to?(:project)` instead of class checks; new-device detection rescues only `ActiveRecord::ActiveRecordError` so genuine bugs surface instead of being swallowed; activity-tracking failure logs now name the record (`Class#id`).
 - `.env.example` now documents every operator-settable ENV var the code reads (was 3 of ~18), grouped by scope — Rails, Kamal, server tuning, signup gating, tenancy preset, and shared-preset seeds — each with its default/valid-values and a pointer to the relevant `app/docs` page (#298). A new template invariant greps the codebase for `ENV[...]`/`ENV.fetch` and fails if any operator-settable var is missing from `.env.example`, so it can't silently drift again.
