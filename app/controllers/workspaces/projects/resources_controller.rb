@@ -93,7 +93,9 @@ module Workspaces
       end
 
       def resource_params
-        params.require(:resource).permit(:title, :status)
+        permitted = [ :title, :status ]
+        permitted << :shared_with_client if @project&.clientside_enabled?
+        params.require(:resource).permit(*permitted)
       end
 
       def resourceable_params

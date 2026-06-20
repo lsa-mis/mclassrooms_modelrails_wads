@@ -43,6 +43,10 @@ class Project < ApplicationRecord
     client_accesses.kept.exists?(user: user)
   end
 
+  def client_visible_resources
+    resources.kept.published.where(shared_with_client: true).positioned
+  end
+
   private
 
   def broadcast_target

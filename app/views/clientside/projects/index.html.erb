@@ -1,0 +1,16 @@
+<% content_for(:title) { t("clientside.projects.index.title") } %>
+<div class="max-w-4xl mx-auto px-4 py-16">
+  <h1 class="text-3xl font-bold text-text-heading"><%= t("clientside.projects.index.title") %></h1>
+  <% if @projects.any? %>
+    <ul class="mt-8 space-y-3" aria-label="<%= t("clientside.projects.index.title") %>">
+      <% @projects.each do |project| %>
+        <li class="border border-border rounded-lg px-4 py-3">
+          <%= link_to project.name, clientside_project_path(project),
+                class: "text-interactive font-medium hover:underline focus-ring rounded" %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <div class="mt-8"><%= render "shared/empty_state", message: t("clientside.projects.index.empty") %></div>
+  <% end %>
+</div>

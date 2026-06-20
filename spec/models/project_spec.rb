@@ -166,4 +166,14 @@ RSpec.describe Project, type: :model do
         .to change(workspace.memberships, :count).by(1)
     end
   end
+
+  describe "#client_visible_resources" do
+    it "returns only kept, published, shared resources" do
+      project = create(:project)
+      visible = create(:resource, project: project, status: "published", shared_with_client: true)
+      create(:resource, project: project, status: "draft", shared_with_client: true)
+      create(:resource, project: project, status: "published", shared_with_client: false)
+      expect(project.client_visible_resources).to eq([ visible ])
+    end
+  end
 end

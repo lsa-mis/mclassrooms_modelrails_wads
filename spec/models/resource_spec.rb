@@ -83,4 +83,21 @@ RSpec.describe Resource, type: :model do
       expect(log).to be_present
     end
   end
+
+  describe "#client_visible?" do
+    it "is true when shared and published" do
+      r = create(:resource, status: "published", shared_with_client: true)
+      expect(r.client_visible?).to be(true)
+    end
+
+    it "is false when shared but still a draft" do
+      r = create(:resource, status: "draft", shared_with_client: true)
+      expect(r.client_visible?).to be(false)
+    end
+
+    it "is false when published but not shared" do
+      r = create(:resource, status: "published", shared_with_client: false)
+      expect(r.client_visible?).to be(false)
+    end
+  end
 end

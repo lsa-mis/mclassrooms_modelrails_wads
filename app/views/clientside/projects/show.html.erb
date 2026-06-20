@@ -1,0 +1,19 @@
+<% content_for(:title) { @project.name } %>
+<% content_for(:client_area_title) { "#{@project.workspace.name} · #{t("clientside.area.title")}" } %>
+<div class="max-w-4xl mx-auto px-4 py-16">
+  <h1 class="text-3xl font-bold text-text-heading"><%= @project.name %></h1>
+  <p class="mt-2 text-text-body"><%= t("clientside.projects.show.shared_with_you") %></p>
+
+  <% if @resources.any? %>
+    <ul class="mt-8 space-y-3" aria-label="<%= t("clientside.projects.show.shared_with_you") %>">
+      <% @resources.each do |resource| %>
+        <li class="border border-border rounded-lg px-4 py-3">
+          <%= link_to resource.title, clientside_project_resource_path(@project, resource),
+                class: "text-interactive font-medium hover:underline focus-ring rounded" %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <div class="mt-8"><%= render "shared/empty_state", message: t("clientside.projects.show.empty") %></div>
+  <% end %>
+</div>

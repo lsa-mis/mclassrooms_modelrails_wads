@@ -109,6 +109,12 @@ Rails.application.routes.draw do
     resource :team,      only: %i[new create]
   end
 
+  namespace :clientside do
+    resources :projects, only: %i[index show] do
+      resources :resources, only: %i[show], module: :projects
+    end
+  end
+
   # Fork seam: product routes (root, marketing pages, your features) live in
   # the fork-owned config/routes/app.rb. See /docs/forking.
   draw(:app)

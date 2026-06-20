@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>"
+      data-controller="theme"
+      data-theme-theme-value="<%= current_user_theme %>">
+<%= render "shared/layout_head" %>
+
+  <body class="min-h-screen flex flex-col bg-surface-raised text-text-heading">
+    <%= render "shared/skip_link" %>
+
+    <header class="border-b border-border">
+      <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <span class="font-semibold text-text-heading">
+          <%= content_for?(:client_area_title) ? yield(:client_area_title) : t("clientside.area.title") %>
+        </span>
+        <%= button_to t("clientside.area.sign_out"), session_path, method: :delete,
+              class: "btn-text btn-neutral" %>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1" class="flex-1">
+      <%= yield %>
+    </main>
+
+    <%= render "shared/layout_tail" %>
+  </body>
+</html>

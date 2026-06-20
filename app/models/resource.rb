@@ -18,6 +18,10 @@ class Resource < ApplicationRecord
   scope :positioned, -> { order(position: :asc) }
   scope :published, -> { where(status: "published") }
 
+  def client_visible?
+    shared_with_client? && published?
+  end
+
   private
 
   def broadcast_target

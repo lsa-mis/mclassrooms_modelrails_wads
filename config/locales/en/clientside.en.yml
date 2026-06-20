@@ -1,5 +1,19 @@
 en:
   clientside:
+    area:
+      title: "Client area"
+      sign_out: "Sign out"
+      no_access: "You don't have client access to that project."
+      unavailable: "That client area isn't available."
+      back: "← Back"
+      resource_unavailable: "That item isn't available."
+    projects:
+      index:
+        title: "Shared with you"
+        empty: "You don't have access to any client areas yet."
+      show:
+        shared_with_you: "Shared with you"
+        empty: "Nothing has been shared with you yet."
     settings:
       title: "Client access"
       subtitle: "Clientside gives external clients a separate, limited view of this project."
@@ -7,6 +21,11 @@ en:
       save: "Save"
       saved: "Client access updated."
       link: "Client access"
+  workspaces:
+    projects:
+      resources:
+        edit:
+          share_with_client: "Share with the client side"
   activerecord:
     errors:
       models:

@@ -50,6 +50,17 @@
 
     <%= render "workspaces/projects/resources/types/#{@resource.resourceable_type.underscore}_form", form: form %>
 
+    <% if @project.clientside_enabled? %>
+      <div>
+        <%= hidden_field_tag "resource[shared_with_client]", "0" %>
+        <label class="flex items-center gap-2 text-sm text-text-body">
+          <%= check_box_tag "resource[shared_with_client]", "1", @resource.shared_with_client?,
+                id: "resource_shared_with_client", class: "focus-ring rounded" %>
+          <%= t("workspaces.projects.resources.edit.share_with_client") %>
+        </label>
+      </div>
+    <% end %>
+
     <%= submit_tag t("workspaces.projects.resources.edit.submit"),
           class: "btn-primary w-full" %>
   <% end %>
