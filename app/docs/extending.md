@@ -251,6 +251,62 @@ For fine-grained access (e.g., "can view Document A but not Document B"):
 2. Update `ResourcePolicy` to check both project membership AND resource shares
 3. Resources without shares fall back to project-level permissions
 
+## Project Tools registry
+
+Each project carries a set of tools (tabs in the project navigation). The base template ships `:docs` only. Forks add tools by registering them in `config/initializers/project_tools.rb` **after** building the tool's surface (model + controller + routes + views):
+
+```ruby
+# config/initializers/project_tools.rb
+Rails.application.config.to_prepare do
+  ProjectTools::Registry.reset!
+
+  # Built-in tool — keep this.
+  ProjectTools::Registry.register(
+    key: :docs,
+    path_helper: :workspace_project_resources_path,
+    default_enabled: true
+  )
+
+  # Your tool — register it here.
+  ProjectTools::Registry.register(
+    key: :messages,
+    path_helper: :workspace_project_messages_path,
+    default_enabled: true
+  )
+end
+```
+
+`path_helper` is a project-scoped route helper the project tab bar calls as `helper(workspace, project)`.
+
+Gate a tool's controller so its routes redirect back to project home when the tool is disabled for that project:
+
+```ruby
+class Workspaces::Projects::MessagesController < ApplicationController
+  include WorkspaceScoped
+  include EnforcesProjectTool
+  enforces_tool :messages          # redirects if tool_enabled?(:messages) is false
+
+  before_action :set_project       # must run BEFORE the EnforcesProjectTool guard
+  # …
+end
+```
+
+The `EnforcesProjectTool` concern reads `@project.tool_enabled?(key)`, so `set_project` must populate `@project` before the guard fires. See [Project Tools](/docs/project-tools) for the full how-to.
+
+## Clientside (external-client area)
+
+The Clientside subsystem lets managers share a read-only project view with external clients — without giving them workspace membership or a seat in workspace policies.
+
+Key extension points:
+
+- **Enable per project.** Clientside is toggled on a per-project basis via the project's Clientside settings (`Workspaces::Projects::ClientsidesController`, `edit_workspace_project_clientside_path`). A project must have `clientside_enabled?` returning `true` before any client-invite or access logic runs.
+- **Invite a client.** `Invitation.invite_client!(project:, email:, company_name:, invited_by:)` creates a client-type invitation and dispatches the invite email. The invitation form lives at `new_workspace_project_client_invitation_path` (`Workspaces::Projects::ClientInvitationsController`).
+- **Acceptance creates a `ClientAccess`.** When a client accepts via `GET /invitations/:token/accept` (or `POST` if already signed in), `Invitation#accept_client_invitation!` creates a `ClientAccess` row — a deliberate non-`Membership` record so clients never enter workspace policies or member-seat counting.
+- **Client area controllers.** `Clientside::BaseController` (namespace `clientside`) resolves projects only through `Current.user.client_accesses.kept` — clients cannot reach workspace-scoped resources. `Clientside::ProjectsController` lists accessible projects; `Clientside::Projects::ResourcesController` shows individual resources that are `client_visible?`. The layout is `clientside`, isolated from the workspace shell.
+- **`skip_onboarding_requirement`.** `Clientside::BaseController` calls `skip_onboarding_requirement` so that client users (who have no workspace and therefore no `onboarded_at`) land in the client area rather than being funnelled into the onboarding wizard.
+
+See [Clientside](/docs/clientside) for the full configuration and usage guide.
+
 ## Next steps
 
 - **[Architecture](/docs/architecture)** — the request flow, tenancy model, and key directories your new code plugs into.

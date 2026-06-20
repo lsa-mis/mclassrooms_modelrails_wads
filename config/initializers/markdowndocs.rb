@@ -27,7 +27,7 @@ Markdowndocs.configure do |config|
     # split. Listing both here keeps the topic discoverable from the
     # canonical "Features" category in either mode.
     "Features" => %w[accounts accounts-and-identity workspaces projects identity-system emails notifications notifications-technical],
-    "Guides" => %w[extending security ui-patterns components accessibility deployment background-jobs troubleshooting forking qa-flows project-tools]
+    "Guides" => %w[extending security ui-patterns components accessibility deployment background-jobs troubleshooting forking qa-flows project-tools onboarding clientside]
   }
 
   # Fork seam: a downstream fork registers its own docs pages in

@@ -1,7 +1,7 @@
 ---
 title: Project Collaboration
-description: Creating projects, managing members, inviting collaborators, and working with resources
-keywords: project members collaboration resources documents invitations roles creator editor viewer pin reposition
+description: Creating projects, managing members, inviting collaborators, working with resources, and enabling project tools and clientside access
+keywords: project members collaboration resources documents invitations roles creator editor viewer pin reposition tools clientside client
 audience: [guide, technical]
 ---
 
@@ -99,6 +99,53 @@ The `positioned` scope orders by position ascending.
 ### Adding New Resource Types
 
 See the [Extending](/docs/extending) guide for how to add new resource types via the polymorphic pattern.
+
+## Project Tools
+
+Each project has an independently configurable set of **tools** — navigable sections of the project (for example, the docs area). Tools appear as a tab bar on the project home page.
+
+**Configuration route:** `GET/PATCH /workspaces/:slug/projects/:slug/tools`
+**Controller:** `Workspaces::Projects::ToolsController`
+
+The available tool catalogue is defined in code via `ProjectTools::Registry` (see `app/lib/project_tools/`). Each `ProjectTools::Tool` entry declares a key, a route-helper name, and whether it is enabled by default. New tools are registered in `config/initializers/project_tools.rb` using `ProjectTools::Registry.register(...)`.
+
+Per-project state is stored as a JSON array of key strings in `projects.enabled_tools`. The model exposes:
+
+- `Project#tool_enabled?(key)` — boolean check for a single key
+- `Project#tools` — returns the subset of `Registry.implemented` tools that are enabled for this project, in registry order
+
+New projects receive the registry's default enabled set (`Registry.default_keys`). The only built-in tool currently shipped is `:docs`.
+
+See [Project Tools](/docs/project-tools) for the full reference.
+
+## Clientside (External Client Access)
+
+A project can optionally expose a read-only **client area** to external users who are _not_ workspace members.
+
+**Enabling clientside:**
+
+`GET/PATCH /workspaces/:slug/projects/:slug/clientside`
+`Controller: Workspaces::Projects::ClientsidesController`
+
+Toggle the `clientside_enabled` flag on the project. When disabled, client invitations cannot be sent and the client area is inaccessible.
+
+**Inviting clients:**
+
+`GET /workspaces/:slug/projects/:slug/client_invitations/new`
+`POST /workspaces/:slug/projects/:slug/client_invitations`
+`Controller: Workspaces::Projects::ClientInvitationsController`
+
+Send an invitation to an external email address and company name. The invitation flow reuses the shared `Invitation` bearer-token system — `Invitation.invite_client!` creates the record and sends the email.
+
+**Client access model:**
+
+Each accepted invitation creates a `ClientAccess` record linking the external `User` to the project. Clients are regular authenticated Users but are never workspace members — they hold no `Membership`, consume no seat, and are invisible to Pundit workspace policies. The relationship is tracked as `Project has_many :client_accesses`.
+
+**What clients can see:**
+
+Clients access the project through the separate `Clientside::` controller namespace. They can only see resources where `Resource#client_visible?` returns true — i.e. the resource is both `published` and `shared_with_client` (`resources.shared_with_client` column). The project's `client_visible_resources` helper returns this filtered, positioned set.
+
+See [Clientside](/docs/clientside) for the full reference.
 
 ## Soft Delete
 

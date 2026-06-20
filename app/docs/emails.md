@@ -30,10 +30,13 @@ ModelRails sends transactional emails for authentication, invitations, and accou
 
 ### Invitation Emails
 
-| Email | Trigger | Recipient | Expiry |
-|-------|---------|-----------|--------|
-| Workspace invitation | Admin invites by email | Invitee's email | 7 days |
-| Project invitation | Project member invites by email | Invitee's email | 7 days |
+| Email | Trigger | Mailer action | Recipient | Expiry |
+| ----- | ------- | ------------- | --------- | ------ |
+| Workspace invitation | Admin invites a member by email | `InvitationMailer.invite` | Invitee's email | 7 days |
+| Project invitation | Project member invites a collaborator | `InvitationMailer.invite` | Invitee's email | 7 days |
+| Client invitation | Project member invites an external client | `InvitationMailer.invite_client` | Client's email | 7 days |
+
+`InvitationMailer.invite_client` is a client-flavoured variant: the subject references the project name (not the workspace), and the email omits the decline link. See [Clientside](/docs/clientside) for the client area this invitation leads to.
 
 ### Magic Link Emails
 
@@ -52,13 +55,15 @@ Tokens are single-use: accepting an invitation, verifying an email, or resetting
 
 ### New User Registration
 
-1. User submits registration form.
+1. User submits registration form (`RegistrationsController#create`).
 2. Unverified `Authentication` record created.
 3. `AuthenticationMailer.verification_email` sent with a signed, single-use token (`generates_token_for :email_verification`).
-4. User clicks link → email marked as verified.
-5. User can now sign in.
+4. User is redirected to the **"check your email" screen** (`EmailVerificationsController#new`, `new_email_verification_path`), which shows a prompt and a **Resend** button (`POST email_verification_resend`).
+5. A non-blocking **"confirm your email" banner** (`shared/_email_verification_banner`) renders in the authenticated layout on every page until the email is verified. It is driven by `User#email_verification_pending?` and links back to `new_email_verification_path`.
+6. User clicks the link in the email → `EmailVerificationsController#show` verifies the token and redirects to `after_authentication_url` (which resolves to `authenticated_home_path` or the stored return URL).
+7. If the user is on the `:none` preset and has not yet completed onboarding, the `RequiresOnboarding` guard fires and redirects them into the onboarding wizard.
 
-Verification can be resent from the profile page if the original email was lost.
+Verification can be resent from the "check your email" screen or via the banner if the original email was lost.
 
 ### Password Reset
 
@@ -86,7 +91,7 @@ Verification can be resent from the profile page if the original email was lost.
 
 ### Invitation Acceptance
 
-1. Admin creates invitation → `InvitationMailer.invite` sent.
+1. Admin creates invitation → `InvitationMailer.invite` sent (workspace member or project collaborator). For external client invitations, `InvitationMailer.invite_client` is sent instead — it uses a client-flavoured subject and omits the decline link.
 2. Invitee clicks accept link.
 3. If authenticated: accepted immediately, provided the account's email matches the invited address.
 4. If not authenticated: the token is stashed, the invitee registers, and the invitation is claimed when they verify the invited email — not at signup.

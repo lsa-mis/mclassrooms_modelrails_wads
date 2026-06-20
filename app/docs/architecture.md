@@ -1,7 +1,7 @@
 ---
 title: Architecture
 description: Data model, authorization, and real-time patterns in ModelRails
-keywords: models workspace project resource membership pundit authorization turbo streams multi-tenancy
+keywords: models workspace project resource membership pundit authorization turbo streams multi-tenancy client clientside project-tools
 audience: [guide, technical]
 ---
 
@@ -14,9 +14,10 @@ User
   └── Workspace (personal, auto-created on sign-up)
   └── Workspace (organizational, created manually)
         ├── Membership (user + Role with permissions JSON)
-        ├── Invitation (polymorphic — workspace or project)
+        ├── Invitation (polymorphic — workspace or project or client)
         └── Project (collaboration space)
               ├── ProjectMembership (user + enum role: creator/editor/viewer)
+              ├── ClientAccess (external client ↔ project; NOT a Membership)
               └── Resource (polymorphic registry)
                     └── Document (Action Text rich content)
 ```
@@ -27,11 +28,15 @@ User
 
 **Project** — collaboration boundary. Lightweight, purpose-driven. Who works together on what.
 
-**Resource** — content within a project. Polymorphic registry pattern: `Resource` holds title, status, position; type-specific content lives in the resourceable (e.g., `Document`).
+**Resource** — content within a project. Polymorphic registry pattern: `Resource` holds title, status, position; type-specific content lives in the resourceable (e.g., `Document`). Resources with `shared_with_client: true` and `status: published` are visible in the client area.
 
 **Role** — workspace-level roles with permissions JSON. Four system defaults: Owner, Admin, Member, Viewer. Forkers add custom roles via seeds.
 
 **ProjectMembership** — project-level roles as a simple enum (creator/editor/viewer). Upgrade path to Role model documented.
+
+**ClientAccess** — external client's scoped access to a single project. A client is a regular `User`; this row is the external relationship — deliberately NOT a `Membership`, so clients never enter workspace Pundit policies or member-seat counting. `Discardable` (soft-deletable). Only createable when `project.clientside_enabled?` is true. See `app/models/client_access.rb`.
+
+**ProjectTools::Registry** + **ProjectTools::Tool** — code-defined catalogue of per-project tools (navigable sections of a project). Defined in `app/lib/project_tools/`. Each `Tool` is an immutable value object (`Data.define`) with a key, a route helper, and default-enabled/implemented flags. The per-project enabled set is stored as a JSON array in `projects.enabled_tools`; `Project#tools` returns the intersection of the registry's implemented tools and the project's enabled set.
 
 ## Authorization
 
@@ -39,6 +44,8 @@ Pundit policies check permissions at two levels:
 
 - **Workspace level**: `ApplicationPolicy#can?("permission_name")` reads from `role.permissions` JSON
 - **Project level**: `ProjectPolicy` and `ResourcePolicy` check `project_membership.creator?` / `.editor?` / `.viewer?`
+
+The `Clientside::` controller namespace is a distinct, authenticated access axis that never sets `Current.workspace` and is never covered by workspace Pundit policies. Project resolution in that namespace is gated on a kept `ClientAccess` record — slug knowledge alone grants nothing. See the [Security](/docs/security) page for the full threat model.
 
 ## Activity Tracking
 

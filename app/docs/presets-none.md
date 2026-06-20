@@ -72,6 +72,41 @@ Users exist at the platform level. A fresh signup has no workspace at all. Works
 | `tenancy.workspace_creation` | `:enabled` — users can create workspaces when your product flow calls for it | `WorkspacesController#new` |
 | `permitted_join_strategies` | `[:invite]` default; add `open_link` for link-join | `SIGNUP_PERMITTED_JOIN_STRATEGIES` |
 
+## First-run onboarding wizard
+
+New users under `:none` are funneled through a mandatory first-run onboarding wizard before they reach their home. The wizard is driven by the `RequiresOnboarding` concern (included in `ApplicationController`) and the `OnboardingsController` step dispatcher.
+
+**Guard.** `RequiresOnboarding#require_onboarding` fires as a `before_action` on every authenticated HTML request. It redirects to `onboarding_path` when all three conditions hold:
+
+- `TenancyConfig.none?` — the guard is completely inert in `:personal`, `:shared`, and `:single_tenant` postures.
+- `Current.user.onboarded?` is false — `users.onboarded_at` is nil.
+- `request.format.html?` — background XHR/JSON requests (e.g. the timezone beacon) pass through.
+
+Controllers that must be reachable mid-wizard (the wizard steps themselves, sign-out, `EmailVerificationsController`) call `skip_onboarding_requirement` to opt out.
+
+**Step dispatcher.** `OnboardingsController#show` reads `User#onboarding_step` (derived from the user's data, not a persisted column) and redirects to the appropriate step:
+
+| `onboarding_step` | Redirects to |
+|---|---|
+| `:workspace` | `new_onboarding_workspace_path` — name the workspace |
+| `:project` | `new_onboarding_project_path` — create the first project |
+| `:team` | `new_onboarding_team_path` — invite teammates |
+
+**Wizard steps** (all under `Onboarding::BaseController`):
+
+1. **`Onboarding::WorkspacesController`** — user names their workspace; on save, redirected to the project step.
+2. **`Onboarding::ProjectsController`** — user creates their first project; on save, routed to the tools step (if the registry offers a real choice) or directly to the team step.
+3. **`Onboarding::ToolsController`** — self-hiding interstitial for toggling project tools; skipped automatically when there is no real choice.
+4. **`Onboarding::TeamsController`** — invite teammates by email; completing or skipping stamps `users.onboarded_at` and lands on the project home (`workspace_project_path`).
+
+**Skipping.** The "Skip for now" action (`PATCH /onboarding`) hits `OnboardingsController#update`, which sets `onboarded_at` immediately and redirects to the workspace/project home (or `root_path` if neither exists yet).
+
+**Completing.** `TeamsController#create` sets `onboarded_at: Time.current` and redirects to the project home. Once `onboarded?` is true the guard never fires again.
+
+See [Onboarding](/docs/onboarding) for a full walkthrough, screenshots, and i18n keys.
+
+> **External Clientside clients** (users with client accesses and no workspace memberships) skip onboarding entirely — they are routed to `clientside_projects_path` via `authenticated_home_path`. See [Clientside](/docs/clientside).
+
 ## Setup
 
 **1. Set the onboarding knob.**
@@ -82,9 +117,9 @@ WORKSPACE_ON_SIGNUP=none
 
 That's the only required change. No seed vars are needed (unlike `:shared`).
 
-**2. Override `authenticated_home_path`.**
+**2. Override `authenticated_home_path` (optional).**
 
-Every post-auth landing — `SessionsController`, magic-link, OAuth, registrations, and `redirect_if_authenticated` — routes through a single private method:
+Every post-auth landing — `SessionsController`, magic-link, OAuth, and `redirect_if_authenticated` — routes through `authenticated_home_path`. For already-onboarded users this is where they land. The default is `root_path`; client-only users land on `clientside_projects_path` automatically. Override in your fork if your workspace-agnostic home lives elsewhere:
 
 ```ruby
 # app/controllers/application_controller.rb  (or a concern)
@@ -95,7 +130,7 @@ def authenticated_home_path
 end
 ```
 
-The default is `root_path`. If your home route *is* `root_path` there is nothing to override. For most `:none` apps you'll point it at a dedicated user home — a profile page, a dashboard, an event listing — that makes sense whether or not the user has any workspaces.
+For most `:none` apps you'll point it at a dedicated user home — a profile page, a dashboard, an event listing — that makes sense whether or not the user has any workspaces. New users won't reach this until they've completed (or skipped) the onboarding wizard.
 
 **3. Build a workspace-agnostic home view.**
 
@@ -133,9 +168,12 @@ A count of zero confirms the preset: no workspace was auto-created.
 
 Browser verification (requires `SIGNUP_MODE=open` or a valid invitation) — sign up a fresh user and confirm:
 
-1. After verifying their email, they land on your `authenticated_home_path` destination (not a workspace).
-2. The workspace switcher is absent.
-3. No workspace appears in `user.workspaces` until they explicitly create or join one.
+1. After submitting the registration form, you are redirected to the "check your email" screen (`EmailVerificationsController#new`).
+2. A non-blocking "confirm your email" banner renders in the authenticated layout until the verification link is clicked.
+3. After clicking the verification link, the onboarding wizard starts — you are redirected to `onboarding_path` and funneled through workspace → project → (tools) → team.
+4. Completing or skipping the wizard stamps `onboarded_at` and lands on the project home.
+5. The workspace switcher is absent until a workspace exists.
+6. No workspace appears in `user.workspaces` until they explicitly create or join one.
 
 **When to switch presets.**
 
