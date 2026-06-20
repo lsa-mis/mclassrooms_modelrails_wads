@@ -90,6 +90,7 @@ Rails.application.routes.draw do
             end
           end
           resource :tools, only: %i[edit update]
+          resource :clientside, only: %i[edit update]
         end
       end
     end

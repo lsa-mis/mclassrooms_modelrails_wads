@@ -135,6 +135,24 @@ RSpec.describe Project, type: :model do
     end
   end
 
+  describe "clientside access" do
+    it "#client? is true for a user with a kept client access" do
+      access = create(:client_access)
+      expect(access.project.client?(access.user)).to be(true)
+    end
+
+    it "#client? is false for a user without client access" do
+      project = create(:project, clientside_enabled: true)
+      expect(project.client?(create(:user))).to be(false)
+    end
+
+    it "#client? is false for a user with a discarded client access" do
+      access = create(:client_access)
+      access.discard!
+      expect(access.project.client?(access.user)).to be(false)
+    end
+  end
+
   describe "factory" do
     it "does not auto-create a workspace membership for created_by" do
       workspace = create(:workspace)

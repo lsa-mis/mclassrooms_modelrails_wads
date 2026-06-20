@@ -10,6 +10,7 @@ class Project < ApplicationRecord
   has_many :users, through: :project_memberships
   has_many :invitations, as: :invitable, dependent: :destroy
   has_many :resources, dependent: :destroy
+  has_many :client_accesses, dependent: :destroy
   has_one_attached :logo
 
   attribute :enabled_tools, :json, default: nil
@@ -36,6 +37,10 @@ class Project < ApplicationRecord
   # in registry order — what the project tab bar renders.
   def tools
     ProjectTools::Registry.implemented.select { |tool| tool_enabled?(tool.key) }
+  end
+
+  def client?(user)
+    client_accesses.kept.exists?(user: user)
   end
 
   private

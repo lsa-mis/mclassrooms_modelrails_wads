@@ -13,6 +13,7 @@ class User < ApplicationRecord
   has_many :sent_invitations, class_name: "Invitation", foreign_key: :invited_by_id, dependent: :nullify
   has_many :project_memberships, dependent: :destroy
   has_many :projects, through: :project_memberships
+  has_many :client_accesses, dependent: :destroy
 
   after_create :onboard_workspace
   after_create :check_gravatar_later
@@ -220,6 +221,10 @@ class User < ApplicationRecord
       .joins("INNER JOIN noticed_events ON noticed_events.id = noticed_notifications.event_id")
       .group("noticed_events.type")
       .count
+  end
+
+  def client_of?(project)
+    client_accesses.kept.exists?(project: project)
   end
 
   private

@@ -1,0 +1,12 @@
+<% content_for(:title) { t("clientside.settings.title") } %>
+<div class="max-w-2xl mx-auto px-4 py-16">
+  <h1 class="text-3xl font-bold text-text-heading"><%= t("clientside.settings.title") %></h1>
+  <p class="mt-2 text-text-body"><%= t("clientside.settings.subtitle") %></p>
+
+  <%= form_with model: @project,
+        url: workspace_project_clientside_path(@workspace, @project),
+        method: :patch, class: "mt-8 space-y-6" do |form| %>
+    <%= form.check_box :clientside_enabled, label: t("clientside.settings.toggle_label") %>
+    <%= form.submit t("clientside.settings.save"), class: "w-full" %>
+  <% end %>
+</div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_19_201954) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_011824) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -83,6 +83,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_19_201954) do
     t.index ["provider", "uid"], name: "index_authentications_on_provider_and_uid", unique: true
     t.index ["user_id", "provider"], name: "index_authentications_on_user_id_and_provider", unique: true
     t.index ["user_id"], name: "index_authentications_on_user_id"
+  end
+
+  create_table "client_accesses", force: :cascade do |t|
+    t.string "company_name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "discarded_at"
+    t.integer "project_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["discarded_at"], name: "index_client_accesses_on_discarded_at"
+    t.index ["project_id", "user_id"], name: "index_client_accesses_on_project_id_and_user_id", unique: true
+    t.index ["project_id"], name: "index_client_accesses_on_project_id"
+    t.index ["user_id"], name: "index_client_accesses_on_user_id"
   end
 
   create_table "documents", force: :cascade do |t|
@@ -184,6 +197,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_19_201954) do
   end
 
   create_table "projects", force: :cascade do |t|
+    t.boolean "clientside_enabled", default: false, null: false
     t.datetime "created_at", null: false
     t.integer "created_by_id", null: false
     t.text "description"
@@ -314,6 +328,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_19_201954) do
   add_foreign_key "activity_logs", "users", column: "actor_id"
   add_foreign_key "activity_logs", "workspaces"
   add_foreign_key "authentications", "users"
+  add_foreign_key "client_accesses", "projects"
+  add_foreign_key "client_accesses", "users"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
