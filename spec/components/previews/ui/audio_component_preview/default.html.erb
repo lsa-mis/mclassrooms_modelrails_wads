@@ -1,7 +1,7 @@
-<%# Real public audio so the player actually plays in Lookbook. The 0b spec asserts %>
-<%# the <audio> markup + axe, never media loading, so external sources are safe. %>
+<%# Local data-URI source with preload="none" — no network dependency. %>
+<%# The 0b spec asserts the <audio> markup + axe, never media loading. %>
 <div data-test="audio">
-  <%= render(UI::AudioComponent.new) do |a| %>
-    <% a.with_source(src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", type: "audio/mpeg") %>
+  <%= render(UI::AudioComponent.new(preload: :none)) do |a| %>
+    <% a.with_source(src: "data:audio/mpeg,", type: "audio/mpeg") %>
   <% end %>
 </div>

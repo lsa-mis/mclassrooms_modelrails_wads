@@ -3,11 +3,11 @@
     anti-pattern, shown commented; the rendered map is the CORRECT fix (alt supplied).
 
     ui :map_area,
-       src: "https://picsum.photos/id/1018/600/400", alt: "Mountain valley",
+       src: "...", alt: "Mountain valley",
        areas: [ { shape: :rect, coords: "0,0,600,400", href: "#peak" } ]  # ← no alt → raises
 %>
 <%= ui :map_area,
-      src: "https://picsum.photos/id/1018/600/400",
+      src: PreviewSupport.placeholder_image_uri(600, 400),
       alt: "Mountain valley — one labeled region",
       width: 600, height: 400,
       areas: [

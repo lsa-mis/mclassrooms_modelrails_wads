@@ -1,7 +1,7 @@
 <div id="ar-scope" class="max-w-md">
   <%= ui :aspect_ratio, ratio: "16 / 9", class: "rounded-lg" do %>
     <%= ui :image,
-          src: "https://picsum.photos/id/1015/800/450",
+          src: PreviewSupport.placeholder_image_uri(800, 450),
           alt: "A river winding between forested cliffs",
           class: "size-full object-cover" %>
   <% end %>

@@ -1,7 +1,8 @@
-<%# Real picsum photos; autoplaying carousel (3s) with a WCAG 2.2.2 pause/play toggle. %>
+<%# Autoplaying carousel (3s) with a WCAG 2.2.2 pause/play toggle. %>
+<%# Local SVG placeholder images — no network dependency. %>
 <div data-test="carousel" class="max-w-md">
   <%= render(UI::CarouselComponent.new(label: "Auto gallery", autoplay: 3000)) do |c| %>
-    <% c.with_slide { tag.img(src: "https://picsum.photos/id/1024/800/400", alt: "Auto one", class: "w-full") } %>
-    <% c.with_slide { tag.img(src: "https://picsum.photos/id/1043/800/400", alt: "Auto two", class: "w-full") } %>
+    <% c.with_slide { tag.img(src: PreviewSupport.placeholder_image_uri(800, 400, "Auto one"), alt: "Auto one", width: 800, height: 400, class: "w-full") } %>
+    <% c.with_slide { tag.img(src: PreviewSupport.placeholder_image_uri(800, 400, "Auto two"), alt: "Auto two", width: 800, height: 400, class: "w-full") } %>
   <% end %>
 </div>

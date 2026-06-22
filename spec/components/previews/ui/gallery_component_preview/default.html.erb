@@ -1,10 +1,9 @@
-<%# Real picsum photos (as the image/picture/video previews use) so the grid and %>
-<%# lightbox are photo-quality. The 0b spec asserts markup + lightbox behavior, %>
-<%# never image loading, so external images are safe here. %>
+<%# Local SVG placeholder images — no network dependency. %>
+<%# The 0b spec asserts markup + lightbox behavior, never image loading. %>
 <div data-test="gallery">
   <%= render(UI::GalleryComponent.new(cols: 3)) do |g| %>
-    <% g.with_image(src: "https://picsum.photos/id/1018/600/600", alt: "Forest canopy") %>
-    <% g.with_image(src: "https://picsum.photos/id/1071/600/600", alt: "City street", caption: "Downtown") %>
-    <% g.with_image(src: "https://picsum.photos/id/1016/600/600", alt: "Mountain lake") %>
+    <% g.with_image(src: PreviewSupport.placeholder_image_uri(600, 600, "Forest canopy"), alt: "Forest canopy") %>
+    <% g.with_image(src: PreviewSupport.placeholder_image_uri(600, 600, "City street"), alt: "City street", caption: "Downtown") %>
+    <% g.with_image(src: PreviewSupport.placeholder_image_uri(600, 600, "Mountain lake"), alt: "Mountain lake") %>
   <% end %>
 </div>

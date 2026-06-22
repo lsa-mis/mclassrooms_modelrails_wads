@@ -1,7 +1,7 @@
 <div id="dm-scope" class="max-w-md">
   <%= ui :device_mockup, variant: :phone do %>
     <%= ui :image,
-          src: "https://picsum.photos/id/1011/300/600",
+          src: PreviewSupport.placeholder_image_uri(300, 600),
           alt: "Mobile app home screen",
           class: "h-full w-full object-cover" %>
   <% end %>

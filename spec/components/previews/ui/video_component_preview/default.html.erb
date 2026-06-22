@@ -1,9 +1,8 @@
-<%# Real poster (picsum) + two real, loadable sources (mp4 + webm) so the preview %>
-<%# shows a poster frame AND actually plays, and demonstrates format fallback. The %>
-<%# 0b spec asserts <video> markup + axe (never media loading), so this is safe. %>
+<%# Local SVG poster + local data-URI sources with preload="none" — no network dependency. %>
+<%# The 0b spec asserts <video> markup + axe (never media loading). %>
 <div data-test="video" class="max-w-md">
-  <%= render(UI::VideoComponent.new(poster: "https://picsum.photos/id/1015/640/360")) do |v| %>
-    <% v.with_source(src: "https://www.w3schools.com/html/mov_bbb.mp4", type: "video/mp4") %>
-    <% v.with_source(src: "https://www.w3schools.com/html/mov_bbb.webm", type: "video/webm") %>
+  <%= render(UI::VideoComponent.new(poster: PreviewSupport.placeholder_image_uri(640, 360, "Video poster"), preload: :none)) do |v| %>
+    <% v.with_source(src: "data:video/mp4,", type: "video/mp4") %>
+    <% v.with_source(src: "data:video/webm,", type: "video/webm") %>
   <% end %>
 </div>

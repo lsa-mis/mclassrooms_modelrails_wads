@@ -1,6 +1,6 @@
 <%= ui :image,
-      src: "https://picsum.photos/id/237/800/600",
-      srcset: "https://picsum.photos/id/237/400/300 400w, https://picsum.photos/id/237/800/600 800w",
+      src: PreviewSupport.placeholder_image_uri(800, 600),
+      srcset: "#{PreviewSupport.placeholder_image_uri(400, 300)} 400w, #{PreviewSupport.placeholder_image_uri(800, 600)} 800w",
       sizes: "(max-width: 640px) 100vw, 50vw",
       width: 800,
       height: 600,

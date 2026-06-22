@@ -1,8 +1,8 @@
-<%# Two real sources (ogg + mp3) demonstrate format fallback — the browser plays the %>
-<%# first it supports. Real public files so the player works in Lookbook. %>
+<%# Two local data-URI sources demonstrate format fallback — the browser picks the first it supports. %>
+<%# preload="none" prevents network fetches. The 0b spec asserts markup + axe, never playback. %>
 <div data-test="audio">
-  <%= render(UI::AudioComponent.new(loop: true)) do |a| %>
-    <% a.with_source(src: "https://www.w3schools.com/html/horse.ogg", type: "audio/ogg") %>
-    <% a.with_source(src: "https://www.w3schools.com/html/horse.mp3", type: "audio/mpeg") %>
+  <%= render(UI::AudioComponent.new(loop: true, preload: :none)) do |a| %>
+    <% a.with_source(src: "data:audio/ogg,", type: "audio/ogg") %>
+    <% a.with_source(src: "data:audio/mpeg,", type: "audio/mpeg") %>
   <% end %>
 </div>

@@ -8,6 +8,10 @@
 # development AND test so system/request specs can render previews as host pages.
 # The Lookbook engine itself stays development-only (see config/routes.rb).
 if Rails.env.development? || Rails.env.test?
+  # PreviewSupport lives outside autoload paths; require it explicitly so
+  # preview ERBs can call PreviewSupport.placeholder_image_uri(...) without network.
+  require Rails.root.join("spec/components/previews/preview_support").to_s
+
   vc = Rails.application.config.view_component
   preview_dir = Rails.root.join("spec/components/previews").to_s
   vc.previews.paths = Array(vc.previews.paths) | [ preview_dir ]

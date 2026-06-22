@@ -1,10 +1,11 @@
 <div id="pic-scope" class="max-w-md">
-  <%# Format fallback: the browser takes the first type it supports, else the JPEG <img>. %>
+  <%# Format fallback: the browser takes the first type it supports, else the fallback <img>. %>
+  <%# Local SVG placeholder images — no network dependency. %>
   <%= ui :picture,
-        src: "https://picsum.photos/id/237/400/300.jpg",
+        src: PreviewSupport.placeholder_image_uri(400, 300),
         alt: "A black puppy sitting on a wooden floor",
         class: "rounded-lg" do |p| %>
-    <% p.with_source(srcset: "https://picsum.photos/id/237/400/300.webp", type: "image/avif") %>
-    <% p.with_source(srcset: "https://picsum.photos/id/237/400/300.webp", type: "image/webp") %>
+    <% p.with_source(srcset: PreviewSupport.placeholder_image_uri(400, 300), type: "image/avif") %>
+    <% p.with_source(srcset: PreviewSupport.placeholder_image_uri(400, 300), type: "image/webp") %>
   <% end %>
 </div>
