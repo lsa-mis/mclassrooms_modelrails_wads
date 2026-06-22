@@ -47,7 +47,7 @@ module Workspaces
     # verification (Settings::ConnectedAccountsController#verify).
     def stash_for_signup
       session[:pending_join_token] = @link.token
-      redirect_to new_registration_path, notice: t("workspaces.joins.create.register_first", workspace: @workspace.name)
+      redirect_to new_session_path, notice: t("workspaces.joins.create.register_first", workspace: @workspace.name)
     end
 
     # Looks up the workspace + the active link. Collapses "no workspace",

@@ -1,15 +1,12 @@
 module Settings
   class PasswordsController < ApplicationController
     def new
-      if Current.user.authentications.email.exists?
-        redirect_to edit_settings_profile_path, notice: t(".already_has_password")
-        nil
-      end
+      redirect_to edit_settings_password_path if Current.user.has_password?
     end
 
     def create
-      if Current.user.authentications.email.exists?
-        redirect_to edit_settings_profile_path, alert: t(".already_has_password")
+      if Current.user.has_password?
+        redirect_to edit_settings_password_path, alert: t(".already_has_password")
         return
       end
 
@@ -23,6 +20,29 @@ module Settings
       else
         render :new, status: :unprocessable_entity
       end
+    end
+
+    def edit
+      redirect_to new_settings_password_path unless Current.user.has_password?
+    end
+
+    def update
+      unless Current.user.has_password?
+        redirect_to new_settings_password_path
+        return
+      end
+
+      if Current.user.update(password_params)
+        redirect_to settings_connected_accounts_path, notice: t(".success")
+      else
+        render :edit, status: :unprocessable_entity
+      end
+    end
+
+    def destroy
+      Current.user.authentications.email.destroy_all
+      Current.user.update_columns(password_digest: nil)
+      redirect_to settings_connected_accounts_path, notice: t(".success")
     end
 
     private

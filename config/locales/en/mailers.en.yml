@@ -6,13 +6,6 @@ en:
       body: "Please verify your email address by clicking the link below."
       action: "Verify email address"
       expiry_note: "This link will expire in 24 hours."
-    password_reset_email:
-      subject: "Reset your password"
-      greeting: "Hi %{name},"
-      body: "We received a request to reset your password. Click the link below to choose a new one."
-      action: "Reset password"
-      expiry_note: "This link will expire in 2 hours."
-      ignore_note: "If you didn't request a password reset, you can safely ignore this email."
     email_change_verification:
       subject: "Verify your new email address"
       greeting: "Hi %{name},"

@@ -19,7 +19,7 @@ class MagicLinkCallbacksController < ApplicationController
         return
       end
       start_new_session_for(@user)
-      redirect_to after_authentication_url, notice: t(".signed_in")
+      redirect_to magic_link_return_path(token_record), notice: t(".signed_in")
     else
       @token = params[:token]
       @email = token_record.email
@@ -36,7 +36,7 @@ class MagicLinkCallbacksController < ApplicationController
     end
 
     unless signups_open?
-      redirect_to new_registration_path,
+      redirect_to new_session_path,
                   alert: t("registrations.closed.oauth_blocked"),
                   status: :see_other
       return
@@ -74,6 +74,16 @@ class MagicLinkCallbacksController < ApplicationController
     else
       # Token was consumed by a concurrent request — treat as invalid.
       redirect_to(authenticated? ? root_path : new_session_path, alert: t(".invalid"))
+    end
+  end
+
+  private
+
+  # Server-side intent → fixed path. Never trust a user-supplied URL here.
+  def magic_link_return_path(token_record)
+    case token_record.intent
+    when "set_password" then edit_settings_password_path
+    else after_authentication_url
     end
   end
 end

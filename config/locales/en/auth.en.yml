@@ -27,6 +27,7 @@ en:
       expiry: "The link expires in 15 minutes."
       try_again: "Didn't receive it? Try again"
       opens_new_window: "(opens in new window)"
+      use_password: "Prefer to use your password? Sign in with it instead."
     destroy:
       success: "Signed out successfully."
   registrations:

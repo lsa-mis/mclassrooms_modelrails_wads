@@ -23,18 +23,20 @@ RSpec.describe "Pages", type: :request do
     context "when SIGNUP_MODE is :open" do
       before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open) }
 
-      it "shows the Sign up CTA on the landing page" do
+      it "shows the Sign up CTA button on the landing page" do
         get root_path
-        expect(response.body).to include(new_registration_path)
+        # The bottom-CTA button ("Create your account") is only rendered when signups_open?.
+        expect(response.body).to include(I18n.t("pages.home.cta.button"))
       end
     end
 
     context "when SIGNUP_MODE is :invite_only without a token" do
       before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only) }
 
-      it "does NOT show the Sign up CTA on the landing page" do
+      it "does NOT show the Sign up CTA button on the landing page" do
         get root_path
-        expect(response.body).not_to include(new_registration_path)
+        # The CTA button ("Create your account") is suppressed when signups are closed.
+        expect(response.body).not_to include(I18n.t("pages.home.cta.button"))
       end
 
       it "still shows the Sign in CTA" do

@@ -7,14 +7,15 @@ RSpec.describe "Toast notification system", type: :system do
     visit new_session_path
     fill_in I18n.t("sessions.new.email_label"), with: user.email_address
     click_button I18n.t("sessions.new.continue")
-    fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
-    click_button I18n.t("sessions.password_form.submit")
+    expect(page).to have_text(I18n.t("sessions.check_email.title"))
+    token = MagicLinkToken.where(email: user.email_address).order(:created_at).last.token
+    visit magic_link_callback_path(token: token)
+    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
   end
 
   def trigger_login_failure
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
+    # The lookup action now sends a magic link; reach the password form directly.
+    visit session_password_form_path(email_address: user.email_address)
     fill_in I18n.t("sessions.password_form.password_label"), with: "wrongpassword"
     click_button I18n.t("sessions.password_form.submit")
   end

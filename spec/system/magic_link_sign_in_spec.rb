@@ -28,19 +28,21 @@ RSpec.describe "Magic link sign-in", type: :system do
   describe "existing user with password" do
     let(:user) { create(:user) }
 
-    it "shows password form, then allows switching to magic link" do
+    it "sends a magic link and shows a 'use password instead' link" do
       visit new_session_path
 
       fill_in I18n.t("sessions.new.email_label"), with: user.email_address
       click_button I18n.t("sessions.new.continue")
 
-      expect(page).to have_text(I18n.t("sessions.lookup.password_prompt"))
+      # Magic-link is now the default for ALL users; password-holders also land here
+      expect(page).to have_text(I18n.t("sessions.check_email.title"))
+      expect(page).to have_text(user.email_address)
 
-      click_button I18n.t("sessions.password_form.use_magic_link")
+      # The 'use password instead' escape hatch is present for password-holders
+      expect(page).to have_link(I18n.t("sessions.check_email.use_password"),
+                                href: session_password_form_path(email_address: user.email_address))
 
-      expect(page).to have_text(I18n.t("magic_links.create.check_email"))
-
-      # Extract the magic link token and visit it directly
+      # Sign in via the magic link directly
       token_record = MagicLinkToken.where(email: user.email_address).order(:created_at).last
       visit magic_link_callback_path(token: token_record.token)
 

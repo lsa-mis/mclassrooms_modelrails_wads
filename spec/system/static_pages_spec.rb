@@ -89,8 +89,10 @@ RSpec.describe "Static pages", type: :system do
       visit new_session_path
       fill_in I18n.t("sessions.new.email_label"), with: user.email_address
       click_button I18n.t("sessions.new.continue")
-      fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
-      click_button I18n.t("sessions.password_form.submit")
+      expect(page).to have_text(I18n.t("sessions.check_email.title"))
+      token = MagicLinkToken.where(email: user.email_address).order(:created_at).last.token
+      visit magic_link_callback_path(token: token)
+      expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
     end
 
     it "shows a pill toast with progress bar on successful sign-in" do
@@ -208,8 +210,12 @@ RSpec.describe "Static pages", type: :system do
         "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
     end
 
-    it "sign-up page passes automated accessibility checks (light + dark)" do
-      visit new_registration_path
+    # sessions/new is the single entry point for both sign-in and sign-up
+    # (passwordless-first posture). The sign-in accessibility test above already
+    # covers this page; this example is retained as a named anchor for the
+    # sign-up entry path now that registration/new is removed.
+    it "sign-up entry page (sessions/new) passes automated accessibility checks (light + dark)" do
+      visit new_session_path
       expect(axe_clean_in_both_themes?(axe_options)).to be(true),
         "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
     end

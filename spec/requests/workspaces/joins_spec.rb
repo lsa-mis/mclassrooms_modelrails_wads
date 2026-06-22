@@ -127,11 +127,11 @@ RSpec.describe "Workspaces::Joins (Flow B: unauthenticated user via link)", type
     workspace.memberships.create!(user: owner, role: owner_role)
   end
 
-  it "POST stashes the join token in the session and redirects to signup" do
+  it "POST stashes the join token in the session and redirects to sign-in" do
     post workspace_join_path(workspace, token: link.token)
 
     expect(session[:pending_join_token]).to eq(link.token)
-    expect(response).to redirect_to(new_registration_path)
+    expect(response).to redirect_to(new_session_path)
   end
 
   it "POST with a revoked link uses the neutral error (no session stash, no info leak)" do

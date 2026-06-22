@@ -12,20 +12,18 @@ RSpec.describe "Invite-only signup flow", type: :system do
 
   # Helper: trigger POST /invitations/:token/accept within the running Playwright
   # browser session. This stashes pending_invitation_token in the Rails session
-  # and the browser follows the redirect to new_registration_path, so the next
-  # visit sees signups_open? == true.
+  # and the browser follows the redirect to new_session_path (the magic-link entry
+  # point), so the next visit sees signups_open? == true.
   #
-  # The GET accept page shows a "Create an account to accept" GET link for
-  # unauthenticated visitors — clicking it bypasses the token stash. The actual
-  # token stash happens only on POST (invitation_accepts#create). We submit a
-  # hidden form via execute_script so the browser follows the 302 redirect,
-  # landing on new_registration_path with the session set.
+  # The actual token stash happens only on POST (invitation_accepts#create). We
+  # submit a hidden form via execute_script so the browser follows the 303 redirect,
+  # landing on new_session_path with the session set.
   def post_accept_invitation(token)
     # Load the accept page to seed the CSRF token into the browser session.
     visit accept_invitation_path(token: token)
 
     # Build and submit a hidden form that POSTs to the current URL. The browser
-    # follows the redirect automatically, ending up at new_registration_path.
+    # follows the redirect automatically, ending up at new_session_path.
     # No authenticity_token needed: allow_forgery_protection is false in test env.
     page.execute_script(<<~JS)
       const form = document.createElement("form");
@@ -36,70 +34,49 @@ RSpec.describe "Invite-only signup flow", type: :system do
     JS
 
     # Wait for the redirect to land before continuing.
-    expect(page).to have_current_path(new_registration_path, wait: 5)
+    expect(page).to have_current_path(new_session_path, wait: 5)
   end
 
-  scenario "invited user signs up, then joins the workspace after verifying email" do
+  scenario "invited user signs up via magic-link, then joins the workspace" do
     invitation = create(:invitation, email: "newuser@example.com")
     workspace  = invitation.invitable
 
     # Stash the pending_invitation_token in the browser session via POST.
     post_accept_invitation(invitation.token)
 
-    # Now visit the registration form — signups_open? should return true because
-    # session[:pending_invitation_token] is present and the invitation is acceptable.
-    visit new_registration_path
+    # Now on sessions/new — enter email to request magic link.
+    expect(page).to have_field(I18n.t("sessions.new.email_label"))
+    fill_in I18n.t("sessions.new.email_label"), with: "newuser@example.com"
+    click_button I18n.t("sessions.new.continue")
 
-    expect(page).not_to have_text(I18n.t("registrations.closed.title"))
-    expect(page).to have_field(I18n.t("registrations.new.email_label"))
+    expect(page).to have_text(I18n.t("sessions.check_email.title"))
 
-    fill_in I18n.t("registrations.new.email_label"),              with: "newuser@example.com"
-    fill_in I18n.t("registrations.new.first_name_label"),         with: "Invited"
-    fill_in I18n.t("registrations.new.last_name_label"),          with: "User"
-    fill_in I18n.t("registrations.new.password_label"),           with: "SecureP@ssw0rd123!"
-    fill_in I18n.t("registrations.new.password_confirmation_label"), with: "SecureP@ssw0rd123!"
+    # Extract the magic-link token from the database and visit the callback.
+    token_record = MagicLinkToken.where(email: "newuser@example.com").order(:created_at).last
+    visit magic_link_callback_path(token: token_record.token)
 
-    click_button I18n.t("registrations.new.submit")
+    # New-user registration form: fill in name and submit.
+    fill_in I18n.t("magic_link_callbacks.new_registration.first_name_label"), with: "Invited"
+    fill_in I18n.t("magic_link_callbacks.new_registration.last_name_label"),  with: "User"
+    click_button I18n.t("magic_link_callbacks.new_registration.submit")
 
-    # Successful registration redirects to the check-your-email screen.
-    expect(page).to have_current_path(new_email_verification_path)
+    expect(page).to have_text(I18n.t("magic_link_callbacks.create.registered"))
 
     new_user = User.find_by(email_address: "newuser@example.com")
     expect(new_user).to be_present
 
-    # Deferred: the email is unproven, so the invitation is parked on the new
-    # email authentication rather than consumed, and no membership is granted yet.
-    expect(invitation.reload).to be_pending
-    expect(new_user.workspaces).not_to include(workspace)
-
-    # Simulate clicking the verification link delivered to the invited address.
-    auth = new_user.authentications.email.first
-    visit verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
-
-    # Proving email ownership claims the invitation and grants membership.
+    # Magic-link signup is atomic: invitation accepted immediately.
     expect(invitation.reload).to be_accepted
-    expect(new_user.reload.workspaces).to include(workspace)
+    expect(new_user.workspaces).to include(workspace)
   end
 
-  scenario "uninvited visitor sees the closed page on /registration/new" do
-    visit new_registration_path
+  scenario "uninvited visitor is sent to sign-in (no separate closed page)" do
+    visit new_session_path
 
-    expect(page).to have_text(I18n.t("registrations.closed.title"))
-    expect(page).to have_link(
-      I18n.t("registrations.closed.sign_in_link"),
-      href: new_session_path
-    )
-  end
-
-  scenario "closed page passes axe-core AAA accessibility scan (light + dark)" do
-    axe_options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
-
-    visit new_registration_path
-
-    expect(page).to have_text(I18n.t("registrations.closed.title"))
-
-    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
-      "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+    # sessions#new is always accessible — it's both sign-in AND signup entry.
+    # No 'closed' state; signups_open? gates the magic-link flow server-side.
+    expect(page).to have_field(I18n.t("sessions.new.email_label"))
+    expect(page).not_to have_text(I18n.t("registrations.closed.title"))
   end
 
   scenario "invited user signs up via OAuth (mocked Google)" do
@@ -129,7 +106,7 @@ RSpec.describe "Invite-only signup flow", type: :system do
     allow(Rails.application.credentials).to receive(:dig)
       .with(:oauth, :github, :client_id).and_return(nil)
 
-    # Stash the invitation token in session; lands on new_registration_path.
+    # Stash the invitation token in session; lands on new_session_path.
     post_accept_invitation(invitation.token)
 
     # Click the Google OAuth button — turbo is disabled on the form so the

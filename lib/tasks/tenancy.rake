@@ -13,8 +13,9 @@ namespace :tenancy do
 
     owner = User.find_by!(email_address: email)
     host = ENV.fetch("APP_HOST", "localhost")
-    url = Rails.application.routes.url_helpers.edit_password_url(token: owner.password_reset_token, host: host)
-    puts "[tenancy] Sign-in link for #{email} (valid #{owner.password_reset_token_expires_in.inspect}): #{url}"
+    token = MagicLinkToken.create_for_email(owner.email_address, intent: "set_password")
+    url = Rails.application.routes.url_helpers.magic_link_callback_url(token: token, host: host)
+    puts "[tenancy] Sign-in link for #{email} (valid 15 minutes): #{url}"
   rescue ActiveRecord::RecordNotFound
     abort "User not found: #{email}"
   end

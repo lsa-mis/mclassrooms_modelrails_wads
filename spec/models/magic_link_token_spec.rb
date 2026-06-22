@@ -34,6 +34,18 @@ RSpec.describe MagicLinkToken, type: :model do
     end
   end
 
+  describe ".create_for_email with intent" do
+    it "persists a server-side intent on the issued token" do
+      token = MagicLinkToken.create_for_email("a@example.com", intent: "set_password")
+      expect(MagicLinkToken.find_by(token: token).intent).to eq("set_password")
+    end
+
+    it "defaults intent to nil for ordinary sign-in/registration links" do
+      token = MagicLinkToken.create_for_email("b@example.com")
+      expect(MagicLinkToken.find_by(token: token).intent).to be_nil
+    end
+  end
+
   describe ".find_valid" do
     it "finds a non-expired token" do
       token_value = MagicLinkToken.create_for_email("test@example.com")

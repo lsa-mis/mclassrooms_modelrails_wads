@@ -10,16 +10,6 @@ class AuthenticationMailer < ApplicationMailer
     )
   end
 
-  def password_reset_email(user)
-    @user = user
-    @reset_url = edit_password_url(token: user.password_reset_token)
-
-    mail(
-      to: @user.email_address,
-      subject: t("authentication_mailer.password_reset_email.subject")
-    )
-  end
-
   def email_change_verification(user)
     @user = user
     @verification_url = settings_email_confirmation_url(token: user.pending_email_token)

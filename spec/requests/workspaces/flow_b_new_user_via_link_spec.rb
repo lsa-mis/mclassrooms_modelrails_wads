@@ -1,15 +1,13 @@
 require "rails_helper"
 
-# Reshape 2b end-to-end: a brand-new visitor clicks a workspace join link
-# (which doubles as the account-gate opener under :invite_only instance mode),
-# registers, verifies their email, and lands in the workspace as Member.
+# Flow B end-to-end: a brand-new visitor clicks a workspace join link,
+# signs up via magic-link, and lands in the workspace as Member.
 #
 # Threads through:
 #   1. Workspaces::JoinsController#create unauthenticated → stash + redirect
 #   2. SignupPolicy.allows_signup?(join_token:) → gate opens
-#   3. RegistrationsController#create → parks pending_join_link_token on auth
-#   4. Settings::ConnectedAccountsController#verify → claims via
-#      Authentication#claim_pending_join_link! → workspace.admit
+#   3. MagicLinkCallbacksController#create → accept_pending_join_link! via Signupable
+#   4. User is a member immediately (magic-link signup is atomic, no deferred verify)
 RSpec.describe "Flow B: new user signs up via workspace join link", type: :request do
   let(:owner)     { create(:user) }
   let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
@@ -34,40 +32,33 @@ RSpec.describe "Flow B: new user signs up via workspace join link", type: :reque
     workspace.memberships.create!(user: owner, role: owner_role)
   end
 
-  it "stashes the join token, opens the signup gate, parks the token on the email auth, and admits on verification" do
-    # 1. Unauthenticated visitor POSTs the join link → stash + redirect.
+  it "stashes the join token, opens the signup gate, admits the user on magic-link signup" do
+    # 1. Unauthenticated visitor POSTs the join link → stash + redirect to sign-in.
     post workspace_join_path(workspace, token: link.token)
     expect(session[:pending_join_token]).to eq(link.token)
-    expect(response).to redirect_to(new_registration_path)
+    expect(response).to redirect_to(new_session_path)
 
     # 2. The signup gate is open even under :invite_only because the join
     #    token in the session resolves to an active open-link workspace.
-    get new_registration_path
-    expect(response).to render_template(:new)
+    get new_session_path
+    expect(response).to have_http_status(:ok)
 
-    # 3. Register. The new email authentication parks the join token.
-    post registration_path, params: {
-      user: {
-        email_address: "newcomer@example.com",
-        first_name: "New",
-        last_name: "Comer",
-        password: "SecureP@ssw0rd123!",
-        password_confirmation: "SecureP@ssw0rd123!"
-      }
+    # 3. Sign up via magic-link. Signupable#accept_pending_join_link! admits
+    #    the user atomically during magic-link callback (no separate verify step).
+    token = MagicLinkToken.create_for_email("newcomer@example.com")
+    post magic_link_callback_path(token: token), params: {
+      user: { first_name: "New", last_name: "Comer" }
     }
+
     new_user = User.find_by!(email_address: "newcomer@example.com")
     auth = new_user.authentications.email.first!
-    expect(auth.pending_join_link_token).to eq(link.token)
+
+    # 4. Magic-link signup is atomic: user is a member immediately.
+    expect(new_user.workspaces).to include(workspace)
+    expect(workspace.memberships.find_by!(user: new_user).role.slug).to eq("member")
     expect(session[:pending_join_token]).to be_nil
 
-    # Not a member of the workspace yet — gated on email verification.
-    expect(new_user.workspaces).not_to include(workspace)
-
-    # 4. Verify the email. claim_pending_join_link! admits the user as Member.
-    get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
-
-    expect(new_user.reload.workspaces).to include(workspace)
-    expect(workspace.memberships.find_by!(user: new_user).role.slug).to eq("member")
-    expect(auth.reload.pending_join_link_token).to be_nil
+    # The email auth is verified immediately (magic-link proves email ownership).
+    expect(auth.verified_at).to be_present
   end
 end

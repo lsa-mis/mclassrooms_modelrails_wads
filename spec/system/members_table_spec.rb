@@ -9,8 +9,9 @@ RSpec.describe "Members table", type: :system do
     visit new_session_path
     fill_in I18n.t("sessions.new.email_label"), with: user.email_address
     click_button I18n.t("sessions.new.continue")
-    fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
-    click_button I18n.t("sessions.password_form.submit")
+    expect(page).to have_text(I18n.t("sessions.check_email.title"))
+    token = MagicLinkToken.where(email: user.email_address).order(:created_at).last.token
+    visit magic_link_callback_path(token: token)
     expect(page).to have_css("#user-menu-button")
   end
 
@@ -154,11 +155,12 @@ RSpec.describe "Members table", type: :system do
       find("#user-menu-button").click
       click_button I18n.t("navigation.sign_out")
       expect(page).to have_text(I18n.t("sessions.new.title"))
-      # Sign in as regular member
+      # Sign in as regular member via magic link
       fill_in I18n.t("sessions.new.email_label"), with: regular.email_address
       click_button I18n.t("sessions.new.continue")
-      fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
-      click_button I18n.t("sessions.password_form.submit")
+      expect(page).to have_text(I18n.t("sessions.check_email.title"))
+      regular_token = MagicLinkToken.where(email: regular.email_address).order(:created_at).last.token
+      visit magic_link_callback_path(token: regular_token)
       expect(page).to have_css("#user-menu-button")
       visit workspace_members_path(workspace)
       expect(page).not_to have_link(I18n.t("workspaces.members.index.invite_member"))

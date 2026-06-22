@@ -35,5 +35,13 @@
                     focus-ring rounded",
             data: { turbo_frame: "_top" } %>
     </div>
+
+    <% if @has_password %>
+      <p class="mt-4 text-sm text-text-muted">
+        <%= link_to t("sessions.check_email.use_password"),
+              main_app.session_password_form_path(email_address: @email_address),
+              class: "text-interactive underline hover:no-underline focus-ring rounded" %>
+      </p>
+    <% end %>
   </div>
 <% end %>

@@ -85,7 +85,7 @@ end
 
 Email verification runs in parallel with onboarding — it is non-blocking.
 
-- `RegistrationsController#create` redirects to `new_email_verification_path` ("check your email") after signup. `EmailVerificationsController#new` renders a Resend button (`email_verification_resend` route).
+- Magic-link signup (`MagicLinkCallbacksController#create`) marks the email as verified immediately (the link itself proves ownership). The email-verification gate is only relevant for users who registered via a legacy path and have an unverified email. `EmailVerificationsController#new` renders a Resend button (`email_verification_resend` route).
 - A reminder banner (`app/views/shared/_email_verification_banner.html.erb`) appears in the authenticated layout whenever `Current.user.email_verification_pending?` is true.
 - `EmailVerificationsController#show` (token link) verifies the address and lands on `authenticated_home_path`.
 

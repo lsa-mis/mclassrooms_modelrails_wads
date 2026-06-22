@@ -36,7 +36,7 @@ class InvitationAcceptsController < ApplicationController
       end
     else
       session[:pending_invitation_token] = @invitation.token
-      redirect_to new_registration_path, notice: t(".register_first")
+      redirect_to new_session_path, notice: t(".register_first")
     end
   end
 

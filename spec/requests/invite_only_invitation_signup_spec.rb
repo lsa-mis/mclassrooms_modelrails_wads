@@ -5,18 +5,18 @@ RSpec.describe "Invite-only signup via an invitation", type: :request do
 
   let(:invitation) { create(:invitation) }
 
-  it "is closed to the public" do
-    get new_registration_path
-    expect(response).to render_template(:closed)
+  it "redirects an unauthenticated visitor to sign-in (not a closed registration page)" do
+    post accept_invitation_path(token: invitation.token)
+    expect(response).to redirect_to(new_session_path)
   end
 
   it "opens the signup gate once an unauthenticated invitee has viewed the accept page" do
     get accept_invitation_path(token: invitation.token)
     expect(response).to have_http_status(:ok)
 
-    get new_registration_path
+    # With the gate open (session has pending_invitation_token), magic-link
+    # signup proceeds. The session entry point is sessions#new (new_session_path).
+    get new_session_path
     expect(response).to have_http_status(:ok)
-    expect(response).to render_template(:new)
-    expect(response).not_to render_template(:closed)
   end
 end

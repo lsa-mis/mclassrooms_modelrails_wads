@@ -4,16 +4,17 @@
 # Tests hit the real rendered pages. Cropper.js gestures are simulated via the
 # controller's JS API rather than synthetic pointer events (flakier and slower).
 module IdentityPickerHelpers
-  # Sign in a user via the real login form (fills email, continues, fills password, submits).
+  # Sign in a user via magic-link (email → Continue → token lookup → callback).
   # Works in system specs where the session cookie must live in the Playwright browser,
   # not the Rack::Test cookie jar.
-  def sign_in_via_form(user, password: "SecureP@ssw0rd123!")
+  def sign_in_via_form(user)
     visit new_session_path
     fill_in I18n.t("sessions.new.email_label"), with: user.email_address
     click_button I18n.t("sessions.new.continue")
-    fill_in I18n.t("sessions.password_form.password_label"), with: password
-    click_button I18n.t("sessions.password_form.submit")
-    expect(page).to have_text(I18n.t("sessions.create.success"))
+    expect(page).to have_text(I18n.t("sessions.check_email.title"))
+    token = MagicLinkToken.where(email: user.email_address).order(:created_at).last.token
+    visit magic_link_callback_path(token: token)
+    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
   end
 
   # Open the identity picker modal from a profile or branding edit page.

@@ -42,6 +42,17 @@ en:
       create:
         success: "Email and password sign-in has been added to your account."
         already_has_password: "You already have email and password sign-in."
+      edit:
+        title: "Change your password"
+        password_label: "New password"
+        password_confirmation_label: "Confirm new password"
+        password_hint: "Must be at least 12 characters."
+        submit: "Update password"
+        remove: "Remove password (use sign-in links instead)"
+      update:
+        success: "Password updated."
+      destroy:
+        success: "Password removed. You'll sign in with a link from now on."
     avatars:
       edit:
         title: "Change avatar"

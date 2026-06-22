@@ -59,42 +59,41 @@ RSpec.describe "Invitation Accepts", type: :request do
   end
 
   describe "POST /invitations/:token/accept (unauthenticated)" do
-    it "stores token in session and redirects to registration" do
+    it "stores token in session and redirects to new_session_path" do
       post accept_invitation_path(token: invitation.token)
-      expect(response).to redirect_to(new_registration_path)
+      expect(response).to redirect_to(new_session_path)
     end
   end
 
-  describe "registration with a pending invitation (deferred until verification)" do
+  describe "signup with a pending invitation via magic-link (atomic acceptance)" do
     let!(:invitation) { create(:invitation, invitable: workspace, email: "newuser@example.com") }
 
-    it "parks the invitation at registration and joins the workspace after email verification" do
-      post accept_invitation_path(token: invitation.token)
+    before do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+    end
 
-      post registration_path, params: {
-        user: {
-          email_address: "newuser@example.com",
-          first_name: "New",
-          last_name: "User",
-          password: "SecureP@ssw0rd123!",
-          password_confirmation: "SecureP@ssw0rd123!"
+    it "parks the invitation token in session, then accepts it atomically on magic-link signup" do
+      # Unauthenticated POST to accept → stashes token in session, redirects to sign-in.
+      post accept_invitation_path(token: invitation.token)
+      expect(response).to redirect_to(new_session_path)
+
+      # Simulate magic-link signup: create a token and POST the callback with the
+      # invitation token still in session (the request helper carries the cookie).
+      token = MagicLinkToken.create_for_email("newuser@example.com")
+      expect {
+        post magic_link_callback_path(token: token), params: {
+          user: { first_name: "New", last_name: "User" }
         }
-      }
+      }.to change(User, :count).by(1)
 
       new_user = User.find_by(email_address: "newuser@example.com")
-      # Email unproven at registration — not joined, invitation still pending.
-      expect(new_user.workspaces).not_to include(workspace)
-      expect(invitation.reload).to be_pending
-
-      auth = new_user.authentications.email.first
-      get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
-
-      expect(new_user.reload.workspaces).to include(workspace)
+      # Magic-link signup is atomic: invitation accepted immediately (verified email).
+      expect(new_user.workspaces).to include(workspace)
       expect(invitation.reload).to be_accepted
     end
   end
 
-  describe "project invitation auto-accept on registration" do
+  describe "project invitation signup via magic-link (atomic acceptance)" do
     let(:workspace) { create(:workspace) }
     let(:owner) { create(:user) }
     let(:project) { create(:project, workspace: workspace, created_by: owner) }
@@ -110,30 +109,25 @@ RSpec.describe "Invitation Accepts", type: :request do
       )
     end
 
-    it "unauthenticated user registers, then joins workspace + project after email verification" do
-      post accept_invitation_path(token: invitation.token)
-      expect(response).to redirect_to(new_registration_path)
+    before do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+    end
 
-      post registration_path, params: {
-        user: {
-          email_address: "new-project-user@example.com",
-          first_name: "Project",
-          last_name: "Invitee",
-          password: "SecureP@ssw0rd123!",
-          password_confirmation: "SecureP@ssw0rd123!"
+    it "unauthenticated user accepts invite, signs up via magic-link, joins workspace + project atomically" do
+      post accept_invitation_path(token: invitation.token)
+      expect(response).to redirect_to(new_session_path)
+
+      token = MagicLinkToken.create_for_email("new-project-user@example.com")
+      expect {
+        post magic_link_callback_path(token: token), params: {
+          user: { first_name: "Project", last_name: "Invitee" }
         }
-      }
+      }.to change(User, :count).by(1)
 
       new_user = User.find_by(email_address: "new-project-user@example.com")
-      # Email unproven at registration — not joined, invitation still pending.
-      expect(new_user.workspaces).not_to include(workspace)
-      expect(invitation.reload).to be_pending
-
-      auth = new_user.authentications.email.first
-      get verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
-
-      expect(new_user.reload.workspaces).to include(workspace)
-      expect(new_user.reload.projects).to include(project)
+      # Magic-link signup is atomic: accepted on signup.
+      expect(new_user.workspaces).to include(workspace)
+      expect(new_user.projects).to include(project)
       expect(invitation.reload).to be_accepted
     end
   end

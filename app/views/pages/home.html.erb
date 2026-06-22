@@ -4,7 +4,7 @@
       title: t("pages.home.hero.title"),
       subtitle: t("pages.home.hero.subtitle"),
       cta_primary: signups_open? ? t("pages.home.hero.cta_primary") : nil,
-      cta_primary_path: signups_open? ? new_registration_path : nil,
+      cta_primary_path: signups_open? ? new_session_path : nil,
       cta_secondary: t("pages.home.hero.cta_secondary"),
       cta_secondary_path: "/docs" %>
 
@@ -31,7 +31,7 @@
     </p>
     <% if signups_open? %>
       <div class="mt-8">
-        <%= link_to t("pages.home.cta.button"), new_registration_path,
+        <%= link_to t("pages.home.cta.button"), new_session_path,
               class: "btn-primary px-6 py-3 text-lg" %>
       </div>
     <% end %>

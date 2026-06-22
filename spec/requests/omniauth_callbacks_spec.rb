@@ -841,7 +841,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         }.not_to change(User, :count)
 
         expect(Authentication.find_by(uid: "gate-test-uid")).to be_nil
-        expect(response).to redirect_to(new_registration_path)
+        expect(response).to redirect_to(new_session_path)
         expect(response).to have_http_status(:see_other)
         expect(flash[:alert]).to include(I18n.t("registrations.closed.oauth_blocked"))
       end
@@ -982,6 +982,59 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
         expect(response).to have_http_status(:redirect)
       end
+    end
+  end
+
+  describe "verified-email OAuth signup with a pending open-link join token" do
+    let(:join_workspace) { create(:workspace, join_policy: :open_link) }
+    let(:join_link) { create(:workspace_join_link, workspace: join_workspace) }
+
+    let(:join_oauth_hash) do
+      OmniAuth::AuthHash.new(
+        provider: "google",
+        uid: "join-oauth-uid-123",
+        info: {
+          email: "joinoauth@example.com",
+          first_name: "Join",
+          last_name: "OAuth",
+          email_verified: true
+        },
+        credentials: {
+          token: "join_tok",
+          refresh_token: "join_rtok",
+          expires_at: 1.hour.from_now.to_i
+        }
+      )
+    end
+
+    before do
+      # Permit :open_link at both the instance level (SignupPolicy) and the
+      # workspace level (validates join_policy_must_be_permitted_by_instance).
+      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies)
+        .and_return([ :invite, :open_link ])
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
+      # default_self_join_role calls Role.find_by!(slug: "member") — ensure it exists.
+      Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
+
+      OmniAuth.config.test_mode = true
+      OmniAuth.config.mock_auth[:google_oauth2] = join_oauth_hash
+      # POST to the join route — sets session[:pending_join_token].
+      post workspace_join_path(workspace_slug: join_workspace.slug, token: join_link.token)
+    end
+
+    after do
+      OmniAuth.config.mock_auth[:google_oauth2] = nil
+      OmniAuth.config.test_mode = false
+    end
+
+    it "creates the user, auto-verifies the authentication, and admits them as a member" do
+      expect {
+        get "/auth/google_oauth2/callback"
+      }.to change(User, :count).by(1)
+
+      new_user = User.find_by(email_address: "joinoauth@example.com")
+      expect(new_user).to be_present
+      expect(new_user.memberships.kept.where(workspace: join_workspace)).to exist
     end
   end
 end

@@ -4,16 +4,16 @@ Rails.application.routes.draw do
   mount Lookbook::Engine, at: "/lookbook" if Rails.env.development?
   mount Biscuit::Engine, at: "/biscuit"
   resource :session
-  resource :registration, only: [ :new, :create ]
   resource :email_verification, only: [ :new, :show ]
-  resources :passwords, param: :token
 
   resource :email_verification_resend, only: [ :create ]
 
   resource :magic_link, only: [ :create ]
+  resource :password_reset, only: [ :create ]
   get "magic_link_callback/:token", to: "magic_link_callbacks#show", as: :magic_link_callback
   post "magic_link_callback/:token", to: "magic_link_callbacks#create"
   post "session/lookup", to: "sessions#lookup", as: :session_lookup
+  get  "session/password", to: "sessions#password_form", as: :session_password_form
 
   get "/auth/:provider/callback", to: "omniauth_callbacks#create"
   get "/auth/failure", to: "omniauth_callbacks#failure"
@@ -22,7 +22,7 @@ Rails.application.routes.draw do
 
   namespace :settings do
     resource :profile, only: [ :edit, :update ]
-    resource :password, only: [ :new, :create ]
+    resource :password, only: [ :new, :create, :edit, :update, :destroy ]
     resource :avatar, only: [ :update, :destroy ] do
       get :hub
     end

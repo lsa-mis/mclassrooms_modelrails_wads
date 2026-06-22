@@ -105,14 +105,35 @@ RSpec.describe "Sessions", type: :request do
     end
   end
 
+  describe "POST /session/lookup (passwordless-first)" do
+    it "sends a magic link to a password user instead of going straight to the password form" do
+      user = create(:user) # has a password
+      expect {
+        post session_lookup_path, params: { email_address: user.email_address }
+      }.to change { MagicLinkToken.where(email: user.email_address).count }.by(1)
+      expect(response.body).to include(I18n.t("sessions.check_email.title"))
+      expect(response.body).to include(I18n.t("sessions.check_email.use_password")) # secondary link present
+    end
+
+    it "blocks registration of a new email when signups are closed" do
+      allow_any_instance_of(SessionsController).to receive(:signups_open?).and_return(false)
+      expect {
+        post session_lookup_path, params: { email_address: "newcomer@example.com" }
+      }.not_to change(MagicLinkToken, :count)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include(I18n.t("registrations.closed.title"))
+    end
+  end
+
   describe "POST /session/lookup (smart routing)" do
     context "user with password" do
       let(:user) { create(:user) }
 
-      it "returns the password form" do
+      it "returns check_email with secondary password link (passwordless-first)" do
         post session_lookup_path, params: { email_address: user.email_address }
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include(I18n.t("sessions.lookup.password_prompt"))
+        expect(response.body).to include(I18n.t("sessions.check_email.title"))
+        expect(response.body).to include(I18n.t("sessions.check_email.use_password"))
       end
     end
 
@@ -132,11 +153,19 @@ RSpec.describe "Sessions", type: :request do
     end
 
     context "non-existent email" do
-      it "shows identical check email message (no information leakage)" do
+      it "shows check email when signups are open (no information leakage)" do
+        allow_any_instance_of(SessionsController).to receive(:signups_open?).and_return(true)
         post session_lookup_path, params: { email_address: "ghost@example.com" }
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(I18n.t("sessions.check_email.title"))
         expect(response.body).to include("ghost@example.com")
+      end
+
+      it "shows closed view when signups are closed" do
+        allow_any_instance_of(SessionsController).to receive(:signups_open?).and_return(false)
+        post session_lookup_path, params: { email_address: "ghost@example.com" }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include(I18n.t("registrations.closed.title"))
       end
     end
 

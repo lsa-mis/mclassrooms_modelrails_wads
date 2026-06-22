@@ -53,15 +53,16 @@ Tokens are single-use: accepting an invitation, verifying an email, or resetting
 
 ## User Flows
 
-### New User Registration
+### New User Registration (magic-link / passwordless-first)
 
-1. User submits registration form (`RegistrationsController#create`).
-2. Unverified `Authentication` record created.
-3. `AuthenticationMailer.verification_email` sent with a signed, single-use token (`generates_token_for :email_verification`).
-4. User is redirected to the **"check your email" screen** (`EmailVerificationsController#new`, `new_email_verification_path`), which shows a prompt and a **Resend** button (`POST email_verification_resend`).
-5. A non-blocking **"confirm your email" banner** (`shared/_email_verification_banner`) renders in the authenticated layout on every page until the email is verified. It is driven by `User#email_verification_pending?` and links back to `new_email_verification_path`.
-6. User clicks the link in the email → `EmailVerificationsController#show` verifies the token and redirects to `after_authentication_url` (which resolves to `authenticated_home_path` or the stored return URL).
-7. If the user is on the `:none` preset and has not yet completed onboarding, the `RequiresOnboarding` guard fires and redirects them into the onboarding wizard.
+1. User enters their email on the sign-in/sign-up page (`sessions#new`) and submits.
+2. `SessionsController#lookup` issues a `MagicLinkToken` and sends `AuthenticationMailer.magic_link_email`.
+3. User clicks the link → `MagicLinkCallbacksController#show` checks for an existing account.
+   - Existing user: signs them in immediately.
+   - New user: renders `magic_link_callbacks/new_registration` (name fields) for first-time signup.
+4. New user submits their name → `MagicLinkCallbacksController#create` creates the User and a **verified** `Authentication` (email ownership proved by the link). No separate verification email is sent.
+5. User is redirected to `after_authentication_url` (onboarding or home).
+6. If the user is on the `:none` preset and has not yet completed onboarding, the `RequiresOnboarding` guard fires and redirects them into the onboarding wizard.
 
 Verification can be resent from the "check your email" screen or via the banner if the original email was lost.
 

@@ -10,13 +10,13 @@ class MagicLinkToken < ApplicationRecord
   # supersede UPDATE, only one INSERT wins; the loser returns the winner's
   # token (rather than retrying with a fresh INSERT, which would invalidate
   # the email already in flight from the winner).
-  def self.create_for_email(email)
+  def self.create_for_email(email, intent: nil)
     normalized_email = email.downcase
     token = SecureRandom.urlsafe_base64(32)
 
     transaction do
       where(email: normalized_email, consumed_at: nil).update_all(consumed_at: Time.current)
-      create!(token: token, email: normalized_email, expires_at: 15.minutes.from_now)
+      create!(token: token, email: normalized_email, expires_at: 15.minutes.from_now, intent: intent)
     end
     token
   rescue ActiveRecord::RecordNotUnique
