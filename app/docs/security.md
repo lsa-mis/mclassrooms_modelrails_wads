@@ -15,8 +15,7 @@ Auth endpoints are rate-limited via Rails 8 `rate_limit` DSL:
 
 | Endpoint | Limit | Window |
 |----------|-------|--------|
-| POST /session (login) | 10 requests | 3 minutes |
-| POST /registration (sign-up) | 10 requests | 3 minutes |
+| POST /session (sign in / email-first lookup) | 10 requests | 3 minutes |
 | POST /passwords (reset) | 10 requests | 3 minutes |
 | POST /magic_links (magic link) | 5 requests | 3 minutes |
 
@@ -44,7 +43,7 @@ Configured in `config/initializers/security_headers.rb`:
 
 - 12-character minimum
 - Pwned password check (Have I Been Pwned API)
-- Password reset tokens are stateless (Rails 8.1 signed tokens, auto-expire)
+- Account recovery issues a single-use `MagicLinkToken` (`set_password` intent, 15-minute expiry), not a stateless reset token
 
 ### OAuth Security
 
@@ -55,7 +54,7 @@ Configured in `config/initializers/security_headers.rb`:
 
 The `Trackable` concern logs all model changes to `ActivityLog`. Sensitive attributes are automatically stripped from metadata:
 
-- `token`, `password_digest`, `password_reset_token`
+- `token`, `password_digest`
 - `oauth_token`, `oauth_refresh_token`
 
 ## External Client Access

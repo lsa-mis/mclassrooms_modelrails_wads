@@ -1,8 +1,7 @@
 ---
 title: "QA: User Flow Walkthroughs"
-description: Manual verification guide for the seven core user-facing flows — signup, magic-link, OAuth, workspace join, identity surfaces, onboarding wizard, and client invite. Each section lists the config required, a numbered walkthrough, and edge cases.
+description: Manual verification guide for the core user-facing flows — signup, magic-link, OAuth, workspace join, identity surfaces, onboarding wizard, client invite, and passkeys. Each section lists the config required, a numbered walkthrough, and edge cases.
 keywords: qa testing signup invitation magic-link oauth workspace join identity verification manual walkthrough onboarding client clientside
-audience: [guide, technical]
 ---
 
 # QA: User Flow Walkthroughs
@@ -32,7 +31,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 
 | Variable | Where set | Values | What it controls |
 |---|---|---|---|
-| `SIGNUP_MODE` | `.env` | `open` · `invite_only` | Whether `/registrations/new` is publicly accessible. Default: `invite_only`. |
+| `SIGNUP_MODE` | `.env` | `open` · `invite_only` | Whether new-user signup is open or invite-only. Default: `invite_only`. |
 | `WORKSPACE_ON_SIGNUP` | `.env` | `personal` · `shared` · `none` | Which workspace (if any) a new user lands in after signup. Default: `personal`. |
 | `SIGNUP_PERMITTED_JOIN_STRATEGIES` | `.env` | `invite` · `invite,open_link` | Instance ceiling on join methods. `open_link` must appear here before any workspace can enable shareable join links. Default: `invite`. |
 | `TENANCY_WORKSPACE_CREATION` | `.env` | `enabled` · `disabled` | Whether the "New workspace" route and UI are available to signed-in users. Default: `enabled`. |
@@ -46,15 +45,14 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 
 **Config:** set `SIGNUP_MODE=open` in `.env` and restart `bin/dev`.
 
-1. In a private window navigate to `/registrations/new`.
-   **Expect:** A registration form with fields for email, first name, last name, password, and password confirmation.
-2. Fill in all fields and submit.
-   **Expect:** You are signed in immediately and redirected (the app calls `start_new_session_for` before redirecting). A verification email is sent to your address — check `/letter_opener`.
-3. At this point your email is **unverified**. The account is fully functional, but any pending invitation or open-link join you arrived with (stashed in the session cookie) will not be claimed until you click the verification link in that email.
-4. Open the verification email in `/letter_opener` and click the link.
-   **Expect:** You land on `settings/connected_accounts` (or `root_path` if you were not signed in) with a success notice. From this point the email authentication is verified.
+1. In a private window navigate to `/session/new` and enter a **new** email address (one with no existing account).
+   **Expect:** The `check_email` page renders inline (Turbo Frame replaces the form). A registration magic-link email is dispatched — check `/letter_opener`.
+2. Click the registration link in `/letter_opener`.
+   **Expect:** `MagicLinkCallbacksController#show` finds no user for that email and renders the `:new_registration` view — a name-only form (no password field) with the email pre-filled. Fill in first and last name and submit.
+   **Expect:** You are signed in immediately and redirected (the app calls `start_new_session_for` inside the transaction). Your email address is already verified at this point (no separate verification step needed).
+3. Any pending invitation or open-link join token stashed in the session cookie is claimed automatically at this point (no separate verification step needed — email is verified inside the registration transaction).
 
-**What `SIGNUP_MODE=open` does not change.** The registration form is always available to visitors who arrive with a valid `session[:pending_invitation_token]` or `session[:pending_join_token]` — even under `invite_only`. This is by design: an invitation or join-link is what opens the gate.
+**What `SIGNUP_MODE=open` does not change.** Sign-up is always available to visitors who arrive with a valid `session[:pending_invitation_token]` or `session[:pending_join_token]` — even under `invite_only`. This is by design: an invitation or join-link is what opens the gate.
 
 **Onboarding gate under `WORKSPACE_ON_SIGNUP=none`.** If the deployment uses the `:none` preset, a newly signed-in user who has not yet set `onboarded_at` is intercepted by the `RequiresOnboarding` concern and redirected to the onboarding wizard (`/onboarding`) instead of `root_path`. See Flow 6 below for the full walkthrough.
 
@@ -62,9 +60,9 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 
 **Config:** set `SIGNUP_MODE=invite_only` in `.env` and restart `bin/dev`.
 
-1. In a private window navigate to `/registrations/new` with **no invitation**.
-   **Expect:** The closed page (`registrations/closed.html.erb`) renders — a heading, a body paragraph, and a link to sign in. **Not a 404.** The response is a 200 with the `:closed` template.
-2. Check that OAuth buttons on the closed page redirect to `/registrations/new` with an alert rather than proceeding — this is the `signups_open?` guard in the OAuth callback.
+1. In a private window navigate to `/session/new`, enter a **new** email address (no existing account), and click **Continue**.
+   **Expect:** The closed page (`sessions/closed.html.erb`) renders inline — a heading, a body paragraph, and a link to sign in. **Not a 404.** The response renders the `:closed` template via `sessions#lookup`.
+2. Check that OAuth buttons on the sign-in page redirect with an alert rather than proceeding when signups are closed — this is the `signups_open?` guard in the OAuth callback.
 
 ### 1c. Invite flow (owner sends, recipient accepts)
 
@@ -77,12 +75,10 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 3. Open the invitation email in `/letter_opener`. Click **Accept invitation**.
    The link is `GET /invitations/:token/accept`.
    **Expect (unauthenticated browser):** The accept page (`invitation_accepts#show`) renders. The token is stashed in `session[:pending_invitation_token]`. A "Register or sign in to accept" prompt is shown.
-4. From the same browser, navigate to `/registrations/new`.
-   **Expect:** The registration form renders (the session token satisfies `signups_open?`).
-5. Register with the **same email address** that the invitation was addressed to.
-   **Expect:** You are signed in immediately. The invitation token is persisted on the new email `Authentication` (not consumed yet). A verification email is dispatched — check `/letter_opener`.
-6. Click the verification link in `/letter_opener`.
-   **Expect:** `Settings::ConnectedAccountsController#verify` verifies the authentication and then calls `auth.claim_pending_invitation!` which calls `Invitation.consume!` with an email-match guard. Because your proven email matches the invitation address, the invitation is accepted and you are added to the workspace. You are redirected to `root_path` with a success notice.
+4. From the same browser, navigate to `/session/new` and enter the invited email address.
+   **Expect:** The `check_email` page renders (the session token satisfies `signups_open?`). Click the registration link in `/letter_opener`.
+5. Fill in first and last name and submit the `:new_registration` form (the email is pre-filled and already matches the invitation address).
+   **Expect:** You are signed in immediately. The email is verified inside the registration transaction. `auth.claim_pending_invitation!` calls `Invitation.consume!` with an email-match guard — because your proven email matches the invitation address, the invitation is accepted and you are added to the workspace. You are redirected to `root_path` with a success notice.
 
 **Signed-in accept (POST path).** If the recipient is already signed in when they click the accept link:
 `POST /invitations/:token/accept` calls `Invitation.consume!` immediately (no deferred email-match check needed — the signed-in user's proven email is used). If the signed-in email does not match the invitation email, `Invitation::EmailMismatch` is rescued and a mismatch alert is shown; you are redirected to `root_path`.
@@ -114,7 +110,9 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 ### Existing user (has password)
 
 1. Navigate to `/session/new` and enter the email address.
-   **Expect:** The password form renders inline (not the `check_email` page) — the lookup path checks `user.has_password?` and renders `:password_form` instead.
+   **Expect:** The `check_email` page renders inline (same as passwordless). A magic-link sign-in email is dispatched — check `/letter_opener`. Because the user `has_password?`, a secondary **"Use your password instead"** link to `session_password_form_path` also appears on the `check_email` page.
+2. Click **Use your password instead** → enter the password and submit to `POST /session`.
+   **Expect:** You are signed in and redirected to `after_authentication_url`.
 
 ### Unknown email (new user)
 
@@ -124,7 +122,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
    **Expect:** `MagicLinkCallbacksController#show` finds no user for that email. It renders the `:new_registration` view — a name-only form (no password field) with the email pre-filled.
 3. Fill in first and last name and submit.
    **Expect:** A user is created with the email already verified (`verified_at: Time.current` is set on the email authentication inside the transaction — no separate verification email). You are signed in and redirected.
-4. If `SIGNUP_MODE=invite_only` and no pending session token, the `create` action refuses and redirects to `/registrations/new` with an alert before creating any user.
+4. If `SIGNUP_MODE=invite_only` and no pending session token, the `create` action refuses and redirects to `new_session_path` with an alert before creating any user.
 
 ### Edge cases — Magic link
 
@@ -223,12 +221,11 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
 1. In a private window (no session), navigate to the join URL.
    **Expect:** Confirmation page renders (same view — `authenticated?` check in `show` does not exist; the before_action only validates the link, not auth state). An existing member who navigates here is immediately redirected to the workspace.
 2. Click **Join** (`POST /workspaces/:slug/joins/:token`).
-   `stash_for_signup` stores the link token in `session[:pending_join_token]` and redirects to `/registrations/new`.
-   **Expect (open signup):** Registration form renders. Fill in and submit.
-   **Expect (invite-only):** Registration form still renders — the pending join-link token satisfies `signups_open?` even under `invite_only`.
-3. After registration, a verification email is dispatched — check `/letter_opener`. The join token is persisted on the email `Authentication` (`pending_join_link_token`).
-4. Click the verification link in `/letter_opener`.
-   `Settings::ConnectedAccountsController#verify` verifies the authentication, then calls `auth.claim_pending_join_link!`, which calls `workspace.admit` if the link is still valid.
+   `stash_for_signup` stores the link token in `session[:pending_join_token]` and redirects to `new_session_path`.
+   **Expect (open signup):** Navigate to `/session/new`, enter your email, click the registration magic link, and fill in name — the pending join-link token satisfies `signups_open?` even under `invite_only`.
+   **Expect (invite-only):** Same — the pending join token opens the gate regardless of `SIGNUP_MODE`.
+3. After registration, the join token is persisted on the email `Authentication` (`pending_join_link_token`) and claimed at sign-in. The email is already verified inside the registration transaction.
+   `auth.claim_pending_join_link!` calls `workspace.admit` if the link is still valid.
    **Expect:** You are signed in. If the link was still valid, you are now a member of the workspace. Stale conditions (revoked link, policy changed back to invite, instance allowlist tightened) are silently no-op'd — sign-in proceeds and you land without workspace membership.
 
 ### Edge cases — Workspace join
@@ -292,10 +289,9 @@ The `:none` preset means new users are not automatically placed in a workspace a
 
 ### Sign up and reach the wizard
 
-1. In a private window navigate to `/registrations/new` (or use magic-link: enter your email on `/session/new`).
-2. Register or request a magic link.
+1. In a private window navigate to `/session/new` and enter your email address.
+2. Click the registration magic link in `/letter_opener`, fill in your name, and submit.
    **Expect:** You are redirected to `after_authentication_url` (default: `root_path`). Because the `:none` preset is active and `Current.user.onboarded?` is `false`, `RequiresOnboarding` immediately redirects to `/onboarding`.
-   - If you registered via magic-link or email with an unverified address, the `check_email` page renders in the sign-in flow first — check `/letter_opener` and click the verification link before the wizard becomes reachable.
 
 ### Wizard step 1 — Name your workspace
 
@@ -367,11 +363,8 @@ This step only appears when the registry has more than one toggleable tool.
 
 1. In a private window with no session, open the invitation email and click **Accept invitation**.
    **Expect:** `InvitationAcceptsController#show` renders. The token is stashed in `session[:pending_invitation_token]`. A prompt to register or sign in is shown.
-2. Navigate to `/registrations/new` (the session token satisfies `signups_open?` even under `invite_only`).
-3. Register.
-   **Expect:** You are signed in. The invitation token is persisted on the new email `Authentication`. A verification email is dispatched — check `/letter_opener`.
-4. Click the verification link.
-   **Expect:** The authentication is verified, `auth.claim_pending_invitation!` calls `Invitation.consume!`, a `ClientAccess` is created, and you are redirected to the client area.
+2. Navigate to `/session/new`, enter the invited email address, click the registration magic link in `/letter_opener`, fill in your name, and submit (the session token satisfies `signups_open?` even under `invite_only`).
+3. **Expect:** You are signed in. The email is verified inside the registration transaction. `auth.claim_pending_invitation!` calls `Invitation.consume!`, a `ClientAccess` is created, and you are redirected to the client area.
 
 ### Client area — what the client sees
 
@@ -382,3 +375,36 @@ Once in the client area the client user sees only their accessible projects (`cl
 - **Clientside disabled.** `Workspaces::Projects::ClientInvitationsController` guards every action with `ensure_clientside_enabled`. Attempting to invite a client when Clientside is off redirects to the Clientside settings page with an alert.
 - **Duplicate invite.** `Invitation.invite_client!` raises `ActiveRecord::RecordNotUnique` if the email already has a pending invitation for the same project. The controller rescues and re-renders the form with an "already invited" alert.
 - **Clientside disabled after `ClientAccess` created.** If a manager disables Clientside on a project after clients have been granted access, `Clientside::BaseController#ensure_clientside_enabled` redirects clients to `clientside_projects_path` with an "unavailable" alert when they try to enter that project's area. Their `ClientAccess` row is preserved; re-enabling Clientside restores their access immediately.
+
+---
+
+## Flow 8 — Passkeys (WebAuthn)
+
+### Manual QA (requires a secure context)
+
+Passkeys need HTTPS — over plain `http://localhost` the "Sign in with a passkey"
+button feature-detects off and the page falls back to magic link. To exercise the
+real ceremony locally, run with TLS and set the origin:
+
+1. `WEBAUTHN_ORIGIN=https://localhost:3000 bin/rails s --ssl` (or a tunnel).
+2. Sign in (magic link) → Settings → Passkeys → **Add a passkey** → approve the
+   platform prompt → the credential appears in the list.
+3. Sign out → on the sign-in screen tap **Sign in with a passkey** → approve →
+   signed in.
+4. Remove the passkey in Settings → confirm sign-in still works via magic link.
+
+See [Passkeys](/docs/passkeys) for RP-ID/origin configuration and troubleshooting.
+
+### Writing passkey tests (contributors)
+
+WebAuthn can't be driven by a normal Capybara click, so tests use one of two
+real-crypto harnesses (no mocking the gem):
+
+- **Request specs** use the gem's `WebAuthn::FakeClient` (real attestation /
+  assertion crypto). See `spec/lib/passkeys/*_spec.rb` and
+  `spec/requests/passkeys/*_spec.rb`.
+- **System specs** use a Playwright **CDP virtual authenticator**, set up by
+  `spec/support/webauthn_virtual_authenticator.rb` (`page.context.new_cdp_session`
+  → `WebAuthn.enable` + `WebAuthn.addVirtualAuthenticator`). The example lives in
+  `spec/system/passkey_auth_spec.rb`. Note: the virtual authenticator requires
+  `Capybara.app_host` to match the configured RP origin.

@@ -1,8 +1,7 @@
 ---
 title: Email Flows
 description: All transactional emails, their triggers, token expiry windows, and customization
-keywords: email mailer authentication invitation magic link password reset verification token expiry smtp
-audience: [guide, technical]
+keywords: email mailer authentication invitation magic link verification token expiry smtp
 ---
 
 # Email Flows
@@ -13,7 +12,7 @@ ModelRails sends transactional emails for authentication, invitations, and accou
 
 | Mailer | Purpose |
 |--------|---------|
-| `AuthenticationMailer` | Email verification, password reset, email change |
+| `AuthenticationMailer` | Email verification, email change |
 | `InvitationMailer` | Workspace and project invitations |
 | `MagicLinkMailer` | Passwordless sign-in and registration links |
 
@@ -24,7 +23,6 @@ ModelRails sends transactional emails for authentication, invitations, and accou
 | Email | Trigger | Recipient | Expiry |
 |-------|---------|-----------|--------|
 | Verification | New account registration | User's email | 24 hours |
-| Password reset | "Forgot password" request | User's email | 2 hours |
 | Email change verification | Email change initiated | New email address | 24 hours |
 | Email change notification | Email change initiated | Current email address | N/A (informational) |
 
@@ -56,7 +54,7 @@ Tokens are single-use: accepting an invitation, verifying an email, or resetting
 ### New User Registration (magic-link / passwordless-first)
 
 1. User enters their email on the sign-in/sign-up page (`sessions#new`) and submits.
-2. `SessionsController#lookup` issues a `MagicLinkToken` and sends `AuthenticationMailer.magic_link_email`.
+2. `SessionsController#lookup` issues a `MagicLinkToken` and sends `MagicLinkMailer.registration_link` (new email) or `MagicLinkMailer.sign_in_link` (existing account).
 3. User clicks the link → `MagicLinkCallbacksController#show` checks for an existing account.
    - Existing user: signs them in immediately.
    - New user: renders `magic_link_callbacks/new_registration` (name fields) for first-time signup.
@@ -66,14 +64,6 @@ Tokens are single-use: accepting an invitation, verifying an email, or resetting
 
 Verification can be resent from the "check your email" screen or via the banner if the original email was lost.
 
-### Password Reset
-
-1. User clicks "Forgot password" on the sign-in page.
-2. System generates a `password_reset_token` on the User record.
-3. `AuthenticationMailer.password_reset_email` sent (2-hour expiry).
-4. User clicks link → enters new password.
-5. Token is invalidated on use.
-
 ### Passwordless Sign-In (Magic Links)
 
 1. User enters their email on the sign-in page.
@@ -81,6 +71,14 @@ Verification can be resent from the "check your email" screen or via the banner 
 3. If the email is new: `MagicLinkMailer.registration_link` sent instead.
 4. User clicks link → signed in (existing) or shown registration form (new).
 5. The `MagicLinkCallbacksController` handles token validation and routing at click time.
+
+### Forgot password / account recovery
+
+There is no password-reset email. "Forgot password?" issues a **magic link** (a
+`MagicLinkToken` carrying a `set_password` intent); clicking it signs the user in
+and lands them on the change-password form. Magic link is the single
+email-recovery primitive — see [Passkeys](/docs/passkeys) for the passwordless
+sign-in options and [Application Flows](/docs/application-flows) for the journey.
 
 ### Email Change
 

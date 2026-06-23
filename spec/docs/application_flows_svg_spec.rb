@@ -75,6 +75,20 @@ RSpec.describe "Application Flows wireframe pages" do
           expect(orphans.size).to eq(0),
             "#{orphans.size} drawing elements rendered outside any <svg> in #{slug} (breakout bug)"
         end
+
+        # Each flow's "Why" is a collapsible <details> (markdowndocs 0.9 allowlists
+        # <details>/<summary> under config.allow_svg). The blank line after
+        # <summary> is what lets the markdown bullets render INSIDE the disclosure
+        # rather than escaping it — assert both survive the pipeline.
+        it "renders each Why section as a <details> with its bullets nested inside" do
+          details = doc.css("details")
+          expect(details.size).to be >= 5
+          details.each do |d|
+            expect(d.at_css("summary")).to be_present, "a <details> rendered without its <summary> in #{slug}"
+            expect(d.css("li").size).to be > 0,
+              "a <details>'s bullets escaped the disclosure in #{slug} (missing blank line after <summary>?)"
+          end
+        end
       end
     end
   end

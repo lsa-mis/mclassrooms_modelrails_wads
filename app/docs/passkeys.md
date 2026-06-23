@@ -74,7 +74,9 @@ Users manage their passkeys at **Settings → Passkeys** (`/settings/passkeys`).
 - **Add** — triggers the browser's native passkey enrollment flow; the optional nickname (e.g. "My MacBook") is stored for identification.
 - **Remove** — soft-deletes the credential (discard). The passkey is immediately unusable for authentication. Because multiple passkeys can be registered, removing one does not affect others. Magic link always remains available.
 
-After a user's first successful magic-link sign-in, a one-time interstitial prompts them to add a passkey. Choosing "Not now" or "Add a passkey" both dismiss the prompt permanently — it never reappears.
+After a user's first successful magic-link sign-in (while they have no passkey yet), a one-time, non-blocking banner suggests adding one. It links to **Settings → Passkeys**; dismissing it (×) — or registering a passkey — stamps `passkey_prompt_seen_at` so it never reappears. The banner hides on browsers without WebAuthn support.
+
+**Writing passkey tests?** See the contributor harness notes in [QA flows](/docs/qa-flows).
 
 ## Browser support
 

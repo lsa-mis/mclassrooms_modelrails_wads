@@ -32,7 +32,7 @@ You can cancel a pending email change from the profile page at any time. If the 
 
 ### Setting a Password (OAuth-only accounts)
 
-If you signed up via Google or GitHub and have no password yet, visit `/account/password/new` to add one. This creates an email-based Authentication record so you can also sign in with email and password.
+If you signed up via Google or GitHub and have no password yet, visit `/settings/password/new` to add one. This creates an email-based Authentication record so you can also sign in with email and password.
 
 ### Password Requirements
 
@@ -42,7 +42,7 @@ If you signed up via Google or GitHub and have no password yet, visit `/account/
 
 ### Password Reset
 
-Request a reset from the sign-in page. A token link is sent with a **2-hour expiry**. No current password is needed since the token proves email ownership.
+Request a reset from the sign-in page ("Forgot password?"). If the account has a password set, a **single-use magic-link** (**15-minute expiry**) is sent; clicking it proves email ownership and lands on the password-change form — no current password needed. Passwordless accounts have nothing to reset and simply sign in with a magic link instead.
 
 ## Avatar / Profile Photo
 
