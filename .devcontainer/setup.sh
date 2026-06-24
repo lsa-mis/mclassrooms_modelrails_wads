@@ -2,15 +2,20 @@
 set -e
 
 echo "=== Installing system packages ==="
-# Mirror the apt-get packages installed by the production Dockerfile so the
-# devcontainer's libvips, sqlite3, jemalloc, libyaml and build toolchain
-# match prod. Keep this list in sync with Dockerfile's apt-get install lines.
+# Mirror the apt-get packages from the production Dockerfile's base AND build
+# stages so the devcontainer's libvips, sqlite3, jemalloc, libyaml and build
+# toolchain match prod. Keep this in sync with the Dockerfile's apt-get install
+# lines — incl. libssl-dev from the build stage: the webauthn/passkeys gem chain
+# (webauthn -> cose -> openssl-signature_algorithm) compiles the native `openssl`
+# gem, which needs the OpenSSL headers; the slim base ships only the libssl3
+# runtime, not the headers.
 sudo apt-get update -qq
 sudo apt-get install --no-install-recommends -y \
   build-essential \
   curl \
   git \
   libjemalloc2 \
+  libssl-dev \
   libvips \
   libyaml-dev \
   pkg-config \
