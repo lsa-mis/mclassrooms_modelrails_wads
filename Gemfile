@@ -33,9 +33,7 @@ gem "omniauth-rails_csrf_protection"
 gem "pwned"
 gem "pundit"
 gem "pagy"
-# TEMP-PIN for adoption validation: gem main (persistent switcher, unreleased).
-# Revert to `gem "markdowndocs", "~> 0.9"` + `bundle update markdowndocs` after 0.10.0 ships.
-gem "markdowndocs", github: "dschmura/markdowndocs", branch: "main"
+gem "markdowndocs", "~> 0.10"
 
 # User-facing notifications (in-app, email, digest) — see `app/notifiers/`.
 gem "noticed", "~> 3.0"

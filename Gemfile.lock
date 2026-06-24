@@ -1,15 +1,4 @@
 GIT
-  remote: https://github.com/dschmura/markdowndocs.git
-  revision: 04830b2e0ae754d8c155ebea557e43417398002f
-  branch: main
-  specs:
-    markdowndocs (0.9.0)
-      commonmarker (>= 1.0)
-      rails (>= 7.1)
-      rails-html-sanitizer (~> 1.6)
-      rouge (~> 4.0)
-
-GIT
   remote: https://github.com/dschmura/modelrails_ui.git
   revision: 043ebddbd942e731b5aa5826a10f25e8ebf090ea
   tag: v0.3.1
@@ -295,6 +284,11 @@ GEM
       net-pop
       net-smtp
     marcel (1.2.1)
+    markdowndocs (0.10.0)
+      commonmarker (>= 1.0)
+      rails (>= 7.1)
+      rails-html-sanitizer (~> 1.6)
+      rouge (~> 4.0)
     matrix (0.4.3)
     mime-types (3.7.0)
       logger
@@ -664,7 +658,7 @@ DEPENDENCIES
   letter_opener_web
   lexxy (~> 0.9.18)
   lookbook
-  markdowndocs!
+  markdowndocs (~> 0.10)
   modelrails_ui!
   noticed (~> 3.0)
   omniauth
@@ -801,7 +795,7 @@ CHECKSUMS
   lookbook (2.3.14) sha256=c11a693bde9915b553c4463440ad5e750829f90bff08abdb6b8610373864cd7c
   mail (2.9.0) sha256=6fa6673ecd71c60c2d996260f9ee3dd387d4673b8169b502134659ece6d34941
   marcel (1.2.1) sha256=1678e9360e32f9eafa917c80029e2f6d10b2715c66a4b87b6d0da9b9cd1f859f
-  markdowndocs (0.9.0)
+  markdowndocs (0.10.0) sha256=f37e5216f57a6561526dd3477ecd09dc4dbc6c1b67ac3bf10162caf27b0c0cf0
   matrix (0.4.3) sha256=a0d5ab7ddcc1973ff690ab361b67f359acbb16958d1dc072b8b956a286564c5b
   mime-types (3.7.0) sha256=dcebf61c246f08e15a4de34e386ebe8233791e868564a470c3fe77c00eed5e56
   mime-types-data (3.2026.0414) sha256=461c4c655373a44bd6c5fe54bcf5b7776026ea96e808144b1ec465c4b99148cc
