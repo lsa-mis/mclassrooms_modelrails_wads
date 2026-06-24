@@ -2,7 +2,11 @@
 <%# locals: (doc:) %>
 <div class="bg-surface-raised rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 p-6 h-full flex flex-col">
   <h3 class="text-lg font-semibold text-text-heading mb-2 hover:text-accent transition-colors">
-    <%= link_to doc.title, markdowndocs.doc_path(doc.slug) %>
+    <%# Link to the canonical mode-scoped path (/docs/<mode>/<slug>) via path_slug,
+        NOT the bare slug. A bare /docs/<slug> resolves only in the mode where the
+        doc lives, so landing on it then switching audience 404s (no cross-mode
+        fallback yet — markdowndocs follow-up). The scoped URL resolves in any mode. %>
+    <%= link_to doc.title, "#{markdowndocs.root_path.chomp("/")}/#{doc.path_slug}" %>
   </h3>
   <p class="text-text-body text-sm line-clamp-3"><%= doc.description %></p>
 </div>

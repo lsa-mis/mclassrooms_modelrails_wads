@@ -60,7 +60,7 @@ RSpec.describe "Docs mode persistence (markdowndocs gem)", type: :system do
     # The switcher reflects the DB-stored mode, not the gem default.
     within first("[data-controller='docs-mode']") do
       expect(page).to have_css(
-        "button[role='radio'][aria-checked='true']",
+        "button[aria-pressed='true']",
         text: I18n.t("markdowndocs.modes.developer")
       )
     end

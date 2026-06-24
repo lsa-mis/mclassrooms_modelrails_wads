@@ -1,12 +1,6 @@
 <%# Host override of markdowndocs gem's docs/_navigation — semantic tokens. %>
-<%# locals: (rendered_content:, related_docs:, current_mode:, available_modes:, toc_items:) %>
+<%# locals: (rendered_content:, related_docs:, toc_items:) %>
 <aside class="sidebar space-y-6">
-  <% if available_modes.length > 1 %>
-    <%= render "markdowndocs/docs/mode_switcher",
-      current_mode: current_mode,
-      available_modes: available_modes %>
-  <% end %>
-
   <% if toc_items.length >= 3 %>
     <div class="bg-surface-raised rounded-lg shadow-sm p-6">
       <nav aria-label="Table of Contents">

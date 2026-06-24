@@ -21,6 +21,11 @@
     <!-- Breadcrumb -->
     <%= render "markdowndocs/docs/breadcrumb", category: @doc.category, title: @doc.title %>
 
+    <!-- Persistent audience switcher toolbar -->
+    <%= render "markdowndocs/docs/docs_toolbar",
+      current_mode: @docs_mode,
+      available_modes: @available_modes %>
+
     <!-- Mobile navigation (hamburger dropdown, hidden on desktop) -->
     <div class="lg:hidden mb-6" data-controller="docs-sidebar">
       <button
@@ -49,8 +54,6 @@
         <%= render "markdowndocs/docs/navigation",
           rendered_content: @rendered_content,
           related_docs: @related_docs,
-          current_mode: @docs_mode,
-          available_modes: @available_modes,
           toc_items: @toc_items %>
       </div>
     </div>
@@ -73,8 +76,6 @@
           <%= render "markdowndocs/docs/navigation",
             rendered_content: @rendered_content,
             related_docs: @related_docs,
-            current_mode: @docs_mode,
-            available_modes: @available_modes,
             toc_items: @toc_items %>
         </div>
       </div>
