@@ -39,6 +39,19 @@ echo "=== Running bin/setup ==="
 # cleanly; the dev runs the server when ready).
 bin/setup --skip-server
 
+# Solid Queue's tables live in a separate `queue` database
+# (config.solid_queue.connects_to). bin/setup's db:prepare creates and loads it
+# on truly-empty storage, but a *preserved* workspace — a container Rebuild
+# (vs. delete-and-recreate), or a prior `bin/dev` whose bin/jobs auto-created an
+# empty queue file — leaves db:prepare on its no-op migrate path (db/queue_migrate
+# is empty; the queue uses schema-load, not migrations), so the solid_queue_*
+# tables never appear and bin/jobs crashes the whole `bin/dev` on boot. Self-heal:
+# if the table is missing, reset the queue DB from its schema.
+if ! bin/rails runner 'exit(SolidQueue::Process.connection.table_exists?("solid_queue_processes") ? 0 : 1)' >/dev/null 2>&1; then
+  echo "=== Solid Queue schema missing — resetting the queue database ==="
+  bin/rails db:reset:queue
+fi
+
 echo "=== Installing Playwright browser (chromium) ==="
 # Runs AFTER bin/setup's `npm ci`, so the pinned @playwright/test (and its
 # `playwright` CLI) is already in node_modules. --no-install forces npx to use
