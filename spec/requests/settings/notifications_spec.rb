@@ -80,6 +80,22 @@ RSpec.describe "Account Notifications", type: :request do
         expect(response.body).to include(I18n.t("notifications.index.heading"))
       end
 
+      # Regression (Bullet unused-eager-loading). The index eager-loads
+      # `event: :record` because ~10 of the 12 notifier `#message` impls read it
+      # (workspace/invitation/password). SignInFromNewDevice's `#message` is
+      # params-only, so an index of ONLY device notifications never touches
+      # `record` — Bullet (raise=true in test) flagged the preload as unused.
+      # The preload is correct (it prevents an N+1 for the common case); the
+      # device-only page is the data-dependent false positive we safelist.
+      it "renders an index of only device-sign-in notifications without tripping Bullet" do
+        SignInFromNewDeviceNotifier
+          .with(record: user, user_agent: "Mozilla/5.0", os: "macOS")
+          .deliver(user)
+        expect(user.notifications.reload).to be_present
+        get settings_notifications_path
+        expect(response).to have_http_status(:ok)
+      end
+
       it "scopes to the current user (own notifications visible, others' not)" do
         own = deliver_security_notification
         foreign = deliver_security_notification(other_user)

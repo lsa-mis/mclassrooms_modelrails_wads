@@ -1,4 +1,5 @@
 require "active_support/core_ext/integer/time"
+require_relative "../../lib/bullet_safelists"
 
 # Required explicitly (not autoloaded): environment config runs before Zeitwerk
 # autoloading is active — same pattern as config/initializers/markdowndocs.rb.
@@ -125,27 +126,6 @@ Rails.application.configure do
     Bullet.rails_logger = true
     Bullet.add_footer = true
 
-    # WorkspacesController#index queries memberships first then joins+preloads
-    # workspace so it can sort by `memberships.last_accessed_at` (Path AA pinned-
-    # current row). Bullet flags `Membership => [:workspace]` as unused eager
-    # loading because the join already aliases workspaces into the SQL, so its
-    # detector treats the includes-side preload as redundant — but the view
-    # still needs the preloaded workspace per row to render name + icon without
-    # an N+1. Mirrors the test.rb safelist added in Path AA Task 6 (7c7053a).
-    Bullet.add_safelist(type: :unused_eager_loading,
-                        class_name: "Membership",
-                        association: :workspace)
-
-    # The inner `workspace.memberships: [:role, :user]` preload feeds
-    # `Workspace#owners` (loaded?-aware at fb89ac4), which short-circuits when
-    # no row hits the owner-check path on the workspaces index. When the
-    # short-circuit fires for every row in a page, the inner :user (and
-    # transitive :workspace) preload goes unused and Bullet flags it. We
-    # can't know per-row whether the owner-check will fire until policy
-    # evaluation, so the preload is intentionally pessimistic — accept the
-    # false positive rather than pay an N+1 on the rows that do need owners.
-    Bullet.add_safelist(type: :unused_eager_loading,
-                        class_name: "Membership",
-                        association: :user)
+    BulletSafelists.apply
   end
 end
