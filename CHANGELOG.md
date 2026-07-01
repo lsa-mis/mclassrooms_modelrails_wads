@@ -6,115 +6,116 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Breaking
 
-- `config/deploy.yml` `servers.web` schema changed from a flat host list to a `hosts:` + `options:` form to support `max-replicas: 1` (#135). Forks that customized `deploy.yml` between v1.4.0 and now must update the structure — see the migration note in `app/docs/deployment.md`.
-- Email verification switched to signed, stateless tokens (`Authentication.generates_token_for :email_verification`); dropped the `authentications.verification_token` and `verification_sent_at` columns and unique index (#178). Verification and OAuth-link confirmation links issued before upgrade stop working.
-
-### Security
-
-- Invitation acceptance is now bound to the invited email across every path — new-user signup, OAuth, magic-link, and signed-in accept — and deferred until that email is verified. A leaked invite link can no longer be redeemed by someone else, even from a different verified or signed-in account (#175, #176). Magic-link invitations remain intentionally bearer.
-
-### Changed
-
-- Retired the deferred "personal workspace"/"personal profile" settings copy → "your workspace" (the tenant) / "your profile" (identity); the personal settings section label "Account" → "You" (honest-naming, identity/tenant split).
-- Removed the half-wired dynamic-PWA scaffold (#306): the unused `app/views/pwa/manifest.json.erb` + `service-worker.js` and their commented-out routes are gone. The working static `public/manifest.webmanifest` stays (its name already matches `brand.en.yml`), so the fork-rename checklist now points at one manifest instead of two.
-- Fork-readiness code-quality cleanup (#305): policies resolve the project via `respond_to?(:project)` instead of class checks; new-device detection rescues only `ActiveRecord::ActiveRecordError` so genuine bugs surface instead of being swallowed; activity-tracking failure logs now name the record (`Class#id`).
-- `.env.example` now documents every operator-settable ENV var the code reads (was 3 of ~18), grouped by scope — Rails, Kamal, server tuning, signup gating, tenancy preset, and shared-preset seeds — each with its default/valid-values and a pointer to the relevant `app/docs` page (#298). A new template invariant greps the codebase for `ENV[...]`/`ENV.fetch` and fails if any operator-settable var is missing from `.env.example`, so it can't silently drift again.
-- SQLite `journal_mode: wal` is now declared explicitly in `config/database.yml` rather than relying on the Rails 8.1 adapter default, so a fork reads the production durability/concurrency posture in the config instead of inferring it (#304). `pragmas:` merges over Rails' defaults, so `synchronous: normal`, `foreign_keys`, `mmap_size`, etc. are preserved. Documented that `timeout: 5000` installs a Ruby busy handler (writers wait 5s) — `PRAGMA busy_timeout` reads 0 by design, and a runtime spec pins that so nobody "fixes" it into replacing the handler.
-- CI lint tooling is now version-pinned (#299): `markdownlint-cli` and `@herb-tools/linter` moved from unpinned `npm install -g` into `package.json` devDependencies (lockfile-pinned), invoked via `npx` so CI, local pre-push (Lefthook), and every fork run the identical linter. `bin/setup` now runs `npm ci`. Removed `--ensure-latest` from `bin/brakeman` — it failed CI the moment a newer brakeman shipped, on every branch with no code change (the drift behind #319). Same anti-drift principle applied across npm and Ruby tooling.
-- Unified the UI signal vocabulary to a canonical `info·success·warning·danger` ladder (`destructive`/`error` kept as non-breaking aliases); alert gains all four levels and badge signal chips move from solid base-token fills to tinted surfaces, fixing the low-contrast muddy-brown warning badge. Indicator `warning` count text moved off the non-adaptive `text-text-heading` to the adaptive `text-text-on-interactive`.
-- Avatar notification indicator restored as a severity-colored dot (v2 — supersedes D1's split). Avatar carries the dot on desktop; hamburger button on mobile. Standalone header bell removed; the in-menu Notifications row is the canonical triage entry point. Live updates target three new frames (`notifications_indicator_avatar`, `notifications_indicator_hamburger`, `notifications_menu_count_frame`) plus the aria-live region. AAA contrast preserved via `--color-danger-strong` (the project's graphic-accent token).
-- Email/password signup defers invitation acceptance — the pending invitation is parked on the new email authentication and claimed when the email is verified, rather than granted at signup (#175).
-
-### Accessibility
-
-- Quiet-hours empty-days warning now sits in a stable `role="status"` / `aria-live="polite"` wrapper instead of carrying the live-region role on the element that toggles `display:none`. A live region that itself flips to `display:none` pops in/out of the accessibility tree and announces unreliably; keeping the wrapper always present means revealing the warning is spoken to screen readers (closes #302).
-- `autocomplete="off"` on the read-only join-link copy field (`workspaces/settings/_join_policy_section`), clearing the `html-input-require-autocomplete` warning the newly-pinned herb-lint (#299) surfaced.
+- `config/deploy.yml` `servers.web` moved from a flat host list to a `hosts:` + `options:` structure for `max-replicas: 1`; forks that customized it must migrate — see `app/docs/deployment.md` (#135).
+- Email verification switched to signed, stateless tokens; dropped the `verification_token`/`verification_sent_at` columns — links issued before upgrade stop working (#178).
 
 ### Added
 
-- Add per-project tools: an extensible registry, per-project toggle, project-home tabs, and a self-hiding onboarding step (ships Docs) (#364).
-- Add first-run onboarding journey (none posture): name workspace → first project → invite, with a soft email-verification gate (#362, #363).
-- Add `ClientAccess` model — scopes an external client `User` to a single project without a workspace `Membership`, consuming no member seat (#365).
-- Add per-project Clientside toggle (`projects.clientside_enabled`), per-resource "share with client side" flag, and a read-only `Clientside::` controller area with focused `clientside` layout (#366).
-- Add client invite flow: `Invitation` client variant (`company_name`, nullable role), `InvitationMailer#invite_client`, `Workspaces::Projects::ClientInvitationsController`, and `authenticated_home_path` routing for client-only users (#367).
-- `:none` onboarding posture (`WORKSPACE_ON_SIGNUP=none`) — signup creates no workspace; identity lives at the User level; workspaces are created or joined through explicit product flows. Pairs with an overridable `authenticated_home_path` private method that every post-auth path routes through (sessions, magic-link, OAuth, registrations, `redirect_if_authenticated`); forks override one method to land users on a workspace-agnostic home. See `app/docs/presets-none.md` (#343).
-- Fork-owned brand-color seam: `app/assets/tailwind/tokens/_brand.css` (`merge=ours`, imported after `_primitives.css`) lets a fork swap its primary palette family without editing the template-owned defaults or hitting merge conflicts — the color twin of `brand.en.yml`. Ships empty (zero compiled bytes); see `docs/theming.md` (#313).
-- Deployment docs: Thruster's automatic X-Sendfile offload documented with an explicit "don't configure `x_sendfile_header`" guard (breaks non-Thruster deploys), plus a health-check-timeout troubleshooting entry.
-- `bin/deploy-guide` — target-aware deployment guidance (kamal / self-host / managed), plus a "Deploying without Kamal" portable-contract section in `app/docs/deployment.md` for Hatchbox-style platforms.
-- Lookbook component explorer at `/lookbook` (development-only) for the vendored `UI::*` components — `modelrails_ui` upgraded to v0.2.0 plus the `lookbook` gem; preview classes live in `spec/components/previews`.
-- Vendored `UI::*` ViewComponents (button, input, textarea, file_input, dialog, avatar) via the dev-only `modelrails_ui` scaffolding gem; the form-field builder, `shared/_modal`, and `avatar_for` delegate to them with no rendered-output change — `view_component` is a runtime dependency, `modelrails_ui` is development-only.
-- Appearance destination time-zone picker — explicit `override=true` submit to `Account::Preferences::TimezonesController#update`; the existing browser beacon's write-on-blank guard preserves the explicit choice on subsequent visits (closes #154).
-- Settings hub destinations: disambiguated H1s + descriptions on each sidebar destination, shared `shared/_settings_page_header.html.erb` partial, and Appearance page (closes #150 — sidebar link no longer 405s).
-- Settings hub mobile drawer: hamburger toggle below 768px slides the sidebar in as an off-canvas drawer with overlay, focus trap, ESC + click-outside dismiss, and auto-close on sidebar navigation (closes #148).
-- Settings hub shell: sidebar-equipped layout (`layouts/settings.html.erb`) for account- and workspace-tier settings, with context-adaptive item list, Pundit-gated visibility, polite aria-live region, and site-wide Turbo morph.
-- Personal-workspace OKLCH context ramp via `[data-workspace-kind="personal"]` — desaturated slate treatment so solo users see a deliberate visual identity rather than unstyled-org defaults.
-- Chroma-boosted color swatch on org workspaces in the sidebar switcher — small vertical chip beside each workspace name using its `primary_color` for at-a-glance differentiation.
-- Notifications v1 — in-app bell + dropdown, dedicated `/account/notifications` triage page, real-time arrival broadcasts, preferences UI (DND, 5×3 category/channel matrix, digest cadence, retention), email digests every 15 minutes, and 10 wired notifier types covering workspace, project, billing, and security events (#48, #53–#56, #64–#71).
-- Optional VS Code Dev Container that matches the production image (#129).
+- Passwordless-first sign-in — magic link is the default; a password is an opt-in set from Security settings (#374).
+- Passkeys / WebAuthn — register platform authenticators and sign in with a discoverable credential (#375, #376).
+- Browser-hosted GitHub Codespace — one-click cloud dev environment; boots, signs in, and runs the suite in-container (#385).
+- Customizable Select picker — native `<select>` styled via `appearance: base-select` where supported, with an untouched native fallback elsewhere (#399, #402).
+- `/docs` split into user and developer audience modes with an always-visible audience switcher (#381, #382).
+- Per-project tools — extensible registry, per-project toggle, project-home tabs, and a self-hiding onboarding step (#364).
+- First-run onboarding journey (`:none`) — name workspace → first project → invite, with a soft email-verification gate (#362, #363).
+- `ClientAccess` model — scopes an external client to one project without a workspace membership or seat (#365).
+- Per-project Clientside toggle, per-resource "share with client side" flag, and a read-only `Clientside::` area (#366).
+- Client invite flow — `Invitation` client variant, `InvitationMailer#invite_client`, and client-only home routing (#367).
+- `:none` onboarding posture (`WORKSPACE_ON_SIGNUP=none`) — signup creates no workspace; forks override `authenticated_home_path` (#343).
+- Fork-owned brand-color seam `_brand.css` (`merge=ours`) — swap the primary palette without merge conflicts (#313).
+- Deployment docs — Thruster X-Sendfile offload with a "don't set `x_sendfile_header`" guard, plus a health-check-timeout entry.
+- `bin/deploy-guide` — target-aware deployment guidance (kamal / self-host / managed) plus a "without Kamal" contract section.
+- Lookbook component explorer at `/lookbook` (development-only) for the vendored `UI::*` components.
+- Vendored `UI::*` ViewComponents via the dev-only `modelrails_ui` gem; the form builder, `_modal`, and `avatar_for` delegate with no output change.
+- Appearance destination time-zone picker — explicit `override=true` preserves the choice against the browser beacon (#154).
+- Settings hub destinations — disambiguated H1s/descriptions, a shared page-header partial, and an Appearance page (#150).
+- Settings hub mobile drawer — off-canvas sidebar below 768px with focus trap + ESC/click-outside dismiss (#148).
+- Settings hub shell — sidebar-equipped `settings.html.erb` with context-adaptive, Pundit-gated items and Turbo morph.
+- Personal-workspace OKLCH context ramp — desaturated slate via `[data-workspace-kind="personal"]`.
+- Chroma-boosted workspace color swatch in the sidebar switcher.
+- Notifications v1 — in-app bell + triage page, real-time broadcasts, preferences UI, email digests, and 10 notifier types (#48, #53–#56, #64–#71).
+- Optional VS Code Dev Container matching the production image (#129).
 - `.env.example` documenting required environment variables (#129).
 - YJIT enabled in production (#129).
 - CI builds the production Docker image on every PR (#134).
-- New deployment, background-jobs, and dev-environment docs at `/docs` (#136).
-- A clear notice when an invitation was addressed to a different email than the one being used — shown on verification, on signup, and on signed-in accept, instead of failing silently (#177, #180).
-- **Single-tenant preset** (`WORKSPACE_ON_SIGNUP=shared`) — one shared workspace, no personal workspaces, tenancy UI suppressed. Setup is env-driven with a seed that bootstraps the workspace + initial Owner and mails a password-set link. See `app/docs/presets.md`.
-- **Per-workspace `join_policy`** (`invite` or `open_link`) with `WorkspaceJoinLink` (`has_secure_token`, revocable, atomically rotatable). Settings UI surfaces the radio + copy/rotate/revoke under `/workspaces/:slug/settings/edit`. Both join flows are wired: **Flow A** (existing authenticated user joins via link) and **Flow B** (new user → link opens the signup gate under `:invite_only`, token parked on the email auth, claimed at email verification). Instance ceiling via `SIGNUP_PERMITTED_JOIN_STRATEGIES` (default `invite`); personal workspaces are hard-guarded. Membership grants consolidate into `Workspace#admit`. See `app/docs/presets.md` (Open SaaS) and `app/docs/workspaces.md` (Join Policies).
-- Fork seams for downstream apps: brand strings in fork-owned `config/locales/en/brand.en.yml`, product routes in `config/routes/app.rb` via `draw(:app)`, `/docs` categories extendable through `config/markdowndocs_categories.local.yml`, and fork-owned paths marked `merge=ours` in `.gitattributes` (driver auto-activated by `bin/setup` in forks).
-- In-app forking guide at `/docs/forking` — start a downstream app, rename the identity, pull upstream updates; the README forking section now points there.
-
-### Bug fixes
-
-- Settings-hub Turbo morph is now actually active (#327). `turbo_refreshes_with method: :morph` buffers its meta tags into `:head` via `provide`, but neither layout had a `yield :head` to render them, so the morph meta never emitted and the hub silently fell back to `replace`. The shared `_layout_head` now yields `:head` and the settings layout provides the morph meta before it renders — the announcer dedup and idiomorph-safe switcher IDs were already built for this.
-- Single-tenant preset: invitation-driven signups now adopt the invitation's role instead of being stuck at the `onboard_workspace` callback's placeholder Member. Solo-default (`:personal`) semantics are unchanged.
-- Unauthenticated invitees can accept invitations under invite-only signup — the accept page stashes the pending invitation token so the signup gate opens (#345).
-- Development mailer URLs now follow the running `PORT`, so letter_opener links work on non-default ports (#346).
+- Deployment, background-jobs, and dev-environment docs at `/docs` (#136).
+- Clear "invitation was for a different email" notice on verification, signup, and accept (#177, #180).
+- Single-tenant preset (`WORKSPACE_ON_SIGNUP=shared`) — one shared workspace, tenancy UI suppressed, env-driven seed.
+- Per-workspace `join_policy` (`invite`/`open_link`) with a revocable `WorkspaceJoinLink`; both join flows wired; instance ceiling via `SIGNUP_PERMITTED_JOIN_STRATEGIES`.
+- Fork seams — brand strings, `draw(:app)` product routes, extendable `/docs` categories, and `merge=ours` fork-owned paths.
+- In-app forking guide at `/docs/forking`.
 
 ### Changed
 
-- `TENANCY_ONBOARDING` renamed to `WORKSPACE_ON_SIGNUP` — the new name asks "which workspace does a new user land in at signup?", making `none` read honestly (the app is always multi-tenant) rather than implying no tenancy.
-- Sidebar skips the personal-only `memberships` eager-load unless onboarding is `:personal` — dead weight under `:none`; `docs/deprecations.md` documents the `personal?` branching as a presentation leak (#344).
-- Workspaces index (`/workspaces`) rewritten from a phonebook into a workbench per Jason Fried's "weak index" critique. Pinned-current row (by most-recently-accessed) with CURRENT badge; "Other workspaces" section sorted by `memberships.last_accessed_at DESC NULLS LAST, name ASC`. Each row carries plan badge, role badge, member count (from preloaded relation, no counter cache), last-accessed timestamp, Switch + Leave inline verbs (Leave gated by `MembershipPolicy#destroy?` which now permits self-leave under personal-workspace + last-owner safety guards). Adds `memberships.last_accessed_at` column + composite index, plus a `WorkspaceScoped` before_action that touches the timestamp on every workspace-scoped request (single UPDATE per request, silently rescued). Single-membership users see only the pinned section without an "Other workspaces" heading.
-- Mobile shell: header now expands accordion-style on mobile to surface the active sidebar contents inline. Replaces the off-canvas drawer pattern shipped earlier this cycle (#148) — one navigation paradigm across breakpoints, no overlay/focus-trap/dialog ARIA, same axe AAA coverage. Workspace-scoped pages and settings pages both use the unified pattern.
-- Header workspace switcher hides personal workspaces — solo users feel single-tenant in the header; the personal workspace remains accessible through the Settings hub sidebar switcher, which is the explicit IA surface for workspace-context switching (closes #145).
-- Account Profile, Notification Preferences, Connected Accounts (Security), Workspace Settings, and Workspace Members destinations now use the shared settings page header for consistent chrome.
-- Smooth motion-safe color transitions on sidebar items and switcher; settings layout's context attribute renamed `data-settings-context-kind` → `data-workspace-kind`; hover prefetch added to header user-menu settings links and header workspace dropdown.
-- Route consolidation: `workspaces#edit` now serves the workspace Profile (identity — name, logo, primary_color); `workspaces/settings#edit` narrows to Limits & Plan. Admin sees Profile in sidebar (capability expansion vs pre-consolidation when sidebar gated on Owner-only `WorkspacePolicy#update?`; now gated on `Workspaces::ProfilePolicy#update?` = `manage_settings`).
-- Notifications bell is now a standalone header affordance (sibling to the avatar on desktop, sibling to the hamburger on mobile) routing directly to the triage page. The user-menu dropdown collapses to two items: a clickable identity block (avatar + name + email → personal-workspace profile) and sign-out. Notification preferences remains accessible via the Settings hub sidebar's personal-context Notifications item. Renames `notifications_avatar_button_label_frame` → `notifications_bell_label_frame` to match its new home; drops the `notifications_menu_count_frame` broadcast and the `_notifications_menu_count_span` / `_user_menu_avatar_button_label` partials.
-- Mobile-accordion sidebar contents flow inline instead of appearing as a nested sidebar. Extracts the switcher + nav items from `_settings_sidebar` and `_workspace_sidebar` into chrome-free `_settings_sidebar_items` / `_workspace_sidebar_items` partials. Desktop column still renders the `<aside>` wrapper with sidebar visual chrome; mobile accordion renders the items partials directly so the menu items flow alongside the identity block and sign-out without a boxed sidebar-inside-a-menu effect — matches the modelrails_agent_os mobile pattern.
-- Sidebar items partials gain a visual divider between the workspace switcher and the nav list, plus a context-aware section label (`Account` in personal-context settings, `Workspace` in org-context settings and on workspace pages). Adds `settings.sidebar.section_label.{personal,org}` and `workspaces.sidebar.section_label` locale keys. Visible on both desktop and inside the mobile accordion — matches the agent_os "WORKSPACE" / section-label rhythm.
-- Sidebar nav items gain icons (Heroicons v1 outline): Profile → user_circle, Notifications → bell, Security → shield_check, Appearance → color_swatch, Members → user_group, Invitations → envelope, Limits & Plan → chart_bar, Overview → home, Projects → folder, Settings → cog. Adds 8 new SVGs to the icon registry (`app/assets/icons/outline/`); the icon helper auto-discovers them on first reference, no registration step. Icons render via the existing `_settings_sidebar_item` partial's `icon:` local (previously unused).
+- Email-first sign-in — one email field routes to password, magic link, or passkey; the connected-accounts page reflects real linked state (#377).
+- Retired the deferred "personal workspace"/"personal profile" copy → "your workspace"/"your profile"; section label "Account" → "You" (honest-naming).
+- Removed the half-wired dynamic-PWA scaffold; the static `public/manifest.webmanifest` stays (#306).
+- Fork-readiness code-quality cleanup — duck-typed project resolution, narrower rescues, named activity-log records (#305).
+- `.env.example` documents every operator-settable ENV var, with a template invariant guarding against drift (#298).
+- SQLite `journal_mode: wal` declared explicitly in `config/database.yml`, with the busy-handler behavior pinned by spec (#304).
+- CI lint tooling version-pinned — markdownlint + herb-lint in `package.json` via `npx`; dropped brakeman `--ensure-latest` (#299).
+- Unified the UI signal vocabulary to `info·success·warning·danger`; signal chips move to tinted surfaces, fixing the muddy warning badge.
+- Avatar notification indicator restored as a severity dot (v2) — desktop on the avatar, mobile on the hamburger; standalone bell removed.
+- Email/password signup defers invitation acceptance until the email is verified (#175).
+- `TENANCY_ONBOARDING` renamed to `WORKSPACE_ON_SIGNUP` — reads honestly (the app is always multi-tenant).
+- Sidebar skips the personal-only `memberships` eager-load unless onboarding is `:personal` (#344).
+- Workspaces index rewritten from phonebook to workbench — pinned-current row, last-accessed sort, inline Switch/Leave; adds `memberships.last_accessed_at`.
+- Mobile shell — the header expands accordion-style inline, replacing the off-canvas drawer (#148).
+- Header workspace switcher hides personal workspaces; the Settings sidebar switcher is the explicit switch surface (#145).
+- Account, Notification, Security, and Workspace settings destinations use the shared settings page header.
+- Motion-safe sidebar transitions; `data-settings-context-kind` → `data-workspace-kind`; hover prefetch on settings/switcher links.
+- Route consolidation — `workspaces#edit` serves Profile, `workspaces/settings#edit` narrows to Limits & Plan (Admin-visible via `ProfilePolicy`).
+- Notifications bell is a standalone header affordance; the user menu collapses to an identity block + sign-out.
+- Mobile-accordion sidebar contents flow inline via chrome-free `_*_sidebar_items` partials.
+- Sidebar items gain a divider and a context-aware section label (`Account`/`Workspace`).
+- Sidebar nav items gain Heroicons v1 outline icons (8 new SVGs, auto-discovered).
 
 ### Removed
 
-- `settings-drawer` Stimulus controller, `settings.mobile_drawer.*` and `workspaces.mobile_drawer.*` locale namespaces, and the off-canvas drawer markup from `settings.html.erb` and `application.html.erb` — superseded by the header accordion (see Changed).
-- `Workspaces::BrandingsController` and its routes (`/workspaces/:slug/branding/*`). Identity picker hub moved to `WorkspacesController#identity_picker_hub` (`/workspaces/:slug/identity_picker_hub`).
-- `Workspaces::BrandingPolicy` (replaced by `Workspaces::ProfilePolicy` on workspaces#edit/update).
-- Orphan header dropdown partials (`shared/_workspace_switcher.html.erb`, `shared/_navigation.html.erb`) and the unused `navigation.new_workspace` locale key — completes Path Y; the sidebar switcher is the canonical workspace-switching surface.
-- Header "Workspaces" text link (desktop + mobile-accordion blocks) and the orphaned `navigation.workspaces` locale key — the sidebar switcher's full workspace list (with "Create workspace" footer) is now the sole workspace-context affordance, eliminating a UX confusion where the literal "Workspaces" link inside the mobile accordion was being tapped as if it were the switcher.
+- Deprecated `invitations#index` redirect route + the redundant "Invitations" sidebar item — folded into the members surface (#398).
+- `settings-drawer` Stimulus controller, `*.mobile_drawer.*` locales, and the off-canvas markup — superseded by the header accordion.
+- `Workspaces::BrandingsController` + `/workspaces/:slug/branding/*` routes — identity picker moved to `WorkspacesController#identity_picker_hub`.
+- `Workspaces::BrandingPolicy` — replaced by `Workspaces::ProfilePolicy`.
+- Orphan header dropdown partials + the `navigation.new_workspace` locale — completes Path Y (the sidebar switcher is canonical).
+- Header "Workspaces" text link + the `navigation.workspaces` locale — the sidebar switcher is the sole workspace affordance.
 
-### Bug fixes
+### Fixed
 
-- `Broadcastable` concern now respects subclass `broadcast_events` overrides (destroys broadcast as expected on `ProjectMembership`).
-- Production `docker build` failure after the Ruby pin change in #129 (#132).
-
-### Maintenance
-
-- Ruby bumped to 4.0.4 and enforced by Bundler across dev, CI, and production (#129).
-- Production image is smaller — no longer ships test gems (#129).
-- Production deploys constrained to one web container at a time, with longer job-drain window (#135, closes #130).
-- Solid Queue uses named queues (`default`, `mailers`, `low`) for observability (#135).
-- Faster CI builds on native architectures (parallel bootsnap precompile) (#131).
-- IDN punycode normalization in `EmailNormalizer` — canonical-form email comparison across `bücher.de` ↔ `xn--bcher-kva.de` encoding variants.
-
-### Security
-
-- Per-recipient email throttle across senders — orthogonal to per-user `rate_limit` declarations; prevents N attackers from collectively flooding one victim's inbox while each staying under per-user limits.
-- Cross-user OAuth collision alert — when an attacker tries to link your verified OAuth identity to a different account, you receive a defense-in-depth notification email (account remains unaffected).
+- Signups-closed sign-in view renders inside the turbo-frame instead of vanishing (#384).
+- Codespaces boot — trixie `moby:false`, `bin/setup` (libssl-dev + Node), non-interactive Playwright, Solid Queue self-heal, and forwarded-proxy CSRF Origin (#386, #387, #388, #396, #397).
+- Settings-hub Turbo morph is now actually active — `_layout_head` yields `:head` so the morph meta emits (#327).
+- Single-tenant preset — invitation-driven signups adopt the invitation's role instead of a placeholder Member.
+- Unauthenticated invitees can accept under invite-only signup — the accept page stashes the pending token (#345).
+- Development mailer URLs follow the running `PORT` so letter_opener links work on non-default ports (#346).
+- `Broadcastable` respects subclass `broadcast_events` overrides (destroys broadcast on `ProjectMembership`).
+- Fixed the production `docker build` failure after the Ruby pin change (#132).
 
 ### Accessibility
 
-- WCAG 2.2 Level AAA contrast pass — six color tokens bumped to 7:1 in both light and dark modes; `text-muted` now matches `text-body` so visual hierarchy comes from font-size/weight, not color.
-- axe-core CI checks promoted from `wcag2aa` to `wcag2aaa`; failure output enriched with computed contrast ratio, foreground/background hex, and font sizing for faster diagnosis.
-- Code blocks at `/docs` meet WCAG 2.2 AAA contrast in both light and dark modes (#137).
+- Quiet-hours warning sits in a stable `role="status"` wrapper so screen readers reliably announce it (#302).
+- `autocomplete="off"` on the read-only join-link copy field, clearing the herb-lint warning (#299).
+- WCAG 2.2 AAA contrast pass — six tokens bumped to 7:1; `text-muted` matches `text-body` (hierarchy via size/weight).
+- axe-core CI promoted `wcag2aa` → `wcag2aaa`, with contrast-ratio/hex/font diagnostics in failures.
+- Code blocks at `/docs` meet WCAG 2.2 AAA contrast in both themes (#137).
+
+### Security
+
+- Dependency CVE bumps — nokogiri/faraday (#371), css_parser 3.0.0/msgpack 1.8.3 (#400); unfixable thruster Go CVEs ignored in the image scan (#380, #395).
+- Invitation acceptance bound to the invited email across every path and deferred until verified — a leaked link can't be redeemed by someone else (#175, #176).
+- Per-recipient email throttle across senders — prevents N attackers from collectively flooding one inbox.
+- Cross-user OAuth collision alert — a defense-in-depth email when someone tries to link your identity to another account.
+
+### Maintenance
+
+- `bundler-audit` runs in Lefthook pre-push, mirroring CI `scan_ruby` (#372).
+- Bullet safelists consolidated into one shared source (`lib/bullet_safelists.rb`) so development and test can't drift (#403).
+- `modelrails_ui` bumped to v0.4.0 (customizable-select); component previews de-flaked by dropping external CDN assets (#401, #373).
+- Ruby bumped to 4.0.4 and enforced by Bundler across dev, CI, and production (#129).
+- Production image no longer ships test gems (#129).
+- Production deploys constrained to one web container with a longer job-drain window (#135, #130).
+- Solid Queue uses named queues (`default`/`mailers`/`low`) (#135).
+- Faster CI on native architectures via parallel bootsnap precompile (#131).
+- IDN punycode normalization in `EmailNormalizer` for canonical email comparison.
 
 ## v1.4.0 — OAuth Hardening & Design System Primitives v2 (2026-04-28)
 
