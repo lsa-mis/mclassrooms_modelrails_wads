@@ -1,27 +1,50 @@
 <footer data-controller="footer" class="bg-surface border-t border-border mt-auto">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
     <%# Row 1: brand + nav clusters + dev trigger (responsive) %>
-    <div class="flex flex-col items-center gap-6
+    <% home_path = main_app.root_path %>
+    <div class="flex flex-col items-center gap-3
                 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4
                 lg:flex-nowrap lg:justify-start lg:gap-6">
-      <%= link_to main_app.root_path,
-            class: "hover:opacity-80 transition-opacity
+      <%# Full logo + wordmark — sm+ only. Below sm, replaced by the compact
+          icon-only version merged into the About/Docs row (see below), since
+          the header already establishes the wordmark for mobile visitors.
+          `hidden`/`sm:hidden` (not sr-only-based hiding) is deliberate: the
+          two logo links are never simultaneously present in the DOM, so
+          screen readers never encounter two "ModelRails" links at once. %>
+      <%= link_to home_path,
+            class: "hidden sm:block hover:opacity-80 transition-opacity
                     focus-ring rounded" do %>
         <%= render "shared/site_logo", size: :small, show_name: true %>
       <% end %>
 
-      <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-6">
-        <nav aria-label="<%= t("footer.aria.product") %>"
-             class="flex items-center gap-5">
-          <%= link_to t("footer.about"), main_app.about_path,
-                class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
-                        hover:text-interactive-hover
-                        focus-ring rounded" %>
-          <%= link_to t("footer.docs"), "/docs",
-                class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
-                        hover:text-interactive-hover
-                        focus-ring rounded" %>
-        </nav>
+      <div class="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-6">
+        <%# `sm:contents` makes this wrapper transparent to the flex row it
+            sits inside at sm+, so the product nav below becomes that row's
+            direct flex child again — exactly as before this change. Below
+            sm, it's a real row pairing the compact logo with the product
+            nav so they share one line. %>
+        <div class="flex items-center gap-5 sm:contents">
+          <%= link_to home_path,
+                class: "sm:hidden inline-flex items-center min-h-[var(--form-input-height)] px-2
+                        hover:opacity-80 transition-opacity
+                        focus-ring rounded" do %>
+            <%# Name kept in the DOM (sr-only) so the link still has an
+                accessible name — the SVG itself is aria-hidden. %>
+            <%= render "shared/site_logo", size: :xsmall, show_name: true, name_class: "sr-only" %>
+          <% end %>
+
+          <nav aria-label="<%= t("footer.aria.product") %>"
+               class="flex items-center gap-5">
+            <%= link_to t("footer.about"), main_app.about_path,
+                  class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
+                          hover:text-interactive-hover
+                          focus-ring rounded" %>
+            <%= link_to t("footer.docs"), "/docs",
+                  class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
+                          hover:text-interactive-hover
+                          focus-ring rounded" %>
+          </nav>
+        </div>
 
         <div class="hidden sm:block border-l border-border h-3.5" aria-hidden="true"></div>
 
@@ -46,16 +69,19 @@
         </nav>
       </div>
 
-      <div class="lg:flex-1"></div>
+      <%# Row-layout spacer that pushes a11y_sim to the far right at lg+. Hidden
+          below lg so it doesn't occupy a slot (and its two flanking gaps) in
+          the mobile/tablet column stack, where it has no layout purpose. %>
+      <div class="hidden lg:block lg:flex-1"></div>
 
       <%= render "shared/a11y_sim" %>
     </div>
 
     <%# Horizontal divider between rows %>
-    <div class="mt-6 border-t border-border"></div>
+    <div class="mt-3 sm:mt-6 border-t border-border"></div>
 
     <%# Row 2: centered copyright %>
-    <p class="mt-6 text-xs text-text-muted text-center">
+    <p class="mt-3 sm:mt-6 text-xs text-text-muted text-center">
       &copy; <%= Date.current.year %> <%= t("footer.copyright") %>
     </p>
   </div>
