@@ -241,7 +241,7 @@ GEM
       letter_opener (~> 1.9)
       railties (>= 6.1)
       rexml
-    lexxy (0.9.20)
+    lexxy (0.9.22)
       rails (>= 8.0.2)
     lint_roller (1.1.0)
     listen (3.10.0)
@@ -264,7 +264,7 @@ GEM
       view_component (>= 2.0)
       yard (~> 0.9)
       zeitwerk (~> 2.5)
-    mail (2.9.0)
+    mail (2.9.1)
       logger
       mini_mime (>= 0.1.1)
       net-imap
@@ -640,7 +640,7 @@ DEPENDENCIES
   lefthook (~> 2.1)
   letter_opener
   letter_opener_web
-  lexxy (~> 0.9.20)
+  lexxy (~> 0.9.22)
   lookbook
   markdowndocs (~> 0.10)
   modelrails_ui!
@@ -767,13 +767,13 @@ CHECKSUMS
   lefthook (2.1.9) sha256=2d4d2e028d4ac4b265675c1180fe1f7c50230200630e65c3aff7d3ed90a1a334
   letter_opener (1.10.0) sha256=2ff33f2e3b5c3c26d1959be54b395c086ca6d44826e8bf41a14ff96fdf1bdbb2
   letter_opener_web (3.0.0) sha256=3f391efe0e8b9b24becfab5537dfb17a5cf5eb532038f947daab58cb4b749860
-  lexxy (0.9.20) sha256=31b4e50b68302e9a4d00b5a3e104f3b27a0682d43510a1e9e6673da695038e6e
+  lexxy (0.9.22) sha256=976c9c96e73078937b97942962ec80f32adfb59315921acaaeb30a4cb8a7306e
   lint_roller (1.1.0) sha256=2c0c845b632a7d172cb849cc90c1bce937a28c5c8ccccb50dfd46a485003cc87
   listen (3.10.0) sha256=c6e182db62143aeccc2e1960033bebe7445309c7272061979bb098d03760c9d2
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   loofah (2.25.1) sha256=d436c73dbd0c1147b16c4a41db097942d217303e1f7728704b37e4df9f6d2e04
   lookbook (2.3.14) sha256=c11a693bde9915b553c4463440ad5e750829f90bff08abdb6b8610373864cd7c
-  mail (2.9.0) sha256=6fa6673ecd71c60c2d996260f9ee3dd387d4673b8169b502134659ece6d34941
+  mail (2.9.1) sha256=06574eca475253d6c18145dd70af80d0eb970182d55053497c5f4d797ea160e8
   marcel (1.2.1) sha256=1678e9360e32f9eafa917c80029e2f6d10b2715c66a4b87b6d0da9b9cd1f859f
   markdowndocs (0.10.0) sha256=f37e5216f57a6561526dd3477ecd09dc4dbc6c1b67ac3bf10162caf27b0c0cf0
   matrix (0.4.3) sha256=a0d5ab7ddcc1973ff690ab361b67f359acbb16958d1dc072b8b956a286564c5b
