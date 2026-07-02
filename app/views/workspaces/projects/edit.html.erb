@@ -17,4 +17,26 @@
 
     <%= form.submit t("workspaces.projects.edit.submit"), class: "w-full" %>
   <% end %>
+
+  <% if policy(@project).destroy? %>
+    <div class="mt-8 p-4 border border-danger-border rounded-lg flex items-center justify-between gap-4">
+      <p class="text-sm text-text-body"><%= t("workspaces.projects.destroy.confirm") %></p>
+
+      <div data-controller="modal" class="shrink-0">
+        <button type="button"
+                data-action="click->modal#open"
+                class="btn-touch-target btn-text btn-text-danger text-sm">
+          <%= t("workspaces.projects.destroy.trigger") %>
+        </button>
+
+        <%= render "shared/confirm_dialog",
+              title: t("workspaces.projects.destroy.title"),
+              message: t("workspaces.projects.destroy.confirm"),
+              confirm_text: t("workspaces.projects.destroy.confirm_action"),
+              confirm_url: workspace_project_path(@workspace, @project),
+              confirm_method: :delete,
+              variant: :danger %>
+      </div>
+    </div>
+  <% end %>
 </div>

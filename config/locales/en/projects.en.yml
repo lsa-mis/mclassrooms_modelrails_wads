@@ -26,6 +26,10 @@ en:
         success: "Project updated."
       destroy:
         success: "Project archived."
+        trigger: "Archive project"
+        title: "Archive project?"
+        confirm: "Are you sure? This project will be archived. It can be restored by an administrator."
+        confirm_action: "Archive"
       invitations:
         new:
           title: "Invite to project"

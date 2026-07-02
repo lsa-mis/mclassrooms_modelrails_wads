@@ -1,0 +1,25 @@
+<%# locals: (workspace:) %>
+<section class="space-y-4" aria-labelledby="settings-danger-zone-heading">
+  <h2 id="settings-danger-zone-heading" class="text-lg font-semibold text-text-heading">
+    <%= t("workspaces.settings.edit.sections.danger_zone_title") %>
+  </h2>
+  <div class="p-4 border border-danger-border rounded-lg flex items-center justify-between gap-4">
+    <p class="text-sm text-text-body"><%= t("workspaces.settings.edit.sections.danger_zone_description") %></p>
+
+    <div data-controller="modal" class="shrink-0">
+      <button type="button"
+              data-action="click->modal#open"
+              class="btn-touch-target btn-text btn-text-danger text-sm">
+        <%= t("workspaces.destroy.trigger") %>
+      </button>
+
+      <%= render "shared/confirm_dialog",
+            title: t("workspaces.destroy.title"),
+            message: t("workspaces.destroy.confirm"),
+            confirm_text: t("workspaces.destroy.confirm_action"),
+            confirm_url: workspace_path(workspace),
+            confirm_method: :delete,
+            variant: :danger %>
+    </div>
+  </div>
+</section>

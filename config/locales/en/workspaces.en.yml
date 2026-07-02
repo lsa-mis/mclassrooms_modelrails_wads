@@ -82,7 +82,10 @@ en:
       success: "Workspace profile updated."
     destroy:
       success: "Workspace archived."
-      confirm: "Are you sure? This workspace will be archived."
+      trigger: "Archive workspace"
+      title: "Archive workspace?"
+      confirm: "Are you sure? This workspace and all of its projects will be archived. This can be undone by an administrator."
+      confirm_action: "Archive"
     members:
       index:
         title: "Members"
@@ -148,6 +151,8 @@ en:
           identity_title: "Identity"
           identity_submit: "Save identity"
           capacity_title: "Capacity"
+          danger_zone_title: "Danger zone"
+          danger_zone_description: "Archiving hides this workspace and its projects. This can be undone by an administrator."
       join_policy:
         heading: "Join policy"
         description: "Control how new members join this workspace."

@@ -15,4 +15,10 @@
       <%= render "workspaces/settings/join_policy_section", workspace: @workspace %>
     </div>
   <% end %>
+
+  <% if policy(@workspace).destroy? %>
+    <div class="mt-8">
+      <%= render "workspaces/settings/danger_zone_section", workspace: @workspace %>
+    </div>
+  <% end %>
 </div>
