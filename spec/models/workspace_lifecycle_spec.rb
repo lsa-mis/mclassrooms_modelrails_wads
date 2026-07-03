@@ -52,6 +52,18 @@ RSpec.describe Workspace, type: :model do
       workspace.suspend!
       expect { workspace.archive! }.not_to raise_error
     end
+
+    it "blocks admit while suspended" do
+      member_role = Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
+        r.name = "Member"
+        r.permissions = { manage_projects: true }
+      }
+      user = create(:user)
+      workspace.suspend!
+
+      expect { workspace.admit(user, role: member_role) }.to raise_error(Suspendable::SuspendedError)
+      expect(workspace.memberships.find_by(user: user)).to be_nil
+    end
   end
 
   describe "idempotency" do

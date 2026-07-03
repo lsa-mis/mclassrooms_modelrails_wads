@@ -36,3 +36,25 @@ namespace :users do
     abort "User not found: #{args[:email]}"
   end
 end
+
+namespace :workspaces do
+  desc "Suspend (lock) a workspace — owners are blocked until unsuspended"
+  task :suspend, [ :slug ] => :environment do |_t, args|
+    abort "Usage: rails workspaces:suspend[slug]" unless args[:slug]
+    workspace = Workspace.find_by!(slug: args[:slug])
+    workspace.suspend!
+    puts "Suspended #{workspace.slug} — owner lifecycle actions and all workspace pages are blocked"
+  rescue ActiveRecord::RecordNotFound
+    abort "Workspace not found: #{args[:slug]}"
+  end
+
+  desc "Unsuspend (unlock) a workspace"
+  task :unsuspend, [ :slug ] => :environment do |_t, args|
+    abort "Usage: rails workspaces:unsuspend[slug]" unless args[:slug]
+    workspace = Workspace.find_by!(slug: args[:slug])
+    workspace.unsuspend!
+    puts "Unsuspended #{workspace.slug}"
+  rescue ActiveRecord::RecordNotFound
+    abort "Workspace not found: #{args[:slug]}"
+  end
+end

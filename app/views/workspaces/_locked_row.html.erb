@@ -1,0 +1,7 @@
+<%# locals: (workspace:) %>
+<li class="p-4 border border-border rounded-lg bg-surface" data-test="locked-workspace-row">
+  <p class="font-medium text-text-heading"><%= t("workspaces.locked_row.heading") %></p>
+  <p class="mt-1 text-sm text-text-body"><%= t("workspaces.locked_row.body", name: workspace.name) %></p>
+  <%= link_to t("workspaces.locked_row.contact"), contact_path,
+        class: "mt-3 inline-flex btn-touch-target btn-text btn-text-interactive text-sm" %>
+</li>

@@ -13,7 +13,11 @@
   <% if @current_membership.present? %>
     <section class="mt-8" data-test="current-workspace-row" aria-label="<%= t('workspaces.index.current_badge') %>">
       <ul class="flex flex-col gap-2">
-        <%= render "workspaces/row", membership: @current_membership, current: true %>
+        <% if @current_membership.workspace.suspended? %>
+          <%= render "workspaces/locked_row", workspace: @current_membership.workspace %>
+        <% else %>
+          <%= render "workspaces/row", membership: @current_membership, current: true %>
+        <% end %>
       </ul>
     </section>
   <% end %>
@@ -25,7 +29,11 @@
       </h2>
       <ul class="flex flex-col gap-2" data-test="other-workspaces-list">
         <% @other_memberships.each do |membership| %>
-          <%= render "workspaces/row", membership: membership, current: false %>
+          <% if membership.workspace.suspended? %>
+            <%= render "workspaces/locked_row", workspace: membership.workspace %>
+          <% else %>
+            <%= render "workspaces/row", membership: membership, current: false %>
+          <% end %>
         <% end %>
       </ul>
     </section>
@@ -38,15 +46,19 @@
       </h2>
       <ul class="flex flex-col gap-2">
         <% @archived_memberships.each do |membership| %>
-          <li class="flex items-center justify-between gap-4 p-4 border border-border rounded-lg bg-surface">
-            <div class="min-w-0">
-              <p class="font-medium text-text-heading truncate"><%= membership.workspace.name %></p>
-              <p class="text-sm text-text-muted"><%= lifecycle_status_label(membership.workspace) %></p>
-            </div>
-            <%= button_to t("lifecycle.restore"), unarchive_workspace_path(membership.workspace),
-                  method: :patch,
-                  class: "btn-touch-target btn-text btn-text-interactive text-sm shrink-0" %>
-          </li>
+          <% if membership.workspace.suspended? %>
+            <%= render "workspaces/locked_row", workspace: membership.workspace %>
+          <% else %>
+            <li class="flex items-center justify-between gap-4 p-4 border border-border rounded-lg bg-surface">
+              <div class="min-w-0">
+                <p class="font-medium text-text-heading truncate"><%= membership.workspace.name %></p>
+                <p class="text-sm text-text-muted"><%= lifecycle_status_label(membership.workspace) %></p>
+              </div>
+              <%= button_to t("lifecycle.restore"), unarchive_workspace_path(membership.workspace),
+                    method: :patch,
+                    class: "btn-touch-target btn-text btn-text-interactive text-sm shrink-0" %>
+            </li>
+          <% end %>
         <% end %>
       </ul>
     </section>

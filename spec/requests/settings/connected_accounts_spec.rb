@@ -561,6 +561,23 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
     end
 
+    # Privacy (T14d): a suspended workspace must be indistinguishable from a
+    # revoked link at this claim site. The visitor was never a member, so
+    # nothing about the lock may leak through this deferred-verification path.
+    context "when the workspace was suspended between parking and verification" do
+      it "silently no-ops: verifies, clears the token, grants no membership" do
+        workspace.suspend!
+
+        get verify_settings_connected_accounts_path(token: pending_auth.generate_token_for(:email_verification))
+
+        expect(pending_auth.reload.verified_at).to be_present
+        expect(user.reload.workspaces).not_to include(workspace)
+        expect(pending_auth.reload.pending_join_link_token).to be_nil
+        expect(flash[:alert]).to be_blank
+        expect(flash[:alert]).not_to eq(I18n.t("workspaces.locked_notice"))
+      end
+    end
+
     context "when the workspace's join policy reverted to invite-only mid-flight" do
       it "silently no-ops: verifies, clears the token, grants no membership" do
         workspace.update!(join_policy: "invite")

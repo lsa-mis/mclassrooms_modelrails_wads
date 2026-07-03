@@ -13,6 +13,7 @@ class ApplicationController < ActionController::Base
 
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
+  rescue_from Suspendable::SuspendedError, with: :workspace_locked
 
   helper_method :signups_open?
 
@@ -49,6 +50,10 @@ class ApplicationController < ActionController::Base
       format.json { render json: { error: t("errors.not_found") }, status: :not_found }
       format.any { head :not_found }
     end
+  end
+
+  def workspace_locked
+    redirect_to workspaces_path, alert: t("workspaces.locked_notice")
   end
 
   # Maps a Passkeys::Error subclass to its localized message for JSON error responses.

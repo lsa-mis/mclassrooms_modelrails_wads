@@ -48,4 +48,28 @@ RSpec.describe "Admin rake tasks" do
       expect(user.memberships.kept.count).to eq(0)
     end
   end
+
+  describe "workspaces:suspend" do
+    it "suspends the workspace by slug, touching no project rows" do
+      workspace = create(:workspace)
+      project = create(:project, workspace: workspace)
+
+      Rake::Task["workspaces:suspend"].reenable
+      Rake::Task["workspaces:suspend"].invoke(workspace.slug)
+
+      expect(workspace.reload).to be_suspended
+      expect(project.reload.attributes.slice("archived_at", "discarded_at").values).to all(be_nil)
+    end
+  end
+
+  describe "workspaces:unsuspend" do
+    it "clears the suspension" do
+      workspace = create(:workspace).tap(&:suspend!)
+
+      Rake::Task["workspaces:unsuspend"].reenable
+      Rake::Task["workspaces:unsuspend"].invoke(workspace.slug)
+
+      expect(workspace.reload).not_to be_suspended
+    end
+  end
 end

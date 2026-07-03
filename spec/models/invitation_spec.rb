@@ -86,6 +86,44 @@ RSpec.describe Invitation, type: :model do
         invitation.accept!(user)
       }.not_to raise_error
     end
+
+    it "raises Invitation::NotAcceptable when the target workspace is suspended (workspace invitation)" do
+      workspace = create(:workspace)
+      invitation = create(:invitation, invitable: workspace)
+      workspace.suspend!
+      # Force user creation outside the expect block — onboarding callbacks
+      # create their own membership, which would confound the count.
+      user
+
+      expect {
+        invitation.accept!(user)
+      }.to raise_error(Invitation::NotAcceptable, /no longer acceptable/i)
+        .and change(Membership, :count).by(0)
+    end
+
+    it "raises Invitation::NotAcceptable when the target workspace is suspended (project invitation)" do
+      workspace = create(:workspace)
+      owner = create(:user)
+      create(:membership, :owner, user: owner, workspace: workspace)
+      project = create(:project, workspace: workspace, created_by: owner)
+      viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
+      invitation = project.invitations.create!(
+        email: "project-invitee@example.com",
+        role: viewer_role,
+        project_role: "editor",
+        invited_by: owner,
+        expires_at: 7.days.from_now
+      )
+      workspace.suspend!
+      # Force user creation outside the expect block — onboarding callbacks
+      # create their own membership, which would confound the count.
+      user
+
+      expect {
+        invitation.accept!(user)
+      }.to raise_error(Invitation::NotAcceptable, /no longer acceptable/i)
+        .and change(Membership, :count).by(0)
+    end
   end
 
   describe "#accept!" do

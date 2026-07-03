@@ -13,6 +13,10 @@ module WorkspaceScoped
     @workspace = Current.user.workspaces.kept.find_by!(slug: slug)
     Current.workspace = @workspace
     session[:current_workspace_id] = @workspace.id
+    # Locked gate. Redirect target MUST be workspaces_path — the nearest
+    # existing pattern (user_not_authorized -> workspace_path) would
+    # re-trigger this same gate in an infinite loop.
+    redirect_to workspaces_path, alert: t("workspaces.locked_notice") if @workspace.suspended?
   rescue ActiveRecord::RecordNotFound
     redirect_to workspaces_path, alert: t("workspaces.not_found")
   end

@@ -46,16 +46,17 @@ module Signupable
   end
 
   # Consumes the session's pending open-link join token for a freshly-signed-up,
-  # email-verified user. Stale link conditions (revoked, policy reverted) are
-  # silent no-ops. Benign "already a member" is rescued; other capacity errors
-  # propagate — the outer commit_signup_atomically rescues RecordInvalid and
-  # returns false, consistent with the invitation path.
+  # email-verified user. Stale link conditions (revoked, policy reverted,
+  # workspace suspended) are silent no-ops — a visitor who was never a member
+  # must not learn the workspace is locked. Benign "already a member" is
+  # rescued; other capacity errors propagate — the outer commit_signup_atomically
+  # rescues RecordInvalid and returns false, consistent with the invitation path.
   def accept_pending_join_link!(user)
     token = session[:pending_join_token]
     return if token.blank?
 
     link = WorkspaceJoinLink.active.find_by(token: token)
-    if link.nil? || !link.workspace.open_join?
+    if link.nil? || !link.workspace.open_join? || link.workspace.suspended?
       session.delete(:pending_join_token)
       return
     end

@@ -266,6 +266,31 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         user = User.find_by(email_address: "joiner@example.com")
         expect(user.memberships.kept.where(workspace: join_workspace)).to exist
       end
+
+      # Privacy (T14d): no existing spec covers a revoked link at this signup
+      # call site (Signupable#accept_pending_join_link!), so this suspended
+      # example is added directly alongside the happy path above rather than
+      # mirroring a revoked-link sibling. A suspended workspace must behave
+      # exactly like a revoked link here: the visitor was never a member, so
+      # signup must still succeed with no membership granted and no hint that
+      # the workspace is locked.
+      context "when the workspace was suspended between parking and signup" do
+        before { join_workspace.suspend! }
+
+        it "signs up the user without granting membership or leaking the lock" do
+          token = MagicLinkToken.create_for_email("suspended-joiner@example.com")
+
+          expect {
+            post magic_link_callback_path(token: token), params: {
+              user: { first_name: "Sus", last_name: "Pended" }
+            }
+          }.to change(User, :count).by(1)
+
+          user = User.find_by(email_address: "suspended-joiner@example.com")
+          expect(user.memberships.kept.where(workspace: join_workspace)).not_to exist
+          expect(flash[:alert]).not_to eq(I18n.t("workspaces.locked_notice"))
+        end
+      end
     end
 
     context "registration via magic link with a pending invitation" do

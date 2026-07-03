@@ -161,6 +161,7 @@ class Workspace < ApplicationRecord
   def admit(user, role:)
     transaction do
       lock!
+      raise Suspendable::SuspendedError if suspended?
       existing = memberships.find_by(user: user)
       if existing&.discarded?
         existing.undiscard!

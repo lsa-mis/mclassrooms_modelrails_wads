@@ -3,6 +3,11 @@ en:
     context_banner:
       in_workspace_html: "You're in <strong>%{name}</strong>"
     not_found: "Workspace not found."
+    locked_notice: "This workspace is locked."
+    locked_row:
+      heading: "This workspace is locked."
+      body: "Access to “%{name}” has been paused. Get in touch and we'll help you sort it out."
+      contact: "Contact support"
     unauthorized: "You don't have permission to do that."
     creation_disabled: "Workspace creation is disabled on this instance."
     archived_banner: "This workspace is archived."
