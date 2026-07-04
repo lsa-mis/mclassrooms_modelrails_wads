@@ -7,7 +7,7 @@
   <%= form_with url: workspace_project_memberships_path(@workspace, @project), method: :post, class: "mt-8 space-y-6" do |form| %>
     <%= form.select :user_id,
           @available_members.map { |m| [m.user.full_name, m.user.id] },
-          { label: t("workspaces.projects.memberships.new.user_label"), prompt: t("workspaces.projects.memberships.new.user_label") },
+          { label: t("workspaces.projects.memberships.new.user_label"), prompt: t("workspaces.projects.memberships.new.user_prompt") },
           {} %>
 
     <%= form.select :role,

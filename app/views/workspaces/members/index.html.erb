@@ -33,7 +33,7 @@
                 @roles.map { |r| [r.name, r.slug] },
                 params[:role]
               ),
-              { label: t("workspaces.members.index.filter_by_role") },
+              { label: t("workspaces.members.index.role") },
               { data: { action: "change->search-form#submit" } } %>
 
         <%= form.select :status,
@@ -44,7 +44,7 @@
                  [t("workspaces.members.index.status_deactivated"), "deactivated"]],
                 params[:status]
               ),
-              { label: t("workspaces.members.index.filter_by_status") },
+              { label: t("workspaces.members.index.status") },
               { data: { action: "change->search-form#submit" } } %>
       </div>
 

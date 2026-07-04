@@ -204,7 +204,7 @@ RSpec.describe "Members table", type: :system do
         expect(page).to have_text("invited@example.com")
       end
       select I18n.t("workspaces.members.index.status_pending"),
-        from: I18n.t("workspaces.members.index.filter_by_status")
+        from: I18n.t("workspaces.members.index.status")
       within("table") do
         expect(page).to have_text("invited@example.com")
         expect(page).not_to have_text("Owner User")

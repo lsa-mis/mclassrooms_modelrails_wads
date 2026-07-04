@@ -249,8 +249,21 @@
     appearance: base-select;
   }
 
-  /* Dropdown arrow: body-text tint, flips when the picker is open. */
+  /* Button layout: selected text at the start, picker-icon pinned to the
+     inline-end on the SAME row. `.form-field` applies `display: block`, which
+     overrides base-select's default flex button and drops the picker-icon onto
+     its own line — so we must restore `display: flex` here (this @supports block
+     wins by source order over `.form-field`), then align + pin the icon. */
+  .ui-select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  /* Dropdown arrow: body-text tint, flips in place when the picker is open. */
   .ui-select::picker-icon {
+    flex: none;
     color: var(--color-text-body);
     transition: rotate 0.2s ease;
   }

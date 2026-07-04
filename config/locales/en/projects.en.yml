@@ -60,6 +60,7 @@ en:
         new:
           title: "Add member"
           user_label: "Workspace member"
+          user_prompt: "Select a member..."
           role_label: "Role"
           submit: "Add to project"
         create:
