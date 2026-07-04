@@ -97,6 +97,14 @@ class Membership < ApplicationRecord
     end
   end
 
+  # Restoring a deactivated EXISTING member. Intentionally NOT guarded by
+  # Workspace#admittable? — unlike outsider admission (Workspace#admit), which
+  # blocks archived/locked/deleted. This path is only reachable through
+  # WorkspaceScoped, which already gates deleted (.kept) and locked (the
+  # suspended redirect), so only `archived` can reach here — and reactivating an
+  # existing member of an archived workspace is intentionally allowed: archived
+  # stays accessible to existing members, and the admin doing this is actively
+  # in the workspace. The pinning test in membership_spec locks this in.
   def reactivate!
     undiscard!
   end

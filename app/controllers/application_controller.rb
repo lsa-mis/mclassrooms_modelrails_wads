@@ -14,6 +14,7 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
   rescue_from Suspendable::SuspendedError, with: :workspace_locked
+  rescue_from Workspace::NotAdmittableError, with: :not_admittable
 
   helper_method :signups_open?
 
@@ -54,6 +55,13 @@ class ApplicationController < ActionController::Base
 
   def workspace_locked
     redirect_to workspaces_path, alert: t("workspaces.locked_notice")
+  end
+
+  # Generic, non-disclosing redirect for Workspace::NotAdmittableError — an
+  # outsider following a join link/invitation must not learn whether the
+  # workspace is archived, suspended, or deleted.
+  def not_admittable
+    redirect_to root_path, alert: t("workspaces.joins.invalid_or_revoked")
   end
 
   # Maps a Passkeys::Error subclass to its localized message for JSON error responses.

@@ -58,6 +58,21 @@ RSpec.describe "Workspace settings danger zone", type: :system do
     end
   end
 
+  context "on a personal (home) workspace" do
+    let(:home) { create(:workspace, personal: true) }
+
+    before do
+      create(:membership, :owner, user: owner, workspace: home)
+      sign_in_via_form(owner)
+    end
+
+    it "shows no Archive or Delete controls (home workspaces are lifecycle-exempt)" do
+      visit edit_workspace_settings_path(home)
+      expect(page).to have_no_button(I18n.t("workspaces.archive.trigger"))
+      expect(page).to have_no_button(I18n.t("workspaces.destroy.trigger"))
+    end
+  end
+
   context "as a plain member (no manage_settings permission)" do
     let(:member) { create(:user) }
 

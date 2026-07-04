@@ -86,13 +86,17 @@ RSpec.describe Signupable, type: :controller do
       expect(flash.now[:alert]).to be_present
     end
 
-    it "leaves session token in place when invitation NotAcceptable" do
+    it "clears the session token on invitation NotAcceptable so a retry can't loop" do
       invitation = create(:invitation, :expired, email: "retry@example.com")
       session[:pending_invitation_token] = invitation.token
 
       post :create, params: { email_address: "retry@example.com" }
 
-      expect(session[:pending_invitation_token]).to eq(invitation.token)
+      # I1: the token must be dropped on any NotAcceptable (expired/revoked/
+      # non-admittable) — otherwise a retry re-parks the same dead token and
+      # rejects forever. The invitation itself stays in the DB (accept! guards
+      # before marking consumed), reclaimable via a fresh emailed link.
+      expect(session[:pending_invitation_token]).to be_nil
     end
 
     it "rolls back user creation when the block raises ActiveRecord::Rollback" do

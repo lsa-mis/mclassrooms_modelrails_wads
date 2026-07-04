@@ -51,16 +51,17 @@ module Workspaces
     end
 
     # Looks up the workspace + the active link. Collapses "no workspace",
-    # "no link", "link revoked", "policy not open", "workspace suspended",
-    # and "instance allowlist excludes :open_link" into one neutral error —
-    # never reveals which condition failed (deny information leakage about
-    # workspace existence, join policy, or lock state — suspension blocks
-    # everything, including outsiders learning the workspace is locked).
+    # "no link", "link revoked", "policy not open", "workspace non-active
+    # (archived, suspended, or deleted)", and "instance allowlist excludes
+    # :open_link" into one neutral error — never reveals which condition
+    # failed (deny information leakage about workspace existence, join
+    # policy, or lock state — a locked/archived/deleted workspace blocks
+    # everything, including outsiders learning its lifecycle state).
     def set_workspace_and_link
-      @workspace = Workspace.find_by(slug: params[:workspace_slug])
+      @workspace = Workspace.kept.find_by(slug: params[:workspace_slug])
       @link = @workspace&.join_links&.active&.find_by(token: params[:token])
 
-      unless @workspace && @link && @workspace.open_join? && !@workspace.suspended?
+      unless @workspace && @link && @workspace.open_join? && @workspace.admittable?
         redirect_to root_path, alert: t("workspaces.joins.invalid_or_revoked")
       end
     end

@@ -78,17 +78,17 @@ class Authentication < ApplicationRecord
 
   # Reshape 2b: claim a workspace join-link token parked at signup time.
   # Stale link conditions (revoked, policy reverted, instance no longer
-  # permits :open_link, workspace suspended) are treated as silent no-ops —
-  # clear the token and continue, so email verification isn't blocked by a
-  # workspace whose join policy changed mid-flight. A visitor who was never
-  # a member must not learn the workspace is locked. Capacity/already-member
-  # errors propagate up so the caller can surface them.
+  # permits :open_link, workspace archived/suspended/deleted) are treated as
+  # silent no-ops — clear the token and continue, so email verification
+  # isn't blocked by a workspace whose join policy changed mid-flight. A
+  # visitor who was never a member must not learn the workspace is locked.
+  # Capacity/already-member errors propagate up so the caller can surface them.
   def claim_pending_join_link!(user)
     return if pending_join_link_token.blank?
 
     link = WorkspaceJoinLink.active.find_by(token: pending_join_link_token)
 
-    if link.nil? || !link.workspace.open_join? || link.workspace.suspended?
+    if link.nil? || !link.workspace.open_join? || !link.workspace.admittable?
       update!(pending_join_link_token: nil)
       return
     end

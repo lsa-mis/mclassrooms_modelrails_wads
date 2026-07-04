@@ -9,6 +9,7 @@ module Onboarding
 
     def create
       authorize Project
+      raise Suspendable::SuspendedError if Current.workspace.suspended?
       @project = Current.workspace.projects.build(project_params)
       @project.created_by = Current.user
 

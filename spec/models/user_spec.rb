@@ -518,7 +518,11 @@ RSpec.describe User, type: :model do
     end
 
     it "returns nil if the personal workspace has been soft-deleted" do
-      user.personal_workspace.discard!
+      # discard! now raises HomeWorkspaceError for a personal workspace, so set
+      # the tombstone directly — this exercises the defensive nil-return for a
+      # legacy/console-discarded personal workspace row, which is the case this
+      # guard is here to survive.
+      user.personal_workspace.update_column(:discarded_at, Time.current)
       expect(user.personal_workspace).to be_nil
     end
 
@@ -576,6 +580,17 @@ RSpec.describe User, type: :model do
       allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return("missing")
 
       expect { create(:user) }.to raise_error(/shared workspace/i)
+    end
+
+    it "creates the account but joins no membership when the shared workspace is suspended" do
+      shared_workspace.suspend!
+
+      user = nil
+      expect {
+        user = create(:user)
+      }.to change(User, :count).by(1)
+
+      expect(shared_workspace.memberships.where(user: user)).to be_empty
     end
   end
 

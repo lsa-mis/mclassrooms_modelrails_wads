@@ -46,4 +46,15 @@ RSpec.describe "Onboarding · project step", type: :request do
     get new_onboarding_project_path
     expect(response).to redirect_to(new_onboarding_workspace_path)
   end
+
+  it "does not create a project and redirects when the workspace is suspended" do
+    workspace.suspend!
+
+    expect {
+      post onboarding_project_path, params: { project: { name: "Acme Website", description: "Marketing site" } }
+    }.not_to change(Project, :count)
+
+    expect(response).to redirect_to(workspaces_path)
+    expect(flash[:alert]).to eq(I18n.t("workspaces.locked_notice"))
+  end
 end

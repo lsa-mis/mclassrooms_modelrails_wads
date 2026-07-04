@@ -578,6 +578,27 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
     end
 
+    # T5: archived and deleted workspaces must be as indistinguishable from a
+    # revoked link here as suspended ones are — the widened admittable? guard
+    # (was suspended?) covers all three non-active states at this claim site.
+    %i[archive discard].each do |lifecycle_action|
+      lifecycle_name = lifecycle_action == :archive ? "archived" : "deleted"
+
+      context "when the workspace was #{lifecycle_name} between parking and verification" do
+        it "silently no-ops: verifies, clears the token, grants no membership" do
+          workspace.public_send("#{lifecycle_action}!")
+
+          get verify_settings_connected_accounts_path(token: pending_auth.generate_token_for(:email_verification))
+
+          expect(pending_auth.reload.verified_at).to be_present
+          expect(user.reload.workspaces).not_to include(workspace)
+          expect(pending_auth.reload.pending_join_link_token).to be_nil
+          expect(flash[:alert]).to be_blank
+          expect(flash[:alert]).not_to match(/archived|deleted|locked|suspended/i)
+        end
+      end
+    end
+
     context "when the workspace's join policy reverted to invite-only mid-flight" do
       it "silently no-ops: verifies, clears the token, grants no membership" do
         workspace.update!(join_policy: "invite")

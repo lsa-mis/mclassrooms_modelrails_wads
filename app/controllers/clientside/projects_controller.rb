@@ -4,7 +4,7 @@ module Clientside
     before_action :ensure_clientside_enabled, only: :show
 
     def index
-      @projects = Project.where(id: Current.user.client_accesses.kept.select(:project_id))
+      @projects = Project.client_accessible.where(id: accessible_project_ids)
     end
 
     def show

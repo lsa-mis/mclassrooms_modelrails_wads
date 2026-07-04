@@ -101,6 +101,8 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Security
 
+- New-member admission blocked into archived, deleted, or locked workspaces on every path — join links, invitations, signup claims, and the client area — with generic copy that never reveals which lifecycle state blocked an outsider (#417).
+- Home workspaces (personal, and the shared instance workspace) can no longer be archived or deleted — a policy exemption plus a model guard that also covers console and direct-call paths (#417).
 - Dependency CVE bumps — nokogiri/faraday (#371), css_parser 3.0.0/msgpack 1.8.3 (#400); unfixable thruster Go CVEs ignored in the image scan (#380, #395).
 - Invitation acceptance bound to the invited email across every path and deferred until verified — a leaked link can't be redeemed by someone else (#175, #176).
 - Per-recipient email throttle across senders — prevents N attackers from collectively flooding one inbox.

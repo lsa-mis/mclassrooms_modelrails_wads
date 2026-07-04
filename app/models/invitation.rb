@@ -135,17 +135,19 @@ class Invitation < ApplicationRecord
       lock!
       raise NotAcceptable, "Invitation no longer acceptable" unless pending?
       raise NotAcceptable, "Invitation no longer acceptable" if expired?
-      # Single choke point for the suspended-workspace gate: every acceptance
-      # path (direct accept controller, magic-link registration, OAuth
-      # signup, email-verification claim) funnels through accept!, so
+      # Single choke point for the non-active-workspace gate: every
+      # acceptance path (direct accept controller, magic-link registration,
+      # OAuth signup, email-verification claim) funnels through accept!, so
       # guarding here — rather than in any one controller — closes all of
-      # them at once. Reuses NotAcceptable's existing invalid/expired
-      # rejection copy rather than the locked_notice copy: an invitee must
-      # not learn the workspace is locked. This also makes Workspace#admit's
-      # own SuspendedError raise unreachable from invitation flows; that
+      # them at once. admittable? covers every non-active state (archived,
+      # deleted, suspended) and fails closed when resolved_workspace is nil.
+      # Reuses NotAcceptable's existing invalid/expired rejection copy
+      # rather than the locked_notice copy: an invitee must not learn the
+      # workspace is locked. This also makes Workspace#admit's own
+      # NotAdmittableError raise unreachable from invitation flows; that
       # guard remains as a backstop for other admit callers (e.g. open-link
       # self-join).
-      raise NotAcceptable, "Invitation no longer acceptable" if resolved_workspace&.suspended?
+      raise NotAcceptable, "Invitation no longer acceptable" unless resolved_workspace&.admittable?
       if client_invite?
         accept_client_invitation!(user)
       elsif invitable_type == "Project"
@@ -219,6 +221,7 @@ class Invitation < ApplicationRecord
   end
 
   def accept_client_invitation!(user)
+    raise NotAcceptable, "Invitation no longer acceptable" unless invitable.kept?
     raise NotAcceptable, "Clientside is disabled for this project" unless invitable.clientside_enabled?
 
     access = invitable.client_accesses.find_by(user: user)

@@ -36,6 +36,6 @@ class WorkspacePolicy < ApplicationPolicy
   # archive?/unarchive?/destroy? share one predicate so the three can't
   # silently drift (same pattern as ApplicationPolicy's new? -> create?).
   def lifecycle_manageable?
-    can?("manage_workspace")
+    can?("manage_workspace") && !record.home?
   end
 end

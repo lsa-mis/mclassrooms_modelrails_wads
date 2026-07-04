@@ -128,6 +128,19 @@ RSpec.describe Membership, type: :model do
       membership.reactivate!
       expect(membership.reload).not_to be_discarded
     end
+
+    # Pins the deliberate admission-asymmetry documented on reactivate!: an
+    # existing member of an ARCHIVED workspace can still be reactivated, even
+    # though Workspace#admit blocks NEW admission into archived workspaces. If a
+    # future refactor adds an admittable?/archived? guard to reactivate!, this
+    # fails and forces that decision back into the open.
+    it "reactivates a member even when the workspace is archived" do
+      membership.discard!
+      membership.workspace.archive!
+
+      expect { membership.reactivate! }.not_to raise_error
+      expect(membership.reload).not_to be_discarded
+    end
   end
 
   describe "max_members enforcement" do

@@ -6,6 +6,17 @@ class Workspace < ApplicationRecord
   include Broadcastable
   include Sluggable
 
+  # Raised when an owner tries to archive/delete a home workspace (personal or
+  # the :shared instance workspace). Defense in depth behind WorkspacePolicy —
+  # covers console/direct-call paths the policy never sees.
+  HomeWorkspaceError = Class.new(StandardError)
+
+  # Raised by #admit when a workspace won't accept new members (archived,
+  # suspended, or deleted). Distinct from Suspendable::SuspendedError so its
+  # rescue can map to GENERIC, non-disclosing copy — an outsider following a
+  # join link/invitation must not learn which lifecycle state blocked them.
+  NotAdmittableError = Class.new(StandardError)
+
   has_one_attached :logo
   has_one_attached :logo_original
   has_many :memberships, dependent: :destroy
@@ -56,6 +67,24 @@ class Workspace < ApplicationRecord
     end
   end
 
+  # A "home" workspace is the user's personal workspace or, under the :shared
+  # posture, the instance's single shared workspace. Home workspaces are
+  # exempt from owner archive/delete (there's nowhere for the user to land).
+  # Compared by slug — never a query or AR identity — so it stays correct
+  # regardless of the workspace's own lifecycle state (see design finding #5).
+  def home?
+    personal? || (TenancyConfig.shared? && slug == TenancyConfig.shared_workspace_slug)
+  end
+
+  # A workspace accepts NEW members (via join link, invitation, or signup
+  # claim) only while active. Existing-member management is separate — see
+  # Membership#reactivate!. Derived from `status` (not a hand-rolled
+  # conjunction) so a future lifecycle state fails CLOSED here automatically
+  # instead of silently admitting — the exact bug class this guard exists for.
+  def admittable?
+    status == :active
+  end
+
   # Guarded lifecycle mutators. Plain `transaction do` opens BEGIN IMMEDIATE
   # on Rails 8.1's SQLite adapter (write lock taken before the first read),
   # so lock!-then-guard is atomic check-then-act. lock! raises on records
@@ -66,6 +95,7 @@ class Workspace < ApplicationRecord
     transaction do
       lock!
       next if archived?
+      raise HomeWorkspaceError if home?
       raise Suspendable::SuspendedError if suspended?
       super
     end
@@ -84,6 +114,7 @@ class Workspace < ApplicationRecord
     transaction do
       lock!
       next if discarded?
+      raise HomeWorkspaceError if home?
       raise Suspendable::SuspendedError if suspended?
       projects.kept.find_each(&:discard!)
       super
@@ -161,7 +192,7 @@ class Workspace < ApplicationRecord
   def admit(user, role:)
     transaction do
       lock!
-      raise Suspendable::SuspendedError if suspended?
+      raise NotAdmittableError unless admittable?
       existing = memberships.find_by(user: user)
       if existing&.discarded?
         existing.undiscard!

@@ -12,15 +12,22 @@ module Clientside
 
     def set_client_project
       slug = params[:project_id] || params[:id]
-      # Project#to_param returns slug; resolve by slug then verify client access.
-      project = Project.find_by(slug: slug)
-      access = project && Current.user.client_accesses.kept.find_by(project_id: project.id)
-      if access.nil?
+      # Resolve slug WITHIN the client's own projects — slugs are unique only
+      # per workspace, so a global find_by can resolve the wrong project.
+      project = Project.where(id: accessible_project_ids).find_by(slug: slug)
+      if project.nil? || !project.client_accessible?
         redirect_to clientside_projects_path, alert: t("clientside.area.no_access")
         return
       end
-      @project = access.project
+      @project = project
       Current.project = @project
+    end
+
+    # The current client's reachable project ids — every kept ClientAccess they
+    # hold. Both set_client_project (show) and ProjectsController#index scope to
+    # this set; keeping it in one place stops the two from drifting.
+    def accessible_project_ids
+      Current.user.client_accesses.kept.select(:project_id)
     end
 
     def ensure_clientside_enabled

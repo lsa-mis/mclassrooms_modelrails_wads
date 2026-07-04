@@ -78,4 +78,21 @@ RSpec.describe WorkspacePolicy do
       expect(described_class.new(user, workspace).destroy?).to be false
     end
   end
+
+  describe "home-workspace exemption" do
+    let(:user) { create(:user) }
+    let(:home) { create(:workspace, personal: true) }
+
+    before do
+      Current.workspace = home
+      create(:membership, :owner, user: user, workspace: home)
+    end
+
+    it "denies archive/unarchive/destroy on a personal (home) workspace even for an owner" do
+      policy = described_class.new(user, home)
+      expect(policy.archive?).to be false
+      expect(policy.unarchive?).to be false
+      expect(policy.destroy?).to be false
+    end
+  end
 end

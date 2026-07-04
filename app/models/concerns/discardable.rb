@@ -17,4 +17,8 @@ module Discardable
   def discarded?
     discarded_at.present?
   end
+
+  def kept?
+    !discarded?
+  end
 end

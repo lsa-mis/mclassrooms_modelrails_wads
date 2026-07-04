@@ -278,6 +278,12 @@ class User < ApplicationRecord
   def join_shared_workspace
     workspace = TenancyConfig.shared_workspace
     raise "Shared workspace #{TenancyConfig.shared_workspace_slug.inspect} not found — has the tenancy seed run?" unless workspace
+    # A non-admittable shared workspace (suspended = instance maintenance/hold;
+    # archived/deleted shouldn't happen to the shared home workspace, but
+    # admittable? fails closed regardless) — the account still creates (this
+    # runs in the after_create transaction; a raise would roll back
+    # registration), the user simply joins nothing and lands on the empty index.
+    return unless workspace.admittable?
 
     member_role = Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
       r.name = "Member"

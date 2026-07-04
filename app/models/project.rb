@@ -22,6 +22,14 @@ class Project < ApplicationRecord
   validates :slug, presence: true, uniqueness: { scope: :workspace_id }
   validate :workspace_has_project_capacity, on: :create
 
+  # A project is visible to external clients only while it — and its
+  # workspace — are kept and the workspace is not suspended (locked).
+  # Archived (project OR workspace) still shows: archived keeps existing
+  # collaborators, and clients are collaborators on a specific project.
+  scope :client_accessible, -> {
+    kept.where(workspace: Workspace.kept.not_suspended)
+  }
+
   def to_param
     slug
   end
@@ -82,6 +90,10 @@ class Project < ApplicationRecord
 
   def client?(user)
     client_accesses.kept.exists?(user: user)
+  end
+
+  def client_accessible?
+    kept? && workspace.kept? && !workspace.suspended?
   end
 
   def client_visible_resources
