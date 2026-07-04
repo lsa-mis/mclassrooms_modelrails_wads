@@ -333,10 +333,10 @@ RSpec.describe Invitation, type: :model do
       expect(pm).to be_viewer
     end
 
-    it "raises for discarded project" do
+    it "raises NotAcceptable for a discarded project" do
       project.discard!
       invitee = create(:user)
-      expect { invitation.accept!(invitee) }.to raise_error(ActiveRecord::RecordInvalid)
+      expect { invitation.accept!(invitee) }.to raise_error(Invitation::NotAcceptable)
     end
   end
 

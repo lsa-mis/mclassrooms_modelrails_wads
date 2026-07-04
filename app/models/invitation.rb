@@ -247,8 +247,21 @@ class Invitation < ApplicationRecord
   end
 
   def accept_project_invitation!(user)
+    # A discarded project is unacceptable — the same generic NotAcceptable the
+    # workspace and client paths raise (was ActiveRecord::RecordInvalid). Checked
+    # first so a dead project never grants a workspace membership as a side effect.
+    raise NotAcceptable, "Invitation no longer acceptable" unless invitable.kept?
+
     workspace = invitable.workspace
     workspace.lock!
+    # Re-verify admittability now that we hold the row lock — defends the window
+    # between accept!'s (un-locked) admittable? read and this grant. SQLite's
+    # BEGIN IMMEDIATE already serializes writers; this also holds on a
+    # row-locking database. Not routed through Workspace#admit: admit's
+    # grant-a-new-member contract errors/reconciles on an existing member, but a
+    # project invite must TOLERATE an existing workspace member (just add them to
+    # the project) — see the "already a project member" spec.
+    raise NotAcceptable, "Invitation no longer acceptable" unless workspace.admittable?
 
     existing_membership = workspace.memberships.find_by(user: user)
     if existing_membership&.discarded?
@@ -260,7 +273,6 @@ class Invitation < ApplicationRecord
       workspace.memberships.create!(user: user, role: role)
     end
 
-    raise ActiveRecord::RecordInvalid.new(self), "Project is no longer active" if invitable.discarded?
     raise ActiveRecord::RecordInvalid.new(self), "User is already a project member" if invitable.project_memberships.exists?(user: user)
     invitable.project_memberships.create!(user: user, role: project_role || "editor")
   end

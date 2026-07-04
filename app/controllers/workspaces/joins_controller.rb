@@ -34,8 +34,9 @@ module Workspaces
         # Already in: no-op, land them in the workspace.
         redirect_to workspace_path(@workspace), notice: t("workspaces.joins.create.already_member", workspace: @workspace.name)
       else
-        # Capacity, etc. — surface the model message cleanly.
-        redirect_to root_path, alert: e.message
+        # Capacity, etc. — a generic i18n message, never the raw model string
+        # (avoids leaking internal validation text to an outsider).
+        redirect_to root_path, alert: t("workspaces.joins.create.could_not_join", workspace: @workspace.name)
       end
     end
 

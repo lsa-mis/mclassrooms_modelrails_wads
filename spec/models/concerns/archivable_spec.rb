@@ -25,9 +25,9 @@ RSpec.describe Archivable, type: :model do
     let!(:active_record) { create(:workspace) }
     let!(:archived_record) { create(:workspace).tap(&:archive!) }
 
-    it "active excludes archived" do
-      expect(Workspace.active).to include(active_record)
-      expect(Workspace.active).not_to include(archived_record)
+    it "not_archived excludes archived" do
+      expect(Workspace.not_archived).to include(active_record)
+      expect(Workspace.not_archived).not_to include(archived_record)
     end
 
     it "archived includes only archived" do

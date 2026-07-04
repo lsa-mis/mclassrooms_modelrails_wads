@@ -16,7 +16,7 @@ class WorkspacesController < ApplicationController
     # *other* members' user records.
     scope = Current.user.memberships.kept
               .joins(:workspace)
-              .merge(Workspace.kept.active)
+              .merge(Workspace.kept.not_archived)
               .includes(
                 :role,
                 workspace: [ :logo_attachment, memberships: [ :role, :user ] ]

@@ -9,7 +9,7 @@ class Workspace < ApplicationRecord
   # Raised when an owner tries to archive/delete a home workspace (personal or
   # the :shared instance workspace). Defense in depth behind WorkspacePolicy —
   # covers console/direct-call paths the policy never sees.
-  HomeWorkspaceError = Class.new(StandardError)
+  HomeWorkspaceProtectedError = Class.new(StandardError)
 
   # Raised by #admit when a workspace won't accept new members (archived,
   # suspended, or deleted). Distinct from Suspendable::SuspendedError so its
@@ -95,7 +95,7 @@ class Workspace < ApplicationRecord
     transaction do
       lock!
       next if archived?
-      raise HomeWorkspaceError if home?
+      raise HomeWorkspaceProtectedError if home?
       raise Suspendable::SuspendedError if suspended?
       super
     end
@@ -114,7 +114,7 @@ class Workspace < ApplicationRecord
     transaction do
       lock!
       next if discarded?
-      raise HomeWorkspaceError if home?
+      raise HomeWorkspaceProtectedError if home?
       raise Suspendable::SuspendedError if suspended?
       projects.kept.find_each(&:discard!)
       super

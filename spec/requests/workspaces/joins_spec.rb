@@ -67,7 +67,9 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
       workspace.update!(max_members: 1)  # owner already fills capacity
       post workspace_join_path(workspace, token: link.token)
       expect(workspace.memberships.find_by(user: newcomer)).to be_nil
-      expect(flash[:alert]).to be_present
+      # A generic i18n message, never the raw model validation string.
+      expect(flash[:alert]).to eq(I18n.t("workspaces.joins.create.could_not_join", workspace: workspace.name))
+      expect(flash[:alert]).not_to match(/capacity|max_members/i)
     end
 
     it "redirects gracefully when the user is already a member" do

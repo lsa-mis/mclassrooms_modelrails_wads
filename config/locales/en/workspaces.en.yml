@@ -27,6 +27,7 @@ en:
         joined: "Welcome to %{workspace}."
         already_member: "You're already a member of %{workspace}."
         register_first: "Create an account to join %{workspace}."
+        could_not_join: "You couldn't be added to %{workspace} right now."
     switcher:
       label: "Workspaces"
     sidebar:
