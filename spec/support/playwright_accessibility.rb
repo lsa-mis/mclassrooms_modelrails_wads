@@ -75,6 +75,19 @@ module PlaywrightAccessibility
           const context = {};
           if (include.length > 0) context.include = include;
           if (exclude.length > 0) context.exclude = exclude;
+
+          // Settle in-flight CSS transitions/animations before auditing so
+          // color-contrast is computed on the FINAL painted state, not a
+          // mid-transition composite. A dialog caught mid-open at ~0.67 opacity
+          // blends its (settled-AAA) background over the surface below it, and
+          // axe reports a bogus sub-threshold ratio — the §2b surface-drift
+          // flake (~1-in-3 under full-suite load, when the open animation is
+          // still running as the sweep fires). finish() jumps each FINITE
+          // animation to its end state; infinite animations (spinners) throw
+          // InvalidStateError and are skipped, so this can't hang the audit.
+          document.getAnimations().forEach((a) => { try { a.finish(); } catch (_) {} });
+          void document.body.offsetHeight; // force reflow so computed styles reflect the settled state
+
           const results = (context.include || context.exclude)
             ? await axe.run(context, options)
             : await axe.run(options);
