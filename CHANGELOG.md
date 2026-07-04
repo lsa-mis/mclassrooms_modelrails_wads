@@ -12,6 +12,8 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Added
 
+- Workspace & project lifecycle — Archive (reversible; restore from the Archived section) and permanent Delete (workspace deletion gated by a type-the-name confirmation), cascading workspace → projects (#413, #414).
+- Operator workspace lock — `rails "workspaces:suspend[slug]"` / `"workspaces:unsuspend[slug]"` puts a workspace on hold ("This workspace is locked."), blocking owners until released (#415).
 - Passwordless-first sign-in — magic link is the default; a password is an opt-in set from Security settings (#374).
 - Passkeys / WebAuthn — register platform authenticators and sign in with a discoverable credential (#375, #376).
 - Browser-hosted GitHub Codespace — one-click cloud dev environment; boots, signs in, and runs the suite in-container (#385).

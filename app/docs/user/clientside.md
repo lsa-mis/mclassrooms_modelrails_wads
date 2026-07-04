@@ -70,12 +70,12 @@ The `Clientside::` controller namespace hosts the read-only client experience:
 
 - **`Clientside::BaseController`** — inherits from `ApplicationController`; calls `skip_onboarding_requirement`; uses `layout "clientside"`; does **not** include `WorkspaceScoped` and never sets `Current.workspace`. All project access is resolved through the user's own `client_accesses`.
 
-  `set_client_project` resolves a project by slug and then verifies a kept `ClientAccess` for the current user. Slug knowledge alone grants nothing — the access record must exist and be kept.
+  `set_client_project` resolves the slug **within** the user's own accessible projects (their kept `ClientAccess` set) — slug knowledge alone grants nothing — and then applies the lifecycle predicate `Project#client_accessible?`. A project is client-accessible only while it and its workspace are kept and the workspace is not locked; an **archived** project or workspace stays accessible (archived keeps existing collaborators). Anything else redirects with a generic no-access message that never reveals the project's or workspace's lifecycle state.
 
   `ensure_clientside_enabled` redirects away if the project's Clientside has been turned off after the access was granted.
 
 - **`Clientside::ProjectsController`**
-  - `index` — lists all projects the user has a kept `ClientAccess` for
+  - `index` — lists the projects the user has a kept `ClientAccess` for, filtered through `Project.client_accessible` (archived-workspace projects still appear; deleted or locked ones don't)
   - `show` — renders `@project.client_visible_resources` (read-only)
 
 - **`Clientside::Projects::ResourcesController`**

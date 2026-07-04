@@ -148,9 +148,21 @@ Clients access the project through the separate `Clientside::` controller namesp
 
 See [Clientside](/docs/user/clientside) for the full reference.
 
-## Soft Delete
+## Project Lifecycle
 
-Projects use the `Discardable` concern for soft deletion. Deleting a project hides it from all views but preserves data. Workspace deletion cascades to all projects.
+Like workspaces, projects are **Active** by default and can be **Archived** (reversible) or **Deleted** (permanent) by anyone who can manage the project. Projects have no lock state of their own — a locked workspace blocks its projects along with everything else.
+
+### Archive (reversible)
+
+**Route:** `PATCH /workspaces/:workspace_slug/projects/:slug/archive` · `PATCH .../unarchive`
+
+Archiving moves a project out of the active list — "you can bring it back anytime from the **Archived** section." An archived project stays readable to its members and to external clients on shared resources (see [Clientside](/docs/user/clientside)). **Restore** returns it to Active.
+
+### Delete (permanent)
+
+**Route:** `DELETE /workspaces/:workspace_slug/projects/:slug`
+
+Deleting is permanent, confirmed through a "Delete this project for good?" → "Delete forever" dialog (no name-typing, unlike deleting a whole workspace). Under the hood it is a soft delete (`Discardable`) — data is retained but hidden from every view. Deleting a workspace cascades this to all of its projects.
 
 ## Real-Time Updates
 

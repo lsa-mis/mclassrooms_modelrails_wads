@@ -1,7 +1,7 @@
 ---
 title: Workspace Administration
 description: Creating and managing workspaces, members, invitations, roles, branding, and ownership
-keywords: workspace members invitations roles branding ownership transfer settings capacity limits soft delete discard
+keywords: workspace members invitations roles branding ownership transfer settings capacity limits lifecycle archive restore delete locked suspend danger zone soft delete discard
 ---
 
 # Workspace Administration
@@ -157,12 +157,37 @@ Pundit policies call `can?("permission_name")`, which looks up `membership.role.
 
 A hue value (0–360) that determines the workspace icon's background color via OKLCH. Applied as a CSS custom property (`--hue`) for CSP safety.
 
-## Soft Delete
+## Workspace Lifecycle
+
+Every workspace is **Active** by default. An owner (anyone with `manage_workspace` — Owner only, not Admin) can move it through two owner-controlled states from the **Danger Zone** in workspace settings; operators have a third, hold-only state.
+
+### Archive (reversible)
+
+**Route:** `PATCH /workspaces/:slug/archive` · `PATCH /workspaces/:slug/unarchive`  
+**Permission:** `manage_workspace` (Owner)
+
+Archiving moves a workspace out of your active list without deleting anything — "it'll move out of your active list; you can bring it back anytime from the **Archived** section." Archived workspaces stay fully readable to their existing members (and to external clients on shared projects — see [Clientside](/docs/user/clientside)); they just don't clutter the workbench. **Restore** returns it to Active at any time.
+
+### Delete (permanent)
 
 **Route:** `DELETE /workspaces/:slug`  
-**Permission:** `manage_workspace` (Owner, Admin)
+**Permission:** `manage_workspace` (Owner)
 
-Workspaces are soft-deleted via the `Discardable` concern. Deleting a workspace also cascades the soft-delete to all its projects. Memberships and invitations remain in the database but the workspace is hidden from all user-facing views.
+Deleting is permanent and gated behind a **type-the-workspace-name** confirmation ("Delete this workspace for good?" → type the exact name → "Delete forever"). It cascades — every project in the workspace is deleted too. Under the hood this is a soft delete (`Discardable`): the rows are retained but hidden from every user-facing view, so an operator can recover it from the console, but there is no in-app undo.
+
+### Locked (operator hold)
+
+Locking is **operator-only** — there is no UI. An operator runs `rails "workspaces:suspend[the-slug]"` to lock a workspace and `rails "workspaces:unsuspend[the-slug]"` to release it. While locked, owners and members are blocked from acting on the workspace and see **"This workspace is locked."** Locking is a temporary hold (billing, abuse review), distinct from Archive (owner tidying) and Delete (permanent).
+
+### Home workspaces are protected
+
+Your personal workspace — and, on a single-tenant (`:shared`) instance, the shared workspace — **cannot be archived or deleted**: there would be nowhere to land, so the Danger Zone doesn't appear for them. (An operator can still lock a shared workspace for maintenance.)
+
+### Precedence
+
+A workspace has one effective state, resolved in this order: **Deleted → Locked → Archived → Active**. A workspace that is both locked and archived reads as Locked until it is unlocked.
+
+New members can only ever join an **Active** workspace — invitations, join links, and signup claims into an archived, locked, or deleted workspace are all rejected with a generic message that never reveals which state blocked them.
 
 ## Real-Time Updates
 
