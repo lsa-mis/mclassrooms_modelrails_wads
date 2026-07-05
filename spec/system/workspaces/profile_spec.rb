@@ -13,9 +13,10 @@ RSpec.describe "Workspace Profile destination", type: :system do
     sign_in_via_form(owner)
   end
 
-  it "renders the disambiguated Profile H1" do
+  it "renders the Profile H1, disambiguated by the persistent identity bar" do
     visit edit_workspace_path(workspace)
-    expect(page).to have_css("h1", text: "#{workspace.name}'s profile")
+    expect(page).to have_css("h1", text: "Profile")
+    expect(page).to have_css("#workspace-name-heading", text: workspace.name)
   end
 
   it "renders the Profile description" do

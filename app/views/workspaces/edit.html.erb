@@ -1,14 +1,14 @@
 <% content_for(:title) { t("workspaces.edit.title", workspace: @workspace.name) } %>
 <%# Workspace Profile destination — identity (name, logo, primary_color).
     Operational config (capacity, plan) lives on Workspaces::SettingsController. %>
-<div class="max-w-2xl mx-auto px-4 py-16">
+<div class="max-w-2xl mx-auto px-4 pt-4 pb-16">
   <% if @workspace.archived? %>
     <%= render "shared/archived_banner",
           message: t("workspaces.archived_banner"),
           restore_path: unarchive_workspace_path(@workspace) %>
   <% end %>
   <%= render "shared/settings_page_header",
-        title_html: t("settings.pages.workspace_profile.h1_html", name: ERB::Util.html_escape(@workspace.name)),
+        title_html: t("settings.pages.workspace_profile.h1_html"),
         description: t("settings.pages.workspace_profile.description") %>
 
   <div class="mt-8">

@@ -1,0 +1,27 @@
+<%# locals: (workspace:) -%>
+<%# Persistent workspace identity — logo + name + plan, rendered above the
+    section-nav strip so identity leads navigation on every workspace page. -%>
+<div class="flex items-center gap-3 mb-4">
+  <span id="workspace_logo_show" class="shrink-0">
+    <%= workspace_icon_for(workspace, size: :md) %>
+  </span>
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2 min-w-0">
+      <span id="workspace-name-heading" class="text-lg font-bold text-text-heading truncate">
+        <%= workspace.name %>
+      </span>
+      <%= ui :badge, workspace.plan.titleize, variant: :outline, tone: :neutral %>
+    </div>
+  </div>
+  <% if workspace.personal? %>
+    <%# Personal workspaces: "Customize" replaces the Settings sidebar entry.
+        Opens a modal with name + logo editing (Phase 1). %>
+    <%= render "shared/modal",
+          id: "workspace-customize",
+          title: t("workspaces.overview.customize.title"),
+          trigger: t("workspaces.overview.customize.open"),
+          trigger_class: "btn-touch-target btn-text btn-text-interactive text-sm" do %>
+      <%= render "workspaces/customize_modal", workspace: workspace %>
+    <% end %>
+  <% end %>
+</div>

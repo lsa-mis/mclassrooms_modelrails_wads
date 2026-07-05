@@ -56,6 +56,9 @@
               data-workspace-branded
               style="--ws-primary-light: oklch(0.40 0.15 <%= ws_hue %>); --ws-primary-dark: oklch(0.78 0.10 <%= ws_hue %>);"
             <% end %>>
+        <% if settings_context_value == "workspace" && Current.workspace %>
+          <%= render "shared/workspace_identity_bar", workspace: Current.workspace %>
+        <% end %>
         <%= render "shared/section_nav_strip",
               items: settings_nav_items,
               heading: t("settings.sidebar.strip_heading.#{settings_context_value}") %>

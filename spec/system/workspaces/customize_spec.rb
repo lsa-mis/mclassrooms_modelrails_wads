@@ -19,7 +19,7 @@ RSpec.describe "Personal workspace Customize", type: :system do
     fill_in I18n.t("workspaces.overview.customize.name_label"), with: "My Stuff"
     click_on I18n.t("workspaces.overview.customize.save")
 
-    expect(page).to have_css("h1", text: "My Stuff")
+    expect(page).to have_css("#workspace-name-heading", text: "My Stuff")
   end
 
   it "exposes the logo-picker trigger inside the Customize modal" do

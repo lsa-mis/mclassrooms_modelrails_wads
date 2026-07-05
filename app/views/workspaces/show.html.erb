@@ -5,37 +5,13 @@
 <%# px-6 aligns the content gutter with the mobile section-nav strip above it
     (which sits at px-6); py scales up with the viewport so mobile isn't mostly
     dead space above the fold while desktop keeps its generous rhythm. -%>
-<div class="max-w-4xl mx-auto px-6 py-6 sm:py-10 lg:py-16">
+<div class="max-w-4xl mx-auto px-6 pt-4 pb-6 sm:pb-10 lg:pb-16">
   <% if @workspace.archived? %>
     <%= render "shared/archived_banner",
           message: t("workspaces.archived_banner"),
           restore_path: unarchive_workspace_path(@workspace) %>
   <% end %>
   <%= turbo_stream_from @workspace %>
-  <div class="flex items-center gap-4">
-    <span id="workspace_logo_show">
-      <%= workspace_icon_for(@workspace, size: :lg) %>
-    </span>
-    <div class="flex-1 min-w-0">
-      <h1 id="workspace-name-heading" class="text-3xl font-bold text-text-heading">
-        <%= @workspace.name %>
-      </h1>
-      <div class="mt-1">
-        <%= ui :badge, @workspace.plan.titleize, variant: :outline, tone: :neutral %>
-      </div>
-    </div>
-    <% if @workspace.personal? %>
-      <%# Personal workspaces: "Customize" replaces the Settings sidebar entry.
-          Opens a modal with name + logo editing in the Overview context (Phase 1). %>
-      <%= render "shared/modal",
-            id: "workspace-customize",
-            title: t("workspaces.overview.customize.title"),
-            trigger: t("workspaces.overview.customize.open"),
-            trigger_class: "btn-secondary" do %>
-        <%= render "workspaces/customize_modal", workspace: @workspace %>
-      <% end %>
-    <% end %>
-  </div>
 
   <%= render "shared/activity_feed", activities: ActivityLog.visible.for_workspace(@workspace).recent.includes(:actor) %>
 </div>

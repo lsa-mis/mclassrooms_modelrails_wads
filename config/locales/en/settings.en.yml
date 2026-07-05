@@ -49,11 +49,11 @@ en:
         h1_html: "<span class='text-text-muted font-normal'>%{name}</span> settings"
         description: "Workspace identity, capacity, and plan."
       workspace_profile:
-        h1_html: "<span class='text-text-muted font-normal'>%{name}</span>'s profile"
+        h1_html: "Profile"
         description: "Workspace identity — name, logo, and primary color."
       workspace_limits_and_plan:
-        h1_html: "<span class='text-text-muted font-normal'>%{name}</span> Limits & Plan"
+        h1_html: "Limits &amp; Plan"
         description: "Capacity and plan — visible to all members, editable by Owner and Admin."
       workspace_members:
-        h1_html: "<span class='text-text-muted font-normal'>%{name}</span> members"
+        h1_html: "Members"
         description: "Invite teammates, manage roles, deactivate access."

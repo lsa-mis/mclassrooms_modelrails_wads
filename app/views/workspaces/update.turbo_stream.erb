@@ -1,8 +1,9 @@
-<%# Replace the workspace name heading on the Overview when renamed in-context. %>
+<%# Replace the workspace name heading in the persistent identity bar when
+    renamed in-context — markup must match shared/_workspace_identity_bar. %>
 <%= turbo_stream.replace "workspace-name-heading" do %>
-  <h1 id="workspace-name-heading" class="text-3xl font-bold text-text-heading">
+  <span id="workspace-name-heading" class="text-lg font-bold text-text-heading truncate">
     <%= @workspace.name %>
-  </h1>
+  </span>
 <% end %>
 
 <%= turbo_stream.replace "workspace_logo_branding" do %>
@@ -17,8 +18,8 @@
 <% end %>
 
 <%= turbo_stream.replace "workspace_logo_show" do %>
-  <span id="workspace_logo_show">
-    <%= workspace_icon_for(@workspace, size: :lg) %>
+  <span id="workspace_logo_show" class="shrink-0">
+    <%= workspace_icon_for(@workspace, size: :md) %>
   </span>
 <% end %>
 

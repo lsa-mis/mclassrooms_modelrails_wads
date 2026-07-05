@@ -34,10 +34,13 @@
                  style: "--ws-primary-light: oklch(0.40 0.15 #{ws_hue}); --ws-primary-dark: oklch(0.78 0.10 #{ws_hue});" }
              end %>
         <%= tag.main id: "main-content", tabindex: "-1", class: "flex-1 min-w-0", **main_context_attrs do %>
-          <%= render "shared/workspace_back_link" %>
           <%# px-6 matches the strip's -mx-6 full-bleed (the workspace <main> has
               no px of its own, unlike the settings <main>) so it reaches the
               viewport edge without overflowing. -%>
+          <div class="px-6 md:px-0">
+            <%= render "shared/workspace_identity_bar", workspace: Current.workspace %>
+          </div>
+          <%= render "shared/workspace_back_link" %>
           <div class="px-6 md:px-0">
             <%= render "shared/section_nav_strip",
                   items: workspace_shell_nav_items,
