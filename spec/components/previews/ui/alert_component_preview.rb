@@ -15,7 +15,9 @@ module UI
   # - It's an ephemeral flash — use the app's toast system (`shared/_toasts`).
   #
   # ## Accessibility contract
-  # - **Guarantees:** an urgency-matched live region and AAA-contrast text.
+  # - **Guarantees:** an urgency-matched live region, AAA-contrast text, and a
+  #   tone-matched severity icon (`aria-hidden` — a non-color severity cue;
+  #   `icon: false` suppresses it).
   # - **You supply:** a title and/or description, and a valid `variant`.
   #
   # ## Variants

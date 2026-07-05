@@ -72,4 +72,27 @@ RSpec.describe UI::AlertComponent, type: :component do
 
     expect(page).to have_css("div.mt-4.bg-surface-raised")
   end
+
+  # v0.5.0: a tone-matched severity SVG — a redundant, non-color severity cue
+  # (WCAG 1.4.1) for colour-blind users. Decorative (aria-hidden): severity is
+  # already conveyed by role/aria-live and the caller's title/description.
+  describe "severity icon" do
+    it "renders a decorative severity glyph for a signal tone" do
+      render_inline(described_class.new(tone: :danger, title: "Couldn't save"))
+
+      expect(page).to have_css("div[role='alert'] > svg[aria-hidden='true'] path", visible: :all)
+    end
+
+    it "omits the glyph for the neutral tone (not a signal level)" do
+      render_inline(described_class.new(tone: :neutral, title: "Heads up"))
+
+      expect(page).to have_no_css("svg", visible: :all)
+    end
+
+    it "suppresses the glyph when icon: false" do
+      render_inline(described_class.new(tone: :warning, title: "Heads up", icon: false))
+
+      expect(page).to have_no_css("svg", visible: :all)
+    end
+  end
 end

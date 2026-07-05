@@ -17,7 +17,9 @@ module UI
   # ## Accessibility contract
   # - **Guarantees:** a live region matched to urgency — `role="status"`/`aria-live="polite"`
   #   for the neutral tone (and `info`/`success`/`warning`), `role="alert"`/
-  #   `aria-live="assertive"` for `danger` — and AAA-contrast text on the banner surface.
+  #   `aria-live="assertive"` for `danger` — AAA-contrast text on the banner surface,
+  #   and a tone-matched severity icon (`aria-hidden`, a redundant non-color cue per
+  #   WCAG 1.4.1 — pass `icon: false` to suppress it).
   # - **You supply:** a title and/or description (kwargs or the `alert_title` /
   #   `alert_description` slots) and a valid `tone` (an unknown one raises in development).
   #
@@ -28,8 +30,8 @@ module UI
   # `destructive`→`danger`, the rest 1:1.)
   class AlertComponent < ApplicationComponent
     OUTER_CLASSES = "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border " \
-                    "px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] " \
-                    "has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current"
+                    "px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*5)_1fr] " \
+                    "has-[>svg]:gap-x-3 [&>svg]:size-5 [&>svg]:translate-y-0.5 [&>svg]:text-current"
 
     # Signal levels share the tinted-surface treatment used by the toast cards
     # (`bg-<level>-surface` + `border-<level>-border` + `text-<level>`), so an alert
@@ -41,6 +43,19 @@ module UI
       success: "bg-success-surface border-success-border text-success [&>svg]:text-current *:data-[slot=alert-description]:text-success",
       warning: "bg-warning-surface border-warning-border text-warning [&>svg]:text-current *:data-[slot=alert-description]:text-warning",
       danger:  "bg-danger-surface border-danger-border text-danger [&>svg]:text-current *:data-[slot=alert-description]:text-danger"
+    }.freeze
+
+    # Tone → severity glyph (Heroicons-style stroke paths, identical to the toaster's
+    # so an alert and a toast at the same level read the same): info circle, check
+    # circle, warning triangle, danger circle-x. Distinct shapes keep severity legible
+    # without relying on color alone (WCAG 1.4.1). `neutral` has no glyph — it isn't a
+    # signal level, and reusing another tone's shape would defeat the non-color cue.
+    ICONS = {
+      neutral: nil,
+      info:    "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z",
+      success: "M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z",
+      warning: "M12 9.36v3.52m0 3.52h.01M10.5 4.84L3.04 17.28a1.76 1.76 0 0 0 1.51 2.64h14.91a1.76 1.76 0 0 0 1.51-2.64L13.5 4.84a1.76 1.76 0 0 0-3.01 0z",
+      danger:  "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
     }.freeze
 
     # Deprecated `variant:` alias → `tone:`. The old flat `variant` enum maps 1:1 onto
@@ -58,16 +73,18 @@ module UI
     # title: and description: are kwarg shorthands for plain-text content.
     # Use slots (with_alert_title / with_alert_description) for rich HTML.
     # Slots take precedence over kwargs when both are provided.
-    def initialize(tone: :neutral, variant: nil, title: nil, description: nil, **html_attrs)
+    # icon: true renders the tone's severity glyph (ICONS); false suppresses it.
+    def initialize(tone: :neutral, variant: nil, title: nil, description: nil, icon: true, **html_attrs)
       @tone = coerce_tone(tone, variant)
       @title = title
       @description = description
+      @icon = icon
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
 
     def call
-      content_tag(:div, safe_join([ resolved_title, resolved_description ].compact),
+      content_tag(:div, safe_join([ tone_icon, resolved_title, resolved_description ].compact),
         **@html_attrs,
         role: ROLES.fetch(@tone),
         "aria-live": LIVE.fetch(@tone),
@@ -114,6 +131,21 @@ module UI
       end
 
       :neutral
+    end
+
+    # The tone's severity glyph as a direct `>svg` child of the root — OUTER_CLASSES
+    # sizes/colors it and switches the grid to the icon column via `has-[>svg]`.
+    # `aria-hidden` because the icon is decorative: severity is already conveyed
+    # programmatically (role + aria-live) and by the caller's title/description.
+    def tone_icon
+      return unless @icon && (path = ICONS.fetch(@tone))
+
+      content_tag(:svg,
+        content_tag(:path, nil, d: path,
+          "stroke-linecap": "round", "stroke-linejoin": "round"),
+        xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24",
+        fill: "none", stroke: "currentColor", "stroke-width": "2",
+        "aria-hidden": "true")
     end
 
     def resolved_title
