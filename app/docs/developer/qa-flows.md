@@ -10,6 +10,14 @@ Use this guide to verify the app manually after initial setup or after a config 
 
 ## Before you start
 
+**Developer tools (development only).** Keep these open in separate tabs — they're the workhorses for QA and accessibility review. Each lives behind its own URL:
+
+| Tool | What it's for | Where |
+| --- | --- | --- |
+| **Lookbook** | Every UI component in isolation — states, source, and its accessibility contract | [`/lookbook`](/lookbook) |
+| **Dev inbox** | Every outbound email the app "sends" — magic links, invitations, digests | [`/letter_opener`](/letter_opener) |
+| **A11y simulator** | Vision & colour-blindness filters over the page you're on | the **`DEV`** badge in the footer |
+
 **Email capture.** In development every outbound email is intercepted by Letter Opener. Navigate to [`/letter_opener`](/letter_opener) in a separate tab — keep it open and click **Refresh** after any action that sends email. You do not need a real email account for any of these flows.
 
 **Console and seed.** When `SIGNUP_MODE=invite_only` you need an owner account before you can invite others. Create one with:
