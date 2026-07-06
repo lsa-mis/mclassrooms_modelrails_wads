@@ -30,7 +30,11 @@
   is_personal = Current.user.personal_workspace_id == workspace.id
 %>
 
-<li class="relative flex flex-col md:flex-row md:items-center gap-3 p-4 rounded-lg border border-border
+<%# data-name + the workspace-filter target let the workspaces-index client-side
+    filter hide non-matching rows (inert on the pinned-current row, whose section
+    has no filter controller). -%>
+<li data-workspace-filter-target="item" data-name="<%= workspace.name.downcase %>"
+    class="relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-border
            hover:border-interactive
            focus-within:ring-2 focus-within:ring-interactive-focus">
   <%= link_to workspace_path(workspace),
@@ -38,44 +42,41 @@
     <span class="sr-only"><%= workspace.name %></span>
   <% end %>
 
-  <%# Icon — pointer-events-none so clicks fall through to the overlay link. %>
-  <div class="relative shrink-0 pointer-events-none">
-    <%= workspace_icon_for(workspace, size: :md) %>
-  </div>
-
-  <%# Identity + metadata — pointer-events-none so clicks fall through. %>
-  <div class="relative flex-1 min-w-0 pointer-events-none">
-    <div class="flex items-center gap-2">
-      <p class="font-medium text-text-heading truncate" title="<%= workspace.name %>">
-        <%= workspace.name %>
+  <%# Icon + identity — a single left group so the icon sits beside the name
+      on every width. pointer-events-none so clicks fall through to the overlay. %>
+  <div class="relative flex items-center gap-3 min-w-0 flex-1 pointer-events-none">
+    <span class="shrink-0"><%= workspace_icon_for(workspace, size: :md) %></span>
+    <div class="min-w-0">
+      <div class="flex items-center gap-2">
+        <p class="font-medium text-text-heading truncate" title="<%= workspace.name %>">
+          <%= workspace.name %>
+        </p>
+        <% if current %>
+          <span class="shrink-0 text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded
+                       bg-interactive text-text-on-interactive">
+            <%= t("workspaces.index.current_badge") %>
+          </span>
+        <% end %>
+      </div>
+      <%# One metadata line (was three) — plan · role · members · recency. %>
+      <p class="text-sm text-text-muted truncate">
+        <%= t("workspaces.plans.#{workspace.plan}", default: workspace.plan.titleize) %>
+        &middot; <%= t("workspaces.index.row.role.#{user_role.slug}", default: user_role.name) %>
+        &middot; <%= t("workspaces.index.row.member", count: member_count) %>
+        &middot;
+        <% if membership.last_accessed_at.present? %>
+          <%= t("workspaces.index.row.last_accessed.touched",
+                 relative: time_ago_in_words(membership.last_accessed_at)) %>
+        <% else %>
+          <%= t("workspaces.index.row.last_accessed.never") %>
+        <% end %>
       </p>
-      <% if current %>
-        <span class="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded
-                     bg-interactive text-text-on-interactive">
-          <%= t("workspaces.index.current_badge") %>
-        </span>
-      <% end %>
     </div>
-    <p class="mt-1 text-sm text-text-muted">
-      <%= t("workspaces.plans.#{workspace.plan}", default: workspace.plan.titleize) %>
-      &middot;
-      <%= t("workspaces.index.row.role.#{user_role.slug}", default: user_role.name) %>
-      &middot;
-      <%= t("workspaces.index.row.member", count: member_count) %>
-    </p>
-    <p class="mt-1 text-xs text-text-muted">
-      <% if membership.last_accessed_at.present? %>
-        <%= t("workspaces.index.row.last_accessed.touched",
-               relative: time_ago_in_words(membership.last_accessed_at)) %>
-      <% else %>
-        <%= t("workspaces.index.row.last_accessed.never") %>
-      <% end %>
-    </p>
   </div>
 
   <%# Action buttons — pointer-events-auto + relative z-10 so they intercept
-      clicks ahead of the overlay link. %>
-  <div class="relative z-10 flex items-center gap-2 mt-2 md:mt-0 pointer-events-auto">
+      clicks ahead of the overlay link. shrink-0 keeps them off the name. %>
+  <div class="relative z-10 flex items-center gap-2 shrink-0 pointer-events-auto">
     <%= link_to t("workspaces.index.row.switch"), workspace_path(workspace),
           class: "btn-touch-target inline-flex items-center px-3 py-2 rounded-md
                   text-sm font-medium text-text-body

@@ -23,10 +23,28 @@
   <% end %>
 
   <% if @other_memberships.any? %>
-    <section class="mt-8">
+    <%# Client-side name filter appears once the list is long enough to scan —
+        a user's own workspaces, rendered in full (no server round-trip). See
+        workspace_filter_controller.js. Threshold kept modest so it helps well
+        before the list becomes unwieldy. %>
+    <% show_filter = @other_memberships.size >= 3 %>
+    <% section_attrs = show_filter ? { data: { controller: "workspace-filter",
+         workspace_filter_status_template_value: t("workspaces.index.filter.status") } } : {} %>
+    <%= tag.section class: "mt-8", **section_attrs do %>
       <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
         <%= t("workspaces.index.other_workspaces_heading") %>
       </h2>
+      <% if show_filter %>
+        <div class="mb-3">
+          <label for="workspace-filter" class="sr-only"><%= t("workspaces.index.filter.label") %></label>
+          <input type="search" id="workspace-filter" autocomplete="off"
+                 placeholder="<%= t("workspaces.index.filter.placeholder") %>"
+                 data-workspace-filter-target="input"
+                 data-action="input->workspace-filter#filter"
+                 class="form-input w-full">
+          <p class="sr-only" role="status" aria-live="polite" data-workspace-filter-target="status"></p>
+        </div>
+      <% end %>
       <ul class="flex flex-col gap-2" data-test="other-workspaces-list">
         <% @other_memberships.each do |membership| %>
           <% if membership.workspace.suspended? %>
@@ -36,7 +54,12 @@
           <% end %>
         <% end %>
       </ul>
-    </section>
+      <% if show_filter %>
+        <p class="mt-4 text-sm text-text-muted" data-workspace-filter-target="empty" hidden>
+          <%= t("workspaces.index.filter.empty") %>
+        </p>
+      <% end %>
+    <% end %>
   <% end %>
 
   <% if @archived_memberships.any? %>

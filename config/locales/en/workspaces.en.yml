@@ -51,6 +51,12 @@ en:
       other_workspaces_heading: "Other workspaces"
       archived_heading: "Archived"
       create_workspace_cta: "Create workspace"
+      filter:
+        label: "Filter your workspaces"
+        placeholder: "Filter by name…"
+        # __COUNT__ is replaced client-side by workspace_filter_controller.js.
+        status: "__COUNT__ matching"
+        empty: "No workspaces match your filter."
       row:
         switch: "Switch"
         leave: "Leave"
