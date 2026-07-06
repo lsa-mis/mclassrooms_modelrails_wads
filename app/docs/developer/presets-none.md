@@ -125,7 +125,7 @@ Every post-auth landing — `SessionsController`, magic-link, OAuth, and `redire
 private
 
 def authenticated_home_path
-  dashboard_path   # or me_path, root_path, wherever your workspace-agnostic home lives
+  dashboard_path   # or workspaces_path, root_path, wherever your workspace-agnostic home lives
 end
 ```
 

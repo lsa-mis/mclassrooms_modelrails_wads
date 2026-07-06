@@ -1,5 +1,11 @@
 <% content_for(:title) { t("workspaces.index.title") } %>
 <div class="max-w-4xl mx-auto px-4 py-16">
+  <%# Identity anchor: this is the signed-in user's own home for workspaces
+      (the former /me), so it opens with who "you" are before the list. %>
+  <div class="flex items-center gap-3 mb-6" data-test="workspaces-identity">
+    <%= avatar_for(Current.user, size: :md) %>
+    <span class="text-sm font-medium text-text-body truncate"><%= Current.user.full_name %></span>
+  </div>
   <div class="flex items-center justify-between">
     <h1 class="text-3xl font-bold text-text-heading">
       <%= t("workspaces.index.title") %>

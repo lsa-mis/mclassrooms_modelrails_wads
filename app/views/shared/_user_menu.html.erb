@@ -44,19 +44,6 @@
           </turbo-frame>
         </div>
 
-        <%# "Your home" — direct link to /me, the user's personal identity
-            and workspace hub. Placed above All workspaces so it is the
-            first post-notification action. %>
-        <div class="border-t border-border">
-          <%= link_to t("navigation.user_menu.home"), main_app.me_path,
-                role: "menuitem", tabindex: "-1",
-                data: { turbo_prefetch: "true" },
-                class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
-                        text-sm text-text-body
-                        hover:bg-surface hover:text-interactive
-                        focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
-        </div>
-
         <%# "All workspaces" — the only in-product path to the workspaces
             index on non-workspace-scoped pages (marketing landing, auth
             flows). Path Y Phase C removed the header text-link version of
@@ -129,13 +116,6 @@
         </span>
       <% end %>
     <% end %>
-    <%# "Your home" — see desktop branch above for rationale. %>
-    <%= link_to t("navigation.user_menu.home"), main_app.me_path,
-          data: { turbo_prefetch: "true" },
-          class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center px-3 py-2
-                  text-sm text-text-body
-                  hover:bg-surface-sunken hover:text-interactive-hover rounded
-                  focus-ring" %>
     <%# "All workspaces" is rendered in the mobile Workspaces group
         (shared/_workspace_switcher, mobile) below, not here — the account
         group holds only always-present account actions. %>

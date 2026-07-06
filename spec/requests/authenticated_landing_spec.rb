@@ -3,7 +3,8 @@ require "rails_helper"
 # Post-sign-in landing is workspace-agnostic and fork-overridable. The template
 # default routes an authenticated user with no saved return_to to their home
 # (authenticated_home_path => root_path). A fork overrides ONE method to land
-# users at /me. (organizer-onboarding design, Template BLOCKERS.)
+# users at a fork-specific home (a dashboard, a profile). (organizer-onboarding
+# design, Template BLOCKERS.)
 RSpec.describe "Authenticated landing seam", type: :request do
   let(:user) { create(:user) }
 

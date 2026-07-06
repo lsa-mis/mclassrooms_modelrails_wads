@@ -38,7 +38,7 @@ RSpec.describe "Workspace switcher (header)", type: :system do
 
   before do
     sign_in_via_form(user)
-    visit me_path
+    visit workspaces_path
   end
 
   it "opens on click, lists both workspaces, and navigates on selection" do

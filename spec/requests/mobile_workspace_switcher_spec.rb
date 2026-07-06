@@ -2,16 +2,14 @@
 
 require "rails_helper"
 
-# Request spec: verifies the mobile workspace switcher and /me link are present
-# in the rendered HTML for authenticated users.
+# Request spec: verifies the mobile workspace switcher is present in the
+# rendered HTML for authenticated users.
 #
 # The mobile switcher (`mobile: true` variant of _workspace_switcher.html.erb)
 # lives inside the hamburger panel in _header.html.erb. Because it carries
 # `md:hidden` it is always in the DOM on every authenticated page — we assert
-# on the raw response body, not on visibility.
-#
-# The /me link is added to both the desktop dropdown and mobile accordion in
-# _user_menu.html.erb.
+# on the raw response body, not on visibility. We load /workspaces (any
+# authenticated page renders the header chrome).
 RSpec.describe "Mobile workspace switcher", type: :request do
   let(:user) { create(:user) }
   let!(:second_workspace) do
@@ -29,7 +27,7 @@ RSpec.describe "Mobile workspace switcher", type: :request do
       user.reload
       personal = user.personal_workspace
 
-      get me_path
+      get workspaces_path
 
       expect(response).to have_http_status(:ok)
 
@@ -41,26 +39,12 @@ RSpec.describe "Mobile workspace switcher", type: :request do
       expect(body).to include(workspace_path(second_workspace))
     end
 
-    it "includes a /me link in the user menu" do
-      get me_path
-
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include(me_path)
-    end
-
-    it "includes a /me link text matching the i18n key" do
-      get me_path
-
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include(I18n.t("navigation.user_menu.home"))
-    end
-
     it "caps the mobile switch list at 5 and offers All workspaces for the rest" do
       # personal + second_workspace + 5 more = 7 workspaces; the list shows 5.
       5.times { create(:membership, :owner, user: user, workspace: create(:workspace)) }
       user.reload
 
-      get me_path
+      get workspaces_path
 
       expect(response).to have_http_status(:ok)
       doc = Nokogiri::HTML(response.body)
@@ -78,7 +62,7 @@ RSpec.describe "Mobile workspace switcher", type: :request do
     it "omits the switch list but still offers All workspaces (solo user)" do
       solo_user.reload
 
-      get me_path
+      get workspaces_path
 
       expect(response).to have_http_status(:ok)
       doc = Nokogiri::HTML(response.body)

@@ -26,7 +26,7 @@ RSpec.describe "Mobile workspace switcher — hamburger panel", type: :system, j
     user.reload
     personal = user.personal_workspace
 
-    visit me_path
+    visit workspaces_path
 
     click_button I18n.t("navigation.mobile_menu.open")
 
@@ -37,7 +37,7 @@ RSpec.describe "Mobile workspace switcher — hamburger panel", type: :system, j
   end
 
   it "navigates to the selected workspace when a mobile switcher link is clicked" do
-    visit me_path
+    visit workspaces_path
 
     click_button I18n.t("navigation.mobile_menu.open")
 
@@ -46,15 +46,5 @@ RSpec.describe "Mobile workspace switcher — hamburger panel", type: :system, j
     end
 
     expect(page).to have_current_path(workspace_path(second_workspace))
-  end
-
-  it "shows the Your home link in the mobile user menu" do
-    visit me_path
-
-    click_button I18n.t("navigation.mobile_menu.open")
-
-    within("[data-mobile-menu-target='menu']") do
-      expect(page).to have_link(I18n.t("navigation.user_menu.home"), href: me_path)
-    end
   end
 end

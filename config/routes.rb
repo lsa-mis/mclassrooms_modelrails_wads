@@ -25,7 +25,6 @@ Rails.application.routes.draw do
   get "/auth/:provider/callback", to: "omniauth_callbacks#create"
   get "/auth/failure", to: "omniauth_callbacks#failure"
 
-  resource :me, only: [ :show ], controller: :me
   resource :passkey_prompt, only: [ :update ]
 
   namespace :settings do

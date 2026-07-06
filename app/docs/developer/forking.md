@@ -178,7 +178,7 @@ Override it to send signed-in users somewhere other than root:
 private
 
 def authenticated_home_path
-  dashboard_path   # or me_path, events_path, etc.
+  dashboard_path   # or workspaces_path, events_path, etc.
 end
 ```
 

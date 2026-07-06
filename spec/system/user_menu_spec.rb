@@ -133,34 +133,24 @@ RSpec.describe "User menu dropdown", type: :system do
       expect(focused_href).to eq(settings_notifications_path)
     end
 
-    it "ArrowDown twice moves focus to Your home (third item)" do
+    it "ArrowDown twice moves focus to All workspaces (third item)" do
       send_dropdown_key("ArrowDown") # identity → Notifications
-      send_dropdown_key("ArrowDown") # Notifications → Your home
-      focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
-      expect(focused_href).to eq(me_path)
-    end
-
-    it "ArrowDown thrice moves focus to All workspaces (fourth item)" do
-      send_dropdown_key("ArrowDown")
-      send_dropdown_key("ArrowDown")
-      send_dropdown_key("ArrowDown") # Your home → All workspaces
+      send_dropdown_key("ArrowDown") # Notifications → All workspaces
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")
       expect(focused_href).to eq(workspaces_path)
     end
 
-    it "ArrowDown four times moves focus to sign-out (fifth and final item)" do
+    it "ArrowDown thrice moves focus to sign-out (fourth and final item)" do
       send_dropdown_key("ArrowDown")
       send_dropdown_key("ArrowDown")
-      send_dropdown_key("ArrowDown")
-      send_dropdown_key("ArrowDown")
+      send_dropdown_key("ArrowDown") # All workspaces → sign-out
       focused_text = page.evaluate_script("document.activeElement?.textContent?.trim()")
       expect(focused_text).to eq(I18n.t("navigation.sign_out"))
     end
 
     it "ArrowDown wraps from last to first item" do
       send_dropdown_key("ArrowDown") # identity → Notifications
-      send_dropdown_key("ArrowDown") # Notifications → Your home
-      send_dropdown_key("ArrowDown") # Your home → All workspaces
+      send_dropdown_key("ArrowDown") # Notifications → All workspaces
       send_dropdown_key("ArrowDown") # All workspaces → sign-out
       send_dropdown_key("ArrowDown") # sign-out → wraps to identity
       focused_href = page.evaluate_script("document.activeElement?.getAttribute('href')")

@@ -27,8 +27,6 @@ en:
     notification_preferences: "Notification preferences"
     connected_accounts: "Accounts"
     all_workspaces: "All workspaces"
-    user_menu:
-      home: "Your home"
     toggle_menu: "Toggle navigation menu"
     toggle_theme: "Toggle theme"
     user_menu_label: "User menu for %{name}"
