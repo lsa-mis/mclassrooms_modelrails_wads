@@ -42,36 +42,36 @@
     <span class="sr-only"><%= workspace.name %></span>
   <% end %>
 
-  <%# Icon + identity — a single left group so the icon sits beside the name
-      on every width. pointer-events-none so clicks fall through to the overlay. %>
-  <div class="relative flex items-center gap-3 min-w-0 flex-1 pointer-events-none">
-    <span class="shrink-0"><%= workspace_icon_for(workspace, size: :md) %></span>
-    <div class="min-w-0">
-      <div class="flex items-center gap-2">
-        <p class="font-medium text-text-heading truncate" title="<%= workspace.name %>">
-          <%= workspace.name %>
-        </p>
-        <% if current %>
-          <span class="shrink-0 text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded
-                       bg-interactive text-text-on-interactive">
-            <%= t("workspaces.index.current_badge") %>
-          </span>
-        <% end %>
-      </div>
-      <%# One metadata line (was three) — plan · role · members · recency. %>
-      <p class="text-sm text-text-muted truncate">
-        <%= t("workspaces.plans.#{workspace.plan}", default: workspace.plan.titleize) %>
-        &middot; <%= t("workspaces.index.row.role.#{user_role.slug}", default: user_role.name) %>
-        &middot; <%= t("workspaces.index.row.member", count: member_count) %>
-        &middot;
-        <% if membership.last_accessed_at.present? %>
-          <%= t("workspaces.index.row.last_accessed.touched",
-                 relative: time_ago_in_words(membership.last_accessed_at)) %>
-        <% else %>
-          <%= t("workspaces.index.row.last_accessed.never") %>
-        <% end %>
+  <%# Icon + identity. The logo sits inline with the name at a shared height
+      (sm ≈ the name line) so they read as one lockup; the metadata indents
+      (ml-11 = the sm logo's w-8 + gap-3) to align under the name, not the
+      logo. pointer-events-none so clicks fall through to the overlay. %>
+  <div class="relative min-w-0 flex-1 pointer-events-none">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="shrink-0"><%= workspace_icon_for(workspace, size: :sm) %></span>
+      <p class="font-medium text-text-heading truncate" title="<%= workspace.name %>">
+        <%= workspace.name %>
       </p>
+      <% if current %>
+        <span class="shrink-0 text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded
+                     bg-interactive text-text-on-interactive">
+          <%= t("workspaces.index.current_badge") %>
+        </span>
+      <% end %>
     </div>
+    <%# One metadata line (was three) — plan · role · members · recency. %>
+    <p class="mt-1 ml-11 text-sm text-text-muted truncate">
+      <%= t("workspaces.plans.#{workspace.plan}", default: workspace.plan.titleize) %>
+      &middot; <%= t("workspaces.index.row.role.#{user_role.slug}", default: user_role.name) %>
+      &middot; <%= t("workspaces.index.row.member", count: member_count) %>
+      &middot;
+      <% if membership.last_accessed_at.present? %>
+        <%= t("workspaces.index.row.last_accessed.touched",
+               relative: time_ago_in_words(membership.last_accessed_at)) %>
+      <% else %>
+        <%= t("workspaces.index.row.last_accessed.never") %>
+      <% end %>
+    </p>
   </div>
 
   <%# Action buttons — pointer-events-auto + relative z-10 so they intercept
