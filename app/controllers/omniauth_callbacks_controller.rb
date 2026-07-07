@@ -173,6 +173,16 @@ class OmniauthCallbacksController < ApplicationController
     session.delete(:pending_invitation_token)
     session.delete(:pending_join_token)
 
+    # RP-initiated logout (D4): stash now, at callback time — this path's
+    # deferred sign-in happens later in
+    # Settings::ConnectedAccountsController#verify, which has no auth_hash to
+    # stash from. The OIDC flow DID complete in this browser (Okta has a live
+    # IdP session here), so the eventual sign-out should still end it.
+    # Verifying in the same browser inherits this session stash; verifying in
+    # a different browser legitimately lacks it (no OIDC flow ever ran there),
+    # so that first session skips RP logout — acceptable.
+    stash_okta_logout_state(auth_hash)
+
     # deliver_later runs after the transaction commits (project convention:
     # deliver_later inside a transaction can enqueue a job that fires on rollback).
     if EmailRecipientThrottle.allow!(auth.email, kind: :verification)

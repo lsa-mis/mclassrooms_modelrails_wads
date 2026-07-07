@@ -44,7 +44,12 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       discovery: true,
       scope: %i[openid email profile],
       response_type: :code,
-      uid_field: "preferred_username",
+      # uid = the immutable OIDC `sub` claim (also the gem's default), by
+      # design — NOT preferred_username or email. Those are human-readable
+      # and reissuable; linking identity on a mutable claim creates a lockout
+      # failure mode (username reissued → uid mismatch → duplicate
+      # Authentication unique-index violation → generic "linking failed").
+      uid_field: "sub",
       client_options: {
         identifier: ENV["OKTA_CLIENT_ID"] || "test",
         secret: ENV["OKTA_CLIENT_SECRET"] || "test",
