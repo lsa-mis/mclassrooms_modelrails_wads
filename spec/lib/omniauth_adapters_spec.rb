@@ -10,6 +10,10 @@ RSpec.describe OmniauthAdapters do
       expect(OmniauthAdapters.normalize_provider("github")).to eq("github")
     end
 
+    it "passes through 'okta' unchanged (the openid_connect strategy is registered with name: :okta already)" do
+      expect(OmniauthAdapters.normalize_provider("okta")).to eq("okta")
+    end
+
     it "passes through unknown strategy names unchanged" do
       expect(OmniauthAdapters.normalize_provider("unknown_strategy")).to eq("unknown_strategy")
     end
