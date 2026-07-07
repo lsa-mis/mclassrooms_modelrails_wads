@@ -858,4 +858,48 @@ RSpec.describe Invitation, type: :model do
       expect { inv.accept!(user) }.to change { workspace.memberships.kept.count }.by(1)
     end
   end
+
+  # Wiring coverage: drive accept!/decline! and assert the notifier fires.
+  # The notifiers themselves are specced in spec/notifiers/; without these,
+  # the after_update_commit registrations could be deleted and the suite
+  # would stay green.
+  describe "notification wiring" do
+    let(:workspace) { create(:workspace) }
+    let(:inviter) { create(:user) }
+    let(:invitation) { create(:invitation, invitable: workspace, invited_by: inviter, email: "invitee@example.com") }
+
+    describe "accepted (after_update_commit)" do
+      it "notifies the inviter when someone else accepts" do
+        acceptor = create(:user)
+        expect {
+          invitation.accept!(acceptor)
+        }.to change { Noticed::Event.where(type: "WorkspaceInvitationAcceptedNotifier").count }.by(1)
+        event = Noticed::Event.where(type: "WorkspaceInvitationAcceptedNotifier").last
+        expect(event.notifications.map(&:recipient)).to eq([ inviter ])
+      end
+
+      it "does not notify when the inviter accepts their own invitation" do
+        expect {
+          invitation.accept!(inviter)
+        }.not_to change { Noticed::Event.where(type: "WorkspaceInvitationAcceptedNotifier").count }
+      end
+    end
+
+    describe "declined (after_update_commit)" do
+      it "notifies the inviter" do
+        expect {
+          invitation.decline!
+        }.to change { Noticed::Event.where(type: "WorkspaceInvitationDeclinedNotifier").count }.by(1)
+        event = Noticed::Event.where(type: "WorkspaceInvitationDeclinedNotifier").last
+        expect(event.notifications.map(&:recipient)).to eq([ inviter ])
+      end
+
+      it "does not notify when the declined invitation was addressed to the inviter" do
+        self_invitation = create(:invitation, invitable: workspace, invited_by: inviter, email: inviter.email_address)
+        expect {
+          self_invitation.decline!
+        }.not_to change { Noticed::Event.where(type: "WorkspaceInvitationDeclinedNotifier").count }
+      end
+    end
+  end
 end

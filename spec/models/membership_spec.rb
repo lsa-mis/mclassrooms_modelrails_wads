@@ -376,4 +376,59 @@ RSpec.describe Membership, type: :model do
       expect(sole_in_target.send(:workspace_has_other_owners?)).to be false
     end
   end
+
+  # Wiring coverage: drive the model state change and assert the notifier
+  # actually fires. The notifiers themselves are specced in spec/notifiers/;
+  # without these, the after_*_commit registrations could be deleted and the
+  # suite would stay green.
+  describe "notification wiring" do
+    let(:owner) { create(:user) }
+    let(:workspace) { create(:workspace) }
+    let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
+    let(:member) { create(:user) }
+
+    describe "member added (after_create_commit)" do
+      it "notifies the added user and the existing owner" do
+        membership = create(:membership, user: member, workspace: workspace)
+        event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
+        expect(event).to be_present
+        expect(event.record).to eq(membership)
+        expect(event.notifications.map(&:recipient)).to contain_exactly(member, owner)
+      end
+
+      it "does not notify when seeding a workspace's first owner" do
+        fresh_workspace = create(:workspace)
+        expect {
+          create(:membership, :owner, user: member, workspace: fresh_workspace)
+        }.not_to change { Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").count }
+      end
+    end
+
+    describe "role changed (after_update_commit)" do
+      let!(:membership) { create(:membership, user: member, workspace: workspace) }
+      let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
+
+      it "notifies the member when their role changes" do
+        expect {
+          membership.change_role!(admin_role)
+        }.to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }.by(1)
+        event = Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").last
+        expect(event.notifications.map(&:recipient)).to eq([ member ])
+      end
+
+      it "does not notify on a save that leaves the role unchanged" do
+        expect {
+          membership.update!(last_accessed_at: Time.current)
+        }.not_to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }
+      end
+
+      it "transfer_ownership_to! notifies the promoted member, not the demoted initiator" do
+        expect {
+          owner_membership.transfer_ownership_to!(membership)
+        }.to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }.by(1)
+        event = Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").last
+        expect(event.notifications.map(&:recipient)).to eq([ member ])
+      end
+    end
+  end
 end

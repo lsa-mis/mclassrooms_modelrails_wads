@@ -112,4 +112,52 @@ RSpec.describe ProjectMembership, type: :model do
       }.to have_broadcasted_to(stream_name)
     end
   end
+
+  # Wiring coverage: drive create/update and assert the notifier fires. The
+  # create and update registrations are deliberately separate lambdas (symbol
+  # form would be de-duplicated by ActiveSupport) — the update example here
+  # fails if that ever regresses.
+  describe "notification wiring" do
+    let(:workspace) { create(:workspace) }
+    let(:member) { create(:user) }
+    let!(:membership) { create(:membership, user: member, workspace: workspace) }
+    let(:project) { create(:project, workspace: workspace, created_by: member) }
+
+    it "notifies the user when added to a project (after_create_commit)" do
+      expect {
+        project.project_memberships.create!(user: member, role: "editor")
+      }.to change { Noticed::Event.where(type: "ProjectMembershipChangedNotifier").count }.by(1)
+      event = Noticed::Event.where(type: "ProjectMembershipChangedNotifier").last
+      expect(event.notifications.map(&:recipient)).to eq([ member ])
+    end
+
+    it "notifies the user when their project role changes (after_update_commit)" do
+      pm = project.project_memberships.create!(user: member, role: "editor")
+      # Outside the one-minute idempotency bucket, so the role-change event
+      # doesn't dedup into the just-created "added to project" event.
+      travel 61.seconds do
+        expect {
+          pm.update!(role: "viewer")
+        }.to change { Noticed::Event.where(type: "ProjectMembershipChangedNotifier").count }.by(1)
+      end
+    end
+
+    it "dedups a role change into the add notification inside the one-minute idempotency window" do
+      # freeze_time pins both writes to one idempotency bucket; without it, a
+      # create at :59 and update at :00 straddle the documented minute boundary.
+      freeze_time do
+        pm = project.project_memberships.create!(user: member, role: "editor")
+        expect {
+          pm.update!(role: "viewer")
+        }.not_to change { Noticed::Event.where(type: "ProjectMembershipChangedNotifier").count }
+      end
+    end
+
+    it "does not notify on a save that leaves the role unchanged" do
+      pm = project.project_memberships.create!(user: member, role: "editor")
+      expect {
+        pm.update!(pinned: true)
+      }.not_to change { Noticed::Event.where(type: "ProjectMembershipChangedNotifier").count }
+    end
+  end
 end
