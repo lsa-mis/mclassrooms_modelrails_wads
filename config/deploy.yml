@@ -102,6 +102,18 @@ env:
     # Log everything from Rails
     # RAILS_LOG_LEVEL: debug
 
+    # === Tenancy preset (MiClassrooms: shared single-workspace, Phase 0 Task 4) ===
+    # Names only — actual values are finalized as Kamal secrets/env in Phase 8
+    # (ops cutover), not committed here. See .env.example and
+    # app/docs/developer/presets-single-tenant.md for what each controls.
+    # WORKSPACE_ON_SIGNUP: shared
+    # TENANCY_WORKSPACE_CREATION: disabled
+    # TENANCY_SHARED_WORKSPACE_SLUG: miclassrooms
+    # TENANCY_SHARED_WORKSPACE_NAME: MiClassrooms
+    # TENANCY_SHARED_JOIN_ROLE: viewer
+    # TENANCY_OWNER_EMAIL: (Phase 8 — Kamal secret)
+    # APP_HOST: (Phase 8 — production host)
+
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal logs -r job" will tail logs from the first server in the job section.
 aliases:

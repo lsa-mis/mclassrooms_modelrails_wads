@@ -54,5 +54,13 @@ module ModelrailsBase
     config.x.tenancy.onboarding          = ENV.fetch("WORKSPACE_ON_SIGNUP", "personal").to_sym
     config.x.tenancy.workspace_creation  = ENV.fetch("TENANCY_WORKSPACE_CREATION", "enabled").to_sym
     config.x.tenancy.shared_workspace_slug = ENV["TENANCY_SHARED_WORKSPACE_SLUG"]
+
+    # Fork deviation (MiClassrooms Task 4): role slug granted by
+    # User#join_shared_workspace to a user self-joining the shared workspace
+    # under the :shared preset. The template hardcodes "member"; this knob
+    # lets a fork override it (MiClassrooms sets TENANCY_SHARED_JOIN_ROLE=viewer
+    # — see .env.example and app/lib/tenancy_config.rb#shared_join_role).
+    # Default "member" preserves upstream behavior when unset.
+    config.x.tenancy.shared_join_role = ENV.fetch("TENANCY_SHARED_JOIN_ROLE", "member")
   end
 end

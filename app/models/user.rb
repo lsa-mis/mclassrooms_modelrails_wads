@@ -254,9 +254,12 @@ class User < ApplicationRecord
     update_column(:personal_workspace_id, workspace.id)
   end
 
-  # :shared posture: every new user joins the configured shared workspace as
-  # a Member. No personal workspace is created. Owners + Admins are seeded
-  # separately (see db/seeds.rb), so :member is the safe self-onboarding role.
+  # :shared posture: every new user joins the configured shared workspace, in
+  # the role given by TenancyConfig.shared_join_role (default "member" — the
+  # template's original hardcoded self-onboarding role; a fork can override
+  # via TENANCY_SHARED_JOIN_ROLE, e.g. MiClassrooms uses "viewer" so signups
+  # land read-only). No personal workspace is created. Owners + Admins are
+  # seeded/promoted separately (see db/seeds.rb).
   def join_shared_workspace
     workspace = TenancyConfig.shared_workspace
     raise "Shared workspace #{TenancyConfig.shared_workspace_slug.inspect} not found — has the tenancy seed run?" unless workspace
@@ -267,8 +270,8 @@ class User < ApplicationRecord
     # registration), the user simply joins nothing and lands on the empty index.
     return unless workspace.admittable?
 
-    member_role = Role.system_default!("member")
-    workspace.memberships.create!(user: self, role: member_role)
+    join_role = Role.system_default!(TenancyConfig.shared_join_role)
+    workspace.memberships.create!(user: self, role: join_role)
   end
 
   def password_not_pwned
