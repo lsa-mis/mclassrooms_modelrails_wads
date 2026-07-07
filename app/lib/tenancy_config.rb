@@ -28,6 +28,15 @@ module TenancyConfig
     Rails.configuration.x.tenancy.shared_workspace_slug
   end
 
+  # Fork deviation (MiClassrooms Task 4): role slug a user is granted by
+  # User#join_shared_workspace when self-joining the shared workspace.
+  # Defaults to "member" (the template's original hardcoded value) so
+  # behavior is unchanged unless a fork opts in via TENANCY_SHARED_JOIN_ROLE.
+  # MiClassrooms sets this to "viewer" — see config/application.rb.
+  def shared_join_role
+    Rails.configuration.x.tenancy.shared_join_role
+  end
+
   def shared_workspace
     return nil unless shared?
     Workspace.find_by(slug: shared_workspace_slug)
