@@ -1,6 +1,10 @@
-# ModelRails
+# MiClassrooms
 
-A multi-tenant SaaS starter kit built on Rails 8.1.
+The University of Michigan's classroom directory — find registrar-schedulable
+classrooms on the Ann Arbor campus and see capacity, equipment, photos, and
+floor plans before you teach or book. Built on
+[ModelRails](https://github.com/dschmura/modelrails_base), a multi-tenant
+SaaS starter kit for Rails 8.1.
 
 ## Tech Stack
 

@@ -133,9 +133,9 @@ RSpec.describe "Static pages", type: :system do
     end
 
     it "displays feature cards" do
-      expect(page).to have_text(I18n.t("pages.home.features.auth.title"))
-      expect(page).to have_text(I18n.t("pages.home.features.workspaces.title"))
-      expect(page).to have_text(I18n.t("pages.home.features.projects.title"))
+      expect(page).to have_text(I18n.t("pages.home.features.capacity.title"))
+      expect(page).to have_text(I18n.t("pages.home.features.media.title"))
+      expect(page).to have_text(I18n.t("pages.home.features.alerts.title"))
     end
   end
 
