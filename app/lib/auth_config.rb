@@ -43,4 +43,39 @@ module AuthConfig
       EmailNormalizer.punycode_domain(domain)
     end
   end
+
+  # Non-production test login for accessibility crawlers (MiClassrooms Phase
+  # 0 Task 8): Siteimprove can't complete Google/Okta SSO, so non-production
+  # environments expose GET /test_login?token=... as a token-gated backdoor
+  # (TestLoginsController). This predicate gates whether config/routes/app.rb
+  # DRAWS the route at all — the route is structurally absent (not merely
+  # guarded) whenever this is false, most importantly in production.
+  #
+  # Deliberately read fresh from Rails.env/ENV on every call rather than
+  # cached off Rails.configuration.x.auth (contrast sso_only?/
+  # allowed_google_domains above, which snapshot ENV once at boot in
+  # config/application.rb): specs need to flip Rails.env/ENV per example to
+  # pin this predicate directly (spec/lib/auth_config_spec.rb) without
+  # reloading routes. The route itself is still boot-time-frozen — see
+  # TestLoginsController for the independent, request-time re-check of
+  # token presence, which is what actually protects a route that stays
+  # drawn across the life of a booted process even if ENV later changes.
+  def test_login_enabled?
+    !Rails.env.production? && test_login_token.present?
+  end
+
+  # The configured shared secret, or nil/blank when unset. Centralized here
+  # (rather than reading ENV directly in both config/routes/app.rb and
+  # TestLoginsController) so there's one place documenting the var.
+  def test_login_token
+    ENV["TEST_LOGIN_TOKEN"]
+  end
+
+  # TEST_LOGIN_ADMIN=true grants the test user the Admin role in its
+  # workspace membership instead of the default Viewer; unset (or any other
+  # value) downgrades back to Viewer on the next test login. See
+  # TestLoginsController#grant_test_role.
+  def test_login_admin?
+    ENV["TEST_LOGIN_ADMIN"] == "true"
+  end
 end
