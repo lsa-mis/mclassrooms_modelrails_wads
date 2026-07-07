@@ -29,7 +29,9 @@ class RoleResolver
   ADMIN_ROLE_SLUGS = %w[owner admin].freeze
 
   def self.for(user)
-    membership = TenancyConfig.shared_workspace&.memberships&.kept&.find_by(user:)
+    # includes(:role): this runs on every authorized request once policies
+    # consult the resolver — keep the resolve at two queries, not three.
+    membership = TenancyConfig.shared_workspace&.memberships&.kept&.includes(:role)&.find_by(user:)
 
     Grant.new(
       admin: membership.present? && ADMIN_ROLE_SLUGS.include?(membership.role.slug),
