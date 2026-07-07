@@ -4,17 +4,26 @@ RSpec.describe "Public marketing pages", type: :system do
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
   describe "landing page" do
-    before do
-      # The primary CTA is gated on signups_open? (SignupPolicy). Stub the
-      # instance to :open so the anonymous-visitor CTA is deterministic,
-      # matching spec/system/static_pages_spec.rb's existing convention —
-      # the underlying signup posture is out of scope for brand seams.
-      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
-      visit root_path
+    # Deliberately NO signup-mode stub: the sign-in CTAs must render under
+    # the REAL default config (SIGNUP_MODE=invite_only). In this codebase
+    # sign-IN is unconditional and only sign-UP is gated by signups_open?
+    # (see the header partial) — the landing page follows the same
+    # convention, so its CTAs must never vanish for anonymous visitors.
+    before { visit root_path }
+
+    # Scoped to main#main-content: the header ALSO carries an unconditional
+    # "Sign in" link with the same text and href, so an unscoped have_link
+    # would pass even if the landing page's own CTAs vanished.
+    it "shows the anonymous visitor a sign-in call-to-action under default config" do
+      within("main#main-content") do
+        expect(page).to have_link(I18n.t("pages.home.hero.cta_primary"), href: new_session_path)
+      end
     end
 
-    it "shows the anonymous visitor a sign-in call-to-action" do
-      expect(page).to have_link(I18n.t("pages.home.hero.cta_primary"), href: new_session_path)
+    it "shows the bottom sign-in call-to-action under default config" do
+      within("main#main-content") do
+        expect(page).to have_link(I18n.t("pages.home.cta.button"), href: new_session_path)
+      end
     end
 
     it "carries no leftover template branding" do

@@ -30,7 +30,7 @@ en:
           description: "Admin-posted alerts flag rooms that need special handling — like an onsite technician — before you walk in."
       cta:
         title: "Ready to find a room?"
-        subtitle: "Sign in with your U-M account to search the full classroom directory."
+        subtitle: "Sign in to search and browse the full directory of registrar-schedulable classrooms."
         button: "Sign in"
     about:
       title: "About MiClassrooms"
@@ -54,7 +54,7 @@ en:
         title: "Who it's for"
         community:
           title: "U-M community"
-          description: "Sign in with your U-M account to search and browse the full directory."
+          description: "Made for U-M faculty, staff, and students — sign in to search and browse the full directory."
         accessibility:
           title: "Built for everyone"
           description: "MiClassrooms meets WCAG 2.2 AAA accessibility standards, including ADA seating counts on every room."

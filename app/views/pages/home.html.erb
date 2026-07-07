@@ -1,10 +1,14 @@
 <% content_for(:title) { t("pages.home.hero.title") } %>
 
+<%# The CTAs on this page are sign-IN, which is unconditional in this
+    codebase — only sign-UP is gated by signups_open? (see shared/_header).
+    Never gate them on the signup posture: under the default invite_only
+    mode they would silently vanish for anonymous visitors. %>
 <%= render "shared/hero",
       title: t("pages.home.hero.title"),
       subtitle: t("pages.home.hero.subtitle"),
-      cta_primary: signups_open? ? t("pages.home.hero.cta_primary") : nil,
-      cta_primary_path: signups_open? ? new_session_path : nil,
+      cta_primary: t("pages.home.hero.cta_primary"),
+      cta_primary_path: new_session_path,
       cta_secondary: t("pages.home.hero.cta_secondary"),
       cta_secondary_path: about_path %>
 
@@ -29,11 +33,9 @@
     <p class="mt-4 text-lg text-text-muted">
       <%= t("pages.home.cta.subtitle") %>
     </p>
-    <% if signups_open? %>
-      <div class="mt-8">
-        <%= link_to t("pages.home.cta.button"), new_session_path,
-              class: "btn-primary px-6 py-3 text-lg" %>
-      </div>
-    <% end %>
+    <div class="mt-8">
+      <%= link_to t("pages.home.cta.button"), new_session_path,
+            class: "btn-primary px-6 py-3 text-lg" %>
+    </div>
   </div>
 <% end %>
