@@ -55,19 +55,59 @@ RSpec.describe Role, type: :model do
     end
   end
 
+  describe "global role uniqueness (workspace_id IS NULL)" do
+    # The composite unique index on (workspace_id, slug) does not constrain
+    # rows with a NULL workspace_id — NULL is distinct in unique indexes on
+    # SQLite, Postgres, and MySQL alike. The partial unique index on
+    # slug WHERE workspace_id IS NULL is the real invariant; this spec guards
+    # against it being dropped and global-role uniqueness silently degrading
+    # to app-validation-only (which find_or_create_by! races straight past).
+    # find_or_create (not create): CI's db:prepare seeds the global roles and
+    # they survive into the suite, while a schema-reloaded local test DB starts
+    # empty — setup must hold in both states.
+    it "rejects a duplicate global slug at the database level" do
+      Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+      duplicate = build(:role, slug: "owner", workspace: nil)
+      expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
+
+  describe ".system_default!" do
+    it "returns the existing global role without creating another" do
+      existing = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+      result = nil
+      expect { result = Role.system_default!("owner") }.not_to change(Role, :count)
+      expect(result).to eq(existing)
+    end
+
+    it "creates the role with canonical name and permissions when missing" do
+      # CI's seeded baseline includes the global roles; the "missing" case must
+      # be arranged explicitly (rolled back with the example transaction).
+      Role.where(slug: "member", workspace_id: nil).delete_all
+      role = Role.system_default!(:member)
+      expect(role).to be_persisted
+      expect(role.workspace_id).to be_nil
+      expect(role.name).to eq("Member")
+      expect(role.permissions).to include("manage_projects" => true)
+    end
+
+    it "raises KeyError for a slug with no canonical definition" do
+      expect { Role.system_default!("superuser") }.to raise_error(KeyError)
+    end
+
+    it "returns the winner's row when losing the insert race" do
+      existing = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+      # find_or_create_by!'s find-then-create window can't be opened in
+      # single-threaded SQLite; simulate losing the race by forcing the
+      # create path into the partial unique index.
+      allow(Role).to receive(:find_or_create_by!).and_raise(ActiveRecord::RecordNotUnique)
+      expect(Role.system_default!("owner")).to eq(existing)
+    end
+  end
+
   describe "system defaults" do
     let!(:default_roles) do
-      {
-        owner:  { name: "Owner",  permissions: { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true } },
-        admin:  { name: "Admin",  permissions: { manage_members: true, manage_projects: true, manage_settings: true } },
-        member: { name: "Member", permissions: { manage_projects: true } },
-        viewer: { name: "Viewer", permissions: {} }
-      }.each do |slug, attrs|
-        Role.find_or_create_by!(slug: slug.to_s, workspace_id: nil) do |r|
-          r.name = attrs[:name]
-          r.permissions = attrs[:permissions]
-        end
-      end
+      Role::SYSTEM_DEFAULTS.each_key { |slug| Role.system_default!(slug) }
     end
 
     it "has 4 default roles" do

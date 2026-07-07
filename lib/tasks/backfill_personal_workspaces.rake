@@ -1,10 +1,7 @@
 namespace :users do
   desc "Create personal workspaces for existing users who don't have one"
   task backfill_personal_workspaces: :environment do
-    owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
-    end
+    owner_role = Role.system_default!("owner")
 
     User.find_each do |user|
       next if user.memberships.kept.joins(:role).where(roles: { slug: "owner" }).exists?

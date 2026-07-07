@@ -1,16 +1,6 @@
-default_roles = {
-  owner:  { name: "Owner",  permissions: { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true } },
-  admin:  { name: "Admin",  permissions: { manage_members: true, manage_projects: true, manage_settings: true } },
-  member: { name: "Member", permissions: { manage_projects: true } },
-  viewer: { name: "Viewer", permissions: {} }
-}
-
-default_roles.each do |slug, attrs|
-  Role.find_or_create_by!(slug: slug.to_s, workspace_id: nil) do |r|
-    r.name = attrs[:name]
-    r.permissions = attrs[:permissions]
-  end
-end
+# Canonical definitions live in Role::SYSTEM_DEFAULTS — one source of truth
+# for seeds and every request-time Role.system_default! lookup.
+Role::SYSTEM_DEFAULTS.each_key { |slug| Role.system_default!(slug) }
 
 # --- Single-tenant preset bootstrap ----------------------------------------
 #

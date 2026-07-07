@@ -11,7 +11,7 @@ module Workspaces
 
       def create
         authorize @project, :update?
-        viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
+        viewer_role = Role.system_default!("viewer")
 
         @invitation = @project.invitations.build(
           email: invitation_params[:email]&.downcase,

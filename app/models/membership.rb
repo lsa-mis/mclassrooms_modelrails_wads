@@ -110,8 +110,8 @@ class Membership < ApplicationRecord
   end
 
   def transfer_ownership_to!(target_membership)
-    owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
-    admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
+    owner_role = Role.system_default!("owner")
+    admin_role = Role.system_default!("admin")
 
     transaction do
       workspace.lock!

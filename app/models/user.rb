@@ -264,10 +264,7 @@ class User < ApplicationRecord
     return if personal_workspace_id.present?
 
     workspace = Workspace.create!(name: "#{first_name}'s Workspace", personal: true)
-    owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
-    end
+    owner_role = Role.system_default!("owner")
     workspace.memberships.create!(user: self, role: owner_role)
     update_column(:personal_workspace_id, workspace.id)
   end
@@ -285,10 +282,7 @@ class User < ApplicationRecord
     # registration), the user simply joins nothing and lands on the empty index.
     return unless workspace.admittable?
 
-    member_role = Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
-      r.name = "Member"
-      r.permissions = { manage_projects: true }
-    end
+    member_role = Role.system_default!("member")
     workspace.memberships.create!(user: self, role: member_role)
   end
 
