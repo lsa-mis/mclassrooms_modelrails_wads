@@ -37,7 +37,6 @@ en:
       section_label: "Workspace"
       strip_heading: "Workspace"
       overview: "Overview"
-      projects: "Projects"
       settings: "Settings"
     plans:
       free: "Free"
@@ -60,7 +59,7 @@ en:
       row:
         switch: "Switch"
         leave: "Leave"
-        leave_confirm: "Leave %{workspace}? You'll lose access to its projects and members. This can be reversed only by being re-invited."
+        leave_confirm: "Leave %{workspace}? You'll lose access. This can be reversed only by being re-invited."
         member:
           one: "1 member"
           other: "%{count} members"
@@ -80,7 +79,6 @@ en:
     show:
       title: "Dashboard"
       members: "Members"
-      projects: "Projects"
       invitations: "Invitations"
       settings: "Settings"
       branding: "Branding"

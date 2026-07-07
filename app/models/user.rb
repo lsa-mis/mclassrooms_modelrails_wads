@@ -11,9 +11,6 @@ class User < ApplicationRecord
   has_many :memberships, dependent: :destroy
   has_many :workspaces, through: :memberships
   has_many :sent_invitations, class_name: "Invitation", foreign_key: :invited_by_id, dependent: :nullify
-  has_many :project_memberships, dependent: :destroy
-  has_many :projects, through: :project_memberships
-  has_many :client_accesses, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
 
   after_create :onboard_workspace
@@ -81,22 +78,14 @@ class User < ApplicationRecord
     onboarded_at.present?
   end
 
-  # First-run wizard helpers (:none posture). The step is derived from data —
-  # the only persisted state is onboarded_at — so dispatcher, guard, and step
-  # controllers all read it from one place instead of re-deriving it.
+  # First-run wizard helper (:none posture). The wizard has a single step —
+  # create a workspace — so the only derived state is "has one or not".
   def onboarding_workspace
     workspaces.kept.first
   end
 
   def onboarding_step
-    workspace = onboarding_workspace
-    if workspace.nil?
-      :workspace
-    elsif workspace.projects.kept.none?
-      :project
-    else
-      :team
-    end
+    :workspace
   end
 
   def locked?
@@ -222,10 +211,6 @@ class User < ApplicationRecord
       .joins("INNER JOIN noticed_events ON noticed_events.id = noticed_notifications.event_id")
       .group("noticed_events.type")
       .count
-  end
-
-  def client_of?(project)
-    client_accesses.kept.exists?(project: project)
   end
 
   # True iff the one-time passkey enrollment banner should appear.

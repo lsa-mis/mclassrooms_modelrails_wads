@@ -20,7 +20,6 @@ RSpec.describe "Workspace shell spacing hooks", type: :request do
   it "uses a consistent px-6 pt-4 content gutter across all shell pages" do
     [
       workspace_path(workspace),
-      workspace_projects_path(workspace),
       workspace_members_path(workspace),
       edit_workspace_path(workspace),
       edit_workspace_settings_path(workspace),

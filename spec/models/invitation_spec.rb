@@ -101,29 +101,6 @@ RSpec.describe Invitation, type: :model do
         .and change(Membership, :count).by(0)
     end
 
-    it "raises Invitation::NotAcceptable when the target workspace is suspended (project invitation)" do
-      workspace = create(:workspace)
-      owner = create(:user)
-      create(:membership, :owner, user: owner, workspace: workspace)
-      project = create(:project, workspace: workspace, created_by: owner)
-      viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
-      invitation = project.invitations.create!(
-        email: "project-invitee@example.com",
-        role: viewer_role,
-        project_role: "editor",
-        invited_by: owner,
-        expires_at: 7.days.from_now
-      )
-      workspace.suspend!
-      # Force user creation outside the expect block — onboarding callbacks
-      # create their own membership, which would confound the count.
-      user
-
-      expect {
-        invitation.accept!(user)
-      }.to raise_error(Invitation::NotAcceptable, /no longer acceptable/i)
-        .and change(Membership, :count).by(0)
-    end
   end
 
   describe "#accept!" do
@@ -191,24 +168,6 @@ RSpec.describe Invitation, type: :model do
       create(:membership, :owner, workspace: workspace)
       create(:membership, workspace: workspace)
       invitation = create(:invitation, invitable: workspace)
-      user = create(:user)
-
-      expect { invitation.accept!(user) }
-        .to raise_error(ActiveRecord::RecordInvalid)
-
-      expect(workspace.memberships.kept.count).to eq(2)
-      expect(invitation.reload).to be_pending
-    end
-
-    it "rejects project-invitation acceptance when workspace is at capacity" do
-      workspace = create(:workspace, max_members: 2)
-      owner_membership = create(:membership, :owner, workspace: workspace)
-      create(:membership, workspace: workspace)
-      # Reuse the owner as the project's created_by to avoid the project factory's
-      # after_create membership backfill (which would push the workspace over cap
-      # before our invitation acceptance even runs — see spec/factories/projects.rb).
-      project = create(:project, workspace: workspace, created_by: owner_membership.user)
-      invitation = create(:invitation, invitable: project, project_role: "editor")
       user = create(:user)
 
       expect { invitation.accept!(user) }
@@ -293,132 +252,6 @@ RSpec.describe Invitation, type: :model do
     it "returns false when email is present" do
       invitation = build(:invitation)
       expect(invitation).not_to be_magic_link
-    end
-  end
-
-  describe "#accept! for project invitation" do
-    let(:workspace) { create(:workspace) }
-    let(:owner) { create(:user) }
-    let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
-    let(:project) { create(:project, workspace: workspace, created_by: owner) }
-    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
-    let(:invitation) do
-      project.invitations.create!(
-        email: "project-invitee@example.com",
-        role: viewer_role,
-        project_role: "editor",
-        invited_by: owner,
-        expires_at: 7.days.from_now
-      )
-    end
-
-    it "creates workspace membership and project membership" do
-      invitee = create(:user, email_address: "project-invitee@example.com")
-      invitation.accept!(invitee)
-      expect(workspace.memberships.kept.exists?(user: invitee)).to be true
-      expect(project.project_memberships.exists?(user: invitee)).to be true
-    end
-
-    it "assigns the correct project role" do
-      invitee = create(:user, email_address: "project-invitee2@example.com")
-      invitation2 = project.invitations.create!(
-        email: "project-invitee2@example.com",
-        role: viewer_role,
-        project_role: "viewer",
-        invited_by: owner,
-        expires_at: 7.days.from_now
-      )
-      invitation2.accept!(invitee)
-      pm = project.project_memberships.find_by(user: invitee)
-      expect(pm).to be_viewer
-    end
-
-    it "raises NotAcceptable for a discarded project" do
-      project.discard!
-      invitee = create(:user)
-      expect { invitation.accept!(invitee) }.to raise_error(Invitation::NotAcceptable)
-    end
-  end
-
-  describe "project_role validation" do
-    it "accepts editor" do
-      inv = build(:invitation, project_role: "editor")
-      inv.valid?
-      expect(inv.errors[:project_role]).to be_empty
-    end
-
-    it "accepts viewer" do
-      inv = build(:invitation, project_role: "viewer")
-      inv.valid?
-      expect(inv.errors[:project_role]).to be_empty
-    end
-
-    it "rejects creator" do
-      inv = build(:invitation, project_role: "creator")
-      expect(inv).not_to be_valid
-      expect(inv.errors[:project_role]).to be_present
-    end
-
-    it "accepts nil (for workspace invitations)" do
-      inv = build(:invitation, project_role: nil)
-      inv.valid?
-      expect(inv.errors[:project_role]).to be_empty
-    end
-  end
-
-  describe "#accept! when user is already a project member" do
-    let(:workspace) { create(:workspace) }
-    let(:owner) { create(:user) }
-    let(:project) { create(:project, workspace: workspace, created_by: owner) }
-    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
-    let(:invitation) do
-      project.invitations.create!(
-        email: "already-member@example.com",
-        role: viewer_role,
-        project_role: "editor",
-        invited_by: owner,
-        expires_at: 7.days.from_now
-      )
-    end
-
-    before do
-      create(:membership, :owner, user: owner, workspace: workspace)
-    end
-
-    it "raises when user is already a project member" do
-      existing_user = create(:user, email_address: "already-member@example.com")
-      create(:membership, user: existing_user, workspace: workspace)
-      create(:project_membership, project: project, user: existing_user)
-
-      expect { invitation.accept!(existing_user) }.to raise_error(ActiveRecord::RecordInvalid)
-    end
-  end
-
-  describe "#accept! reactivates discarded workspace membership for project invitation" do
-    let(:workspace) { create(:workspace) }
-    let(:owner) { create(:user) }
-    let(:project) { create(:project, workspace: workspace, created_by: owner) }
-    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
-
-    before { create(:membership, :owner, user: owner, workspace: workspace) }
-
-    it "reactivates the discarded membership" do
-      user = create(:user)
-      ws_membership = create(:membership, user: user, workspace: workspace)
-      other_owner = create(:membership, :owner, workspace: workspace)
-      ws_membership.deactivate!
-
-      invitation = project.invitations.create!(
-        email: user.email_address,
-        role: viewer_role,
-        project_role: "editor",
-        invited_by: owner,
-        expires_at: 7.days.from_now
-      )
-
-      invitation.accept!(user)
-      expect(ws_membership.reload).not_to be_discarded
-      expect(project.project_memberships.exists?(user: user)).to be true
     end
   end
 
@@ -527,13 +360,6 @@ RSpec.describe Invitation, type: :model do
 
     it "returns the invitable when invitable is a Workspace" do
       invitation = create(:invitation, invitable: workspace)
-      expect(invitation.resolved_workspace).to eq(workspace)
-    end
-
-    it "returns the project's workspace when invitable is a Project" do
-      create(:membership, :owner, user: owner, workspace: workspace)
-      project = create(:project, workspace: workspace, created_by: owner)
-      invitation = create(:invitation, invitable: project, project_role: "editor")
       expect(invitation.resolved_workspace).to eq(workspace)
     end
   end
@@ -680,108 +506,6 @@ RSpec.describe Invitation, type: :model do
 
         expect(result).to eq(invitation)
       end
-    end
-  end
-
-  describe "client invitations" do
-    let!(:owner_role) do
-      Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-        r.name = "Owner"; r.permissions = { manage_workspace: true }
-      end
-    end
-    let(:project) { create(:project, clientside_enabled: true) }
-    let(:inviter) { create(:user) }
-
-    it "is a client invite when company_name is present" do
-      inv = build(:invitation, :client, invitable: project)
-      expect(inv.client_invite?).to be(true)
-      expect(inv).to be_valid
-    end
-
-    it "allows a nil role only for client invites" do
-      member = build(:invitation, role: nil, company_name: nil)
-      expect(member).not_to be_valid
-      expect(member.errors[:role]).to be_present
-    end
-
-    it ".invite_client! creates the invite and enqueues the client mailer" do
-      expect {
-        Invitation.invite_client!(project: project, email: "dana@bigco.com",
-                                  company_name: "BigCo", invited_by: inviter)
-      }.to have_enqueued_mail(InvitationMailer, :invite_client)
-      inv = Invitation.last
-      expect(inv.client_invite?).to be(true)
-      expect(inv.role).to be_nil
-      expect(inv.invitable).to eq(project)
-    end
-
-    it "accept! creates a ClientAccess and stamps onboarded_at" do
-      inv = Invitation.invite_client!(project: project, email: "dana@bigco.com",
-                                      company_name: "BigCo", invited_by: inviter)
-      client = create(:user, :with_zero_workspaces, email_address: "dana@bigco.com")
-      expect { inv.accept!(client) }.to change { project.client_accesses.kept.count }.by(1)
-      expect(project.client?(client)).to be(true)
-      expect(client.reload.onboarded?).to be(true)
-      expect(inv.reload).to be_accepted
-    end
-
-    it "consume! still guards against a mismatched email (bearer protection)" do
-      inv = Invitation.invite_client!(project: project, email: "dana@bigco.com",
-                                      company_name: "BigCo", invited_by: inviter)
-      other = create(:user, :with_zero_workspaces, email_address: "evil@example.com")
-      expect { Invitation.consume!(token: inv.token, user: other, expected_email: other.email_address) }
-        .to raise_error(Invitation::EmailMismatch)
-    end
-
-    it "accept! raises NotAcceptable when Clientside is disabled (undiscard bypass)" do
-      # Arrange: an existing discarded ClientAccess for the user on the project,
-      # then Clientside is toggled off. The undiscard path must not succeed.
-      inv = Invitation.invite_client!(project: project, email: "dana@bigco.com",
-                                      company_name: "BigCo", invited_by: inviter)
-      client = create(:user, :with_zero_workspaces, email_address: "dana@bigco.com")
-      project.client_accesses.create!(user: client, company_name: "BigCo").discard!
-      project.update!(clientside_enabled: false)
-
-      expect { inv.accept!(client) }.to raise_error(Invitation::NotAcceptable, /clientside is disabled/i)
-    end
-
-    it "accept! still succeeds when Clientside is enabled (happy path)" do
-      inv = Invitation.invite_client!(project: project, email: "happy@bigco.com",
-                                      company_name: "BigCo", invited_by: inviter)
-      client = create(:user, :with_zero_workspaces, email_address: "happy@bigco.com")
-      expect { inv.accept!(client) }.to change { project.client_accesses.kept.count }.by(1)
-      expect(inv.reload).to be_accepted
-    end
-
-    it "is invalid when invitable is a Workspace, not a Project" do
-      inv = build(:invitation, :client, invitable: create(:workspace))
-      expect(inv).not_to be_valid
-      expect(inv.errors[:base]).to be_present
-    end
-
-    it "accept! for a client invitation to a discarded project raises NotAcceptable and creates no ClientAccess" do
-      inv = Invitation.invite_client!(project: project, email: "dana@bigco.com",
-                                      company_name: "BigCo", invited_by: inviter)
-      client = create(:user, :with_zero_workspaces, email_address: "dana@bigco.com")
-      project.discard!
-
-      expect { inv.accept!(client) }.to raise_error(Invitation::NotAcceptable)
-      expect(ClientAccess.where(user: client, project: project)).to be_empty
-    end
-
-    # Closes the admission matrix for the CLIENT (project-invitable) vector: the
-    # single accept! choke-point guard (unless resolved_workspace&.admittable?)
-    # resolves the workspace THROUGH the project, so a new client invitation into
-    # an archived (or deleted) workspace is blocked — new admission requires an
-    # active workspace, even though archived KEEPS existing client access.
-    it "accept! for a client invitation whose workspace is archived raises NotAcceptable and creates no ClientAccess" do
-      inv = Invitation.invite_client!(project: project, email: "arch@bigco.com",
-                                      company_name: "BigCo", invited_by: inviter)
-      client = create(:user, :with_zero_workspaces, email_address: "arch@bigco.com")
-      project.workspace.archive!
-
-      expect { inv.accept!(client) }.to raise_error(Invitation::NotAcceptable)
-      expect(ClientAccess.where(user: client, project: project)).to be_empty
     end
   end
 

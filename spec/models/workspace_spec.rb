@@ -146,18 +146,6 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
-  describe "cascade discard" do
-    it "cascades discard to projects" do
-      workspace = create(:workspace)
-      user = create(:user)
-      create(:membership, user: user, workspace: workspace)
-      project = create(:project, workspace: workspace, created_by: user)
-
-      workspace.discard!
-      expect(project.reload).to be_discarded
-    end
-  end
-
   describe "name length" do
     it "limits name to 255 characters" do
       workspace = build(:workspace, name: "a" * 256)

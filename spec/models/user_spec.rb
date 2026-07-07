@@ -688,36 +688,10 @@ RSpec.describe User, type: :model do
       expect(user.onboarding_step).to eq(:workspace)
     end
 
-    it "#onboarding_step is :project with a workspace but no project" do
+    it "#onboarding_step is still :workspace once the user has one (the wizard is single-step)" do
       user = create(:user, :with_zero_workspaces)
       join(user, create(:workspace))
-      expect(user.onboarding_step).to eq(:project)
-    end
-
-    it "#onboarding_step is :team with a workspace that has a project" do
-      user = create(:user, :with_zero_workspaces)
-      workspace = create(:workspace)
-      join(user, workspace)
-      create(:project, workspace: workspace)
-      expect(user.reload.onboarding_step).to eq(:team)
-    end
-  end
-
-  describe "#client_of?" do
-    it "is true for a project the user has client access to" do
-      access = create(:client_access)
-      expect(access.user.client_of?(access.project)).to be(true)
-    end
-
-    it "is false otherwise" do
-      project = create(:project, clientside_enabled: true)
-      expect(create(:user).client_of?(project)).to be(false)
-    end
-
-    it "is false for a discarded client access" do
-      access = create(:client_access)
-      access.discard!
-      expect(access.user.client_of?(access.project)).to be(false)
+      expect(user.onboarding_step).to eq(:workspace)
     end
   end
 

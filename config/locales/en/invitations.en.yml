@@ -45,7 +45,6 @@ en:
     show:
       title: "You've been invited"
       body: "%{inviter} invited you to join %{workspace} as a %{role}."
-      client_body: "%{inviter} shared the project %{project} with you."
       accept: "Accept invitation"
       sign_in: "Sign in to accept"
       register: "Create an account to accept"

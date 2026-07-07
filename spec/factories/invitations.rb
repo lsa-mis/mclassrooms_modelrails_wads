@@ -29,12 +29,5 @@ FactoryBot.define do
     trait :expired do
       expires_at { 1.day.ago }
     end
-
-    trait :client do
-      association :invitable, factory: :project, clientside_enabled: true
-      role { nil }
-      company_name { "BigCo" }
-      email { "dana@bigco.com" }
-    end
   end
 end

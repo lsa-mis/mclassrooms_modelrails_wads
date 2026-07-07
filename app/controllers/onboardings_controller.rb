@@ -5,11 +5,7 @@ class OnboardingsController < ApplicationController
   def show
     return redirect_to(root_path) if Current.user.onboarded?
 
-    case Current.user.onboarding_step
-    when :workspace then redirect_to new_onboarding_workspace_path
-    when :project   then redirect_to new_onboarding_project_path
-    when :team      then redirect_to new_onboarding_team_path
-    end
+    redirect_to new_onboarding_workspace_path
   end
 
   # "Skip for now" / finish: mark complete and land in the workspace.
@@ -17,9 +13,7 @@ class OnboardingsController < ApplicationController
     Current.user.update!(onboarded_at: Time.current) unless Current.user.onboarded?
 
     workspace = Current.user.onboarding_workspace
-    if workspace && (project = workspace.projects.kept.first)
-      redirect_to workspace_project_path(workspace, project), notice: t(".complete")
-    elsif workspace
+    if workspace
       redirect_to workspace_path(workspace), notice: t(".complete")
     else
       redirect_to root_path, notice: t(".complete")

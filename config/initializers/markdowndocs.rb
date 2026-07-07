@@ -18,8 +18,8 @@ Markdowndocs.configure do |config|
   template_categories = {
     "Getting Started"            => %w[user/welcome developer/getting-started developer/codespaces],
     "Accounts & Authentication"  => %w[user/authentication user/accounts],
-    "Workspaces & Collaboration" => %w[user/workspaces user/projects user/invitations user/onboarding user/clientside],
-    "Features"                   => %w[user/notifications user/emails user/project-tools],
+    "Workspaces & Collaboration" => %w[user/workspaces user/invitations user/onboarding],
+    "Features"                   => %w[user/notifications user/emails],
     "Presets (Tenancy)"          => %w[developer/presets developer/presets-solo developer/presets-single-tenant developer/presets-open-saas developer/presets-none],
     "Architecture & Data Model"  => %w[developer/architecture developer/application-flows developer/accounts-and-identity developer/identity-system],
     "Building & Extending"       => %w[developer/extending developer/forking developer/components developer/ui-patterns],

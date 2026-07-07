@@ -2,8 +2,6 @@ en:
   onboarding:
     steps:
       workspace: "Workspace"
-      project: "Project"
-      team: "Team"
     workspaces:
       new:
         title: "Name your workspace"
@@ -12,32 +10,6 @@ en:
         submit: "Continue"
       create:
         success: "Account created."
-    projects:
-      new:
-        title: "Create your first project"
-        subtitle: "Projects hold the work — you can add more later."
-        name_label: "Project name"
-        description_label: "What's it about? (optional)"
-        submit: "Continue"
-      create:
-        success: "Project created."
-    tools:
-      new:
-        title: "Pick your tools"
-        subtitle: "Turn on the tools this project needs — you can change these later."
-        submit: "Save tools"
-    teams:
-      new:
-        title: "Invite your team"
-        subtitle: "Add teammates by email — or skip and invite them later."
-        emails_label: "Email addresses"
-        emails_placeholder: "sam@example.com, lee@example.com"
-        role_label: "Role"
-        submit: "Send invites"
-        skip: "Skip for now"
-      create:
-        sent: "Invitations sent."
-        no_emails: "Enter at least one email address, or skip for now."
   onboardings:
     update:
       complete: "You're all set."

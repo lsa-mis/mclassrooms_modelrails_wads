@@ -86,28 +86,6 @@ Rails.application.routes.draw do
       get  "joins/:token", to: "joins#show",   as: :join
       post "joins/:token", to: "joins#create"
       resource :settings, only: [ :edit, :update ]
-      resources :projects, param: :slug do
-        member do
-          patch :archive
-          patch :unarchive
-        end
-        scope module: :projects do
-          resources :memberships, only: [ :index, :new, :create, :update, :destroy ] do
-            member do
-              patch :toggle_pin
-            end
-          end
-          resources :invitations, only: [ :new, :create ]
-          resources :resources, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
-            member do
-              patch :reposition
-            end
-          end
-          resource :tools, only: %i[edit update]
-          resource :clientside, only: %i[edit update]
-          resources :client_invitations, only: %i[new create]
-        end
-      end
     end
   end
 
@@ -119,15 +97,6 @@ Rails.application.routes.draw do
   resource :onboarding, only: %i[show update]
   namespace :onboarding do
     resource :workspace, only: %i[new create]
-    resource :project,   only: %i[new create]
-    resource :tools,     only: %i[new create]
-    resource :team,      only: %i[new create]
-  end
-
-  namespace :clientside do
-    resources :projects, only: %i[index show] do
-      resources :resources, only: %i[show], module: :projects
-    end
   end
 
   # Fork seam: product routes (root, marketing pages, your features) live in

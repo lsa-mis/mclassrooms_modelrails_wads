@@ -21,36 +21,6 @@ RSpec.describe "Turbo Stream broadcasts" do
       expect(invitation).to receive(:broadcast_refresh_to).with(workspace)
       invitation.decline!
     end
-
-    it "Project broadcasts refresh to workspace on create" do
-      user = create(:user)
-      create(:membership, user: user, workspace: workspace)
-      project = workspace.projects.build(name: "New", created_by: user)
-      expect(project).to receive(:broadcast_refresh_to).with(workspace)
-      project.save!
-    end
-  end
-
-  describe "project-level broadcasts" do
-    let(:workspace) { create(:workspace) }
-    let(:user) { create(:user) }
-    let(:project) { create(:project, workspace: workspace, created_by: user) }
-    before { create(:membership, user: user, workspace: workspace) }
-
-    it "Resource broadcasts refresh to project on create" do
-      doc = Document.create!
-      resource = project.resources.build(title: "Test", resourceable: doc, created_by: user)
-      expect(resource).to receive(:broadcast_refresh_to).with(project)
-      resource.save!
-    end
-
-    it "ProjectMembership broadcasts refresh to project on create" do
-      new_member = create(:user)
-      create(:membership, user: new_member, workspace: workspace)
-      pm = project.project_memberships.build(user: new_member, role: "editor")
-      expect(pm).to receive(:broadcast_refresh_to).with(project)
-      pm.save!
-    end
   end
 
   describe "broadcast resilience" do
