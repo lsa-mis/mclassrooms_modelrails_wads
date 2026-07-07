@@ -1,72 +1,69 @@
 en:
   pages:
     home:
-      title: "Welcome to ModelRails"
+      title: "MiClassrooms"
       hero:
-        title: "Build your SaaS faster"
-        subtitle: "A production-ready Rails 8.1 starter kit with authentication, workspaces, projects, and real-time collaboration built in."
-        cta_primary: "Get started"
-        cta_secondary: "View documentation"
+        title: "Find your classroom on the Ann Arbor campus"
+        subtitle: "MiClassrooms is the University of Michigan's directory of registrar-schedulable classrooms. Search by building or room and see everything you need before you teach or book — seating capacity (including ADA seating), equipment, photos, 360° panoramas, seating charts, floor plans, and scheduling and support contacts."
+        cta_primary: "Sign in"
+        cta_secondary: "Learn more"
       features:
-        title: "Everything you need"
-        subtitle: "Stop rebuilding the same infrastructure. Start with a solid foundation."
-        auth:
-          title: "Authentication"
-          description: "Email/password, Google and GitHub OAuth, email verification, password reset, and account locking — all built in."
-        workspaces:
-          title: "Workspaces"
-          description: "Multi-tenant workspaces with roles, permissions, invitations, and branding. Your workspace on sign-up."
-        projects:
-          title: "Projects"
-          description: "Lightweight collaboration spaces with creator/editor/viewer roles, pinning, and project-level invitations."
-        resources:
-          title: "Resources"
-          description: "Polymorphic resource registry with Document support via Action Text. Add your own content types."
-        realtime:
-          title: "Real-time"
-          description: "Turbo Stream broadcasts on workspace and project changes. Your app feels native without writing JavaScript."
-        security:
-          title: "Security"
-          description: "Pundit authorization, rate limiting, security headers, Pwned password checks, and sensitive data filtering."
+        title: "Everything you need before class"
+        subtitle: "Locally curated presentation details layered onto building and room data synced nightly from the university's official facilities systems."
+        capacity:
+          title: "Capacity & ADA seating"
+          description: "Seating capacity for every room, including ADA-accessible seat counts, so you can confirm a room fits your class before you book it."
+        equipment:
+          title: "Equipment & characteristics"
+          description: "Projectors, whiteboards, video conferencing, and every other room characteristic — searchable and filterable."
+        media:
+          title: "Photos & 360° panoramas"
+          description: "See the room before you arrive: photos, immersive 360° panoramas, and seating charts for every listed classroom."
+        floor_plans:
+          title: "Floor plans"
+          description: "Find your room on its building's floor plan, alongside every other classroom on that floor."
+        contacts:
+          title: "Scheduling & support contacts"
+          description: "Know exactly who to call to schedule a room or get on-site technical support."
+        alerts:
+          title: "Notes & alerts"
+          description: "Admin-posted alerts flag rooms that need special handling — like an onsite technician — before you walk in."
       cta:
-        title: "Ready to build?"
-        subtitle: "Get started in minutes with a foundation that scales."
-        button: "Create your account"
+        title: "Ready to find a room?"
+        subtitle: "Sign in with your U-M account to search the full classroom directory."
+        button: "Sign in"
     about:
-      title: "About ModelRails"
+      title: "About MiClassrooms"
       hero:
-        title: "About ModelRails"
-        subtitle: "A multi-tenant SaaS starter kit that lets you focus on what makes your app unique."
+        title: "About MiClassrooms"
+        subtitle: "The University of Michigan's classroom directory for the Ann Arbor campus."
       mission:
-        title: "Our mission"
-        description: "ModelRails eliminates the months of boilerplate work that every SaaS application requires. Authentication, multi-tenancy, authorization, invitations, real-time updates — it's all here, tested, and ready to customize."
+        title: "What MiClassrooms does"
+        description: "MiClassrooms helps U-M faculty, staff, and students find registrar-schedulable classrooms and see everything about a room before they teach or book it — seating capacity (including ADA seating), equipment and characteristics, photos, 360° panoramas, seating charts, floor plans, and scheduling and support contacts. Building and room data sync nightly from the university's official facilities systems, and admins post notes and alerts on top of it. It replaced the legacy LSA Classroom Database and still supports its old links."
       features:
         title: "What's included"
         items:
-          - "Email/password and OAuth authentication"
-          - "Workspace-based multi-tenancy with roles"
-          - "Project collaboration spaces"
-          - "Polymorphic resource system"
-          - "Real-time updates via Turbo Streams"
-          - "Pundit-based authorization"
-          - "Activity tracking and audit logging"
-          - "WCAG 2.2 AAA accessibility"
-          - "Full I18n internationalization"
-          - "Comprehensive test suite"
+          - "Seating capacity, including ADA-accessible seat counts"
+          - "Equipment and room characteristics, searchable and filterable"
+          - "Photos, 360° panoramas, and seating charts"
+          - "Floor plans showing every classroom on a floor"
+          - "Scheduling and support contacts for every room"
+          - "Admin-posted notes and alerts"
+          - "Nightly sync with the university's official facilities systems"
       philosophy:
-        title: "Built on principles"
-        conventions:
-          title: "Conventions first"
-          description: "Rails generators, built-in auth, standard patterns. We deviate only after documented evaluation."
+        title: "Who it's for"
+        community:
+          title: "U-M community"
+          description: "Sign in with your U-M account to search and browse the full directory."
         accessibility:
-          title: "Accessibility is not optional"
-          description: "WCAG 2.2 AAA compliance. 7:1 contrast ratios, 44px touch targets, semantic HTML, keyboard navigation."
-        testing:
-          title: "Test-driven"
-          description: "Every feature built with strict TDD. Red-Green-Refactor. Tests verify behavior, not implementation."
-        extensible:
-          title: "Forker-friendly"
-          description: "Clear seams for extension. Add your resource types, custom roles, and domain logic on a solid foundation."
+          title: "Built for everyone"
+          description: "MiClassrooms meets WCAG 2.2 AAA accessibility standards, including ADA seating counts on every room."
+        data:
+          title: "Kept up to date"
+          description: "Building and room data sync nightly from the university's facilities systems; photos, panoramas, and notes are curated locally."
+        legacy:
+          title: "Successor to the Classroom Database"
+          description: "MiClassrooms replaces the LSA Classroom Database and keeps its legacy links working."
     privacy:
       title: "Privacy Policy"
       intro: "This privacy policy describes how ModelRails handles your information. We are committed to protecting your privacy and being transparent about our practices."

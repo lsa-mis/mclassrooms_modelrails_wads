@@ -29,7 +29,7 @@
       title: t("pages.about.philosophy.title"),
       bg: "bg-surface" do %>
   <div class="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
-    <% %w[conventions accessibility testing extensible].each do |principle| %>
+    <% %w[community accessibility data legacy].each do |principle| %>
       <%= render "shared/feature_card",
             title: t("pages.about.philosophy.#{principle}.title"),
             description: t("pages.about.philosophy.#{principle}.description") %>
