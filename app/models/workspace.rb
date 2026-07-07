@@ -23,7 +23,6 @@ class Workspace < ApplicationRecord
   has_many :users, through: :memberships
   has_many :roles, dependent: :destroy
   has_many :invitations, as: :invitable, dependent: :destroy
-  has_many :projects, dependent: :destroy
 
   enum :plan, { free: "free", pro: "pro", enterprise: "enterprise" }
 
@@ -116,7 +115,6 @@ class Workspace < ApplicationRecord
       next if discarded?
       raise HomeWorkspaceProtectedError if home?
       raise Suspendable::SuspendedError if suspended?
-      projects.kept.find_each(&:discard!)
       super
     end
   end

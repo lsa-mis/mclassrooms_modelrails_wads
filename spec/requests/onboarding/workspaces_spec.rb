@@ -18,7 +18,7 @@ RSpec.describe "Onboarding · account step", type: :request do
     expect(response).to have_http_status(:ok)
   end
 
-  it "creates the workspace + owner membership and advances to the project step" do
+  it "creates the workspace + owner membership and completes onboarding" do
     expect {
       post onboarding_workspace_path, params: { workspace: { name: "Acme Co" } }
     }.to change(Workspace.kept, :count).by(1)
@@ -26,7 +26,8 @@ RSpec.describe "Onboarding · account step", type: :request do
     workspace = user.reload.workspaces.kept.first
     expect(workspace.name).to eq("Acme Co")
     expect(workspace.owner).to eq(user)
-    expect(response).to redirect_to(new_onboarding_project_path)
+    expect(user.reload.onboarded?).to be(true)
+    expect(response).to redirect_to(workspace_path(workspace))
   end
 
   it "re-renders on a blank name" do

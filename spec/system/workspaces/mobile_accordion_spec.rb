@@ -5,7 +5,7 @@ require "rails_helper"
 # Mobile-viewport behavior for the workspace-scoped (application layout)
 # header accordion (below md). The accordion holds only GLOBAL chrome now
 # (workspace switcher, user menu, theme toggle); the workspace section sub-nav
-# (Overview/Projects/Settings) lives in an in-page strip, not here. Mirrors the
+# (Overview/Settings) lives in an in-page strip, not here. Mirrors the
 # settings accordion spec.
 RSpec.describe "Workspace pages — mobile accordion", type: :system, js: true do
   let(:user) { create(:user) }
@@ -25,7 +25,6 @@ RSpec.describe "Workspace pages — mobile accordion", type: :system, js: true d
     click_button I18n.t("navigation.mobile_menu.open")
     within("[data-mobile-menu-target='menu']") do
       expect(page).to have_link(I18n.t("navigation.all_workspaces"))    # global chrome
-      expect(page).to have_no_link(I18n.t("workspaces.sidebar.projects")) # sub-nav lives in the in-page strip
     end
   end
 

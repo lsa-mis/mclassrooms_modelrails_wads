@@ -6,7 +6,7 @@ keywords: workspace members invitations roles branding ownership transfer settin
 
 # Workspace Administration
 
-A workspace is the top-level organizational boundary — users, projects, invitations, and roles are all scoped to one. How workspaces *present* to users (one workspace or many, whether a switcher appears) depends on your [app preset](/docs/developer/presets). For the underlying data model and how scoping is enforced at request time (`Current.workspace`, the `Tenanted` concern), see [Architecture](/docs/developer/architecture).
+A workspace is the top-level organizational boundary — users, memberships, invitations, and roles are all scoped to one. How workspaces *present* to users (one workspace or many, whether a switcher appears) depends on your [app preset](/docs/developer/presets). For the underlying data model and how scoping is enforced at request time (`Current.workspace`, the `Tenanted` concern), see [Architecture](/docs/developer/architecture).
 
 > See the invite-teammates flow drawn as a wireframe in [Application Flows](/docs/developer/application-flows).
 
@@ -50,11 +50,11 @@ Select from the workspace's effective roles (system defaults plus any workspace-
 
 ### Deactivating a Member
 
-Deactivation is a **soft operation** — the membership is discarded (not destroyed), and the user is removed from all projects in that workspace. The last owner cannot be deactivated.
+Deactivation is a **soft operation** — the membership is discarded (not destroyed). The last owner cannot be deactivated.
 
 ### Reactivating a Member
 
-Restores a previously deactivated membership. The user regains workspace access but must be re-added to individual projects.
+Restores a previously deactivated membership. The user regains workspace access.
 
 ## Ownership Transfer
 
@@ -166,14 +166,14 @@ Every workspace is **Active** by default. An owner (anyone with `manage_workspac
 **Route:** `PATCH /workspaces/:slug/archive` · `PATCH /workspaces/:slug/unarchive`  
 **Permission:** `manage_workspace` (Owner)
 
-Archiving moves a workspace out of your active list without deleting anything — "it'll move out of your active list; you can bring it back anytime from the **Archived** section." Archived workspaces stay fully readable to their existing members (and to external clients on shared projects — see [Clientside](/docs/user/clientside)); they just don't clutter the workbench. **Restore** returns it to Active at any time.
+Archiving moves a workspace out of your active list without deleting anything — "it'll move out of your active list; you can bring it back anytime from the **Archived** section." Archived workspaces stay fully readable to their existing members; they just don't clutter the workbench. **Restore** returns it to Active at any time.
 
 ### Delete (permanent)
 
 **Route:** `DELETE /workspaces/:slug`  
 **Permission:** `manage_workspace` (Owner)
 
-Deleting is permanent and gated behind a **type-the-workspace-name** confirmation ("Delete this workspace for good?" → type the exact name → "Delete forever"). It cascades — every project in the workspace is deleted too. Under the hood this is a soft delete (`Discardable`): the rows are retained but hidden from every user-facing view, so an operator can recover it from the console, but there is no in-app undo.
+Deleting is permanent and gated behind a **type-the-workspace-name** confirmation ("Delete this workspace for good?" → type the exact name → "Delete forever"). Under the hood this is a soft delete (`Discardable`): the row is retained but hidden from every user-facing view, so an operator can recover it from the console, but there is no in-app undo.
 
 ### Locked (operator hold)
 

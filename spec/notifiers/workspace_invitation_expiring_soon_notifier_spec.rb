@@ -140,29 +140,5 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
         )
       end
     end
-
-    context "when invitation invitable is a Project" do
-      let(:project) { create(:project, workspace: workspace) }
-      let(:project_invitation) do
-        create(:invitation,
-               invitable: project,
-               email: invitee.email_address,
-               invited_by: inviter,
-               expires_at: 24.hours.from_now,
-               project_role: "editor")
-      end
-
-      it "uses the project's workspace name in the message" do
-        freeze_time do
-          described_class.with(record: project_invitation).deliver(invitee)
-          notification = invitee.notifications.last
-          expect(notification.message).to eq(
-            I18n.t("notifications.workspace_invitation_expiring_soon.message",
-                   workspace: workspace.name,
-                   hours_remaining: 24)
-          )
-        end
-      end
-    end
   end
 end

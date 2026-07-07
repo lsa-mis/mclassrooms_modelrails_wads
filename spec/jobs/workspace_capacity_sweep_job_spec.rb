@@ -102,7 +102,6 @@ RSpec.describe WorkspaceCapacitySweepJob, type: :job do
       workspace = create(:workspace, max_members: 100, max_projects: 1)
       owner = create(:user)
       create(:membership, user: owner, workspace: workspace, role: owner_role)
-      create(:project, workspace: workspace, created_by: owner)
 
       expect {
         described_class.perform_now

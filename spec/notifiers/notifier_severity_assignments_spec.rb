@@ -11,8 +11,7 @@ RSpec.describe "Notifier severity assignments" do
     WorkspaceRoleChangedNotifier         => :info,
     WorkspaceMemberAddedNotifier         => :success,
     WorkspaceInvitationAcceptedNotifier  => :success,
-    WorkspaceInvitationDeclinedNotifier  => :info,
-    ProjectMembershipChangedNotifier     => :info
+    WorkspaceInvitationDeclinedNotifier  => :info
   }
 
   expected.each do |notifier_class, severity|

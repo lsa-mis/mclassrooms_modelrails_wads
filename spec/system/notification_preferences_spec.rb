@@ -29,11 +29,11 @@ RSpec.describe "Notification preferences", type: :system do
       expect(page).to have_css("h1", text: I18n.t("settings.pages.notifications.h1"))
     end
 
-    it "renders Card 1: Notification Types with 5 rows + security 'Always on' badge" do
+    it "renders Card 1: Notification Types with 4 rows + security 'Always on' badge" do
       expect(page).to have_css("h2", text: I18n.t("notifications.preferences.notification_types.heading"))
-      # 5 type toggles (security disabled-but-rendered + 4 user-toggleable).
+      # 4 type toggles (security disabled-but-rendered + 3 user-toggleable).
       checkboxes = all('input[type="checkbox"][name^="notification_preferences[notification_types]"]', visible: :all)
-      expect(checkboxes.size).to eq(5)
+      expect(checkboxes.size).to eq(4)
       # Security row is disabled and shows the always-on reassurance.
       expect(page).to have_css(
         'input[type="checkbox"][name="notification_preferences[notification_types][security]"][disabled]',

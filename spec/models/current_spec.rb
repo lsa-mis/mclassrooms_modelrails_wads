@@ -9,10 +9,6 @@ RSpec.describe Current, type: :model do
     it "has workspace attribute" do
       expect(Current).to respond_to(:workspace)
     end
-
-    it "has project attribute" do
-      expect(Current).to respond_to(:project)
-    end
   end
 
   describe "delegation" do

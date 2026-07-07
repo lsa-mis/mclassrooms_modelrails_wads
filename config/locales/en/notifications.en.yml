@@ -30,7 +30,6 @@ en:
         security: "Security & sign-in"
         account_access: "Account & access"
         workspace_activity: "Workspace activity"
-        project_activity: "Project activity"
         billing: "Billing"
       notification_types:
         heading: "Notification types"
@@ -46,9 +45,6 @@ en:
           workspace_activity:
             title: "Workspace activity"
             description: "Members joining or changing roles."
-          project_activity:
-            title: "Project activity"
-            description: "Changes to projects you belong to."
           billing:
             title: "Billing"
             description: "Plan changes and usage warnings."
@@ -127,8 +123,6 @@ en:
       message: "%{added_user_name} joined %{workspace}"
     workspace_capacity_approaching:
       message: "%{workspace} is approaching its %{metric} limit (%{current} of %{limit})"
-    project_membership_changed:
-      message: "Your access to %{project} changed to %{new_role}"
     password_changed:
       message: "Your password was changed for your account, %{user_name}."
     sign_in_from_new_device:
@@ -142,7 +136,6 @@ en:
         security: "Security"
         account_access: "Access"
         workspace_activity: "Workspace"
-        project_activity: "Project"
         billing: "Billing"
       empty_all: "You're all caught up."
       empty_filter: "Nothing matches this filter."

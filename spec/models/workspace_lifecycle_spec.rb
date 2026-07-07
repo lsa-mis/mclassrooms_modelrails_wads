@@ -81,20 +81,6 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
-  describe "cascades" do
-    let!(:project) { create(:project, workspace: workspace) }
-
-    it "archive! does NOT touch project rows (no archive cascade)" do
-      workspace.archive!
-      expect(project.reload.archived_at).to be_nil
-    end
-
-    it "discard! still cascades to kept projects (unchanged)" do
-      workspace.discard!
-      expect(project.reload).to be_discarded
-    end
-  end
-
   describe "#home?" do
     it "is true for a personal workspace" do
       expect(create(:workspace, personal: true).home?).to be(true)
