@@ -9,7 +9,8 @@ RSpec.describe "Content Security Policy" do
   # config/initializers/content_security_policy.rb's form_action directive.
   EXPECTED_OAUTH_HOSTS_BY_PROVIDER = {
     google_oauth2: "https://accounts.google.com",
-    github:        "https://github.com"
+    github:        "https://github.com",
+    okta:          "https://*.okta.com"
   }.freeze
 
   it "allows form-action to every configured OAuth provider host" do

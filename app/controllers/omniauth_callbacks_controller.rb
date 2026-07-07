@@ -47,6 +47,7 @@ class OmniauthCallbacksController < ApplicationController
         notice: t("omniauth_callbacks.create.pending_resent", email: auth.email)
     else
       auth.update!(oauth_attrs(auth_hash))
+      stash_okta_logout_state(auth_hash)
       start_new_session_for(auth.user)
       redirect_to after_authentication_url, notice: t("sessions.create.success")
     end
@@ -130,6 +131,7 @@ class OmniauthCallbacksController < ApplicationController
     end
 
     if success
+      stash_okta_logout_state(auth_hash)
       start_new_session_for(@user)
       redirect_to after_authentication_url, notice: t("sessions.create.success")
     else
@@ -186,6 +188,25 @@ class OmniauthCallbacksController < ApplicationController
 
   def normalized_provider(auth_hash)
     OmniauthAdapters.normalize_provider(auth_hash.provider)
+  end
+
+  # RP-initiated logout (Task 6, D4): stash the OIDC id_token for the
+  # lifetime of the browser session so SessionsController#destroy can hand
+  # it back to Okta as id_token_hint on sign-out. Never persisted to the
+  # Authentication row — there's no column for it, and it's only meaningful
+  # for the session that minted it.
+  #
+  # Gated on the normalized provider (not merely "id_token present") because
+  # Google's strategy is also OIDC-based and populates credentials.id_token
+  # too (omniauth-google-oauth2#credentials) — without this guard, signing in
+  # via Google would incorrectly route sign-out through Okta's
+  # end_session_endpoint. The mocked Google specs never set id_token, so that
+  # bug would only have surfaced against real Google tokens in production.
+  def stash_okta_logout_state(auth_hash)
+    return unless normalized_provider(auth_hash) == "okta"
+
+    id_token = auth_hash.credentials&.id_token
+    session[:okta_id_token] = id_token if id_token.present?
   end
 
   # OAuth providers may explicitly mark the supplied email as unverified
