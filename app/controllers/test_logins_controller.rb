@@ -20,10 +20,7 @@ class TestLoginsController < ApplicationController
   def create
     raise ActionController::RoutingError, "Not Found" unless valid_token?
 
-    user = User.find_or_create_by!(email_address: TEST_LOGIN_EMAIL) do |u|
-      u.first_name = "Siteimprove"
-      u.last_name = "Crawler"
-    end
+    user = find_or_create_test_user
 
     grant_test_role(user)
     start_new_session_for(user)
@@ -31,6 +28,20 @@ class TestLoginsController < ApplicationController
   end
 
   private
+
+  # find_or_create_by! is find-then-create, not atomic: concurrent crawler
+  # requests can both miss the find and race the INSERT (unique index on
+  # email_address makes the loser raise RecordNotUnique instead of a
+  # duplicate row). Same shape as Role.system_default! (app/models/role.rb)
+  # — rescue and re-find the winner's row.
+  def find_or_create_test_user
+    User.find_or_create_by!(email_address: TEST_LOGIN_EMAIL) do |u|
+      u.first_name = "Siteimprove"
+      u.last_name = "Crawler"
+    end
+  rescue ActiveRecord::RecordNotUnique
+    User.find_by!(email_address: TEST_LOGIN_EMAIL)
+  end
 
   def valid_token?
     configured_token = AuthConfig.test_login_token
