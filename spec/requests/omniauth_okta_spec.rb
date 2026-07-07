@@ -19,7 +19,11 @@ RSpec.describe "Okta OIDC", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_join_role).and_return("viewer")
   end
 
-  let(:okta_uid) { "okta-uid-umich-123" }
+  # Shaped like Okta's `sub` claim (an opaque 00u... identifier): the strategy
+  # links identity on the immutable OIDC subject, uid_field: "sub" — NOT
+  # preferred_username/email, which are reissuable. See
+  # config/initializers/omniauth.rb.
+  let(:okta_uid) { "00uAbC123dEf456GhI7x5" }
 
   let(:okta_auth_hash) do
     OmniAuth::AuthHash.new(
@@ -179,6 +183,69 @@ RSpec.describe "Okta OIDC", type: :request do
       it "still terminates the local session" do
         expect { delete session_path }.to change(Session, :count).by(-1)
       end
+    end
+  end
+
+  describe "RP-initiated logout after the unverified-email deferred sign-in flow (D4)" do
+    # An Okta org can assert email_verified: false, which routes the callback
+    # through handle_unverified_email_oauth: no session is started at callback
+    # time — sign-in is deferred to Settings::ConnectedAccountsController#verify
+    # when the user clicks the emailed verification link. The id_token stash
+    # must happen at CALLBACK time (the verify request has no auth_hash), so a
+    # same-browser verification inherits it and sign-out still ends the Okta
+    # IdP session.
+    let(:unverified_okta_hash) do
+      OmniAuth::AuthHash.new(
+        provider: "okta",
+        uid: okta_uid,
+        info: {
+          email: "deferred@umich.edu",
+          first_name: "Dee",
+          last_name: "Ferred",
+          email_verified: false
+        },
+        credentials: {
+          token: "okta-access-token",
+          refresh_token: "okta-refresh-token",
+          expires_at: 1.hour.from_now.to_i,
+          id_token: "okta-id-token-deferred"
+        }
+      )
+    end
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("OKTA_ISSUER").and_return("https://miclassrooms-test.okta.com")
+      OmniAuth.config.mock_auth[:okta] = unverified_okta_hash
+    end
+
+    it "stashes the id_token at callback time so the deferred first session still gets RP logout" do
+      # Callback: creates user + pending auth, refuses to sign in — but the
+      # OIDC flow completed in this browser, so the stash lands now.
+      get "/auth/okta/callback"
+      expect(response).to redirect_to(new_session_path)
+      expect(session[:okta_id_token]).to eq("okta-id-token-deferred")
+
+      user = User.find_by(email_address: "deferred@umich.edu")
+      auth = user.authentications.find_by(provider: "okta")
+      expect(auth).to be_pending
+
+      # Same-browser verification: the deferred sign-in happens here
+      # (Settings::ConnectedAccountsController#verify → start_new_session_for).
+      token = auth.generate_token_for(:email_verification)
+      expect {
+        get verify_settings_connected_accounts_path(token: token)
+      }.to change(Session, :count).by(1)
+      expect(response).to redirect_to(root_path)
+
+      # Sign-out from that deferred session routes through Okta's
+      # end_session_endpoint, exactly like a directly-signed-in Okta session.
+      delete session_path
+      expect(response).to have_http_status(:see_other)
+      expect(response.location).to start_with("https://miclassrooms-test.okta.com/v1/logout?")
+      query = Rack::Utils.parse_nested_query(URI.parse(response.location).query)
+      expect(query["id_token_hint"]).to eq("okta-id-token-deferred")
+      expect(query["post_logout_redirect_uri"]).to eq(new_session_url)
     end
   end
 end
