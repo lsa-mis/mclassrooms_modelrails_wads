@@ -18,14 +18,17 @@ RSpec.describe "GET /test_login", type: :request do
   around do |example|
     original_token = ENV["TEST_LOGIN_TOKEN"]
     original_admin = ENV["TEST_LOGIN_ADMIN"]
-    ENV["TEST_LOGIN_TOKEN"] = TEST_TOKEN
-    Rails.application.reload_routes!
 
-    example.run
+    begin
+      ENV["TEST_LOGIN_TOKEN"] = TEST_TOKEN
+      Rails.application.reload_routes!
 
-    original_token.nil? ? ENV.delete("TEST_LOGIN_TOKEN") : ENV["TEST_LOGIN_TOKEN"] = original_token
-    original_admin.nil? ? ENV.delete("TEST_LOGIN_ADMIN") : ENV["TEST_LOGIN_ADMIN"] = original_admin
-    Rails.application.reload_routes!
+      example.run
+    ensure
+      original_token.nil? ? ENV.delete("TEST_LOGIN_TOKEN") : ENV["TEST_LOGIN_TOKEN"] = original_token
+      original_admin.nil? ? ENV.delete("TEST_LOGIN_ADMIN") : ENV["TEST_LOGIN_ADMIN"] = original_admin
+      Rails.application.reload_routes!
+    end
   end
 
   let!(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MiClassrooms", personal: false) }
@@ -75,6 +78,29 @@ RSpec.describe "GET /test_login", type: :request do
 
       expect(User.find_by!(email_address: TEST_LOGIN_EMAIL).id).to eq(first_user_id)
       expect(response).to redirect_to(root_path)
+    end
+
+    it "recovers from a concurrent RecordNotUnique race (same shape as Role.system_default!)" do
+      call_count = 0
+      allow(User).to receive(:find_or_create_by!).and_wrap_original do |original_method, *args, &block|
+        call_count += 1
+        if call_count == 1
+          # Simulate a concurrent crawler request winning the same race:
+          # it inserts the row underneath us, so this call's own insert
+          # would violate the unique index on email_address.
+          original_method.call(*args, &block)
+          raise ActiveRecord::RecordNotUnique, "simulated concurrent insert"
+        else
+          original_method.call(*args, &block)
+        end
+      end
+
+      expect {
+        get "/test_login", params: { token: TEST_TOKEN }
+      }.to change(User, :count).by(1)
+
+      expect(response).to redirect_to(root_path)
+      expect(User.find_by!(email_address: TEST_LOGIN_EMAIL)).to be_present
     end
 
     context "when TEST_LOGIN_ADMIN=true" do
