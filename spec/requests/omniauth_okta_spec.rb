@@ -1,9 +1,18 @@
 require "rails_helper"
 
 RSpec.describe "Okta OIDC", type: :request do
-  # Mirrors the global default in omniauth_callbacks_spec.rb so signup isn't
-  # blocked by the invite-only gate added in Task 10.
-  before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open) }
+  # No signup-mode stub needed here (Task 7 update): this suite used to stub
+  # Rails.configuration.x.signup.mode to :open to dodge the Task 10
+  # invite-only gate — but that stub was masking a real bug, not working
+  # around a test-only limitation. Under the fork's actual default
+  # (SIGNUP_MODE=invite_only, exercised unstubbed below), OAuth-provisioned
+  # accounts always bypass SIGNUP_MODE by design (see
+  # OmniauthCallbacksController#handle_new_user_oauth and
+  # spec/requests/omniauth_google_domains_spec.rb's "SSO provisioning
+  # bypasses closed email self-signup" block, which pins the same
+  # invariant for Google). Leaving the stub out here proves Okta
+  # provisioning genuinely works out of the box, not just under a
+  # test-mode artifact.
 
   # MiClassrooms Task 4's shared-workspace posture (see spec/models/user_spec.rb
   # "#onboard_workspace under :shared posture with MiClassrooms' configured join

@@ -9,6 +9,15 @@ module OauthHelper
 
   def enabled_oauth_providers
     PROVIDER_CONFIG.select do |provider_key, _config|
+      # SSO-only posture (MiClassrooms Phase 0 Task 7): GitHub's strategy
+      # stays configured (config/initializers/omniauth.rb) so linking an
+      # already-signed-in account still works, but its sign-in button is
+      # excluded from the posture that offers only Google + Okta. Gated here
+      # (the mechanism enabled_oauth_providers already keys on) rather than
+      # in the view, so the sign-in page and any other caller of this helper
+      # agree automatically.
+      next false if provider_key == :github && AuthConfig.sso_only?
+
       case provider_key
       when :google_oauth2
         Rails.application.credentials.dig(:oauth, :google, :client_id).present?

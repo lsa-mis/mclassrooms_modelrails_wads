@@ -62,5 +62,26 @@ module ModelrailsBase
     # — see .env.example and app/lib/tenancy_config.rb#shared_join_role).
     # Default "member" preserves upstream behavior when unset.
     config.x.tenancy.shared_join_role = ENV.fetch("TENANCY_SHARED_JOIN_ROLE", "member")
+
+    # SSO-only posture (MiClassrooms Phase 0 Task 7): true hides the
+    # email/password/magic-link form and passkey prompt from the sign-in page
+    # and drops the GitHub OAuth button, leaving only Google + Okta (see
+    # app/lib/auth_config.rb, app/views/sessions/new.html.erb,
+    # OauthHelper#enabled_oauth_providers). Defaults to Rails.env.production?
+    # so a fresh `cp .env.example .env` gets the permissive/dev-friendly
+    # posture locally and in CI, same env-defaulting shape as the tenancy
+    # knobs above. Validated in config/initializers/auth.rb.
+    config.x.auth.sso_only =
+      ENV.key?("AUTH_SSO_ONLY") ? ENV["AUTH_SSO_ONLY"] == "true" : Rails.env.production?
+
+    # Google OAuth domain allowlist (MiClassrooms Phase 0 Task 7):
+    # comma-separated bare domains, pre-split and downcased here so the
+    # callback only ever does an exact array-inclusion check — no
+    # end_with?/include? substring tricks at the call site (see
+    # OmniauthCallbacksController#google_domain_allowed?). Empty/unset
+    # disables the allowlist (every domain passes) — dev-friendly default.
+    # Does NOT apply to Okta; org membership is Okta's own gate.
+    config.x.auth.allowed_google_domains =
+      ENV.fetch("ALLOWED_GOOGLE_DOMAINS", "").split(",").map { |d| d.strip.downcase }.reject(&:empty?)
   end
 end

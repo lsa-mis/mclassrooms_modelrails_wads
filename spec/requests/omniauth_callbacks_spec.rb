@@ -833,17 +833,27 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
 
     context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new user)" do
+      # MiClassrooms Phase 0 Task 7: OAuth-provisioned accounts always bypass
+      # SIGNUP_MODE — this describe block used to assert the opposite (added
+      # in Task 10), but that gate never served SSO auto-provisioning well:
+      # under the fork's real default (SIGNUP_MODE=invite_only), it blocked
+      # every OAuth signup exactly like email self-signup. The Google domain
+      # allowlist / Okta org-membership requirement is this fork's intended
+      # access-control gate for SSO instead (see
+      # OmniauthCallbacksController#handle_new_user_oauth and
+      # spec/requests/omniauth_google_domains_spec.rb, which pins the same
+      # invariant against the unstubbed default). Email self-signup
+      # (RegistrationsController, MagicLinkCallbacksController) is unaffected
+      # and stays gated by SIGNUP_MODE.
       before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only) }
 
-      it "redirects with 303 and creates no User or Authentication" do
+      it "creates the User and Authentication and signs in despite the closed signup gate" do
         expect {
           get "/auth/google_oauth2/callback"
-        }.not_to change(User, :count)
+        }.to change(User, :count).by(1).and change(Authentication, :count).by(1)
 
-        expect(Authentication.find_by(uid: "gate-test-uid")).to be_nil
-        expect(response).to redirect_to(new_session_path)
-        expect(response).to have_http_status(:see_other)
-        expect(flash[:alert]).to include(I18n.t("registrations.closed.oauth_blocked"))
+        expect(Authentication.find_by(uid: "gate-test-uid")).to be_present
+        expect(response).to redirect_to(root_path)
       end
     end
 
