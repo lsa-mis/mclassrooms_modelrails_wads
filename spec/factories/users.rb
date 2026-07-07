@@ -30,13 +30,20 @@ FactoryBot.define do
       end
     end
 
-    # Silences the after_create :onboard_workspace callback for THIS instance
-    # so the user persists with zero workspaces and no personal_workspace_id.
-    # Used by zero-workspace crash-safety specs. The singleton override is
-    # instance-scoped and does not leak to other factory calls.
+    # Persists the user with zero workspaces and no personal_workspace_id by
+    # saving under the :none tenancy posture — the real production branch of
+    # onboard_workspace, not a stubbed-out callback. Scoped to THIS create
+    # (config restored in ensure), so other factory calls in the same example
+    # still onboard normally. Used by zero-workspace crash-safety specs.
     trait :with_zero_workspaces do
-      after(:build) do |user|
-        user.define_singleton_method(:onboard_workspace) { nil }
+      to_create do |user|
+        original = Rails.configuration.x.tenancy.onboarding
+        Rails.configuration.x.tenancy.onboarding = :none
+        begin
+          user.save!
+        ensure
+          Rails.configuration.x.tenancy.onboarding = original
+        end
       end
     end
   end

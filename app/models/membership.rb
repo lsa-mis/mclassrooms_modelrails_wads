@@ -29,11 +29,8 @@ class Membership < ApplicationRecord
   #
   # Gated by `workspace_has_other_owners?` — a workspace without owners *other
   # than this membership* (e.g. User#create_personal_workspace seeding the very
-  # first owner-membership, or bare-bones test factories that build a workspace
-  # + non-owner membership but never seed an owner) has nobody for whom the
-  # "new member joined" event is actionable. Firing in that scenario produces
-  # a self-notification at best, and pollutes adjacent specs that exercise
-  # Membership creation as setup.
+  # first owner-membership) has nobody for whom the "new member joined" event
+  # is actionable; firing there would produce a self-notification at best.
   after_create_commit :notify_member_added, if: :workspace_has_other_owners?
 
   scope :search, ->(query) {
