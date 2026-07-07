@@ -6,6 +6,21 @@ class OmniauthCallbacksController < ApplicationController
   def create
     auth_hash = request.env["omniauth.auth"]
     resume_session
+
+    # Google domain allowlist (MiClassrooms Phase 0 Task 7): checked first,
+    # for every Google callback (new user, returning user, and
+    # signed-in-user linking alike) — not just at signup — so a Google
+    # account outside the allowed domains never reaches any branch below.
+    # Okta is NOT subject to this: org membership is Okta's own gate (see
+    # config/initializers/omniauth.rb). Nothing is created or looked up
+    # before this check runs.
+    if normalized_provider(auth_hash) == "google" && !google_domain_allowed?(auth_hash)
+      redirect_to new_session_path,
+        alert: t("omniauth_callbacks.create.google_domain_not_allowed"),
+        status: :see_other
+      return
+    end
+
     existing = Authentication.find_by(provider: normalized_provider(auth_hash), uid: auth_hash.uid)
 
     if existing
@@ -102,14 +117,24 @@ class OmniauthCallbacksController < ApplicationController
     end
   end
 
+  # SSO-only posture (MiClassrooms Phase 0 Task 7): OAuth-provisioned
+  # accounts always bypass SignupPolicy/SIGNUP_MODE — the closed-signup gate
+  # that blocks email self-signup (RegistrationsController,
+  # MagicLinkCallbacksController#create) never applied here. The Google
+  # domain allowlist and Okta's org-membership requirement (both enforced in
+  # #create, above) ARE this fork's access-control gate for SSO; SIGNUP_MODE
+  # is a separate, orthogonal knob for the email/invitation flow.
+  #
+  # This was verified empirically while building this task: Task 6's Okta
+  # spec appeared to provision new users successfully under
+  # SIGNUP_MODE=invite_only, but that passed only because the spec's
+  # top-level `before` stubbed Rails.configuration.x.signup.mode to :open —
+  # under the real default, the (now-removed) `unless signups_open?` guard
+  # that used to open this method blocked new-user OAuth signups exactly
+  # like email signup. See spec/requests/omniauth_google_domains_spec.rb's
+  # "SSO provisioning bypasses closed email self-signup" describe block,
+  # which pins this against the unstubbed default.
   def handle_new_user_oauth(auth_hash)
-    unless signups_open?
-      redirect_to new_session_path,
-                  alert: t("registrations.closed.oauth_blocked"),
-                  status: :see_other
-      return
-    end
-
     if oauth_email_verified?(auth_hash)
       handle_verified_email_oauth(auth_hash)
     else
@@ -198,6 +223,23 @@ class OmniauthCallbacksController < ApplicationController
 
   def normalized_provider(auth_hash)
     OmniauthAdapters.normalize_provider(auth_hash.provider)
+  end
+
+  # Google domain allowlist (MiClassrooms Phase 0 Task 7): case-insensitive
+  # EXACT match against the domain part of the OAuth-supplied email — never
+  # end_with?/include? substring matching, which would let "evilumich.edu" or
+  # "umich.edu.evil.com" slip past a naive check. AuthConfig.allowed_google_domains
+  # is already lowercased at boot (config/application.rb); email's domain part
+  # is lowercased here since it comes straight from the provider. An empty
+  # allowlist (ALLOWED_GOOGLE_DOMAINS unset) disables the check entirely.
+  def google_domain_allowed?(auth_hash)
+    allowlist = AuthConfig.allowed_google_domains
+    return true if allowlist.empty?
+
+    email = auth_hash.info&.email
+    return false if email.blank?
+
+    allowlist.include?(email.to_s.rpartition("@").last.downcase)
   end
 
   # RP-initiated logout (Task 6, D4): stash the OIDC id_token for the
