@@ -75,9 +75,12 @@ module ModelrailsBase
       ENV.key?("AUTH_SSO_ONLY") ? ENV["AUTH_SSO_ONLY"] == "true" : Rails.env.production?
 
     # Google OAuth domain allowlist (MiClassrooms Phase 0 Task 7):
-    # comma-separated bare domains, pre-split and downcased here so the
-    # callback only ever does an exact array-inclusion check — no
-    # end_with?/include? substring tricks at the call site (see
+    # comma-separated bare domains, split/stripped/downcased here; full
+    # canonicalization (NFC + punycode, matching EmailNormalizer.normalize's
+    # domain form) happens at read time in AuthConfig.allowed_google_domains,
+    # because EmailNormalizer isn't autoloadable this early in boot. The
+    # callback then does an exact array-inclusion check — no
+    # end_with?/include? substring tricks (see
     # OmniauthCallbacksController#google_domain_allowed?). Empty/unset
     # disables the allowlist (every domain passes) — dev-friendly default.
     # Does NOT apply to Okta; org membership is Okta's own gate.

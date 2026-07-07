@@ -24,12 +24,23 @@ module AuthConfig
     Rails.configuration.x.auth.sso_only
   end
 
-  # Comma-separated ALLOWED_GOOGLE_DOMAINS env, pre-split/downcased into an
-  # array of bare domains (config/application.rb). Empty means "disabled" —
-  # every domain passes — which is the dev-friendly default. Never applies to
-  # Okta: org membership is Okta's own gate (see
-  # OmniauthCallbacksController#google_domain_allowed?).
+  # Comma-separated ALLOWED_GOOGLE_DOMAINS env, split at boot
+  # (config/application.rb) and canonicalized here at read time: NFC + strip
+  # + downcase + punycode via EmailNormalizer.punycode_domain — the exact
+  # canonical form EmailNormalizer.normalize produces for an email's domain
+  # part, so OmniauthCallbacksController#google_domain_allowed? compares
+  # like against like. Normalization lives here rather than in
+  # config/application.rb because EmailNormalizer is an app/lib autoloadable
+  # constant, unavailable during application-class definition (same boot
+  # constraint documented in config/initializers/tenancy.rb re: Role).
+  # Empty means "disabled" — every domain passes — the dev-friendly default.
+  # Never applies to Okta: org membership is Okta's own gate.
   def allowed_google_domains
-    Rails.configuration.x.auth.allowed_google_domains
+    Rails.configuration.x.auth.allowed_google_domains.filter_map do |entry|
+      domain = entry.to_s.unicode_normalize(:nfc).strip.downcase
+      next if domain.empty?
+
+      EmailNormalizer.punycode_domain(domain)
+    end
   end
 end
