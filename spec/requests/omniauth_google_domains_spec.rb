@@ -106,6 +106,41 @@ RSpec.describe "Google OAuth domain allowlist", type: :request do
     end
   end
 
+  describe "allowlist entry normalization (EmailNormalizer parity)" do
+    # Entries are normalized at read time (AuthConfig.allowed_google_domains:
+    # NFC + strip + downcase + punycode via EmailNormalizer.punycode_domain) —
+    # the same canonical form EmailNormalizer.normalize produces for the
+    # OAuth email's domain part — so a sloppily-formatted env value can't
+    # silently lock everyone out.
+    context "with a trailing-whitespace allowlist entry" do
+      before do
+        allow(Rails.configuration.x.auth).to receive(:allowed_google_domains)
+          .and_return([ " umich.edu " ])
+        OmniAuth.config.mock_auth[:google_oauth2] = google_auth_hash("someone@umich.edu")
+      end
+
+      it "still matches" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.to change(User, :count).by(1)
+      end
+    end
+
+    context "with a mixed-case allowlist entry" do
+      before do
+        allow(Rails.configuration.x.auth).to receive(:allowed_google_domains)
+          .and_return([ "UMICH.edu" ])
+        OmniAuth.config.mock_auth[:google_oauth2] = google_auth_hash("someone@umich.edu")
+      end
+
+      it "still matches" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.to change(User, :count).by(1)
+      end
+    end
+  end
+
   describe "when the allowlist is empty/unset (dev-friendly default)" do
     before do
       allow(Rails.configuration.x.auth).to receive(:allowed_google_domains).and_return([])
@@ -146,6 +181,37 @@ RSpec.describe "Google OAuth domain allowlist", type: :request do
       }.to change(User, :count).by(1).and change(Authentication, :count).by(1)
 
       expect(response).to redirect_to(root_path)
+    end
+
+    # The bypass is scoped to providers with their own institutional gate
+    # (google: domain allowlist; okta: org membership) —
+    # OmniauthCallbacksController::SSO_SIGNUP_BYPASS_PROVIDERS. GitHub has no
+    # such gate: its strategy stays configured and its callback route stays
+    # live even though the button is hidden under sso_only, so letting it
+    # bypass SIGNUP_MODE would reopen public self-signup to anyone with any
+    # GitHub account. It must go through signups_open? exactly as before
+    # Task 7 — fail-closed for any provider not in the bypass list.
+    context "a NEW user arriving via GitHub (no institutional gate)" do
+      before do
+        OmniAuth.config.mock_auth[:github] = OmniAuth::AuthHash.new(
+          provider: "github",
+          uid: "github-new-user-uid",
+          info: { email: "stranger@example.com", first_name: "Any", last_name: "Body" },
+          credentials: { token: "tok", refresh_token: nil, expires_at: nil }
+        )
+      end
+
+      it "is rejected under the real invite_only default: nothing created, closed-signup alert" do
+        expect {
+          get "/auth/github/callback"
+        }.not_to change(User, :count)
+
+        expect(Authentication.find_by(uid: "github-new-user-uid")).to be_nil
+        expect(Session.count).to eq(0)
+        expect(response).to redirect_to(new_session_path)
+        expect(response).to have_http_status(:see_other)
+        expect(flash[:alert]).to include(I18n.t("registrations.closed.oauth_blocked"))
+      end
     end
   end
 end

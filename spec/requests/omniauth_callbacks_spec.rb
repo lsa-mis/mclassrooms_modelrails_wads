@@ -832,19 +832,20 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       OmniAuth.config.test_mode = false
     end
 
-    context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new user)" do
-      # MiClassrooms Phase 0 Task 7: OAuth-provisioned accounts always bypass
-      # SIGNUP_MODE — this describe block used to assert the opposite (added
-      # in Task 10), but that gate never served SSO auto-provisioning well:
-      # under the fork's real default (SIGNUP_MODE=invite_only), it blocked
-      # every OAuth signup exactly like email self-signup. The Google domain
-      # allowlist / Okta org-membership requirement is this fork's intended
-      # access-control gate for SSO instead (see
-      # OmniauthCallbacksController#handle_new_user_oauth and
+    context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new Google user)" do
+      # MiClassrooms Phase 0 Task 7: OAuth providers listed in
+      # OmniauthCallbacksController::SSO_SIGNUP_BYPASS_PROVIDERS (google +
+      # okta — each has its own institutional gate: the ALLOWED_GOOGLE_DOMAINS
+      # allowlist and Okta org membership respectively) bypass SIGNUP_MODE.
+      # This describe block used to assert the opposite (added in Task 10),
+      # but that gate never served SSO auto-provisioning well: under the
+      # fork's real default (SIGNUP_MODE=invite_only), it blocked every OAuth
+      # signup exactly like email self-signup. See
       # spec/requests/omniauth_google_domains_spec.rb, which pins the same
-      # invariant against the unstubbed default). Email self-signup
+      # invariant against the unstubbed default. Email self-signup
       # (RegistrationsController, MagicLinkCallbacksController) is unaffected
-      # and stays gated by SIGNUP_MODE.
+      # and stays gated by SIGNUP_MODE — as do providers outside the bypass
+      # list (GitHub, next context).
       before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only) }
 
       it "creates the User and Authentication and signs in despite the closed signup gate" do
@@ -853,6 +854,74 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         }.to change(User, :count).by(1).and change(Authentication, :count).by(1)
 
         expect(Authentication.find_by(uid: "gate-test-uid")).to be_present
+        expect(response).to redirect_to(root_path)
+      end
+    end
+
+    context "when SIGNUP_MODE is :invite_only and a NEW user arrives via GitHub (Branch 3, NOT bypassed)" do
+      # GitHub is NOT in SSO_SIGNUP_BYPASS_PROVIDERS: it has no institutional
+      # gate of its own, and its callback route stays live (with
+      # allow_unauthenticated_access) even when its button is hidden under
+      # sso_only — so letting it bypass SIGNUP_MODE would reopen public
+      # self-signup to anyone with any GitHub account. It goes through
+      # signups_open? exactly as before Task 7, fail-closed for any provider
+      # outside the bypass list.
+      let(:github_hash) do
+        OmniAuth::AuthHash.new(
+          provider: "github",
+          uid: "github-gate-uid",
+          info: { email: "githubber@example.com", first_name: "Git", last_name: "Hubber" },
+          credentials: { token: "tok", refresh_token: nil, expires_at: nil }
+        )
+      end
+
+      before do
+        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+        OmniAuth.config.mock_auth[:github] = github_hash
+      end
+
+      it "redirects with 303 and creates no User, Authentication, or Session" do
+        expect {
+          get "/auth/github/callback"
+        }.not_to change(User, :count)
+
+        expect(Authentication.find_by(uid: "github-gate-uid")).to be_nil
+        expect(Session.count).to eq(0)
+        expect(response).to redirect_to(new_session_path)
+        expect(response).to have_http_status(:see_other)
+        expect(flash[:alert]).to include(I18n.t("registrations.closed.oauth_blocked"))
+      end
+
+      it "still allows GitHub signup with a valid invitation token (unchanged template semantics)" do
+        invitation = create(:invitation, email: "githubber@example.com")
+        post accept_invitation_path(token: invitation.token)
+
+        expect {
+          get "/auth/github/callback"
+        }.to change(User, :count).by(1)
+      end
+    end
+
+    context "when SIGNUP_MODE is :open and a NEW user arrives via GitHub (template semantics preserved)" do
+      let(:github_hash) do
+        OmniAuth::AuthHash.new(
+          provider: "github",
+          uid: "github-open-uid",
+          info: { email: "opengithubber@example.com", first_name: "Open", last_name: "Hubber" },
+          credentials: { token: "tok", refresh_token: nil, expires_at: nil }
+        )
+      end
+
+      before do
+        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
+        OmniAuth.config.mock_auth[:github] = github_hash
+      end
+
+      it "creates the user and signs them in" do
+        expect {
+          get "/auth/github/callback"
+        }.to change(User, :count).by(1).and change(Authentication, :count).by(1)
+
         expect(response).to redirect_to(root_path)
       end
     end
