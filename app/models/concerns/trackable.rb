@@ -1,3 +1,8 @@
+# Best-effort audit trail, by design: create_activity rescues and logs rather
+# than ever failing the business write, and the after_commit placement means a
+# crash between commit and callback loses the activity row, not the write.
+# The Current.user/Current.workspace reads here are a documented deliberate
+# deviation — see .claude-on-rails/context.md (#4).
 module Trackable
   extend ActiveSupport::Concern
 
