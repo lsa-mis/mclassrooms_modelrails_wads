@@ -103,7 +103,6 @@ end
 | `WorkspaceInvitationExpiringSoonNotifier` | `account_access` | `warning` | Sweep job finds invitations within 24 hours of expiry |
 | `WorkspaceRoleChangedNotifier` | `account_access` | `info` | Owner changes a member's role |
 | `WorkspaceMemberAddedNotifier` | `workspace_activity` | `success` | New member joins (fans out to all owners) |
-| `ProjectMembershipChangedNotifier` | `project_activity` | `info` | Project member role changed |
 | `WorkspaceCapacityApproachingNotifier` | `billing` | `warning` | Sweep job finds a workspace approaching its plan limit |
 
 ### Category → notifier types
