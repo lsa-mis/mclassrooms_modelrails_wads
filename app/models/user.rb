@@ -254,6 +254,8 @@ class User < ApplicationRecord
     update_column(:personal_workspace_id, workspace.id)
   end
 
+  # Fork deviation (MiClassrooms Task 4): the self-onboarding role below was
+  # hardcoded "member"; it now reads TenancyConfig.shared_join_role.
   # :shared posture: every new user joins the configured shared workspace, in
   # the role given by TenancyConfig.shared_join_role (default "member" — the
   # template's original hardcoded self-onboarding role; a fork can override
