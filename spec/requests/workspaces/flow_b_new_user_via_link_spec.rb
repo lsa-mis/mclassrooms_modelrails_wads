@@ -14,13 +14,13 @@ RSpec.describe "Flow B: new user signs up via workspace join link", type: :reque
   let!(:owner_role) {
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
       r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
     }
   }
   let!(:member_role) {
     Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
       r.name = "Member"
-      r.permissions = { manage_projects: true }
+      r.permissions = {}
     }
   }
   let(:link) { create(:workspace_join_link, workspace: workspace, created_by: owner) }

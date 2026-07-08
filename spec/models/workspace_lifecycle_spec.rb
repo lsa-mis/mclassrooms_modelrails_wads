@@ -56,7 +56,7 @@ RSpec.describe Workspace, type: :model do
     it "blocks admit while suspended" do
       member_role = Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
         r.name = "Member"
-        r.permissions = { manage_projects: true }
+        r.permissions = {}
       }
       user = create(:user)
       workspace.suspend!

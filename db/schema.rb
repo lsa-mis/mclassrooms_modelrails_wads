@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030009) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -65,6 +65,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.index ["workspace_id"], name: "index_activity_logs_on_workspace_id"
   end
 
+  create_table "announcements", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "slot", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["slot"], name: "index_announcements_on_slot", unique: true
+    t.index ["workspace_id"], name: "index_announcements_on_workspace_id"
+  end
+
   create_table "authentications", force: :cascade do |t|
     t.string "avatar_url"
     t.datetime "created_at", null: false
@@ -85,10 +94,94 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.index ["user_id"], name: "index_authentications_on_user_id"
   end
 
+  create_table "availability_blocks", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "ends_at", null: false
+    t.integer "room_id", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id", "starts_at"], name: "index_availability_blocks_on_room_id_and_starts_at"
+    t.index ["room_id"], name: "index_availability_blocks_on_room_id"
+    t.index ["workspace_id"], name: "index_availability_blocks_on_workspace_id"
+  end
+
+  create_table "buildings", force: :cascade do |t|
+    t.string "abbreviation"
+    t.string "address"
+    t.string "bldrecnbr", null: false
+    t.integer "campus_id"
+    t.string "city"
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.datetime "hidden_at"
+    t.integer "hidden_by_id"
+    t.boolean "in_feed", default: false, null: false
+    t.decimal "latitude", precision: 10, scale: 6
+    t.decimal "longitude", precision: 10, scale: 6
+    t.string "name", null: false
+    t.string "nickname"
+    t.string "state"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.string "zip"
+    t.index ["bldrecnbr"], name: "index_buildings_on_bldrecnbr", unique: true
+    t.index ["campus_id"], name: "index_buildings_on_campus_id"
+    t.index ["hidden_at"], name: "index_buildings_on_hidden_at"
+    t.index ["hidden_by_id"], name: "index_buildings_on_hidden_by_id"
+    t.index ["in_feed"], name: "index_buildings_on_in_feed"
+    t.index ["workspace_id"], name: "index_buildings_on_workspace_id"
+  end
+
+  create_table "campuses", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "code"], name: "index_campuses_on_workspace_and_code", unique: true
+    t.index ["workspace_id"], name: "index_campuses_on_workspace_id"
+  end
+
+  create_table "characteristic_display_rules", force: :cascade do |t|
+    t.string "category_override"
+    t.datetime "created_at", null: false
+    t.boolean "filterable", default: true, null: false
+    t.string "icon_key"
+    t.string "short_code", null: false
+    t.boolean "team_learning", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "short_code"], name: "index_characteristic_display_rules_on_workspace_and_code", unique: true
+    t.index ["workspace_id"], name: "index_characteristic_display_rules_on_workspace_id"
+  end
+
+  create_table "editor_assignments", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "unit_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.integer "workspace_id", null: false
+    t.index ["unit_id"], name: "index_editor_assignments_on_unit_id"
+    t.index ["user_id", "unit_id"], name: "index_editor_assignments_on_user_id_and_unit_id", unique: true
+    t.index ["user_id"], name: "index_editor_assignments_on_user_id"
+    t.index ["workspace_id"], name: "index_editor_assignments_on_workspace_id"
+  end
+
+  create_table "floors", force: :cascade do |t|
+    t.integer "building_id", null: false
+    t.datetime "created_at", null: false
+    t.string "label", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["building_id", "label"], name: "index_floors_on_building_id_and_label", unique: true
+    t.index ["building_id"], name: "index_floors_on_building_id"
+    t.index ["workspace_id"], name: "index_floors_on_workspace_id"
+  end
+
   create_table "invitations", force: :cascade do |t|
     t.datetime "accepted_at"
     t.integer "accepted_by_id"
-    t.string "company_name"
     t.datetime "created_at", null: false
     t.datetime "declined_at"
     t.string "email"
@@ -96,7 +189,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.integer "invitable_id", null: false
     t.string "invitable_type", null: false
     t.integer "invited_by_id", null: false
-    t.string "project_role"
     t.datetime "revoked_at"
     t.integer "role_id"
     t.string "status", default: "pending", null: false
@@ -136,6 +228,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.index ["user_id", "workspace_id"], name: "index_memberships_on_user_id_and_workspace_id", unique: true
     t.index ["user_id"], name: "index_memberships_on_user_id"
     t.index ["workspace_id"], name: "index_memberships_on_workspace_id"
+  end
+
+  create_table "notes", force: :cascade do |t|
+    t.boolean "alert", default: false, null: false
+    t.integer "author_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "notable_id", null: false
+    t.string "notable_type", null: false
+    t.integer "parent_id"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["author_id"], name: "index_notes_on_author_id"
+    t.index ["notable_type", "notable_id"], name: "index_notes_on_notable"
+    t.index ["parent_id"], name: "index_notes_on_parent_id"
+    t.index ["workspace_id"], name: "index_notes_on_workspace_id"
   end
 
   create_table "noticed_events", force: :cascade do |t|
@@ -180,6 +287,90 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.index ["workspace_id"], name: "index_roles_on_workspace_id"
   end
 
+  create_table "room_characteristics", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.string "long_description"
+    t.integer "room_id", null: false
+    t.string "short_code", null: false
+    t.string "status"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id", "code"], name: "index_room_characteristics_on_room_id_and_code", unique: true
+    t.index ["room_id"], name: "index_room_characteristics_on_room_id"
+    t.index ["short_code"], name: "index_room_characteristics_on_short_code"
+    t.index ["workspace_id"], name: "index_room_characteristics_on_workspace_id"
+  end
+
+  create_table "room_contacts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "room_id", null: false
+    t.string "scheduling_detail_url"
+    t.string "scheduling_email"
+    t.string "scheduling_name"
+    t.string "scheduling_phone"
+    t.string "scheduling_usage_guidelines_url"
+    t.string "support_department_description"
+    t.string "support_department_id"
+    t.string "support_email"
+    t.string "support_phone"
+    t.string "support_url"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id"], name: "index_room_contacts_on_room_id", unique: true
+    t.index ["workspace_id"], name: "index_room_contacts_on_workspace_id"
+  end
+
+  create_table "room_gallery_images", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id", "position"], name: "index_room_gallery_images_on_room_id_and_position"
+    t.index ["room_id"], name: "index_room_gallery_images_on_room_id"
+    t.index ["workspace_id"], name: "index_room_gallery_images_on_workspace_id"
+  end
+
+  create_table "rooms", force: :cascade do |t|
+    t.integer "ada_seat_count"
+    t.integer "building_id", null: false
+    t.string "building_name"
+    t.integer "campus_id"
+    t.datetime "created_at", null: false
+    t.string "department_description"
+    t.string "department_group"
+    t.string "department_group_description"
+    t.string "department_id"
+    t.string "facility_code"
+    t.string "facility_code_normalized"
+    t.integer "floor_id"
+    t.datetime "hidden_at"
+    t.integer "hidden_by_id"
+    t.boolean "in_feed", default: false, null: false
+    t.integer "instructional_seat_count"
+    t.string "nickname"
+    t.string "rmrecnbr", null: false
+    t.string "room_number"
+    t.string "room_type"
+    t.integer "square_feet"
+    t.integer "unit_id"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["building_id"], name: "index_rooms_on_building_id"
+    t.index ["campus_id"], name: "index_rooms_on_campus_id"
+    t.index ["facility_code_normalized"], name: "index_rooms_on_facility_code_normalized"
+    t.index ["floor_id"], name: "index_rooms_on_floor_id"
+    t.index ["hidden_at"], name: "index_rooms_on_hidden_at"
+    t.index ["hidden_by_id"], name: "index_rooms_on_hidden_by_id"
+    t.index ["in_feed"], name: "index_rooms_on_in_feed"
+    t.index ["rmrecnbr"], name: "index_rooms_on_rmrecnbr", unique: true
+    t.index ["room_type", "instructional_seat_count"], name: "index_rooms_on_room_type_and_instructional_seat_count"
+    t.index ["unit_id"], name: "index_rooms_on_unit_id"
+    t.index ["workspace_id"], name: "index_rooms_on_workspace_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
@@ -187,6 +378,72 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.string "user_agent"
     t.integer "user_id", null: false
     t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
+
+  create_table "settings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.datetime "updated_at", null: false
+    t.string "value"
+    t.index ["key"], name: "index_settings_on_key", unique: true
+  end
+
+  create_table "sync_phases", force: :cascade do |t|
+    t.json "counters", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.json "error_messages", default: [], null: false
+    t.datetime "finished_at"
+    t.string "key", null: false
+    t.datetime "started_at"
+    t.string "status", default: "pending", null: false
+    t.integer "sync_run_id", null: false
+    t.datetime "updated_at", null: false
+    t.json "warnings", default: [], null: false
+    t.integer "workspace_id", null: false
+    t.index ["sync_run_id", "key"], name: "index_sync_phases_on_sync_run_id_and_key", unique: true
+    t.index ["sync_run_id"], name: "index_sync_phases_on_sync_run_id"
+    t.index ["workspace_id"], name: "index_sync_phases_on_workspace_id"
+  end
+
+  create_table "sync_runs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "dry_run", default: false, null: false
+    t.datetime "finished_at"
+    t.datetime "started_at"
+    t.string "status", default: "running", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id"], name: "index_sync_runs_on_workspace_id"
+  end
+
+  create_table "sync_scope_rules", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "rule_type", null: false
+    t.datetime "updated_at", null: false
+    t.string "value", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "rule_type", "value"], name: "index_sync_scope_rules_on_workspace_type_and_value", unique: true
+    t.index ["workspace_id"], name: "index_sync_scope_rules_on_workspace_id"
+  end
+
+  create_table "unit_display_names", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "department_group", null: false
+    t.string "display_name", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "department_group"], name: "index_unit_display_names_on_workspace_and_dept_group", unique: true
+    t.index ["workspace_id"], name: "index_unit_display_names_on_workspace_id"
+  end
+
+  create_table "units", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "department_group", null: false
+    t.string "description"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "department_group"], name: "index_units_on_workspace_and_dept_group", unique: true
+    t.index ["workspace_id"], name: "index_units_on_workspace_id"
   end
 
   create_table "user_preferences", force: :cascade do |t|
@@ -280,7 +537,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.string "join_policy", default: "invite", null: false
     t.string "logo_source", default: "initials", null: false
     t.integer "max_members", default: 5, null: false
-    t.integer "max_projects", default: 3, null: false
     t.string "name", null: false
     t.boolean "personal", default: false, null: false
     t.string "plan", default: "free", null: false
@@ -299,20 +555,59 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activity_logs", "users", column: "actor_id"
   add_foreign_key "activity_logs", "workspaces"
+  add_foreign_key "announcements", "workspaces"
   add_foreign_key "authentications", "users"
+  add_foreign_key "availability_blocks", "rooms"
+  add_foreign_key "availability_blocks", "workspaces"
+  add_foreign_key "buildings", "campuses"
+  add_foreign_key "buildings", "users", column: "hidden_by_id"
+  add_foreign_key "buildings", "workspaces"
+  add_foreign_key "campuses", "workspaces"
+  add_foreign_key "characteristic_display_rules", "workspaces"
+  add_foreign_key "editor_assignments", "units"
+  add_foreign_key "editor_assignments", "users"
+  add_foreign_key "editor_assignments", "workspaces"
+  add_foreign_key "floors", "buildings"
+  add_foreign_key "floors", "workspaces"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
   add_foreign_key "memberships", "roles"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
+  add_foreign_key "notes", "notes", column: "parent_id"
+  add_foreign_key "notes", "users", column: "author_id"
+  add_foreign_key "notes", "workspaces"
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
   add_foreign_key "roles", "workspaces"
+  add_foreign_key "room_characteristics", "rooms"
+  add_foreign_key "room_characteristics", "workspaces"
+  add_foreign_key "room_contacts", "rooms"
+  add_foreign_key "room_contacts", "workspaces"
+  add_foreign_key "room_gallery_images", "rooms"
+  add_foreign_key "room_gallery_images", "workspaces"
+  add_foreign_key "rooms", "buildings"
+  add_foreign_key "rooms", "campuses"
+  add_foreign_key "rooms", "floors"
+  add_foreign_key "rooms", "units"
+  add_foreign_key "rooms", "users", column: "hidden_by_id"
+  add_foreign_key "rooms", "workspaces"
   add_foreign_key "sessions", "users"
+  add_foreign_key "sync_phases", "sync_runs"
+  add_foreign_key "sync_phases", "workspaces"
+  add_foreign_key "sync_runs", "workspaces"
+  add_foreign_key "sync_scope_rules", "workspaces"
+  add_foreign_key "unit_display_names", "workspaces"
+  add_foreign_key "units", "workspaces"
   add_foreign_key "user_preferences", "users"
   add_foreign_key "users", "workspaces", column: "personal_workspace_id", on_delete: :nullify
   add_foreign_key "webauthn_challenges", "users"
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "workspace_join_links", "users", column: "created_by_id"
   add_foreign_key "workspace_join_links", "workspaces"
+
+  # Virtual tables defined in this database.
+  # Note that virtual tables may not work with other database engines. Be careful if changing database.
+  create_virtual_table "building_search_index", "fts5", ["name", "nickname", "abbreviation", "tokenize = 'unicode61'"]
+  create_virtual_table "room_search_index", "fts5", ["facility_code", "nickname", "room_number", "rmrecnbr", "building_name", "tokenize = 'unicode61'"]
 end
