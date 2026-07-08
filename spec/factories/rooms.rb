@@ -1,6 +1,9 @@
 FactoryBot.define do
   factory :room do
     building
+    # Overriding :workspace does NOT propagate to the auto-built building —
+    # pass building: explicitly (in the same workspace) when you override
+    # workspace, or the room and its building land in different tenants.
     workspace { building.workspace }
     sequence(:rmrecnbr) { |n| (2_000_000 + n).to_s }
     sequence(:room_number) { |n| format("%04d", n) }
