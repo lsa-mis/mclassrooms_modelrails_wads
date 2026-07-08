@@ -88,15 +88,8 @@ RSpec.describe Building, type: :model do
     end
 
     it "drops a building from the index when it is destroyed" do
-      # Can't drive this through a real `building.destroy!`: Building's
-      # `notes` association is dependent: :destroy but Note doesn't exist
-      # until a later Phase 1 task — any `.destroy` on a Building raises
-      # NameError today, independent of this feature (pre-existing, out of
-      # scope here). Instead: assert the callback is wired, then exercise
-      # it directly.
-      expect(Building._destroy_callbacks.map(&:filter)).to include(:remove_from_search_index)
       building = create(:building, name: "Mason Hall")
-      building.send(:remove_from_search_index)
+      expect { building.destroy! }.to change(Building, :count).by(-1)
       expect(Building.search_name("mason")).to be_empty
     end
 

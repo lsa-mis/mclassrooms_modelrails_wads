@@ -177,16 +177,8 @@ RSpec.describe Room, type: :model do
     end
 
     it "drops a room from the index when it is destroyed" do
-      # Can't drive this through a real `room.destroy!`: Room's `room_contact`
-      # /`gallery_images`/`availability_blocks`/`notes` associations are
-      # dependent: :destroy but their target classes (RoomContact,
-      # RoomGalleryImage, AvailabilityBlock, Note) don't exist until Phase 1
-      # Tasks 8/9 — any `.destroy` on a Room raises NameError today,
-      # independent of this feature (pre-existing, out of scope here).
-      # Instead: assert the callback is wired, then exercise it directly.
-      expect(Room._destroy_callbacks.map(&:filter)).to include(:remove_from_search_index)
       room = create(:room, facility_code: "MLB1200")
-      room.send(:remove_from_search_index)
+      expect { room.destroy! }.to change(Room, :count).by(-1)
       expect(Room.search_name("mlb")).to be_empty
     end
 
