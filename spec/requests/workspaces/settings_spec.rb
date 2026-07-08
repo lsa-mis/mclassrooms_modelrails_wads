@@ -28,11 +28,6 @@ RSpec.describe "Workspace Settings", type: :request do
         expect(workspace.reload.max_members).to eq(10)
       end
 
-      it "updates max_projects" do
-        patch workspace_settings_path(workspace), params: { workspace: { max_projects: 5 } }
-        expect(workspace.reload.max_projects).to eq(5)
-      end
-
       it "redirects with success message" do
         patch workspace_settings_path(workspace), params: { workspace: { max_members: 10 } }
         expect(response).to redirect_to(edit_workspace_settings_path(workspace))

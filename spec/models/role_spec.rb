@@ -88,7 +88,7 @@ RSpec.describe Role, type: :model do
       expect(role).to be_persisted
       expect(role.workspace_id).to be_nil
       expect(role.name).to eq("Member")
-      expect(role.permissions).to include("manage_projects" => true)
+      expect(role.permissions).to eq({})
     end
 
     it "raises KeyError for a slug with no canonical definition" do

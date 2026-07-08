@@ -14,7 +14,7 @@ A workspace is the top-level organizational boundary — users, memberships, inv
 
 Any authenticated user can create a workspace. A URL-safe slug is generated automatically from the name. The creator is assigned the **Owner** role.
 
-**Defaults:** free plan, 5 max members, 3 max projects.
+**Defaults:** free plan, 5 max members.
 
 ## Workspace Settings
 
@@ -26,9 +26,8 @@ Configure capacity limits:
 | Setting | Validation | Purpose |
 |---------|-----------|---------|
 | `max_members` | Must be > 0 | Cap on active memberships |
-| `max_projects` | Must be > 0 | Cap on active projects |
 
-These limits are enforced when creating new memberships or projects. The validation runs inside a database lock to prevent race conditions.
+This limit is enforced when creating new memberships. The validation runs inside a database lock to prevent race conditions.
 
 ## Member Management
 
@@ -121,7 +120,6 @@ Roles use a flat JSON permissions structure:
 {
   "manage_workspace": true,
   "manage_members": true,
-  "manage_projects": true,
   "manage_settings": true
 }
 ```
@@ -130,9 +128,9 @@ Roles use a flat JSON permissions structure:
 
 | Role | Permissions |
 |------|------------|
-| **Owner** | All four permissions |
-| **Admin** | manage_members, manage_projects, manage_settings |
-| **Member** | manage_projects |
+| **Owner** | All three permissions |
+| **Admin** | manage_members, manage_settings |
+| **Member** | None (no permissions beyond membership) |
 | **Viewer** | None (read-only) |
 
 ### Custom Roles

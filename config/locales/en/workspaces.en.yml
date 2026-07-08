@@ -167,7 +167,6 @@ en:
       edit:
         title: "Workspace settings"
         max_members_label: "Maximum members"
-        max_projects_label: "Maximum projects"
         plan_label: "Plan"
         submit: "Save settings"
         sections:

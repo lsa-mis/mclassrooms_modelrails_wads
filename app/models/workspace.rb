@@ -42,7 +42,6 @@ class Workspace < ApplicationRecord
     size: { less_than: 10.megabytes }
   validates :slug, presence: true, uniqueness: true
   validates :max_members, numericality: { greater_than: 0 }
-  validates :max_projects, numericality: { greater_than: 0 }
   validates :primary_color, inclusion: { in: 0..360 }, allow_nil: true
   validates :logo_source, inclusion: { in: %w[upload initials] }
   validate :personal_workspaces_are_invite_only

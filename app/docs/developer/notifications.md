@@ -52,7 +52,6 @@ The canonical per-user config. Shape (with database-level defaults applied autom
     "security": true,
     "account_access": true,
     "workspace_activity": true,
-    "project_activity": true,
     "billing": true
   },
   "delivery_methods": {
@@ -327,7 +326,7 @@ Watch for:
 ### Adding a new notifier
 
 1. Subclass `ApplicationNotifier` under `app/notifiers/`
-2. Declare `category :name` (one of `security`, `account_access`, `workspace_activity`, `project_activity`, `billing`)
+2. Declare `category :name` (one of `security`, `account_access`, `workspace_activity`, `billing`)
 3. Declare `severity :level` (one of `:danger`, `:warning`, `:info`, `:success`) — drives the bell color; omitting it defaults to `:info`
 4. Define `notification_methods do; def message; def url; end` (use `event.record.*` for context)
 5. Add `deliver_by :email, ... if:` guards if you want email
