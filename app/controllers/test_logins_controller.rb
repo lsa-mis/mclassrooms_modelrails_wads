@@ -1,7 +1,7 @@
-# Non-production test login for accessibility crawlers (MiClassrooms Phase 0
-# Task 8): Siteimprove can't complete Google/Okta SSO, so this backdoor signs
-# a fixed test user in directly. This is a backdoor BY DESIGN — its safety
-# rests on three independent defenses, each pinned by its own spec
+# Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
+# accessibility crawlers — Siteimprove can't complete Google/Okta SSO, so this
+# backdoor signs a fixed test user in directly. This is a backdoor BY DESIGN —
+# its safety rests on three independent defenses, each pinned by its own spec
 # (spec/requests/test_login_spec.rb, spec/lib/auth_config_spec.rb):
 #
 #   1. Non-production only — AuthConfig.test_login_enabled? gates whether

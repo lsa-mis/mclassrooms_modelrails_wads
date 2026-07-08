@@ -57,8 +57,9 @@ if TenancyConfig.shared?
       "Run `bin/rails tenancy:owner_setup_link` for a short-lived sign-in link " \
       "(minted on demand — not logged here)."
   else
-    # Bug fix (MiClassrooms Task 4): this called AuthenticationMailer.password_reset_email,
-    # which does not exist in this codebase's passwordless-first auth mailers —
+    # Fork deviation (MiClassrooms Task 4): bug fix — this called
+    # AuthenticationMailer.password_reset_email, which does not exist in this
+    # codebase's passwordless-first auth mailers —
     # it raised NoMethodError on every db:seed run under the :shared preset
     # outside production (spec/db/seeds_spec.rb only covers the production
     # branch above, so this line was never exercised). Use the same

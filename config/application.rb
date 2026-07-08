@@ -63,8 +63,8 @@ module ModelrailsBase
     # Default "member" preserves upstream behavior when unset.
     config.x.tenancy.shared_join_role = ENV.fetch("TENANCY_SHARED_JOIN_ROLE", "member")
 
-    # SSO-only posture (MiClassrooms Phase 0 Task 7): true hides the
-    # email/password/magic-link form and passkey prompt from the sign-in page
+    # Fork deviation (MiClassrooms Phase 0 Task 7): SSO-only posture — true
+    # hides the email/password/magic-link form and passkey prompt from the sign-in page
     # and drops the GitHub OAuth button, leaving only Google + Okta (see
     # app/lib/auth_config.rb, app/views/sessions/new.html.erb,
     # OauthHelper#enabled_oauth_providers). Defaults to Rails.env.production?
@@ -74,8 +74,8 @@ module ModelrailsBase
     config.x.auth.sso_only =
       ENV.key?("AUTH_SSO_ONLY") ? ENV["AUTH_SSO_ONLY"] == "true" : Rails.env.production?
 
-    # Google OAuth domain allowlist (MiClassrooms Phase 0 Task 7):
-    # comma-separated bare domains, split/stripped/downcased here; full
+    # Fork deviation (MiClassrooms Phase 0 Task 7): Google OAuth domain
+    # allowlist — comma-separated bare domains, split/stripped/downcased here; full
     # canonicalization (NFC + punycode, matching EmailNormalizer.normalize's
     # domain form) happens at read time in AuthConfig.allowed_google_domains,
     # because EmailNormalizer isn't autoloadable this early in boot. The
