@@ -1,0 +1,48 @@
+# Reference-data seeds for CharacteristicDisplayRule, UnitDisplayName, and
+# SyncScopeRule — loaded by ReferenceData.seed! (app/lib/reference_data.rb),
+# called from db/seeds.rb below the fork seam.
+#
+# CUTOVER NOTE (binding for phase 8): every value below is a dev-plausible
+# SAMPLE, not production data. The production values — campus 100 plus the
+# seven allow-listed building record numbers, the one excluded building, and
+# the real display-rule/unit-name sets — live in the old app's config and
+# are copied into this file during the phase 8 cutover. Until then, nothing
+# here should be treated as authoritative sync-scope or display data.
+
+characteristic_display_rules:
+  - short_code: InstrComp
+    icon_key: computer
+    filterable: true
+  - short_code: LectureCap
+    icon_key: video-camera
+    filterable: true
+    category_override: Recording
+  - short_code: TeamTables
+    icon_key: table
+    filterable: true
+    team_learning: true
+  - short_code: "Whtbrd>25"
+    icon_key: whiteboard
+    filterable: false
+
+unit_display_names:
+  - department_group: COLLEGE_OF_LSA
+    display_name: College of Literature, Science & the Arts
+  - department_group: SCHOOL_OF_ENGIN
+    display_name: College of Engineering
+
+sync_scope_rules:
+  # Campus 100 = Ann Arbor Central — the real, permanent value (not a
+  # placeholder); the old app scopes its feed to this campus code.
+  - rule_type: campus_allow
+    value: "100"
+  # Placeholders only — the old app allow-lists seven specific building
+  # record numbers; the real seven arrive during the phase 8 cutover.
+  - rule_type: building_allow
+    value: "1000042"
+  - rule_type: building_allow
+    value: "1000107"
+  # Placeholder only — the real excluded building record number arrives
+  # during the phase 8 cutover.
+  - rule_type: building_exclude
+    value: "1000255"
