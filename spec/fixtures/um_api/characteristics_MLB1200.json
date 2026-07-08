@@ -1,0 +1,25 @@
+{
+  "Characteristics": [
+    {
+      "Code": "INSTRCOMP",
+      "ShortCode": "InstrComp",
+      "Description": "Instructor Computer",
+      "LongDescription": "Instructor station computer with document camera",
+      "Status": "A"
+    },
+    {
+      "Code": "LECTURECAP",
+      "ShortCode": "LectureCap",
+      "Description": "Lecture Capture",
+      "LongDescription": "Automated lecture capture system installed",
+      "Status": "A"
+    },
+    {
+      "Code": "WHTBD25",
+      "ShortCode": "Whtbrd>25",
+      "Description": "Whiteboard (25+ sqft)",
+      "LongDescription": "Whiteboard surface exceeding 25 square feet",
+      "Status": "A"
+    }
+  ]
+}

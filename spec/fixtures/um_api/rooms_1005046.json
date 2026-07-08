@@ -1,0 +1,40 @@
+{
+  "Rooms": [
+    {
+      "RmRecNbr": "2005046",
+      "BldRecNbr": "1005046",
+      "RoomNbr": "1200",
+      "RoomType": "Classroom",
+      "DeptID": "190000",
+      "DeptDescr": "LSA - German",
+      "DeptGrp": "COLLEGE_OF_LSA",
+      "DeptGrpDescr": "College of Literature, Science & the Arts",
+      "SqFt": 850,
+      "Floor": "1"
+    },
+    {
+      "RmRecNbr": "2005047",
+      "BldRecNbr": "1005046",
+      "RoomNbr": "B120",
+      "RoomType": "Class Laboratory",
+      "DeptID": "190100",
+      "DeptDescr": "LSA - Chemistry",
+      "DeptGrp": "COLLEGE_OF_LSA",
+      "DeptGrpDescr": "College of Literature, Science & the Arts",
+      "SqFt": 1200,
+      "Floor": "B"
+    },
+    {
+      "RmRecNbr": "2005048",
+      "BldRecNbr": "1005046",
+      "RoomNbr": "3100",
+      "RoomType": "Office",
+      "DeptID": "",
+      "DeptDescr": "",
+      "DeptGrp": "",
+      "DeptGrpDescr": "",
+      "SqFt": 150,
+      "Floor": "3"
+    }
+  ]
+}

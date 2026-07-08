@@ -1,0 +1,16 @@
+{
+  "Contacts": [
+    {
+      "SchedName": "LSA Classroom Scheduling",
+      "SchedEmail": "lsa.scheduling@umich.edu",
+      "SchedPhone": "734-555-0100",
+      "SchedDetailUrl": "https://lsa.umich.edu/classrooms/mlb1200",
+      "SchedUsageGuidelinesUrl": "https://lsa.umich.edu/classrooms/guidelines",
+      "SupportDeptId": "190000",
+      "SupportDeptDescr": "LSA Technology Services",
+      "SupportEmail": "lsa.support@umich.edu",
+      "SupportPhone": null,
+      "SupportUrl": "https://lsa.umich.edu/support"
+    }
+  ]
+}
