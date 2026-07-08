@@ -46,13 +46,24 @@ module Sync
     end
 
     def call
-      phase = find_or_create_phase!
-      phase.update!(status: :running, started_at: Time.current, finished_at: nil, error_messages: [])
-
-      calls_before = client.call_count
-      sleeps_before = rate_limiter_sleep_count
+      # The rescue wraps the ENTIRE body — phase find-or-create, the running
+      # stamp, AND #perform — because Task 12's pipeline relies on .call NEVER
+      # propagating: a RecordNotUnique racing the unique (sync_run_id, key)
+      # index, or a validation failure on the running stamp, must become a
+      # Result.failure just like a #perform blow-up, not escape and abort the
+      # whole run. `phase`/`calls_before`/`sleeps_before` are nil until their
+      # assignments are reached, so the rescue reads them defensively.
+      phase = nil
+      calls_before = nil
+      sleeps_before = nil
 
       begin
+        phase = find_or_create_phase!
+        phase.update!(status: :running, started_at: Time.current, finished_at: nil, error_messages: [])
+
+        calls_before = client.call_count
+        sleeps_before = rate_limiter_sleep_count
+
         perform
         record_call_deltas!(calls_before, sleeps_before)
 
@@ -61,14 +72,12 @@ module Sync
       rescue StandardError => e
         # UmApi::Error (Task 5's typed gateway errors) is itself a
         # StandardError subclass, so one rescue clause handles both "the
-        # gateway told us something went wrong" and "something in #perform
-        # blew up unexpectedly" identically — the pipeline treats both the
-        # same way: fail this phase, keep whatever it counted so far,
-        # never propagate.
-        record_call_deltas!(calls_before, sleeps_before)
-
-        phase.update!(status: :failed, finished_at: Time.current, counters: counters, warnings: warnings, error_messages: [ e.message ])
-        Result.failure(e.message, counters: counters.dup)
+        # gateway told us something went wrong" and "something blew up
+        # unexpectedly" identically — the pipeline treats both the same way:
+        # fail this phase, keep whatever it counted so far, never propagate.
+        record_call_deltas!(calls_before, sleeps_before) if calls_before
+        stamp_failed(phase, e)
+        Result.failure(e.message, counters: counters.dup, warnings: warnings.dup)
       end
     end
 
@@ -104,6 +113,23 @@ module Sync
       end
     end
 
+    # Best-effort failure stamp: only possible if we actually got a phase row
+    # back (a raise inside find_or_create_phase! leaves `phase` nil, so there
+    # is nothing to stamp — the Result.failure still carries the message).
+    # If the stamp itself raises (e.g. the phase row is the very thing that's
+    # broken), swallow it so THAT doesn't escape .call either — the
+    # never-propagate invariant wins over a perfectly-recorded failure row.
+    def stamp_failed(phase, error)
+      return unless phase
+
+      phase.update!(
+        status: :failed, finished_at: Time.current,
+        counters: counters, warnings: warnings, error_messages: [ error.message ]
+      )
+    rescue StandardError => e
+      Rails.logger.warn("Sync::BasePhase failed to stamp phase failed: #{e.class}: #{e.message}")
+    end
+
     def record_call_deltas!(calls_before, sleeps_before)
       count(:api_calls, client.call_count - calls_before)
       count(:rate_limit_sleeps, rate_limiter_sleep_count - sleeps_before)
@@ -112,7 +138,10 @@ module Sync
     def rate_limiter_sleep_count
       return 0 unless client.respond_to?(:rate_limiter)
 
-      client.rate_limiter&.sleep_count.to_i
+      # Explicit `|| 0` (not NilClass#to_i) so the nil-safety is intentional,
+      # not an accident of `nil.to_i == 0`: a client whose rate_limiter is nil
+      # contributes zero sleeps.
+      client.rate_limiter&.sleep_count || 0
     end
   end
 end
