@@ -33,6 +33,19 @@ class Room < ApplicationRecord
   scope :hidden,      -> { where.not(hidden_at: nil) }
   scope :not_in_feed, -> { where(in_feed: false) }
 
+  # D8 characteristic filter: AND semantics — rooms having ALL given
+  # short_codes, not merely any. COUNT(DISTINCT ...) guards against both a
+  # duplicated short_code in the caller's array and a room with two
+  # RoomCharacteristic rows sharing a short_code under different raw codes.
+  scope :with_all_characteristics, ->(short_codes) {
+    codes = Array(short_codes).compact_blank.uniq
+    next all if codes.empty?
+    joins(:room_characteristics)
+      .where(room_characteristics: { short_code: codes })
+      .group("rooms.id")
+      .having("COUNT(DISTINCT room_characteristics.short_code) = ?", codes.size)
+  }
+
   def self.normalize_facility_code(value)
     value.to_s.downcase.gsub(/[^a-z0-9]/, "").presence
   end

@@ -59,6 +59,62 @@ RSpec.describe Room, type: :model do
     end
   end
 
+  describe ".with_all_characteristics (D8)" do
+    it "matches a room with all given short_codes but not a room with only one" do
+      both = create(:room)
+      create(:room_characteristic, room: both, short_code: "InstrComp")
+      create(:room_characteristic, room: both, short_code: "LectureCap")
+
+      one = create(:room)
+      create(:room_characteristic, room: one, short_code: "InstrComp")
+
+      expect(Room.with_all_characteristics(%w[InstrComp LectureCap])).to contain_exactly(both)
+    end
+
+    it "does not double-count when a room has two rows for the same short_code under different codes" do
+      # Natural key is (room_id, code), not (room_id, short_code) — the feed
+      # can legitimately produce two rows that share a short_code. Without
+      # COUNT(DISTINCT short_code), the join would over-count rows and this
+      # room would still match, but for the wrong reason; pinning the
+      # DISTINCT so the count reflects distinct short_codes, not rows.
+      room = create(:room)
+      create(:room_characteristic, room: room, code: "201", short_code: "InstrComp")
+      create(:room_characteristic, room: room, code: "205", short_code: "InstrComp")
+      create(:room_characteristic, room: room, code: "301", short_code: "LectureCap")
+
+      expect(Room.with_all_characteristics(%w[InstrComp LectureCap])).to contain_exactly(room)
+    end
+
+    it "does not inflate the required count when the query itself repeats a short_code" do
+      room = create(:room)
+      create(:room_characteristic, room: room, short_code: "InstrComp")
+      create(:room_characteristic, room: room, short_code: "LectureCap")
+
+      expect(Room.with_all_characteristics(%w[InstrComp InstrComp LectureCap])).to contain_exactly(room)
+    end
+
+    it "returns all rooms when given an empty array" do
+      room = create(:room)
+      expect(Room.with_all_characteristics([])).to contain_exactly(room)
+    end
+
+    it "composes with .classroom.listed" do
+      matching = create(:room)
+      create(:room_characteristic, room: matching, short_code: "InstrComp")
+      create(:room_characteristic, room: matching, short_code: "LectureCap")
+
+      non_classroom = create(:room, room_type: "Class Laboratory")
+      create(:room_characteristic, room: non_classroom, short_code: "InstrComp")
+      create(:room_characteristic, room: non_classroom, short_code: "LectureCap")
+
+      partial = create(:room)
+      create(:room_characteristic, room: partial, short_code: "InstrComp")
+
+      expect(Room.classroom.listed.with_all_characteristics(%w[InstrComp LectureCap]))
+        .to contain_exactly(matching)
+    end
+  end
+
   describe "visibility (D6)" do
     it "lists a room iff in_feed AND hidden_at IS NULL, composing with .classroom" do
       listed   = create(:room)

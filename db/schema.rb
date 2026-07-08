@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030002) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030003) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -239,6 +239,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030002) do
     t.index ["workspace_id"], name: "index_roles_on_workspace_id"
   end
 
+  create_table "room_characteristics", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.string "long_description"
+    t.integer "room_id", null: false
+    t.string "short_code", null: false
+    t.string "status"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id", "code"], name: "index_room_characteristics_on_room_id_and_code", unique: true
+    t.index ["room_id"], name: "index_room_characteristics_on_room_id"
+    t.index ["short_code"], name: "index_room_characteristics_on_short_code"
+    t.index ["workspace_id"], name: "index_room_characteristics_on_workspace_id"
+  end
+
   create_table "rooms", force: :cascade do |t|
     t.integer "ada_seat_count"
     t.integer "building_id", null: false
@@ -441,6 +457,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030002) do
   add_foreign_key "memberships", "workspaces"
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
   add_foreign_key "roles", "workspaces"
+  add_foreign_key "room_characteristics", "rooms"
+  add_foreign_key "room_characteristics", "workspaces"
   add_foreign_key "rooms", "buildings"
   add_foreign_key "rooms", "campuses"
   add_foreign_key "rooms", "floors"
