@@ -26,14 +26,14 @@ class SessionsController < ApplicationController
   end
 
   def lookup
-    @email_lookup_form = EmailLookupForm.new(email_address: params[:email_address])
+    @email_lookup_form = EmailLookupForm.new(email_address: lookup_email_address)
 
     unless @email_lookup_form.valid?
       render :email_error
       return
     end
 
-    email = @email_lookup_form.email_address.downcase.strip
+    email = EmailNormalizer.normalize(@email_lookup_form.email_address)
     user = User.find_by(email_address: email)
 
     if user
@@ -70,6 +70,10 @@ class SessionsController < ApplicationController
   end
 
   private
+
+  def lookup_email_address
+    params[:email_address].presence || params.dig(:email_lookup_form, :email_address)
+  end
 
   # RP-initiated logout (Task 6, D4): when the session being torn down
   # originated from an Okta sign-in (OmniauthCallbacksController stashed the
