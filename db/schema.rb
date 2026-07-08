@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030007) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030008) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -63,6 +63,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030007) do
     t.index ["trackable_type", "trackable_id"], name: "index_activity_logs_on_trackable"
     t.index ["workspace_id", "created_at"], name: "index_activity_logs_on_workspace_id_and_created_at"
     t.index ["workspace_id"], name: "index_activity_logs_on_workspace_id"
+  end
+
+  create_table "announcements", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "slot", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["slot"], name: "index_announcements_on_slot", unique: true
+    t.index ["workspace_id"], name: "index_announcements_on_workspace_id"
   end
 
   create_table "authentications", force: :cascade do |t|
@@ -219,6 +228,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030007) do
     t.index ["user_id", "workspace_id"], name: "index_memberships_on_user_id_and_workspace_id", unique: true
     t.index ["user_id"], name: "index_memberships_on_user_id"
     t.index ["workspace_id"], name: "index_memberships_on_workspace_id"
+  end
+
+  create_table "notes", force: :cascade do |t|
+    t.boolean "alert", default: false, null: false
+    t.integer "author_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "notable_id", null: false
+    t.string "notable_type", null: false
+    t.integer "parent_id"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["author_id"], name: "index_notes_on_author_id"
+    t.index ["notable_type", "notable_id"], name: "index_notes_on_notable"
+    t.index ["parent_id"], name: "index_notes_on_parent_id"
+    t.index ["workspace_id"], name: "index_notes_on_workspace_id"
   end
 
   create_table "noticed_events", force: :cascade do |t|
@@ -523,6 +547,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030007) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activity_logs", "users", column: "actor_id"
   add_foreign_key "activity_logs", "workspaces"
+  add_foreign_key "announcements", "workspaces"
   add_foreign_key "authentications", "users"
   add_foreign_key "availability_blocks", "rooms"
   add_foreign_key "availability_blocks", "workspaces"
@@ -542,6 +567,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030007) do
   add_foreign_key "memberships", "roles"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
+  add_foreign_key "notes", "notes", column: "parent_id"
+  add_foreign_key "notes", "users", column: "author_id"
+  add_foreign_key "notes", "workspaces"
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
   add_foreign_key "roles", "workspaces"
   add_foreign_key "room_characteristics", "rooms"
