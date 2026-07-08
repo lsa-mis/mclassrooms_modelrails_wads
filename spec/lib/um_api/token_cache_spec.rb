@@ -52,13 +52,33 @@ RSpec.describe UmApi::TokenCache do
       expect(stub).to have_been_requested.once
     end
 
-    it "refetches once the injected clock passes the cached expiry" do
+    # The fixture's expires_in is 3600, so the buffered expiry is at
+    # +3540 (3600 - EARLY_EXPIRY). These two cases straddle that boundary to
+    # prove the 60s buffer is actually applied, not just that the token
+    # "eventually" refetches: +3500 is still inside the buffer (cached), and
+    # +3550 is past the buffer but still BEFORE the token's true 3600s expiry
+    # — so a refetch there can ONLY happen if EARLY_EXPIRY is honored. (With
+    # EARLY_EXPIRY = 0 the +3550 case would still read the cache and this
+    # example would fail — that's the teeth.)
+    it "keeps serving the cached token just before the buffered expiry" do
       stub = stub_um_token(scope: "buildings")
       clock = FakeClock.new(Time.utc(2026, 1, 1, 0, 0, 0))
       cache = described_class.new(clock: clock)
 
       cache.token_for("buildings")
-      clock.now += 3600 # fixture's expires_in, past the 60s early-expiry buffer
+      clock.now += 3500 # inside the 3540s buffered window
+      cache.token_for("buildings")
+
+      expect(stub).to have_been_requested.once
+    end
+
+    it "refetches past the buffered expiry even before the token's true expiry" do
+      stub = stub_um_token(scope: "buildings")
+      clock = FakeClock.new(Time.utc(2026, 1, 1, 0, 0, 0))
+      cache = described_class.new(clock: clock)
+
+      cache.token_for("buildings")
+      clock.now += 3550 # past 3540 (buffered) but before 3600 (true expiry)
       cache.token_for("buildings")
 
       expect(stub).to have_been_requested.twice
@@ -94,15 +114,35 @@ RSpec.describe UmApi::TokenCache do
       expect { described_class.new.token_for("department") }.to raise_error(UmApi::Unauthorized)
     end
 
-    it "is thread-safe: concurrent callers for the same scope only trigger one fetch" do
+    # Race on a COLD cache: 10 threads are parked at a gate and released as
+    # simultaneously as the scheduler allows, so they all reach #token_for
+    # with an empty cache at once. The Mutex must let exactly ONE thread run
+    # the fetch-and-cache while the other nine block, then read the cached
+    # entry — so the token endpoint is hit EXACTLY once. Without the mutex,
+    # several threads would see the empty cache and each fetch, so the count
+    # would exceed one. `.once` (never `.at_least_once`) is what gives this
+    # teeth; no sleeps — the `ready`/`go` queues are the barrier.
+    it "is thread-safe: concurrent cold-cache callers trigger exactly one fetch" do
       stub = stub_um_token(scope: "buildings")
       cache = described_class.new
+      ready = Queue.new
+      go = Queue.new
 
-      threads = Array.new(10) { Thread.new { cache.token_for("buildings") } }
+      threads = Array.new(10) do
+        Thread.new do
+          ready << true
+          go.pop
+          cache.token_for("buildings")
+        end
+      end
+
+      10.times { ready.pop } # every thread is up and parked at the gate
+      10.times { go << :release } # release them together
+
       results = threads.map(&:value)
 
       expect(results.uniq).to eq([ "test-um-api-token-abc123" ])
-      expect(stub).to have_been_requested.at_least_once
+      expect(stub).to have_been_requested.once
     end
   end
 end
