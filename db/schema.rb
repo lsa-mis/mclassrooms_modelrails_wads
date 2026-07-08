@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030006) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030007) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -356,6 +356,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030006) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "sync_phases", force: :cascade do |t|
+    t.json "counters", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.json "error_messages", default: [], null: false
+    t.datetime "finished_at"
+    t.string "key", null: false
+    t.datetime "started_at"
+    t.string "status", default: "pending", null: false
+    t.integer "sync_run_id", null: false
+    t.datetime "updated_at", null: false
+    t.json "warnings", default: [], null: false
+    t.integer "workspace_id", null: false
+    t.index ["sync_run_id", "key"], name: "index_sync_phases_on_sync_run_id_and_key", unique: true
+    t.index ["sync_run_id"], name: "index_sync_phases_on_sync_run_id"
+    t.index ["workspace_id"], name: "index_sync_phases_on_workspace_id"
+  end
+
+  create_table "sync_runs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "dry_run", default: false, null: false
+    t.datetime "finished_at"
+    t.datetime "started_at"
+    t.string "status", default: "running", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id"], name: "index_sync_runs_on_workspace_id"
+  end
+
   create_table "sync_scope_rules", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "rule_type", null: false
@@ -529,6 +557,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030006) do
   add_foreign_key "rooms", "users", column: "hidden_by_id"
   add_foreign_key "rooms", "workspaces"
   add_foreign_key "sessions", "users"
+  add_foreign_key "sync_phases", "sync_runs"
+  add_foreign_key "sync_phases", "workspaces"
+  add_foreign_key "sync_runs", "workspaces"
   add_foreign_key "sync_scope_rules", "workspaces"
   add_foreign_key "unit_display_names", "workspaces"
   add_foreign_key "units", "workspaces"
