@@ -1,0 +1,50 @@
+<%# Admin nav region (Task 10, Navigation IA skeleton). Gated at the call
+    site on current_grant.admin? (app/helpers/application_helper.rb), not
+    here — this partial assumes it should render.
+
+    Phases 4-8 populate the panel with real admin navigation; until then
+    this is a genuinely empty, accessible region (not a dead link, not a
+    "coming soon" placeholder) so the affordance's shape — a labeled
+    navigation landmark — is stable across phases and doesn't need
+    reshaping once content lands.
+
+    Desktop gets an interactive disclosure (reuses the existing `dropdown`
+    Stimulus controller for the click/outside-click/Escape wiring already
+    proven by shared/_workspace_switcher and shared/_user_menu — no new JS).
+    It deliberately does NOT use role="menu"/"menuitem" the way those two
+    do: an ARIA menu with zero menuitem children fails aria-required-children,
+    and there's nothing menu-shaped to put in it yet. Mobile renders as a
+    static labeled group (matching the "Workspaces" mobile group style) since
+    it already lives inside the collapsible hamburger accordion — a second,
+    nested disclosure toggle there would be redundant. -%>
+<% if local_assigns[:mobile] %>
+  <nav aria-label="<%= t("navigation.admin.aria_label") %>"
+       class="md:hidden px-1 pt-3 mt-1 border-t border-border">
+    <p class="px-2 py-1 text-xs font-semibold text-text-muted uppercase tracking-wide">
+      <%= t("navigation.admin.label") %>
+    </p>
+    <p class="px-2 py-2 text-sm text-text-muted">
+      <%= t("navigation.admin.empty") %>
+    </p>
+  </nav>
+<% else %>
+  <nav aria-label="<%= t("navigation.admin.aria_label") %>"
+       data-controller="dropdown"
+       class="relative hidden md:block">
+    <button data-dropdown-target="button" data-action="click->dropdown#toggle"
+            id="admin-nav-button" type="button"
+            aria-expanded="false" aria-controls="admin-nav-panel"
+            class="min-h-[44px] flex items-center gap-2 px-3 rounded-lg text-text-body
+                   hover:bg-surface-sunken focus-ring">
+      <%= t("navigation.admin.label") %>
+      <span aria-hidden="true">&#9662;</span>
+    </button>
+
+    <div data-dropdown-target="menu" id="admin-nav-panel"
+         aria-labelledby="admin-nav-button"
+         class="hidden absolute right-0 mt-2 w-64 rounded-lg bg-surface-raised
+                border border-border shadow-lg z-50 p-4">
+      <p class="text-sm text-text-muted"><%= t("navigation.admin.empty") %></p>
+    </div>
+  </nav>
+<% end %>

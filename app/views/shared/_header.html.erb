@@ -28,8 +28,16 @@
         <div class="hidden md:block">
           <%= render "shared/theme_toggle", style: :icon %>
         </div>
-        <% if authenticated? %>
+        <%# Navigation IA (Task 10): MiClassrooms' :shared posture is one
+            workspace for everyone — the switcher has nothing to switch
+            between, so it's suppressed via TenancyConfig rather than
+            deleted (a :personal-posture fork still gets it; its own
+            switcher-internals size>1 check is unchanged). %>
+        <% if authenticated? && !TenancyConfig.shared? %>
           <%= render "shared/workspace_switcher" %>
+        <% end %>
+        <% if authenticated? && current_grant.admin? %>
+          <%= render "shared/admin_nav" %>
         <% end %>
         <%= render "shared/user_menu", context: :desktop %>
 
@@ -85,7 +93,12 @@
       <div class="flex flex-col gap-2">
         <% if authenticated? %>
           <%= render "shared/user_menu", context: :mobile %>
-          <%= render "shared/workspace_switcher", mobile: true %>
+          <% unless TenancyConfig.shared? %>
+            <%= render "shared/workspace_switcher", mobile: true %>
+          <% end %>
+          <% if current_grant.admin? %>
+            <%= render "shared/admin_nav", mobile: true %>
+          <% end %>
         <% else %>
           <%= link_to t("navigation.sign_in"), main_app.new_session_path,
                 class: "min-h-[var(--form-input-height)] flex items-center px-2 text-text-body
