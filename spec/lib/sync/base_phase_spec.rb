@@ -22,17 +22,23 @@ require "rails_helper"
 class FakeRateLimiter
   attr_accessor :sleep_count
 
-  def initialize
-    @sleep_count = 0
+  # `sleep_count:` seedable so a spec can simulate a shared limiter a PRIOR
+  # phase already slept on — the delta-nonzero regression test starts above
+  # zero on purpose.
+  def initialize(sleep_count: 0)
+    @sleep_count = sleep_count
   end
 end
 
 class FakeClient
   attr_reader :call_count, :rate_limiter
 
-  def initialize
-    @call_count = 0
-    @rate_limiter = FakeRateLimiter.new
+  # `call_count:`/`rate_limiter:` seedable for the same reason — a client
+  # carried across phases starts each new phase at a non-zero cumulative
+  # count, and BasePhase must record only THIS phase's delta.
+  def initialize(call_count: 0, rate_limiter: FakeRateLimiter.new)
+    @call_count = call_count
+    @rate_limiter = rate_limiter
   end
 
   # Simulates the client having sent `n` HTTP requests, exactly like
@@ -63,6 +69,7 @@ class RaisingUmApiTestPhase < Sync::BasePhase
 
   def perform
     count(:created, 1)
+    add_warning("partial page before failure")
     client.simulate_calls(1)
     raise UmApi::ServerError, "gateway exploded"
   end
@@ -130,6 +137,28 @@ RSpec.describe Sync::BasePhase do
       expect { SucceedingTestPhase.call(run: run, client: client) }
         .not_to change { SyncPhase.where(sync_run: run, key: "campuses").count }
     end
+
+    # Teeth-test for the crux behavior: api_calls/rate_limit_sleeps must be the
+    # DELTA this phase produced, not the client's absolute cumulative totals.
+    # A shared client carried across a multi-phase pipeline run arrives here
+    # already at call_count 5 / sleep_count 3 from prior phases; this phase
+    # itself makes 2 calls / 1 sleep, so the row must record 2 / 1 — NOT 7 / 4.
+    # A regression that dropped the before/after diffing (recording
+    # client.call_count absolutely) would pass every other spec here — they
+    # all start the fake at zero — but MUST fail this one.
+    it "records only the calls/sleeps its own #perform produced, not the shared client's running totals" do
+      run = create(:sync_run)
+      client = FakeClient.new(call_count: 5, rate_limiter: FakeRateLimiter.new(sleep_count: 3))
+
+      SucceedingTestPhase.call(run: run, client: client)
+
+      phase = run.sync_phases.find_by!(key: "campuses")
+      expect(phase.counters["api_calls"]).to eq(2)
+      expect(phase.counters["rate_limit_sleeps"]).to eq(1)
+      # Sanity: the shared client did advance to its new cumulative totals.
+      expect(client.call_count).to eq(7)
+      expect(client.rate_limiter.sleep_count).to eq(4)
+    end
   end
 
   describe "a subclass raising UmApi::Error" do
@@ -146,10 +175,14 @@ RSpec.describe Sync::BasePhase do
       expect(phase.finished_at).to be_present
       expect(phase.error_messages).to eq([ "gateway exploded" ])
       expect(phase.counters).to eq("created" => 1, "api_calls" => 1, "rate_limit_sleeps" => 0)
+      expect(phase.warnings).to eq([ "partial page before failure" ])
 
       expect(result).not_to be_success
       expect(result.errors).to eq([ "gateway exploded" ])
       expect(result.payload[:counters]).to eq(phase.counters)
+      # MINOR 3: the failure Result carries warnings just like success does,
+      # so a caller reading result.payload[:warnings] never gets nil.
+      expect(result.payload[:warnings]).to eq([ "partial page before failure" ])
     end
   end
 
@@ -168,6 +201,27 @@ RSpec.describe Sync::BasePhase do
 
       expect(result).not_to be_success
       expect(result.errors).to eq([ "unexpected boom" ])
+    end
+  end
+
+  # IMPORTANT 2: the "nothing escapes .call" invariant Task 12's pipeline
+  # depends on must hold even when the failure originates in the SyncPhase
+  # find-or-create / running-stamp itself (e.g. a RecordNotUnique racing the
+  # unique (sync_run_id, key) index, or a validation failure), not just
+  # inside #perform. Stubbing SyncPhase#update! to raise reproduces a
+  # running-stamp failure: .call must still return Result.failure and must
+  # not propagate.
+  describe "a failure during phase creation / running-stamp" do
+    it "returns Result.failure without propagating when the running-stamp raises" do
+      run = create(:sync_run)
+      client = FakeClient.new
+      allow_any_instance_of(SyncPhase).to receive(:update!).and_raise(ActiveRecord::RecordInvalid.new(SyncPhase.new))
+      result = nil
+
+      expect { result = SucceedingTestPhase.call(run: run, client: client) }.not_to raise_error
+
+      expect(result).not_to be_success
+      expect(result.errors).not_to be_empty
     end
   end
 
