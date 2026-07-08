@@ -65,6 +65,13 @@ RSpec.describe Setting, type: :model do
       expect(Setting.recompute_capacity_filter_max!).to eq(100)
     end
 
+    it "keeps an exact multiple of 25 unchanged (75 -> 75, not 100)" do
+      # Pins the ceil boundary: a future refactor to `round` or `ceil` on a
+      # pre-divided value must not bump an exact multiple to the next bucket.
+      create(:room, instructional_seat_count: 75)
+      expect(Setting.recompute_capacity_filter_max!).to eq(75)
+    end
+
     it "falls back to the default when there are zero classrooms" do
       expect(Room.classroom.count).to eq(0)
       expect(Setting.recompute_capacity_filter_max!).to eq(Setting::CAPACITY_FILTER_MAX_DEFAULT)
