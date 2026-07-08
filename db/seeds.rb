@@ -74,3 +74,9 @@ end
 # Fork seam: add your app's domain seeds BELOW this line. Upstream owns
 # everything above it; keeping your additions below the marker keeps
 # `git merge upstream/main` conflicts away. See /docs/developer/forking.
+
+# --- MiClassrooms domain seeds (fork-owned) ---------------------------------
+if TenancyConfig.shared?
+  shared_workspace = Workspace.find_by!(slug: ENV.fetch("TENANCY_SHARED_WORKSPACE_SLUG"))
+  ReferenceData.seed!(workspace: shared_workspace)
+end
