@@ -11,10 +11,15 @@ RSpec.describe Room, type: :model do
   it "enforces rmrecnbr uniqueness globally, even across workspaces" do
     # Deliberate divergence from Campus/Unit: rmrecnbr is a U-M-wide natural
     # key (like Building's bldrecnbr), so uniqueness is NOT workspace-scoped.
-    workspace = create(:workspace)
-    create(:room, workspace: workspace, rmrecnbr: "2900001")
-    duplicate = build(:room, workspace: create(:workspace), rmrecnbr: "2900001")
+    # Each room gets an explicit building so room + building share a tenant:
+    # overriding :workspace alone leaves the factory's auto-built building in
+    # a different workspace — a state impossible in production.
+    original_building  = create(:building, workspace: create(:workspace))
+    duplicate_building = create(:building, workspace: create(:workspace))
+    create(:room, building: original_building, rmrecnbr: "2900001")
+    duplicate = build(:room, building: duplicate_building, rmrecnbr: "2900001")
 
+    expect(duplicate.workspace).not_to eq(original_building.workspace)
     expect(duplicate).not_to be_valid
     expect(duplicate.errors[:rmrecnbr]).not_to be_empty
   end
