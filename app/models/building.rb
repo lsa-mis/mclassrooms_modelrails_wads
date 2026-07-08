@@ -17,6 +17,7 @@ class Building < ApplicationRecord
   scope :listed,      -> { where(in_feed: true, hidden_at: nil) }
   scope :hidden,      -> { where.not(hidden_at: nil) }
   scope :not_in_feed, -> { where(in_feed: false) }
+  scope :with_classrooms, -> { where(id: Room.classroom.select(:building_id)) }
 
   def display_name = nickname.present? ? "#{name} (#{nickname})" : name
 
