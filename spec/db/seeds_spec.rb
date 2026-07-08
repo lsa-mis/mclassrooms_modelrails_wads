@@ -39,4 +39,29 @@ RSpec.describe "db/seeds.rb :shared bootstrap", type: :request do
     expect(tenancy_line).to include("tenancy:owner_setup_link")   # on-demand mint, not a logged token
     expect(tenancy_line).not_to include("/passwords/")            # no live password credential in logs
   end
+
+  # MiClassrooms Task 4 bug fix: outside production the seed used to call
+  # AuthenticationMailer.password_reset_email, a method that does not exist in
+  # this codebase's passwordless-first mailers — a NoMethodError on every
+  # db:seed run under :shared in dev/test. Only the production branch above
+  # was ever covered, so this went undetected. Locks in the fix: the seed now
+  # mints a MagicLinkToken (intent: "set_password") and sends it via
+  # MagicLinkMailer#sign_in_link, the same mechanism
+  # PasswordResetsController#create and `tenancy:owner_setup_link` use.
+  context "outside production" do
+    before { allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("test")) }
+
+    it "sends a magic-link password-set email instead of raising" do
+      expect { Rails.application.load_seed }
+        .to change { ActionMailer::Base.deliveries.size }.by(1)
+
+      mail = ActionMailer::Base.deliveries.last
+      expect(mail.to).to include("owner@acme.test")
+
+      owner = User.find_by!(email_address: "owner@acme.test")
+      token = MagicLinkToken.where(email: owner.email_address, intent: "set_password").order(:created_at).last
+      expect(token).to be_present
+      expect(mail.body.encoded).to include(token.token)
+    end
+  end
 end

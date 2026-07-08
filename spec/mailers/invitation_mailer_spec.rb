@@ -30,34 +30,6 @@ RSpec.describe InvitationMailer, type: :mailer do
     end
   end
 
-  describe "#invite for project invitation" do
-    let(:workspace) { create(:workspace) }
-    let(:user) { create(:user) }
-    let(:project) { create(:project, workspace: workspace, created_by: user) }
-    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
-    let(:invitation) do
-      project.invitations.create!(
-        email: "project-invite@example.com",
-        role: viewer_role,
-        project_role: "editor",
-        invited_by: user,
-        expires_at: 7.days.from_now
-      )
-    end
-
-    before { create(:membership, user: user, workspace: workspace) }
-
-    it "includes the workspace name in subject" do
-      mail = described_class.invite(invitation)
-      expect(mail.subject).to include(workspace.name)
-    end
-
-    it "sends to the invitee email" do
-      mail = described_class.invite(invitation)
-      expect(mail.to).to eq([ "project-invite@example.com" ])
-    end
-  end
-
   describe "#invite details" do
     let(:invitation) { create(:invitation) }
 
@@ -74,16 +46,6 @@ RSpec.describe InvitationMailer, type: :mailer do
     it "includes the decline link" do
       mail = described_class.invite(invitation)
       expect(mail.body.encoded).to include("decline")
-    end
-  end
-
-  describe "#invite_client" do
-    it "renders to the client with the accept URL" do
-      project = create(:project, clientside_enabled: true)
-      inv = create(:invitation, :client, invitable: project, email: "dana@bigco.com")
-      mail = InvitationMailer.invite_client(inv)
-      expect(mail.to).to eq([ "dana@bigco.com" ])
-      expect(mail.body.encoded).to include(accept_invitation_url(token: inv.token))
     end
   end
 end

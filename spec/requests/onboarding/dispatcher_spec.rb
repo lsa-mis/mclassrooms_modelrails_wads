@@ -21,25 +21,6 @@ RSpec.describe "Onboarding dispatcher", type: :request do
     expect(response).to redirect_to(new_onboarding_workspace_path)
   end
 
-  it "routes a user with a workspace but no project to the project step" do
-    user = create(:user, :with_zero_workspaces)
-    workspace = create(:workspace)
-    admit(user, workspace)
-    sign_in(user)
-    get onboarding_path
-    expect(response).to redirect_to(new_onboarding_project_path)
-  end
-
-  it "routes a user with a workspace and a project to the team step" do
-    user = create(:user, :with_zero_workspaces)
-    workspace = create(:workspace)
-    admit(user, workspace)
-    create(:project, workspace: workspace)
-    sign_in(user)
-    get onboarding_path
-    expect(response).to redirect_to(new_onboarding_team_path)
-  end
-
   it "PATCH marks onboarding complete and lands on the workspace" do
     user = create(:user, :with_zero_workspaces)
     workspace = create(:workspace)

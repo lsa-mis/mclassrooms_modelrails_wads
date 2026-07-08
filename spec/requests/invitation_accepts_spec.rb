@@ -92,43 +92,4 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(invitation.reload).to be_accepted
     end
   end
-
-  describe "project invitation signup via magic-link (atomic acceptance)" do
-    let(:workspace) { create(:workspace) }
-    let(:owner) { create(:user) }
-    let(:project) { create(:project, workspace: workspace, created_by: owner) }
-    let(:viewer_role) { Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" } }
-    let!(:invitation) do
-      create(:membership, :owner, user: owner, workspace: workspace)
-      project.invitations.create!(
-        email: "new-project-user@example.com",
-        role: viewer_role,
-        project_role: "editor",
-        invited_by: owner,
-        expires_at: 7.days.from_now
-      )
-    end
-
-    before do
-      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
-    end
-
-    it "unauthenticated user accepts invite, signs up via magic-link, joins workspace + project atomically" do
-      post accept_invitation_path(token: invitation.token)
-      expect(response).to redirect_to(new_session_path)
-
-      token = MagicLinkToken.create_for_email("new-project-user@example.com")
-      expect {
-        post magic_link_callback_path(token: token), params: {
-          user: { first_name: "Project", last_name: "Invitee" }
-        }
-      }.to change(User, :count).by(1)
-
-      new_user = User.find_by(email_address: "new-project-user@example.com")
-      # Magic-link signup is atomic: accepted on signup.
-      expect(new_user.workspaces).to include(workspace)
-      expect(new_user.projects).to include(project)
-      expect(invitation.reload).to be_accepted
-    end
-  end
 end

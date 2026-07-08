@@ -1,7 +1,7 @@
 ---
 title: Extending
-description: How to add resource types, custom roles, and new features to ModelRails
-keywords: resource types roles permissions migration polymorphic customization logo branding cookies gdpr consent analytics
+description: How to add tenant-scoped models, custom roles, and new features to ModelRails
+keywords: tenanted roles permissions migration customization logo branding cookies gdpr consent analytics
 ---
 
 # Extending ModelRails
@@ -23,8 +23,8 @@ rails db:migrate
 
 Two shapes — picking the wrong one is the most common *design* mistake:
 
-- **A workspace-level root** (a top-level thing a workspace owns, like `Project`) → `include Tenanted`, which adds `belongs_to :workspace` and a `for_current_workspace` scope.
-- **A child of something already tenant-scoped** (e.g. a `Comment` on a `Project`) → just `belongs_to :project`. Do **not** add `Tenanted` or a `workspace_id`; it inherits its tenant transitively through the parent. This is exactly why `Resource` and `Document` carry no `workspace_id` — they reach the workspace via `resource → project → workspace`.
+- **A workspace-level root** (a top-level thing a workspace owns, like a `Milestone`) → `include Tenanted`, which adds `belongs_to :workspace` and a `for_current_workspace` scope.
+- **A child of something already tenant-scoped** (e.g. a `Comment` on a `Milestone`) → just `belongs_to :milestone`. Do **not** add `Tenanted` or a `workspace_id`; it inherits its tenant transitively through the parent.
 
 ```ruby
 # app/models/milestone.rb — a workspace-level root
@@ -74,7 +74,7 @@ class MilestonePolicy < ApplicationPolicy
   end
 
   def create?
-    can?("manage_projects")        # gated on a role permission
+    can?("manage_settings")        # gated on a role permission
   end
 
   def update?
@@ -87,7 +87,7 @@ class MilestonePolicy < ApplicationPolicy
 end
 ```
 
-The permission keys (`manage_projects`, `manage_members`, `manage_workspace`, …) live on each role; see [Workspace Administration](/docs/user/workspaces) for the full list.
+The permission keys (`manage_settings`, `manage_members`, `manage_workspace`, …) live on each role; see [Workspace Administration](/docs/user/workspaces) for the full list.
 
 ### 5. Opt into shared behavior (optional)
 
@@ -99,54 +99,7 @@ Mix in the same concerns the built-in models use, only as needed:
 | `Trackable` | Activity-log entries when the record changes | — |
 | `Broadcastable` | Turbo Stream broadcasts on change | define a private `broadcast_target` (e.g. `workspace` or the parent record) |
 
-`Project` includes all three; `Resource` broadcasts to its `project`. Copy whichever match your model.
-
-## Adding a New Resource Type
-
-The Resource registry uses a polymorphic pattern. To add a new type (e.g., `Slideshow`):
-
-### 1. Create the model
-
-```bash
-rails generate model Slideshow
-rails db:migrate          # generate writes the migration; this applies it
-```
-
-```ruby
-# app/models/slideshow.rb
-class Slideshow < ApplicationRecord
-  has_one :resource, as: :resourceable, dependent: :destroy
-  has_many :slides, dependent: :destroy
-end
-```
-
-A resource type is reached through `resource → project → workspace`, so it needs **no** `workspace_id` and does **not** `include Tenanted` — see [Adding a workspace-scoped feature](#adding-a-workspace-scoped-feature) for when a model does.
-
-### 2. Register the type
-
-In `app/models/resource.rb`, add to the allowlist:
-
-```ruby
-ALLOWED_RESOURCEABLE_TYPES = %w[Document Slideshow].freeze
-```
-
-### 3. Create view partials
-
-```
-app/views/workspaces/projects/resources/types/_slideshow.html.erb
-app/views/workspaces/projects/resources/types/_slideshow_form.html.erb
-```
-
-The controller automatically renders the correct partial based on `resourceable_type`.
-
-### 4. Add strong parameters
-
-In `ResourcesController#resourceable_params`, add a case:
-
-```ruby
-when "Slideshow"
-  params.fetch(:slideshow, {}).permit(:title, slides_attributes: [:image, :caption, :position])
-```
+Workspace and Membership already use all three; copy whichever match your model.
 
 ## Customizing the Site Logo
 
@@ -232,79 +185,6 @@ def manage_billing?
   can?("manage_billing")
 end
 ```
-
-## Upgrading Project Roles to Role Model
-
-If you need custom project roles beyond creator/editor/viewer:
-
-1. Add `role_id` to `project_memberships`: `rails generate migration AddRoleIdToProjectMemberships role:references`
-2. Seed project-specific roles with a `context` column on Role
-3. Update `ProjectMembershipPolicy` to use `can?` instead of enum checks
-4. Migrate existing data: map enum values to Role records
-
-## Adding Per-Resource Permissions
-
-For fine-grained access (e.g., "can view Document A but not Document B"):
-
-1. Create a `ResourceShare` model: `user_id`, `resource_id`, `permission` (read/write)
-2. Update `ResourcePolicy` to check both project membership AND resource shares
-3. Resources without shares fall back to project-level permissions
-
-## Project Tools registry
-
-Each project carries a set of tools (tabs in the project navigation). The base template ships `:docs` only. Forks add tools by registering them in `config/initializers/project_tools.rb` **after** building the tool's surface (model + controller + routes + views):
-
-```ruby
-# config/initializers/project_tools.rb
-Rails.application.config.to_prepare do
-  ProjectTools::Registry.reset!
-
-  # Built-in tool — keep this.
-  ProjectTools::Registry.register(
-    key: :docs,
-    path_helper: :workspace_project_resources_path,
-    default_enabled: true
-  )
-
-  # Your tool — register it here.
-  ProjectTools::Registry.register(
-    key: :messages,
-    path_helper: :workspace_project_messages_path,
-    default_enabled: true
-  )
-end
-```
-
-`path_helper` is a project-scoped route helper the project tab bar calls as `helper(workspace, project)`.
-
-Gate a tool's controller so its routes redirect back to project home when the tool is disabled for that project:
-
-```ruby
-class Workspaces::Projects::MessagesController < ApplicationController
-  include WorkspaceScoped
-  include EnforcesProjectTool
-  enforces_tool :messages          # redirects if tool_enabled?(:messages) is false
-
-  before_action :set_project       # must run BEFORE the EnforcesProjectTool guard
-  # …
-end
-```
-
-The `EnforcesProjectTool` concern reads `@project.tool_enabled?(key)`, so `set_project` must populate `@project` before the guard fires. See [Project Tools](/docs/user/project-tools) for the full how-to.
-
-## Clientside (external-client area)
-
-The Clientside subsystem lets managers share a read-only project view with external clients — without giving them workspace membership or a seat in workspace policies.
-
-Key extension points:
-
-- **Enable per project.** Clientside is toggled on a per-project basis via the project's Clientside settings (`Workspaces::Projects::ClientsidesController`, `edit_workspace_project_clientside_path`). A project must have `clientside_enabled?` returning `true` before any client-invite or access logic runs.
-- **Invite a client.** `Invitation.invite_client!(project:, email:, company_name:, invited_by:)` creates a client-type invitation and dispatches the invite email. The invitation form lives at `new_workspace_project_client_invitation_path` (`Workspaces::Projects::ClientInvitationsController`).
-- **Acceptance creates a `ClientAccess`.** When a client accepts via `GET /invitations/:token/accept` (or `POST` if already signed in), `Invitation#accept_client_invitation!` creates a `ClientAccess` row — a deliberate non-`Membership` record so clients never enter workspace policies or member-seat counting.
-- **Client area controllers.** `Clientside::BaseController` (namespace `clientside`) resolves projects only through `Current.user.client_accesses.kept` — clients cannot reach workspace-scoped resources. `Clientside::ProjectsController` lists accessible projects; `Clientside::Projects::ResourcesController` shows individual resources that are `client_visible?`. The layout is `clientside`, isolated from the workspace shell.
-- **`skip_onboarding_requirement`.** `Clientside::BaseController` calls `skip_onboarding_requirement` so that client users (who have no workspace and therefore no `onboarded_at`) land in the client area rather than being funnelled into the onboarding wizard.
-
-See [Clientside](/docs/user/clientside) for the full configuration and usage guide.
 
 ## Next steps
 

@@ -158,10 +158,7 @@ on every sync.
 | `config/routes/app.rb` | Your product's routes (loaded by `draw(:app)`) |
 | `config/markdowndocs_categories.local.yml` | Registers your own docs pages on this `/docs` index |
 | `app/assets/tailwind/tokens/_brand.css` | Brand-color overrides — swap the primary palette family ([Theming](theming)) |
-| `config/initializers/project_tools.rb` | Register your own project tools (`ProjectTools::Registry.register`) — see [Extending: Project Tools](/docs/developer/extending#project-tools-registry) |
 | `README.md` | Your product's README |
-
-**Clientside (external client area).** Clientside is available in every preset and is enabled per-project, not per-deployment — a fork enables it on a project-by-project basis via the project's Clientside settings toggle. No fork-owned file change is required to activate it; the toggle is in the project settings UI. See [Clientside](/docs/user/clientside) for details.
 
 ### Fork seams — method overrides
 
@@ -244,7 +241,6 @@ git log --oneline main..upstream/main -- \
   app/views/pages app/controllers/pages_controller.rb \
   config/locales/en/pages.en.yml config/locales/en/brand.en.yml \
   config/routes/app.rb config/markdowndocs_categories.local.yml \
-  config/initializers/project_tools.rb \
   app/assets/tailwind/tokens/_brand.css README.md
 ```
 

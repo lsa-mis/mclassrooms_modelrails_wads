@@ -41,7 +41,7 @@ RSpec.describe Suspendable, type: :model do
     end
   end
 
-  it "is not included in Project (workspace-only state)" do
-    expect(Project.ancestors).not_to include(Suspendable)
+  it "is not included in Membership (workspace-only state)" do
+    expect(Membership.ancestors).not_to include(Suspendable)
   end
 end

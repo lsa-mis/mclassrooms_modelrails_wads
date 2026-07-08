@@ -88,9 +88,6 @@ class Membership < ApplicationRecord
       validate_not_last_owner!
       discard!
       enforce_owner_invariant!
-      ProjectMembership.joins(:project)
-        .where(projects: { workspace_id: workspace_id }, user_id: user_id)
-        .destroy_all
     end
   end
 

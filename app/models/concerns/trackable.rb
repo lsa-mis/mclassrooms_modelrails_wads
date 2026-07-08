@@ -43,12 +43,6 @@ module Trackable
   end
 
   def resolve_workspace_for_activity
-    if respond_to?(:workspace)
-      workspace
-    elsif respond_to?(:project) && project&.respond_to?(:workspace)
-      project.workspace
-    else
-      Current.workspace
-    end
+    respond_to?(:workspace) ? workspace : Current.workspace
   end
 end

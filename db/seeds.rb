@@ -57,7 +57,16 @@ if TenancyConfig.shared?
       "Run `bin/rails tenancy:owner_setup_link` for a short-lived sign-in link " \
       "(minted on demand — not logged here)."
   else
-    AuthenticationMailer.password_reset_email(owner).deliver_now
+    # Fork deviation (MiClassrooms Task 4): bug fix — this called
+    # AuthenticationMailer.password_reset_email, which does not exist in this
+    # codebase's passwordless-first auth mailers —
+    # it raised NoMethodError on every db:seed run under the :shared preset
+    # outside production (spec/db/seeds_spec.rb only covers the production
+    # branch above, so this line was never exercised). Use the same
+    # magic-link mechanism the app's own password-reset flow
+    # (PasswordResetsController#create) and `tenancy:owner_setup_link` use.
+    token = MagicLinkToken.create_for_email(owner.email_address, intent: "set_password")
+    MagicLinkMailer.sign_in_link(owner.email_address, token).deliver_now
   end
 end
 

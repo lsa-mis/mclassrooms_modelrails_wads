@@ -22,8 +22,8 @@ RSpec.describe "Application Flows wireframe pages" do
       # Each top-level <svg>…</svg> block (flows are not nested).
       let(:svg_blocks) { source.scan(/<svg\b.*?<\/svg>/m) }
 
-      it "has at least the five flow diagrams" do
-        expect(svg_blocks.size).to be >= 5
+      it "has at least the three flow diagrams" do
+        expect(svg_blocks.size).to be >= 3
       end
 
       it "every flow svg is well-formed XML" do
@@ -63,7 +63,7 @@ RSpec.describe "Application Flows wireframe pages" do
 
         it "nests each flow's drawing elements inside its <svg> (no foreign-content breakout)" do
           svgs = doc.css("svg")
-          expect(svgs.size).to be >= 5
+          expect(svgs.size).to be >= 3
           svgs.each do |svg|
             expect(svg.css("rect, circle, text, line").size).to be > 1,
               "svg #{svg['viewBox'].inspect} in #{slug} rendered with no nested screens — CommonMark/HTML5 breakout"
@@ -82,7 +82,7 @@ RSpec.describe "Application Flows wireframe pages" do
         # rather than escaping it — assert both survive the pipeline.
         it "renders each Why section as a <details> with its bullets nested inside" do
           details = doc.css("details")
-          expect(details.size).to be >= 5
+          expect(details.size).to be >= 3
           details.each do |d|
             expect(d.at_css("summary")).to be_present, "a <details> rendered without its <summary> in #{slug}"
             expect(d.css("li").size).to be > 0,

@@ -146,18 +146,6 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
-  describe "cascade discard" do
-    it "cascades discard to projects" do
-      workspace = create(:workspace)
-      user = create(:user)
-      create(:membership, user: user, workspace: workspace)
-      project = create(:project, workspace: workspace, created_by: user)
-
-      workspace.discard!
-      expect(project.reload).to be_discarded
-    end
-  end
-
   describe "name length" do
     it "limits name to 255 characters" do
       workspace = build(:workspace, name: "a" * 256)
@@ -165,14 +153,9 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
-  describe "max_members and max_projects validation" do
+  describe "max_members validation" do
     it "requires max_members to be positive" do
       workspace = build(:workspace, max_members: 0)
-      expect(workspace).not_to be_valid
-    end
-
-    it "requires max_projects to be positive" do
-      workspace = build(:workspace, max_projects: 0)
       expect(workspace).not_to be_valid
     end
   end

@@ -12,7 +12,8 @@ module Onboarding
       if @workspace.save
         owner_role = Role.find_by!(slug: "owner", workspace_id: nil)
         @workspace.memberships.create!(user: Current.user, role: owner_role)
-        redirect_to new_onboarding_project_path, notice: t(".success")
+        Current.user.update!(onboarded_at: Time.current)
+        redirect_to workspace_path(@workspace), notice: t(".success")
       else
         render :new, status: :unprocessable_entity
       end

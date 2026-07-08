@@ -10,7 +10,6 @@ RSpec.describe NotificationPreferences do
         "security" => true,
         "account_access" => true,
         "workspace_activity" => true,
-        "project_activity" => true,
         "billing" => true
       },
       "delivery_methods" => {
@@ -399,8 +398,8 @@ RSpec.describe NotificationPreferences do
   end
 
   describe "constants" do
-    it "lists 5 categories (unchanged)" do
-      expect(described_class::CATEGORIES).to eq %w[security account_access workspace_activity project_activity billing]
+    it "lists 4 categories" do
+      expect(described_class::CATEGORIES).to eq %w[security account_access workspace_activity billing]
     end
 
     it "lists 2 channels — digest folded into email" do

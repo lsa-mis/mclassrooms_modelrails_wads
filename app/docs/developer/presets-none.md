@@ -88,23 +88,16 @@ Controllers that must be reachable mid-wizard (the wizard steps themselves, sign
 | `onboarding_step` | Redirects to |
 |---|---|
 | `:workspace` | `new_onboarding_workspace_path` — name the workspace |
-| `:project` | `new_onboarding_project_path` — create the first project |
-| `:team` | `new_onboarding_team_path` — invite teammates |
 
 **Wizard steps** (all under `Onboarding::BaseController`):
 
-1. **`Onboarding::WorkspacesController`** — user names their workspace; on save, redirected to the project step.
-2. **`Onboarding::ProjectsController`** — user creates their first project; on save, routed to the tools step (if the registry offers a real choice) or directly to the team step.
-3. **`Onboarding::ToolsController`** — self-hiding interstitial for toggling project tools; skipped automatically when there is no real choice.
-4. **`Onboarding::TeamsController`** — invite teammates by email; completing or skipping stamps `users.onboarded_at` and lands on the project home (`workspace_project_path`).
+1. **`Onboarding::WorkspacesController`** — user names their workspace; on save, `onboarded_at` is stamped immediately and the user lands on the workspace.
 
-**Skipping.** The "Skip for now" action (`PATCH /onboarding`) hits `OnboardingsController#update`, which sets `onboarded_at` immediately and redirects to the workspace/project home (or `root_path` if neither exists yet).
+The wizard is a single step in the base template — the example domain that used to add project/tools/team steps here has been removed. A fork that needs a multi-step wizard adds its own steps around its own domain models, following the same `Onboarding::BaseController` pattern.
 
-**Completing.** `TeamsController#create` sets `onboarded_at: Time.current` and redirects to the project home. Once `onboarded?` is true the guard never fires again.
+**Skipping/finishing.** `PATCH /onboarding` hits `OnboardingsController#update`, which sets `onboarded_at` immediately and redirects to the workspace (or `root_path` if none exists yet). Once `onboarded?` is true the guard never fires again.
 
 See [Onboarding](/docs/user/onboarding) for a full walkthrough, screenshots, and i18n keys.
-
-> **External Clientside clients** (users with client accesses and no workspace memberships) skip onboarding entirely — they are routed to `clientside_projects_path` via `authenticated_home_path`. See [Clientside](/docs/user/clientside).
 
 ## Setup
 
@@ -118,7 +111,7 @@ That's the only required change. No seed vars are needed (unlike `:shared`).
 
 **2. Override `authenticated_home_path` (optional).**
 
-Every post-auth landing — `SessionsController`, magic-link, OAuth, and `redirect_if_authenticated` — routes through `authenticated_home_path`. For already-onboarded users this is where they land. The default is `root_path`; client-only users land on `clientside_projects_path` automatically. Override in your fork if your workspace-agnostic home lives elsewhere:
+Every post-auth landing — `SessionsController`, magic-link, OAuth, and `redirect_if_authenticated` — routes through `authenticated_home_path`. For already-onboarded users this is where they land. The default is `root_path`. Override in your fork if your workspace-agnostic home lives elsewhere:
 
 ```ruby
 # app/controllers/application_controller.rb  (or a concern)
@@ -169,8 +162,8 @@ Browser verification (requires `SIGNUP_MODE=open` or a valid invitation) — sig
 
 1. After submitting the registration form, you are redirected to the "check your email" screen (`EmailVerificationsController#new`).
 2. A non-blocking "confirm your email" banner renders in the authenticated layout until the verification link is clicked.
-3. After clicking the verification link, the onboarding wizard starts — you are redirected to `onboarding_path` and funneled through workspace → project → (tools) → team.
-4. Completing or skipping the wizard stamps `onboarded_at` and lands on the project home.
+3. After clicking the verification link, the onboarding wizard starts — you are redirected to `onboarding_path` and land on the workspace-naming step.
+4. Completing or skipping the wizard stamps `onboarded_at` and lands on the workspace.
 5. The workspace switcher is absent until a workspace exists.
 6. No workspace appears in `user.workspaces` until they explicitly create or join one.
 

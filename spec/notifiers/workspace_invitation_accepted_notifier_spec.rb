@@ -86,29 +86,6 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
                workspace: workspace.name)
       )
     end
-
-    context "when invitation invitable is a Project" do
-      let(:project) { create(:project, workspace: workspace) }
-      let(:project_invitation) do
-        create(:invitation,
-               invitable: project,
-               email: accepter.email_address,
-               invited_by: inviter,
-               accepted_by: accepter,
-               accepted_at: Time.current,
-               project_role: "editor")
-      end
-
-      it "uses the project's workspace name in the message" do
-        described_class.with(record: project_invitation).deliver(inviter)
-        notification = inviter.notifications.last
-        expect(notification.message).to eq(
-          I18n.t("notifications.workspace_invitation_accepted.message",
-                 accepter: accepter.email_address,
-                 workspace: workspace.name)
-        )
-      end
-    end
   end
 
   describe "Invitation#after_update_commit trigger" do

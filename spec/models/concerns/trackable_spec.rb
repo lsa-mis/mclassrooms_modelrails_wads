@@ -86,12 +86,8 @@ RSpec.describe Trackable, type: :model do
       user = create(:user)
       create(:membership, :owner, user: user, workspace: workspace)
       with_session(user) do
-        project = Project.create!(
-          name: "Tracked Project",
-          workspace: workspace,
-          created_by: user
-        )
-        log = ActivityLog.where(trackable: project, action: "project.created").last
+        membership = create(:membership, workspace: workspace)
+        log = ActivityLog.where(trackable: membership, action: "membership.created").last
         expect(log).to be_present
         expect(log.workspace).to eq(workspace)
       end

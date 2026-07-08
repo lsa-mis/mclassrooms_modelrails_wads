@@ -17,7 +17,7 @@ RSpec.describe "Locked workspace gate", type: :request do
   end
 
   it "gates nested workspace-scoped controllers too" do
-    get workspace_projects_path(workspace)
+    get workspace_members_path(workspace)
     expect(response).to redirect_to(workspaces_path)
   end
 
@@ -92,26 +92,6 @@ RSpec.describe "Locked workspace gate", type: :request do
 
     before do
       create(:membership, :owner, user: owner, workspace: locked_workspace)
-    end
-
-    it "does not admit a member via a pending PROJECT invitation, and redirects with the existing acceptance_failed copy" do
-      project = create(:project, workspace: locked_workspace, created_by: owner)
-      invitation = project.invitations.create!(
-        email: invitee.email_address,
-        role: viewer_role,
-        project_role: "editor",
-        invited_by: owner,
-        expires_at: 7.days.from_now
-      )
-      locked_workspace.suspend!
-      sign_in(invitee)
-
-      expect {
-        post accept_invitation_path(token: invitation.token)
-      }.not_to change(Membership, :count)
-
-      expect(response).to redirect_to(root_path)
-      expect(flash[:alert]).to eq(I18n.t("invitation_accepts.create.acceptance_failed"))
     end
 
     it "does not admit a member via a pending WORKSPACE invitation, and redirects with the existing acceptance_failed copy" do

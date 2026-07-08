@@ -59,7 +59,32 @@ class SessionsController < ApplicationController
   end
 
   def destroy
+    okta_id_token = session.delete(:okta_id_token)
     terminate_session
-    redirect_to new_session_path, status: :see_other, notice: t(".success")
+
+    if okta_id_token.present?
+      redirect_to okta_end_session_url(okta_id_token), allow_other_host: true, status: :see_other
+    else
+      redirect_to new_session_path, status: :see_other, notice: t(".success")
+    end
+  end
+
+  private
+
+  # RP-initiated logout (Task 6, D4): when the session being torn down
+  # originated from an Okta sign-in (OmniauthCallbacksController stashed the
+  # id_token — see #stash_okta_logout_state there), redirect through Okta's
+  # end_session_endpoint instead of straight back to sign-in. This actually
+  # ends the user's session at Okta too; otherwise "sign out" here would
+  # leave them silently still signed in at the IdP, able to sign back in
+  # without re-entering credentials. id_token_hint identifies which Okta
+  # session to end; post_logout_redirect_uri must be a URI Okta allows for
+  # this app (configured alongside the callback URL in the Okta admin
+  # console). No id_token in session (password/magic-link/Google/GitHub
+  # sign-in, or Okta not configured) falls through to the branch above,
+  # unchanged.
+  def okta_end_session_url(id_token)
+    query = { id_token_hint: id_token, post_logout_redirect_uri: new_session_url }.to_query
+    "#{AuthConfig.okta_issuer.to_s.chomp('/')}/v1/logout?#{query}"
   end
 end

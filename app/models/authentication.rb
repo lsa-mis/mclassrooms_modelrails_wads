@@ -1,7 +1,7 @@
 class Authentication < ApplicationRecord
   belongs_to :user
 
-  enum :provider, { email: "email", google: "google", github: "github" }
+  enum :provider, { email: "email", google: "google", github: "github", okta: "okta" }
 
   include Broadcastable
 

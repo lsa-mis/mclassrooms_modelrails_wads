@@ -5,7 +5,7 @@
 #
 # JSONB shape:
 #   notification_types: { security, account_access, workspace_activity,
-#                         project_activity, billing }  → booleans
+#                         billing }  → booleans
 #   delivery_methods:   { in_app: { enabled },
 #                         email:  { enabled, frequency: instant|daily|weekly } }
 #   quiet_hours:        { enabled, start: "HH:MM", end: "HH:MM", allow_urgent }
@@ -19,7 +19,7 @@
 #   5. quiet_hours_active?(now)        → deny (security exempt via step 1)
 #   6. otherwise                       → allow
 class NotificationPreferences
-  CATEGORIES = %w[security account_access workspace_activity project_activity billing].freeze
+  CATEGORIES = %w[security account_access workspace_activity billing].freeze
   # Digest is folded into Email channel's frequency selector — no longer a channel.
   CHANNELS   = %w[in_app email].freeze
   EMAIL_FREQUENCIES = %w[instant daily weekly].freeze
