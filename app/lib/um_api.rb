@@ -19,4 +19,15 @@ module UmApi
   class ServerError < Error; end
 
   class NotFound < Error; end
+
+  # U-M's fiscal year runs July 1 -> June 30 (Task 8 of
+  # planning/plans/phase-2-ingestion.md; roadmap Lib section). A calendar
+  # date in July-December already belongs to NEXT calendar year's fiscal
+  # year (e.g. Nov 2026 is FY2027); January-June belongs to the current
+  # calendar year's fiscal year. Sync::UpdateBuildings feeds this straight
+  # into its buildings-listing query param — buildings are the one
+  # phase-2 resource scoped to "the current fiscal year" (Brief §6.1).
+  def self.fiscal_year(date)
+    date.month >= 7 ? date.year + 1 : date.year
+  end
 end

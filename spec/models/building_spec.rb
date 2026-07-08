@@ -171,6 +171,19 @@ RSpec.describe Building, type: :model do
     end
   end
 
+  describe "#full_address" do
+    it "joins the present address components with commas" do
+      building = build(:building, address: "812 E Washington St", city: "Ann Arbor", state: "MI",
+        zip: "48109", country: "USA")
+      expect(building.full_address).to eq("812 E Washington St, Ann Arbor, MI 48109, USA")
+    end
+
+    it "omits blank components instead of leaving stray commas" do
+      building = build(:building, address: "812 E Washington St", city: "Ann Arbor", state: nil, zip: nil, country: nil)
+      expect(building.full_address).to eq("812 E Washington St, Ann Arbor")
+    end
+  end
+
   describe "photo attachment validations" do
     it "accepts a small PNG" do
       building = build(:building)
