@@ -3,7 +3,7 @@ class CreateBuildings < ActiveRecord::Migration[8.1]
     create_table :buildings do |t|
       t.references :workspace, null: false, foreign_key: true
       t.references :campus, foreign_key: true
-      t.string :bldrecnbr, null: false                     # natural key (header note 5)
+      t.string :bldrecnbr, null: false                     # natural key — globally unique U-M building record number (roadmap Models table)
       t.string :name, null: false
       t.string :abbreviation, :address, :city, :state, :zip, :country
       t.string :nickname                                   # curated
