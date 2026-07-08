@@ -126,7 +126,7 @@ RSpec.describe Sync::UpdateCampuses do
   end
 
   describe "hard-delete of a campus that dropped out of the feed" do
-    it "destroys a pre-existing campus absent from the fixture and counts it" do
+    it "destroys an unreferenced pre-existing campus absent from the fixture and counts it" do
       create(:campus, workspace: workspace, code: "999", description: "Retired Campus")
       stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
 
@@ -136,6 +136,46 @@ RSpec.describe Sync::UpdateCampuses do
       expect(Campus.for_current_workspace.exists?(code: "999")).to be false
       expect(phase.counters).to include("deleted" => 1)
       expect(phase).to be_succeeded
+    end
+
+    # THE Critical this fix exists for: campuses sync BEFORE buildings, so a
+    # retiring campus that dropped out of the feed still has last run's
+    # buildings pointing at it (buildings.campus_id FK, enforced by SQLite).
+    # `stale.destroy!` therefore raises ActiveRecord::InvalidForeignKey on
+    # the NORMAL retirement case. That must NOT abort the phase (which would
+    # halt Task 12's whole pipeline): the still-referenced campus is
+    # skipped-with-warning, the phase still SUCCEEDS, and it is NOT counted
+    # as deleted (the counter reflects only ACTUAL deletions).
+    it "skips a still-referenced campus with a warning instead of failing the phase" do
+      stale = create(:campus, workspace: workspace, code: "999", description: "Retiring Campus")
+      create(:building, workspace: workspace, campus: stale)
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+
+      result = described_class.call(run: run, client: client)
+
+      expect(result).to be_success
+      expect(phase).to be_succeeded
+      expect(Campus.for_current_workspace.exists?(code: "999")).to be true
+      expect(counter(phase, :deleted)).to eq(0)
+      expect(phase.warnings).to include(a_string_matching(/999/))
+    end
+
+    # Mixed batch: the still-referenced campus is skipped-with-warning while
+    # the unreferenced one is genuinely deleted in the SAME sweep — proving
+    # per-record resilience (one bad delete doesn't poison the others) and
+    # that count(:deleted) counts only the one that actually went.
+    it "deletes the unreferenced stale campus but not the referenced one in the same run" do
+      referenced = create(:campus, workspace: workspace, code: "999", description: "Referenced")
+      create(:building, workspace: workspace, campus: referenced)
+      create(:campus, workspace: workspace, code: "888", description: "Unreferenced")
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+
+      described_class.call(run: run, client: client)
+
+      expect(Campus.for_current_workspace.exists?(code: "999")).to be true
+      expect(Campus.for_current_workspace.exists?(code: "888")).to be false
+      expect(phase.counters).to include("deleted" => 1)
+      expect(phase.warnings).to include(a_string_matching(/999/))
     end
 
     # Tenant-safety teeth: a campus in ANOTHER workspace, absent from THIS
@@ -149,6 +189,26 @@ RSpec.describe Sync::UpdateCampuses do
       described_class.call(run: run, client: client)
 
       expect(untouchable.reload).to be_persisted
+    end
+  end
+
+  # Empty-seen guard: a transient API glitch returning zero rows must NOT be
+  # read as "every campus was retired" and wipe the table. The sweep is
+  # skipped entirely with a warning; the phase still succeeds.
+  describe "an empty feed" do
+    it "deletes nothing and warns instead of wiping every pre-existing campus" do
+      create(:campus, workspace: workspace, code: "100", description: "Ann Arbor Central")
+      create(:campus, workspace: workspace, code: "250", description: "Michigan Medicine")
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses_empty.json", query: { "limit" => "1000" })
+
+      result = nil
+      expect { result = described_class.call(run: run, client: client) }
+        .not_to change(Campus, :count)
+
+      expect(result).to be_success
+      expect(phase).to be_succeeded
+      expect(counter(phase, :deleted)).to eq(0)
+      expect(phase.warnings).to include(a_string_matching(/zero rows/i))
     end
   end
 
