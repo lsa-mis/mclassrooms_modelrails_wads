@@ -79,4 +79,50 @@ RSpec.describe "config/initializers/auth.rb" do
       expect { run_initializer }.not_to raise_error
     end
   end
+
+  # C1 (final-review fix): a production, SSO-only deployment with Google
+  # credentials configured but no allowlist would let ANY Google account
+  # self-provision — the exact fail-open bug closed in
+  # OmniauthCallbacksController#sso_signup_bypass?. This is the belt to that
+  # controller-level suspenders: catch the misconfiguration at boot too.
+  describe "SSO-only Google allowlist guard" do
+    before do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+      allow(Rails.application.credentials).to receive(:dig)
+        .with(:oauth, :google, :client_id).and_return("google-client-id")
+      allow(Rails.configuration.x.auth).to receive(:sso_only).and_return(true)
+      allow(Rails.configuration.x.auth).to receive(:allowed_google_domains).and_return([])
+    end
+
+    it "raises when production + Google configured + sso_only + empty allowlist all coincide" do
+      expect { run_initializer }.to raise_error(
+        RuntimeError, /AUTH_SSO_ONLY is true with Google OAuth configured.*ALLOWED_GOOGLE_DOMAINS is empty/
+      )
+    end
+
+    it "does not raise outside production" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+
+      expect { run_initializer }.not_to raise_error
+    end
+
+    it "does not raise when Google OAuth credentials aren't configured" do
+      allow(Rails.application.credentials).to receive(:dig)
+        .with(:oauth, :google, :client_id).and_return(nil)
+
+      expect { run_initializer }.not_to raise_error
+    end
+
+    it "does not raise when sso_only is false" do
+      allow(Rails.configuration.x.auth).to receive(:sso_only).and_return(false)
+
+      expect { run_initializer }.not_to raise_error
+    end
+
+    it "does not raise when the allowlist is configured" do
+      allow(Rails.configuration.x.auth).to receive(:allowed_google_domains).and_return(%w[umich.edu])
+
+      expect { run_initializer }.not_to raise_error
+    end
+  end
 end

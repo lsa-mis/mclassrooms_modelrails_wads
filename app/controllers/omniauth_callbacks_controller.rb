@@ -1,13 +1,23 @@
 class OmniauthCallbacksController < ApplicationController
   include Signupable
 
-  # Providers whose NEW-USER auto-provisioning bypasses SignupPolicy /
-  # SIGNUP_MODE (MiClassrooms Phase 0 Task 7). ONLY providers with their own
-  # institutional access gate belong here:
+  # Fork deviation (MiClassrooms Phase 0 Task 7): providers whose NEW-USER
+  # auto-provisioning bypasses SignupPolicy / SIGNUP_MODE. ONLY providers with
+  # their own institutional access gate belong here, and the bypass only
+  # applies while that gate is actually armed:
   #   - google: restricted by the ALLOWED_GOOGLE_DOMAINS allowlist
   #     (#google_domain_allowed?, enforced in #create before any branch runs)
+  #     — but the allowlist being EMPTY means the gate is unarmed (disabled,
+  #     the dev-friendly default), so an empty allowlist does NOT grant
+  #     google a signup bypass either: #sso_signup_bypass? requires
+  #     AuthConfig.allowed_google_domains.any? before treating google as
+  #     gated, and google new-user signups fall back through the normal
+  #     signups_open? check exactly like any non-bypass provider. This is the
+  #     fail-open bug this comment used to invert — an unarmed allowlist is
+  #     not an institutional gate.
   #   - okta: only accounts in the deployment's Okta org can complete the
-  #     OIDC flow at all — org membership is the gate
+  #     OIDC flow at all — org membership is intrinsic to the provider, so
+  #     okta's bypass is unconditional (there's no "unarmed" state to check)
   # Everything else — github, and any provider a fork adds — stays behind
   # the signups_open? gate (fail-closed by default): its callback route is
   # live with allow_unauthenticated_access even when its button is hidden
@@ -22,8 +32,8 @@ class OmniauthCallbacksController < ApplicationController
     auth_hash = request.env["omniauth.auth"]
     resume_session
 
-    # Google domain allowlist (MiClassrooms Phase 0 Task 7): checked first,
-    # for every Google callback (new user, returning user, and
+    # Fork deviation (MiClassrooms Phase 0 Task 7): Google domain allowlist,
+    # checked first, for every Google callback (new user, returning user, and
     # signed-in-user linking alike) — not just at signup — so a Google
     # account outside the allowed domains never reaches any branch below.
     # Okta is NOT subject to this: org membership is Okta's own gate (see
@@ -132,15 +142,17 @@ class OmniauthCallbacksController < ApplicationController
     end
   end
 
-  # SSO-only posture (MiClassrooms Phase 0 Task 7): new-user provisioning
-  # via the providers in SSO_SIGNUP_BYPASS_PROVIDERS (google + okta — see
-  # the constant's comment for WHY only those two) bypasses
+  # Fork deviation (MiClassrooms Phase 0 Task 7): SSO-only posture — new-user
+  # provisioning via the providers in SSO_SIGNUP_BYPASS_PROVIDERS (google +
+  # okta — see the constant's comment for WHY only those two, and for the
+  # google allowlist-armed condition #sso_signup_bypass? enforces) bypasses
   # SignupPolicy/SIGNUP_MODE. Their institutional gates (Google domain
   # allowlist, Okta org membership — both enforced before this method runs)
   # are this fork's access-control for SSO; SIGNUP_MODE remains the gate for
   # email self-signup (RegistrationsController,
-  # MagicLinkCallbacksController#create) and for any OAuth provider outside
-  # the bypass list (GitHub today), which behave exactly as before Task 7.
+  # MagicLinkCallbacksController#create), for any OAuth provider outside the
+  # bypass list (GitHub today), and — critically — for google itself when its
+  # allowlist is empty (unarmed), which behave exactly as before Task 7.
   #
   # The bypass exists because of an empirical finding: Task 6's Okta spec
   # appeared to provision new users successfully under
@@ -150,10 +162,10 @@ class OmniauthCallbacksController < ApplicationController
   # signups exactly like email signup. See
   # spec/requests/omniauth_google_domains_spec.rb's "SSO provisioning
   # bypasses closed email self-signup" describe block, which pins both the
-  # bypass (google/okta) and the non-bypass (github) against the unstubbed
-  # default.
+  # bypass (google/okta) and the non-bypass (github, and google with an empty
+  # allowlist) against the unstubbed default.
   def handle_new_user_oauth(auth_hash)
-    unless SSO_SIGNUP_BYPASS_PROVIDERS.include?(normalized_provider(auth_hash)) || signups_open?
+    unless sso_signup_bypass?(auth_hash) || signups_open?
       redirect_to new_session_path,
                   alert: t("registrations.closed.oauth_blocked"),
                   status: :see_other
@@ -165,6 +177,26 @@ class OmniauthCallbacksController < ApplicationController
     else
       handle_unverified_email_oauth(auth_hash)
     end
+  end
+
+  # Whether this provider's institutional gate is actually armed and may
+  # therefore bypass SIGNUP_MODE for a brand-new user (see
+  # SSO_SIGNUP_BYPASS_PROVIDERS above). Okta's gate (org membership) is
+  # intrinsic to completing the OIDC flow at all, so it's unconditional.
+  # Google's gate is the ALLOWED_GOOGLE_DOMAINS allowlist, which is OPT-IN —
+  # an empty allowlist means the domain check is disabled (every domain
+  # passes, the dev-friendly default), which is not an institutional gate at
+  # all. Treating an unarmed allowlist as a bypass would fail OPEN: any
+  # Google account could self-provision on an otherwise invite_only/SSO-only
+  # instance. So google only gets the bypass when the allowlist is non-empty;
+  # with an empty allowlist, google new-user signups fall back through the
+  # same signups_open? check as every other non-bypass provider.
+  def sso_signup_bypass?(auth_hash)
+    provider = normalized_provider(auth_hash)
+    return false unless SSO_SIGNUP_BYPASS_PROVIDERS.include?(provider)
+    return true unless provider == "google"
+
+    AuthConfig.allowed_google_domains.any?
   end
 
   def handle_verified_email_oauth(auth_hash)
@@ -250,10 +282,11 @@ class OmniauthCallbacksController < ApplicationController
     OmniauthAdapters.normalize_provider(auth_hash.provider)
   end
 
-  # Google domain allowlist (MiClassrooms Phase 0 Task 7): case-insensitive
-  # EXACT match against the domain part of the OAuth-supplied email — never
-  # end_with?/include? substring matching, which would let "evilumich.edu" or
-  # "umich.edu.evil.com" slip past a naive check. The email is canonicalized
+  # Fork deviation (MiClassrooms Phase 0 Task 7): Google domain allowlist —
+  # case-insensitive EXACT match against the domain part of the OAuth-supplied
+  # email — never end_with?/include? substring matching, which would let
+  # "evilumich.edu" or "umich.edu.evil.com" slip past a naive check. The
+  # email is canonicalized
   # through EmailNormalizer.normalize (NFC + strip + downcase + punycoded
   # domain — the same normalizer this controller already uses for email
   # equality) and AuthConfig.allowed_google_domains applies the identical

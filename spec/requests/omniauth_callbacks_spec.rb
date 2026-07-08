@@ -832,7 +832,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       OmniAuth.config.test_mode = false
     end
 
-    context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new Google user)" do
+    context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new Google user, allowlist armed)" do
       # MiClassrooms Phase 0 Task 7: OAuth providers listed in
       # OmniauthCallbacksController::SSO_SIGNUP_BYPASS_PROVIDERS (google +
       # okta — each has its own institutional gate: the ALLOWED_GOOGLE_DOMAINS
@@ -840,13 +840,25 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       # This describe block used to assert the opposite (added in Task 10),
       # but that gate never served SSO auto-provisioning well: under the
       # fork's real default (SIGNUP_MODE=invite_only), it blocked every OAuth
-      # signup exactly like email self-signup. See
-      # spec/requests/omniauth_google_domains_spec.rb, which pins the same
-      # invariant against the unstubbed default. Email self-signup
-      # (RegistrationsController, MagicLinkCallbacksController) is unaffected
-      # and stays gated by SIGNUP_MODE — as do providers outside the bypass
-      # list (GitHub, next context).
-      before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only) }
+      # signup exactly like email self-signup.
+      #
+      # C1 (final-review fix): the bypass is further conditioned on google's
+      # own gate actually being ARMED (a non-empty allowlist) —
+      # OmniauthCallbacksController#sso_signup_bypass?. This example stubs the
+      # allowlist to match the auth_hash's domain so it continues to pin "the
+      # bypass fires when the institutional gate is armed"; the unarmed
+      # (empty-allowlist) case — where this must fall back to signups_open?
+      # instead — is pinned in spec/requests/omniauth_google_domains_spec.rb,
+      # which exercises both the SIGNUP_MODE=invite_only rejection and the
+      # SIGNUP_MODE=open pass-through against the unstubbed allowlist default.
+      # Email self-signup (RegistrationsController,
+      # MagicLinkCallbacksController) is unaffected and stays gated by
+      # SIGNUP_MODE — as do providers outside the bypass list (GitHub, next
+      # context).
+      before do
+        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+        allow(Rails.configuration.x.auth).to receive(:allowed_google_domains).and_return(%w[example.com])
+      end
 
       it "creates the User and Authentication and signs in despite the closed signup gate" do
         expect {
