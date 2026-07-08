@@ -182,6 +182,27 @@ RSpec.describe Room, type: :model do
       expect(Room.search_name("mlb")).to be_empty
     end
 
+    it "cascades destroy to every satellite when real rows are attached" do
+      # Route each satellite's tenant through the room (rooms-factory landmine:
+      # overriding :workspace alone leaves auto-built parents in another tenant).
+      room = create(:room, facility_code: "MLB1200")
+      create(:room_contact, room: room)
+      create(:room_gallery_image, room: room)
+      create(:availability_block, room: room)
+      create(:room_characteristic, room: room)
+      create(:note, notable: room, workspace: room.workspace)
+
+      aggregate_failures do
+        expect { room.destroy! }
+          .to change(Room, :count).by(-1)
+          .and change(RoomContact, :count).by(-1)
+          .and change(RoomGalleryImage, :count).by(-1)
+          .and change(AvailabilityBlock, :count).by(-1)
+          .and change(RoomCharacteristic, :count).by(-1)
+          .and change(Note, :count).by(-1)
+      end
+    end
+
     it "composes with other scopes, e.g. .classroom.listed" do
       matching = create(:room, facility_code: "MLB1200")
       create(:room, facility_code: "MLB1300", room_type: "Office")

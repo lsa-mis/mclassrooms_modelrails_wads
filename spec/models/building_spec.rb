@@ -93,6 +93,17 @@ RSpec.describe Building, type: :model do
       expect(Building.search_name("mason")).to be_empty
     end
 
+    it "cascades destroy to its notes when a real note is attached" do
+      building = create(:building, name: "Mason Hall")
+      create(:note, notable: building, workspace: building.workspace)
+
+      aggregate_failures do
+        expect { building.destroy! }
+          .to change(Building, :count).by(-1)
+          .and change(Note, :count).by(-1)
+      end
+    end
+
     it "returns Building.none for a blank query" do
       create(:building, name: "Mason Hall")
       expect(Building.search_name("")).to be_empty
