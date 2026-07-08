@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_010000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -83,6 +83,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000001) do
     t.index ["provider", "uid"], name: "index_authentications_on_provider_and_uid", unique: true
     t.index ["user_id", "provider"], name: "index_authentications_on_user_id_and_provider", unique: true
     t.index ["user_id"], name: "index_authentications_on_user_id"
+  end
+
+  create_table "characteristic_display_rules", force: :cascade do |t|
+    t.string "category_override"
+    t.datetime "created_at", null: false
+    t.boolean "filterable", default: true, null: false
+    t.string "icon_key"
+    t.string "short_code", null: false
+    t.boolean "team_learning", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "short_code"], name: "index_characteristic_display_rules_on_workspace_and_code", unique: true
+    t.index ["workspace_id"], name: "index_characteristic_display_rules_on_workspace_id"
   end
 
   create_table "invitations", force: :cascade do |t|
@@ -185,6 +198,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000001) do
     t.string "user_agent"
     t.integer "user_id", null: false
     t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
+
+  create_table "sync_scope_rules", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "rule_type", null: false
+    t.datetime "updated_at", null: false
+    t.string "value", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "rule_type", "value"], name: "index_sync_scope_rules_on_workspace_type_and_value", unique: true
+    t.index ["workspace_id"], name: "index_sync_scope_rules_on_workspace_id"
+  end
+
+  create_table "unit_display_names", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "department_group", null: false
+    t.string "display_name", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["workspace_id", "department_group"], name: "index_unit_display_names_on_workspace_and_dept_group", unique: true
+    t.index ["workspace_id"], name: "index_unit_display_names_on_workspace_id"
   end
 
   create_table "user_preferences", force: :cascade do |t|
@@ -297,6 +330,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000001) do
   add_foreign_key "activity_logs", "users", column: "actor_id"
   add_foreign_key "activity_logs", "workspaces"
   add_foreign_key "authentications", "users"
+  add_foreign_key "characteristic_display_rules", "workspaces"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
@@ -306,6 +340,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000001) do
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
   add_foreign_key "roles", "workspaces"
   add_foreign_key "sessions", "users"
+  add_foreign_key "sync_scope_rules", "workspaces"
+  add_foreign_key "unit_display_names", "workspaces"
   add_foreign_key "user_preferences", "users"
   add_foreign_key "users", "workspaces", column: "personal_workspace_id", on_delete: :nullify
   add_foreign_key "webauthn_challenges", "users"
