@@ -125,6 +125,26 @@ RSpec.describe UmApi::RateLimiter do
       expect(sleeper.calls).to eq(Array.new(10, 61))
       expect(limiter.sleep_count).to eq(10)
     end
+
+    it "lets a non-RateLimited exception propagate immediately, without retrying or sleeping" do
+      # backoff_429 must only retry 429s — a real bug (or a ServerError) must
+      # surface at once, not be masked by 10 retries. Teeth: if the rescue
+      # widened to StandardError, attempts would be 11 and this would fail.
+      sleeper = FakeSleeper.new
+      limiter = described_class.new(sleeper: sleeper, clock: FakeClock.new(Time.utc(2026, 1, 1)))
+      attempts = 0
+
+      expect do
+        limiter.backoff_429 do
+          attempts += 1
+          raise ArgumentError, "a real bug, not a 429"
+        end
+      end.to raise_error(ArgumentError, "a real bug, not a 429")
+
+      expect(attempts).to eq(1)
+      expect(sleeper.calls).to be_empty
+      expect(limiter.sleep_count).to eq(0)
+    end
   end
 
   describe "#sleep_count" do
