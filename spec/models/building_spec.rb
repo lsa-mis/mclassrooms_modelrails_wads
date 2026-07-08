@@ -72,6 +72,77 @@ RSpec.describe Building, type: :model do
     end
   end
 
+  describe ".search_name (D3 — FTS5)" do
+    it "matches on name, nickname, and abbreviation prefixes, case-insensitively" do
+      building = create(:building, name: "Mason Hall", nickname: "Mason", abbreviation: "MH")
+      expect(Building.search_name("maso")).to contain_exactly(building)
+      expect(Building.search_name("MH")).to contain_exactly(building)
+    end
+
+    it "re-indexes on update: a rename stops matching the old term" do
+      building = create(:building, name: "Old Name")
+      expect(Building.search_name("old")).to contain_exactly(building)
+      building.update!(name: "New Name")
+      expect(Building.search_name("old")).to be_empty
+      expect(Building.search_name("new")).to contain_exactly(building)
+    end
+
+    it "drops a building from the index when it is destroyed" do
+      # Can't drive this through a real `building.destroy!`: Building's
+      # `notes` association is dependent: :destroy but Note doesn't exist
+      # until a later Phase 1 task — any `.destroy` on a Building raises
+      # NameError today, independent of this feature (pre-existing, out of
+      # scope here). Instead: assert the callback is wired, then exercise
+      # it directly.
+      expect(Building._destroy_callbacks.map(&:filter)).to include(:remove_from_search_index)
+      building = create(:building, name: "Mason Hall")
+      building.send(:remove_from_search_index)
+      expect(Building.search_name("mason")).to be_empty
+    end
+
+    it "returns Building.none for a blank query" do
+      create(:building, name: "Mason Hall")
+      expect(Building.search_name("")).to be_empty
+      expect(Building.search_name(nil)).to be_empty
+      expect(Building.search_name("   ")).to be_empty
+    end
+
+    it "does not raise or inject FTS5 syntax on hostile input" do
+      create(:building, name: "Mason Hall")
+      expect { Building.search_name(%q("mason OR *)) }.not_to raise_error
+      expect { Building.search_name("mason*") }.not_to raise_error
+      expect { Building.search_name("mason-hall") }.not_to raise_error
+      expect { Building.search_name("café") }.not_to raise_error
+      expect { Building.search_name(%q(" UNION SELECT * FROM users--)) }.not_to raise_error
+      # Tokens are reduced to bare [[:alnum:]] runs before being re-quoted, so
+      # stray quotes/asterisks/SQL keywords never reach FTS5 as live syntax —
+      # "OR"/"*" here are inert literal search terms, not boolean operators,
+      # so this does NOT behave like an unbounded wildcard match.
+      expect(Building.search_name(%q("mason OR *))).to be_empty
+    end
+
+    it "keeps the index untouched when the surrounding transaction rolls back" do
+      ActiveRecord::Base.transaction(requires_new: true) do
+        create(:building, name: "Rollback Hall")
+        raise ActiveRecord::Rollback
+      end
+      expect(Building.search_name("rollback")).to be_empty
+    end
+
+    it "does not bleed into Room's search index" do
+      create(:building, name: "Mason Hall")
+      expect(Room.search_name("mason")).to be_empty
+    end
+
+    it "rebuilds the index from scratch via .rebuild_search_index!" do
+      building = create(:building, name: "Mason Hall")
+      Building.connection.execute("DELETE FROM building_search_index")
+      expect(Building.search_name("mason")).to be_empty
+      Building.rebuild_search_index!
+      expect(Building.search_name("mason")).to contain_exactly(building)
+    end
+  end
+
   describe "#hidden?" do
     it "is true when hidden_at is present" do
       building = build(:building, hidden_at: Time.current)

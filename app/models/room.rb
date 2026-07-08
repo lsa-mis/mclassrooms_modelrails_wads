@@ -23,6 +23,12 @@ class Room < ApplicationRecord
 
   before_save :normalize_facility_code
 
+  SEARCH_INDEX_TABLE = "room_search_index"
+  SEARCH_INDEX_COLUMNS = %w[facility_code nickname room_number rmrecnbr building_name].freeze
+
+  after_save :refresh_search_index        # same-transaction: FTS lives in the same SQLite file
+  after_destroy :remove_from_search_index
+
   # D8 classroom rule as a display scope; D6 visibility split (duplicated on
   # Building by design — see plan constraints).
   scope :classroom, -> {
@@ -62,9 +68,37 @@ class Room < ApplicationRecord
 
   def hidden? = hidden_at.present?
 
+  # Prefix-match FTS5 query; tokens are quoted so input can't inject MATCH syntax.
+  def self.search_name(q)
+    match = q.to_s.scan(/[[:alnum:]]+/).map { |t| %("#{t}"*) }.join(" ")
+    return none if match.blank?
+    where(id: connection.select_values(sanitize_sql_array(
+      [ "SELECT rowid FROM #{SEARCH_INDEX_TABLE} WHERE #{SEARCH_INDEX_TABLE} MATCH ?", match ]
+    )))
+  end
+
+  def self.rebuild_search_index!
+    connection.execute("DELETE FROM #{SEARCH_INDEX_TABLE}")
+    find_each { |record| record.send(:refresh_search_index) }
+  end
+
   private
 
   def normalize_facility_code
     self.facility_code_normalized = self.class.normalize_facility_code(facility_code)
+  end
+
+  def refresh_search_index
+    remove_from_search_index
+    self.class.connection.execute(self.class.sanitize_sql_array([
+      "INSERT INTO #{SEARCH_INDEX_TABLE}(rowid, #{SEARCH_INDEX_COLUMNS.join(', ')}) VALUES (?, ?, ?, ?, ?, ?)",
+      id, facility_code, nickname, room_number, rmrecnbr, building_name
+    ]))
+  end
+
+  def remove_from_search_index
+    self.class.connection.execute(
+      self.class.sanitize_sql_array([ "DELETE FROM #{SEARCH_INDEX_TABLE} WHERE rowid = ?", id ])
+    )
   end
 end

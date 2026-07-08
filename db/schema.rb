@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030003) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030004) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -475,4 +475,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030003) do
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "workspace_join_links", "users", column: "created_by_id"
   add_foreign_key "workspace_join_links", "workspaces"
+
+  # Virtual tables defined in this database.
+  # Note that virtual tables may not work with other database engines. Be careful if changing database.
+  create_virtual_table "building_search_index", "fts5", ["name", "nickname", "abbreviation", "tokenize = 'unicode61'"]
+  create_virtual_table "room_search_index", "fts5", ["facility_code", "nickname", "room_number", "rmrecnbr", "building_name", "tokenize = 'unicode61'"]
 end

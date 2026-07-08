@@ -152,6 +152,94 @@ RSpec.describe Room, type: :model do
     end
   end
 
+  describe ".search_name (D3 — FTS5)" do
+    it "finds a room by facility code prefix, case-insensitively" do
+      room = create(:room, facility_code: "MLB1200")
+      expect(Room.search_name("mlb")).to contain_exactly(room)
+      expect(Room.search_name("MLB")).to contain_exactly(room)
+    end
+
+    it "matches on nickname, room number, rmrecnbr, and building name" do
+      room = create(:room, nickname: "Aud 3", room_number: "1200", rmrecnbr: "2900123",
+                            building_name: "Mason Hall")
+      expect(Room.search_name("aud")).to contain_exactly(room)
+      expect(Room.search_name("1200")).to contain_exactly(room)
+      expect(Room.search_name("2900123")).to contain_exactly(room)
+      expect(Room.search_name("maso")).to contain_exactly(room)
+    end
+
+    it "re-indexes on update: a renamed nickname stops matching the old term" do
+      room = create(:room, nickname: "Old Name")
+      expect(Room.search_name("old")).to contain_exactly(room)
+      room.update!(nickname: "New Name")
+      expect(Room.search_name("old")).to be_empty
+      expect(Room.search_name("new")).to contain_exactly(room)
+    end
+
+    it "drops a room from the index when it is destroyed" do
+      # Can't drive this through a real `room.destroy!`: Room's `room_contact`
+      # /`gallery_images`/`availability_blocks`/`notes` associations are
+      # dependent: :destroy but their target classes (RoomContact,
+      # RoomGalleryImage, AvailabilityBlock, Note) don't exist until Phase 1
+      # Tasks 8/9 — any `.destroy` on a Room raises NameError today,
+      # independent of this feature (pre-existing, out of scope here).
+      # Instead: assert the callback is wired, then exercise it directly.
+      expect(Room._destroy_callbacks.map(&:filter)).to include(:remove_from_search_index)
+      room = create(:room, facility_code: "MLB1200")
+      room.send(:remove_from_search_index)
+      expect(Room.search_name("mlb")).to be_empty
+    end
+
+    it "composes with other scopes, e.g. .classroom.listed" do
+      matching = create(:room, facility_code: "MLB1200")
+      create(:room, facility_code: "MLB1300", room_type: "Office")
+      create(:room, :hidden, facility_code: "MLB1400")
+      expect(Room.classroom.listed.search_name("mlb")).to contain_exactly(matching)
+    end
+
+    it "returns Room.none for a blank query" do
+      create(:room, facility_code: "MLB1200")
+      expect(Room.search_name("")).to be_empty
+      expect(Room.search_name(nil)).to be_empty
+      expect(Room.search_name("   ")).to be_empty
+    end
+
+    it "does not raise or inject FTS5 syntax on hostile input" do
+      create(:room, facility_code: "MLB1200")
+      expect { Room.search_name(%q("mlb OR *)) }.not_to raise_error
+      expect { Room.search_name("mlb*") }.not_to raise_error
+      expect { Room.search_name("mlb-1200") }.not_to raise_error
+      expect { Room.search_name("café") }.not_to raise_error
+      expect { Room.search_name(%q(" UNION SELECT * FROM users--)) }.not_to raise_error
+      # Tokens are reduced to bare [[:alnum:]] runs before being re-quoted, so
+      # stray quotes/asterisks/SQL keywords never reach FTS5 as live syntax —
+      # "OR"/"*" here are inert literal search terms, not boolean operators,
+      # so this does NOT behave like an unbounded wildcard match.
+      expect(Room.search_name(%q("mlb OR *))).to be_empty
+    end
+
+    it "keeps the index untouched when the surrounding transaction rolls back" do
+      ActiveRecord::Base.transaction(requires_new: true) do
+        create(:room, facility_code: "MLB9797")
+        raise ActiveRecord::Rollback
+      end
+      expect(Room.search_name("mlb9797")).to be_empty
+    end
+
+    it "does not bleed into Building's search index" do
+      create(:room, facility_code: "MLB1200")
+      expect(Building.search_name("mlb")).to be_empty
+    end
+
+    it "rebuilds the index from scratch via .rebuild_search_index!" do
+      room = create(:room, facility_code: "MLB1200")
+      Room.connection.execute("DELETE FROM room_search_index")
+      expect(Room.search_name("mlb")).to be_empty
+      Room.rebuild_search_index!
+      expect(Room.search_name("mlb")).to contain_exactly(room)
+    end
+  end
+
   describe "attachments" do
     it "allows PDF for the seating chart but not the photo; caps size at 10MB" do
       room = build(:room)
