@@ -11,13 +11,13 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
   let!(:owner_role) {
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
       r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
     }
   }
   let!(:member_role) {
     Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
       r.name = "Member"
-      r.permissions = { manage_projects: true }
+      r.permissions = {}
     }
   }
   let(:link) { create(:workspace_join_link, workspace: workspace, created_by: owner) }
@@ -119,7 +119,7 @@ RSpec.describe "Workspaces::Joins (Flow B: unauthenticated user via link)", type
   let!(:owner_role) {
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
       r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
     }
   }
   let(:link) { create(:workspace_join_link, workspace: workspace, created_by: owner) }

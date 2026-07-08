@@ -10,12 +10,9 @@
 # Notifier's day-bucket per-(workspace, metric) idempotency override, owners
 # receive at most one capacity alert per workspace per metric per day.
 #
-# Projects-metric coverage is intentionally OUT OF SCOPE for v1. Although
-# `Workspace#max_projects` exists in the schema, scoping the alert volume,
-# tier-aware messaging, and copy decisions for the projects threshold is its
-# own pass — keeping this PR focused on the notification scheduling layer
-# avoids conflating the two changes. Adding a `:projects` branch is a small
-# additive change once the projects-cap UX direction is settled.
+# The projects metric was removed along with the template example domain
+# (phase 0): `Workspace#max_projects` no longer exists, so this job sweeps
+# `max_members` only. There is no pending follow-up to add a projects branch.
 class WorkspaceCapacitySweepJob < ApplicationJob
   queue_as :default
 
@@ -24,7 +21,6 @@ class WorkspaceCapacitySweepJob < ApplicationJob
   def perform
     Workspace.kept.find_each do |workspace|
       sweep_members_metric(workspace)
-      # Projects-metric check pending v1.x — see class-level docs above.
     end
   end
 

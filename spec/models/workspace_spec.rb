@@ -57,10 +57,6 @@ RSpec.describe Workspace, type: :model do
     it "defaults max_members to 5" do
       expect(Workspace.new.max_members).to eq(5)
     end
-
-    it "defaults max_projects to 3" do
-      expect(Workspace.new.max_projects).to eq(3)
-    end
   end
 
   describe "Discardable" do
@@ -325,13 +321,13 @@ RSpec.describe Workspace, type: :model do
     let!(:owner_role) {
       Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
         r.name = "Owner"
-        r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+        r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
       }
     }
     let!(:member_role) {
       Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
         r.name = "Member"
-        r.permissions = { manage_projects: true }
+        r.permissions = {}
       }
     }
 
