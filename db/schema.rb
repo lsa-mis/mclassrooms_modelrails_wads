@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030004) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030005) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -255,6 +255,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030004) do
     t.index ["workspace_id"], name: "index_room_characteristics_on_workspace_id"
   end
 
+  create_table "room_contacts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "room_id", null: false
+    t.string "scheduling_detail_url"
+    t.string "scheduling_email"
+    t.string "scheduling_name"
+    t.string "scheduling_phone"
+    t.string "scheduling_usage_guidelines_url"
+    t.string "support_department_description"
+    t.string "support_department_id"
+    t.string "support_email"
+    t.string "support_phone"
+    t.string "support_url"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id"], name: "index_room_contacts_on_room_id", unique: true
+    t.index ["workspace_id"], name: "index_room_contacts_on_workspace_id"
+  end
+
+  create_table "room_gallery_images", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id", "position"], name: "index_room_gallery_images_on_room_id_and_position"
+    t.index ["room_id"], name: "index_room_gallery_images_on_room_id"
+    t.index ["workspace_id"], name: "index_room_gallery_images_on_workspace_id"
+  end
+
   create_table "rooms", force: :cascade do |t|
     t.integer "ada_seat_count"
     t.integer "building_id", null: false
@@ -459,6 +489,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030004) do
   add_foreign_key "roles", "workspaces"
   add_foreign_key "room_characteristics", "rooms"
   add_foreign_key "room_characteristics", "workspaces"
+  add_foreign_key "room_contacts", "rooms"
+  add_foreign_key "room_contacts", "workspaces"
+  add_foreign_key "room_gallery_images", "rooms"
+  add_foreign_key "room_gallery_images", "workspaces"
   add_foreign_key "rooms", "buildings"
   add_foreign_key "rooms", "campuses"
   add_foreign_key "rooms", "floors"
