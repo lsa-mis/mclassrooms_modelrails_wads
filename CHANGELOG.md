@@ -4,6 +4,10 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ## [Unreleased]
 
+### Fixed
+
+- Toast containers are named region landmarks — clears the app-wide aria-prohibited-attr axe violation and keeps toast content inside a landmark.
+
 ## v2.0.0 — Passwordless Auth, Workspace Lifecycle & Navigation IA (2026-07-06)
 
 ### Breaking
