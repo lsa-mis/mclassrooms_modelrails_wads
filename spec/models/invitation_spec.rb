@@ -518,13 +518,13 @@ RSpec.describe Invitation, type: :model do
     let!(:admin_role) {
       Role.find_or_create_by!(slug: "admin", workspace_id: nil) do |r|
         r.name = "Admin"
-        r.permissions = { manage_members: true, manage_projects: true, manage_settings: true }
+        r.permissions = { manage_members: true, manage_settings: true }
       end
     }
     let!(:member_role) {
       Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
         r.name = "Member"
-        r.permissions = { manage_projects: true }
+        r.permissions = {}
       end
     }
     let(:inviter) { create(:user) }
@@ -569,7 +569,7 @@ RSpec.describe Invitation, type: :model do
 
   describe "member-invite role requirement (regression for client-variant change)" do
     it "still requires a role for a normal (non-client) workspace invite" do
-      inv = build(:invitation, company_name: nil, role: nil)
+      inv = build(:invitation, role: nil)
       expect(inv).not_to be_valid
       expect(inv.errors[:role]).to be_present
     end
@@ -577,7 +577,7 @@ RSpec.describe Invitation, type: :model do
     it "accepts a member invite with a role and creates a membership" do
       workspace = create(:workspace)
       role = Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
-      inv = create(:invitation, invitable: workspace, role: role, company_name: nil)
+      inv = create(:invitation, invitable: workspace, role: role)
       user = create(:user, :with_zero_workspaces)
       expect { inv.accept!(user) }.to change { workspace.memberships.kept.count }.by(1)
     end

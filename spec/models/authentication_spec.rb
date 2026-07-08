@@ -286,7 +286,7 @@ RSpec.describe Authentication, type: :model do
     let!(:member_role) {
       Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
         r.name = "Member"
-        r.permissions = { manage_projects: true }
+        r.permissions = {}
       }
     }
     let(:link) { create(:workspace_join_link, workspace: workspace, created_by: create(:user)) }

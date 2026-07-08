@@ -20,7 +20,7 @@ RSpec.describe "Onboarding journey", type: :system do
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
       r.name        = "Owner"
       r.permissions = { "manage_workspace" => true, "manage_members" => true,
-                        "manage_projects" => true, "manage_settings" => true }
+                        "manage_settings" => true }
     end
   end
 
