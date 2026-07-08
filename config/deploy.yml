@@ -114,6 +114,20 @@ env:
     # TENANCY_OWNER_EMAIL: (Phase 8 — Kamal secret)
     # APP_HOST: (Phase 8 — production host)
 
+    # === Auth preset (MiClassrooms: SSO + Google domain allowlist, Phase 0 Task 7) ===
+    # Names only — actual values are finalized as Kamal secrets/env in Phase 8
+    # (ops cutover), not committed here. See .env.example, app/lib/auth_config.rb,
+    # and config/initializers/omniauth.rb for what each controls.
+    # ALLOWED_GOOGLE_DOMAINS: (Phase 8 — Kamal secret)
+    # OKTA_ISSUER: (Phase 8 — Kamal secret)
+    # OKTA_CLIENT_ID: (Phase 8 — Kamal secret)
+    # OKTA_CLIENT_SECRET: (Phase 8 — Kamal secret)
+    # AUTH_SSO_ONLY: (Phase 8 — Kamal secret)
+    # never set TEST_LOGIN_TOKEN in production — it token-gates a
+    # non-production-only backdoor (AuthConfig.test_login_enabled? is
+    # hardcoded false whenever Rails.env.production?, but the var itself
+    # should never be present in a production environment file regardless)
+
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal logs -r job" will tail logs from the first server in the job section.
 aliases:

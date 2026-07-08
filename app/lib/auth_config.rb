@@ -78,4 +78,20 @@ module AuthConfig
   def test_login_admin?
     ENV["TEST_LOGIN_ADMIN"] == "true"
   end
+
+  # Fork deviation (MiClassrooms Phase 0 Task 6): Okta issuer URL — centralizes
+  # the ENV var name so config/initializers/omniauth.rb, OauthHelper#enabled_oauth_providers,
+  # and SessionsController#okta_end_session_url don't each hardcode
+  # "OKTA_ISSUER" independently. Read fresh from ENV on every call — same
+  # rationale as test_login_token above — rather than baked into
+  # Rails.configuration.x.auth at boot: config/initializers/omniauth.rb reads
+  # this from inside the OmniAuth::Builder block, which is only evaluated
+  # when the middleware stack is built (after config/application.rb's config.x
+  # assignments would even help), and Okta org config is otherwise
+  # ENV-only (unlike Google/GitHub, which read Rails credentials — see the
+  # initializer for why). No value here means Okta isn't configured for this
+  # deployment.
+  def okta_issuer
+    ENV["OKTA_ISSUER"]
+  end
 end

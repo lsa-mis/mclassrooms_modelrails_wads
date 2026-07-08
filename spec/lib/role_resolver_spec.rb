@@ -71,6 +71,26 @@ RSpec.describe RoleResolver do
       expect(grant.viewer?).to be(false)
     end
 
+    # M3 (final-review fix): TenancyConfig.shared_workspace now scopes its
+    # lookup to .kept (mirroring the DirectoryScoped idiom), so a discarded
+    # shared workspace resolves to nil just like a nil/missing one above —
+    # even though the user still holds an admin membership in it. Exercises
+    # the real TenancyConfig.shared_workspace method (and_call_original)
+    # rather than the stub every other example in this file uses, so it pins
+    # the actual .kept scoping, not just RoleResolver's nil-handling.
+    it "grants nothing when the shared workspace has been discarded" do
+      membership_with("admin")
+      workspace.update_column(:discarded_at, Time.current)
+      allow(TenancyConfig).to receive(:shared_workspace).and_call_original
+      allow(TenancyConfig).to receive(:shared?).and_return(true)
+      allow(TenancyConfig).to receive(:shared_workspace_slug).and_return(workspace.slug)
+
+      grant = described_class.for(user)
+
+      expect(grant.admin?).to be(false)
+      expect(grant.viewer?).to be(false)
+    end
+
     it "is editor? false with empty editor_unit_ids for everyone, including admins (phase 5 stub)" do
       membership_with("admin")
 

@@ -17,11 +17,11 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       scope: "user:email"
   end
 
-  # Okta (Task 6, MiClassrooms Phase 0): unlike Google/GitHub above, Okta is
-  # configured via ENV (OKTA_ISSUER/OKTA_CLIENT_ID/OKTA_CLIENT_SECRET, see
+  # Fork deviation (MiClassrooms Phase 0 Task 6): Okta — unlike Google/GitHub
+  # above, Okta is configured via ENV (OKTA_ISSUER/OKTA_CLIENT_ID/OKTA_CLIENT_SECRET, see
   # .env.example) rather than Rails credentials — this fork's IdP is set per
   # deployment (a university's Okta org), not a checked-in template default.
-  okta_issuer = ENV["OKTA_ISSUER"]
+  okta_issuer = AuthConfig.okta_issuer
   if okta_issuer.present? || Rails.env.test?
     # redirect_uri must be a fixed, exact string — Okta whitelists callback
     # URLs in its admin console, unlike Google/GitHub's strategies above which
