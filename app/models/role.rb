@@ -13,9 +13,9 @@ class Role < ApplicationRecord
   # before this existed, call sites each carried their own copy and could
   # create the same role with divergent permissions depending on who won.
   SYSTEM_DEFAULTS = {
-    "owner"  => { name: "Owner",  permissions: { "manage_workspace" => true, "manage_members" => true, "manage_projects" => true, "manage_settings" => true } },
-    "admin"  => { name: "Admin",  permissions: { "manage_members" => true, "manage_projects" => true, "manage_settings" => true } },
-    "member" => { name: "Member", permissions: { "manage_projects" => true } },
+    "owner"  => { name: "Owner",  permissions: { "manage_workspace" => true, "manage_members" => true, "manage_settings" => true } },
+    "admin"  => { name: "Admin",  permissions: { "manage_members" => true, "manage_settings" => true } },
+    "member" => { name: "Member", permissions: {} },
     "viewer" => { name: "Viewer", permissions: {} }
   }.freeze
 

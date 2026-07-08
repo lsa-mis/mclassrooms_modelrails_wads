@@ -97,7 +97,6 @@ Choose which categories of events you want to hear about:
 | **Security & sign-in** | Password changes, new device sign-ins, account security events | ❌ Always on |
 | **Account & access** | Role changes and invitation reminders | ✅ |
 | **Workspace activity** | Members joining or changing roles | ✅ |
-| **Project activity** | Changes to projects you belong to | ✅ |
 | **Billing** | Plan changes and usage warnings | ✅ |
 
 **Why security can't be disabled:** Security notifications protect your account. Even if you turn off every other notification type and enable Do Not Disturb, you'll still get sign-in and password-change alerts. This is a hard guarantee the system makes regardless of your settings.

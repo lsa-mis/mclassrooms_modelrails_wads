@@ -74,7 +74,7 @@ class MilestonePolicy < ApplicationPolicy
   end
 
   def create?
-    can?("manage_projects")        # gated on a role permission
+    can?("manage_settings")        # gated on a role permission
   end
 
   def update?
@@ -87,7 +87,7 @@ class MilestonePolicy < ApplicationPolicy
 end
 ```
 
-The permission keys (`manage_projects`, `manage_members`, `manage_workspace`, …) live on each role; see [Workspace Administration](/docs/user/workspaces) for the full list.
+The permission keys (`manage_settings`, `manage_members`, `manage_workspace`, …) live on each role; see [Workspace Administration](/docs/user/workspaces) for the full list.
 
 ### 5. Opt into shared behavior (optional)
 
