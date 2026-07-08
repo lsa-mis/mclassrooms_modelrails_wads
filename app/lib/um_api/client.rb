@@ -41,12 +41,17 @@
 #
 # #call_count is a running total of HTTP requests actually sent (feeds
 # each sync phase's `api_calls` counter, roadmap).
+#
+# #rate_limiter is exposed (Task 6) so Sync::BasePhase can read
+# `rate_limiter.sleep_count` before/after a phase runs and diff the two —
+# the same before/after pattern #call_count itself supports — without this
+# class needing to know anything about phases or counters itself.
 module UmApi
   class Client
     PAGE_SIZE = 1000
     PAGE_SIZE_PARAM = "limit"
 
-    attr_reader :call_count
+    attr_reader :call_count, :rate_limiter
 
     def initialize(token_cache: TokenCache.new, rate_limiter: RateLimiter.new)
       @token_cache = token_cache
