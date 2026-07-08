@@ -144,15 +144,82 @@ RSpec.describe "Google OAuth domain allowlist", type: :request do
   describe "when the allowlist is empty/unset (dev-friendly default)" do
     before do
       allow(Rails.configuration.x.auth).to receive(:allowed_google_domains).and_return([])
-      OmniAuth.config.mock_auth[:google_oauth2] = google_auth_hash("anyone@example.com")
     end
 
-    it "allows any domain through" do
-      expect {
-        get "/auth/google_oauth2/callback"
-      }.to change(User, :count).by(1)
+    # An empty allowlist means the domain CHECK is disabled (every domain
+    # passes google_domain_allowed?) — but, per C1 below, it separately means
+    # the SIGNUP_MODE bypass is NOT granted. Stub signup mode open here so
+    # this example isolates the domain-check behavior; the SIGNUP_MODE
+    # interaction gets its own describe block right below.
+    context "with SIGNUP_MODE open" do
+      before do
+        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
+        OmniAuth.config.mock_auth[:google_oauth2] = google_auth_hash("anyone@example.com")
+      end
 
-      expect(response).to redirect_to(root_path)
+      it "allows any domain through and still provisions the new user" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.to change(User, :count).by(1)
+
+        expect(response).to redirect_to(root_path)
+      end
+    end
+
+    # C1 (final-review fix): the SIGNUP_MODE bypass in
+    # OmniauthCallbacksController::SSO_SIGNUP_BYPASS_PROVIDERS used to apply
+    # to google unconditionally. That was fail-open: with the allowlist
+    # empty/unset (the gate unarmed), ANY Google account could self-provision
+    # even while the instance is invite_only/SSO-only. #sso_signup_bypass?
+    # now requires AuthConfig.allowed_google_domains.any? before treating
+    # google as gated, so an unarmed allowlist falls through to the normal
+    # signups_open? check — exactly like github (see the describe block
+    # below this one) — instead of bypassing it.
+    context "with SIGNUP_MODE invite_only (the real default)" do
+      before do
+        OmniAuth.config.mock_auth[:google_oauth2] = google_auth_hash("newperson@example.com", uid: "new-person-uid")
+      end
+
+      it "does not stub signup mode — the real default is :invite_only" do
+        expect(Rails.configuration.x.signup.mode).to eq(:invite_only)
+      end
+
+      it "rejects the new Google user: creates no User, Authentication, or Session" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change(User, :count)
+
+        expect(Authentication.find_by(uid: "new-person-uid")).to be_nil
+        expect(Session.count).to eq(0)
+      end
+
+      it "redirects with the closed-signup alert (303, not the domain-not-allowed alert)" do
+        get "/auth/google_oauth2/callback"
+
+        expect(response).to redirect_to(new_session_path)
+        expect(response).to have_http_status(:see_other)
+        expect(flash[:alert]).to include(I18n.t("registrations.closed.oauth_blocked"))
+      end
+
+      context "an EXISTING Google user (Branch 1 — the bypass gap only affects NEW-user provisioning)" do
+        let!(:user) { create(:user, email_address: "returner@example.com") }
+        let!(:authentication) do
+          user.authentications.create!(provider: "google", uid: "returning-uid", verified_at: Time.current)
+        end
+
+        before do
+          OmniAuth.config.mock_auth[:google_oauth2] =
+            google_auth_hash("returner@example.com", uid: "returning-uid")
+        end
+
+        it "still signs in without creating a new user" do
+          expect {
+            get "/auth/google_oauth2/callback"
+          }.not_to change(User, :count)
+
+          expect(response).to redirect_to(root_path)
+        end
+      end
     end
   end
 
