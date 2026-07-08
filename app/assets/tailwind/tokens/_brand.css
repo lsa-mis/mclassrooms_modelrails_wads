@@ -22,3 +22,41 @@
    7:1; a local run only checks AA. Push and read CI before shipping a rebrand.
    See /docs/developer/forking.
    ========================================================================== */
+
+/* MiClassrooms brand: U-M Blue drives every --primary-* shade (buttons,
+   links, focus rings, CTAs) — the `blue` Tailwind family is the closest
+   built-in match to U-M's #00274C (blue-950 is ~24 RGB units off), and every
+   shade actually wired into the semantic layer clears AAA comfortably:
+
+     light --color-interactive       (primary-800) on --color-surface        8.44:1
+     light --color-interactive-hover (primary-900) on --color-surface-sunken 9.49:1
+     dark  --color-interactive       (primary-300) on --color-surface        9.85:1
+     dark  --color-interactive-hover (primary-200) on --color-surface        12.54:1
+
+   (computed via the OKLCH->linear-sRGB->WCAG-relative-luminance formula
+   against this project's unmodified --neutral-* (slate) surfaces.)
+
+   U-M Maize (#FFCB05, nearly identical to Tailwind's yellow-400) is
+   deliberately NOT wired into --secondary-* / --color-accent: that token is
+   rendered as real text (docs prose links, card hover states — see
+   app/assets/tailwind/_prose.css and app/views/markdowndocs/**). No yellow
+   shade is simultaneously "maize" and AAA-normal-text-compliant: yellow-800
+   on white measures 6.87:1 (just short of 7:1) and yellow-900 clears AAA at
+   8.69:1 but reads as brown (#733e0a), not maize. Per the fork brief, AAA
+   contrast wins over brand fidelity here — maize stays reserved for a future
+   non-text semantic slot (e.g. a badge/divider role) rather than forced into
+   a text token it would silently regress. Neutral stays the template default
+   (slate) — no U-M-specific neutral requirement. */
+:root {
+  --primary-50:  var(--color-blue-50);
+  --primary-100: var(--color-blue-100);
+  --primary-200: var(--color-blue-200);
+  --primary-300: var(--color-blue-300);
+  --primary-400: var(--color-blue-400);
+  --primary-500: var(--color-blue-500);
+  --primary-600: var(--color-blue-600);
+  --primary-700: var(--color-blue-700);
+  --primary-800: var(--color-blue-800);
+  --primary-900: var(--color-blue-900);
+  --primary-950: var(--color-blue-950);
+}

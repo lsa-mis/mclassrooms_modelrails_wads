@@ -594,6 +594,39 @@ RSpec.describe User, type: :model do
     end
   end
 
+  # MiClassrooms Task 4: the shared-preset join role is a fork-configurable
+  # knob (TenancyConfig.shared_join_role / config.x.tenancy.shared_join_role,
+  # env TENANCY_SHARED_JOIN_ROLE) rather than the template's hardcoded
+  # "member". MiClassrooms overrides it to "viewer" (empty-permissions,
+  # any-authenticated-U-M-user tier) so every new signup lands read-only in
+  # the single shared `miclassrooms` workspace until an admin promotes them.
+  describe "#onboard_workspace under :shared posture with MiClassrooms' configured join role" do
+    let!(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MiClassrooms", personal: false) }
+
+    before do
+      allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared_workspace.slug)
+      allow(Rails.configuration.x.tenancy).to receive(:shared_join_role).and_return("viewer")
+      allow(Rails.configuration.x.tenancy).to receive(:workspace_creation).and_return(:disabled)
+    end
+
+    it "joins the miclassrooms workspace as Viewer, with exactly one membership and no personal workspace" do
+      user = create(:user)
+
+      expect(user.personal_workspace_id).to be_nil
+      expect(user.memberships.count).to eq(1)
+
+      membership = shared_workspace.memberships.find_by!(user: user)
+      expect(membership.role.slug).to eq("viewer")
+      expect(membership.role.name).to eq("Viewer")
+      expect(membership.role.permissions).to eq({})
+    end
+
+    it "reports workspace creation as disabled under this posture" do
+      expect(TenancyConfig).not_to be_workspace_creation_enabled
+    end
+  end
+
   describe "#onboard_workspace under :none posture" do
     before do
       allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:none)
@@ -688,36 +721,10 @@ RSpec.describe User, type: :model do
       expect(user.onboarding_step).to eq(:workspace)
     end
 
-    it "#onboarding_step is :project with a workspace but no project" do
+    it "#onboarding_step is still :workspace once the user has one (the wizard is single-step)" do
       user = create(:user, :with_zero_workspaces)
       join(user, create(:workspace))
-      expect(user.onboarding_step).to eq(:project)
-    end
-
-    it "#onboarding_step is :team with a workspace that has a project" do
-      user = create(:user, :with_zero_workspaces)
-      workspace = create(:workspace)
-      join(user, workspace)
-      create(:project, workspace: workspace)
-      expect(user.reload.onboarding_step).to eq(:team)
-    end
-  end
-
-  describe "#client_of?" do
-    it "is true for a project the user has client access to" do
-      access = create(:client_access)
-      expect(access.user.client_of?(access.project)).to be(true)
-    end
-
-    it "is false otherwise" do
-      project = create(:project, clientside_enabled: true)
-      expect(create(:user).client_of?(project)).to be(false)
-    end
-
-    it "is false for a discarded client access" do
-      access = create(:client_access)
-      access.discard!
-      expect(access.user.client_of?(access.project)).to be(false)
+      expect(user.onboarding_step).to eq(:workspace)
     end
   end
 

@@ -27,7 +27,6 @@ Once you're signed in, here is what's available:
 |------|---------------|-----|
 | **Account** | Profile, avatar, email, linked accounts | [Accounts](/docs/user/accounts) |
 | **Workspaces** | Create or join a workspace, manage settings | [Workspaces](/docs/user/workspaces) |
-| **Projects** | Create projects and organise work | [Projects](/docs/user/projects) |
 | **Invitations** | Accept or send team invitations | [Invitations](/docs/user/invitations) |
 | **Notifications** | In-app and email notification preferences | [Notifications](/docs/user/notifications) |
 

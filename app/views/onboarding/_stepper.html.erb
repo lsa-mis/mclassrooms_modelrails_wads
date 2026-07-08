@@ -1,9 +1,0 @@
-<%# locals: (current:) %>
-<% step_keys = %i[workspace project team] %>
-<% current_index = step_keys.index(current) %>
-<%= render(UI::StepperComponent.new(steps: step_keys.each_with_index.map { |key, i|
-      {
-        label: t("onboarding.steps.#{key}"),
-        status: (i < current_index ? :complete : (i == current_index ? :current : :pending))
-      }
-    })) %>

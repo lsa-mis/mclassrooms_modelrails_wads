@@ -11,9 +11,6 @@ class User < ApplicationRecord
   has_many :memberships, dependent: :destroy
   has_many :workspaces, through: :memberships
   has_many :sent_invitations, class_name: "Invitation", foreign_key: :invited_by_id, dependent: :nullify
-  has_many :project_memberships, dependent: :destroy
-  has_many :projects, through: :project_memberships
-  has_many :client_accesses, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
 
   after_create :onboard_workspace
@@ -81,22 +78,14 @@ class User < ApplicationRecord
     onboarded_at.present?
   end
 
-  # First-run wizard helpers (:none posture). The step is derived from data —
-  # the only persisted state is onboarded_at — so dispatcher, guard, and step
-  # controllers all read it from one place instead of re-deriving it.
+  # First-run wizard helper (:none posture). The wizard has a single step —
+  # create a workspace — so the only derived state is "has one or not".
   def onboarding_workspace
     workspaces.kept.first
   end
 
   def onboarding_step
-    workspace = onboarding_workspace
-    if workspace.nil?
-      :workspace
-    elsif workspace.projects.kept.none?
-      :project
-    else
-      :team
-    end
+    :workspace
   end
 
   def locked?
@@ -224,10 +213,6 @@ class User < ApplicationRecord
       .count
   end
 
-  def client_of?(project)
-    client_accesses.kept.exists?(project: project)
-  end
-
   # True iff the one-time passkey enrollment banner should appear.
   # Clears once the user dismisses the banner OR registers a passkey.
   def passkey_prompt_eligible?
@@ -269,9 +254,14 @@ class User < ApplicationRecord
     update_column(:personal_workspace_id, workspace.id)
   end
 
-  # :shared posture: every new user joins the configured shared workspace as
-  # a Member. No personal workspace is created. Owners + Admins are seeded
-  # separately (see db/seeds.rb), so :member is the safe self-onboarding role.
+  # Fork deviation (MiClassrooms Task 4): the self-onboarding role below was
+  # hardcoded "member"; it now reads TenancyConfig.shared_join_role.
+  # :shared posture: every new user joins the configured shared workspace, in
+  # the role given by TenancyConfig.shared_join_role (default "member" — the
+  # template's original hardcoded self-onboarding role; a fork can override
+  # via TENANCY_SHARED_JOIN_ROLE, e.g. MiClassrooms uses "viewer" so signups
+  # land read-only). No personal workspace is created. Owners + Admins are
+  # seeded/promoted separately (see db/seeds.rb).
   def join_shared_workspace
     workspace = TenancyConfig.shared_workspace
     raise "Shared workspace #{TenancyConfig.shared_workspace_slug.inspect} not found — has the tenancy seed run?" unless workspace
@@ -282,8 +272,8 @@ class User < ApplicationRecord
     # registration), the user simply joins nothing and lands on the empty index.
     return unless workspace.admittable?
 
-    member_role = Role.system_default!("member")
-    workspace.memberships.create!(user: self, role: member_role)
+    join_role = Role.system_default!(TenancyConfig.shared_join_role)
+    workspace.memberships.create!(user: self, role: join_role)
   end
 
   def password_not_pwned

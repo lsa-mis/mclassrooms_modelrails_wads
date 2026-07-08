@@ -16,11 +16,9 @@ class Invitation < ApplicationRecord
 
   enum :status, { pending: "pending", accepted: "accepted", declined: "declined", revoked: "revoked" }, default: "pending"
 
-  validates :role, presence: true, unless: :client_invite?
-  validate :client_invite_targets_a_project
+  validates :role, presence: true
   validates :invited_by, presence: true
   validates :expires_at, presence: true
-  validates :project_role, inclusion: { in: %w[editor viewer] }, allow_nil: true
   validates :email, format: { with: User::EMAIL_FORMAT }, allow_nil: true
 
   before_create :generate_token
@@ -48,22 +46,6 @@ class Invitation < ApplicationRecord
     scope = scope.joins(:role).where(roles: { slug: role }) if role.present?
     scope
   }
-
-  def client_invite?
-    company_name.present?
-  end
-
-  def self.invite_client!(project:, email:, company_name:, invited_by:)
-    invitation = create!(
-      invitable: project,
-      email: email.to_s.downcase.strip,
-      company_name: company_name,
-      invited_by: invited_by,
-      expires_at: 7.days.from_now
-    )
-    InvitationMailer.invite_client(invitation).deliver_later
-    invitation
-  end
 
   def self.bulk_invite!(workspace:, emails:, role:, invited_by:)
     sent = 0
@@ -148,13 +130,7 @@ class Invitation < ApplicationRecord
       # guard remains as a backstop for other admit callers (e.g. open-link
       # self-join).
       raise NotAcceptable, "Invitation no longer acceptable" unless resolved_workspace&.admittable?
-      if client_invite?
-        accept_client_invitation!(user)
-      elsif invitable_type == "Project"
-        accept_project_invitation!(user)
-      else
-        accept_workspace_invitation!(user)
-      end
+      accept_workspace_invitation!(user)
 
       update!(
         status: "accepted",
@@ -203,39 +179,18 @@ class Invitation < ApplicationRecord
     ((expires_at - Time.current) / 1.hour).ceil
   end
 
-  # Resolves the workspace context for a polymorphic invitation. An invitation
-  # may target a Workspace directly or a Project — in the latter case the
-  # workspace context comes from the project. Single source of truth shared by
-  # the notifiers (Accepted / Declined / ExpiringSoon) and NotificationMailer.
+  # Resolves the workspace context for an invitation. Workspace is currently
+  # the only invitable type (Project invites were removed with the example
+  # domain). Single source of truth shared by the notifiers (Accepted /
+  # Declined / ExpiringSoon) and NotificationMailer.
   def resolved_workspace
-    case invitable
-    when Workspace then invitable
-    when Project   then invitable.workspace
-    end
+    invitable if invitable.is_a?(Workspace)
   end
 
   private
 
   def broadcast_target
-    invitable_type == "Project" ? invitable.workspace : invitable
-  end
-
-  def accept_client_invitation!(user)
-    raise NotAcceptable, "Invitation no longer acceptable" unless invitable.kept?
-    raise NotAcceptable, "Clientside is disabled for this project" unless invitable.clientside_enabled?
-
-    access = invitable.client_accesses.find_by(user: user)
-    if access&.discarded?
-      access.undiscard!
-    elsif access.nil?
-      invitable.client_accesses.create!(user: user, company_name: company_name)
-    end
-    user.update!(onboarded_at: Time.current) unless user.onboarded?
-  end
-
-  def client_invite_targets_a_project
-    return unless client_invite?
-    errors.add(:base, :client_requires_project) if invitable_type != "Project"
+    invitable
   end
 
   def accept_workspace_invitation!(user)
@@ -244,37 +199,6 @@ class Invitation < ApplicationRecord
     # in Workspace#admit so the open-link self-join flow (Reshape 2) shares
     # identical semantics.
     invitable.admit(user, role: role)
-  end
-
-  def accept_project_invitation!(user)
-    # A discarded project is unacceptable — the same generic NotAcceptable the
-    # workspace and client paths raise (was ActiveRecord::RecordInvalid). Checked
-    # first so a dead project never grants a workspace membership as a side effect.
-    raise NotAcceptable, "Invitation no longer acceptable" unless invitable.kept?
-
-    workspace = invitable.workspace
-    workspace.lock!
-    # Re-verify admittability now that we hold the row lock — defends the window
-    # between accept!'s (un-locked) admittable? read and this grant. SQLite's
-    # BEGIN IMMEDIATE already serializes writers; this also holds on a
-    # row-locking database. Not routed through Workspace#admit: admit's
-    # grant-a-new-member contract errors/reconciles on an existing member, but a
-    # project invite must TOLERATE an existing workspace member (just add them to
-    # the project) — see the "already a project member" spec.
-    raise NotAcceptable, "Invitation no longer acceptable" unless workspace.admittable?
-
-    existing_membership = workspace.memberships.find_by(user: user)
-    if existing_membership&.discarded?
-      existing_membership.undiscard!
-    elsif existing_membership.nil?
-      if workspace.memberships.kept.count >= workspace.max_members
-        raise ActiveRecord::RecordInvalid.new(self), "Workspace is at capacity"
-      end
-      workspace.memberships.create!(user: user, role: role)
-    end
-
-    raise ActiveRecord::RecordInvalid.new(self), "User is already a project member" if invitable.project_memberships.exists?(user: user)
-    invitable.project_memberships.create!(user: user, role: project_role || "editor")
   end
 
   def generate_token

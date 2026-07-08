@@ -1,7 +1,7 @@
 ---
 title: Security
 description: Security configuration, recommendations, and best practices for ModelRails
-keywords: rate limiting account locking headers csp password oauth rack attack https clientside client access bearer token
+keywords: rate limiting account locking headers csp password oauth rack attack https bearer token
 ---
 
 # Security
@@ -56,25 +56,9 @@ The `Trackable` concern logs all model changes to `ActivityLog`. Sensitive attri
 - `token`, `password_digest`
 - `oauth_token`, `oauth_refresh_token`
 
-## External Client Access
+### Invitation Bearer-Token Protection
 
-Projects can be opened to external clients via the `Clientside::` area. This is a distinct access axis from workspace membership.
-
-### Access model
-
-- Clients are standard authenticated `User` records — they pass through the same authentication stack (session, rate limiting, account locking) as internal users.
-- A client's only foothold inside the workspace is a kept `ClientAccess` record linking them to a specific project. They are **not** `Membership` holders; they appear in no workspace Pundit policies and consume no member seat.
-- The `Clientside::BaseController` calls `skip_onboarding_requirement` so clients are never funneled into the workspace onboarding wizard.
-- The area never sets `Current.workspace`. Projects are resolved by slug AND by verifying a kept `ClientAccess` for the current user — slug knowledge alone is insufficient (`set_client_project` in `app/controllers/clientside/base_controller.rb`).
-- When a project's `clientside_enabled?` flag is false, `ensure_clientside_enabled` redirects the client away even if their `ClientAccess` record still exists.
-
-### Visibility scope
-
-Clients can only see resources that are **both** published and explicitly shared: `Resource#client_visible?` returns `true` only when `shared_with_client? && published?`. Nothing else in the workspace is accessible — no other projects, no member lists, no workspace settings.
-
-### Client invitation bearer-token protection
-
-Client invitations use the same bearer-token invitation system as workspace invitations. `Invitation.consume!` enforces an `EmailMismatch` guard: if the invitation was addressed to a specific email and the redeeming user's proven email does not match, redemption is refused with `Invitation::EmailMismatch`. This prevents a leaked invite link from being claimed by a different email address (`app/models/invitation.rb`). Additionally, `accept_client_invitation!` re-checks `clientside_enabled?` at acceptance time, so an invite cannot be redeemed after clientside has been turned off for the project.
+`Invitation.consume!` enforces an `EmailMismatch` guard: if the invitation was addressed to a specific email and the redeeming user's proven email does not match, redemption is refused with `Invitation::EmailMismatch`. This prevents a leaked invite link from being claimed by a different email address (`app/models/invitation.rb`).
 
 ## Production Recommendations
 

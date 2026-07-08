@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_06_215926) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -83,24 +83,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_215926) do
     t.index ["provider", "uid"], name: "index_authentications_on_provider_and_uid", unique: true
     t.index ["user_id", "provider"], name: "index_authentications_on_user_id_and_provider", unique: true
     t.index ["user_id"], name: "index_authentications_on_user_id"
-  end
-
-  create_table "client_accesses", force: :cascade do |t|
-    t.string "company_name", null: false
-    t.datetime "created_at", null: false
-    t.datetime "discarded_at"
-    t.integer "project_id", null: false
-    t.datetime "updated_at", null: false
-    t.integer "user_id", null: false
-    t.index ["discarded_at"], name: "index_client_accesses_on_discarded_at"
-    t.index ["project_id", "user_id"], name: "index_client_accesses_on_project_id_and_user_id", unique: true
-    t.index ["project_id"], name: "index_client_accesses_on_project_id"
-    t.index ["user_id"], name: "index_client_accesses_on_user_id"
-  end
-
-  create_table "documents", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "invitations", force: :cascade do |t|
@@ -184,56 +166,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_215926) do
     t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_unread", where: "read_at IS NULL"
     t.check_constraint "recipient_type = 'User'", name: "recipient_type_user_only_v1"
     t.check_constraint "seen_at IS NULL OR read_at IS NULL OR read_at >= seen_at", name: "seen_before_read"
-  end
-
-  create_table "project_memberships", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.boolean "pinned", default: false, null: false
-    t.integer "project_id", null: false
-    t.string "role", default: "editor", null: false
-    t.datetime "updated_at", null: false
-    t.integer "user_id", null: false
-    t.index ["project_id", "user_id"], name: "index_project_memberships_on_project_id_and_user_id", unique: true
-    t.index ["project_id"], name: "index_project_memberships_on_project_id"
-    t.index ["user_id"], name: "index_project_memberships_on_user_id"
-  end
-
-  create_table "projects", force: :cascade do |t|
-    t.datetime "archived_at"
-    t.boolean "clientside_enabled", default: false, null: false
-    t.datetime "created_at", null: false
-    t.integer "created_by_id", null: false
-    t.text "description"
-    t.datetime "discarded_at"
-    t.json "enabled_tools", default: [], null: false
-    t.string "name", null: false
-    t.string "slug", null: false
-    t.datetime "updated_at", null: false
-    t.integer "workspace_id", null: false
-    t.index ["archived_at"], name: "index_projects_on_archived_at"
-    t.index ["created_by_id"], name: "index_projects_on_created_by_id"
-    t.index ["discarded_at"], name: "index_projects_on_discarded_at"
-    t.index ["workspace_id", "slug"], name: "index_projects_on_workspace_id_and_slug", unique: true
-    t.index ["workspace_id"], name: "index_projects_on_workspace_id"
-  end
-
-  create_table "resources", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.integer "created_by_id", null: false
-    t.datetime "discarded_at"
-    t.integer "position", default: 0, null: false
-    t.integer "project_id", null: false
-    t.integer "resourceable_id", null: false
-    t.string "resourceable_type", null: false
-    t.boolean "shared_with_client", default: false, null: false
-    t.string "status", default: "draft", null: false
-    t.string "title", null: false
-    t.datetime "updated_at", null: false
-    t.index ["created_by_id"], name: "index_resources_on_created_by_id"
-    t.index ["discarded_at"], name: "index_resources_on_discarded_at"
-    t.index ["project_id", "position"], name: "index_resources_on_project_id_and_position"
-    t.index ["project_id"], name: "index_resources_on_project_id"
-    t.index ["resourceable_type", "resourceable_id"], name: "index_resources_on_resourceable_type_and_resourceable_id", unique: true
   end
 
   create_table "roles", force: :cascade do |t|
@@ -368,8 +300,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_215926) do
   add_foreign_key "activity_logs", "users", column: "actor_id"
   add_foreign_key "activity_logs", "workspaces"
   add_foreign_key "authentications", "users"
-  add_foreign_key "client_accesses", "projects"
-  add_foreign_key "client_accesses", "users"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
@@ -377,12 +307,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_215926) do
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
-  add_foreign_key "project_memberships", "projects"
-  add_foreign_key "project_memberships", "users"
-  add_foreign_key "projects", "users", column: "created_by_id"
-  add_foreign_key "projects", "workspaces"
-  add_foreign_key "resources", "projects"
-  add_foreign_key "resources", "users", column: "created_by_id"
   add_foreign_key "roles", "workspaces"
   add_foreign_key "sessions", "users"
   add_foreign_key "user_preferences", "users"

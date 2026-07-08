@@ -12,3 +12,4 @@ en:
       pending_in_progress: "You have a pending %{provider} link to %{email}. Cancel it from connected accounts before linking a different %{provider} account."
       linking_failed: "We couldn't link that account. Please try again."
       unverified_email_pending: "Your %{email} address hasn't been verified with the OAuth provider yet. We sent you a confirmation link — click it to finish creating your account."
+      google_domain_not_allowed: "That Google account isn't from an allowed domain. Please sign in with an allowed email address, or use another sign-in method."

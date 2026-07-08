@@ -9,10 +9,9 @@ RSpec.describe "Workspace shell section-nav strip (mobile)", type: :system do
     page.driver.with_playwright_page { |pw_page| pw_page.set_viewport_size(width: 375, height: 667) }
   end
 
-  it "shows Overview/Projects/Settings as an in-page strip with the current page marked" do
+  it "shows Overview/Settings as an in-page strip with the current page marked" do
     visit workspace_path(workspace)
     expect(page).to have_css("nav[aria-labelledby='section-nav-strip-heading'] a[aria-current='page']",
                              text: I18n.t("workspaces.sidebar.overview"))
-    expect(page).to have_no_css("#mobile-menu-panel nav a", text: I18n.t("workspaces.sidebar.projects"))
   end
 end

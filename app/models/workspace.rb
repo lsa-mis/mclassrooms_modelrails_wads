@@ -23,7 +23,6 @@ class Workspace < ApplicationRecord
   has_many :users, through: :memberships
   has_many :roles, dependent: :destroy
   has_many :invitations, as: :invitable, dependent: :destroy
-  has_many :projects, dependent: :destroy
 
   enum :plan, { free: "free", pro: "pro", enterprise: "enterprise" }
 
@@ -43,7 +42,6 @@ class Workspace < ApplicationRecord
     size: { less_than: 10.megabytes }
   validates :slug, presence: true, uniqueness: true
   validates :max_members, numericality: { greater_than: 0 }
-  validates :max_projects, numericality: { greater_than: 0 }
   validates :primary_color, inclusion: { in: 0..360 }, allow_nil: true
   validates :logo_source, inclusion: { in: %w[upload initials] }
   validate :personal_workspaces_are_invite_only
@@ -116,7 +114,6 @@ class Workspace < ApplicationRecord
       next if discarded?
       raise HomeWorkspaceProtectedError if home?
       raise Suspendable::SuspendedError if suspended?
-      projects.kept.find_each(&:discard!)
       super
     end
   end

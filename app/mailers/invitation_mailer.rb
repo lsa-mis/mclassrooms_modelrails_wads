@@ -5,13 +5,7 @@ class InvitationMailer < ApplicationMailer
     @invitation = invitation
     @inviter = invitation.invited_by
     @role = invitation.role
-
-    if invitation.invitable_type == "Project"
-      @project = invitation.invitable
-      @workspace = @project.workspace
-    else
-      @workspace = invitation.invitable
-    end
+    @workspace = invitation.invitable
 
     @accept_url = accept_invitation_url(token: invitation.token)
     @decline_url = decline_invitation_url(token: invitation.token)
@@ -19,21 +13,6 @@ class InvitationMailer < ApplicationMailer
     mail(
       to: invitation.email,
       subject: t("invitation_mailer.invite.subject", workspace: @workspace.name)
-    )
-  end
-
-  def invite_client(invitation)
-    return if invitation.email.nil?
-
-    @invitation = invitation
-    @inviter = invitation.invited_by
-    @project = invitation.invitable
-    @workspace = @project.workspace
-    @accept_url = accept_invitation_url(token: invitation.token)
-
-    mail(
-      to: invitation.email,
-      subject: t("invitation_mailer.invite_client.subject", project: @project.name)
     )
   end
 end

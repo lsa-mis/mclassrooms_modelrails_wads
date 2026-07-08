@@ -52,18 +52,14 @@ module Authenticatable
 
     # The post-sign-in home for an authenticated user with no saved return_to.
     # Workspace-agnostic (a user may have no workspace under :none onboarding).
-    # Client-only users (client_accesses present, no memberships) land in the
-    # client area so they don't hit a blank workspace dashboard.
     # Calls resume_session in case require_authentication was skipped (e.g.
     # email-verification show, which allows unauthenticated access).
+    #
+    # Fork seam: override this method in ApplicationController to send signed-in
+    # users somewhere other than root — see app/docs/developer/forking.md.
     def authenticated_home_path
       resume_session
-      user = Current.user
-      if user && user.client_accesses.kept.exists? && user.memberships.kept.none?
-        clientside_projects_path
-      else
-        root_path
-      end
+      root_path
     end
 
     def start_new_session_for(user)

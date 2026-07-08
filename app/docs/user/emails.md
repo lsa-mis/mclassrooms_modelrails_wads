@@ -13,7 +13,7 @@ ModelRails sends transactional emails for authentication, invitations, and accou
 | Mailer | Purpose |
 |--------|---------|
 | `AuthenticationMailer` | Email verification, email change |
-| `InvitationMailer` | Workspace and project invitations |
+| `InvitationMailer` | Workspace invitations |
 | `MagicLinkMailer` | Passwordless sign-in and registration links |
 
 ## Email Reference
@@ -31,10 +31,6 @@ ModelRails sends transactional emails for authentication, invitations, and accou
 | Email | Trigger | Mailer action | Recipient | Expiry |
 | ----- | ------- | ------------- | --------- | ------ |
 | Workspace invitation | Admin invites a member by email | `InvitationMailer.invite` | Invitee's email | 7 days |
-| Project invitation | Project member invites a collaborator | `InvitationMailer.invite` | Invitee's email | 7 days |
-| Client invitation | Project member invites an external client | `InvitationMailer.invite_client` | Client's email | 7 days |
-
-`InvitationMailer.invite_client` is a client-flavoured variant: the subject references the project name (not the workspace), and the email omits the decline link. See [Clientside](/docs/user/clientside) for the client area this invitation leads to.
 
 ### Magic Link Emails
 
@@ -90,11 +86,11 @@ sign-in options and [Application Flows](/docs/developer/application-flows) for t
 
 ### Invitation Acceptance
 
-1. Admin creates invitation → `InvitationMailer.invite` sent (workspace member or project collaborator). For external client invitations, `InvitationMailer.invite_client` is sent instead — it uses a client-flavoured subject and omits the decline link.
+1. Admin creates invitation → `InvitationMailer.invite` sent (workspace member).
 2. Invitee clicks accept link.
 3. If authenticated: accepted immediately, provided the account's email matches the invited address.
 4. If not authenticated: the token is stashed, the invitee registers, and the invitation is claimed when they verify the invited email — not at signup.
-5. All paths go through `Invitation.consume!`, which enforces the email match (emailless magic-link invitations excepted) before `Invitation#accept!` creates the workspace membership (and project membership if applicable).
+5. All paths go through `Invitation.consume!`, which enforces the email match (emailless magic-link invitations excepted) before `Invitation#accept!` creates the workspace membership.
 
 ## Configuration
 

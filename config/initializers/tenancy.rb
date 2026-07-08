@@ -18,3 +18,13 @@ if Rails.configuration.x.tenancy.onboarding == :shared &&
    Rails.configuration.x.tenancy.shared_workspace_slug.blank?
   raise "TENANCY_SHARED_WORKSPACE_SLUG is required when WORKSPACE_ON_SIGNUP=shared"
 end
+
+# Note: TENANCY_SHARED_JOIN_ROLE (config.x.tenancy.shared_join_role, see
+# config/application.rb) is deliberately NOT validated here. Role::SYSTEM_DEFAULTS
+# lives in app/models/role.rb, which Zeitwerk hasn't wired up as an autoloadable
+# constant yet at this point in boot (the main autoloader is set up by a
+# Finisher initializer that runs after config/initializers load) — referencing
+# it here raises NameError. Role.system_default!(slug) already raises a clear
+# KeyError on an unrecognized slug the first time a user joins the shared
+# workspace (see User#join_shared_workspace), which is an acceptable deferred
+# fail-fast (mirrors how a missing shared workspace is only detected there too).

@@ -1,10 +1,5 @@
 {
-  "ignored_warnings": [
-    {
-      "fingerprint": "14cfde438c5bd3a5bd950c6a6b22d8ce37188069c42779575e3ada12d406cf4d",
-      "note": "Intentional: project creator selects which workspace member to add. Protected by Pundit creator-only policy and workspace member validation on ProjectMembership."
-    }
-  ],
-  "updated": "2026-03-28",
+  "ignored_warnings": [],
+  "updated": "2026-07-07",
   "brakeman_version": "8.0.4"
 }

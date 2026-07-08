@@ -6,6 +6,16 @@
 
   <%= render "shared/oauth_buttons" %>
 
+  <%# Fork deviation (MiClassrooms Phase 0 Task 7): SSO-only posture — under
+      AuthConfig.sso_only? the sign-in page offers only the OAuth buttons
+      above (Google + Okta — GitHub is excluded by
+      OauthHelper#enabled_oauth_providers). The email/password/magic-link
+      lookup form and the passkey prompt below are hidden — deliberately a
+      UI-only gate: SessionsController#lookup and MagicLinkCallbacksController
+      stay reachable so the seeded workspace Owner (provisioned via a
+      password-set link, not SSO — see db/seeds.rb) still has a working
+      break-glass sign-in path even when this posture is active. %>
+  <% unless AuthConfig.sso_only? %>
   <%# Email-first entry for both sign in and sign up. The webauthn controller
       wires conditional-UI autofill — the email field's
       autocomplete="username webauthn" surfaces a saved passkey inline — and the
@@ -53,4 +63,5 @@
        data-webauthn-target="status"
        class="mt-3 text-sm text-text-body text-center"></p>
   </div>
+  <% end %>
 </div>
