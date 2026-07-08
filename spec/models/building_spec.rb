@@ -23,6 +23,17 @@ RSpec.describe Building, type: :model do
       expect(duplicate).not_to be_valid
       expect(duplicate.errors[:bldrecnbr]).not_to be_empty
     end
+
+    it "enforces bldrecnbr uniqueness globally, even across workspaces" do
+      # Deliberate divergence from Campus/Unit: bldrecnbr is a U-M-wide
+      # natural key, so uniqueness is NOT workspace-scoped.
+      workspace = create(:workspace)
+      create(:building, workspace: workspace, bldrecnbr: "1000002")
+      duplicate = build(:building, workspace: create(:workspace), bldrecnbr: "1000002")
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:bldrecnbr]).not_to be_empty
+    end
   end
 
   describe "visibility scopes (D6: sync-owned in_feed vs. curation-owned hidden_at)" do
