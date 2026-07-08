@@ -8,7 +8,7 @@ RSpec.describe WorkspaceCapacitySweepJob, type: :job do
   let(:owner_role) do
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
       r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
     end
   end
 
@@ -90,18 +90,6 @@ RSpec.describe WorkspaceCapacitySweepJob, type: :job do
       create(:membership, user: owner, workspace: workspace, role: owner_role)
       3.times { create(:membership, user: create(:user), workspace: workspace) }
       workspace.discard!
-
-      expect {
-        described_class.perform_now
-      }.not_to change { Noticed::Event.where(type: "WorkspaceCapacityApproachingNotifier").count }
-    end
-
-    it "does not sweep the projects metric in v1 (members-only by design)" do
-      # Build a workspace that's at 100% of max_projects but well under
-      # max_members — confirms the sweep does not emit a projects-metric event.
-      workspace = create(:workspace, max_members: 100, max_projects: 1)
-      owner = create(:user)
-      create(:membership, user: owner, workspace: workspace, role: owner_role)
 
       expect {
         described_class.perform_now

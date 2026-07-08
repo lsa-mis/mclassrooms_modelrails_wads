@@ -14,3 +14,12 @@
 # ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.acronym "RESTful"
 # end
+
+# Rails' default plural rules include `inflect.plural(/s$/i, "s")`, which
+# treats any word already ending in "s" as already-plural (a well-known
+# gotcha — "campus".pluralize == "campus" unless overridden). Without this,
+# the `Campus` model infers table_name "campus" instead of the migration's
+# "campuses".
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  inflect.irregular "campus", "campuses"
+end
