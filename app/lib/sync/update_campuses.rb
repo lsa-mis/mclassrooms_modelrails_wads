@@ -48,9 +48,55 @@ module Sync
         campus.update!(attrs)
       end
 
+      delete_stale_campuses(seen)
+    end
+
+    # The stale-campus sweep — deliberately resilient (Brief §9: never corrupt
+    # local data, produce a comprehensive run report). Two guards distinguish
+    # this from the naive "destroy everything not in `seen`":
+    #
+    # 1. Empty-seen guard. An empty `seen` means the feed returned zero rows.
+    #    That is far more likely a transient gateway glitch than "the
+    #    university retired every campus at once", so treating it as the latter
+    #    would wipe the whole table. Skip the sweep entirely and warn.
+    #
+    # 2. FK-safe per-record delete. Campuses sync BEFORE buildings, so a
+    #    campus that dropped out of the feed still has last run's buildings
+    #    pointing at it (buildings.campus_id FK, enforced by SQLite) — the
+    #    NORMAL retirement case, not an edge case. A raw `destroy!` would raise
+    #    ActiveRecord::InvalidForeignKey, abort #perform, and (via BasePhase)
+    #    fail the phase, which halts Task 12's whole pipeline. Instead each
+    #    delete is independently rescued: a still-referenced campus is
+    #    skipped-with-warning and the sweep moves on. Per-record granularity is
+    #    the right unit here (individual hard-deletes) — no surrounding
+    #    transaction, unlike the rooms phase's UPDATE-deactivation sweep.
+    #
+    # count(:deleted) reflects only ACTUAL deletions on a real run: it is
+    # incremented AFTER destroy! succeeds, never before, so a skipped
+    # (still-referenced) campus never inflates it. Under dry-run nothing is
+    # destroyed, but every stale campus is counted as a PREVIEW of intent so
+    # the report still says how many *would* be deleted. `guarded_write`
+    # doesn't cleanly express this split (its count sits outside the guard,
+    # which would double-count on a real-run skip), so the dry-run branch is
+    # explicit here.
+    def delete_stale_campuses(seen)
+      if seen.empty?
+        add_warning("Campuses feed returned zero rows; skipping stale-campus deletion")
+        return
+      end
+
       Campus.for_current_workspace.where.not(code: seen).find_each do |stale|
-        count(:deleted)
-        guarded_write { stale.destroy! }
+        if dry_run?
+          count(:deleted)
+          next
+        end
+
+        begin
+          stale.destroy!
+          count(:deleted)
+        rescue ActiveRecord::InvalidForeignKey
+          add_warning("Campus #{stale.code} is still referenced and was not deleted")
+        end
       end
     end
 
