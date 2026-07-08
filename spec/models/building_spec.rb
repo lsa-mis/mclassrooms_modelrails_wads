@@ -61,6 +61,17 @@ RSpec.describe Building, type: :model do
     end
   end
 
+  describe ".with_classrooms" do
+    it "includes only buildings with at least one classroom" do
+      classroom_building = create(:building)
+      create(:room, building: classroom_building)
+      office_building = create(:building)
+      create(:room, building: office_building, room_type: "Office")
+
+      expect(Building.with_classrooms).to contain_exactly(classroom_building)
+    end
+  end
+
   describe "#hidden?" do
     it "is true when hidden_at is present" do
       building = build(:building, hidden_at: Time.current)

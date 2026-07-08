@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030001) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030002) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -239,6 +239,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030001) do
     t.index ["workspace_id"], name: "index_roles_on_workspace_id"
   end
 
+  create_table "rooms", force: :cascade do |t|
+    t.integer "ada_seat_count"
+    t.integer "building_id", null: false
+    t.string "building_name"
+    t.integer "campus_id"
+    t.datetime "created_at", null: false
+    t.string "department_description"
+    t.string "department_group"
+    t.string "department_group_description"
+    t.string "department_id"
+    t.string "facility_code"
+    t.string "facility_code_normalized"
+    t.integer "floor_id"
+    t.datetime "hidden_at"
+    t.integer "hidden_by_id"
+    t.boolean "in_feed", default: false, null: false
+    t.integer "instructional_seat_count"
+    t.string "nickname"
+    t.string "rmrecnbr", null: false
+    t.string "room_number"
+    t.string "room_type"
+    t.integer "square_feet"
+    t.integer "unit_id"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["building_id"], name: "index_rooms_on_building_id"
+    t.index ["campus_id"], name: "index_rooms_on_campus_id"
+    t.index ["facility_code_normalized"], name: "index_rooms_on_facility_code_normalized"
+    t.index ["floor_id"], name: "index_rooms_on_floor_id"
+    t.index ["hidden_at"], name: "index_rooms_on_hidden_at"
+    t.index ["hidden_by_id"], name: "index_rooms_on_hidden_by_id"
+    t.index ["in_feed"], name: "index_rooms_on_in_feed"
+    t.index ["rmrecnbr"], name: "index_rooms_on_rmrecnbr", unique: true
+    t.index ["room_type", "instructional_seat_count"], name: "index_rooms_on_room_type_and_instructional_seat_count"
+    t.index ["unit_id"], name: "index_rooms_on_unit_id"
+    t.index ["workspace_id"], name: "index_rooms_on_workspace_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
@@ -403,6 +441,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030001) do
   add_foreign_key "memberships", "workspaces"
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
   add_foreign_key "roles", "workspaces"
+  add_foreign_key "rooms", "buildings"
+  add_foreign_key "rooms", "campuses"
+  add_foreign_key "rooms", "floors"
+  add_foreign_key "rooms", "units"
+  add_foreign_key "rooms", "users", column: "hidden_by_id"
+  add_foreign_key "rooms", "workspaces"
   add_foreign_key "sessions", "users"
   add_foreign_key "sync_scope_rules", "workspaces"
   add_foreign_key "unit_display_names", "workspaces"
