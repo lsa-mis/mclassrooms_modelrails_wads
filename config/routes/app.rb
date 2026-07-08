@@ -7,8 +7,8 @@ get "about", to: "pages#about"
 get "privacy", to: "pages#privacy"
 get "contact", to: "pages#contact"
 
-# Non-production test login for accessibility crawlers (MiClassrooms Phase 0
-# Task 8): Siteimprove can't complete Google/Okta SSO. Drawn only when
+# Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
+# accessibility crawlers — Siteimprove can't complete Google/Okta SSO. Drawn only when
 # AuthConfig.test_login_enabled? is true at boot — i.e. never in production,
 # and never without a configured TEST_LOGIN_TOKEN — so the route is
 # structurally absent (not merely guarded) rather than drawn-and-blocked.
