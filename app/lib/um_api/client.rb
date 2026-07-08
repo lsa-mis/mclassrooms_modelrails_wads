@@ -102,15 +102,16 @@ module UmApi
     # with other comma-separated rel values (e.g. `<url1>; rel="first",
     # <url2>; rel="next"`), and returns the rel="next" URL — or nil if
     # there isn't one (last page) or the header is absent entirely.
+    #
+    # Scans for every `<url>; rel="x"` pair instead of splitting the header
+    # on a bare "," first: a naive split breaks as soon as any URL in the
+    # header (rel="next" or otherwise) contains a literal comma — e.g. a
+    # query string like `?ids=1,2,3` — silently truncating pagination
+    # (returns nil, loop stops early, no error) instead of raising.
     def next_link(header)
       return nil unless header
 
-      header.split(",").each do |link|
-        match = link.match(/<([^>]+)>\s*;\s*rel="?next"?/)
-        return match[1] if match
-      end
-
-      nil
+      header.to_s.scan(/<([^>]+)>\s*;\s*rel="?([^",;]+)"?/).find { |_url, rel| rel == "next" }&.first
     end
 
     def request(uri, scope:)

@@ -177,6 +177,42 @@ RSpec.describe UmApi::Client do
         "Modern Languages Building", "Angell Hall", "Danto Engineering Development Center"
       )
       expect(last_page_stub).to have_been_requested.once
+      expect(client.call_count).to eq(2)
+    end
+
+    # Teeth for next_link's Link-header parsing: the header carries BOTH a
+    # rel="prev" and a rel="next" entry in one comma-separated value, and
+    # BOTH urls contain a literal comma in their own query string (e.g.
+    # `?ids=1,2,3`). The old implementation split the whole header on a
+    # bare "," before regex-matching each fragment, so a comma inside the
+    # rel="next" URL split that URL's `<...>` across two fragments and
+    # next_link returned nil — each_page would silently stop after page 1
+    # with no error. Scanning for every `<url>; rel="x"` pair instead of
+    # splitting first fixes that: this must yield page 2's item too.
+    it "follows only the rel=\"next\" link when the header also carries a rel=\"prev\" link, even when both URLs contain commas" do
+      stub_um_token(scope: "buildings")
+      prev_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?ids=9,8,7"
+      next_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?page=2&ids=1,2,3"
+      multi_rel_link_header = %(<#{prev_url}>; rel="prev", <#{next_url}>; rel="next")
+
+      stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2")
+        .with(query: { "limit" => "1000" })
+        .to_return(
+          status: 200,
+          headers: UmApiStubs::JSON_RESPONSE_HEADERS.merge("Link" => multi_rel_link_header),
+          body: um_api_fixture("buildings_page1.json")
+        )
+      next_page_stub = stub_request(:get, next_url)
+        .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS, body: um_api_fixture("buildings_page2.json"))
+      client = described_class.new(rate_limiter: ThrottleSpy.new)
+
+      names = []
+      client.each_page("/bf/Buildings/v2", scope: "buildings") { |item| names << item["BldName"] }
+
+      expect(names).to contain_exactly(
+        "Modern Languages Building", "Angell Hall", "Danto Engineering Development Center"
+      )
+      expect(next_page_stub).to have_been_requested.once
     end
 
     it "runs rate_limiter.throttle! once per page fetched" do
