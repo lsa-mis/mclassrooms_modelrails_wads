@@ -104,6 +104,70 @@ RSpec.describe "Google OAuth domain allowlist", type: :request do
         expect(response).to redirect_to(new_session_path)
       end
     end
+
+    # M5 (final-review fix): the domain check runs unconditionally, before the
+    # existing/signed-in/new-user branch dispatch (OmniauthCallbacksController#create),
+    # so it must also block a RETURNING user whose domain no longer clears the
+    # allowlist (e.g. the org's policy tightened after they originally signed
+    # up) — not just brand-new signups.
+    context "with a returning user (existing Authentication) whose domain is no longer allowed" do
+      let!(:user) { create(:user, email_address: "returner@gmail.com") }
+      let!(:authentication) do
+        user.authentications.create!(provider: "google", uid: "returning-disallowed-uid", verified_at: Time.current)
+      end
+
+      before do
+        OmniAuth.config.mock_auth[:google_oauth2] =
+          google_auth_hash("returner@gmail.com", uid: "returning-disallowed-uid")
+      end
+
+      it "does not sign them in" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change(Session, :count)
+      end
+
+      it "creates no additional User or Authentication" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change(User, :count)
+
+        expect(user.authentications.count).to eq(1)
+      end
+
+      it "redirects to sign-in with the domain-not-allowed alert" do
+        get "/auth/google_oauth2/callback"
+        expect(response).to redirect_to(new_session_path)
+        expect(flash[:alert]).to eq(I18n.t("omniauth_callbacks.create.google_domain_not_allowed"))
+      end
+    end
+
+    # M5 (final-review fix): same unconditional check, exercised via the
+    # signed-in-linking branch (#handle_signed_in_link) — a signed-in user
+    # attempting to link a Google account outside the allowlist must not have
+    # it linked, and lands on the SAME sign-in redirect + alert as the
+    # unauthenticated paths above (not settings_connected_accounts_path),
+    # because the domain check fires before Current.user is even consulted.
+    context "with a signed-in user attempting to link a Google account with a disallowed domain" do
+      let(:user) { create(:user) }
+
+      before do
+        sign_in(user)
+        OmniAuth.config.mock_auth[:google_oauth2] = google_auth_hash("linker@gmail.com", uid: "link-attempt-uid")
+      end
+
+      it "does not link the provider to the signed-in user" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change { user.authentications.count }
+      end
+
+      it "redirects to sign-in (not connected accounts) with the domain-not-allowed alert" do
+        get "/auth/google_oauth2/callback"
+        expect(response).to redirect_to(new_session_path)
+        expect(flash[:alert]).to eq(I18n.t("omniauth_callbacks.create.google_domain_not_allowed"))
+      end
+    end
   end
 
   describe "allowlist entry normalization (EmailNormalizer parity)" do
