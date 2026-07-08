@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030001) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -85,6 +85,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_020000) do
     t.index ["user_id"], name: "index_authentications_on_user_id"
   end
 
+  create_table "buildings", force: :cascade do |t|
+    t.string "abbreviation"
+    t.string "address"
+    t.string "bldrecnbr", null: false
+    t.integer "campus_id"
+    t.string "city"
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.datetime "hidden_at"
+    t.integer "hidden_by_id"
+    t.boolean "in_feed", default: false, null: false
+    t.decimal "latitude", precision: 10, scale: 6
+    t.decimal "longitude", precision: 10, scale: 6
+    t.string "name", null: false
+    t.string "nickname"
+    t.string "state"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.string "zip"
+    t.index ["bldrecnbr"], name: "index_buildings_on_bldrecnbr", unique: true
+    t.index ["campus_id"], name: "index_buildings_on_campus_id"
+    t.index ["hidden_at"], name: "index_buildings_on_hidden_at"
+    t.index ["hidden_by_id"], name: "index_buildings_on_hidden_by_id"
+    t.index ["in_feed"], name: "index_buildings_on_in_feed"
+    t.index ["workspace_id"], name: "index_buildings_on_workspace_id"
+  end
+
   create_table "campuses", force: :cascade do |t|
     t.string "code", null: false
     t.datetime "created_at", null: false
@@ -106,6 +133,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_020000) do
     t.integer "workspace_id", null: false
     t.index ["workspace_id", "short_code"], name: "index_characteristic_display_rules_on_workspace_and_code", unique: true
     t.index ["workspace_id"], name: "index_characteristic_display_rules_on_workspace_id"
+  end
+
+  create_table "floors", force: :cascade do |t|
+    t.integer "building_id", null: false
+    t.datetime "created_at", null: false
+    t.string "label", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["building_id", "label"], name: "index_floors_on_building_id_and_label", unique: true
+    t.index ["building_id"], name: "index_floors_on_building_id"
+    t.index ["workspace_id"], name: "index_floors_on_workspace_id"
   end
 
   create_table "invitations", force: :cascade do |t|
@@ -350,8 +388,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_020000) do
   add_foreign_key "activity_logs", "users", column: "actor_id"
   add_foreign_key "activity_logs", "workspaces"
   add_foreign_key "authentications", "users"
+  add_foreign_key "buildings", "campuses"
+  add_foreign_key "buildings", "users", column: "hidden_by_id"
+  add_foreign_key "buildings", "workspaces"
   add_foreign_key "campuses", "workspaces"
   add_foreign_key "characteristic_display_rules", "workspaces"
+  add_foreign_key "floors", "buildings"
+  add_foreign_key "floors", "workspaces"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
