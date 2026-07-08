@@ -100,7 +100,6 @@ RSpec.describe Invitation, type: :model do
       }.to raise_error(Invitation::NotAcceptable, /no longer acceptable/i)
         .and change(Membership, :count).by(0)
     end
-
   end
 
   describe "#accept!" do

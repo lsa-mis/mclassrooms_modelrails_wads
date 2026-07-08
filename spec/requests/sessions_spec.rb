@@ -216,6 +216,20 @@ RSpec.describe "Sessions", type: :request do
       end
     end
 
+    context "retry after invalid email" do
+      it "accepts the nested params submitted by the error form" do
+        allow_any_instance_of(SessionsController).to receive(:signups_open?).and_return(true)
+
+        expect {
+          post session_lookup_path, params: { email_lookup_form: { email_address: "retry@example.com" } }
+        }.to change { MagicLinkToken.where(email: "retry@example.com").count }.by(1)
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include(I18n.t("sessions.check_email.title"))
+        expect(response.body).to include("retry@example.com")
+      end
+    end
+
     context "invalid email format" do
       it "rejects email without a domain TLD" do
         post session_lookup_path, params: { email_address: "hd@humbledaisy" }
