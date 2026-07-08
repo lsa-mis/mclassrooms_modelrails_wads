@@ -85,6 +85,6 @@ class SessionsController < ApplicationController
   # unchanged.
   def okta_end_session_url(id_token)
     query = { id_token_hint: id_token, post_logout_redirect_uri: new_session_url }.to_query
-    "#{ENV['OKTA_ISSUER'].to_s.chomp('/')}/v1/logout?#{query}"
+    "#{AuthConfig.okta_issuer.to_s.chomp('/')}/v1/logout?#{query}"
   end
 end
