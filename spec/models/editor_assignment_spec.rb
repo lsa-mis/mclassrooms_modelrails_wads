@@ -42,14 +42,17 @@ RSpec.describe EditorAssignment, type: :model do
       expect(other).to be_valid
     end
 
-    it "allows the same (user, unit) pair across different workspaces" do
+    it "allows the same user to be assigned to different units" do
+      # The uniqueness scope is :unit_id, so a user editing multiple units is
+      # valid — only the exact (user, unit) pair is rejected. (A pair cannot
+      # span workspaces: a Unit belongs to exactly one workspace.)
       user = create(:user)
-      unit = create(:unit)
-      create(:editor_assignment, user: user, unit: unit)
+      workspace = create(:workspace)
+      unit = create(:unit, workspace: workspace)
+      other_unit = create(:unit, workspace: workspace)
+      create(:editor_assignment, user: user, unit: unit, workspace: workspace)
 
-      other_workspace = create(:workspace)
-      other_unit = create(:unit, workspace: other_workspace, department_group: unit.department_group)
-      other = build(:editor_assignment, user: user, unit: other_unit, workspace: other_workspace)
+      other = build(:editor_assignment, user: user, unit: other_unit, workspace: workspace)
 
       expect(other).to be_valid
     end
