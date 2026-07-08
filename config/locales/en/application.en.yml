@@ -46,6 +46,10 @@ en:
       open: "Open menu"
       close: "Close menu"
       aria_label: "Main menu"
+    admin:
+      label: "Admin"
+      aria_label: "Admin navigation"
+      empty: "Nothing here yet — admin tools land in later phases."
   theme:
     light: "Light"
     dark: "Dark"

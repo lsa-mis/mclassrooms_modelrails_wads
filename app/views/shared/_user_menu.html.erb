@@ -51,16 +51,23 @@
             and got mistaken for it; placing it inside the user menu
             structurally prevents that confusion. Label is deliberately
             "All workspaces" (not "Workspaces") to disambiguate from the
-            switcher's "switch workspace" verb. %>
-        <div class="border-t border-border">
-          <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,
-                role: "menuitem", tabindex: "-1",
-                data: { turbo_prefetch: "true" },
-                class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
-                        text-sm text-text-body
-                        hover:bg-surface hover:text-interactive
-                        focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
-        </div>
+            switcher's "switch workspace" verb.
+            Navigation IA (Task 10): this is the switcher's "see all"
+            companion, so it's suppressed under the same :shared-posture
+            check as the switcher itself (see shared/_header) — a single
+            shared workspace has no index worth surfacing as its own
+            affordance. %>
+        <% unless TenancyConfig.shared? %>
+          <div class="border-t border-border">
+            <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,
+                  role: "menuitem", tabindex: "-1",
+                  data: { turbo_prefetch: "true" },
+                  class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                          text-sm text-text-body
+                          hover:bg-surface hover:text-interactive
+                          focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+          </div>
+        <% end %>
 
         <div class="border-t border-border">
           <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,

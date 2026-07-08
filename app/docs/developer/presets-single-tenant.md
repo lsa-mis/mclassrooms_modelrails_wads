@@ -116,7 +116,11 @@ owner.memberships.first.role.slug              # => "owner"
 In the browser, after the Owner has set their password and signed in:
 
 1. They land directly in the shared workspace (no switcher, no chooser).
-2. The header workspace switcher does not appear.
+2. The header workspace switcher does not appear, and neither does the user
+   menu's "All workspaces" entry point (its switcher-adjacent "see all"
+   companion) — both are suppressed under `TenancyConfig.shared?` (see
+   `shared/_header.html.erb` and `shared/_user_menu.html.erb`), not merely
+   hidden by incidental single-membership math.
 3. `/workspaces/new` redirects to root with the alert `Workspace creation is disabled on this instance.`
 4. Invited new users (via the standard invitation flow) verify their email and become Members of the same shared workspace.
 
