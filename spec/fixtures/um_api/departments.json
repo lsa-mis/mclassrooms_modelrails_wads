@@ -1,0 +1,16 @@
+{
+  "Departments": [
+    {
+      "DeptID": "190000",
+      "DeptDescr": "LSA - German",
+      "DeptGrp": "COLLEGE_OF_LSA",
+      "DeptGrpDescr": "College of Literature, Science & the Arts"
+    },
+    {
+      "DeptID": "180000",
+      "DeptDescr": "LSA - Mathematics",
+      "DeptGrp": "COLLEGE_OF_LSA",
+      "DeptGrpDescr": "College of Literature, Science & the Arts"
+    }
+  ]
+}
