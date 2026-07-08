@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030005) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_030006) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -85,6 +85,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030005) do
     t.index ["user_id"], name: "index_authentications_on_user_id"
   end
 
+  create_table "availability_blocks", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "ends_at", null: false
+    t.integer "room_id", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id", "starts_at"], name: "index_availability_blocks_on_room_id_and_starts_at"
+    t.index ["room_id"], name: "index_availability_blocks_on_room_id"
+    t.index ["workspace_id"], name: "index_availability_blocks_on_workspace_id"
+  end
+
   create_table "buildings", force: :cascade do |t|
     t.string "abbreviation"
     t.string "address"
@@ -133,6 +145,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030005) do
     t.integer "workspace_id", null: false
     t.index ["workspace_id", "short_code"], name: "index_characteristic_display_rules_on_workspace_and_code", unique: true
     t.index ["workspace_id"], name: "index_characteristic_display_rules_on_workspace_id"
+  end
+
+  create_table "editor_assignments", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "unit_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.integer "workspace_id", null: false
+    t.index ["unit_id"], name: "index_editor_assignments_on_unit_id"
+    t.index ["user_id", "unit_id"], name: "index_editor_assignments_on_user_id_and_unit_id", unique: true
+    t.index ["user_id"], name: "index_editor_assignments_on_user_id"
+    t.index ["workspace_id"], name: "index_editor_assignments_on_workspace_id"
   end
 
   create_table "floors", force: :cascade do |t|
@@ -472,11 +496,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030005) do
   add_foreign_key "activity_logs", "users", column: "actor_id"
   add_foreign_key "activity_logs", "workspaces"
   add_foreign_key "authentications", "users"
+  add_foreign_key "availability_blocks", "rooms"
+  add_foreign_key "availability_blocks", "workspaces"
   add_foreign_key "buildings", "campuses"
   add_foreign_key "buildings", "users", column: "hidden_by_id"
   add_foreign_key "buildings", "workspaces"
   add_foreign_key "campuses", "workspaces"
   add_foreign_key "characteristic_display_rules", "workspaces"
+  add_foreign_key "editor_assignments", "units"
+  add_foreign_key "editor_assignments", "users"
+  add_foreign_key "editor_assignments", "workspaces"
   add_foreign_key "floors", "buildings"
   add_foreign_key "floors", "workspaces"
   add_foreign_key "invitations", "roles"
