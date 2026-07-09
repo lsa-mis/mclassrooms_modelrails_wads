@@ -1,0 +1,132 @@
+<%# MiClassrooms Phase 4 Task 9 (Brief §5.3, §14.1): admin building edit —
+    nickname (curated field), photo attach/remove, and per-floor floor-plan
+    attach/replace/remove. Mirrors rooms/edit.html.erb's structure and
+    conventions (Task 7): one form posting to #update, which routes the
+    whole payload through Curation::Apply (BuildingsController) so every
+    mutation here — curated field or attachment — is audited.
+
+    DEVIATION (Decision 2): this form deliberately has NO address fields and
+    NO visibility (hide/unhide) control — address is sync-owned (a next
+    nightly sync would overwrite any manual edit here) and visibility ships
+    with phase 5's dedicated hide/unhide routes. See
+    BuildingsController#building_params for the strong-params enforcement.
+
+    Floors are sync-created (D10) — the floors card below only attaches,
+    replaces, or removes each EXISTING floor's `plan`; it can never add or
+    remove a Floor row (Building#floors accepts_nested_attributes_for has no
+    allow_destroy and no blank rows are ever built).
+
+    `multipart: true` is explicit (not auto-detected): TailwindFormBuilder's
+    `file_field` renders via UI::FileInputComponent directly rather than
+    delegating to Rails' own Tags::File, so it never flips the FormBuilder's
+    `@multipart` flag the way `form_with`'s auto-detection relies on. Without
+    this, the browser would submit the photo/floor-plan file inputs as empty
+    strings (x-www-form-urlencoded), not their file contents. %>
+<% content_for(:title) { t("buildings.edit.title", building: @building.display_name) } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t("buildings.edit.title", building: @building.display_name) %></h1>
+
+  <%= form_with model: @building, url: building_path(@building), method: :patch, multipart: true,
+        class: "mt-8 space-y-8" do |form| %>
+    <%= form.error_summary %>
+
+    <%# --- Curated fields ------------------------------------------------ %>
+    <%= ui :card do %>
+      <%= ui :card_header do %>
+        <%= ui :card_title, t(".curated_heading"), level: 2 %>
+      <% end %>
+      <%= ui :card_content, class: "space-y-6" do %>
+        <%= form.text_field :nickname,
+              label: t(".nickname_label"),
+              help: t(".nickname_hint") %>
+      <% end %>
+    <% end %>
+
+    <%# --- Photo ----------------------------------------------------------- %>
+    <%= ui :card do %>
+      <%= ui :card_header do %>
+        <%= ui :card_title, t(".photo_heading"), level: 2 %>
+      <% end %>
+      <%= ui :card_content, class: "space-y-4" do %>
+        <% if @building.photo.attached? %>
+          <% if @building.photo.variable? %>
+            <%= ui :figure do %>
+              <%= ui :image,
+                    src: rails_representation_path(@building.photo.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
+                    alt: t("buildings.show.photo_alt", building: @building.display_name),
+                    width: 150, height: 150,
+                    class: "size-[150px] rounded-md object-cover" %>
+            <% end %>
+          <% else %>
+            <%# Only reachable transiently: a failed #update re-render where the
+                just-submitted (not-yet-persisted, and about to be rejected by
+                Building's own content_type validation) photo isn't
+                image-variable. Skip the variant transform
+                (ActiveStorage::InvariableError) rather than 500. %>
+            <p class="text-sm text-text-muted"><%= t(".attachment_present_notice") %></p>
+          <% end %>
+          <div>
+            <%= form.check_box :remove_photo,
+                  label: t(".remove_photo_label", building: @building.display_name) %>
+            <p class="mt-1 text-sm text-text-muted"><%= t(".delete_confirm") %></p>
+          </div>
+        <% end %>
+
+        <%= form.file_field :photo,
+              label: t(".photo_heading"),
+              help: t(".photo_hint"),
+              accept: "image/png,image/jpeg,image/webp" %>
+      <% end %>
+    <% end %>
+
+    <%# --- Floors: one row per existing floor, plan attach/replace/remove -- %>
+    <%= ui :card do %>
+      <%= ui :card_header do %>
+        <%= ui :card_title, t(".floors_heading"), level: 2 %>
+      <% end %>
+      <%= ui :card_content, class: "space-y-6" do %>
+        <%= form.fields_for :floors, @floors do |ff| %>
+          <% floor = ff.object %>
+          <div class="space-y-3 border-b border-border pb-6 last:border-b-0 last:pb-0">
+            <p class="font-medium text-text-heading"><%= t(".floor_row_label", label: floor.label) %></p>
+
+            <% if floor.plan.attached? %>
+              <% if floor.plan.content_type == "application/pdf" %>
+                <%= link_to t(".plan_pdf_link", label: floor.label),
+                      rails_blob_path(floor.plan, disposition: :inline),
+                      class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+              <% elsif floor.plan.variable? %>
+                <%= ui :figure do %>
+                  <%= ui :image,
+                        src: rails_representation_path(floor.plan.variant(resize_to_fill: [ 96, 96 ], format: :webp)),
+                        alt: t(".plan_alt", label: floor.label),
+                        width: 96, height: 96,
+                        class: "size-24 rounded-md border border-border object-cover" %>
+                <% end %>
+              <% else %>
+                <p class="text-sm text-text-muted"><%= t(".attachment_present_notice") %></p>
+              <% end %>
+
+              <div>
+                <%= ff.check_box :remove_plan, label: t(".remove_plan_label", label: floor.label) %>
+                <p class="mt-1 text-sm text-text-muted"><%= t(".delete_confirm") %></p>
+              </div>
+            <% else %>
+              <%# Graceful empty state (D10: a floor plan is optional) — no
+                  broken-image icon, no false "attached" affordance. %>
+              <p class="text-sm text-text-muted"><%= t(".no_plan", label: floor.label) %></p>
+            <% end %>
+
+            <%= ff.file_field :plan,
+                  label: t(".replace_plan_label", label: floor.label),
+                  help: t(".replace_plan_hint"),
+                  accept: "image/png,image/jpeg,image/webp,application/pdf" %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= form.submit t(".submit") %>
+  <% end %>
+</div>

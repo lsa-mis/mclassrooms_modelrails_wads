@@ -6,16 +6,15 @@
 class BuildingsController < ApplicationController
   include DirectoryScoped
 
-  # Task 9 extends this to `only: [:show, :edit, :update]` once #edit/#update
-  # are real controller methods. `resources :buildings, only: [:index, :show,
-  # :edit, :update]` is already drawn per the route contract (config/routes/
-  # app.rb), but naming an undefined action in a before_action's `only:` list
-  # raises AbstractController::ActionNotFound on EVERY request —
-  # raise_on_missing_callback_actions is true in dev/test (see
-  # config/environments/{development,test}.rb) — #index included. Mirrors
-  # RoomsController's identical constraint before Task 7 added #edit/#update
-  # there.
-  before_action :set_building, only: [ :show ]
+  # Extended to `:edit, :update` now that both are real controller methods
+  # (Task 9). `resources :buildings, only: [:index, :show, :edit, :update]`
+  # was already drawn per the route contract (config/routes/app.rb) ahead of
+  # this — naming an undefined action in a before_action's `only:` list
+  # raises AbstractController::ActionNotFound on EVERY request (dev/test set
+  # raise_on_missing_callback_actions: true), which is why #edit/#update
+  # couldn't join this list until they existed. Mirrors RoomsController's
+  # identical `set_room` extension in its own Task 7.
+  before_action :set_building, only: [ :show, :edit, :update ]
 
   # Admin-only page (BuildingPolicy#index?), so `show_hidden=1` needs no
   # extra gate beyond the action-level `authorize` below — there is no
@@ -81,7 +80,109 @@ class BuildingsController < ApplicationController
     end
   end
 
+  # MiClassrooms Phase 4 Task 9 (Brief §5.3, §14.1): the admin building edit
+  # form — nickname + photo (curated fields) plus per-floor floor-plan
+  # attach/replace/remove via nested attributes. Mirrors RoomsController#edit
+  # (Task 7): `authorize @building` only, then preload each floor's `plan`
+  # attachment so the view's per-floor `floor.plan.attached?`/content_type
+  # checks don't N+1 (Bullet raises in test).
+  def edit
+    authorize @building
+    load_floors
+  end
+
+  # Routes the whole payload — nickname, photo (+ remove_photo), and each
+  # floor's plan (+ remove_plan) — through Curation::Apply.call in ONE
+  # transaction (spec D13), exactly like RoomsController#update. Attachment
+  # operations aren't dirty-tracked, so their before_after diff is empty —
+  # the "building.curated" action string is their audit signal; a genuine
+  # column change (nickname) still appears in the diff normally.
+  def update
+    authorize @building
+    attrs = building_params.to_h
+    # Preloaded BEFORE Curation::Apply.call, not just before a failure
+    # re-render: a floor RECEIVING A NEW plan upload is the one case
+    # Building#save!'s autosave cascade actually (re-)validates this
+    # request — remove_plan alone or an untouched floor (skipped by
+    # Building#floors' reject_if) never registers as `changed_for_autosave?`
+    # (see this method's own comment), so preloading every floor
+    # unconditionally flagged Bullet's OWN "unused eager loading" check on
+    # the remove-only path. Scoping the preload to just the touched
+    # floor(s) satisfies both directions. Mirrors RoomsController#update's
+    # `preload_gallery_image_attachments` call before its own
+    # Curation::Apply.call.
+    preload_new_floor_plan_attachments(attrs)
+    result = Curation::Apply.call(record: @building, actor: Current.user,
+                                  attributes: attrs, action: "building.curated")
+
+    if result.success?
+      redirect_to building_path(@building), notice: t("buildings.edit.success")
+    else
+      @building = result.payload[:record] || @building
+      load_floors
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
   private
+
+  # Preloads each floor's `plan` attachment (mirrors #show's identical
+  # `includes(plan_attachment: :blob)`) so #edit's first render AND #update's
+  # failure re-render both avoid an N+1 across the floors card's per-floor
+  # plan.attached?/content_type checks.
+  def load_floors
+    @floors = @building.floors.order(:label).includes(plan_attachment: :blob)
+  end
+
+  # Preloads the `plan` attachment ONLY for the floor(s) whose submitted
+  # attributes include a NEW `plan` upload — the sole case where
+  # Building#save!'s autosave cascade actually validates that Floor's `plan`
+  # content type/size this request. `remove_plan` alone doesn't touch AR's
+  # dirty-tracking or ActiveStorage's `attachment_changes` (purge_later just
+  # schedules a job), so a remove-only or otherwise-untouched floor is never
+  # `changed_for_autosave?` and its validations never run — preloading it
+  # anyway is itself an UNUSED eager load Bullet flags just as readily as a
+  # missing one. `@building.floors.select { ... }` (not a fresh `.includes`
+  # query) loads the association's target ONTO `@building.floors` itself —
+  # the same in-memory objects `floors_attributes=` is about to find and
+  # mutate below — same technique as
+  # RoomsController#preload_gallery_image_attachments.
+  #
+  # Both `plan_attachment: :blob` and the auto-generated `plan_blob`
+  # shortcut (has_one_attached's own `has_one :plan_blob, through:
+  # :plan_attachment`) need preloading: #show's read-only view only ever
+  # touches the former, but ActiveStorageValidations::ContentTypeValidator
+  # reads blob content type via the `plan_blob` shortcut directly — a
+  # SEPARATE association Bullet tracks on its own.
+  def preload_new_floor_plan_attachments(attrs)
+    ids = floor_ids_with_new_plan(attrs)
+    return if ids.empty?
+
+    floors = @building.floors.select { |floor| ids.include?(floor.id.to_s) }
+    return if floors.empty?
+
+    ActiveRecord::Associations::Preloader.new(
+      records: floors, associations: [ :plan_blob, { plan_attachment: :blob } ]
+    ).call
+  end
+
+  # Ids of floors whose submitted nested-attribute row includes a present
+  # `plan` (a real file upload) — see preload_new_floor_plan_attachments'
+  # comment above. `.with_indifferent_access` throughout: `building_params
+  # .to_h`'s nested floors_attributes hash and its per-row hashes are both
+  # plain Hash by the time they reach here, and Rails' own `fields_for`
+  # always submits this as a hash keyed by index (never a bare array), but
+  # the defensive `Array(...)`/`.is_a?(Hash)` branch (mirrors
+  # RoomsController#destroyed_gallery_image_ids) tolerates either shape.
+  def floor_ids_with_new_plan(attrs)
+    rows = attrs.with_indifferent_access[:floors_attributes]
+    return [] if rows.blank?
+
+    rows = rows.is_a?(Hash) ? rows.values : Array(rows)
+    rows.select { |row| row.with_indifferent_access[:plan].present? }
+        .map { |row| row.with_indifferent_access[:id].to_s }
+        .compact
+  end
 
   def set_building
     # for_current_workspace (CLAUDE.md deviation #1): tenant-scoped find,
@@ -89,6 +190,24 @@ class BuildingsController < ApplicationController
     # `.listed`-filtered: this is the admin page, so a hidden building must
     # still be reachable by id.
     @building = Building.for_current_workspace.find(params[:id])
+  end
+
+  # Curated fields (nickname), the photo slot + its remove_photo purge
+  # writer, and per-floor plan attach/replace/remove via nested attributes.
+  #
+  # DEVIATION (Decision 2): deliberately NO address fields (:address, :city,
+  # :state, :zip, :country) and NO visibility params (:hidden_at, :in_feed)
+  # here. Address is sync-owned (Brief §5.3/D6) — permitting it here would
+  # let an admin's edit be silently overwritten by the next nightly sync, or
+  # (worse) let a curated edit clobber sync data out of band. Visibility
+  # (hide/unhide) ships with phase 5's dedicated routes, not this form. Any
+  # `address`/`city`/`state`/`zip`/`country`/`hidden_at`/`in_feed` param
+  # submitted here is silently dropped by strong params, never assigned.
+  def building_params
+    params.require(:building).permit(
+      :nickname, :photo, :remove_photo,
+      floors_attributes: [ :id, :plan, :remove_plan ]
+    )
   end
 
   def index_json
