@@ -8,6 +8,22 @@ class RoomsController < ApplicationController
 
   VIEWS = %w[active inactive_rooms inactive_buildings].freeze
 
+  # REQUIRED CORRECTION vs. the phase-4 Task 3 brief: the brief's snippet lists
+  # `only: [:show, :edit, :update, :floor_plan]`, anticipating the full action
+  # set this controller will have by the end of the phase. But `:edit`/`:update`
+  # (Task 7) and `:floor_plan` (Task 6) aren't defined as controller methods
+  # yet, and `config.action_controller.raise_on_missing_callback_actions` is
+  # `true` in both development.rb and test.rb (Rails 7.1+ default) — so a
+  # before_action `only:` naming an undefined action isn't inert, it's a hard
+  # `AbstractController::ActionNotFound` ("Unknown action") raised for EVERY
+  # request to this controller, including `#index` (verified: it broke all 19
+  # pre-existing Find-a-Room examples). Scoped to `:show` only for this task;
+  # Tasks 6/7 must add `:floor_plan`/`:edit`/`:update` back to these lists in
+  # the same commit that defines those methods.
+  before_action :set_room, only: [ :show ]
+  before_action :redirect_inactive_for_non_admins, only: [ :show ]
+  before_action :ensure_url_helpers_have_a_host, only: [ :show ]
+
   def index
     authorize Room
     @search = RoomSearch.new(filter_params, base: base_scope)
@@ -23,6 +39,27 @@ class RoomsController < ApplicationController
     respond_to do |format|
       format.html # never fresh_when here — D14: results are live queries
       format.json
+    end
+  end
+
+  # MiClassrooms Phase 4 Task 3 (Brief §5.3): room detail, HTML + JSON.
+  # `RoomPresenter` (Task 2) supplies both the view-model chips/grouping and
+  # the JSON payload — this action just wires policy + conditional GET around
+  # it. `app/views/rooms/show.html.erb` itself ships in Task 4; the format.html
+  # branch is wired now per the contract so Task 4 only has to add the template.
+  def show
+    authorize @room
+    @presenter = RoomPresenter.new(@room, url: room_url(@room))
+
+    # D14: conditional GET over room + contact + notes (own and building's) + all
+    # media attachments. Cache-Control stays Rails-default `private, max-age=0,
+    # must-revalidate` — the legacy no-store header is deliberately NOT set.
+    # Admin-ness is in the ETag: admins see the inactive banner and edit controls.
+    if stale?(etag: show_cache_key, last_modified: show_last_modified)
+      respond_to do |format|
+        format.html
+        format.json { render json: @presenter.as_json }
+      end
     end
   end
 
@@ -57,5 +94,74 @@ class RoomsController < ApplicationController
   def filter_params
     params.permit(:building, :room, :unit_id, :capacity_min, :capacity_max,
                   :sort, :per, :view, characteristics: [])
+  end
+
+  # D14 ETag components: the room + its contact record (both attribute-level
+  # changes), admin-ness (admins get the inactive banner/edit affordances —
+  # a distinct cache entry per role), and the max updated_at across notes
+  # (own + the building's, since the show page renders both) and every media
+  # attachment. `@room` and `@room.room_contact` are ActiveRecord objects, so
+  # Rails' combine_etags digests their cache_key (class + id + updated_at) —
+  # a `room_contact` update alone (no `Room#updated_at` bump) still busts it.
+  #
+  # REQUIRED CORRECTION vs. the brief: `media_attachments.maximum(:updated_at)`
+  # raises `SQLite3::SQLException: no such column: updated_at` —
+  # `active_storage_attachments` (db/schema.rb) has only `created_at`, not
+  # `updated_at`; attachment rows are immutable (attach/detach creates or
+  # destroys a row rather than updating one in place), so `created_at` is not
+  # just the fix but the semantically correct column: a newly-attached photo
+  # or gallery image is a brand-new row whose `created_at` bumps the max.
+  def show_cache_key
+    [ @room, @room.room_contact, RoleResolver.for(Current.user).admin?,
+      @room.notes.maximum(:updated_at), @room.building.notes.maximum(:updated_at),
+      media_attachments.maximum(:created_at) ]
+  end
+
+  def show_last_modified
+    [ @room.updated_at, @room.notes.maximum(:updated_at),
+      @room.building.notes.maximum(:updated_at),
+      media_attachments.maximum(:created_at) ].compact.max
+  end
+
+  # Every attachment the show page can render: the room's own has_one_attached
+  # trio (photo/panorama/seating_chart — all `record_type: "Room"`) plus each
+  # gallery image's attached `image` (`record_type: "RoomGalleryImage"`).
+  def media_attachments
+    ActiveStorage::Attachment.where(record_type: "Room", record_id: @room.id)
+      .or(ActiveStorage::Attachment.where(record_type: "RoomGalleryImage", record_id: @room.gallery_image_ids))
+  end
+
+  def set_room
+    # for_current_workspace keeps tenant isolation (CLAUDE.md deviation #1: no
+    # unscoped `Room.find`) but does NOT filter by listed/hidden, so hidden
+    # rooms stay findable here for the inactive-redirect/admin-banner logic
+    # below.
+    @room = Room.for_current_workspace.find(params[:id])
+  end
+
+  def redirect_inactive_for_non_admins
+    return unless @room.hidden?
+    return if RoleResolver.for(Current.user).admin?
+    redirect_to find_a_room_path, notice: t("rooms.inactive_notice")
+  end
+
+  # ADDITIONAL GAP found (beyond the brief): `RoomPresenter#media_json` builds
+  # attachment URLs via `Rails.application.routes.url_helpers.rails_blob_url`
+  # — the bare route-helpers module, not the controller's own `_url` helpers
+  # (RoomPresenter is a PORO with no view/controller context — see its own
+  # header comment). That module reads `Rails.application.routes.default_url_options`
+  # for the host, which is a *global*, request-independent default — nothing
+  # in this app sets it (only `action_mailer.default_url_options` exists), so
+  # any room with a real attachment 500s here with `ArgumentError: Missing
+  # host to link to!` the first time it's actually exercised (this task is the
+  # first caller to invoke the presenter from a live request rather than a
+  # lib spec with a manually-stubbed host). Fixed at the narrowest point that
+  # doesn't touch RoomPresenter (out of scope for this task) or the global
+  # environment configs (outside this task's file list): learn the host once
+  # from the current request. Safe as a shared/memoized global specifically
+  # because this app is single-host (CLAUDE.md: "single-host topology") — every
+  # request has the same host, so this can never thrash between values.
+  def ensure_url_helpers_have_a_host
+    Rails.application.routes.default_url_options[:host] ||= request.host
   end
 end

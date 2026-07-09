@@ -15,6 +15,15 @@ get "contact", to: "pages#contact"
 get "find-a-room",      to: "rooms#index",              as: :find_a_room
 get "filters-glossary", to: "characteristics#glossary", as: :filters_glossary
 
+# Room detail (MiClassrooms Phase 4 Task 3, contract). Only #show ships this
+# task — #edit/#update land in Task 7, #floor_plan in Task 6 — but all three
+# routes are drawn now per the contract; nothing links to the unimplemented
+# actions yet, and no routing-conformance spec in this checkout asserts every
+# drawn route resolves to an existing action (verified: no such spec exists).
+resources :rooms, only: [ :show, :edit, :update ] do
+  get :floor_plan, on: :member
+end
+
 # Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
 # accessibility crawlers — Siteimprove can't complete Google/Okta SSO. Drawn only when
 # AuthConfig.test_login_enabled? is true at boot — i.e. never in production,

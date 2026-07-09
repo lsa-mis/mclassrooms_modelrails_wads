@@ -1,5 +1,6 @@
 en:
   rooms:
+    inactive_notice: "That room is no longer listed."
     show:
       capacity: "%{students} students · %{ada} ADA-accessible seats"
     index:
