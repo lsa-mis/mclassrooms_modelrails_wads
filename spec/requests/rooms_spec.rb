@@ -478,6 +478,20 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.headers["ETag"]).not_to eq(etag)
     end
 
+    it "busts the ETag when the room's contact info changes" do
+      contact = create(:room_contact, room: room, workspace: workspace)
+
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+
+      contact.update!(scheduling_email: "new@umich.edu")
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
     it "busts the ETag when a gallery image is added" do
       get room_path(room), as: :json
       etag = response.headers["ETag"]
@@ -504,6 +518,71 @@ RSpec.describe "GET /rooms/:id", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
+    it "busts the ETag when a photo attachment is replaced" do
+      room.photo.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "room.png",
+        content_type: "image/png"
+      )
+
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+
+      # has_one_attached replace = purge the old attachment row + create a new
+      # one (never an UPDATE-in-place), so the new row's created_at becomes
+      # the new max — proving media_attachments.maximum(:created_at) tracks
+      # replace, not just first-insert.
+      room.photo.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "room-replacement.png",
+        content_type: "image/png"
+      )
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
+    it "busts the ETag when a photo attachment is removed" do
+      room.photo.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "room.png",
+        content_type: "image/png"
+      )
+
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+
+      # purge (not purge_later): the row must be gone before the very next
+      # request. media_attachments.maximum(:created_at) drops to nil, which
+      # show_last_modified's `.compact.max` already tolerates.
+      room.photo.purge
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
+    it "produces a different ETag for an admin than a viewer of the same room" do
+      get room_path(room), as: :json
+      viewer_etag = response.headers["ETag"]
+
+      Membership.find_by!(user: viewer, workspace: workspace).update!(role: Role.system_default!("admin"))
+      # Re-signing in (rather than just re-roling and reusing the session)
+      # leaves a fresh "Signed in successfully." flash — same warm-up-drain
+      # concern as the outer before block, so drain it before the comparison
+      # request.
+      sign_in(viewer)
+      get room_path(room), as: :json
+
+      get room_path(room), as: :json
+      admin_etag = response.headers["ETag"]
+
+      expect(admin_etag).not_to eq(viewer_etag)
     end
 
     it "sets a private Cache-Control and never no-store" do

@@ -22,7 +22,6 @@ class RoomsController < ApplicationController
   # the same commit that defines those methods.
   before_action :set_room, only: [ :show ]
   before_action :redirect_inactive_for_non_admins, only: [ :show ]
-  before_action :ensure_url_helpers_have_a_host, only: [ :show ]
 
   def index
     authorize Room
@@ -143,25 +142,5 @@ class RoomsController < ApplicationController
     return unless @room.hidden?
     return if RoleResolver.for(Current.user).admin?
     redirect_to find_a_room_path, notice: t("rooms.inactive_notice")
-  end
-
-  # ADDITIONAL GAP found (beyond the brief): `RoomPresenter#media_json` builds
-  # attachment URLs via `Rails.application.routes.url_helpers.rails_blob_url`
-  # — the bare route-helpers module, not the controller's own `_url` helpers
-  # (RoomPresenter is a PORO with no view/controller context — see its own
-  # header comment). That module reads `Rails.application.routes.default_url_options`
-  # for the host, which is a *global*, request-independent default — nothing
-  # in this app sets it (only `action_mailer.default_url_options` exists), so
-  # any room with a real attachment 500s here with `ArgumentError: Missing
-  # host to link to!` the first time it's actually exercised (this task is the
-  # first caller to invoke the presenter from a live request rather than a
-  # lib spec with a manually-stubbed host). Fixed at the narrowest point that
-  # doesn't touch RoomPresenter (out of scope for this task) or the global
-  # environment configs (outside this task's file list): learn the host once
-  # from the current request. Safe as a shared/memoized global specifically
-  # because this app is single-host (CLAUDE.md: "single-host topology") — every
-  # request has the same host, so this can never thrash between values.
-  def ensure_url_helpers_have_a_host
-    Rails.application.routes.default_url_options[:host] ||= request.host
   end
 end
