@@ -32,6 +32,17 @@ end
 # #edit/#update).
 resources :buildings, only: [ :index, :show, :edit, :update ]
 
+# Admin bulk upload (MiClassrooms Phase 4 Task 11, Brief §5.3): a stateless
+# drop -> review -> commit flow with NO persisted model, so only :new/:create
+# are drawn — a deliberate SUBSET of the roadmap contract's bare
+# `resources :bulk_uploads`. There is no row to #show/#edit/#update/#destroy;
+# the "review" step is just #create re-rendering a template (params[:confirmed]
+# unset) rather than a separate route, and the final commit redirects back to
+# #new rather than to a #show that doesn't exist.
+namespace :admin do
+  resources :bulk_uploads, only: [ :new, :create ]
+end
+
 # Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
 # accessibility crawlers — Siteimprove can't complete Google/Okta SSO. Drawn only when
 # AuthConfig.test_login_enabled? is true at boot — i.e. never in production,

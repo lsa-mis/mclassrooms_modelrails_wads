@@ -1,0 +1,130 @@
+<%# MiClassrooms Phase 4 Task 11 (Brief §5.3, §14.1): step 2 of the stateless
+    bulk-upload flow — BulkUploadsController#create rendered this (rather than
+    redirecting) because `params[:confirmed] != "1"`. @report is
+    BulkUpload::Matcher::Report (Task 10): `matched` (blob/room/slot triples)
+    and `unmatched` (blob/reason pairs). Nothing here is persisted yet — the
+    confirm form below re-POSTs the SAME signed_blob_ids (matched AND
+    unmatched, so a stale/purged id can be caught again) plus `confirmed: "1"`,
+    and #create re-runs the Matcher from scratch rather than trusting
+    anything about this render.
+
+    Tables are hand-rolled (not UI::DataTableComponent): the shared
+    component's `<th>` cells don't emit `scope="col"`, which this page's a11y
+    contract requires explicitly (see task brief); a static admin review of a
+    single dropped batch also has no real use for DataTableComponent's
+    client-side search/sort/pagination. `<caption>` is `sr-only` — the
+    `UI::CardTitleComponent` heading right above each table already gives
+    sighted users the same text visually; the caption still gives screen
+    reader users the table's accessible name without doubling the visible
+    text.
+
+    Replace-warning (Brief a11y note): TEXT, not color-only — the
+    `UI::IndicatorComponent` dot is a purely decorative accent anchored on a
+    warning icon (`aria-hidden`); the actual accessible signal is the
+    sibling `<span>` of visible, localized text. %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+
+  <%= ui :card do %>
+    <%= ui :card_header do %>
+      <%= ui :card_title, t(".matched_heading"), level: 2 %>
+    <% end %>
+    <%= ui :card_content do %>
+      <% if @report.matched.any? %>
+        <div class="overflow-auto rounded-lg border border-border">
+          <table class="w-full text-sm">
+            <caption class="sr-only"><%= t(".matched_heading") %></caption>
+            <thead class="bg-surface-sunken/40">
+              <tr>
+                <th scope="col" class="h-11 px-4 text-left align-middle font-medium text-text-muted">
+                  <%= t(".column_filename") %>
+                </th>
+                <th scope="col" class="h-11 px-4 text-left align-middle font-medium text-text-muted">
+                  <%= t(".column_room") %>
+                </th>
+                <th scope="col" class="h-11 px-4 text-left align-middle font-medium text-text-muted">
+                  <%= t(".column_slot") %>
+                </th>
+                <th scope="col" class="h-11 px-4 text-left align-middle font-medium text-text-muted">
+                  <%= t(".column_notice") %>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @report.matched.each do |match| %>
+                <tr class="border-t border-border">
+                  <td class="px-4 py-3 align-middle text-text-body"><%= match.blob.filename.to_s %></td>
+                  <td class="px-4 py-3 align-middle">
+                    <%= link_to match.room.display_name, room_path(match.room),
+                          class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+                  </td>
+                  <td class="px-4 py-3 align-middle">
+                    <%= ui :badge, t(".slot.#{match.slot}"), variant: :soft, tone: :info %>
+                  </td>
+                  <td class="px-4 py-3 align-middle">
+                    <% if match.room.public_send(match.slot).attached? %>
+                      <div class="flex items-center gap-2">
+                        <%= ui :indicator, variant: :warning do %>
+                          <%= icon(:exclamation_triangle, size: :sm, class: "text-warning-icon") %>
+                        <% end %>
+                        <span class="text-sm text-warning"><%= t(".will_replace") %></span>
+                      </div>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-sm text-text-muted"><%= t(".no_matched") %></p>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= ui :card do %>
+    <%= ui :card_header do %>
+      <%= ui :card_title, t(".unmatched_heading"), level: 2 %>
+    <% end %>
+    <%= ui :card_content do %>
+      <% if @report.unmatched.any? %>
+        <div class="overflow-auto rounded-lg border border-border">
+          <table class="w-full text-sm">
+            <caption class="sr-only"><%= t(".unmatched_heading") %></caption>
+            <thead class="bg-surface-sunken/40">
+              <tr>
+                <th scope="col" class="h-11 px-4 text-left align-middle font-medium text-text-muted">
+                  <%= t(".column_filename") %>
+                </th>
+                <th scope="col" class="h-11 px-4 text-left align-middle font-medium text-text-muted">
+                  <%= t(".column_reason") %>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @report.unmatched.each do |unmatched| %>
+                <tr class="border-t border-border">
+                  <td class="px-4 py-3 align-middle text-text-body"><%= unmatched.blob.filename.to_s %></td>
+                  <td class="px-4 py-3 align-middle text-text-body"><%= t(".reason.#{unmatched.reason}") %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-sm text-text-muted"><%= t(".no_unmatched") %></p>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: admin_bulk_uploads_path, method: :post, class: "flex items-center gap-4" do |form| %>
+    <% (@report.matched.map(&:blob) + @report.unmatched.map(&:blob)).each do |blob| %>
+      <%= hidden_field_tag "signed_blob_ids[]", blob.signed_id %>
+    <% end %>
+    <%= hidden_field_tag :confirmed, "1" %>
+    <%= form.submit t(".confirm") %>
+    <%= link_to t(".back"), new_admin_bulk_upload_path, class: "btn-secondary" %>
+  <% end %>
+</div>
