@@ -357,3 +357,214 @@ RSpec.describe "GET /find-a-room", type: :request do
     end
   end
 end
+
+# MiClassrooms Phase 4 Task 3 (Brief §5.3, phase-4 plan Task 3): room detail —
+# HTML + JSON, D14 conditional GET, and the hidden-room redirect. A sibling
+# top-level example group (not nested in "GET /find-a-room" above) so its
+# ETag-busting mutations (notes, gallery images, attachments) can't leak
+# state into the Find-a-Room examples. Mirrors the same tenancy setup:
+# shared-posture stub + workspace-scoped fixtures + `sign_in`.
+#
+# `app/views/rooms/show.html.erb` doesn't exist yet — it ships in Task 4 — so
+# every example below requests `as: :json` even where the brief's language
+# ("200 on a listed room") doesn't name a format; an unqualified HTML request
+# would hit `respond_to`'s `format.html` branch and raise
+# ActionView::MissingTemplate before Task 4 adds the view. The hidden-room
+# redirect is safe to request in the default (HTML) format because it fires
+# from a before_action, before the controller ever reaches `respond_to`.
+RSpec.describe "GET /rooms/:id", type: :request do
+  let(:workspace) { create(:workspace, slug: "rooms-show-spec-workspace", personal: false) }
+
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+  end
+
+  # Same reuse-and-re-role pattern as the Find-a-Room spec above (see that
+  # file's comment): `create(:user)` auto-joins `workspace` via
+  # `User#onboard_workspace` under the :shared posture stubbed here.
+  def membership_with(slug)
+    user = create(:user)
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    membership.update!(role: Role.system_default!(slug))
+    user
+  end
+
+  let(:building) { create(:building, workspace: workspace) }
+  let!(:room) { create(:room, building: building, workspace: workspace, facility_code: "MLB1001") }
+
+  describe "as a signed-in viewer" do
+    let(:viewer) { membership_with("viewer") }
+
+    before { sign_in(viewer) }
+
+    it "returns 200 for a listed room" do
+      get room_path(room), as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "redirects a hidden room to Find a Room with the inactive notice" do
+      hidden_room = create(:room, :hidden, building: building, workspace: workspace)
+
+      get room_path(hidden_room)
+
+      expect(response).to redirect_to(find_a_room_path)
+      expect(flash[:notice]).to eq(I18n.t("rooms.inactive_notice"))
+    end
+  end
+
+  describe "as an admin" do
+    let(:admin) { membership_with("admin") }
+
+    before { sign_in(admin) }
+
+    it "returns 200 for a hidden room instead of redirecting" do
+      hidden_room = create(:room, :hidden, building: building, workspace: workspace)
+
+      get room_path(hidden_room), as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
+  describe "conditional GET (D14)" do
+    let(:viewer) { membership_with("viewer") }
+
+    before do
+      sign_in(viewer)
+      # Rails' built-in ActionController::EtagWithFlash folds `flash` into the
+      # ETag (so a stale cache never hides a flash message) — `sign_in`'s
+      # `post session_path` leaves a "Signed in successfully." notice that
+      # would otherwise survive into the FIRST request below and inflate that
+      # request's ETag with flash content the second, comparison request
+      # never sees (flash is one-request-lived), producing a spurious
+      # mismatch unrelated to the room. This warm-up request drains it before
+      # any example starts comparing ETags across two requests.
+      get room_path(room), as: :json
+    end
+
+    it "returns 304 when If-None-Match matches the prior response's ETag" do
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+      expect(etag).to be_present
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:not_modified)
+    end
+
+    it "busts the ETag when a note on the room changes" do
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+
+      create(:note, notable: room, workspace: workspace)
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
+    it "busts the ETag when the building's note changes" do
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+
+      create(:note, notable: building, workspace: workspace)
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
+    it "busts the ETag when a gallery image is added" do
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+
+      create(:room_gallery_image, room: room, workspace: workspace)
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
+    it "busts the ETag when a media attachment (photo) is added" do
+      get room_path(room), as: :json
+      etag = response.headers["ETag"]
+
+      room.photo.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "room.png",
+        content_type: "image/png"
+      )
+
+      get room_path(room), headers: { "If-None-Match" => etag }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["ETag"]).not_to eq(etag)
+    end
+
+    it "sets a private Cache-Control and never no-store" do
+      get room_path(room), as: :json
+
+      expect(response.headers["Cache-Control"]).to include("private")
+      expect(response.headers["Cache-Control"]).not_to include("no-store")
+    end
+  end
+
+  describe "JSON shape" do
+    let(:viewer) { membership_with("viewer") }
+    let(:unit) { create(:unit, workspace: workspace) }
+    let(:floor) { create(:floor, building: building, workspace: workspace, label: "3") }
+    let!(:full_room) do
+      create(:room, building: building, workspace: workspace, unit: unit, floor: floor,
+             facility_code: "MLB3001", nickname: "The Lounge", room_number: "3001",
+             room_type: "Classroom", square_feet: 500,
+             instructional_seat_count: 40, ada_seat_count: 2)
+    end
+
+    before do
+      # Normalization-stable short_code (RoomCharacteristic#short_code is NOT
+      # model-normalized, unlike CharacteristicDisplayRule#short_code, which
+      # goes through CodeNormalizer — an underscore here would only matter if
+      # this spec also created a matching display rule, which it doesn't).
+      create(:room_characteristic, room: full_room, workspace: workspace, short_code: "projector")
+      create(:room_contact, room: full_room, workspace: workspace)
+      sign_in(viewer)
+    end
+
+    it "renders the full room-show JSON contract" do
+      get room_path(full_room), as: :json
+
+      json = response.parsed_body
+
+      expect(json.keys).to match_array(
+        %w[id rmrecnbr facility_code display_name nickname building floor_label room_number room_type
+           square_feet instructional_seat_count ada_seat_count department characteristics media contacts url]
+      )
+      expect(json["id"]).to eq(full_room.id)
+      expect(json["rmrecnbr"]).to eq(full_room.rmrecnbr)
+      expect(json["facility_code"]).to eq(full_room.facility_code)
+      expect(json["display_name"]).to eq(full_room.display_name)
+      expect(json["nickname"]).to eq("The Lounge")
+      expect(json["building"]).to eq(
+        "id" => building.id, "name" => building.name, "abbreviation" => building.abbreviation
+      )
+      expect(json["floor_label"]).to eq("3")
+      expect(json["room_number"]).to eq("3001")
+      expect(json["room_type"]).to eq("Classroom")
+      expect(json["square_feet"]).to eq(500)
+      expect(json["instructional_seat_count"]).to eq(40)
+      expect(json["ada_seat_count"]).to eq(2)
+      expect(json["department"].keys).to match_array(%w[id description group group_description])
+      expect(json["characteristics"]).to eq([ "projector" ])
+      expect(json["media"].keys).to match_array(
+        %w[photo_url thumbnail_url panorama_url seating_chart_url gallery_urls]
+      )
+      expect(json["contacts"]).to be_present
+      expect(json["url"]).to eq(room_url(full_room))
+    end
+  end
+end
