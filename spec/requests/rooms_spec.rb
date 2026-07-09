@@ -239,4 +239,90 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(seen_ids).not_to include(*non_matching_rooms.map(&:id))
     end
   end
+
+  # MiClassrooms Phase 3 Task 5 (Brief §5.2): the filter form + results Turbo
+  # Frame + admin view toggles. A basic render/interaction check per the task
+  # brief — the comprehensive axe-AAA pass is Task 8; this only proves the
+  # screen assembles (frame id, fieldset/legend groups, summary line) and that
+  # a filter change narrows the SAME frame's results without a full reload.
+  describe "Task 5 UI: filter form, results frame, admin toggles" do
+    let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
+    let!(:listed_classroom) { create(:room, building: building, workspace: workspace, facility_code: "MLB1001") }
+
+    before do
+      # A described characteristic ("Category: Value") so CharacteristicFilterGroups
+      # produces a real named group — proves the fieldset/legend-per-group markup,
+      # not just the "Other" catch-all a bare short_code would fall into.
+      create(:room_characteristic, room: listed_classroom, workspace: workspace,
+             short_code: "seating_fixed", description: "Seating: Fixed")
+    end
+
+    it "renders the results Turbo Frame with a fieldset/legend per filter group" do
+      sign_in(membership_with("viewer"))
+
+      get find_a_room_path
+
+      expect(response.body).to include('id="find_a_room_results"')
+      expect(response.body).to include("<fieldset")
+      expect(response.body).to include("<legend")
+      expect(response.body).to include("Seating")
+    end
+
+    it "shows the active-filter summary line when a building filter is applied" do
+      sign_in(membership_with("viewer"))
+
+      get find_a_room_path, params: { building: "Mason" }
+
+      expect(response.body).to include(I18n.t("rooms.index.summary.building", value: "Mason"))
+    end
+
+    it "re-renders only the matching rooms when a filter narrows the result set (no full reload)" do
+      other_building = create(:building, workspace: workspace, name: "Angell Hall")
+      other_room = create(:room, building: other_building, workspace: workspace, facility_code: "ANG2000")
+      sign_in(membership_with("viewer"))
+
+      get find_a_room_path, params: { building: "Mason" }
+
+      expect(response.body).to include('id="find_a_room_results"')
+      expect(response.body).to include(listed_classroom.display_name)
+      expect(response.body).not_to include(other_room.display_name)
+    end
+
+    it "hides the admin-only view toggles from a viewer" do
+      sign_in(membership_with("viewer"))
+
+      get find_a_room_path
+
+      expect(response.body).not_to include(I18n.t("rooms.index.views.inactive_rooms"))
+    end
+
+    it "shows the admin-only view toggles to an admin" do
+      sign_in(membership_with("admin"))
+
+      get find_a_room_path
+
+      expect(response.body).to include(I18n.t("rooms.index.views.inactive_rooms"))
+      expect(response.body).to include(I18n.t("rooms.index.views.inactive_buildings"))
+    end
+
+    # Exercises the row branches a bare factory room never touches: a gallery
+    # thumbnail (Active Storage variant), the ADA badge, a real characteristic
+    # icon chip (icon_key must resolve via IconRegistry — the display_rule
+    # factory's own default "wifi" isn't a real icon, so this proves the
+    # happy path with one that is), and the building card. None of this is
+    # covered elsewhere, so a regression here (e.g. a bad variant call) would
+    # otherwise only surface in Task 8's system specs.
+    it "renders a gallery thumbnail, ADA badge, characteristic icon chip, and building card" do
+      listed_classroom.update!(ada_seat_count: 5)
+      create(:room_gallery_image, room: listed_classroom, workspace: workspace)
+      create(:characteristic_display_rule, workspace: workspace, short_code: "seating_fixed", icon_key: "computer_desktop")
+      sign_in(membership_with("viewer"))
+
+      get find_a_room_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(I18n.t("rooms.row.ada", count: 5))
+      expect(response.body).to include(I18n.t("rooms.building_card.classroom_count", count: 1))
+    end
+  end
 end

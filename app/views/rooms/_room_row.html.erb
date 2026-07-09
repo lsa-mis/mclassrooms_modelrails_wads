@@ -1,0 +1,70 @@
+<%# locals: (room:) %>
+<%# MiClassrooms Phase 3 Task 5 (Brief §5.2): one result row per room. A native
+    <details>/<summary> disclosure — no JS needed for keyboard operability or
+    the expand/collapse semantics (Enter/Space on the focused summary toggles
+    it; screen readers announce the expanded state natively). No link to
+    rooms#show: that route ships in phase 4, so the row's summary IS the
+    interactive surface. %>
+<li>
+  <details class="group border-b border-border last:border-b-0">
+    <summary class="list-none min-h-11 flex flex-wrap items-center gap-4 py-3 px-2 -mx-2
+                    cursor-pointer rounded-md focus-ring">
+      <% if (thumbnail = room_thumbnail_image(room)) %>
+        <%= ui :image,
+              src: url_for(thumbnail.image.variant(resize_to_fill: [ 96, 96 ])),
+              alt: room.display_name,
+              class: "size-16 rounded-md object-cover shrink-0" %>
+      <% else %>
+        <span class="size-16 rounded-md bg-surface-sunken flex items-center justify-center shrink-0" aria-hidden="true">
+          <%= icon(:camera, size: :md, class: "text-text-muted") %>
+        </span>
+        <span class="sr-only"><%= t("rooms.row.no_thumbnail") %></span>
+      <% end %>
+
+      <span class="flex-1 min-w-40">
+        <span class="block font-medium text-text-heading"><%= room.display_name %></span>
+        <span class="block text-sm text-text-muted"><%= room.building.display_name %></span>
+      </span>
+
+      <span class="flex items-center gap-2 shrink-0">
+        <span class="text-sm text-text-body">
+          <%= t("rooms.row.capacity", count: room.instructional_seat_count.to_i) %>
+        </span>
+        <% if room.ada_seat_count.to_i.positive? %>
+          <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :info %>
+        <% end %>
+      </span>
+
+      <span class="flex items-center gap-1.5 shrink-0">
+        <% room_characteristic_icons(room).each do |icon_key, label| %>
+          <%= ui :tooltip, text: label, side: :top do %>
+            <span class="sr-only"><%= label %></span>
+            <%= icon(icon_key, size: :sm, class: "text-text-muted") %>
+          <% end %>
+        <% end %>
+      </span>
+
+      <%= icon(:chevron_down, size: :sm,
+            class: "text-text-muted shrink-0 transition-transform group-open:rotate-180") %>
+    </summary>
+
+    <div class="pl-2 pb-4 pt-1 text-sm text-text-body space-y-1">
+      <% if room.floor %>
+        <p><span class="font-medium text-text-heading"><%= t("rooms.row.floor") %>:</span> <%= room.floor.label %></p>
+      <% end %>
+      <% if room.room_number.present? %>
+        <p><span class="font-medium text-text-heading"><%= t("rooms.row.room_number") %>:</span> <%= room.room_number %></p>
+      <% end %>
+      <% if room.unit %>
+        <p><span class="font-medium text-text-heading"><%= t("rooms.row.unit") %>:</span> <%= room.unit.display_name %></p>
+      <% end %>
+      <% labels = room_characteristic_labels(room) %>
+      <% if labels.any? %>
+        <p>
+          <span class="font-medium text-text-heading"><%= t("rooms.row.characteristics_heading") %>:</span>
+          <%= labels.join(", ") %>
+        </p>
+      <% end %>
+    </div>
+  </details>
+</li>

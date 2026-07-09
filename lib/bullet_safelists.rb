@@ -54,14 +54,15 @@ module BulletSafelists
     # row to render name + icon without an N+1.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Membership", association: :workspace)
 
-    # RoomSearch#results (Find a Room, phase 3 Task 2) preloads the associations the
-    # index CARDS need per room — building/floor labels, characteristic chips, gallery
-    # thumbnail — so the phase-4 view renders a page of rooms without N+1ing. The
-    # RoomSearch unit spec exercises filtering/sorting only (no view render), so it
-    # never dereferences these; safelisted rather than dropped so the real controller
-    # path keeps the guard.
+    # RoomSearch#results (Find a Room, phase 3 Tasks 2 + 5) preloads the associations
+    # the index ROWS need per room — building/floor labels, unit display name,
+    # characteristic chips, gallery thumbnail — so the view renders a page of rooms
+    # without N+1ing. The RoomSearch unit spec exercises filtering/sorting only (no
+    # view render), so it never dereferences these; safelisted rather than dropped
+    # so the real controller path keeps the guard.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :building)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :floor)
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :unit)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :room_characteristics)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :gallery_images)
   end
