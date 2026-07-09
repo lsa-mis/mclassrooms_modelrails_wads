@@ -15,7 +15,17 @@ RSpec.describe "Find a Room", type: :system do
   # same name raises an "already initialized constant" warning when both
   # load in the same process) — matches spec/system/docs_spec.rb's
   # `axe_options` convention.
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  #
+  # Full conformance set (A + AA + AAA), not just wcag2aaa: axe's wcag2aaa
+  # tag only covers the 3 AAA-only rules (color-contrast-enhanced,
+  # identical-links-same-purpose, meta-refresh-no-exceptions). Baseline
+  # rules like label/button-name/aria-*/image-alt are tagged wcag2a/wcag2aa
+  # and never run under a wcag2aaa-only filter, even though AAA conformance
+  # requires A + AA + AAA per WCAG 2.2 §5. Product screens audit the full
+  # set; the shared CI after-each hook in playwright_accessibility.rb is
+  # left at wcag2aaa only so this fix doesn't blast-radius the template's
+  # own specs.
+  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
 
   # `find_a_room` runs under DirectoryScoped, which sets Current.workspace to
   # the ONE shared workspace resolved by TenancyConfig.shared_workspace_slug,

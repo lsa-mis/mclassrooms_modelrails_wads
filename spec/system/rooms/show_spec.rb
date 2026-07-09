@@ -85,14 +85,20 @@ RSpec.describe "Room show", type: :system do
 
   before { sign_in_via_form(user) }
 
-  # Scopes the axe sweep to WCAG 2.2 AAA (the project's compliance target,
-  # matching every other full-page axe spec, e.g. static_pages_spec.rb) —
-  # unscoped `axe.run({})` also picks up axe's own best-practice-only rules
-  # (aria-prohibited-attr, region/landmarks) against shared/_toasts.html.erb's
-  # always-present, currently-empty toast containers. Those are a pre-existing,
-  # page-independent condition (every page renders them) and not WCAG
-  # failures, so out of scope for this task.
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  # Scopes the axe sweep to the full WCAG 2.2 conformance set (A + AA + AAA,
+  # the project's compliance target). wcag2aaa alone only runs axe's 3
+  # AAA-only rules (color-contrast-enhanced, identical-links-same-purpose,
+  # meta-refresh-no-exceptions) — baseline rules (label, button-name,
+  # image-alt, aria-prohibited-attr, etc.) are tagged wcag2a/wcag2aa and were
+  # never exercised under that filter. See find_a_room_spec.rb.
+  #
+  # Widening this surfaced a real aria-prohibited-attr failure (wcag2a,
+  # SC 4.1.2): shared/_toasts.html.erb's always-present `#toast-pills` /
+  # `#toast-cards` containers had `aria-label` on a bare `<div>` (implicit
+  # role "generic", which doesn't support naming). Fixed at the source by
+  # adding `role="region"` to both containers — every page benefits, not
+  # just this one.
+  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
 
   it "renders the header, chips, media, notes, and share accessibly in both themes" do
     visit room_path(room)
