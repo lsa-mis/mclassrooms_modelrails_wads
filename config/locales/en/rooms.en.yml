@@ -32,6 +32,13 @@ en:
         support_link_label: "Support page"
         support_link: "Visit support page"
       not_available: "Not available"
+      photo_alt: "Photo of %{room}"
+      gallery_alt: "Photo %{position} of %{room}"
+      panorama_label: "360° panorama of %{room}"
+      load_panorama: "Load 360° view"
+      panorama_hint: "Opens an interactive 360° view. Drag or use the arrow keys to look around once it loads."
+      seating_chart_link: "Seating chart for %{room} (PDF)"
+      floor_plan_link: "View floor plan"
       notes_heading: "Notes"
       building_notes_heading: "Building notes"
       share:

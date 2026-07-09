@@ -1,11 +1,10 @@
 require "rails_helper"
 
-# MiClassrooms Phase 4 Task 4 (Brief §5.3): starter system-spec coverage for
-# the room detail page. Task 5 completes this file with the media suite
-# (photo/gallery/panorama/seating-chart) plus the axe-AAA both-themes sweep —
-# this task only asserts the HTML that already renders without media: the
-# h1, the capacity line, a characteristic chip's visible label, the "Not
-# Available" contact fallback, and the share confirmation text. Mirrors
+# MiClassrooms Phase 4 Task 5 (Brief §5.3): full system-spec coverage for the
+# room detail page — header, characteristic chips, contact fallback, notes,
+# the media suite (photo lightbox, gallery, panorama, seating chart, floor
+# plan), the share confirmation, and the axe-AAA both-themes sweep (the
+# definitive a11y gate for the whole page, media included). Mirrors
 # spec/system/find_a_room_spec.rb's tenancy setup: shared-posture stub +
 # workspace-scoped building/room fixtures + sign_in_via_form.
 RSpec.describe "Room show", type: :system do
@@ -17,8 +16,9 @@ RSpec.describe "Room show", type: :system do
   end
 
   let!(:building) { create(:building, name: "Mason Hall", workspace: workspace) }
+  let!(:floor) { create(:floor, building: building, workspace: workspace, label: "2") }
   let!(:room) do
-    create(:room, building: building, workspace: workspace, room_number: "1200",
+    create(:room, building: building, workspace: workspace, floor: floor, room_number: "1200",
            facility_code: "MAS1200", instructional_seat_count: 80, ada_seat_count: 2)
   end
 
@@ -67,9 +67,34 @@ RSpec.describe "Room show", type: :system do
            body: "Building elevator under maintenance")
   end
 
+  # Task 5: the full media suite, attached so every branch of
+  # rooms/_media.html.erb renders real markup for the axe sweep below (not
+  # just the "nothing attached" fallback). `room.jpg`/`seating_chart.pdf` are
+  # dedicated fixtures (marcel-identified as image/jpeg and application/pdf
+  # respectively); the gallery reuses the shared avatar.png fixture via the
+  # :room_gallery_image factory.
+  before do
+    room.photo.attach(io: file_fixture("room.jpg").open,
+                       filename: "MAS1200.jpg", content_type: "image/jpeg")
+    room.panorama.attach(io: file_fixture("room.jpg").open,
+                          filename: "MAS1200-360.jpg", content_type: "image/jpeg")
+    room.seating_chart.attach(io: file_fixture("seating_chart.pdf").open,
+                               filename: "MAS1200-seating.pdf", content_type: "application/pdf")
+    create_list(:room_gallery_image, 2, room: room, workspace: workspace)
+  end
+
   before { sign_in_via_form(user) }
 
-  it "renders the header, a characteristic chip, a contact fallback, and the share confirmation" do
+  # Scopes the axe sweep to WCAG 2.2 AAA (the project's compliance target,
+  # matching every other full-page axe spec, e.g. static_pages_spec.rb) —
+  # unscoped `axe.run({})` also picks up axe's own best-practice-only rules
+  # (aria-prohibited-attr, region/landmarks) against shared/_toasts.html.erb's
+  # always-present, currently-empty toast containers. Those are a pre-existing,
+  # page-independent condition (every page renders them) and not WCAG
+  # failures, so out of scope for this task.
+  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+
+  it "renders the header, chips, media, notes, and share accessibly in both themes" do
     visit room_path(room)
 
     expect(page).to have_selector("h1", text: room.display_name)
@@ -92,7 +117,36 @@ RSpec.describe "Room show", type: :system do
     expect(page).to have_content(room_plain_note.body.to_plain_text)
     expect(page).to have_content(building_note.body.to_plain_text)
 
+    # Photo lightbox: UI::Dialog's own `modal` controller owns the focus
+    # trap/Escape/restore — no bespoke JS needed. Opening the dialog shows
+    # the full-size image; Escape closes it and returns focus to the thumb
+    # that opened it (modal_controller#open records document.activeElement,
+    # #close refocuses it).
+    # Scoped to the native `dialog` tag (not the bare `[role='dialog']`
+    # attribute selector) — biscuit-rails' cookie-consent banner also carries
+    # `role="dialog"` on a plain `<div>`, and it stays on the page throughout,
+    # so an unscoped selector both false-matches it opened and never closes
+    # it after Escape.
+    find("[data-testid='room-photo-thumb']").click
+    expect(page).to have_css("dialog[role='dialog'] img")
+    send_keys(:escape)
+    expect(page).to have_no_css("dialog[role='dialog']")
+    expect(page.evaluate_script("document.activeElement.dataset.testid")).to eq("room-photo-thumb")
+
+    # Panorama: assert the opt-in "Load 360°" button is present, not a
+    # booted WebGL viewer — headless Chromium may lack WebGL, and the point
+    # of the click-to-load design is that nothing renders until this button
+    # is pressed.
+    expect(page).to have_button(I18n.t("rooms.show.load_panorama"))
+
+    # Floor-plan link renders (the room has a floor) but is NOT clicked —
+    # RoomsController#floor_plan ships in Task 6, so the route 500s until then.
+    expect(page).to have_link(I18n.t("rooms.show.floor_plan_link"))
+
     click_button I18n.t("rooms.show.share.button")
     expect(page).to have_content(I18n.t("rooms.show.share.copied"))
+
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
 end
