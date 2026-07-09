@@ -1,6 +1,9 @@
 en:
   rooms:
     index:
+      title: "Find a Room"
+      empty: "No rooms match your filters."
+      pagination: "Page %{page} of %{pages}"
       summary:
         building: "Building: %{value}"
         room: "Room: %{value}"
