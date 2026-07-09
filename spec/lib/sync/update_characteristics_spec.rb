@@ -121,6 +121,53 @@ RSpec.describe Sync::UpdateCharacteristics do
       whiteboard = room.room_characteristics.find_by!(code: "WHTBD25")
       expect(whiteboard.short_code).to eq("whtbrd25")
     end
+
+    # A short code that is all-punctuation normalizes to blank (nil, via the
+    # shared CodeNormalizer). Creating a RoomCharacteristic with a blank
+    # short_code violates its presence validation and raises RecordInvalid —
+    # UNRESCUED inside #perform's find_each loop, that would abort
+    # characteristic sync for every SUBSEQUENT room in the run. This pins
+    # that the unstorable row is skipped (not created), the room's OTHER
+    # characteristics still sync, and a LATER room in the same run is
+    # unaffected — the phase still succeeds.
+    it "skips a row whose short code normalizes to blank without aborting the rest of the run" do
+      room_a = create(:room, workspace: workspace, building: building, facility_code: "MLB1200")
+      room_b = create(:room, workspace: workspace, building: building, facility_code: "AH0100")
+      stub_characteristics(facility_code: "MLB1200", fixture: "characteristics_with_blank.json")
+      stub_characteristics(facility_code: "AH0100", fixture: "characteristics_MLB1200.json")
+
+      result = described_class.call(run: run, client: client)
+
+      expect(result).to be_success
+      expect(phase).to be_succeeded
+      # room_a: the valid INSTRCOMP row synced, the blank BADCODE row skipped.
+      # Query RoomCharacteristic directly (not room.room_characteristics.count
+      # across two Room instances, which trips Bullet's counter-cache advice).
+      expect(RoomCharacteristic.where(room: room_a).pluck(:code)).to contain_exactly("INSTRCOMP")
+      # room_b (processed AFTER room_a) still synced fully — no abort.
+      expect(RoomCharacteristic.where(room: room_b).count).to eq(3)
+      expect(counter(phase, :skipped)).to eq(1)
+    end
+  end
+
+  # Phase 3's CharacteristicFilterGroups joins RoomCharacteristic.short_code
+  # (written by this sync) to CharacteristicDisplayRule.short_code (seeded /
+  # admin-CRUD'd) BY short_code. Case-sensitive SQLite means an unnormalized
+  # mismatch ("Whtbrd>25" vs "whtbrd25") makes every join miss. Both sides
+  # now route through the shared CodeNormalizer, so the same raw input lands
+  # on EQUAL stored values — this pins that the join will match.
+  describe "phase-3 join correctness: sync and display-rule short codes converge" do
+    it "writes a RoomCharacteristic.short_code equal to a CharacteristicDisplayRule built from the same raw short code" do
+      room = create(:room, workspace: workspace, building: building, facility_code: "MLB1200")
+      stub_characteristics
+
+      described_class.call(run: run, client: client)
+
+      rule = CharacteristicDisplayRule.create!(workspace: workspace, short_code: "Whtbrd>25")
+      synced = room.room_characteristics.find_by!(code: "WHTBD25")
+      expect(synced.short_code).to eq(rule.short_code)
+      expect(synced.short_code).to eq("whtbrd25")
+    end
   end
 
   describe "D14: writes touch updated_at so phase 3's derived cache version advances" do
