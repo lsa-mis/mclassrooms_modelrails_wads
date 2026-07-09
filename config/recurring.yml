@@ -49,3 +49,13 @@ production:
     # Security category protected by NotificationPreferences::RETENTION_FLOORS
     # ("security" => 365.days) regardless of user preference.
     schedule: every day at 3am
+
+  nightly_sync:
+    class: SyncNightlyJob
+    queue: default
+    # 2:30am America/Detroit — off-peak for the U-M Facilities gateway and
+    # clear of the 3am notification_cleanup / hourly Solid Queue GC above.
+    # SyncNightlyJob never raises (failure is recorded on the SyncRun row,
+    # not thrown — see app/jobs/sync_nightly_job.rb), so this never feeds a
+    # retry storm even on a bad night.
+    schedule: every day at 2:30am America/Detroit

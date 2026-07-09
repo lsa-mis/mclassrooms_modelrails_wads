@@ -1,0 +1,26 @@
+{
+  "Buildings": [
+    {
+      "BldRecNbr": "1005046",
+      "BldName": "Modern Languages Building",
+      "BldNameShort": "MLB",
+      "CampusCd": "100",
+      "Address": "812 E Washington St",
+      "City": "Ann Arbor",
+      "State": "MI",
+      "Zip": "48109",
+      "Country": "USA"
+    },
+    {
+      "BldRecNbr": "1005090",
+      "BldName": "Angell Hall",
+      "BldNameShort": "AH",
+      "CampusCd": "100",
+      "Address": "435 S State St",
+      "City": "Ann Arbor",
+      "State": "MI",
+      "Zip": "48109",
+      "Country": "USA"
+    }
+  ]
+}

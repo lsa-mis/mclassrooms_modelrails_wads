@@ -52,8 +52,11 @@ class Room < ApplicationRecord
       .having("COUNT(DISTINCT room_characteristics.short_code) = ?", codes.size)
   }
 
+  # Delegates to the shared CodeNormalizer (app/lib) so facility codes and
+  # characteristic short codes normalize identically — behavior unchanged
+  # (downcase, strip non-alphanumeric, blank -> nil).
   def self.normalize_facility_code(value)
-    value.to_s.downcase.gsub(/[^a-z0-9]/, "").presence
+    CodeNormalizer.normalize(value)
   end
 
   def self.find_by_facility_code(q)
