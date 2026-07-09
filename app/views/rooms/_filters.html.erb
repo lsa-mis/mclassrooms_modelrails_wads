@@ -1,0 +1,118 @@
+<%# locals: (search:, filter_groups:) %>
+<%# MiClassrooms Phase 3 Task 5 (Brief §5.2): Find a Room filter form. A plain
+    GET targeted at the results Turbo Frame (`data-turbo-frame` +
+    `data-turbo-action: advance`) so every filter change re-renders ONLY the
+    frame below and updates the URL (shareable/back-button-able) without a
+    full page reload. `role="search"` names this as the search landmark
+    (WCAG 2.2 AAA semantic-regions posture, Brief §5.2). %>
+<%= form_with url: find_a_room_path, method: :get,
+      data: { controller: "filter-form", turbo_frame: "find_a_room_results", turbo_action: "advance" },
+      role: "search", "aria-label": t("rooms.filters.form_label"),
+      class: "mt-6 space-y-6" do |form| %>
+
+  <%# Preserve the current view (active/inactive_rooms/inactive_buildings) across
+      filter changes — it isn't a filter control here, so without this hidden
+      field every filter submit would silently reset an admin's inactive view
+      back to "active" (Brief §5.2, controller `view` param). %>
+  <%= hidden_field_tag :view, params[:view] if params[:view].present? %>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <%= ui :form_field, label: t("rooms.filters.building_label"), id: "filter_building" do |f| %>
+      <%= ui :search_input, name: "building", value: params[:building],
+            label: t("rooms.filters.building_label"),
+            data: { action: "input->filter-form#submit" }, **f.input_attrs %>
+    <% end %>
+
+    <%= ui :form_field, label: t("rooms.filters.room_label"), id: "filter_room" do |f| %>
+      <%= ui :search_input, name: "room", value: params[:room],
+            label: t("rooms.filters.room_label"),
+            data: { action: "input->filter-form#submit" }, **f.input_attrs %>
+    <% end %>
+
+    <%= ui :form_field, label: t("rooms.filters.unit_label"), id: "filter_unit_id" do |f| %>
+      <%= ui :select, name: "unit_id",
+            options: [ [ "", t("rooms.filters.unit_all") ] ] + RoomSearch.unit_options.map { |u| [ u.id, u.display_name ] },
+            selected: params[:unit_id],
+            data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
+    <% end %>
+
+    <div class="grid grid-cols-2 gap-4">
+      <%= ui :form_field, label: t("rooms.filters.capacity_min_label"), id: "filter_capacity_min" do |f| %>
+        <%= number_field_tag :capacity_min, params[:capacity_min],
+              min: 0, max: search.capacity_bound, class: "form-field", id: f.input_attrs[:id],
+              data: { action: "input->filter-form#submit" } %>
+      <% end %>
+
+      <%= ui :form_field, label: t("rooms.filters.capacity_max_label"), id: "filter_capacity_max" do |f| %>
+        <%= number_field_tag :capacity_max, params[:capacity_max],
+              min: 0, max: search.capacity_bound, class: "form-field", id: f.input_attrs[:id],
+              data: { action: "input->filter-form#submit" } %>
+      <% end %>
+    </div>
+  </div>
+
+  <fieldset class="space-y-4">
+    <legend class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.characteristics_legend") %></legend>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <% filter_groups.each do |group| %>
+        <fieldset class="rounded-md border border-border p-4">
+          <legend class="px-1 text-sm font-medium text-text-heading"><%= group.name %></legend>
+          <div class="mt-2 space-y-2">
+            <% group.entries.each do |entry| %>
+              <%# No `title:` — a native title on the 16px input is mouse-hover-only
+                  and not reliably exposed to AT. The visible checkbox label IS the
+                  accessible name; the long description belongs to the glossary
+                  (Task 7), not every filter checkbox. %>
+              <%= ui :checkbox,
+                    name: "characteristics[]",
+                    value: entry.short_code,
+                    label: entry.label,
+                    checked: Array(params[:characteristics]).include?(entry.short_code),
+                    id: "characteristics_#{entry.short_code}",
+                    data: { action: "change->filter-form#submitNow" } %>
+            <% end %>
+          </div>
+        </fieldset>
+      <% end %>
+    </div>
+  </fieldset>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <%= ui :form_field, label: t("rooms.filters.sort_label"), id: "filter_sort" do |f| %>
+      <%= ui :select, name: "sort",
+            options: RoomSearch::SORTS.map { |s| [ s, t("rooms.filters.sorts.#{s}") ] },
+            selected: search.sort,
+            data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
+    <% end %>
+
+    <%= ui :form_field, label: t("rooms.filters.per_label"), id: "filter_per" do |f| %>
+      <%= ui :select, name: "per",
+            options: [ 30, 60, 100 ].map { |n| [ n, n ] },
+            selected: search.per_page,
+            data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
+    <% end %>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-4">
+    <button type="submit" class="btn-primary"><%= t("rooms.filters.submit") %></button>
+    <%= link_to t("rooms.filters.reset"), find_a_room_path,
+          data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
+          class: "btn-secondary" %>
+    <%= link_to t("rooms.filters.glossary_link"), filters_glossary_path,
+          class: "text-sm text-interactive underline hover:no-underline
+                 min-h-11 inline-flex items-center focus-ring rounded" %>
+  </div>
+
+  <% if policy(Room).view_inactive? %>
+    <% current_view = params[:view].presence_in(RoomsController::VIEWS) || "active" %>
+    <nav aria-label="<%= t('rooms.index.views_nav_label') %>" class="flex flex-wrap gap-4 border-t border-border pt-4">
+      <% RoomsController::VIEWS.each do |view_key| %>
+        <%= link_to t("rooms.index.views.#{view_key}"), find_a_room_path(view: view_key),
+              "aria-current": (current_view == view_key ? "page" : nil),
+              data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
+              class: "text-sm min-h-11 inline-flex items-center focus-ring rounded
+                     #{current_view == view_key ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" %>
+      <% end %>
+    </nav>
+  <% end %>
+<% end %>
