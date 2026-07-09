@@ -1,0 +1,50 @@
+<%# locals: (notable:) %>
+<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): read-only notes for the room
+    detail page — the notable's own alert notes surface first, then its
+    plain notes, then (when the notable responds to #building — true for
+    Room) the BUILDING's notes under an I18n subheading. Phase 5 upgrades
+    this partial in place (authoring UI + broadcast); this task only reads.
+    Renders nothing at all when there are no notes anywhere — no error, no
+    empty headings. %>
+<%
+  # :rich_text_body (the has_rich_text association), not just :author — Bullet
+  # flags a real N+1 on ActionText::RichText otherwise, one query per note.
+  preload = [ :author, :rich_text_body ]
+  own_alerts = notable.notes.alerts.roots.includes(*preload)
+  own_plain  = notable.notes.plain_notes.roots.includes(*preload)
+  building   = notable.respond_to?(:building) ? notable.building : nil
+  building_alerts = building ? building.notes.alerts.roots.includes(*preload) : Note.none
+  building_plain  = building ? building.notes.plain_notes.roots.includes(*preload) : Note.none
+%>
+<% if own_alerts.any? || own_plain.any? || building_alerts.any? || building_plain.any? %>
+  <section class="mt-8">
+    <h2 class="text-lg font-semibold text-text-heading"><%= t("rooms.show.notes_heading") %></h2>
+
+    <% if own_alerts.any? || own_plain.any? %>
+      <div class="mt-2 space-y-3">
+        <% own_alerts.each do |note| %>
+          <%= render "notes/note", note: note %>
+        <% end %>
+        <% own_plain.each do |note| %>
+          <%= render "notes/note", note: note %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if building_alerts.any? || building_plain.any? %>
+      <div class="mt-4">
+        <h3 class="text-base font-semibold text-text-heading">
+          <%= t("rooms.show.building_notes_heading") %>
+        </h3>
+        <div class="mt-2 space-y-3">
+          <% building_alerts.each do |note| %>
+            <%= render "notes/note", note: note %>
+          <% end %>
+          <% building_plain.each do |note| %>
+            <%= render "notes/note", note: note %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+<% end %>

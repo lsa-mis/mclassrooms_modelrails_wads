@@ -1,0 +1,15 @@
+<%# locals: (note:) %>
+<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): one read-only note, rendered
+    through UI::AlertComponent on either the warning tone (alert notes) or
+    the neutral tone (plain notes) — reusing one design-system primitive for
+    both instead of hand-rolling a second card style. Phase 5 upgrades this
+    partial in place with authoring controls + Turbo Stream broadcast (Note
+    already includes Broadcastable); this task is render-only. %>
+<%= ui :alert, tone: (note.alert? ? :warning : :neutral) do |a| %>
+  <% a.with_alert_title do %>
+    <%= note.author.full_name %> · <%= l(note.created_at, format: :short) %>
+  <% end %>
+  <% a.with_alert_description do %>
+    <%= note.body %>
+  <% end %>
+<% end %>

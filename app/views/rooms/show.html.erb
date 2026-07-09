@@ -1,0 +1,28 @@
+<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): room detail — header (breadcrumb,
+    h1, attribute list, admin-only inactive banner), characteristic chips,
+    grouped features, contacts, read-only notes, and the copy-to-clipboard
+    share button. Task 5 inserts `render "rooms/media"` here for the
+    photo/gallery/panorama/seating-chart suite — this page renders
+    completely and correctly without it until then. %>
+<% content_for(:title) { @room.display_name } %>
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <%= render "rooms/header", room: @room, presenter: @presenter %>
+
+  <%= render "rooms/characteristics", presenter: @presenter %>
+
+  <%= render "rooms/contacts", room: @room %>
+
+  <%= render "notes/list", notable: @room %>
+
+  <div class="mt-8"
+       data-controller="share"
+       data-share-text-value="<%= @presenter.share_text %>"
+       data-share-copied-message-value="<%= t('rooms.show.share.copied') %>">
+    <button type="button" data-action="share#copy" class="btn-secondary">
+      <%= t("rooms.show.share.button") %>
+    </button>
+    <span data-share-target="status" aria-live="polite"
+          class="mt-2 block text-sm text-text-body"></span>
+  </div>
+</div>
