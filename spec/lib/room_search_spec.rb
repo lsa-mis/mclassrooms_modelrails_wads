@@ -99,7 +99,10 @@ RSpec.describe RoomSearch do
     allow(Setting).to receive(:capacity_filter_max).and_return(150)
     search = described_class.new(building: "Mason", capacity_min: "40", capacity_max: "100",
                                   characteristics: %w[LectureCap])
-    expect(search.summary).to eq("Building: Mason, Capacity: 40-100, Filters: lecturecap")
+    # "LectureCap" (the label CharacteristicFilterGroups.label_for now resolves via
+    # CharacteristicDisplayRule/RoomCharacteristic, Task 3) — not the raw normalized
+    # short_code "lecturecap" the Task-2 identity stub returned before Task 3 landed.
+    expect(search.summary).to eq("Building: Mason, Capacity: 40-100, Filters: LectureCap")
   end
 
   describe ".unit_options" do
