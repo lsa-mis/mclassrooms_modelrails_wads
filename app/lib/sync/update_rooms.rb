@@ -143,7 +143,8 @@ module Sync
     def preload_departments
       lookup = {}
       client.each_page(DEPARTMENTS_PATH, scope: "department") do |row|
-        lookup[row.fetch("DeptID").to_s] = parse_department(row)
+        parsed = parse_department(row)
+        lookup[parsed[:id]] = parsed
       end
       lookup
     end
@@ -251,6 +252,7 @@ module Sync
 
     def parse_department(row)
       {
+        id: row.fetch("DeptID").to_s,
         description: row["DeptDescr"],
         group: row["DeptGrp"],
         group_description: row["DeptGrpDescr"]

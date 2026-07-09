@@ -22,7 +22,7 @@
 # common case.
 class GeocodeBuildingJob < ApplicationJob
   queue_as :default
-  retry_on Geocoder::Error, Timeout::Error, wait: :exponentially_longer, attempts: 3
+  retry_on Geocoder::Error, Timeout::Error, wait: :polynomially_longer, attempts: 3
 
   def perform(building_id)
     building = Building.find(building_id)
