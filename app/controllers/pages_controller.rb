@@ -7,7 +7,20 @@
 class PagesController < ApplicationController
   allow_unauthenticated_access
 
+  # Phase 3 Task 6 (Brief §5.1): signed-in non-admins land on Find a Room
+  # instead of the marketing homepage; admins and anonymous visitors keep
+  # the landing page. Redirects only when TenancyConfig.shared_workspace
+  # is admittable (kept + not suspended) — the same gate DirectoryScoped
+  # uses to admit GET /find-a-room — so a suspended (or missing/personal-
+  # posture) shared workspace never bounces a viewer between root_path and
+  # find_a_room_path (DirectoryScoped redirects a suspended workspace back
+  # to root_path, which would otherwise loop forever).
   def home
+    return unless authenticated? # home allows unauthenticated access; resume the session explicitly
+    return if RoleResolver.for(Current.user).admin? # admins keep the landing page
+
+    workspace = TenancyConfig.shared_workspace # nil unless shared posture + kept workspace exists
+    redirect_to find_a_room_path if workspace && !workspace.suspended?
   end
 
   def about
