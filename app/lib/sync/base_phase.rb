@@ -77,7 +77,14 @@ module Sync
         # fail this phase, keep whatever it counted so far, never propagate.
         record_call_deltas!(calls_before, sleeps_before) if calls_before
         stamp_failed(phase, e)
-        Result.failure(e.message, counters: counters.dup, warnings: warnings.dup)
+        # error_class: carries the ORIGINAL exception's class name forward in
+        # the failure Result so downstream callers (Task 12's pipeline +
+        # Sync::OperatorLog) can map error class -> operator guidance by class
+        # rather than re-parsing e.message. Different gateway paths word the
+        # same failure differently (UmApi::Client "U-M gateway returned 401
+        # ..." vs UmApi::TokenCache "token endpoint returned 401 for scope
+        # ..."), so the class is the reliable key; the message is not.
+        Result.failure(e.message, error_class: e.class.name, counters: counters.dup, warnings: warnings.dup)
       end
     end
 

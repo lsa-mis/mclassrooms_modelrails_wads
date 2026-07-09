@@ -183,6 +183,10 @@ RSpec.describe Sync::BasePhase do
       # MINOR 3: the failure Result carries warnings just like success does,
       # so a caller reading result.payload[:warnings] never gets nil.
       expect(result.payload[:warnings]).to eq([ "partial page before failure" ])
+      # Task 12 fix: the failure Result carries the ORIGINAL error's class
+      # name so Sync::OperatorLog can map guidance by class, not by re-parsing
+      # a message whose wording varies per gateway path.
+      expect(result.payload[:error_class]).to eq("UmApi::ServerError")
     end
   end
 

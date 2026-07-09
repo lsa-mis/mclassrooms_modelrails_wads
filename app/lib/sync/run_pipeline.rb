@@ -40,13 +40,21 @@
 # gaps between the phases it re-runs, not the ones it skipped via
 # already-succeeded.
 #
-# Never raises: mirrors Sync::BasePhase's invariant one level up. A real
-# phase's `.call` already can't raise (Task 6), so the only things that
-# could blow up `.call` here are this class's own bookkeeping (run/phase
-# row writes) or — in principle, e.g. a future non-BasePhase phase class —
-# a phase itself raising instead of returning a Result. `#run_phase` guards
-# the latter; the top-level rescue guards the former. Either way `.call`
-# returns the SyncRun, never an exception.
+# Never raises — ONCE THE RUN EXISTS: the guarantee is scoped to phase
+# execution. A real phase's `.call` already can't raise (Task 6); the only
+# things that could blow up here after the SyncRun row exists are this
+# class's own bookkeeping (phase-row writes) or — in principle, e.g. a
+# future non-BasePhase phase class — a phase itself raising instead of
+# returning a Result. `#run_phase` guards the latter; `#execute`'s rescue
+# guards the former, marking the run failed. Both paths still return the
+# SyncRun.
+#   Deliberate exception (the clarification, Task 12 review): if the SyncRun
+# row ITSELF cannot be created (`create_run!` — catastrophic infra/misconfig,
+# e.g. no Current.workspace), there is nothing to record a failure on, so it
+# raises LOUDLY rather than returning nil and silently breaking the
+# `.call -> SyncRun` contract. `create_run!` therefore sits OUTSIDE `#execute`'s
+# swallow-and-record boundary. For a resumed run the row already exists, so
+# this edge can't occur.
 module Sync
   class RunPipeline
     CORE_PHASES = [
@@ -63,20 +71,37 @@ module Sync
     PHASE_PAUSE_SECONDS = 61
 
     def self.call(dry_run: ENV["API_UPDATE_DELETE_DRY_RUN"].present?, resume_run: nil,
-                  sleeper: ->(seconds) { Kernel.sleep(seconds) }, client: nil)
-      new(dry_run: dry_run, resume_run: resume_run, sleeper: sleeper, client: client).call
+                  sleeper: ->(seconds) { Kernel.sleep(seconds) }, client: nil,
+                  operator_log: Sync::OperatorLog.new)
+      new(dry_run: dry_run, resume_run: resume_run, sleeper: sleeper, client: client,
+          operator_log: operator_log).call
     end
 
-    def initialize(dry_run:, resume_run:, sleeper:, client:)
+    def initialize(dry_run:, resume_run:, sleeper:, client:, operator_log:)
       @dry_run = dry_run
       @resume_run = resume_run
       @sleeper = sleeper
       @client = client || UmApi::Client.new
-      @operator_log = Sync::OperatorLog.new
+      @operator_log = operator_log
     end
 
     def call
+      # Run creation is OUTSIDE the never-raises boundary (see the class
+      # header): if the row can't be created there's nothing to record a
+      # failure on, so let it raise loudly rather than return nil. For a
+      # resumed run the row already exists.
       run = @resume_run || create_run!
+      execute(run)
+      run
+    end
+
+    private
+
+    attr_reader :dry_run, :sleeper, :client, :operator_log
+
+    # The never-raises boundary: `run` is guaranteed to exist here, so any
+    # failure below is recorded on it and swallowed rather than propagated.
+    def execute(run)
       # A resumed run's prior attempt left status: failed, finished_at: set
       # — flip it back to a live "in progress" row for the duration of this
       # attempt; the final update below (success or failure) sets both again.
@@ -85,29 +110,21 @@ module Sync
       execute_core_phases(run)
       execute_optional_phases(run)
       run.update!(finished_at: Time.current)
-
-      run
     rescue StandardError => e
-      # This is NOT a phase failure (those are contained above) — it means
-      # the pipeline's own bookkeeping broke (e.g. the run row itself failed
-      # validation). Best-effort mark the run failed so a nightly job never
-      # raises regardless of where things went wrong; `run` may still be nil
-      # if even `create_run!` couldn't produce a row.
-      @operator_log.error("Sync::RunPipeline: unexpected pipeline error: #{e.class}: #{e.message}")
+      # NOT a phase failure (those are contained in #run_phase) — the
+      # pipeline's own bookkeeping broke. Best-effort mark the run failed so
+      # a nightly job never raises once a run exists; `run` is non-nil by
+      # construction of #call.
+      operator_log.error("Sync::RunPipeline: unexpected pipeline error: #{e.class}: #{e.message}")
       begin
-        run&.update!(status: :failed, finished_at: Time.current)
+        run.update!(status: :failed, finished_at: Time.current)
       rescue StandardError => stamp_error
-        @operator_log.error(
+        operator_log.error(
           "Sync::RunPipeline: failed to stamp run failed after pipeline error: " \
           "#{stamp_error.class}: #{stamp_error.message}"
         )
       end
-      run
     end
-
-    private
-
-    attr_reader :dry_run, :sleeper, :client, :operator_log
 
     def create_run!
       SyncRun.create!(workspace: Current.workspace, dry_run: dry_run, status: :running, started_at: Time.current)
@@ -169,7 +186,7 @@ module Sync
       phase = find_or_create_phase!(run, phase_class)
       phase.update!(status: :failed, finished_at: Time.current, error_messages: [ error.message ])
     rescue StandardError => e
-      @operator_log.error("Sync::RunPipeline: failed to stamp phase failed: #{e.class}: #{e.message}")
+      operator_log.error("Sync::RunPipeline: failed to stamp phase failed: #{e.class}: #{e.message}")
     end
 
     def find_or_create_phase!(run, phase_class)
