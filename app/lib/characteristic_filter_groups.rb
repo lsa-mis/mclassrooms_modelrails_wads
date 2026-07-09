@@ -31,13 +31,23 @@ class CharacteristicFilterGroups
     def labels = fetch(:labels)
 
     # Event-keyed cache stamp (D14; contradiction #4): any characteristics
-    # sync write or admin display-rule edit changes this tuple.
+    # sync write or admin display-rule edit changes this tuple. Count catches
+    # a row add/remove; max(updated_at) catches an IN-PLACE edit (admin rule
+    # tweak, re-sync touch) that leaves the count unchanged — that timestamp
+    # term is the only thing invalidating the cache on such an edit.
     def data_version
-      [ RoomCharacteristic.count, RoomCharacteristic.maximum(:updated_at),
-        CharacteristicDisplayRule.count, CharacteristicDisplayRule.maximum(:updated_at) ]
+      [ RoomCharacteristic.count, stamp(RoomCharacteristic.maximum(:updated_at)),
+        CharacteristicDisplayRule.count, stamp(CharacteristicDisplayRule.maximum(:updated_at)) ]
     end
 
     private
+
+    # Microsecond precision (not Time#to_param, which serializes whole-second):
+    # two in-place edits in the same wall-clock second with no new row would
+    # otherwise expand to an IDENTICAL cache key and serve stale data until the
+    # 12h TTL. Rails 8 stores SQLite timestamps at 6-digit subsecond precision,
+    # so iso8601(6) survives the DB round-trip and is real signal.
+    def stamp(time) = time&.utc&.iso8601(6)
 
     def fetch(mode)
       Rails.cache.fetch([ "characteristic_filter_groups", mode, I18n.locale, data_version ],
