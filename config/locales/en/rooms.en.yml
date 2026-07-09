@@ -72,6 +72,7 @@ en:
       gallery_full_notice: "This room's gallery already has the maximum of 5 photos."
       submit: "Save changes"
       success: "Room updated."
+      stale_gallery: "One or more gallery rows are out of date; please reload and try again."
     floor_plan:
       title: "%{building}, floor %{floor}"
       plan_alt: "Floor plan of %{building}, floor %{floor}"
