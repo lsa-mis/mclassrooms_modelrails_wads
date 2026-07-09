@@ -1,0 +1,30 @@
+en:
+  buildings:
+    index:
+      title: "Buildings"
+      search_label: "Search buildings"
+      search_submit: "Search"
+      show_hidden: "Show hidden buildings"
+      no_results: "No buildings match your search."
+      column_name: "Name"
+      column_abbreviation: "Abbreviation"
+      column_campus: "Campus"
+      column_classroom_count: "Classrooms"
+      column_hidden: "Status"
+      hidden_badge: "Hidden"
+      classroom_count:
+        one: "1 classroom"
+        other: "%{count} classrooms"
+    show:
+      photo_alt: "Photo of %{building}"
+      campus: "Campus"
+      address: "Address"
+      abbreviation: "Abbreviation"
+      inactive_banner: "This building is hidden from Find a Room results."
+      floors_heading: "Floors"
+      no_floors: "No floors have been added for this building yet."
+      floor_classroom_count:
+        one: "1 classroom"
+        other: "%{count} classrooms"
+      plan_attached: "Floor plan attached"
+      no_plan: "No floor plan uploaded"

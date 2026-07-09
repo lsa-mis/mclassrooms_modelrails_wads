@@ -431,6 +431,18 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).to include(I18n.t("rooms.show.seating_chart_alt", room: room.display_name))
       expect(response.body).not_to include("(PDF)")
     end
+
+    # MiClassrooms Phase 4 Task 8 breadcrumb retrofit: `building_path` now
+    # exists, but Buildings is admin-only (BuildingPolicy denies every
+    # action to a non-admin) — a viewer must NOT get a link they can't
+    # follow, so the building crumb stays plain, non-interactive text for
+    # them (rooms/_header.html.erb's RoleResolver branch).
+    it "renders the building breadcrumb crumb as plain text, not a link" do
+      get room_path(room)
+
+      expect(response.body).not_to include(%(href="#{building_path(building)}"))
+      expect(response.body).to include(building.display_name)
+    end
   end
 
   describe "as an admin" do
@@ -444,6 +456,16 @@ RSpec.describe "GET /rooms/:id", type: :request do
       get room_path(hidden_room), as: :json
 
       expect(response).to have_http_status(:ok)
+    end
+
+    # MiClassrooms Phase 4 Task 8 breadcrumb retrofit: an admin CAN follow
+    # the building crumb (BuildingsController grants them every action), so
+    # rooms/_header.html.erb renders it as a real link once building_path
+    # exists.
+    it "renders the building breadcrumb crumb as a link to the admin building page" do
+      get room_path(room)
+
+      expect(response.body).to include(%(href="#{building_path(building)}"))
     end
   end
 

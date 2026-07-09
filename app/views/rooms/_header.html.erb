@@ -3,18 +3,19 @@
     + a definition list of room attributes, plus the admin-only inactive
     banner.
 
-    The building crumb has no `building_path` yet — Task 8 adds the
-    Buildings controller/routes and wires this crumb to a real link.
-    UI::BreadcrumbComponent requires every non-last item to be a link (it
-    always renders `content_tag(:a, ..., href: item[:href])`); passing no
-    href produced an `<a>` with no `href` attribute that still carried the
-    link's hover/focus styling — it LOOKED clickable but did nothing.
-    Rendered manually here instead (reusing the component's own LINK/
-    CURRENT style constants so the visual language stays identical) so the
-    building name shows as plain, non-interactive text with no link
-    affordance. Not modifying the shared, template-owned component for a
-    single-page, single-crumb case. Swap this back to `ui :breadcrumb` with
-    a real `href:` once `building_path` exists. %>
+    Task 8 retrofit: `building_path` now exists (BuildingsController), but
+    Buildings is an ADMIN-ONLY section (BuildingPolicy denies every action
+    to a non-admin) — a viewer following this crumb would hit a Pundit
+    not-authorized redirect, so the building crumb is a real link ONLY for
+    an admin; a non-admin still gets the plain, non-interactive text this
+    partial has always rendered. UI::BreadcrumbComponent requires every
+    non-last item to be a link (it always renders `content_tag(:a, ...,
+    href: item[:href])`, and a blank `href` still carries the link's hover/
+    focus styling with nothing to click) — the whole trail is rendered by
+    hand here (reusing the component's own LINK/CURRENT style constants so
+    the visual language stays identical) so the conditional plain-text-vs-
+    link building crumb is possible at all; the shared component itself
+    still can't express "linked for some viewers, plain for others." %>
 
 <nav aria-label="<%= t("ui.breadcrumb.label", default: "Breadcrumb") %>">
   <ol class="flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5">
@@ -23,7 +24,11 @@
       <span class="select-none text-text-muted" aria-hidden="true">/</span>
     </li>
     <li class="inline-flex items-center gap-1.5">
-      <span class="text-text-muted"><%= room.building.display_name %></span>
+      <% if RoleResolver.for(Current.user).admin? %>
+        <%= link_to room.building.display_name, building_path(room.building), class: UI::BreadcrumbComponent::LINK %>
+      <% else %>
+        <span class="text-text-muted"><%= room.building.display_name %></span>
+      <% end %>
       <span class="select-none text-text-muted" aria-hidden="true">/</span>
     </li>
     <li class="inline-flex items-center gap-1.5">
