@@ -48,6 +48,7 @@ en:
     floor_plan:
       title: "%{building}, floor %{floor}"
       plan_alt: "Floor plan of %{building}, floor %{floor}"
+      plan_pdf_link: "Floor plan for %{building}, floor %{floor} (PDF)"
       no_plan: "A floor plan hasn't been uploaded for this floor yet."
       no_floor: "This room isn't assigned to a floor."
       current_room: "Current room"

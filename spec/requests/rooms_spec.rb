@@ -724,6 +724,28 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
       expect(flash[:notice]).to eq(I18n.t("rooms.inactive_notice"))
     end
 
+    # Regression guard (review fix): floor_plan.html.erb used to render
+    # `@floor.plan` unconditionally through `ui :image`/`<img>`, but
+    # Floor#plan's content_type validation allows PDF (Task 9's building edit
+    # can attach one) — a PDF floor plan rendered a browser broken-image icon.
+    # Mirrors rooms/_media.html.erb's seating-chart PDF branch: a PDF plan
+    # must render as a link, never an `<img>`.
+    it "renders a PDF floor plan as a link instead of an image" do
+      floor.plan.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/seating_chart.pdf")),
+        filename: "floor-2.pdf",
+        content_type: "application/pdf"
+      )
+
+      get floor_plan_room_path(room)
+
+      expect(response.body).to include(
+        I18n.t("rooms.floor_plan.plan_pdf_link", building: building.display_name, floor: floor.label)
+      )
+      expect(response.body).to include(%(href="#{rails_blob_path(floor.plan, disposition: :inline)}"))
+      expect(response.body).not_to include("<img")
+    end
+
     # "B100" CASTs to 0 (SQLite CAST stops at the first non-digit character)
     # and tiebreaks alphabetically ahead of any purely-numeric label; "20" <
     # "100" numerically. Same three-case semantics documented on
