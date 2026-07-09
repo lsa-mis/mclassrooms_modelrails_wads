@@ -1,0 +1,21 @@
+<%# locals: (note:) %>
+<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): one read-only note, rendered
+    through UI::AlertComponent on either the warning tone (alert notes) or
+    the neutral tone (plain notes) — reusing one design-system primitive for
+    both instead of hand-rolling a second card style. Phase 5 upgrades this
+    partial in place with authoring controls + Turbo Stream broadcast (Note
+    already includes Broadcastable); this task is render-only.
+
+    The author · date byline is NOT a section heading — it must not use
+    `with_alert_title` (AlertComponent::TitleComponent unconditionally emits
+    an <h5>, which would skip from the surrounding <h2>/<h3> straight to
+    <h5>, an AAA "no skipped heading levels" violation). It renders as a
+    plain <p> inside the description slot instead, ahead of the note body. %>
+<%= ui :alert, tone: (note.alert? ? :warning : :neutral) do |a| %>
+  <% a.with_alert_description do %>
+    <p class="text-sm font-medium text-text-heading">
+      <%= note.author.full_name %> · <%= l(note.created_at, format: :short) %>
+    </p>
+    <%= note.body %>
+  <% end %>
+<% end %>

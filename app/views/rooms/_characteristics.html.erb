@@ -1,0 +1,36 @@
+<%# locals: (presenter:) %>
+<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): the full characteristic-chip
+    list, then one h2 group per non-empty presenter category. Grouping is
+    data-driven by Task 2's RoomPresenter (CharacteristicDisplayRule#category_
+    override) rather than hardcoded per-characteristic logic; the
+    team-based-learning cluster forms regardless of category (the
+    presenter's own team_learning-overrides-category rule). %>
+
+<% if presenter.chips.any? %>
+  <ul data-testid="characteristic-chips" class="mt-4 flex flex-wrap gap-2">
+    <% presenter.chips.each do |chip| %>
+      <li><%= render "rooms/characteristic_chip", chip: chip %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<%
+  feature_groups = [
+    [ t("rooms.show.features.amenities"), presenter.amenities ],
+    [ t("rooms.show.features.boards"), presenter.boards ],
+    [ t("rooms.show.features.projection"), presenter.projection ],
+    [ t("rooms.show.features.instructor_computers"), presenter.instructor_computers ],
+    [ t("rooms.show.features.team_based_learning"), presenter.team_based_learning ]
+  ]
+%>
+<% feature_groups.each do |heading, chips| %>
+  <% next if chips.blank? %>
+  <div class="mt-6">
+    <h2 class="text-lg font-semibold text-text-heading"><%= heading %></h2>
+    <ul class="mt-2 flex flex-wrap gap-2">
+      <% chips.each do |chip| %>
+        <li><%= render "rooms/characteristic_chip", chip: chip %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

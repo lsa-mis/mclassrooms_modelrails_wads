@@ -1,0 +1,76 @@
+<%# MiClassrooms Phase 4 Task 6 (Brief §5.3): the floor-plan view — breadcrumb
+    (room → floor plan), the floor's plan (or a graceful empty state when none
+    has been uploaded — D10: floor plans are optional), and the list of
+    classrooms on the same floor in natural room-number order
+    (Room.natural_room_order, extracted from RoomSearch::DEFAULT_ORDER's tail
+    so this list and Find a Room never drift). The current room is called out
+    with both an `aria-current` state and a visible badge — WCAG 1.4.1: the
+    highlight isn't color-only.
+
+    Floor#plan accepts PDF alongside images (Task 9's building edit can attach
+    either), so — mirroring rooms/_media.html.erb's seating-chart branch — a
+    `content_type == "application/pdf"` plan renders as a plain PDF link
+    instead of through `ui :image`/`<img>`, which would otherwise show a
+    browser broken-image icon for a model-sanctioned, reachable state.
+
+    UI::BreadcrumbComponent requires every non-last item to be a real link;
+    unlike rooms/_header.html.erb's building crumb (no building_path yet),
+    the room crumb here links to `room_path(@room)`, which already exists
+    (Task 3), so the plain `ui :breadcrumb` call works as-is. %>
+<% content_for(:title) { t(".title", building: @room.building.display_name, floor: @floor.label) } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <%= ui :breadcrumb, items: [
+        { label: @room.display_name, href: room_path(@room) },
+        { label: t(".title", building: @room.building.display_name, floor: @floor.label) }
+      ] %>
+
+  <h1 class="mt-4 text-2xl font-bold text-text-heading">
+    <%= t(".title", building: @room.building.display_name, floor: @floor.label) %>
+  </h1>
+
+  <div class="mt-6">
+    <% if @floor.plan.attached? %>
+      <% if @floor.plan.content_type == "application/pdf" %>
+        <%= link_to t(".plan_pdf_link", building: @room.building.display_name, floor: @floor.label),
+              rails_blob_path(@floor.plan, disposition: :inline),
+              class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+      <% else %>
+        <%= ui :figure do %>
+          <%= ui :image,
+                src: rails_blob_path(@floor.plan),
+                alt: t(".plan_alt", building: @room.building.display_name, floor: @floor.label),
+                loading: :eager,
+                class: "w-full rounded-md border border-border" %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <%= ui :alert, tone: :neutral, description: t(".no_plan") %>
+    <% end %>
+  </div>
+
+  <%= ui :list_group, class: "mt-8" do %>
+    <% @rooms_on_floor.each do |floor_room| %>
+      <% current = floor_room == @room %>
+      <%# aria-current="true" (not "page") — this row's href is the room's OWN
+          show page, not the floor-plan page we're actually on, so "page"
+          would misstate the link target; "true" marks it as the row
+          representing the room currently being viewed. Only set when true —
+          list_group_item's own default is nil, which content_tag would still
+          render as a bare `aria-current` attribute if passed explicitly. %>
+      <%= ui :list_group_item, href: room_path(floor_room),
+            **(current ? { "aria-current": "true" } : {}) do %>
+        <span class="inline-flex items-center gap-2">
+          <%= floor_room.display_name %>
+          <% if current %>
+            <%= ui :badge, t(".current_room"), variant: :soft, tone: :info %>
+          <% end %>
+        </span>
+        <span class="text-text-muted">
+          <%= t("rooms.show.capacity", students: floor_room.instructional_seat_count,
+                ada: floor_room.ada_seat_count.to_i) %>
+        </span>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

@@ -8,7 +8,10 @@ require "rails_helper"
 RSpec.describe "Filters glossary", type: :system do
   # `let`, not a top-level constant — see find_a_room_spec.rb's comment on
   # why (matches spec/system/docs_spec.rb's `axe_options` convention).
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  #
+  # Full conformance set (A + AA + AAA) — see find_a_room_spec.rb's comment
+  # for why wcag2aaa alone is not enough.
+  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
 
   # `characteristics#glossary` also runs under DirectoryScoped (Current.workspace
   # resolved by TenancyConfig.shared_workspace_slug) — same shared-posture setup

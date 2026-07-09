@@ -1,0 +1,1 @@
+Not a recognized media file — used by spec/system/admin/bulk_uploads_spec.rb to prove the unmatched path.
