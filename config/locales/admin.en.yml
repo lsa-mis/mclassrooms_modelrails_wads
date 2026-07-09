@@ -31,3 +31,4 @@ en:
         committed:
           one: "1 file attached."
           other: "%{count} files attached."
+        partial_failure: "%{attached} attached, %{failed} could not be attached (invalid file)."

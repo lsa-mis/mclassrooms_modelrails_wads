@@ -118,6 +118,49 @@ RSpec.describe "Admin bulk uploads", type: :request do
         expect(logs.count).to eq(2)
       end
 
+      it "purges a matched blob that fails Room's own validation instead of leaving it orphaned, and reports the honest attached count" do
+        # MLB1200.jpg matches `room`'s facility code for :photo (Matcher only
+        # reads the filename), but its byte_size trips Room's own
+        # `size: { less_than_or_equal_to: 10.megabytes }` validation
+        # (app/models/room.rb) — so Curation::Apply's `save!` raises
+        # RecordInvalid, which it rescues into Result.failure and rolls back.
+        # Real (allowed) PNG bytes padded past the 10MB cap, rather than a
+        # bogus declared content_type: `ActiveStorage::Blob.create_and_upload!`
+        # IDENTIFIES the content_type from the actual bytes by default
+        # (`identify: true`), so a declared-but-not-actual content_type would
+        # silently be corrected to the real (valid) one and never fail
+        # validation at all — byte_size is the one property that can't be
+        # sniffed away.
+        #
+        # Before the fix, BulkUploadsController#commit never checked
+        # Curation::Apply's Result: the blob was neither attached NOR purged
+        # (an orphan), and the notice still counted it via
+        # `@report.matched.size`.
+        oversized_png = File.binread(Rails.root.join("spec/fixtures/files/avatar.png")) +
+          ("\0" * (11.megabytes))
+        oversized_photo_id = ActiveStorage::Blob.create_and_upload!(
+          io: StringIO.new(oversized_png), filename: "MLB1200.jpg", content_type: "image/png"
+        ).signed_id
+        chairs_id = signed_blob(filename: "MLB1200_chairs.pdf", content_type: "application/pdf")
+
+        expect {
+          post admin_bulk_uploads_path, params: {
+            signed_blob_ids: [ oversized_photo_id, chairs_id ], confirmed: "1"
+          }
+        }.to change(ActivityLog, :count).by(1)
+          .and have_enqueued_job(ActiveStorage::PurgeJob)
+
+        expect(response).to redirect_to(new_admin_bulk_upload_path)
+        follow_redirect!
+        expect(response.body).to include(
+          I18n.t("admin.bulk_uploads.create.partial_failure", attached: 1, failed: 1)
+        )
+
+        room.reload
+        expect(room.photo).not_to be_attached
+        expect(room.seating_chart).to be_attached
+      end
+
       it "replaces an already-attached slot instead of erroring" do
         room.photo.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
                            filename: "old.png", content_type: "image/png")
@@ -135,6 +178,26 @@ RSpec.describe "Admin bulk uploads", type: :request do
         expect {
           post admin_bulk_uploads_path, params: { signed_blob_ids: [ stray_id ], confirmed: "1" }
         }.not_to change(ActivityLog, :count)
+
+        expect(response).to redirect_to(new_admin_bulk_upload_path)
+      end
+
+      it "purges every unmatched blob in a batch, not just the first" do
+        stray_blob = ActiveStorage::Blob.create_and_upload!(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "stray.txt", content_type: "text/plain"
+        )
+        another_stray_blob = ActiveStorage::Blob.create_and_upload!(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "also_stray.txt", content_type: "text/plain"
+        )
+
+        expect {
+          post admin_bulk_uploads_path, params: {
+            signed_blob_ids: [ stray_blob.signed_id, another_stray_blob.signed_id ], confirmed: "1"
+          }
+        }.to have_enqueued_job(ActiveStorage::PurgeJob).with(stray_blob)
+          .and have_enqueued_job(ActiveStorage::PurgeJob).with(another_stray_blob)
 
         expect(response).to redirect_to(new_admin_bulk_upload_path)
       end
