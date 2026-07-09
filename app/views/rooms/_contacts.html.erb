@@ -1,0 +1,117 @@
+<%# locals: (room:) %>
+<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): two read-only contact cards off
+    room.room_contact. Every absent field (including a wholly-absent contact
+    record — `contact` is nil-safe throughout via `&.`) renders the shared
+    "Not available" fallback; URLs render as links whose VISIBLE TEXT states
+    their purpose (never a bare URL), per the brief's a11y notes. %>
+<% contact = room.room_contact %>
+
+<div class="mt-8 grid gap-4 sm:grid-cols-2">
+  <%= ui :card do %>
+    <%= ui :card_header do %>
+      <%= ui :card_title, t("rooms.show.contacts.scheduling_heading"), level: 2 %>
+    <% end %>
+    <%= ui :card_content do %>
+      <dl class="space-y-3 text-sm text-text-body">
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.scheduling_name") %></dt>
+          <dd><%= contact&.scheduling_name.presence || t("rooms.show.not_available") %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.scheduling_email") %></dt>
+          <dd>
+            <% if contact&.scheduling_email.present? %>
+              <%= link_to contact.scheduling_email, "mailto:#{contact.scheduling_email}",
+                    class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+            <% else %>
+              <%= t("rooms.show.not_available") %>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.scheduling_phone") %></dt>
+          <dd>
+            <% if contact&.scheduling_phone.present? %>
+              <%= link_to contact.scheduling_phone, "tel:#{contact.scheduling_phone}",
+                    class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+            <% else %>
+              <%= t("rooms.show.not_available") %>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.scheduling_detail_label") %></dt>
+          <dd>
+            <% if contact&.scheduling_detail_url.present? %>
+              <%= link_to t("rooms.show.contacts.scheduling_detail_link"), contact.scheduling_detail_url,
+                    class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+            <% else %>
+              <%= t("rooms.show.not_available") %>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium text-text-heading">
+            <%= t("rooms.show.contacts.scheduling_usage_guidelines_label") %>
+          </dt>
+          <dd>
+            <% if contact&.scheduling_usage_guidelines_url.present? %>
+              <%= link_to t("rooms.show.contacts.scheduling_usage_guidelines_link"),
+                    contact.scheduling_usage_guidelines_url,
+                    class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+            <% else %>
+              <%= t("rooms.show.not_available") %>
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    <% end %>
+  <% end %>
+
+  <%= ui :card do %>
+    <%= ui :card_header do %>
+      <%= ui :card_title, t("rooms.show.contacts.support_heading"), level: 2 %>
+    <% end %>
+    <%= ui :card_content do %>
+      <dl class="space-y-3 text-sm text-text-body">
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.support_department") %></dt>
+          <dd><%= contact&.support_department_description.presence || t("rooms.show.not_available") %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.support_email") %></dt>
+          <dd>
+            <% if contact&.support_email.present? %>
+              <%= link_to contact.support_email, "mailto:#{contact.support_email}",
+                    class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+            <% else %>
+              <%= t("rooms.show.not_available") %>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.support_phone") %></dt>
+          <dd>
+            <% if contact&.support_phone.present? %>
+              <%= link_to contact.support_phone, "tel:#{contact.support_phone}",
+                    class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+            <% else %>
+              <%= t("rooms.show.not_available") %>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium text-text-heading"><%= t("rooms.show.contacts.support_link_label") %></dt>
+          <dd>
+            <% if contact&.support_url.present? %>
+              <%= link_to t("rooms.show.contacts.support_link"), contact.support_url,
+                    class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+            <% else %>
+              <%= t("rooms.show.not_available") %>
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    <% end %>
+  <% end %>
+</div>

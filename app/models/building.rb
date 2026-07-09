@@ -8,6 +8,36 @@ class Building < ApplicationRecord
   has_many :notes, as: :notable, dependent: :destroy
   has_one_attached :photo
 
+  # Phase 4 Task 9 (Brief §5.3): the admin building-edit form's floors card
+  # only attaches/replaces/removes each EXISTING floor's `plan` — floors are
+  # sync-created (D10, Task 8), so this must never create or delete a `Floor`
+  # row. No `allow_destroy: true` (there is no `_destroy` control on this
+  # form), and reject_if skips a row where neither `plan` nor `remove_plan`
+  # changed — mirroring Room's Task 7 reject_if, but the opposite direction:
+  # Room's guard exists to tolerate BLANK pre-built "add another photo" rows;
+  # this form never builds blank Floor rows at all (every `fields_for :floors`
+  # row is an already-persisted floor), so the guard here is a plain no-op
+  # skip for a row nothing touched, keeping an untouched floor row from
+  # spuriously appearing in Curation::Apply's dirty-attribute diff.
+  #
+  # `attrs[:id].blank?` is checked FIRST and rejects unconditionally: unlike
+  # Room's gallery (where a new, id-less row is the legitimate "add another
+  # photo" case), this form's `fields_for :floors` only ever renders
+  # already-persisted floor rows, so an id-less row can only be a forged/
+  # tampered submission. Without this guard, an id-less row with a present
+  # `plan` sails past the `plan.blank? && remove_plan.blank?` half of the
+  # check and `assign_nested_attributes_for_collection_association` calls
+  # `build` on `Floor` — a brand-new Floor row this form must never create.
+  # (Today that `build` happens to be harmless-looking because unrelated
+  # `label`/`workspace` validations fail it before save, but relying on
+  # coincidental validation failure on ANOTHER model to enforce THIS model's
+  # own invariant is exactly the gap this guard closes directly.)
+  accepts_nested_attributes_for :floors,
+    reject_if: proc { |attributes|
+      attrs = attributes.with_indifferent_access
+      attrs[:id].blank? || (attrs[:plan].blank? && attrs[:remove_plan].blank?)
+    }
+
   validates :bldrecnbr, presence: true, uniqueness: true
   validates :name, presence: true
   validates :photo, content_type: [ :png, :jpeg, :webp ],
@@ -28,6 +58,21 @@ class Building < ApplicationRecord
   def display_name = nickname.present? ? "#{name} (#{nickname})" : name
 
   def hidden? = hidden_at.present?
+
+  # Phase 4 Task 9 (Brief §5.3): attribute-shaped remover so a "delete photo"
+  # checkbox flows through strong params + Curation::Apply.call(attributes:)
+  # exactly like `nickname` — no separate purge call in the controller.
+  # Mirrors Room's Task 7 remove_* writers (app/models/room.rb): purge_later
+  # (not purge) runs as a side effect of #assign_attributes, which happens
+  # BEFORE Curation::Apply's transaction opens, so the purge job still fires
+  # even on the rare rollback where only the audit write fails. The reader
+  # always returns false so the checkbox round-trips unchecked on a
+  # validation-failure re-render rather than echoing back a transient
+  # submitted value.
+  def remove_photo=(value)
+    photo.purge_later if ActiveModel::Type::Boolean.new.cast(value)
+  end
+  def remove_photo = false
 
   # Geocoding input for GeocodeBuildingJob (Task 8, phase 2 ingestion).
   # `state` and `zip` are joined with a space ("MI 48109") before being

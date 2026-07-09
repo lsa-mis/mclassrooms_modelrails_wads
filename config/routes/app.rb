@@ -15,6 +15,34 @@ get "contact", to: "pages#contact"
 get "find-a-room",      to: "rooms#index",              as: :find_a_room
 get "filters-glossary", to: "characteristics#glossary", as: :filters_glossary
 
+# Room detail (MiClassrooms Phase 4 Task 3, contract). Only #show ships this
+# task — #edit/#update land in Task 7, #floor_plan in Task 6 — but all three
+# routes are drawn now per the contract; nothing links to the unimplemented
+# actions yet, and no routing-conformance spec in this checkout asserts every
+# drawn route resolves to an existing action (verified: no such spec exists).
+resources :rooms, only: [ :show, :edit, :update ] do
+  get :floor_plan, on: :member
+end
+
+# Admin Buildings section (MiClassrooms Phase 4 Task 8, contract). Only
+# #index/#show ship this task — #edit/#update land in Task 9 — but all four
+# routes are drawn now per the contract, mirroring the `resources :rooms`
+# precedent above (nothing links to the unimplemented actions yet). JSON is
+# supported on #index/#show only (the contract doesn't require it on
+# #edit/#update).
+resources :buildings, only: [ :index, :show, :edit, :update ]
+
+# Admin bulk upload (MiClassrooms Phase 4 Task 11, Brief §5.3): a stateless
+# drop -> review -> commit flow with NO persisted model, so only :new/:create
+# are drawn — a deliberate SUBSET of the roadmap contract's bare
+# `resources :bulk_uploads`. There is no row to #show/#edit/#update/#destroy;
+# the "review" step is just #create re-rendering a template (params[:confirmed]
+# unset) rather than a separate route, and the final commit redirects back to
+# #new rather than to a #show that doesn't exist.
+namespace :admin do
+  resources :bulk_uploads, only: [ :new, :create ]
+end
+
 # Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
 # accessibility crawlers — Siteimprove can't complete Google/Okta SSO. Drawn only when
 # AuthConfig.test_login_enabled? is true at boot — i.e. never in production,

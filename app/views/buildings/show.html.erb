@@ -1,0 +1,83 @@
+<%# MiClassrooms Phase 4 Task 8 (Brief §5.3, §14.1): admin building detail —
+    breadcrumb, photo, address/campus, a floors list (each linking to a
+    representative classroom's floor-plan view — Task 6), and read-only
+    notes (Task 4's notes/list partial, reused as-is). Admin-only page
+    (BuildingPolicy#show?), so the hidden-building banner needs no extra
+    RoleResolver check the way rooms/_header.html.erb's does — every
+    visitor here already cleared that bar in the controller. %>
+<% content_for(:title) { @building.display_name } %>
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <%= ui :breadcrumb, items: [
+        { label: t("buildings.index.title"), href: buildings_path },
+        { label: @building.display_name }
+      ] %>
+
+  <% if @building.hidden? %>
+    <div class="mt-4">
+      <%= ui :banner, t(".inactive_banner"), variant: :warning %>
+    </div>
+  <% end %>
+
+  <h1 class="mt-4 text-2xl font-bold text-text-heading"><%= @building.display_name %></h1>
+
+  <% if @building.photo.attached? %>
+    <div class="mt-6">
+      <%= ui :figure do %>
+        <%= ui :image,
+              src: rails_blob_path(@building.photo),
+              alt: t(".photo_alt", building: @building.display_name),
+              loading: :eager,
+              class: "w-full max-h-96 rounded-md border border-border object-cover" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <dl class="mt-6 grid gap-x-6 gap-y-2 text-sm text-text-body sm:grid-cols-2">
+    <% if @building.campus %>
+      <div>
+        <dt class="font-medium text-text-heading"><%= t(".campus") %></dt>
+        <dd><%= @building.campus.description %></dd>
+      </div>
+    <% end %>
+
+    <% if @building.full_address.present? %>
+      <div>
+        <dt class="font-medium text-text-heading"><%= t(".address") %></dt>
+        <dd><%= @building.full_address %></dd>
+      </div>
+    <% end %>
+
+    <% if @building.abbreviation.present? %>
+      <div>
+        <dt class="font-medium text-text-heading"><%= t(".abbreviation") %></dt>
+        <dd><%= @building.abbreviation %></dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <section class="mt-8">
+    <h2 class="text-lg font-semibold text-text-heading"><%= t(".floors_heading") %></h2>
+
+    <%# @floors, @floor_classroom_counts, @floor_representative_rooms: all
+        loaded ONCE in the controller (see #show's comments) — reusing
+        @building.floors here (a fresh, non-preloaded query) plus a
+        per-floor floor.rooms.classroom.first/.count was an N+1 pair Bullet
+        never flagged (further-scoped `.first`/`.count` calls, not
+        unpreloaded association lazy-loads). %>
+    <% if @floors.any? %>
+      <%= ui :list_group, class: "mt-3" do %>
+        <% @floors.each do |floor| %>
+          <% representative_room = @floor_representative_rooms[floor.id]&.first %>
+          <%= ui :list_group_item, href: (representative_room && floor_plan_room_path(representative_room)) do %>
+            <%= floor_row_body(floor, classroom_count: @floor_classroom_counts.fetch(floor.id, 0)) %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="mt-3 text-text-muted"><%= t(".no_floors") %></p>
+    <% end %>
+  </section>
+
+  <%= render "notes/list", notable: @building %>
+</div>

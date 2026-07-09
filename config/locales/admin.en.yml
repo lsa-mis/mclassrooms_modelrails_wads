@@ -1,0 +1,34 @@
+en:
+  admin:
+    bulk_uploads:
+      new:
+        title: "Bulk upload media"
+        instructions: "Drop photos, panoramas, and seating charts named after their room's facility code (e.g. MLB1200.jpg, MLB1200_pano.jpg, MLB1200_chairs.pdf). You'll review the matches before anything is attached."
+        dropzone_label: "Files to upload"
+        submit: "Continue"
+      review:
+        title: "Review bulk upload"
+        matched_heading: "Matched"
+        unmatched_heading: "Unmatched"
+        no_matched: "No files matched a room."
+        no_unmatched: "Every file matched a room."
+        column_filename: "Filename"
+        column_room: "Room"
+        column_slot: "Slot"
+        column_notice: "Notice"
+        column_reason: "Reason"
+        will_replace: "This will replace the existing file in this slot."
+        slot:
+          photo: "Photo"
+          panorama: "Panorama"
+          seating_chart: "Seating chart"
+        reason:
+          unrecognized_filename: "Filename does not match a recognized photo, panorama, or seating chart pattern."
+          room_not_found: "No room matches this facility code."
+        confirm: "Confirm and attach"
+        back: "Start over"
+      create:
+        committed:
+          one: "1 file attached."
+          other: "%{count} files attached."
+        partial_failure: "%{attached} attached, %{failed} could not be attached (invalid file)."

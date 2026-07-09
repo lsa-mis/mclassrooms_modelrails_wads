@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_030009) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_09_150715) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -52,6 +52,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_030009) do
   create_table "activity_logs", force: :cascade do |t|
     t.string "action", null: false
     t.integer "actor_id"
+    t.json "before_after"
     t.datetime "created_at", null: false
     t.json "metadata", default: {}
     t.integer "trackable_id", null: false
