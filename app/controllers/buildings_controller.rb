@@ -100,6 +100,32 @@ class BuildingsController < ApplicationController
   def update
     authorize @building
     attrs = building_params.to_h
+
+    # Guard BEFORE Curation::Apply ever sees `attrs`: Rails' own
+    # `assign_nested_attributes_for_collection_association` resolves each
+    # row's `:id` against `association.scope.where(id: ...)` (i.e.
+    # `@building.floors` scoped to THIS building) — a row whose `:id`
+    # belongs to another building's floor, or a floor the nightly sync
+    # removed between this page's load and this submit, finds nothing there
+    # and calls `raise_nested_attributes_record_not_found!`, raising
+    # ActiveRecord::RecordNotFound from INSIDE
+    # `@record.assign_attributes(@attributes)` — i.e. before
+    # Curation::Apply's transaction (and its RecordInvalid/
+    # RecordNotDestroyed rescue) even opens. Left unguarded,
+    # ApplicationController's blanket `rescue_from ActiveRecord::RecordNotFound`
+    # catches it globally and (for an HTML request) redirects to
+    # `request.referer || root_path` with a generic "not found" alert —
+    # bouncing an otherwise-valid admin edit off the edit page entirely,
+    # not the documented graceful 422 re-render. Checking every submitted id
+    # against `@building.floor_ids` up front means a bad id never reaches
+    # `assign_attributes` at all.
+    if stale_floor_ids?(attrs)
+      load_floors
+      flash.now[:alert] = t("buildings.edit.stale_floor")
+      render :edit, status: :unprocessable_entity
+      return
+    end
+
     # Preloaded BEFORE Curation::Apply.call, not just before a failure
     # re-render: a floor RECEIVING A NEW plan upload is the one case
     # Building#save!'s autosave cascade actually (re-)validates this
@@ -168,20 +194,41 @@ class BuildingsController < ApplicationController
 
   # Ids of floors whose submitted nested-attribute row includes a present
   # `plan` (a real file upload) — see preload_new_floor_plan_attachments'
-  # comment above. `.with_indifferent_access` throughout: `building_params
-  # .to_h`'s nested floors_attributes hash and its per-row hashes are both
-  # plain Hash by the time they reach here, and Rails' own `fields_for`
-  # always submits this as a hash keyed by index (never a bare array), but
-  # the defensive `Array(...)`/`.is_a?(Hash)` branch (mirrors
-  # RoomsController#destroyed_gallery_image_ids) tolerates either shape.
+  # comment above and submitted_floor_rows' comment below for the row
+  # extraction this delegates to.
   def floor_ids_with_new_plan(attrs)
+    submitted_floor_rows(attrs).select { |row| row[:plan].present? }
+                                .map { |row| row[:id].to_s }
+                                .compact
+  end
+
+  # True when `floors_attributes` names an `:id` that is NOT one of
+  # `@building`'s own floors — a foreign building's floor id, or a floor the
+  # nightly sync deleted between this page's load and this submit. Compared
+  # as strings (`floor_ids` are Integers, submitted ids are form strings) so
+  # `"7" == 7` doesn't silently fail the `include?` check.
+  def stale_floor_ids?(attrs)
+    submitted_ids = submitted_floor_rows(attrs).map { |row| row[:id].to_s }.compact_blank
+    return false if submitted_ids.empty?
+
+    known_ids = @building.floor_ids.map(&:to_s)
+    submitted_ids.any? { |id| known_ids.exclude?(id) }
+  end
+
+  # Shared row-extraction for both floor_ids_with_new_plan and
+  # stale_floor_ids? — `building_params.to_h`'s nested floors_attributes hash
+  # and its per-row hashes are both plain Hash by the time they reach here,
+  # and Rails' own `fields_for` always submits this as a hash keyed by index
+  # (never a bare array), but the defensive `Array(...)`/`.is_a?(Hash)`
+  # branch (mirrors RoomsController#destroyed_gallery_image_ids) tolerates
+  # either shape. Each returned row is already `.with_indifferent_access`'d
+  # so callers can read `row[:id]`/`row[:plan]` directly.
+  def submitted_floor_rows(attrs)
     rows = attrs.with_indifferent_access[:floors_attributes]
     return [] if rows.blank?
 
     rows = rows.is_a?(Hash) ? rows.values : Array(rows)
-    rows.select { |row| row.with_indifferent_access[:plan].present? }
-        .map { |row| row.with_indifferent_access[:id].to_s }
-        .compact
+    rows.map(&:with_indifferent_access)
   end
 
   def set_building

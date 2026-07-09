@@ -19,10 +19,23 @@ class Building < ApplicationRecord
   # row is an already-persisted floor), so the guard here is a plain no-op
   # skip for a row nothing touched, keeping an untouched floor row from
   # spuriously appearing in Curation::Apply's dirty-attribute diff.
+  #
+  # `attrs[:id].blank?` is checked FIRST and rejects unconditionally: unlike
+  # Room's gallery (where a new, id-less row is the legitimate "add another
+  # photo" case), this form's `fields_for :floors` only ever renders
+  # already-persisted floor rows, so an id-less row can only be a forged/
+  # tampered submission. Without this guard, an id-less row with a present
+  # `plan` sails past the `plan.blank? && remove_plan.blank?` half of the
+  # check and `assign_nested_attributes_for_collection_association` calls
+  # `build` on `Floor` — a brand-new Floor row this form must never create.
+  # (Today that `build` happens to be harmless-looking because unrelated
+  # `label`/`workspace` validations fail it before save, but relying on
+  # coincidental validation failure on ANOTHER model to enforce THIS model's
+  # own invariant is exactly the gap this guard closes directly.)
   accepts_nested_attributes_for :floors,
     reject_if: proc { |attributes|
       attrs = attributes.with_indifferent_access
-      attrs[:plan].blank? && attrs[:remove_plan].blank?
+      attrs[:id].blank? || (attrs[:plan].blank? && attrs[:remove_plan].blank?)
     }
 
   validates :bldrecnbr, presence: true, uniqueness: true

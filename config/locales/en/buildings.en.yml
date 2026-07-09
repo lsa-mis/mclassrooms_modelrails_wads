@@ -48,3 +48,4 @@ en:
       remove_plan_label: "Delete floor plan for floor %{label}"
       submit: "Save changes"
       success: "Building updated."
+      stale_floor: "One or more floor rows are out of date; please reload and try again."

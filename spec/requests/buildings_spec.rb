@@ -542,6 +542,60 @@ RSpec.describe "PATCH /buildings/:id", type: :request do
       expect(building.address).to eq("419 S State St")
       expect(building.city).to eq("Ann Arbor")
     end
+
+    # Review-wave regression (Important finding #1): Building#floors'
+    # reject_if only checked `plan`/`remove_plan`, never `:id` — a
+    # floors_attributes row with NO `:id` but a present `plan` upload sailed
+    # past that check, and assign_nested_attributes_for_collection_association
+    # would `build` a brand-new Floor. Floors are sync-created (D10) — this
+    # form must never create one, even accidentally. Fails against the
+    # pre-fix reject_if (Floor.count changes by 1); passes against the
+    # `attrs[:id].blank? || ...` guard (row rejected outright, rest of the
+    # update — the nickname change — still applies).
+    it "does not create a Floor from a floors_attributes row with no id, and still applies the rest of the update" do
+      expect {
+        patch building_path(building), params: {
+          building: {
+            nickname: "New Name",
+            floors_attributes: { "0" => { plan: fixture_file_upload("avatar.png", "image/png") } }
+          }
+        }
+      }.not_to change(Floor, :count)
+
+      expect(response).to redirect_to(building_path(building))
+      expect(building.reload.nickname).to eq("New Name")
+    end
+
+    # Review-wave regression (Important finding #2): a floors_attributes row
+    # whose `:id` belongs to ANOTHER building raises
+    # ActiveRecord::RecordNotFound from inside `Building#assign_attributes`
+    # — BEFORE Curation::Apply's own transaction (and its RecordInvalid/
+    # RecordNotDestroyed rescue) ever runs. Left unguarded that bubbles up
+    # to ApplicationController's blanket `rescue_from RecordNotFound` (a
+    # 404), the wrong contract for what's really a stale/foreign form
+    # submission on an otherwise-valid admin edit. Fails against the
+    # pre-fix controller (raises, uncaught by Curation::Apply, surfaced as a
+    # 404 by the global rescue_from); passes against the pre-Curation::Apply
+    # id guard (422, :edit re-rendered, neither building's floors touched).
+    it "422s and mutates nothing when floors_attributes references another building's floor id" do
+      other_building = create(:building, workspace: workspace)
+      foreign_floor = create(:floor, building: other_building, workspace: workspace, label: "1")
+
+      expect {
+        patch building_path(building), params: {
+          building: {
+            nickname: "New Name",
+            floors_attributes: { "0" => {
+              id: foreign_floor.id, plan: fixture_file_upload("avatar.png", "image/png")
+            } }
+          }
+        }
+      }.not_to raise_error
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(building.reload.nickname).to eq("Old Name")
+      expect(foreign_floor.reload.plan).not_to be_attached
+    end
   end
 
   describe "POST create" do
