@@ -785,3 +785,159 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
     end
   end
 end
+
+# MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): admin room editing — the
+# phase's first audited mutation. Every write here must flow through
+# Curation::Apply (Task 1), never a bare `@room.update`, so the ActivityLog
+# examples below double as the contract's regression guard. Mirrors the
+# tenancy setup from the sibling describe blocks above: shared-posture stub +
+# workspace-scoped fixtures + sign_in.
+RSpec.describe "GET /rooms/:id/edit", type: :request do
+  let(:workspace) { create(:workspace, slug: "rooms-edit-spec-workspace", personal: false) }
+
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+  end
+
+  def membership_with(slug)
+    user = create(:user)
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    membership.update!(role: Role.system_default!(slug))
+    user
+  end
+
+  let(:building) { create(:building, workspace: workspace) }
+  let!(:room) { create(:room, building: building, workspace: workspace, facility_code: "MLB1001") }
+
+  describe "as a non-admin viewer" do
+    it_behaves_like "an admin-only action" do
+      let(:actor) { membership_with("viewer") }
+      let(:http_method) { :get }
+      let(:request_path) { edit_room_path(room) }
+    end
+  end
+
+  describe "as an admin" do
+    let(:admin) { membership_with("admin") }
+
+    it "returns 200 and renders the edit form" do
+      sign_in(admin)
+
+      get edit_room_path(room)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(room.display_name)
+    end
+  end
+end
+
+RSpec.describe "PATCH /rooms/:id", type: :request do
+  let(:workspace) { create(:workspace, slug: "rooms-update-spec-workspace", personal: false) }
+
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+  end
+
+  def membership_with(slug)
+    user = create(:user)
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    membership.update!(role: Role.system_default!(slug))
+    user
+  end
+
+  let(:building) { create(:building, workspace: workspace) }
+  let!(:room) do
+    create(:room, building: building, workspace: workspace, facility_code: "MLB1001", nickname: "Old Name")
+  end
+
+  describe "as a non-admin viewer" do
+    it_behaves_like "an admin-only action" do
+      let(:actor) { membership_with("viewer") }
+      let(:http_method) { :patch }
+      let(:request_path) { room_path(room) }
+      let(:request_params) { { room: { nickname: "Should not apply" } } }
+    end
+  end
+
+  describe "as an admin" do
+    let(:admin) { membership_with("admin") }
+
+    before { sign_in(admin) }
+
+    # The audit-granularity contract Curation::Apply already proves in
+    # isolation (spec/lib/curation/apply_spec.rb): a real column change
+    # (nickname) appears in before_after; this pins that RoomsController's
+    # #update wires it correctly end-to-end, one ActivityLog per request.
+    it "updates the curated field via Curation::Apply and writes exactly one audited ActivityLog" do
+      expect {
+        patch room_path(room), params: { room: { nickname: "New Name" } }
+      }.to change(ActivityLog, :count).by(1)
+
+      expect(response).to redirect_to(room_path(room))
+      expect(room.reload.nickname).to eq("New Name")
+
+      log = ActivityLog.last
+      expect(log.action).to eq("room.curated")
+      expect(log.before_after).to eq(
+        "before" => { "nickname" => "Old Name" }, "after" => { "nickname" => "New Name" }
+      )
+    end
+
+    # Room's own `content_type: [:png, :jpeg, :webp]` validation on :photo is
+    # the natural, already-existing validation reachable through this form —
+    # a PDF is allowed for seating_chart but not photo, so attaching one here
+    # is a genuine ActiveRecord::RecordInvalid, not a stub.
+    it "re-renders :edit with 422 on a validation failure and writes no ActivityLog" do
+      expect {
+        patch room_path(room), params: {
+          room: { photo: fixture_file_upload("seating_chart.pdf", "application/pdf") }
+        }
+      }.not_to change(ActivityLog, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(room.reload.photo).not_to be_attached
+    end
+
+    it "persists a gallery reorder" do
+      first = create(:room_gallery_image, room: room, workspace: workspace, position: 0)
+      second = create(:room_gallery_image, room: room, workspace: workspace, position: 1)
+
+      patch room_path(room), params: {
+        room: { gallery_images_attributes: {
+          "0" => { id: first.id, position: "1" },
+          "1" => { id: second.id, position: "0" }
+        } }
+      }
+
+      expect(response).to redirect_to(room_path(room))
+      expect(first.reload.position).to eq(1)
+      expect(second.reload.position).to eq(0)
+    end
+
+    it "removes a gallery image via _destroy" do
+      image = create(:room_gallery_image, room: room, workspace: workspace)
+
+      expect {
+        patch room_path(room), params: {
+          room: { gallery_images_attributes: { "0" => { id: image.id, _destroy: "1" } } }
+        }
+      }.to change(RoomGalleryImage, :count).by(-1)
+
+      expect(response).to redirect_to(room_path(room))
+    end
+  end
+
+  describe "POST create" do
+    it "has no route" do
+      post "/rooms", params: { room: { rmrecnbr: "9999999" } }
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "RoomPolicy#create? is false" do
+      expect(RoomPolicy.new(nil, Room.new).create?).to be(false)
+    end
+  end
+end

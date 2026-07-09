@@ -8,20 +8,19 @@ class RoomsController < ApplicationController
 
   VIEWS = %w[active inactive_rooms inactive_buildings].freeze
 
-  # REQUIRED CORRECTION vs. the phase-4 Task 3 brief: the brief's snippet lists
-  # `only: [:show, :edit, :update, :floor_plan]`, anticipating the full action
-  # set this controller will have by the end of the phase. But `:edit`/`:update`
-  # (Task 7) aren't defined as controller methods yet, and
-  # `config.action_controller.raise_on_missing_callback_actions` is `true` in
-  # both development.rb and test.rb (Rails 7.1+ default) — so a before_action
-  # `only:` naming an undefined action isn't inert, it's a hard
-  # `AbstractController::ActionNotFound` ("Unknown action") raised for EVERY
-  # request to this controller, including `#index` (verified: it broke all 19
-  # pre-existing Find-a-Room examples). Scoped to `:show`/`:floor_plan` for
-  # now that Task 6 defines `#floor_plan` below; Task 7 must add `:edit`/
-  # `:update` back to these lists in the same commit that defines those
-  # methods.
-  before_action :set_room, only: [ :show, :floor_plan ]
+  # Task 7 (Brief §5.3) now defines #edit/#update below, so both actions join
+  # set_room — the phase-4 Task 3 brief's originally-anticipated
+  # `only: [:show, :edit, :update, :floor_plan]` couldn't be written until
+  # #edit/#update existed as real methods (raise_on_missing_callback_actions
+  # is `true` in dev/test, so naming an undefined action here raises
+  # AbstractController::ActionNotFound for every request, #index included).
+  # redirect_inactive_for_non_admins deliberately stays scoped to
+  # :show/:floor_plan only: an admin editing a HIDDEN room is the normal path
+  # (how else would they un-hide one?), and a non-admin never reaches
+  # #edit/#update at all — RoomPolicy#edit?/#update? deny them via `authorize`
+  # below, the same redirect-with-alert as every other Pundit denial in this
+  # app.
+  before_action :set_room, only: [ :show, :floor_plan, :edit, :update ]
   before_action :redirect_inactive_for_non_admins, only: [ :show, :floor_plan ]
 
   def index
@@ -86,7 +85,119 @@ class RoomsController < ApplicationController
                           .where(floor_id: @floor.id).natural_room_order
   end
 
+  # MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): the phase's first admin
+  # mutation — curated fields (nickname, ADA seat count) plus media
+  # attach/remove/reorder, all in one form. `RoomPolicy#edit?` is admin-only
+  # this phase (see the policy file's phase-5 seam comment).
+  def edit
+    authorize @room
+    build_blank_gallery_images
+  end
+
+  # Routes the whole payload — curated fields, attachment assignment, the
+  # remove_* purge writers, and gallery add/remove/reorder — through
+  # Curation::Apply.call in ONE transaction (spec D13): either the record
+  # change and its ActivityLog both commit, or neither does. Attachment
+  # operations are not dirty-tracked (ActiveRecord::AttributeMethods::Dirty
+  # never sees a has_one_attached assignment), so their `before_after` diff
+  # is empty — the "room.curated" action string is their only audit trail;
+  # a genuine column change (nickname, ada_seat_count) still appears in the
+  # diff normally.
+  def update
+    authorize @room
+    attrs = room_params.to_h
+    # Preloaded BEFORE the save, not just before a failure re-render: a
+    # gallery reorder/destroy re-validates every SURVIVING RoomGalleryImage's
+    # `attached: true` during the autosave cascade inside Curation::Apply's
+    # `@record.save!` below, and @room came from set_room's plain `find` (no
+    # gallery_images preload) — Bullet raises on that N+1 regardless of
+    # whether the request ever reaches a render. Rows being `_destroy`d are
+    # excluded from the preload (Rails skips validations on records marked
+    # for destruction, so preloading their attachment would itself be an
+    # UNUSED eager load — the destroy-only spec below caught exactly that).
+    preload_gallery_image_attachments(skip_ids: destroyed_gallery_image_ids(attrs))
+    result = Curation::Apply.call(record: @room, actor: Current.user,
+                                  attributes: attrs, action: "room.curated")
+
+    if result.success?
+      redirect_to room_path(@room), notice: t("rooms.edit.success")
+    else
+      # result.failure → @room carries the model's own validation errors
+      # (result.payload[:record] is the same in-memory @room Curation::Apply
+      # attempted to save!, so re-rendering :edit shows exactly what failed).
+      @room = result.payload[:record] || @room
+      build_blank_gallery_images
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
   private
+
+  # Blank "add a photo" rows for the gallery card, up to the D9 five-image
+  # cap (app/models/room_gallery_image.rb) — `.build` appends to the
+  # association's in-memory target, so the view's single `fields_for
+  # :gallery_images` loop picks up both persisted rows and these unsaved ones
+  # (branching per-row on `persisted?`) without a second query. `.size` and
+  # `.map` below read that same target, counting any rows a failed #update
+  # already re-built via nested attributes (so a re-render never double-adds
+  # blanks past the cap). Preloading runs AFTER build (harmless either order —
+  # it only touches already-persisted rows) so both #edit's first render and
+  # a failed #update's re-render get it.
+  def build_blank_gallery_images
+    remaining = 5 - @room.gallery_images.size
+    if remaining.positive?
+      next_position = (@room.gallery_images.map(&:position).compact.max || -1) + 1
+      remaining.times { |i| @room.gallery_images.build(position: next_position + i) }
+    end
+
+    preload_gallery_image_attachments
+  end
+
+  # The view renders every persisted gallery image's `image.variant(...)`
+  # (thumbnail) and RoomGalleryImage's own `validates :image, attached: true`
+  # re-checks `image.attached?` per row on save — both N+1 without this.
+  # `ActiveRecord::Associations::Preloader` (not `.includes`) is the one API
+  # that can preload ONTO already-loaded, in-memory records: `@room` was
+  # fetched via a plain `find` in `set_room`, and `build_blank_gallery_images`
+  # may have already appended unsaved rows to `@room.gallery_images`' target —
+  # re-querying via `.includes` would return a SEPARATE set of instances,
+  # losing those unsaved rows. `select(&:persisted?)` skips new/blank rows
+  # (they have no attachment to preload). Mirrors rooms/_media.html.erb's
+  # `includes(image_attachment: :blob)` choice over the auto-generated
+  # `with_attached_image` scope (that scope also preloads `variant_records`,
+  # which Bullet flags as unused here).
+  #
+  # `skip_ids:` excludes rows the caller already knows are being `_destroy`d
+  # this request — Rails skips validations on a record marked for
+  # destruction, so preloading ITS attachment ahead of `#update`'s save would
+  # itself be an unused eager load (Bullet caught exactly this on the
+  # destroy-only spec). Not used before a render (#edit, or #update's failure
+  # re-render still wants every row's thumbnail, destroy-marked or not).
+  def preload_gallery_image_attachments(skip_ids: [])
+    persisted = @room.gallery_images.select { |image| image.persisted? && skip_ids.exclude?(image.id.to_s) }
+    return if persisted.empty?
+
+    ActiveRecord::Associations::Preloader.new(
+      records: persisted, associations: { image_attachment: :blob }
+    ).call
+  end
+
+  # Ids of gallery images the submitted params mark for destruction this
+  # request — see preload_gallery_image_attachments' `skip_ids:` above.
+  # `.with_indifferent_access` throughout: `room_params.to_h`'s nested
+  # gallery_images_attributes hash and its per-row hashes are both plain
+  # Hash by the time they reach here, and Rails' own `fields_for` always
+  # submits this as a hash keyed by index (never a bare array), but the
+  # defensive `Array(...)`/`.is_a?(Hash)` branch tolerates either shape.
+  def destroyed_gallery_image_ids(attrs)
+    rows = attrs.with_indifferent_access[:gallery_images_attributes]
+    return [] if rows.blank?
+
+    rows = rows.is_a?(Hash) ? rows.values : Array(rows)
+    rows.select { |row| ActiveModel::Type::Boolean.new.cast(row.with_indifferent_access[:_destroy]) }
+        .map { |row| row.with_indifferent_access[:id].to_s }
+        .compact
+  end
 
   def view = params[:view].presence_in(VIEWS) || "active"
 
@@ -117,6 +228,19 @@ class RoomsController < ApplicationController
   def filter_params
     params.permit(:building, :room, :unit_id, :capacity_min, :capacity_max,
                   :sort, :per, :view, characteristics: [])
+  end
+
+  # Curated fields (nickname, ada_seat_count), the three media slots plus
+  # their attribute-shaped remove_* purge writers, and gallery
+  # add/remove/reorder via accepts_nested_attributes_for. Everything here
+  # flows into ONE Curation::Apply.call(attributes:) — no field is ever
+  # assigned outside that audited path.
+  def room_params
+    params.require(:room).permit(
+      :nickname, :ada_seat_count, :photo, :panorama, :seating_chart,
+      :remove_photo, :remove_panorama, :remove_seating_chart,
+      gallery_images_attributes: [ :id, :position, :image, :_destroy ]
+    )
   end
 
   # D14 ETag components: the room + its contact record (both attribute-level
