@@ -12,12 +12,15 @@ require "rails_helper"
 # succeeded/failed phase's row, only a skipped one's (see run_pipeline.rb).
 #
 # No real sleeps, ever: `sleeper:` is injected as a fake that records its
-# calls instead of invoking Kernel.sleep.
+# calls instead of invoking Kernel.sleep. No real log writes, ever:
+# `operator_log:` is injected with a StringIO-backed Logger so nothing here
+# appends to the real log/sync.log (mirrors operator_log_spec's discipline).
 RSpec.describe Sync::RunPipeline do
   let(:workspace) { create(:workspace) }
   let(:sleeps) { [] }
   let(:sleeper) { ->(seconds) { sleeps << seconds } }
   let(:client) { instance_double(UmApi::Client) }
+  let(:operator_log) { Sync::OperatorLog.new(logger: Logger.new(StringIO.new)) }
 
   before { Current.workspace = workspace }
 
@@ -51,7 +54,7 @@ RSpec.describe Sync::RunPipeline do
       call_log = []
       stub_all_core_succeeding(call_log: call_log)
 
-      run = described_class.call(sleeper: sleeper, client: client)
+      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(call_log).to eq(%w[campuses buildings rooms facility_ids characteristics contacts])
       expect(sleeps).to eq([ 61, 61, 61, 61, 61 ]) # 5 gaps between 6 phases, never after the last
@@ -72,7 +75,7 @@ RSpec.describe Sync::RunPipeline do
         end
       end
 
-      described_class.call(sleeper: sleeper, client: client)
+      described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(seen_clients.uniq.size).to eq(1)
       expect(seen_clients.first).to equal(client)
@@ -83,7 +86,7 @@ RSpec.describe Sync::RunPipeline do
       fake_client = instance_double(UmApi::Client)
       allow(UmApi::Client).to receive(:new).and_return(fake_client)
 
-      described_class.call(sleeper: sleeper)
+      described_class.call(sleeper: sleeper, operator_log: operator_log)
 
       expect(UmApi::Client).to have_received(:new).once
     end
@@ -91,7 +94,7 @@ RSpec.describe Sync::RunPipeline do
     it "creates the run under Current.workspace with the requested dry_run flag" do
       stub_all_core_succeeding
 
-      run = described_class.call(dry_run: true, sleeper: sleeper, client: client)
+      run = described_class.call(dry_run: true, sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run.workspace).to eq(workspace)
       expect(run).to be_dry_run
@@ -109,7 +112,7 @@ RSpec.describe Sync::RunPipeline do
         allow(phase_class).to receive(:call)
       end
 
-      run = described_class.call(sleeper: sleeper, client: client)
+      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(call_log).to eq(%w[campuses buildings rooms])
       described_class::CORE_PHASES[3..].each { |phase_class| expect(phase_class).not_to have_received(:call) }
@@ -155,7 +158,7 @@ RSpec.describe Sync::RunPipeline do
       stub_phase(described_class::CORE_PHASES[4], status: :succeeded, call_log: call_log) # characteristics
       stub_phase(described_class::CORE_PHASES[5], status: :succeeded, call_log: call_log) # contacts
 
-      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client)
+      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run).to eq(failed_run)
       expect(described_class::CORE_PHASES[0]).not_to have_received(:call)
@@ -193,7 +196,7 @@ RSpec.describe Sync::RunPipeline do
       allow(described_class::CORE_PHASES[4]).to receive(:call)
       allow(described_class::CORE_PHASES[5]).to receive(:call)
 
-      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client)
+      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run).to be_failed
       expect(described_class::CORE_PHASES[3]).not_to have_received(:call)
@@ -225,7 +228,7 @@ RSpec.describe Sync::RunPipeline do
         Result.failure("meetings endpoint down")
       end
 
-      run = described_class.call(sleeper: sleeper, client: client)
+      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run).to be_succeeded # core succeeded; the optional failure must not flip this
       expect(run.sync_phases.find_by!(key: "availability")).to be_failed
@@ -242,7 +245,7 @@ RSpec.describe Sync::RunPipeline do
         Result.success(counters: {}, warnings: [])
       end
 
-      run = described_class.call(sleeper: sleeper, client: client)
+      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run).to be_failed # core's failure still stands
       expect(call_log).to eq(%w[campuses availability])
@@ -250,25 +253,33 @@ RSpec.describe Sync::RunPipeline do
     end
   end
 
-  describe "never raises out of .call" do
-    it "swallows a phase class raising directly (bypassing the BasePhase Result contract) and marks the run failed" do
+  # The never-raises guarantee is scoped to PHASE execution — once a SyncRun
+  # row exists, no phase failure or bookkeeping hiccup escapes .call, and the
+  # SyncRun is always returned. If the run row ITSELF can't be created, there
+  # is nothing to record the failure on, so that raises loudly (the
+  # clarification, Task 12 review) rather than silently returning nil.
+  describe "the never-raises boundary (once the run exists) and the .call -> SyncRun contract" do
+    it "swallows a phase class raising directly (bypassing the BasePhase Result contract), marks the run failed, and returns the SyncRun" do
       stub_phase(described_class::CORE_PHASES[0], status: :succeeded)
       allow(described_class::CORE_PHASES[1]).to receive(:call).and_raise(StandardError, "phase blew up unexpectedly")
       described_class::CORE_PHASES[2..].each { |phase_class| allow(phase_class).to receive(:call) }
 
       run = nil
-      expect { run = described_class.call(sleeper: sleeper, client: client) }.not_to raise_error
+      expect { run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log) }.not_to raise_error
 
+      expect(run).to be_a(SyncRun)
       expect(run).to be_failed
+      expect(run.finished_at).to be_present
       expect(run.sync_phases.find_by!(key: "buildings")).to be_failed
       expect(run.sync_phases.find_by!(key: "buildings").error_messages).to eq([ "phase blew up unexpectedly" ])
       described_class::CORE_PHASES[2..].each { |phase_class| expect(phase_class).not_to have_received(:call) }
     end
 
-    it "never raises even if the run row itself can't be created" do
-      Current.workspace = nil # SyncRun requires a workspace; this makes create! raise
+    it "raises loudly when the run row itself cannot be created — there is nothing to record the failure on" do
+      Current.workspace = nil # SyncRun requires a workspace; create! raises rather than returning nil
 
-      expect { described_class.call(sleeper: sleeper, client: client) }.not_to raise_error
+      expect { described_class.call(sleeper: sleeper, client: client, operator_log: operator_log) }
+        .to raise_error(ActiveRecord::RecordInvalid)
     end
   end
 end

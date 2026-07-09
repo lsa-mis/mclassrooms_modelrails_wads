@@ -68,6 +68,42 @@ RSpec.describe Sync::OperatorLog do
         expect(log.guidance_for("unexpected boom")).to eq(Sync::OperatorLog::DEFAULT_GUIDANCE)
       end
     end
+
+    # Task 12 fix: map by the CLASS carried in the failure Result, not by
+    # re-parsing the message. Sync::BasePhase now stamps error_class into
+    # every failure Result (base_phase.rb) precisely because message wording
+    # varies per gateway path.
+    describe "given a failure Result carrying error_class (the shape Sync::BasePhase now produces)" do
+      it "maps by the carried error_class regardless of message text" do
+        result = Result.failure("anything at all, no status code in here", error_class: "UmApi::Unauthorized")
+        expect(log.guidance_for(result)).to eq("check credentials")
+      end
+
+      # The live defect this fix targets: UmApi::TokenCache raises
+      # Unauthorized as "token endpoint returned {code} for scope ..." — a
+      # DIFFERENT message shape than UmApi::Client's "gateway returned ...",
+      # and every phase calls token_for BEFORE any HTTP request, so a
+      # token-endpoint 401 is reachable on a real nightly run. The message
+      # here even carries a MISLEADING 500 that message-parsing would mis-map
+      # to "transient, re-run"; class-first mapping still yields the correct
+      # "check credentials". Under pure string-parsing this returns the wrong
+      # guidance (or generic), so this example has teeth.
+      it "maps a TokenCache-shaped Unauthorized to credentials guidance, not a message-parsed guess" do
+        result = Result.failure("token endpoint returned 500 for scope buildings", error_class: "UmApi::Unauthorized")
+        expect(log.guidance_for(result)).to eq("check credentials")
+      end
+
+      it "still falls back to message parsing when the Result's error_class is a foreign (non-UmApi) class" do
+        result = Result.failure("U-M gateway returned 404 for /bf/x", error_class: "SomeGem::Timeout")
+        expect(log.guidance_for(result)).to eq("verify department mapping")
+      end
+    end
+
+    describe "given the error_class name string directly" do
+      it "maps UmApi::Unauthorized to credentials guidance" do
+        expect(log.guidance_for("UmApi::Unauthorized")).to eq("check credentials")
+      end
+    end
   end
 
   describe "#phase_started" do
@@ -86,6 +122,15 @@ RSpec.describe Sync::OperatorLog do
     it "logs every error message with its guidance on failure" do
       log.phase_finished("buildings", Result.failure("U-M gateway returned 401 for /bf/x"))
       expect(logged).to include("phase=buildings").and include("failed").and include("check credentials")
+    end
+
+    it "derives guidance from the failure Result's error_class, not its (per-gateway-path variable) message" do
+      # The exact pipeline call path: a token-endpoint 401 Result whose
+      # message would mis-parse (500) but whose error_class is authoritative.
+      result = Result.failure("token endpoint returned 500 for scope buildings", error_class: "UmApi::Unauthorized")
+      log.phase_finished("campuses", result)
+      expect(logged).to include("check credentials")
+      expect(logged).not_to include("transient, re-run")
     end
   end
 
