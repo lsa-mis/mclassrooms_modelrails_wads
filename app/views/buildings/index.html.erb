@@ -1,9 +1,22 @@
 <%# MiClassrooms Phase 4 Task 8 (Brief §5.3, §14.1): the admin Buildings
     index — FTS5 search (name/nickname/abbreviation via Building.search_name),
-    a hidden-buildings toggle, and UI::DataTableComponent for the results.
-    Admin-only page (BuildingPolicy#index?), so no view-toggle gating is
-    needed here the way rooms/index.html.erb gates its inactive-view links —
-    every visitor of this page already cleared that bar in the controller.
+    a hidden-buildings toggle, and a plain server-rendered table for the
+    results. Admin-only page (BuildingPolicy#index?), so no view-toggle
+    gating is needed here the way rooms/index.html.erb gates its
+    inactive-view links — every visitor of this page already cleared that
+    bar in the controller.
+
+    Deliberately NOT UI::DataTableComponent: this index is Pagy-paginated
+    server-side, and DataTableComponent's own "Don't use when" contract
+    (app/components/ui/data_table_component.rb) rules it out for exactly
+    that reason — its client-side search box only filters rows already in
+    the DOM (the current page), so a user searching for a building that
+    exists on another page got a false "no results" directly under the real
+    server-FTS search box above. A plain `<table>` (styled per the design
+    system's table convention — see workspaces/members/index.html.erb) with
+    explicit `scope="col"` headers avoids both the functional trap and a
+    missing-scope accessibility gap DataTableComponent's own header cells
+    don't set.
 
     The search form uses the template's shared `auto-submit` Stimulus
     controller (app/javascript/controllers/auto_submit_controller.js): the
@@ -30,26 +43,37 @@
   <% end %>
 
   <% if @buildings.any? %>
-    <%
-      columns = [
-        { key: :name, label: t(".column_name") },
-        { key: :abbreviation, label: t(".column_abbreviation") },
-        { key: :campus, label: t(".column_campus") },
-        { key: :classroom_count, label: t(".column_classroom_count") },
-        { key: :hidden, label: t(".column_hidden") }
-      ]
-      rows = @buildings.map do |building|
-        {
-          name: link_to(building.display_name, building_path(building),
-                  class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm"),
-          abbreviation: building.abbreviation,
-          campus: building.campus&.description,
-          classroom_count: building.rooms.classroom.count,
-          hidden: building.hidden? ? ui(:badge, t(".hidden_badge"), variant: :soft, tone: :warning) : nil
-        }
-      end
-    %>
-    <%= ui :data_table, columns: columns, rows: rows, per_page: 0, caption: t(".title"), class: "mt-8" %>
+    <div class="mt-8 bg-surface-raised rounded-lg border border-border shadow-sm overflow-hidden">
+      <table class="w-full" aria-label="<%= t('.title') %>">
+        <thead>
+          <tr class="border-b border-border bg-surface">
+            <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_name") %></th>
+            <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_abbreviation") %></th>
+            <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_campus") %></th>
+            <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_classroom_count") %></th>
+            <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_hidden") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @buildings.each do |building| %>
+            <tr class="border-b border-border last:border-b-0 hover:bg-surface-sunken transition-colors">
+              <td class="py-3 px-2 text-text-heading">
+                <%= link_to building.display_name, building_path(building),
+                      class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+              </td>
+              <td class="py-3 px-2 text-text-muted"><%= building.abbreviation %></td>
+              <td class="py-3 px-2 text-text-muted"><%= building.campus&.description %></td>
+              <td class="py-3 px-2 text-text-muted"><%= @classroom_counts.fetch(building.id, 0) %></td>
+              <td class="py-3 px-2">
+                <% if building.hidden? %>
+                  <%= ui :badge, t(".hidden_badge"), variant: :soft, tone: :warning %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
 
     <%= render "shared/pagination", pagy: @pagy %>
   <% else %>
