@@ -9,19 +9,27 @@
 # are copied into this file during the phase 8 cutover. Until then, nothing
 # here should be treated as authoritative sync-scope or display data.
 
+# short_code values are stored NORMALIZED (downcase + strip non-alphanumeric,
+# via CodeNormalizer) — CharacteristicDisplayRule#normalize_short_code applies
+# it before_validation, and the phase-2 characteristics sync writes
+# RoomCharacteristic.short_code the same way, so phase 3's join across the two
+# matches. They MUST be pre-normalized here: ReferenceData.seed! looks a row
+# up by find_or_initialize_by(short_code:) on the raw YAML value, so a
+# non-normalized value would fail to find its own normalized-on-save row and
+# re-seeding would raise a uniqueness error instead of being a no-op.
 characteristic_display_rules:
-  - short_code: InstrComp
+  - short_code: instrcomp
     icon_key: computer
     filterable: true
-  - short_code: LectureCap
+  - short_code: lecturecap
     icon_key: video-camera
     filterable: true
     category_override: Recording
-  - short_code: TeamTables
+  - short_code: teamtables
     icon_key: table
     filterable: true
     team_learning: true
-  - short_code: "Whtbrd>25"
+  - short_code: whtbrd25
     icon_key: whiteboard
     filterable: false
 

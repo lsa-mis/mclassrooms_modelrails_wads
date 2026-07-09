@@ -1,0 +1,18 @@
+{
+  "Characteristics": [
+    {
+      "Code": "INSTRCOMP",
+      "ShortCode": "InstrComp",
+      "Description": "Instructor Computer",
+      "LongDescription": "Instructor station computer with document camera",
+      "Status": "A"
+    },
+    {
+      "Code": "BADCODE",
+      "ShortCode": "@#$",
+      "Description": "Malformed short code",
+      "LongDescription": "A row whose short code is all punctuation and normalizes to blank",
+      "Status": "A"
+    }
+  ]
+}

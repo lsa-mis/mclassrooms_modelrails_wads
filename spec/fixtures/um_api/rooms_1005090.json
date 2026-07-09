@@ -1,0 +1,16 @@
+{
+  "Rooms": [
+    {
+      "RmRecNbr": "2005090",
+      "BldRecNbr": "1005090",
+      "RoomNbr": "0100",
+      "RoomType": "Classroom",
+      "DeptID": "180000",
+      "DeptDescr": "LSA - Mathematics",
+      "DeptGrp": "COLLEGE_OF_LSA",
+      "DeptGrpDescr": "College of Literature, Science & the Arts",
+      "SqFt": 2200,
+      "Floor": "0"
+    }
+  ]
+}

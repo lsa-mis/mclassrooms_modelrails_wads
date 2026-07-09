@@ -1,0 +1,6 @@
+{
+  "Classrooms": [
+    { "RmRecNbr": "2005046", "FacilityCd": "MLB1200", "Capacity": 60 },
+    { "RmRecNbr": "2005090", "FacilityCd": "AH0100", "Capacity": 0 }
+  ]
+}

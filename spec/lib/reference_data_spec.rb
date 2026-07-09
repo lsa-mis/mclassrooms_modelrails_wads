@@ -13,10 +13,16 @@ RSpec.describe ReferenceData do
     file.path
   end
 
+  # short_code is stored normalized (CharacteristicDisplayRule#normalize_short_code,
+  # before_validation), and ReferenceData.seed! looks rows up by the raw YAML
+  # short_code — so the seed value must already be in normalized form or the
+  # second seed can't find its own row (idempotency breaks). These fixtures
+  # therefore use normalized short_codes; the loader's upsert semantics, not
+  # the normalization, are what this spec exercises.
   let(:path) do
     yaml_fixture(
       "characteristic_display_rules" => [
-        { "short_code" => "InstrComp", "icon_key" => "computer", "filterable" => true }
+        { "short_code" => "instrcomp", "icon_key" => "computer", "filterable" => true }
       ],
       "unit_display_names" => [
         { "department_group" => "COLLEGE_OF_LSA", "display_name" => "College of LSA" }
@@ -51,12 +57,12 @@ RSpec.describe ReferenceData do
 
     it "updates a changed attribute in place on re-seed instead of duplicating the row" do
       described_class.seed!(workspace: workspace, path: path)
-      record = CharacteristicDisplayRule.find_by!(short_code: "InstrComp", workspace: workspace)
+      record = CharacteristicDisplayRule.find_by!(short_code: "instrcomp", workspace: workspace)
       expect(record.filterable).to be(true)
 
       changed_path = yaml_fixture(
         "characteristic_display_rules" => [
-          { "short_code" => "InstrComp", "icon_key" => "computer", "filterable" => false }
+          { "short_code" => "instrcomp", "icon_key" => "computer", "filterable" => false }
         ]
       )
 

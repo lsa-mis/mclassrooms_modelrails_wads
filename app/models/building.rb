@@ -29,6 +29,15 @@ class Building < ApplicationRecord
 
   def hidden? = hidden_at.present?
 
+  # Geocoding input for GeocodeBuildingJob (Task 8, phase 2 ingestion).
+  # `state` and `zip` are joined with a space ("MI 48109") before being
+  # comma-joined with the rest, matching conventional US postal address
+  # formatting; any blank component (including a blank "state zip" pair)
+  # is dropped rather than leaving a stray ", ,".
+  def full_address
+    [ address, city, [ state, zip ].compact_blank.join(" ").presence, country ].compact_blank.join(", ")
+  end
+
   # Prefix-match FTS5 query; tokens are quoted so input can't inject MATCH syntax.
   def self.search_name(q)
     match = q.to_s.scan(/[[:alnum:]]+/).map { |t| %("#{t}"*) }.join(" ")
