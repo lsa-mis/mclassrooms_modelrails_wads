@@ -135,6 +135,30 @@ RSpec.describe CharacteristicFilterGroups do
         rule(short_code: "newrule")
       }.to change { described_class.data_version }
     end
+
+    # The create-based examples above always bump the `count` half of the
+    # tuple, so they can't catch a regression that drops the max(updated_at)
+    # term. These edit-based examples DON'T change any count — the only thing
+    # that can move data_version is the updated_at timestamp. They FAIL if the
+    # max(updated_at) terms are dropped from data_version, which is exactly the
+    # D14 "admin edits an existing rule in place" invalidation path.
+    it "changes when an existing CharacteristicDisplayRule is edited in place (updated_at, not count)" do
+      existing = rule(short_code: "editrule")
+
+      expect {
+        existing.update!(icon_key: "different")
+      }.to change { described_class.data_version }
+        .and change { CharacteristicDisplayRule.count }.by(0) # edit, not create
+    end
+
+    it "changes when an existing RoomCharacteristic is edited in place (updated_at, not count)" do
+      existing = characteristic(short_code: "editchar", description: "Seating: Old")
+
+      expect {
+        existing.update!(long_description: "reworded")
+      }.to change { described_class.data_version }
+        .and change { RoomCharacteristic.count }.by(0) # edit, not create
+    end
   end
 
   describe "caching (Solid Cache, event-keyed per D14)" do
