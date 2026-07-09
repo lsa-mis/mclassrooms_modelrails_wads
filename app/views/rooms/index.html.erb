@@ -1,0 +1,33 @@
+<%# MiClassrooms Phase 3 Task 4 (Brief §5.2): minimal Find a Room index —
+    deliberately bare (heading + result rows only). The full filter form,
+    capacity slider, and building cards are Task 5's UI-SPEC-driven rebuild
+    of this same template; this version exists only so the controller has a
+    renderable HTML response for the request spec / JSON consumers. %>
+<% content_for(:title) { t("rooms.index.title") } %>
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t("rooms.index.title") %></h1>
+
+  <% if @announcement %>
+    <div class="mt-4 text-text-default"><%= @announcement.body %></div>
+  <% end %>
+
+  <p class="mt-2 text-text-muted"><%= @search.summary %></p>
+
+  <% if @rooms.any? %>
+    <ul class="mt-6 divide-y divide-border">
+      <% @rooms.each do |room| %>
+        <li class="py-3 flex items-baseline justify-between gap-4">
+          <span class="font-medium text-text-heading"><%= room.display_name %></span>
+          <span class="text-text-muted"><%= room.building.display_name %></span>
+        </li>
+      <% end %>
+    </ul>
+
+    <p class="mt-4 text-sm text-text-muted">
+      <%= t("rooms.index.pagination", page: @pagy.page, pages: @pagy.pages) %>
+    </p>
+  <% else %>
+    <p class="mt-6 text-text-muted"><%= t("rooms.index.empty") %></p>
+  <% end %>
+</div>
