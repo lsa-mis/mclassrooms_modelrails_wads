@@ -157,7 +157,16 @@ RSpec.describe Sync::UpdateRooms do
       expect(office.unit_id).to be_nil
     end
 
-    it "assigns the same Unit to every room sharing the same department group description" do
+    # THE keying teeth (product-owner-confirmed): a Unit is keyed on the
+    # STABLE department-group CODE (DeptGrp "COLLEGE_OF_LSA"), NOT the
+    # free-text description. departments.json deliberately gives dept 180000
+    # (Math) a REWORDED DeptGrpDescr ("College of Lit, Science & Arts") while
+    # depts 190000 (German) and 190100 (Chem, via fallback) keep the full
+    # "College of Literature, Science & the Arts" — same code, three source
+    # rows, TWO distinct descriptions. Under description-keying this forks
+    # into 2+ Units and this example fails; under code-keying all three rooms
+    # collapse to ONE Unit.
+    it "collapses departments sharing a group CODE into one Unit even when their descriptions differ" do
       stub_departments_feed
       stub_department_fallback
       stub_rooms_feed
@@ -169,8 +178,27 @@ RSpec.describe Sync::UpdateRooms do
       math = Room.for_current_workspace.find_by!(rmrecnbr: "2005090")
 
       expect(Unit.for_current_workspace.count).to eq(1)
-      shared_unit_id = Unit.for_current_workspace.sole.id
-      expect([ german.unit_id, chem_lab.unit_id, math.unit_id ]).to all(eq(shared_unit_id))
+      unit = Unit.for_current_workspace.sole
+      expect(unit.department_group).to eq("COLLEGE_OF_LSA")
+      expect([ german.unit_id, chem_lab.unit_id, math.unit_id ]).to all(eq(unit.id))
+    end
+
+    # A UnitDisplayName override keyed on the group CODE only fires if the
+    # sync-created Unit is itself keyed on that CODE. Under the old
+    # description-keying the Unit's department_group held the free text, the
+    # override (keyed "COLLEGE_OF_LSA") never matched, and display_name
+    # silently fell through to the raw description — a dead override. This
+    # pins that the override now resolves.
+    it "lets a code-keyed UnitDisplayName override drive the created Unit's display_name" do
+      create(:unit_display_name, workspace: workspace, department_group: "COLLEGE_OF_LSA", display_name: "LSA")
+      stub_departments_feed
+      stub_department_fallback
+      stub_rooms_feed
+
+      described_class.call(run: run, client: client)
+
+      unit = Unit.for_current_workspace.find_by!(department_group: "COLLEGE_OF_LSA")
+      expect(unit.display_name).to eq("LSA")
     end
   end
 
@@ -186,7 +214,7 @@ RSpec.describe Sync::UpdateRooms do
       expect(math.department_id).to eq("180000")
       expect(math.department_description).to eq("LSA - Mathematics")
       expect(math.department_group).to eq("COLLEGE_OF_LSA")
-      expect(math.department_group_description).to eq("College of Literature, Science & the Arts")
+      expect(math.department_group_description).to eq("College of Lit, Science & Arts")
     end
 
     it "falls back to a per-department fetch when a room's dept id is missing from the preload" do
