@@ -22,6 +22,16 @@ class RoomPolicy < ApplicationPolicy
   # signal available.
   def view_inactive? = user.present? && RoleResolver.for(user).admin?
 
+  # MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): admin-only THIS phase for
+  # BOTH curated fields (nickname, ADA seat count) and media. Phase 5 widens
+  # curated-field editing to editors via RoleResolver#can_edit_room? (already
+  # unit-scoped on the Grant, per app/lib/role_resolver.rb) — media stays
+  # admin-only per §14.1 even after that widening, so #edit/#update will need
+  # to split into a curated-fields check vs. a media check at that point,
+  # not just loosen this one predicate.
+  def edit? = user.present? && RoleResolver.for(user).admin?
+  def update? = edit?
+
   class Scope < ApplicationPolicy::Scope
     # The safe default for every caller, admin included: listed classrooms
     # in the current workspace only. `for_current_workspace` is the

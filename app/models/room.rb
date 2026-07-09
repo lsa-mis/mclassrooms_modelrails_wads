@@ -15,6 +15,34 @@ class Room < ApplicationRecord
   has_one_attached :panorama
   has_one_attached :seating_chart
 
+  # Phase 4 Task 7 (Brief §5.3): admin gallery add/remove/reorder flows through
+  # nested attributes so the whole edit form — curated fields AND gallery
+  # changes — resolves to one `attributes:` hash for Curation::Apply.call, no
+  # separate save. allow_destroy: true backs the `_destroy` checkbox per row.
+  #
+  # reject_if is a necessary addition beyond the brief's one-line snippet: the
+  # edit view renders blank "add another photo" rows up to the D9 five-image
+  # cap, each pre-filled with a `position` value so a real upload lands in the
+  # right slot without extra JS. Without reject_if, `position` being non-blank
+  # on an UNTOUCHED blank row defeats Rails' own `all_blank?` skip, so
+  # `assign_nested_attributes_for_collection_association` would build a new
+  # RoomGalleryImage with no image attached — RoomGalleryImage's own
+  # `validates :image, attached: true` would then fail EVERY curated-field-only
+  # edit (e.g. a plain nickname change) with an unrelated gallery error.
+  #
+  # Reject ONLY a NEW row (no `id`) with a blank `image` — an existing row's
+  # reorder/destroy submission never resends an `image` key at all (no
+  # re-upload), and `call_reject_if` in Rails' own nested_attributes.rb runs
+  # for id-bearing (update) hashes too, not just new ones — an `image`-blank
+  # check alone would silently no-op every position/`_destroy` edit on an
+  # existing gallery image. `with_indifferent_access` tolerates either string
+  # keys (real form submissions) or symbol keys (specs/console calls).
+  accepts_nested_attributes_for :gallery_images, allow_destroy: true,
+    reject_if: proc { |attributes|
+      attrs = attributes.with_indifferent_access
+      attrs[:id].blank? && attrs[:image].blank?
+    }
+
   validates :rmrecnbr, presence: true, uniqueness: true
   validates :photo, :panorama, content_type: [ :png, :jpeg, :webp ],
                     size: { less_than_or_equal_to: 10.megabytes }
@@ -22,6 +50,24 @@ class Room < ApplicationRecord
                     size: { less_than_or_equal_to: 10.megabytes }
 
   before_save :normalize_facility_code
+
+  # Phase 4 Task 7 (Brief §5.3): attribute-shaped removers so a media "delete"
+  # checkbox flows through strong params + Curation::Apply.call(attributes:)
+  # exactly like nickname/ada_seat_count — no separate purge call in the
+  # controller. purge_later (not purge) is a deliberate MVP choice: it's
+  # enqueued as a side effect of #assign_attributes, which runs BEFORE
+  # Curation::Apply's transaction opens, so on the rare rollback (the audit
+  # write itself failing) the purge job still executes even though the rest of
+  # the mutation rolled back. Acceptable for MVP; flagged in the task report.
+  # The reader always returns false (never true) so the checkbox round-trips
+  # unchecked on re-render (a validation failure re-renders :edit) rather than
+  # echoing back "checked" from a transient submitted value.
+  %i[photo panorama seating_chart].each do |slot|
+    define_method("remove_#{slot}=") do |value|
+      public_send(slot).purge_later if ActiveModel::Type::Boolean.new.cast(value)
+    end
+    define_method("remove_#{slot}") { false }
+  end
 
   SEARCH_INDEX_TABLE = "room_search_index"
   SEARCH_INDEX_COLUMNS = %w[facility_code nickname room_number rmrecnbr building_name].freeze
