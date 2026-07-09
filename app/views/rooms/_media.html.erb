@@ -8,12 +8,10 @@
     seed data carry zero media.
 
     pannellum.css only needs to load on pages that render a panorama —
-    injected here via `content_for(:head)` (shared/_layout_head.html.erb
-    already `yield`s :head) rather than app-wide in the stylesheet manifest,
-    so rooms without a panorama don't pay for it. %>
-<% content_for(:head) do %>
-  <%= stylesheet_link_tag "pannellum", "data-turbo-track": "reload" %>
-<% end %>
+    injected via `content_for(:head)` inside the `room.panorama.attached?`
+    guard below (shared/_layout_head.html.erb already `yield`s :head) rather
+    than app-wide in the stylesheet manifest, so rooms without a panorama
+    don't pay for it. %>
 
 <div class="mt-8 space-y-8">
   <% if room.photo.attached? %>
@@ -69,6 +67,9 @@
   <% end %>
 
   <% if room.panorama.attached? %>
+    <% content_for(:head) do %>
+      <%= stylesheet_link_tag "pannellum", "data-turbo-track": "reload" %>
+    <% end %>
     <%# Panorama preview variant doubles as both the static poster image shown
         before the visitor opts in, and the `preview:` value Pannellum itself
         draws inside the booted viewer while the full-resolution panorama
@@ -84,8 +85,7 @@
             panorama_label_value: t("rooms.show.panorama_label", room: room.display_name)
           } do %>
       <%= image_tag panorama_preview_path, alt: "", loading: :eager,
-            class: "absolute inset-0 size-full object-cover",
-            data: { panorama_target: "preview" } %>
+            class: "absolute inset-0 size-full object-cover" %>
       <div data-panorama-target="viewer" hidden class="absolute inset-0"></div>
       <div class="absolute inset-0 flex items-center justify-center gap-2">
         <%= ui :button, t("rooms.show.load_panorama"), variant: :outline, tone: :neutral,
@@ -111,7 +111,7 @@
                   class="block overflow-hidden rounded-md cursor-zoom-in focus-ring">
             <%= ui :image,
                   src: rails_representation_path(room.seating_chart.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                  alt: t("rooms.show.seating_chart_link", room: room.display_name),
+                  alt: t("rooms.show.seating_chart_alt", room: room.display_name),
                   width: 150, height: 150,
                   class: "size-[150px] object-cover" %>
           </button>
@@ -119,7 +119,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_blob_path(room.seating_chart),
-                alt: t("rooms.show.seating_chart_link", room: room.display_name),
+                alt: t("rooms.show.seating_chart_alt", room: room.display_name),
                 loading: :eager,
                 class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
         <% end %>

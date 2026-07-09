@@ -412,6 +412,25 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response).to redirect_to(find_a_room_path)
       expect(flash[:notice]).to eq(I18n.t("rooms.inactive_notice"))
     end
+
+    # Regression guard (review fix): rooms/_media.html.erb's seating-chart
+    # IMAGE branch used to reuse `rooms.show.seating_chart_link` — "Seating
+    # chart for %{room} (PDF)" — as its `alt:`, falsely telling screen-reader
+    # users an image attachment was a PDF. The dedicated `seating_chart_alt`
+    # key (no "(PDF)" suffix) must render instead whenever the attachment's
+    # content_type isn't application/pdf.
+    it "renders an image seating chart's alt without the PDF suffix" do
+      room.seating_chart.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "seating.png",
+        content_type: "image/png"
+      )
+
+      get room_path(room)
+
+      expect(response.body).to include(I18n.t("rooms.show.seating_chart_alt", room: room.display_name))
+      expect(response.body).not_to include("(PDF)")
+    end
   end
 
   describe "as an admin" do
