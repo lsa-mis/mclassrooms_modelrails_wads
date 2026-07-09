@@ -13,7 +13,12 @@ class RoomsController < ApplicationController
     @search = RoomSearch.new(filter_params, base: base_scope)
     @pagy, @rooms = pagy(:offset, @search.results, limit: @search.per_page)
     @filter_groups = CharacteristicFilterGroups.filters
-    @buildings = Building.where(id: @rooms.map(&:building_id).uniq).order(:name)
+    # with_attached_photo (Rails' auto-generated has_one_attached scope) preloads
+    # photo_attachment + blob for every building in one pass — `_building_card`
+    # calls `building.photo.attached?` per card, which N+1s per building without
+    # it (Task 8 system specs surfaced this: Bullet raises with 2+ buildings in
+    # the results).
+    @buildings = Building.where(id: @rooms.map(&:building_id).uniq).order(:name).with_attached_photo
     @announcement = Announcement.for(:find_a_room_page)
     respond_to do |format|
       format.html # never fresh_when here — D14: results are live queries
