@@ -666,3 +666,100 @@ RSpec.describe "GET /rooms/:id", type: :request do
     end
   end
 end
+
+# MiClassrooms Phase 4 Task 6 (Brief §5.3): the floor-plan view — authorizes
+# like #show (RoomPolicy#show?) and reuses the shared
+# redirect_inactive_for_non_admins before_action (now extended to
+# :floor_plan), so a hidden room's non-admin redirect and an admin's 200 both
+# mirror "GET /rooms/:id" above. Also pins the nil-floor redirect and
+# Room.natural_room_order's same-floor room ordering. Mirrors the tenancy
+# setup from the two describe blocks above: shared-posture stub +
+# workspace-scoped fixtures + sign_in.
+RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
+  let(:workspace) { create(:workspace, slug: "rooms-floor-plan-spec-workspace", personal: false) }
+
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+  end
+
+  # Same reuse-and-re-role pattern as the sibling describe blocks above.
+  def membership_with(slug)
+    user = create(:user)
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    membership.update!(role: Role.system_default!(slug))
+    user
+  end
+
+  let(:building) { create(:building, workspace: workspace) }
+  let(:floor) { create(:floor, building: building, workspace: workspace, label: "2") }
+  let!(:room) { create(:room, building: building, workspace: workspace, floor: floor, facility_code: "MLB1001") }
+
+  describe "as a signed-in viewer" do
+    let(:viewer) { membership_with("viewer") }
+
+    before { sign_in(viewer) }
+
+    it "returns 200 for a room with a floor" do
+      get floor_plan_room_path(room)
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "redirects to the room with the no_floor notice when the room has no floor" do
+      floorless_room = create(:room, building: building, workspace: workspace, floor: nil, facility_code: "MLB1099")
+
+      get floor_plan_room_path(floorless_room)
+
+      expect(response).to redirect_to(room_path(floorless_room))
+      expect(flash[:notice]).to eq(I18n.t("rooms.floor_plan.no_floor"))
+    end
+
+    it "redirects a hidden room to Find a Room instead of rendering" do
+      hidden_room = create(:room, :hidden, building: building, workspace: workspace, floor: floor, facility_code: "MLB1098")
+
+      get floor_plan_room_path(hidden_room)
+
+      expect(response).to redirect_to(find_a_room_path)
+      expect(flash[:notice]).to eq(I18n.t("rooms.inactive_notice"))
+    end
+
+    # "B100" CASTs to 0 (SQLite CAST stops at the first non-digit character)
+    # and tiebreaks alphabetically ahead of any purely-numeric label; "20" <
+    # "100" numerically. Same three-case semantics documented on
+    # RoomSearch::DEFAULT_ORDER's tail, which Room.natural_room_order mirrors.
+    it "lists same-floor classrooms in natural room-number order" do
+      lettered = create(:room, building: building, workspace: workspace, floor: floor,
+                         room_number: "B100", facility_code: "MLB2001")
+      low = create(:room, building: building, workspace: workspace, floor: floor,
+                     room_number: "20", facility_code: "MLB2002")
+      high = create(:room, building: building, workspace: workspace, floor: floor,
+                      room_number: "100", facility_code: "MLB2003")
+
+      get floor_plan_room_path(room)
+
+      body = response.body
+      lettered_index = body.index(lettered.display_name)
+      low_index = body.index(low.display_name)
+      high_index = body.index(high.display_name)
+
+      expect([ lettered_index, low_index, high_index ]).to all(be_present)
+      expect(lettered_index).to be < low_index
+      expect(low_index).to be < high_index
+    end
+  end
+
+  describe "as an admin" do
+    let(:admin) { membership_with("admin") }
+
+    before { sign_in(admin) }
+
+    it "returns 200 for a hidden room's floor plan instead of redirecting" do
+      hidden_room = create(:room, :hidden, building: building, workspace: workspace, floor: floor, facility_code: "MLB1097")
+
+      get floor_plan_room_path(hidden_room)
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
+end
