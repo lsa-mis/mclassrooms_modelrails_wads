@@ -106,6 +106,33 @@ class RoomsController < ApplicationController
   def update
     authorize @room
     attrs = room_params.to_h
+
+    # Guard BEFORE Curation::Apply ever sees `attrs`: Rails' own
+    # `assign_nested_attributes_for_collection_association` resolves each
+    # row's `:id` against `association.scope.where(id: ...)` (i.e.
+    # `@room.gallery_images` scoped to THIS room) — a row whose `:id`
+    # belongs to another room's gallery image, or one destroyed between
+    # this page's load and this submit, finds nothing there and calls
+    # `raise_nested_attributes_record_not_found!`, raising
+    # ActiveRecord::RecordNotFound from INSIDE
+    # `@record.assign_attributes(@attributes)` — i.e. before
+    # Curation::Apply's transaction (and its RecordInvalid/
+    # RecordNotDestroyed rescue) even opens. Left unguarded,
+    # ApplicationController's blanket `rescue_from ActiveRecord::RecordNotFound`
+    # catches it globally and (for an HTML request) redirects to
+    # `request.referer || root_path` with a generic "not found" alert —
+    # bouncing an otherwise-valid admin edit off the edit page entirely,
+    # not the documented graceful 422 re-render. Checking every submitted id
+    # against `@room.gallery_image_ids` up front means a bad id never
+    # reaches `assign_attributes` at all. Mirrors BuildingsController#update's
+    # identical `stale_floor_ids?` guard for floors_attributes.
+    if stale_gallery_ids?(attrs)
+      build_blank_gallery_images
+      flash.now[:alert] = t("rooms.edit.stale_gallery")
+      render :edit, status: :unprocessable_entity
+      return
+    end
+
     # Preloaded BEFORE the save, not just before a failure re-render: a
     # gallery reorder/destroy re-validates every SURVIVING RoomGalleryImage's
     # `attached: true` during the autosave cascade inside Curation::Apply's
@@ -184,19 +211,41 @@ class RoomsController < ApplicationController
 
   # Ids of gallery images the submitted params mark for destruction this
   # request — see preload_gallery_image_attachments' `skip_ids:` above.
-  # `.with_indifferent_access` throughout: `room_params.to_h`'s nested
-  # gallery_images_attributes hash and its per-row hashes are both plain
-  # Hash by the time they reach here, and Rails' own `fields_for` always
-  # submits this as a hash keyed by index (never a bare array), but the
-  # defensive `Array(...)`/`.is_a?(Hash)` branch tolerates either shape.
   def destroyed_gallery_image_ids(attrs)
+    submitted_gallery_rows(attrs)
+      .select { |row| ActiveModel::Type::Boolean.new.cast(row[:_destroy]) }
+      .map { |row| row[:id].to_s }
+      .compact
+  end
+
+  # True when `gallery_images_attributes` names an `:id` that is NOT one of
+  # `@room`'s own gallery images — a foreign room's gallery image id, or one
+  # destroyed between this page's load and this submit. Compared as strings
+  # (`gallery_image_ids` are Integers, submitted ids are form strings) so
+  # `"7" == 7` doesn't silently fail the `include?` check. Mirrors
+  # BuildingsController#stale_floor_ids?.
+  def stale_gallery_ids?(attrs)
+    submitted_ids = submitted_gallery_rows(attrs).map { |row| row[:id].to_s }.compact_blank
+    return false if submitted_ids.empty?
+
+    known_ids = @room.gallery_image_ids.map(&:to_s)
+    submitted_ids.any? { |id| known_ids.exclude?(id) }
+  end
+
+  # Shared row-extraction for destroyed_gallery_image_ids and
+  # stale_gallery_ids? — `room_params.to_h`'s nested gallery_images_attributes
+  # hash and its per-row hashes are both plain Hash by the time they reach
+  # here, and Rails' own `fields_for` always submits this as a hash keyed by
+  # index (never a bare array), but the defensive `Array(...)`/`.is_a?(Hash)`
+  # branch (mirrors BuildingsController#submitted_floor_rows) tolerates
+  # either shape. Each returned row is already `.with_indifferent_access`'d
+  # so callers can read `row[:id]`/`row[:_destroy]` directly.
+  def submitted_gallery_rows(attrs)
     rows = attrs.with_indifferent_access[:gallery_images_attributes]
     return [] if rows.blank?
 
     rows = rows.is_a?(Hash) ? rows.values : Array(rows)
-    rows.select { |row| ActiveModel::Type::Boolean.new.cast(row.with_indifferent_access[:_destroy]) }
-        .map { |row| row.with_indifferent_access[:id].to_s }
-        .compact
+    rows.map(&:with_indifferent_access)
   end
 
   def view = params[:view].presence_in(VIEWS) || "active"

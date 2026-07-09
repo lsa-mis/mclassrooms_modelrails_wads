@@ -949,6 +949,43 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
 
       expect(response).to redirect_to(room_path(room))
     end
+
+    # Whole-branch review regression (Important): the exact parallel of
+    # BuildingsController's floors_attributes guard
+    # (spec/requests/buildings_spec.rb "422s and mutates nothing when
+    # floors_attributes references another building's floor id") had no
+    # analogue here — a gallery_images_attributes row whose `:id` belongs to
+    # ANOTHER room raises ActiveRecord::RecordNotFound from inside
+    # `Room#assign_attributes` (via
+    # `assign_nested_attributes_for_collection_association`), BEFORE
+    # Curation::Apply's own transaction (and its RecordInvalid/
+    # RecordNotDestroyed rescue) ever runs. Left unguarded that bubbles up to
+    # ApplicationController's blanket `rescue_from ActiveRecord::RecordNotFound`
+    # — a redirect-bounce off the edit page, not the documented graceful 422
+    # re-render. Fails against the pre-fix controller (raises, uncaught by
+    # Curation::Apply, surfaced as a redirect by the global rescue_from);
+    # passes against the pre-Curation::Apply id guard (422, :edit
+    # re-rendered, neither room's gallery touched).
+    it "422s and mutates nothing when gallery_images_attributes references another room's gallery image id" do
+      other_building = create(:building, workspace: workspace)
+      other_room = create(:room, building: other_building, workspace: workspace)
+      foreign_image = create(:room_gallery_image, room: other_room, workspace: workspace, position: 3)
+
+      expect {
+        patch room_path(room), params: {
+          room: {
+            nickname: "New Name",
+            gallery_images_attributes: { "0" => { id: foreign_image.id, position: "0" } }
+          }
+        }
+      }.not_to raise_error
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(room.reload.nickname).to eq("Old Name")
+      expect(room.gallery_images.reload).to be_empty
+      expect(foreign_image.reload.position).to eq(3)
+      expect(foreign_image.room_id).to eq(other_room.id)
+    end
   end
 
   describe "POST create" do
