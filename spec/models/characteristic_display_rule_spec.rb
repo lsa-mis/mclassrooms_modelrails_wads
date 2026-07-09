@@ -28,6 +28,31 @@ RSpec.describe CharacteristicDisplayRule, type: :model do
     end
   end
 
+  # short_code is normalized (downcase + strip non-alphanumeric, via the
+  # shared CodeNormalizer) BEFORE validation so both the admin-input footgun
+  # is closed and the uniqueness validation is meaningful: the phase-2
+  # characteristics sync stores normalized RoomCharacteristic.short_codes, so
+  # the display-rule side must match or phase 3's case-sensitive SQLite join
+  # misses every time.
+  describe "short_code normalization" do
+    it "normalizes short_code to alphanumerics on save" do
+      rule = CharacteristicDisplayRule.new(workspace: create(:workspace), short_code: "Whtbrd>25")
+
+      rule.save!
+
+      expect(rule.short_code).to eq("whtbrd25")
+    end
+
+    it "treats a raw and an already-normalized form as the same row for uniqueness" do
+      workspace = create(:workspace)
+      create(:characteristic_display_rule, workspace: workspace, short_code: "whtbrd25")
+      duplicate = build(:characteristic_display_rule, workspace: workspace, short_code: "Whtbrd>25")
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:short_code]).not_to be_empty
+    end
+  end
+
   describe "defaults" do
     it "defaults filterable to true" do
       rule = CharacteristicDisplayRule.new(workspace: create(:workspace), short_code: "WIFI")

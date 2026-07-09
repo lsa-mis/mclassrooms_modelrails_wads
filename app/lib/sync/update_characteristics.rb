@@ -87,11 +87,28 @@ module Sync
 
       fetch_characteristics(room).each do |row|
         attrs = parse_characteristic(row)
+        next if skip_blank_short_code?(room, attrs)
+
         seen << attrs[:code]
         create_missing_characteristic(room, existing, attrs)
       end
 
       remove_departed_characteristics(room, existing, seen)
+    end
+
+    # CodeNormalizer.normalize returns nil for a short code that is blank or
+    # all-punctuation. RoomCharacteristic validates short_code presence, so
+    # attempting to create such a row raises RecordInvalid — which, unrescued
+    # inside #perform's find_each, would abort characteristic sync for every
+    # LATER room this run. Skip the unstorable row instead: don't add it to
+    # `seen` (nothing to keep) and don't try to create it, counting/warning
+    # once so the run report still surfaces the malformed feed row.
+    def skip_blank_short_code?(room, attrs)
+      return false if attrs[:short_code].present?
+
+      count(:skipped)
+      add_warning("Room #{room.rmrecnbr} characteristic #{attrs[:code]} has a blank short code after normalization; skipped")
+      true
     end
 
     def fetch_characteristics(room)
@@ -139,20 +156,19 @@ module Sync
       end
     end
 
+    # short_code runs through the shared CodeNormalizer (app/lib) — the SAME
+    # transform CharacteristicDisplayRule#normalize_short_code uses — so
+    # phase 3's join across the two tables matches. It returns nil for a
+    # blank/all-punctuation code, which #skip_blank_short_code? then filters
+    # out. "Whtbrd>25" -> "whtbrd25".
     def parse_characteristic(row)
       {
         code: row.fetch("Code"),
-        short_code: normalize_short_code(row["ShortCode"]),
+        short_code: CodeNormalizer.normalize(row["ShortCode"]),
         description: row["Description"],
         long_description: row["LongDescription"],
         status: row["Status"]
       }
-    end
-
-    # Phase-1 rule (Room.normalize_facility_code): downcase, strip anything
-    # that isn't [a-z0-9]. "Whtbrd>25" -> "whtbrd25".
-    def normalize_short_code(value)
-      value.to_s.downcase.gsub(/[^a-z0-9]/, "")
     end
   end
 end
