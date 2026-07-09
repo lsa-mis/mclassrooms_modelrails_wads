@@ -178,4 +178,65 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(ids).to eq([ listed_classroom.id ])
     end
   end
+
+  # Regression guard for characteristics-filter + pagination (a common user
+  # path: "show me all projector rooms" spanning several pages). RoomSearch's
+  # `with_all_characteristics` merges in a GROUP BY rooms.id + HAVING relation,
+  # so `.count` on it is a GROUP BY count — which returns a Hash
+  # ({room_id => n}) on a bare ActiveRecord relation. Pagy 43.5.6 normalizes
+  # that Hash to `.size` (the number of matching groups) internally, so
+  # pagination.count/pages come out as the correct Integer and pages stay
+  # disjoint. This spec pins that end-to-end contract: nothing else in the
+  # suite guards it, so a future Pagy upgrade or a with_all_characteristics
+  # refactor that reintroduced the raw Hash would break characteristics
+  # pagination silently — here it would surface as `pagination.count` being a
+  # Hash (failing the `be_a(Integer)` teeth) and page 1's slice returning all
+  # 5 rooms instead of 2 (the Hash's truthy count defeating the LIMIT math).
+  describe "characteristics filter + pagination" do
+    let(:viewer) { membership_with("viewer") }
+    let(:building) { create(:building, workspace: workspace) }
+    # Already-normalized short_code: RoomSearch normalizes the query param via
+    # CodeNormalizer before matching room_characteristics.short_code, so the
+    # stored value must be in normalized form for the join to hit.
+    let(:matching_code) { "projector" }
+
+    let!(:matching_rooms) do
+      create_list(:room, 5, building: building, workspace: workspace).each do |room|
+        create(:room_characteristic, room: room, workspace: workspace, short_code: matching_code)
+      end
+    end
+
+    let!(:non_matching_rooms) do
+      create_list(:room, 2, building: building, workspace: workspace).each do |room|
+        create(:room_characteristic, room: room, workspace: workspace, short_code: "whiteboard")
+      end
+    end
+
+    before { sign_in(viewer) }
+
+    it "paginates the grouped relation correctly: integer count, disjoint pages, no leaks" do
+      seen_ids = []
+
+      (1..3).each do |page|
+        get find_a_room_path, params: { characteristics: [ matching_code ], per: "2", page: page.to_s }, as: :json
+        json = response.parsed_body
+
+        # Grouped-relation count must surface as a plain Integer, never the
+        # raw GROUP BY Hash leaking through.
+        expect(json["pagination"]["count"]).to be_a(Integer)
+        expect(json["pagination"]["count"]).to eq(5)
+        expect(json["pagination"]["pages"]).to eq(3)
+        expect(json["pagination"]["per"]).to eq(2)
+
+        page_ids = json["rooms"].map { |r| r["id"] }
+        expect(page_ids & seen_ids).to be_empty # pages are disjoint
+        seen_ids.concat(page_ids)
+      end
+
+      # All 5 matching rooms seen exactly once across the 3 pages; the 2
+      # non-matching rooms never leaked in.
+      expect(seen_ids).to match_array(matching_rooms.map(&:id))
+      expect(seen_ids).not_to include(*non_matching_rooms.map(&:id))
+    end
+  end
 end
