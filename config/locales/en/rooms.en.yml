@@ -1,0 +1,12 @@
+en:
+  rooms:
+    index:
+      summary:
+        building: "Building: %{value}"
+        room: "Room: %{value}"
+        unit: "School/College: %{value}"
+        capacity_range: "Capacity: %{min}-%{max}"
+        capacity_min_only: "Capacity: %{min}+"
+        capacity_max_only: "Capacity: up to %{max}"
+        characteristics: "Filters: %{value}"
+        separator: ", "
