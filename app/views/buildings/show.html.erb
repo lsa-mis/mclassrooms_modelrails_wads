@@ -59,12 +59,18 @@
   <section class="mt-8">
     <h2 class="text-lg font-semibold text-text-heading"><%= t(".floors_heading") %></h2>
 
-    <% if @building.floors.any? %>
+    <%# @floors, @floor_classroom_counts, @floor_representative_rooms: all
+        loaded ONCE in the controller (see #show's comments) — reusing
+        @building.floors here (a fresh, non-preloaded query) plus a
+        per-floor floor.rooms.classroom.first/.count was an N+1 pair Bullet
+        never flagged (further-scoped `.first`/`.count` calls, not
+        unpreloaded association lazy-loads). %>
+    <% if @floors.any? %>
       <%= ui :list_group, class: "mt-3" do %>
-        <% @building.floors.order(:label).each do |floor| %>
-          <% representative_room = floor.rooms.classroom.order(:id).first %>
+        <% @floors.each do |floor| %>
+          <% representative_room = @floor_representative_rooms[floor.id]&.first %>
           <%= ui :list_group_item, href: (representative_room && floor_plan_room_path(representative_room)) do %>
-            <%= floor_row_body(floor) %>
+            <%= floor_row_body(floor, classroom_count: @floor_classroom_counts.fetch(floor.id, 0)) %>
           <% end %>
         <% end %>
       <% end %>

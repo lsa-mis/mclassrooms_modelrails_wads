@@ -108,6 +108,66 @@ RSpec.describe "GET /buildings", type: :request do
       expect(ids).not_to include(non_matching.id)
     end
 
+    # Regression for the review's Critical finding: `with_classrooms` (from
+    # BuildingPolicy::Scope#resolve) and `Building.search_name` both filter on
+    # the SAME `id` column via `where(id: ...)`. `scope.merge(search_name(q))`
+    # OVERRIDES (does not AND) a duplicate equality/IN predicate on the
+    # merging side, so the classroom filter was silently discarded whenever
+    # `q` was present — a classroom-less building whose name/nickname/
+    # abbreviation matched the term leaked into results. Fails against
+    # `.merge`, passes against `.where(id: ...)`.
+    it "excludes a classroom-less building whose name matches the search term (merge would leak it in)" do
+      matching_with_classroom = create(:building, workspace: workspace, name: "Search Target Hall")
+      create(:room, building: matching_with_classroom, workspace: workspace)
+      matching_without_classroom = create(:building, workspace: workspace, name: "Search Target Annex")
+
+      get buildings_path, params: { q: "Search Target" }, as: :json
+
+      ids = response.parsed_body["buildings"].map { |b| b["id"] }
+      expect(ids).to include(matching_with_classroom.id)
+      expect(ids).not_to include(matching_without_classroom.id)
+    end
+
+    # Query-budget regression for the review's N+1 finding: Bullet only flags
+    # unpreloaded ASSOCIATION lazy-loads, not a fresh `.count` on a
+    # further-scoped relation — so `building.rooms.classroom.count` per row
+    # (index_json + the HTML view) slipped past the green Bullet run as a
+    # per-building COUNT query. Post-fix, one grouped `Room.classroom
+    # .where(building_id: ...).group(:building_id).count` replaces all of
+    # them. Fails against the per-row `.count` (6 queries: the 5 seeded here
+    # plus the outer `let!(:building)`), passes against the grouped count
+    # (1 query total, regardless of building count).
+    it "does not scale the classroom-count query with the number of buildings on the page" do
+      create_list(:building, 5, workspace: workspace).each do |b|
+        create(:room, building: b, workspace: workspace)
+      end
+
+      # Two distinct shapes, matched separately so Pagy's own `scope.count`
+      # (a COUNT on "buildings" whose WHERE clause happens to embed a rooms
+      # sub-select, via `with_classrooms`) doesn't get miscounted as a
+      # per-row rooms query: the pre-fix per-row query filters on a single
+      # `"rooms"."building_id" = ?`; the post-fix batched query is a single
+      # `GROUP BY "rooms"."building_id"` aggregate.
+      per_row_count_queries = 0
+      grouped_count_queries = 0
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        next if %w[CACHE SCHEMA].include?(payload[:name])
+        sql = payload[:sql]
+        per_row_count_queries += 1 if sql.match?(/SELECT COUNT\(\*\) FROM "rooms" WHERE "rooms"\."building_id" = \?/i)
+        grouped_count_queries += 1 if sql.match?(/GROUP BY "rooms"\."building_id"/i)
+      end
+
+      begin
+        get buildings_path
+      ensure
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+      end
+
+      expect(response).to have_http_status(:ok)
+      expect(per_row_count_queries).to eq(0)
+      expect(grouped_count_queries).to eq(1)
+    end
+
     it "paginates results" do
       create_list(:building, 25, workspace: workspace).each do |b|
         create(:room, building: b, workspace: workspace)
@@ -252,6 +312,42 @@ RSpec.describe "GET /buildings/:id", type: :request do
       get building_path(building)
 
       expect(response.body).to include(note.body.to_plain_text)
+    end
+
+    # Query-budget regression for the review's N+1 finding: the HTML view
+    # re-queried `@building.floors.order(:label)` from scratch (a SEPARATE,
+    # non-preloaded collection from the one `show_json` builds), then fired
+    # `floor.rooms.classroom.first` (representative-room link) and
+    # `floor.rooms.classroom.count` (buildings_helper) per floor — neither
+    # caught by Bullet, since both are further-scoped `.first`/`.count`
+    # calls on a loaded record, not unpreloaded association lazy-loads.
+    # Post-fix, `@floors` is loaded ONCE and both the per-floor count and the
+    # representative-room lookup are each a single batched query. Fails
+    # against the per-floor calls (5 queries apiece, one per floor seeded
+    # below), passes against the batched queries (1 apiece, regardless of
+    # floor count).
+    it "does not scale per-floor queries with the number of floors on the page" do
+      floors = create_list(:floor, 5, building: building, workspace: workspace)
+      floors.each { |f| create(:room, building: building, workspace: workspace, floor: f) }
+
+      room_count_queries = 0
+      room_select_queries = 0
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        next if %w[CACHE SCHEMA].include?(payload[:name])
+        sql = payload[:sql]
+        room_count_queries += 1 if sql.match?(/SELECT COUNT\(\*\).*FROM "rooms"/i)
+        room_select_queries += 1 if sql.match?(/SELECT "rooms"\.\* FROM "rooms"/i)
+      end
+
+      begin
+        get building_path(building)
+      ensure
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+      end
+
+      expect(response).to have_http_status(:ok)
+      expect(room_count_queries).to eq(1)
+      expect(room_select_queries).to eq(1)
     end
   end
 end
