@@ -1,0 +1,70 @@
+<%# locals: (room:, presenter:) %>
+<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): breadcrumb + h1 + capacity line
+    + a definition list of room attributes, plus the admin-only inactive
+    banner. The building crumb has NO href for anyone (viewers and admins):
+    Task 8 adds the admin-only `building_path` link once the Buildings
+    controller/routes exist — calling it now would raise a NoMethodError
+    (the route is undefined this phase). Rendered without an href, the
+    breadcrumb component's middle-crumb branch emits an anchor with no
+    `href` attribute, which browsers/AT treat as inert text, not a link —
+    so this reads as plain text exactly as required. %>
+
+<%= ui :breadcrumb, items: [
+  { label: t("rooms.index.title"), href: find_a_room_path },
+  { label: room.building.display_name },
+  { label: room.display_name }
+] %>
+
+<% if RoleResolver.for(Current.user).admin? && room.hidden? %>
+  <div class="mt-4">
+    <%= ui :banner, t("rooms.show.inactive_banner"), variant: :warning %>
+  </div>
+<% end %>
+
+<h1 class="mt-4 text-2xl font-bold text-text-heading"><%= room.display_name %></h1>
+
+<p class="mt-1 text-text-body"><%= presenter.capacity_line %></p>
+
+<dl class="mt-4 grid gap-x-6 gap-y-2 text-sm text-text-body sm:grid-cols-2">
+  <% if room.building.full_address.present? %>
+    <div>
+      <dt class="font-medium text-text-heading"><%= t("rooms.show.address") %></dt>
+      <dd><%= room.building.full_address %></dd>
+    </div>
+  <% end %>
+
+  <% if room.floor %>
+    <div>
+      <dt class="font-medium text-text-heading"><%= t("rooms.show.floor") %></dt>
+      <dd><%= room.floor.label %></dd>
+    </div>
+  <% end %>
+
+  <% if room.room_number.present? %>
+    <div>
+      <dt class="font-medium text-text-heading"><%= t("rooms.show.room_number") %></dt>
+      <dd><%= room.room_number %></dd>
+    </div>
+  <% end %>
+
+  <% if room.square_feet.present? %>
+    <div>
+      <dt class="font-medium text-text-heading"><%= t("rooms.show.square_feet") %></dt>
+      <dd><%= number_with_delimiter(room.square_feet) %></dd>
+    </div>
+  <% end %>
+
+  <% if room.unit %>
+    <div>
+      <dt class="font-medium text-text-heading"><%= t("rooms.show.department") %></dt>
+      <dd><%= room.unit.display_name %></dd>
+    </div>
+  <% end %>
+
+  <% if room.room_type.present? %>
+    <div>
+      <dt class="font-medium text-text-heading"><%= t("rooms.show.room_type") %></dt>
+      <dd><%= room.room_type %></dd>
+    </div>
+  <% end %>
+</dl>
