@@ -29,15 +29,24 @@
 # label:)` creates the floor once per (building, label) — the DB's own
 # `[building_id, label]` unique index (db/schema.rb) makes this safe to call
 # on every room on that floor, every run. `Unit.find_or_create_by!
-# (department_group: group_description)` — note the department GROUP
-# DESCRIPTION (the long readable text, e.g. "College of Literature, Science &
-# the Arts"), not the short group code — is skipped entirely (unit_id: nil)
-# when that description is blank, which is exactly the admin-only-room case
-# (Brief §14.1): a room with no department group has no unit to assign.
-# Both lookups are scoped `.for_current_workspace` (matching Sync::
-# UpdateCampuses's `find_or_initialize_by` precedent) so a brand-new Floor or
-# Unit is stamped with this run's workspace via `scope_for_create`, and two
-# workspaces never collide on the same (building, label) or department_group.
+# (department_group: <DeptGrp CODE>)` keys on the department group's STABLE
+# CODE (e.g. "COLLEGE_OF_LSA"), NOT its free-text description — many
+# departments share one group code, and a Unit IS a group, so keying on the
+# code collapses them to a single Unit, whereas keying on the (rewordable)
+# description would spuriously fork one group into several Units. The group
+# DESCRIPTION (DeptGrpDescr, "College of Literature, Science & the Arts") is
+# stored in `Unit.description` on create and refreshed if it later drifts —
+# a display attribute, never the key, so a reworded description updates the
+# existing Unit rather than creating a new one. That description feeds
+# `Unit#display_name`'s `|| description` fallback, and the phase-1 seed's
+# UnitDisplayName override (keyed on the same CODE) layers on top of it. Unit
+# resolution is skipped (unit_id: nil) when the group code is blank — the
+# admin-only-room case (Brief §14.1): a room with no department group has no
+# unit to assign. Both lookups are scoped `.for_current_workspace` (matching
+# Sync::UpdateCampuses's `find_or_initialize_by` precedent) so a brand-new
+# Floor or Unit is stamped with this run's workspace via `scope_for_create`,
+# and two workspaces never collide on the same (building, label) or
+# department_group code.
 #
 # Department enrichment (performance — Task 8's review flagged per-row Campus
 # lookups in UpdateBuildings; this phase has far higher row volume, so it
@@ -160,7 +169,7 @@ module Sync
         building: building,
         building_name: building.name,
         floor: floor,
-        unit_id: resolve_unit_id(dept_attrs[:department_group_description]),
+        unit_id: resolve_unit_id(dept_attrs[:department_group], dept_attrs[:department_group_description]),
         department_id: attrs[:department_id],
         room_number: attrs[:room_number],
         room_type: attrs[:room_type],
@@ -187,12 +196,20 @@ module Sync
       }
     end
 
-    # nil when the department GROUP DESCRIPTION is blank (Brief §14.1) — a
-    # room with no department group is admin-only and gets no unit.
-    def resolve_unit_id(group_description)
-      return nil if group_description.blank?
+    # Keys the Unit on the department group CODE (stable), storing the group
+    # description as a display attribute (see header comment). nil when the
+    # code is blank (Brief §14.1) — a room with no department group is
+    # admin-only and gets no unit. The description is set on create and
+    # refreshed only when it actually drifts, so a reworded description
+    # updates the existing Unit in place and never forks a duplicate.
+    def resolve_unit_id(group_code, group_description)
+      return nil if group_code.blank?
 
-      Unit.for_current_workspace.find_or_create_by!(department_group: group_description).id
+      unit = Unit.for_current_workspace.find_or_create_by!(department_group: group_code) do |new_unit|
+        new_unit.description = group_description
+      end
+      unit.update!(description: group_description) if unit.description != group_description
+      unit.id
     end
 
     # See header comment: empty-feed guard, then a single all-or-nothing
