@@ -1,11 +1,17 @@
 <%# MiClassrooms Phase 4 Task 6 (Brief §5.3): the floor-plan view — breadcrumb
-    (room → floor plan), the floor's plan image (or a graceful empty state
-    when none has been uploaded — D10: floor plans are optional), and the
-    list of classrooms on the same floor in natural room-number order
+    (room → floor plan), the floor's plan (or a graceful empty state when none
+    has been uploaded — D10: floor plans are optional), and the list of
+    classrooms on the same floor in natural room-number order
     (Room.natural_room_order, extracted from RoomSearch::DEFAULT_ORDER's tail
     so this list and Find a Room never drift). The current room is called out
     with both an `aria-current` state and a visible badge — WCAG 1.4.1: the
     highlight isn't color-only.
+
+    Floor#plan accepts PDF alongside images (Task 9's building edit can attach
+    either), so — mirroring rooms/_media.html.erb's seating-chart branch — a
+    `content_type == "application/pdf"` plan renders as a plain PDF link
+    instead of through `ui :image`/`<img>`, which would otherwise show a
+    browser broken-image icon for a model-sanctioned, reachable state.
 
     UI::BreadcrumbComponent requires every non-last item to be a real link;
     unlike rooms/_header.html.erb's building crumb (no building_path yet),
@@ -25,12 +31,18 @@
 
   <div class="mt-6">
     <% if @floor.plan.attached? %>
-      <%= ui :figure do %>
-        <%= ui :image,
-              src: rails_blob_path(@floor.plan),
-              alt: t(".plan_alt", building: @room.building.display_name, floor: @floor.label),
-              loading: :eager,
-              class: "w-full rounded-md border border-border" %>
+      <% if @floor.plan.content_type == "application/pdf" %>
+        <%= link_to t(".plan_pdf_link", building: @room.building.display_name, floor: @floor.label),
+              rails_blob_path(@floor.plan, disposition: :inline),
+              class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+      <% else %>
+        <%= ui :figure do %>
+          <%= ui :image,
+                src: rails_blob_path(@floor.plan),
+                alt: t(".plan_alt", building: @room.building.display_name, floor: @floor.label),
+                loading: :eager,
+                class: "w-full rounded-md border border-border" %>
+        <% end %>
       <% end %>
     <% else %>
       <%= ui :alert, tone: :neutral, description: t(".no_plan") %>
