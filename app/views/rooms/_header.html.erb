@@ -1,19 +1,36 @@
 <%# locals: (room:, presenter:) %>
 <%# MiClassrooms Phase 4 Task 4 (Brief §5.3): breadcrumb + h1 + capacity line
     + a definition list of room attributes, plus the admin-only inactive
-    banner. The building crumb has NO href for anyone (viewers and admins):
-    Task 8 adds the admin-only `building_path` link once the Buildings
-    controller/routes exist — calling it now would raise a NoMethodError
-    (the route is undefined this phase). Rendered without an href, the
-    breadcrumb component's middle-crumb branch emits an anchor with no
-    `href` attribute, which browsers/AT treat as inert text, not a link —
-    so this reads as plain text exactly as required. %>
+    banner.
 
-<%= ui :breadcrumb, items: [
-  { label: t("rooms.index.title"), href: find_a_room_path },
-  { label: room.building.display_name },
-  { label: room.display_name }
-] %>
+    The building crumb has no `building_path` yet — Task 8 adds the
+    Buildings controller/routes and wires this crumb to a real link.
+    UI::BreadcrumbComponent requires every non-last item to be a link (it
+    always renders `content_tag(:a, ..., href: item[:href])`); passing no
+    href produced an `<a>` with no `href` attribute that still carried the
+    link's hover/focus styling — it LOOKED clickable but did nothing.
+    Rendered manually here instead (reusing the component's own LINK/
+    CURRENT style constants so the visual language stays identical) so the
+    building name shows as plain, non-interactive text with no link
+    affordance. Not modifying the shared, template-owned component for a
+    single-page, single-crumb case. Swap this back to `ui :breadcrumb` with
+    a real `href:` once `building_path` exists. %>
+
+<nav aria-label="<%= t("ui.breadcrumb.label", default: "Breadcrumb") %>">
+  <ol class="flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5">
+    <li class="inline-flex items-center gap-1.5">
+      <%= link_to t("rooms.index.title"), find_a_room_path, class: UI::BreadcrumbComponent::LINK %>
+      <span class="select-none text-text-muted" aria-hidden="true">/</span>
+    </li>
+    <li class="inline-flex items-center gap-1.5">
+      <span class="text-text-muted"><%= room.building.display_name %></span>
+      <span class="select-none text-text-muted" aria-hidden="true">/</span>
+    </li>
+    <li class="inline-flex items-center gap-1.5">
+      <span class="<%= UI::BreadcrumbComponent::CURRENT %>" aria-current="page"><%= room.display_name %></span>
+    </li>
+  </ol>
+</nav>
 
 <% if RoleResolver.for(Current.user).admin? && room.hidden? %>
   <div class="mt-4">
