@@ -2,8 +2,18 @@ en:
   rooms:
     index:
       title: "Find a Room"
-      empty: "No rooms match your filters."
-      pagination: "Page %{page} of %{pages}"
+      results_frame_label: "Room search results"
+      results_heading: "Rooms"
+      results_summary:
+        one: "1 room found"
+        other: "%{count} rooms found"
+      no_results: "No rooms match your filters."
+      buildings_heading: "Buildings"
+      views_nav_label: "Visibility"
+      views:
+        active: "Listed"
+        inactive_rooms: "Hidden rooms"
+        inactive_buildings: "Hidden buildings"
       summary:
         building: "Building: %{value}"
         room: "Room: %{value}"
@@ -13,3 +23,38 @@ en:
         capacity_max_only: "Capacity: up to %{max}"
         characteristics: "Filters: %{value}"
         separator: ", "
+    filters:
+      form_label: "Filter rooms"
+      building_label: "Building"
+      room_label: "Room name or number"
+      unit_label: "School/College"
+      unit_all: "All schools/colleges"
+      capacity_min_label: "Minimum capacity"
+      capacity_max_label: "Maximum capacity"
+      characteristics_legend: "Characteristics"
+      sort_label: "Sort by"
+      sorts:
+        default: "Building, then room"
+        capacity_asc: "Capacity (low to high)"
+        capacity_desc: "Capacity (high to low)"
+      per_label: "Results per page"
+      submit: "Apply filters"
+      reset: "Reset filters"
+      glossary_link: "What do these filters mean?"
+    row:
+      no_thumbnail: "No photo available"
+      capacity:
+        one: "1 seat"
+        other: "%{count} seats"
+      ada:
+        one: "+1 ADA"
+        other: "+%{count} ADA"
+      floor: "Floor"
+      room_number: "Room number"
+      unit: "School/College"
+      characteristics_heading: "Characteristics"
+      details_label: "Room details"
+    building_card:
+      classroom_count:
+        one: "1 classroom"
+        other: "%{count} classrooms"

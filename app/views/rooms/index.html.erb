@@ -1,33 +1,56 @@
-<%# MiClassrooms Phase 3 Task 4 (Brief §5.2): minimal Find a Room index —
-    deliberately bare (heading + result rows only). The full filter form,
-    capacity slider, and building cards are Task 5's UI-SPEC-driven rebuild
-    of this same template; this version exists only so the controller has a
-    renderable HTML response for the request spec / JSON consumers. %>
+<%# MiClassrooms Phase 3 Task 5 (Brief §5.2): Find a Room — filters, live
+    Turbo-frame results, building cards. Filter submissions target the
+    `find_a_room_results` frame only (see `_filters.html.erb`'s
+    `data-turbo-frame`/`data-turbo-action`), so the heading/announcement/form
+    chrome outside the frame never re-renders on a filter change. %>
 <% content_for(:title) { t("rooms.index.title") } %>
 
 <div class="max-w-5xl mx-auto px-4 py-8">
   <h1 class="text-2xl font-bold text-text-heading"><%= t("rooms.index.title") %></h1>
 
   <% if @announcement %>
-    <div class="mt-4 text-text-default"><%= @announcement.body %></div>
+    <div class="mt-4">
+      <%= ui :banner, variant: :info do %>
+        <%= @announcement.body %>
+      <% end %>
+    </div>
   <% end %>
 
-  <p class="mt-2 text-text-muted"><%= @search.summary %></p>
+  <%= render "filters", search: @search, filter_groups: @filter_groups %>
 
-  <% if @rooms.any? %>
-    <ul class="mt-6 divide-y divide-border">
-      <% @rooms.each do |room| %>
-        <li class="py-3 flex items-baseline justify-between gap-4">
-          <span class="font-medium text-text-heading"><%= room.display_name %></span>
-          <span class="text-text-muted"><%= room.building.display_name %></span>
-        </li>
+  <%= turbo_frame_tag "find_a_room_results", "aria-label": t("rooms.index.results_frame_label"), class: "block mt-8" do %>
+    <%# Announces filter re-renders to assistive tech (Brief §5.2): the active-filter
+        summary plus a result count, in one polite live region so a screen-reader
+        user gets the same feedback a sighted user gets from watching the list change. %>
+    <p role="status" aria-live="polite" aria-atomic="true" class="text-text-body">
+      <% if @search.summary.present? %>
+        <span class="block font-medium text-text-heading"><%= @search.summary %></span>
       <% end %>
-    </ul>
-
-    <p class="mt-4 text-sm text-text-muted">
-      <%= t("rooms.index.pagination", page: @pagy.page, pages: @pagy.pages) %>
+      <%= t("rooms.index.results_summary", count: @pagy.count) %>
     </p>
-  <% else %>
-    <p class="mt-6 text-text-muted"><%= t("rooms.index.empty") %></p>
+
+    <% if @rooms.any? %>
+      <h2 class="sr-only"><%= t("rooms.index.results_heading") %></h2>
+      <ul class="mt-4 divide-y divide-border border-t border-border">
+        <% @rooms.each do |room| %>
+          <%= render "room_row", room: room %>
+        <% end %>
+      </ul>
+
+      <% if @buildings.any? %>
+        <aside aria-label="<%= t('rooms.index.buildings_heading') %>" class="mt-8">
+          <h2 class="text-lg font-semibold text-text-heading"><%= t("rooms.index.buildings_heading") %></h2>
+          <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <% @buildings.each do |building| %>
+              <%= render "building_card", building: building %>
+            <% end %>
+          </div>
+        </aside>
+      <% end %>
+
+      <%= render "shared/pagination", pagy: @pagy %>
+    <% else %>
+      <p class="mt-6 text-text-muted"><%= t("rooms.index.no_results") %></p>
+    <% end %>
   <% end %>
 </div>
