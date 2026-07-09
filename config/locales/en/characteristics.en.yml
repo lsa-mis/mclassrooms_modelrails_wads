@@ -3,3 +3,8 @@ en:
     groups:
       team_based_learning: "Team Based Learning"
       other: "Other"
+    glossary:
+      title: "Filters glossary"
+      intro: "Every characteristic used to filter Find a Room, grouped by category with a plain-language description."
+      back_link: "Back to Find a Room"
+      no_description: "No description available yet."
