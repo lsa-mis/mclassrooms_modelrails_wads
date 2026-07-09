@@ -8,7 +8,11 @@ require "rails_helper"
 # fixtures + sign_in_via_form) and spec/system/rooms/edit_spec.rb's admin
 # re-role pattern (Membership.find_by!(...).update!(role: Role.system_default!("admin"))).
 RSpec.describe "Buildings", type: :system do
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  # Full WCAG 2.2 conformance set (A + AA + AAA) — wcag2aaa alone only runs
+  # axe's 3 AAA-only rules and never exercises baseline rules (label,
+  # button-name, image-alt, etc.), tagged wcag2a/wcag2aa. See
+  # find_a_room_spec.rb.
+  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
 
   let!(:workspace) { create(:workspace, slug: "directory", personal: false) }
 

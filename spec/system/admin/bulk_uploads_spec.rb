@@ -11,7 +11,11 @@ require "rails_helper"
 # posture stub + workspace-scoped fixtures + sign_in_via_form) and admin
 # re-role pattern.
 RSpec.describe "Admin bulk uploads", type: :system do
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  # Full WCAG 2.2 conformance set (A + AA + AAA) — wcag2aaa alone only runs
+  # axe's 3 AAA-only rules and never exercises baseline rules (label,
+  # button-name, image-alt, etc.), tagged wcag2a/wcag2aa. See
+  # find_a_room_spec.rb.
+  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
 
   let!(:workspace) { create(:workspace, slug: "directory", personal: false) }
 

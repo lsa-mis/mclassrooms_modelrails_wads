@@ -32,12 +32,13 @@ RSpec.describe "Room floor plan", type: :system do
 
   before { sign_in_via_form(user) }
 
-  # Scoped to WCAG 2.2 AAA (matches show_spec.rb / static_pages_spec.rb) —
-  # unscoped axe.run also picks up best-practice-only rules against
-  # shared/_toasts.html.erb's always-present, currently-empty toast
-  # containers, which is a pre-existing, page-independent condition and not
-  # a WCAG failure.
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  # Scoped to the full WCAG 2.2 conformance set (A + AA + AAA, matches
+  # show_spec.rb). wcag2aaa alone only covers axe's 3 AAA-only rules;
+  # baseline rules (label, button-name, image-alt, aria-prohibited-attr,
+  # etc.) are tagged wcag2a/wcag2aa. See find_a_room_spec.rb and
+  # show_spec.rb's comment on the real aria-prohibited-attr fix this
+  # surfaced in shared/_toasts.html.erb.
+  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
 
   it "renders the plan image, breadcrumb, and same-floor room list accessibly in both themes" do
     floor.plan.attach(io: file_fixture("room.jpg").open,
