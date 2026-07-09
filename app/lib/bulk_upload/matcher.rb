@@ -5,7 +5,10 @@ module BulkUpload
   # slots by facility-code filename convention, so the bulk-upload flow can
   # sort a batch of dropped files (photos, panoramas, seating charts) without
   # the uploader hand-picking a room/slot per file. Pure — no I/O beyond the
-  # `Room.find_by_facility_code` lookup; callers own persistence of the match.
+  # `Room.for_current_workspace.find_by_facility_code` lookup (workspace-
+  # scoped defensively, like every other Room lookup, even though D1 never
+  # exercises cross-workspace facility codes today); callers own persistence
+  # of the match.
   class Matcher
     Match = Data.define(:blob, :room, :slot)
     Unmatched = Data.define(:blob, :reason)
@@ -30,7 +33,7 @@ module BulkUpload
         slot, code = slot_for(blob.filename.to_s)
         if slot.nil?
           unmatched << Unmatched.new(blob:, reason: :unrecognized_filename)
-        elsif (room = Room.find_by_facility_code(code)).nil?
+        elsif (room = Room.for_current_workspace.find_by_facility_code(code)).nil?
           unmatched << Unmatched.new(blob:, reason: :room_not_found)
         else
           matched << Match.new(blob:, room:, slot:)

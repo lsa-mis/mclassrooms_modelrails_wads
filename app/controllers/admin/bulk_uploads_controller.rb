@@ -70,21 +70,45 @@ module Admin
     # has_one_attached's own replace-then-purge-the-old-blob behavior on
     # reassignment is exactly "replaces it" from the brief.
     #
+    # A match's Result IS checked, unlike a plain fire-and-forget call: a
+    # matched blob whose filename convention resolved a real room can still
+    # fail Room's own content_type/size validation (app/models/room.rb), and
+    # Curation::Apply rescues that RecordInvalid into Result.failure + rolls
+    # back rather than raising. Every other Curation::Apply caller
+    # (RoomsController#update, BuildingsController#update) branches on
+    # `result.success?`; skipping that here would leave a rejected blob
+    # ATTACHED TO NOTHING (never purged — it's in `@report.matched`, so the
+    # unmatched-purge loop below never sees it) while the notice still
+    # counted it as attached. So a failed match's blob is purged here too
+    # (mirrors the unmatched-purge branch just below), and the notice
+    # reports the real attached count, not the raw matched count.
+    #
     # Unmatched blobs are purged (never left as orphaned storage) via
     # purge_later — mirrors Room's own remove_photo/remove_panorama/
     # remove_seating_chart writers (app/models/room.rb), which use the same
     # async purge rather than a synchronous `purge`.
     def commit
+      attached = 0
+      failed = 0
+
       @report.matched.each do |match|
-        Curation::Apply.call(
+        result = Curation::Apply.call(
           record: match.room, actor: Current.user,
           attributes: { match.slot => match.blob },
           action: "room.media_bulk_uploaded"
         )
+
+        if result.success?
+          attached += 1
+        else
+          failed += 1
+          match.blob.purge_later
+        end
       end
       @report.unmatched.each { |unmatched| unmatched.blob.purge_later }
 
-      redirect_to new_admin_bulk_upload_path, notice: t(".committed", count: @report.matched.size)
+      notice = failed.zero? ? t(".committed", count: attached) : t(".partial_failure", attached:, failed:)
+      redirect_to new_admin_bulk_upload_path, notice: notice
     end
   end
 end
