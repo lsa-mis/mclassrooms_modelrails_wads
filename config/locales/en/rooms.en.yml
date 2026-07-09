@@ -1,5 +1,7 @@
 en:
   rooms:
+    show:
+      capacity: "%{students} students · %{ada} ADA-accessible seats"
     index:
       title: "Find a Room"
       results_frame_label: "Room search results"
