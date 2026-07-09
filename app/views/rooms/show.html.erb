@@ -1,13 +1,14 @@
-<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): room detail — header (breadcrumb,
-    h1, attribute list, admin-only inactive banner), characteristic chips,
-    grouped features, contacts, read-only notes, and the copy-to-clipboard
-    share button. Task 5 inserts `render "rooms/media"` here for the
-    photo/gallery/panorama/seating-chart suite — this page renders
-    completely and correctly without it until then. %>
+<%# MiClassrooms Phase 4 Task 5 (Brief §5.3): room detail — header (breadcrumb,
+    h1, attribute list, admin-only inactive banner), the media suite (photo
+    lightbox, gallery, panorama, seating chart, floor-plan link),
+    characteristic chips, grouped features, contacts, read-only notes, and
+    the copy-to-clipboard share button. %>
 <% content_for(:title) { @room.display_name } %>
 
 <div class="max-w-5xl mx-auto px-4 py-8">
   <%= render "rooms/header", room: @room, presenter: @presenter %>
+
+  <%= render "rooms/media", room: @room %>
 
   <%= render "rooms/characteristics", presenter: @presenter %>
 

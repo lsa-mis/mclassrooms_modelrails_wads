@@ -8,6 +8,14 @@ pin_all_from "app/javascript/controllers", under: "controllers"
 pin "lexxy", to: "lexxy.js"
 pin "cropperjs", to: "https://cdn.jsdelivr.net/npm/cropperjs@2/dist/cropper.esm.js"
 
+# Pannellum (2.5.6 standalone build, bundles libpannellum) is vendored at
+# vendor/javascript/pannellum.js rather than fetched from a CDN — it has no
+# npm-published ESM build, so `pin "pannellum"` resolves through
+# importmap-rails' default vendor/javascript lookup. It sets `window.pannellum`
+# as a side effect (no `export`s) — panorama_controller.js lazy-imports it for
+# that side effect only, on the visitor's "Load 360°" click.
+pin "pannellum"
+
 # Chart.js is opt-in (the gem doesn't bundle it; chart_controller.js lazy-imports it).
 # Pinned in development only so the Lookbook catalog can render the chart component —
 # this app uses chart solely in the dev-only catalog, so production stays lean and
