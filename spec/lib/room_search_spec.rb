@@ -37,6 +37,16 @@ RSpec.describe RoomSearch do
     expect(described_class.new({}).results.where(floor: [ f_b, f_m, f2, f10 ]).to_a).to eq(expected)
   end
 
+  it "natural-sorts multi-character lettered floors within a prefix (B2 before B10), then the numeric bucket" do
+    # Teeth: under a plain `floors.label COLLATE NOCASE` lettered tiebreak this
+    # sorts B, B10, B2, M (alphabetical). The lettered bucket must split into
+    # (alpha prefix, trailing digits as integer), all in SQL — not Ruby.
+    floors = %w[B B2 B10 M 1 2 10].map { |l| create(:floor, building: mason, label: l) }
+    floors.each { |fl| classroom(mason, "100", 10, floor: fl) }
+    result = described_class.new({}).results.where(floor: floors).to_a
+    expect(result.map(&:floor)).to eq(floors)
+  end
+
   it "matches a nickname via case/whitespace-insensitive substring" do
     room = classroom(mason, "3005", 50)
     room.update!(nickname: "Grand Aud")

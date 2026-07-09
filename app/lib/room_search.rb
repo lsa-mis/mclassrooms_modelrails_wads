@@ -10,12 +10,25 @@ class RoomSearch
   # CAST); rooms without a floor sort last within their building. Room numbers
   # natural-sort by leading integer (SQLite CAST stops at the first non-digit;
   # "B100" casts to 0 and resolves on the NOCASE alpha tiebreak).
+  #
+  # The lettered bucket ALSO natural-sorts labels that carry digits ("B2" <
+  # "B10", not the alphabetical "B10" < "B2"): it splits each label into an
+  # alpha prefix (rtrim the trailing digits) and a numeric suffix (ltrim the
+  # leading letters, then CAST). SQLite's rtrim/ltrim second arg is a *character
+  # set*, so `rtrim(label, '0-9')` drops the trailing number and `ltrim(label,
+  # 'A-Za-z')` drops the leading letters — both pure-SQL, no regex/UDF. A
+  # pure-numeric label ("10") rtrims to "" and a pure-alpha one ("M") ltrims to
+  # "" → CAST 0, but the 0/1/2 bucket above already isolates those, so these two
+  # keys only ever tiebreak *within* the lettered bucket.
+  ALPHA_CHARS = ("A".."Z").to_a.join + ("a".."z").to_a.join
   DEFAULT_ORDER = Arel.sql(<<~SQL.squish).freeze
     buildings.name COLLATE NOCASE,
     CASE WHEN floors.label IS NULL THEN 2
          WHEN floors.label GLOB '[0-9]*' THEN 1
          ELSE 0 END,
     CASE WHEN floors.label GLOB '[0-9]*' THEN CAST(floors.label AS INTEGER) END,
+    rtrim(floors.label, '0123456789') COLLATE NOCASE,
+    CAST(ltrim(floors.label, '#{ALPHA_CHARS}') AS INTEGER),
     floors.label COLLATE NOCASE,
     CAST(rooms.room_number AS INTEGER),
     rooms.room_number COLLATE NOCASE
@@ -53,7 +66,13 @@ class RoomSearch
   end
 
   def sort = SORTS.include?(@params[:sort]) ? @params[:sort] : "default"
-  def capacity_bound = (Setting.capacity_filter_max.presence || FALLBACK_CAPACITY_BOUND).to_i
+
+  # Memoized per instance: bounded_max?/capacity_max/capacity_summary all read
+  # it, and the Task-4 view reads it again for the slider — without the memo
+  # that's 4+ identical `Setting.capacity_filter_max` find_by queries per
+  # request. A RoomSearch is built once per request, so the memo keeps the
+  # "live" (never cross-request-cached) intent while collapsing the reads.
+  def capacity_bound = @capacity_bound ||= (Setting.capacity_filter_max.presence || FALLBACK_CAPACITY_BOUND).to_i
 
   # "Building: mason, Capacity: 40-100, Filters: Lecture Capture" (Brief §5.2).
   # Unbounded endpoints (0 / bound) drop out of the label entirely.
