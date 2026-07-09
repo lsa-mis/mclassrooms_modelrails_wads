@@ -53,7 +53,6 @@ en:
       room_number: "Room number"
       unit: "School/College"
       characteristics_heading: "Characteristics"
-      details_label: "Room details"
     building_card:
       classroom_count:
         one: "1 classroom"

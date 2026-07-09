@@ -315,7 +315,14 @@ RSpec.describe "GET /find-a-room", type: :request do
     it "renders a gallery thumbnail, ADA badge, characteristic icon chip, and building card" do
       listed_classroom.update!(ada_seat_count: 5)
       create(:room_gallery_image, room: listed_classroom, workspace: workspace)
-      create(:characteristic_display_rule, workspace: workspace, short_code: "seating_fixed", icon_key: "computer_desktop")
+      # Normalization-stable short_code: RoomCharacteristic stores the raw value
+      # while CharacteristicDisplayRule normalizes via CodeNormalizer (strips
+      # non-alphanumerics), so the row's icon-key join only hits when the code
+      # survives normalization unchanged. "projector" does; "seating_fixed"
+      # would not (the underscore is stripped to "seatingfixed").
+      create(:room_characteristic, room: listed_classroom, workspace: workspace,
+             short_code: "projector", description: "Media: Projector")
+      create(:characteristic_display_rule, workspace: workspace, short_code: "projector", icon_key: "computer_desktop")
       sign_in(membership_with("viewer"))
 
       get find_a_room_path
@@ -323,6 +330,30 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("rooms.row.ada", count: 5))
       expect(response.body).to include(I18n.t("rooms.building_card.classroom_count", count: 1))
+    end
+
+    # Teeth for the nested-interactive a11y fix: the row's characteristic icon
+    # chip must give the (aria-hidden) icon a visually-hidden accessible name,
+    # and the <summary> subtree must contain NO focusable/interactive descendant
+    # — HTML5 forbids focusable descendants of <summary>, and axe-core's
+    # nested-interactive rule (Task 8) flags exactly a `tabindex`-bearing tooltip
+    # wrapper here. "Media: Projector" parses to the label "Projector" (Task 3
+    # grouping); "projector" is normalization-stable so the icon-key join hits.
+    it "renders the row characteristic chip with an sr-only name and no focusable element in the summary" do
+      create(:room_characteristic, room: listed_classroom, workspace: workspace,
+             short_code: "projector", description: "Media: Projector")
+      create(:characteristic_display_rule, workspace: workspace, short_code: "projector", icon_key: "computer_desktop")
+      sign_in(membership_with("viewer"))
+
+      get find_a_room_path
+
+      summary_html = response.body[%r{<summary\b.*?</summary>}m]
+      expect(summary_html).to be_present
+      expect(summary_html).to include('class="sr-only">Projector')
+      # No focusable/interactive descendant of <summary>: the old ui :tooltip
+      # wrapper carried tabindex="0" + role="tooltip"; the plain <span> chip does not.
+      expect(summary_html).not_to include("tabindex")
+      expect(summary_html).not_to include('role="tooltip"')
     end
   end
 end

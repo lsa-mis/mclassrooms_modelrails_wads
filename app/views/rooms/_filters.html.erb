@@ -59,13 +59,16 @@
           <legend class="px-1 text-sm font-medium text-text-heading"><%= group.name %></legend>
           <div class="mt-2 space-y-2">
             <% group.entries.each do |entry| %>
+              <%# No `title:` — a native title on the 16px input is mouse-hover-only
+                  and not reliably exposed to AT. The visible checkbox label IS the
+                  accessible name; the long description belongs to the glossary
+                  (Task 7), not every filter checkbox. %>
               <%= ui :checkbox,
                     name: "characteristics[]",
                     value: entry.short_code,
                     label: entry.label,
                     checked: Array(params[:characteristics]).include?(entry.short_code),
                     id: "characteristics_#{entry.short_code}",
-                    title: entry.long_description,
                     data: { action: "change->filter-form#submitNow" } %>
             <% end %>
           </div>

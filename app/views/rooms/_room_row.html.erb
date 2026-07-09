@@ -37,10 +37,16 @@
 
       <span class="flex items-center gap-1.5 shrink-0">
         <% room_characteristic_icons(room).each do |icon_key, label| %>
-          <%= ui :tooltip, text: label, side: :top do %>
+          <%# NON-interactive chip: HTML5 forbids focusable/interactive descendants
+              of <summary> (axe-core nested-interactive), so this is a plain <span>
+              — the aria-hidden icon plus a visually-hidden label give the chip an
+              accessible name WITHOUT any tabindex/keydown element. The long
+              description / hover tooltip lives in the glossary (Task 7) and on the
+              room detail page (phase 4), not on this row chip. %>
+          <span class="inline-flex items-center">
             <span class="sr-only"><%= label %></span>
             <%= icon(icon_key, size: :sm, class: "text-text-muted") %>
-          <% end %>
+          </span>
         <% end %>
       </span>
 
