@@ -10,6 +10,15 @@ module RoomsHelper
       CharacteristicDisplayRule.where.not(icon_key: [ nil, "" ]).pluck(:short_code, :icon_key).to_h
   end
 
+  # Request-scoped memo of the full short_code => label map (mirrors
+  # characteristic_icon_keys above): CharacteristicFilterGroups.labels computes
+  # data_version (4 aggregates) to build its cache key, so calling label_for
+  # per characteristic per row re-ran those aggregates hundreds of times per
+  # render. Resolving the hash ONCE collapses that to a single computation.
+  def characteristic_labels
+    @characteristic_labels ||= CharacteristicFilterGroups.labels
+  end
+
   # Icon chips for a room's key characteristics (Brief §5.2 row icons): only
   # characteristics with a configured icon_key get a chip. `IconRegistry.exists?`
   # guards a stale/typo'd icon_key (e.g. an admin renamed an icon file) so a
@@ -21,7 +30,7 @@ module RoomsHelper
       icon_key = characteristic_icon_keys[rc.short_code]
       next unless icon_key.present? && IconRegistry.exists?(icon_key)
 
-      [ icon_key, CharacteristicFilterGroups.label_for(rc.short_code) ]
+      [ icon_key, characteristic_labels.fetch(rc.short_code, rc.short_code) ]
     end
   end
 
@@ -40,7 +49,7 @@ module RoomsHelper
 
   # Full characteristic label list for a row's expanded detail (Brief §5.2).
   def room_characteristic_labels(room)
-    room.room_characteristics.map { |rc| CharacteristicFilterGroups.label_for(rc.short_code) }.sort
+    room.room_characteristics.map { |rc| characteristic_labels.fetch(rc.short_code, rc.short_code) }.sort
   end
 
   # Building-photo placeholder initials (Brief §5.2 building card): first

@@ -83,8 +83,13 @@ class RoomSearch
     parts << I18n.t("rooms.index.summary.unit", value: unit.display_name) if unit
     parts << capacity_summary if capacity_summary
     if characteristic_codes.any?
-      labels = characteristic_codes.map { |c| CharacteristicFilterGroups.label_for(c) }
-      parts << I18n.t("rooms.index.summary.characteristics", value: labels.join(", "))
+      # Resolve the short_code => label hash ONCE rather than calling
+      # label_for per selected code: label_for computes data_version (4
+      # aggregate queries) to build its cache key, so N selected
+      # characteristics meant N redundant data_version computations here.
+      labels = CharacteristicFilterGroups.labels
+      parts << I18n.t("rooms.index.summary.characteristics",
+                       value: characteristic_codes.map { |c| labels.fetch(c, c) }.join(", "))
     end
     parts.join(I18n.t("rooms.index.summary.separator"))
   end
