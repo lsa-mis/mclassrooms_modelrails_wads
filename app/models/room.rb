@@ -39,6 +39,16 @@ class Room < ApplicationRecord
   scope :hidden,      -> { where.not(hidden_at: nil) }
   scope :not_in_feed, -> { where(in_feed: false) }
 
+  # Phase 4 Task 6 (Brief §5.3): the room-number natural sort extracted out of
+  # RoomSearch::DEFAULT_ORDER's tail (app/lib/room_search.rb:33-34) so the
+  # floor-plan view's same-floor room list orders identically to Find a Room
+  # without a second, drift-prone copy of the CAST/COLLATE expression. SQLite's
+  # CAST stops at the first non-digit, so a lettered-prefix number like "B100"
+  # casts to 0 and sorts before "100"; the COLLATE NOCASE tiebreak then
+  # alpha-orders same-cast labels. Mirrors DEFAULT_ORDER's tail exactly — keep
+  # the two in sync if either changes.
+  scope :natural_room_order, -> { order(Arel.sql("CAST(room_number AS INTEGER), room_number COLLATE NOCASE")) }
+
   # D8 characteristic filter: AND semantics — rooms having ALL given
   # short_codes, not merely any. COUNT(DISTINCT ...) guards against both a
   # duplicated short_code in the caller's array and a room with two

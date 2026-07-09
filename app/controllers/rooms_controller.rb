@@ -11,17 +11,18 @@ class RoomsController < ApplicationController
   # REQUIRED CORRECTION vs. the phase-4 Task 3 brief: the brief's snippet lists
   # `only: [:show, :edit, :update, :floor_plan]`, anticipating the full action
   # set this controller will have by the end of the phase. But `:edit`/`:update`
-  # (Task 7) and `:floor_plan` (Task 6) aren't defined as controller methods
-  # yet, and `config.action_controller.raise_on_missing_callback_actions` is
-  # `true` in both development.rb and test.rb (Rails 7.1+ default) — so a
-  # before_action `only:` naming an undefined action isn't inert, it's a hard
+  # (Task 7) aren't defined as controller methods yet, and
+  # `config.action_controller.raise_on_missing_callback_actions` is `true` in
+  # both development.rb and test.rb (Rails 7.1+ default) — so a before_action
+  # `only:` naming an undefined action isn't inert, it's a hard
   # `AbstractController::ActionNotFound` ("Unknown action") raised for EVERY
   # request to this controller, including `#index` (verified: it broke all 19
-  # pre-existing Find-a-Room examples). Scoped to `:show` only for this task;
-  # Tasks 6/7 must add `:floor_plan`/`:edit`/`:update` back to these lists in
-  # the same commit that defines those methods.
-  before_action :set_room, only: [ :show ]
-  before_action :redirect_inactive_for_non_admins, only: [ :show ]
+  # pre-existing Find-a-Room examples). Scoped to `:show`/`:floor_plan` for
+  # now that Task 6 defines `#floor_plan` below; Task 7 must add `:edit`/
+  # `:update` back to these lists in the same commit that defines those
+  # methods.
+  before_action :set_room, only: [ :show, :floor_plan ]
+  before_action :redirect_inactive_for_non_admins, only: [ :show, :floor_plan ]
 
   def index
     authorize Room
@@ -60,6 +61,29 @@ class RoomsController < ApplicationController
         format.json { render json: @presenter.as_json }
       end
     end
+  end
+
+  # MiClassrooms Phase 4 Task 6 (Brief §5.3): the floor-plan view — authorizes
+  # identically to #show (a floor plan is just another facet of room detail,
+  # not a separately-gated resource) and reuses `set_room`/
+  # `redirect_inactive_for_non_admins` (both already extended to `:floor_plan`
+  # above) so a hidden room's non-admin redirect fires before this method ever
+  # runs. `@room.floor` can be nil (Floor is `optional: true` on Room) — that's
+  # not an error state, just a room the nightly sync never assigned a floor
+  # to, so it redirects back to the room with a notice rather than 404ing or
+  # rendering a floor-less page.
+  def floor_plan
+    authorize @room, :show?
+    @floor = @room.floor
+    return redirect_to(room_path(@room), notice: t("rooms.floor_plan.no_floor")) if @floor.nil?
+
+    # for_current_workspace kept explicit here (CLAUDE.md deviation #1) even
+    # though floor_id already transitively scopes to the workspace (a Floor
+    # belongs to a Building in exactly one workspace) — consistent with how
+    # every other Room query in this controller resolves through an explicit
+    # tenant scope rather than relying on a transitive guarantee.
+    @rooms_on_floor = Room.for_current_workspace.classroom.listed
+                          .where(floor_id: @floor.id).natural_room_order
   end
 
   private
