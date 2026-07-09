@@ -9,12 +9,16 @@
 <%
   # :rich_text_body (the has_rich_text association), not just :author — Bullet
   # flags a real N+1 on ActionText::RichText otherwise, one query per note.
+  #
+  # `.to_a` loads each relation once — the `.any?` presence check below and
+  # the `.each` iteration further down then reuse the same in-memory array
+  # instead of firing the query twice.
   preload = [ :author, :rich_text_body ]
-  own_alerts = notable.notes.alerts.roots.includes(*preload)
-  own_plain  = notable.notes.plain_notes.roots.includes(*preload)
+  own_alerts = notable.notes.alerts.roots.includes(*preload).to_a
+  own_plain  = notable.notes.plain_notes.roots.includes(*preload).to_a
   building   = notable.respond_to?(:building) ? notable.building : nil
-  building_alerts = building ? building.notes.alerts.roots.includes(*preload) : Note.none
-  building_plain  = building ? building.notes.plain_notes.roots.includes(*preload) : Note.none
+  building_alerts = building ? building.notes.alerts.roots.includes(*preload).to_a : []
+  building_plain  = building ? building.notes.plain_notes.roots.includes(*preload).to_a : []
 %>
 <% if own_alerts.any? || own_plain.any? || building_alerts.any? || building_plain.any? %>
   <section class="mt-8">
