@@ -351,3 +351,208 @@ RSpec.describe "GET /buildings/:id", type: :request do
     end
   end
 end
+
+# MiClassrooms Phase 4 Task 9 (Brief §5.3, §14.1): the admin building edit
+# form — nickname + photo (curated fields) and per-floor floor-plan
+# attach/replace/remove, all routed through Curation::Apply. Mirrors
+# spec/requests/rooms_spec.rb's "GET /rooms/:id/edit" split and tenancy
+# setup (shared-posture stub + workspace-scoped fixtures + sign_in) exactly.
+RSpec.describe "GET /buildings/:id/edit", type: :request do
+  let(:workspace) { create(:workspace, slug: "buildings-edit-spec-workspace", personal: false) }
+
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+  end
+
+  def membership_with(slug)
+    user = create(:user)
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    membership.update!(role: Role.system_default!(slug))
+    user
+  end
+
+  let(:building) { create(:building, workspace: workspace) }
+  let!(:classroom) { create(:room, building: building, workspace: workspace) }
+
+  describe "as a non-admin viewer" do
+    it_behaves_like "an admin-only action" do
+      let(:actor) { membership_with("viewer") }
+      let(:http_method) { :get }
+      let(:request_path) { edit_building_path(building) }
+    end
+  end
+
+  describe "as an admin" do
+    let(:admin) { membership_with("admin") }
+
+    it "returns 200 and renders the edit form" do
+      sign_in(admin)
+
+      get edit_building_path(building)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(building.display_name)
+    end
+  end
+end
+
+# MiClassrooms Phase 4 Task 9 (Brief §5.3, §14.1): PATCH /buildings/:id —
+# nickname + photo through Curation::Apply (one audited ActivityLog per
+# request, "building.curated"), floor-plan attach/replace/remove through
+# Building#floors nested attributes, and the Decision 2 deviation proof that
+# address params are silently dropped by strong params, never assigned.
+# Mirrors spec/requests/rooms_spec.rb's "PATCH /rooms/:id" structure.
+RSpec.describe "PATCH /buildings/:id", type: :request do
+  let(:workspace) { create(:workspace, slug: "buildings-update-spec-workspace", personal: false) }
+
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+  end
+
+  def membership_with(slug)
+    user = create(:user)
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    membership.update!(role: Role.system_default!(slug))
+    user
+  end
+
+  let(:building) { create(:building, workspace: workspace, nickname: "Old Name") }
+  let!(:classroom) { create(:room, building: building, workspace: workspace) }
+
+  describe "as a non-admin viewer" do
+    it_behaves_like "an admin-only action" do
+      let(:actor) { membership_with("viewer") }
+      let(:http_method) { :patch }
+      let(:request_path) { building_path(building) }
+      let(:request_params) { { building: { nickname: "Should not apply" } } }
+    end
+  end
+
+  describe "as an admin" do
+    let(:admin) { membership_with("admin") }
+
+    before { sign_in(admin) }
+
+    # The audit-granularity contract Curation::Apply already proves in
+    # isolation (spec/lib/curation/apply_spec.rb): a real column change
+    # (nickname) appears in before_after; this pins that BuildingsController
+    # #update wires it correctly end-to-end, one ActivityLog per request —
+    # even though the SAME request also attaches a photo (an attachment op,
+    # not dirty-tracked, so it contributes nothing to the diff).
+    it "updates the nickname and attaches a photo via Curation::Apply, writing exactly one audited ActivityLog" do
+      expect {
+        patch building_path(building), params: {
+          building: {
+            nickname: "New Name",
+            photo: fixture_file_upload("avatar.png", "image/png")
+          }
+        }
+      }.to change(ActivityLog, :count).by(1)
+
+      expect(response).to redirect_to(building_path(building))
+      building.reload
+      expect(building.nickname).to eq("New Name")
+      expect(building.photo).to be_attached
+
+      log = ActivityLog.last
+      expect(log.action).to eq("building.curated")
+      expect(log.before_after).to eq(
+        "before" => { "nickname" => "Old Name" }, "after" => { "nickname" => "New Name" }
+      )
+    end
+
+    # Building's own `content_type: [:png, :jpeg, :webp]` validation on :photo
+    # is the natural, already-existing validation reachable through this
+    # form — a PDF is allowed for a floor's plan but not the building photo,
+    # so attaching one here is a genuine ActiveRecord::RecordInvalid.
+    it "re-renders :edit with 422 on a validation failure and writes no ActivityLog" do
+      expect {
+        patch building_path(building), params: {
+          building: { photo: fixture_file_upload("seating_chart.pdf", "application/pdf") }
+        }
+      }.not_to change(ActivityLog, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(building.reload.photo).not_to be_attached
+    end
+
+    it "attaches a floor plan via nested attributes" do
+      floor = create(:floor, building: building, workspace: workspace, label: "1")
+
+      patch building_path(building), params: {
+        building: { floors_attributes: { "0" => {
+          id: floor.id, plan: fixture_file_upload("avatar.png", "image/png")
+        } } }
+      }
+
+      expect(response).to redirect_to(building_path(building))
+      expect(floor.reload.plan).to be_attached
+    end
+
+    it "replaces an existing floor plan with a new file" do
+      floor = create(:floor, building: building, workspace: workspace, label: "1")
+      floor.plan.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+                         filename: "old-plan.png", content_type: "image/png")
+
+      patch building_path(building), params: {
+        building: { floors_attributes: { "0" => {
+          id: floor.id, plan: fixture_file_upload("seating_chart.pdf", "application/pdf")
+        } } }
+      }
+
+      expect(response).to redirect_to(building_path(building))
+      expect(floor.reload.plan.content_type).to eq("application/pdf")
+    end
+
+    # remove_plan is a purge_later writer (test's ActiveJob queue_adapter is
+    # :test — see config/environments/test.rb — so the attachment isn't
+    # actually gone until the enqueued ActiveStorage::PurgeJob runs); this
+    # pins that submitting the checkbox reaches the floor and enqueues the
+    # purge, mirroring how Room's identical remove_* writers are exercised.
+    it "enqueues a purge job for an existing floor plan via remove_plan" do
+      floor = create(:floor, building: building, workspace: workspace, label: "1")
+      floor.plan.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+                         filename: "old-plan.png", content_type: "image/png")
+
+      expect {
+        patch building_path(building), params: {
+          building: { floors_attributes: { "0" => { id: floor.id, remove_plan: "1" } } }
+        }
+      }.to have_enqueued_job(ActiveStorage::PurgeJob)
+
+      expect(response).to redirect_to(building_path(building))
+    end
+
+    # Decision 2 deviation: address is sync-owned, so this form must never
+    # accept it — an attempted address/city param is silently dropped by
+    # strong params (building_params), never assigned, regardless of whether
+    # the rest of the request succeeds.
+    it "ignores an attempted address param instead of writing it" do
+      building.update!(address: "419 S State St", city: "Ann Arbor")
+
+      patch building_path(building), params: {
+        building: { nickname: "New Name", address: "999 Hacked Ave", city: "Nowhere" }
+      }
+
+      expect(response).to redirect_to(building_path(building))
+      building.reload
+      expect(building.nickname).to eq("New Name")
+      expect(building.address).to eq("419 S State St")
+      expect(building.city).to eq("Ann Arbor")
+    end
+  end
+
+  describe "POST create" do
+    it "has no route" do
+      post "/buildings", params: { building: { bldrecnbr: "9999999" } }
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "BuildingPolicy#create? is false" do
+      expect(BuildingPolicy.new(nil, Building.new).create?).to be(false)
+    end
+  end
+end

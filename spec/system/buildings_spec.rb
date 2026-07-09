@@ -74,4 +74,42 @@ RSpec.describe "Buildings", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
+
+  # MiClassrooms Phase 4 Task 9 (Brief §5.3, §14.1): the admin building edit
+  # form — nickname, photo, and per-floor floor-plan management. A second
+  # floor with an already-attached PDF plan (plus the building's own photo)
+  # is pre-attached before visiting, so the axe sweep below covers the
+  # "already attached" branches (photo remove checkbox, PDF plan link +
+  # remove checkbox) alongside `floor`'s (label "2") graceful empty state —
+  # the same full-branch-coverage reasoning spec/system/rooms/edit_spec.rb
+  # uses for the room edit page.
+  it "renames the nickname, uploads a floor plan for a floor with none, and is accessible with an existing PDF plan present, in both themes" do
+    floor_with_pdf_plan = create(:floor, building: building, workspace: workspace, label: "3")
+    floor_with_pdf_plan.plan.attach(io: file_fixture("seating_chart.pdf").open,
+                                     filename: "floor-3.pdf", content_type: "application/pdf")
+    building.photo.attach(io: file_fixture("room.jpg").open, filename: "mason.jpg", content_type: "image/jpeg")
+
+    visit edit_building_path(building)
+
+    expect(page).to have_selector("h1", text: I18n.t("buildings.edit.title", building: building.display_name))
+    # Graceful empty state (D10: a floor plan is optional) — floor "2" has
+    # no plan uploaded yet.
+    expect(page).to have_content(I18n.t("buildings.edit.no_plan", label: floor.label))
+    expect(page).to have_link(I18n.t("buildings.edit.plan_pdf_link", label: floor_with_pdf_plan.label))
+
+    fill_in I18n.t("buildings.edit.nickname_label"), with: "The Mason"
+    attach_file I18n.t("buildings.edit.replace_plan_label", label: floor.label), file_fixture("room.jpg").to_s
+
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+
+    click_button I18n.t("buildings.edit.submit")
+
+    expect(page).to have_current_path(building_path(building))
+    expect(page).to have_content(I18n.t("buildings.edit.success"))
+    expect(page).to have_selector("h1", text: "Mason Hall (The Mason)")
+
+    expect(building.reload.nickname).to eq("The Mason")
+    expect(floor.reload.plan).to be_attached
+  end
 end
