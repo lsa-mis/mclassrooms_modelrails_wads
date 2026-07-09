@@ -44,11 +44,36 @@
 # work against rooms already in this workspace), so the ENTIRE
 # `client.each_page` walk is wrapped in `client.rate_limiter.backoff_429` —
 # a transient 429 sleeps-and-retries the whole fetch instead of aborting the
-# phase. `seen` is reset at the top of the wrapped block so a retry that
-# fires after some rows were already yielded (a multi-page feed 429-ing on
-# page 2, say) starts the seen-list clean rather than accumulating rmrecnbrs
-# across attempts; re-running the upsert for an already-processed row is a
-# harmless no-op (idempotent, same as every other phase's upsert).
+# phase. `client.each_page` is the only retry seam UmApi::Client exposes
+# (there is no per-page callback), so whole-walk backoff is what's available
+# until phase 8's credentialed cutover confirms the live feed's pagination;
+# real per-page retry is a phase-8 prerequisite once that shape is known
+# (see the two residual risks below).
+#
+# Whole-walk retry has two consequences on a genuinely PAGINATED feed (the
+# single-page classroom_list.json fixture never hits either, but the live
+# feed might), both named honestly here rather than glossed as "harmless":
+#
+# 1. Redundant re-walk + run-report accuracy. A 429 on a later page restarts
+#    the walk from page 1, re-yielding every row already processed. `seen`
+#    is `.clear`ed at the top of the wrapped block so the clear-sweep sees
+#    only the final successful walk's rmrecnbrs, and `count(:updated)` is
+#    naturally idempotent (changed_after_assign returns false the second
+#    time a row is seen, since the first walk already persisted it). But
+#    `count(:skipped)` has NO such natural guard — an unmatched row would be
+#    counted once per walk attempt, inflating the skipped tally in the run
+#    report (Brief §6.1: "comprehensive run reports"). So a `skipped_rmrecnbrs`
+#    Set persists ACROSS retries (declared outside the backoff_429 block,
+#    unlike `seen`, which resets per attempt) and `count(:skipped)`/its
+#    warning fire only the first time a given rmrecnbr is skipped. The
+#    re-walk is still redundant WORK, just no longer a counting error.
+# 2. Shared retry budget. UmApi::RateLimiter::MAX_BACKOFF_ATTEMPTS (10) is
+#    consumed across the WHOLE walk, not per page, so a large multi-page feed
+#    that 429s intermittently on several different pages could exhaust the
+#    budget and fail the phase where a per-page retry (a fresh budget per
+#    page) would have succeeded. This is the other reason real per-page retry
+#    is a phase-8 cutover prerequisite once the live feed's pagination is
+#    known.
 #
 # Capacity bound recompute (D12): `Setting.recompute_capacity_filter_max!`
 # runs at the very END of #perform, strictly after the upsert loop and the
@@ -80,13 +105,17 @@ module Sync
 
     def perform
       seen = []
+      # Persists ACROSS backoff_429 retries (declared here, NOT inside the
+      # block that `.clear`s `seen`) so a whole-walk retry can't double-count
+      # a skipped rmrecnbr — see header comment, residual risk #1.
+      skipped_rmrecnbrs = Set.new
 
       client.rate_limiter.backoff_429 do
         seen.clear
         client.each_page(CLASSROOM_LIST_PATH, scope: "classrooms") do |row|
           attrs = parse_classroom(row)
           seen << attrs[:rmrecnbr]
-          upsert_facility_id(attrs)
+          upsert_facility_id(attrs, skipped_rmrecnbrs)
         end
       end
 
@@ -97,13 +126,17 @@ module Sync
     # A classroom-list row with no matching room (Room.for_current_workspace
     # scoped, so a match never reaches into another tenant's data) is
     # skipped — see header comment: rooms come only from Sync::UpdateRooms,
-    # never from this phase.
-    def upsert_facility_id(attrs)
+    # never from this phase. `skipped_rmrecnbrs.add?` returns nil when the
+    # rmrecnbr was already skipped this run, so a whole-walk 429 retry
+    # re-encountering the same unmatched row counts and warns exactly once.
+    def upsert_facility_id(attrs, skipped_rmrecnbrs)
       room = Room.for_current_workspace.find_by(rmrecnbr: attrs[:rmrecnbr])
 
       unless room
-        count(:skipped)
-        add_warning("Classroom list row #{attrs[:rmrecnbr]} (facility code #{attrs[:facility_code]}) has no matching room; skipped")
+        if skipped_rmrecnbrs.add?(attrs[:rmrecnbr])
+          count(:skipped)
+          add_warning("Classroom list row #{attrs[:rmrecnbr]} (facility code #{attrs[:facility_code]}) has no matching room; skipped")
+        end
         return
       end
 

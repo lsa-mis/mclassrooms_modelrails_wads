@@ -231,6 +231,40 @@ RSpec.describe Sync::UpdateFacilityIds do
       expect(german.reload.facility_code).to eq("MLB1200")
       expect(counter(phase, :rate_limit_sleeps)).to eq(1)
     end
+
+    # Run-report accuracy (Brief §6.1: "comprehensive run reports"). backoff_429
+    # wraps the WHOLE each_page walk (the only retry seam UmApi::Client exposes),
+    # so a 429 on a later page restarts the walk from page 1 — re-yielding every
+    # row already processed on earlier pages. count(:updated) is naturally
+    # idempotent (changed_after_assign returns false the second time a row is
+    # seen, since the first walk already persisted it), but count(:skipped) has
+    # no such natural guard: an UNMATCHED row would be counted once per walk
+    # attempt, double-counting the skipped tally in the run report. This pins
+    # that skipped is counted ONCE per rmrecnbr regardless of retries.
+    #
+    # Teeth: page 1 carries both classroom-list rows (both UNMATCHED — no rooms
+    # exist), and next-links to page 2, which 429s once then returns empty. The
+    # 429 restarts the walk, so page 1's two unmatched rows are yielded TWICE
+    # across the run. Without a per-rmrecnbr Set guard skipped would be 4 (and
+    # there would be 4 "no matching room" warnings); the guard keeps both at 2.
+    it "counts each unmatched rmrecnbr once even when a mid-walk 429 restarts the whole walk" do
+      page2_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/Classrooms?page=2"
+      stub_um_get("/bf/Buildings/v2/Classrooms", fixture: "classroom_list.json",
+        query: { "limit" => "1000" }, next_link: page2_url)
+      stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/Classrooms")
+        .with(query: { "page" => "2" })
+        .to_return(
+          { status: 429, body: "" },
+          { status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS, body: um_api_fixture("classroom_list_empty.json") }
+        )
+
+      result = described_class.call(run: run, client: client)
+
+      expect(result).to be_success
+      expect(counter(phase, :skipped)).to eq(2)
+      expect(phase.warnings.count { |warning| warning.match?(/no matching room/) }).to eq(2)
+      expect(counter(phase, :rate_limit_sleeps)).to eq(1)
+    end
   end
 
   describe "capacity_filter_max recompute (D12)" do
