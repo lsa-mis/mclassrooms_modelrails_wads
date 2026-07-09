@@ -43,6 +43,7 @@ module Sync
       @client = client
       @counters = Hash.new(0)
       @warnings = []
+      @deltas_recorded = false
     end
 
     def call
@@ -75,6 +76,11 @@ module Sync
         # gateway told us something went wrong" and "something blew up
         # unexpectedly" identically — the pipeline treats both the same way:
         # fail this phase, keep whatever it counted so far, never propagate.
+        #
+        # This also covers the case where #perform succeeds AND the delta
+        # was already recorded, but the succeeded-stamp `phase.update!` just
+        # above then raises: #record_call_deltas! is idempotent (guarded by
+        # @deltas_recorded), so calling it again here never double-adds.
         record_call_deltas!(calls_before, sleeps_before) if calls_before
         stamp_failed(phase, e)
         # error_class: carries the ORIGINAL exception's class name forward in
@@ -137,7 +143,15 @@ module Sync
       Rails.logger.warn("Sync::BasePhase failed to stamp phase failed: #{e.class}: #{e.message}")
     end
 
+    # Idempotent: if #perform succeeds and this runs, but the succeeded-stamp
+    # `phase.update!` immediately after then raises, `.call`'s rescue calls
+    # this a second time so the failure Result still carries accurate
+    # counters. Without the @deltas_recorded guard that second call would
+    # double-add the same delta on top of itself.
     def record_call_deltas!(calls_before, sleeps_before)
+      return if @deltas_recorded
+
+      @deltas_recorded = true
       count(:api_calls, client.call_count - calls_before)
       count(:rate_limit_sleeps, rate_limiter_sleep_count - sleeps_before)
     end

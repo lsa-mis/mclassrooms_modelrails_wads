@@ -229,6 +229,43 @@ RSpec.describe Sync::BasePhase do
     end
   end
 
+  # MINOR: if #perform succeeds and #record_call_deltas! runs, but the
+  # succeeded-stamp `phase.update!` that follows it then raises, `.call`'s
+  # rescue calls #record_call_deltas! a SECOND time (its `if calls_before`
+  # guard doesn't know the delta was already recorded once) — without the
+  # @deltas_recorded idempotency guard, that would double-add the same
+  # api_calls/rate_limit_sleeps delta onto the failure Result. The second
+  # `update!` (the succeeded stamp) is the one made to raise here — the
+  # first (`status: :running`) and third (`stamp_failed`'s `status: :failed`)
+  # calls must both succeed for real, so a plain call-count-based stub (not
+  # an unconditional raise) isolates exactly that one call.
+  describe "double-count guard: #record_call_deltas! is idempotent" do
+    it "records the api_calls/rate_limit_sleeps delta once, not twice, when the succeeded-stamp update! raises after #perform" do
+      run = create(:sync_run)
+      client = FakeClient.new
+      call_count = 0
+
+      allow_any_instance_of(SyncPhase).to receive(:update!).and_wrap_original do |method, *args, **kwargs|
+        call_count += 1
+        raise "stamp blew up" if call_count == 2
+
+        method.call(*args, **kwargs)
+      end
+
+      result = SucceedingTestPhase.call(run: run, client: client)
+
+      expect(result).not_to be_success
+      expect(result.errors).to eq([ "stamp blew up" ])
+      expect(result.payload[:counters]["api_calls"]).to eq(2)
+      expect(result.payload[:counters]["rate_limit_sleeps"]).to eq(1)
+
+      phase = run.sync_phases.find_by!(key: "campuses")
+      expect(phase).to be_failed
+      expect(phase.counters["api_calls"]).to eq(2)
+      expect(phase.counters["rate_limit_sleeps"]).to eq(1)
+    end
+  end
+
   describe "#dry_run?" do
     it "delegates to run.dry_run?" do
       dry_phase = GuardedWriteTestPhase.new(run: build_stubbed(:sync_run, dry_run: true), client: FakeClient.new)

@@ -52,12 +52,16 @@
 # normalization convention this codebase already has rather than inventing a
 # second one. "Whtbrd>25" (characteristics_MLB1200.json) becomes "whtbrd25".
 #
-# parse_characteristic(row) isolation: per spec/support/um_api_stubs.rb's
-# fixture-shape disclaimer, Code/ShortCode/Description/LongDescription/Status
-# match spec/fixtures/um_api/characteristics_MLB1200.json exactly, NOT
-# verified against credentialed access — if phase 8's cutover finds different
-# field names, only this method (and the normalization rule, if the real
-# gateway turns out to pre-normalize) needs to change.
+# parse_characteristic(row) / characteristics_from(body) isolation: per
+# spec/support/um_api_stubs.rb's fixture-shape disclaimer, these are the ONLY
+# two places that reach into a raw API response hash directly.
+# Code/ShortCode/Description/LongDescription/Status (parse_characteristic)
+# match spec/fixtures/um_api/characteristics_MLB1200.json exactly, and the
+# "Characteristics" envelope key (characteristics_from) matches that same
+# fixture's top-level shape — NOT verified against credentialed access — if
+# phase 8's cutover finds different field names or a different envelope key,
+# only these two methods (and the normalization rule, if the real gateway
+# turns out to pre-normalize) need to change.
 #
 # Endpoint path ("/bf/Buildings/v2/Classrooms/{facility_code}/Characteristics"):
 # mirrors Sync::UpdateFacilityIds's own "/bf/Buildings/v2/Classrooms" flat
@@ -115,8 +119,13 @@ module Sync
       body = client.rate_limiter.backoff_429 do
         client.get_json(characteristics_path(room.facility_code), scope: "classrooms")
       end
-      body.fetch("Characteristics", [])
+      characteristics_from(body)
     end
+
+    # Single documented raw-access point for the response envelope's key —
+    # see header comment. If phase 8's cutover finds the envelope shaped
+    # differently, only this method needs to change.
+    def characteristics_from(body) = body.fetch("Characteristics", [])
 
     # Routine, idempotent create — never dry-run guarded (see header
     # comment). A code already present in `existing` is left completely

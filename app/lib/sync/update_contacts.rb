@@ -32,12 +32,16 @@
 # keys entirely — `.presence` handles all three shapes ("" -> nil, JSON null
 # -> already nil -> nil, missing key -> nil -> nil) with one call.
 #
-# parse_contact(row) isolation: per spec/support/um_api_stubs.rb's
-# fixture-shape disclaimer, SchedName/SchedEmail/SchedPhone/SchedDetailUrl/
-# SchedUsageGuidelinesUrl/SupportDeptId/SupportDeptDescr/SupportEmail/
-# SupportPhone/SupportUrl match spec/fixtures/um_api/contacts_MLB1200.json
-# exactly, NOT verified against credentialed access — if phase 8's cutover
-# finds different field names, only this method needs to change.
+# parse_contact(row) / contacts_from(body) isolation: per spec/support/
+# um_api_stubs.rb's fixture-shape disclaimer, these are the ONLY two places
+# that reach into a raw API response hash directly.
+# SchedName/SchedEmail/SchedPhone/SchedDetailUrl/SchedUsageGuidelinesUrl/
+# SupportDeptId/SupportDeptDescr/SupportEmail/SupportPhone/SupportUrl
+# (parse_contact) match spec/fixtures/um_api/contacts_MLB1200.json exactly,
+# and the "Contacts" envelope key (contacts_from) matches that same
+# fixture's top-level shape — NOT verified against credentialed access — if
+# phase 8's cutover finds different field names or a different envelope key,
+# only these two methods need to change.
 #
 # Endpoint path ("/bf/Buildings/v2/Classrooms/{facility_code}/Contacts"):
 # mirrors Sync::UpdateCharacteristics's own per-classroom nesting off the
@@ -73,8 +77,13 @@ module Sync
       body = client.rate_limiter.backoff_429 do
         client.get_json(contacts_path(room.facility_code), scope: "classrooms")
       end
-      body.fetch("Contacts", []).first
+      contacts_from(body).first
     end
+
+    # Single documented raw-access point for the response envelope's key —
+    # see header comment. If phase 8's cutover finds the envelope shaped
+    # differently, only this method needs to change.
+    def contacts_from(body) = body.fetch("Contacts", [])
 
     def parse_contact(row)
       {
