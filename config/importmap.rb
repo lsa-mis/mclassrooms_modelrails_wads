@@ -6,6 +6,20 @@ pin "@hotwired/stimulus", to: "stimulus.min.js"
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
 pin "lexxy", to: "lexxy.js"
+
+# ActiveStorage direct upload (MiClassrooms Phase 4 Task 11, Brief §5.3):
+# `activestorage.esm.js` ships INSIDE the `activestorage` gem itself
+# (app/assets/javascripts/activestorage.esm.js), not as a separately
+# fetched npm package — same story as the `@hotwired/*` pins above, whose JS
+# ships inside turbo-rails/stimulus-rails. Propshaft's default asset load
+# path includes every Railtie's `app/assets/*` (ActiveStorage::Engine is
+# `require`d in config/application.rb), so this pin resolves without a CDN
+# or a vendored copy. Started in app/javascript/application.js — required
+# by the admin bulk-upload flow (app/controllers/admin/bulk_uploads_controller.rb),
+# which re-POSTs signed blob ids across two requests and therefore needs the
+# blob uploaded to storage BEFORE the first request, not carried as multipart
+# form data.
+pin "@rails/activestorage", to: "activestorage.esm.js"
 pin "cropperjs", to: "https://cdn.jsdelivr.net/npm/cropperjs@2/dist/cropper.esm.js"
 
 # Pannellum (2.5.6 standalone build, bundles libpannellum) is vendored at

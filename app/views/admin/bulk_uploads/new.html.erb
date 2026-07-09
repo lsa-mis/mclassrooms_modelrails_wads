@@ -1,0 +1,44 @@
+<%# MiClassrooms Phase 4 Task 11 (Brief §5.3, §14.1): the bulk-upload dropzone
+    — step 1 of the stateless two-step flow. This form's file input is a REAL
+    `<input type=file multiple>` (rendered via TailwindFormBuilder#file_field
+    -> UI::FileInputComponent) carrying `data-direct-upload-url`, so
+    `ActiveStorage.start()` (app/javascript/application.js) intercepts this
+    form's submit, uploads every selected file straight to storage, and
+    replaces the file input with one hidden `signed_blob_ids[]` field per
+    file BEFORE the form's real POST to #create ever leaves the browser.
+    That is why this form carries no file bytes to the server itself, and why
+    `multipart: true` doesn't actually matter for what ends up being
+    submitted — it's kept for parity with rooms/buildings' identical-shaped
+    file forms and as a harmless no-op if JS is ever unavailable (the browser
+    would then submit the raw file as multipart form data, which #create
+    doesn't read — see BulkUploadsController's comment on `resolve_blobs`).
+
+    Drag-and-drop is enhancement only, not a separate affordance: a real
+    `<input type=file>` already accepts OS-level drag-and-drop natively, so
+    no dropzone Stimulus controller is needed for that behavior — the input
+    is fully keyboard-operable (Enter/Space opens the file picker) with or
+    without a mouse. %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+  <p class="mt-2 text-text-muted"><%= t(".instructions") %></p>
+
+  <%= form_with url: admin_bulk_uploads_path, method: :post, multipart: true,
+        class: "mt-8 space-y-6" do |form| %>
+    <%# No custom `id:` here (deliberately): TailwindFormBuilder#build_label
+        always points its `<label for=...>` at the auto-computed field_id
+        (it has no way to see a caller-supplied `id:` override, which only
+        reaches the <input> itself via ui_file) — passing a custom id would
+        silently break the label/input association. Letting both default to
+        the same field_id keeps them in sync, same as every other file_field
+        call in this app. %>
+    <%= form.file_field :signed_blob_ids,
+          multiple: true,
+          label: t(".dropzone_label"),
+          accept: "image/png,image/jpeg,image/webp,application/pdf",
+          data: { direct_upload_url: rails_direct_uploads_path } %>
+
+    <%= form.submit t(".submit") %>
+  <% end %>
+</div>
