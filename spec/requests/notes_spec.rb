@@ -190,6 +190,30 @@ RSpec.describe "Notes", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(%(action="update" target="#{new_note_id}"))
     end
+
+    # Whole-branch review I-1 (WCAG 2.2 AAA): notes/_form.html.erb renders
+    # via `form_with model: record`, which derives its field ids from
+    # `record.model_name.param_key` — "note" for a Note whether new OR
+    # persisted. With one existing root note, an authoring editor's room
+    # page renders THREE note forms (top create, that note's inline edit,
+    # that note's reply) that, pre-fix, all emit the SAME body-field id
+    # (`note_body`), so every `form.label :body` resolves to the FIRST
+    # `#note_body` in document order (WCAG 1.3.1/3.3.2/4.1.2 failures at
+    # AAA). This spec fails pre-fix (all 3 ids collapse to 1 unique value)
+    # and passes once each context's field id is made unique.
+    it "gives the create, edit, and reply forms distinct Lexxy body-field ids (I-1)" do
+      create(:note, notable: room_in_unit, workspace: workspace)
+
+      get room_path(room_in_unit)
+
+      expect(response).to have_http_status(:ok)
+
+      body_field_ids = response.body.scan(/id="([^"]*note_body)"/).flatten
+      # Sanity: the create form + the existing note's edit form + its reply
+      # form all render for an authoring editor with one root note present.
+      expect(body_field_ids.size).to eq(3)
+      expect(body_field_ids.uniq.size).to eq(body_field_ids.size)
+    end
   end
 
   describe "PATCH /notes/:id" do

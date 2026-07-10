@@ -77,4 +77,17 @@ RSpec.describe RoleResolver do
     create(:editor_assignment, user: user, unit: unit)
     expect(described_class.for(user).editor?).to be true
   end
+
+  # Whole-branch review M-2: the fallback exists for callers with no
+  # workspace-scoping before_action (e.g. PagesController#home's admin
+  # check), so Current.workspace is nil and .for must resolve through
+  # TenancyConfig.shared_workspace instead — mirrors the stubbing pattern
+  # spec/policies/room_policy_spec.rb already uses for the same method.
+  it "falls back to TenancyConfig.shared_workspace when Current.workspace is nil" do
+    Current.workspace = nil
+    allow(TenancyConfig).to receive(:shared_workspace).and_return(workspace)
+    membership_with(:admin)
+
+    expect(described_class.for(user).admin?).to be true
+  end
 end

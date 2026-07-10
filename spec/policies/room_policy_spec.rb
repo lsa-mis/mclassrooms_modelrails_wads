@@ -39,6 +39,19 @@ RSpec.describe RoomPolicy do
     end
   end
 
+  # Whole-branch review M-6: the matrix above pins hide? on a room the
+  # editor's own unit still has VISIBLE (true), but no example directly
+  # covers the one-way-hide guard itself — a unit editor re-attempting
+  # hide? on a room already hidden (visible_record? false). Behavior is
+  # already correct (RoomPolicy#hide? requires visible_record? for a
+  # non-admin); this just pins it.
+  describe "#hide? guards against re-hiding an already-hidden room" do
+    it "denies a unit editor hiding a room in their own unit that is already hidden" do
+      policy = described_class.new(editor_user, hidden_room_in_unit)
+      expect(policy.hide?).to be false
+    end
+  end
+
   # edit?/floor_plan? mirror update?/show? exactly (ApplicationPolicy's own
   # new?/edit? aliasing convention) — not in the §14.1 matrix table itself,
   # but pinned here so the aliasing doesn't silently drift from its target.

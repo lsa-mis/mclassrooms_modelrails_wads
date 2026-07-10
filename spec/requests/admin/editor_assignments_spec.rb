@@ -157,6 +157,11 @@ RSpec.describe "Admin editor assignments", type: :request do
             params: { editor_assignment: { user_id: member.id, unit_id: foreign_unit.id } }
         }.not_to change(EditorAssignment, :count)
 
+        expect {
+          post admin_editor_assignments_path,
+            params: { editor_assignment: { user_id: member.id, unit_id: foreign_unit.id } }
+        }.not_to change(ActivityLog, :count)
+
         expect(response).to have_http_status(:unprocessable_entity)
         expect(EditorAssignment.where(unit_id: foreign_unit.id)).not_to exist
       end
@@ -168,6 +173,11 @@ RSpec.describe "Admin editor assignments", type: :request do
           post admin_editor_assignments_path,
             params: { editor_assignment: { user_id: outsider.id, unit_id: unit.id } }
         }.not_to change(EditorAssignment, :count)
+
+        expect {
+          post admin_editor_assignments_path,
+            params: { editor_assignment: { user_id: outsider.id, unit_id: unit.id } }
+        }.not_to change(ActivityLog, :count)
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(EditorAssignment.where(user_id: outsider.id)).not_to exist
