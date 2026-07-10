@@ -115,12 +115,17 @@ class NotesController < ApplicationController
   # here. Re-renders a FRESH blank create/reply form into the exact
   # container the actor's form came from, so their just-submitted form is
   # visibly reset rather than left showing stale (already-saved) input.
+  # `reset_target` names the spacing <div> the view renders around
+  # notes/_form (see that partial's header comment) — the form itself no
+  # longer carries that id, so this must be `update` (swap the div's inner
+  # content) rather than `replace` (which would consume the div itself and
+  # drop its mt-3/mt-2 spacing on the very first reset).
   def success_streams(reset_target)
     streams = [ success_toast(t("notes.toasts.#{action_name}")) ]
     return streams unless reset_target
 
     parent = @note.parent
     form_locals = parent ? { notable: parent.notable, parent: parent } : { notable: @note.notable, parent: nil }
-    streams.unshift(turbo_stream.replace(reset_target, partial: "notes/form", locals: form_locals))
+    streams.unshift(turbo_stream.update(reset_target, partial: "notes/form", locals: form_locals))
   end
 end
