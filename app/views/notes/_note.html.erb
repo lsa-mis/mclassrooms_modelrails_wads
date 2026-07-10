@@ -1,21 +1,71 @@
 <%# locals: (note:) %>
-<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): one read-only note, rendered
-    through UI::AlertComponent on either the warning tone (alert notes) or
-    the neutral tone (plain notes) — reusing one design-system primitive for
-    both instead of hand-rolling a second card style. Phase 5 upgrades this
-    partial in place with authoring controls + Turbo Stream broadcast (Note
-    already includes Broadcastable); this task is render-only.
+<%# MiClassrooms Phase 5 Task 7 (Brief §14.1, D15): one note, live. This
+    partial is the SOLE unit Note's own Broadcastable wiring
+    (app/models/note.rb#broadcast_changes) prepends/replaces/removes by id —
+    the outermost list item below, whose id is this note's dom_id, MUST stay
+    the outermost element, and for a ROOT note (parent_id nil) it must ALSO
+    render that root's own replies list + reply form INSIDE that same list
+    item, because an update re-renders this ENTIRE partial in place
+    (broadcast_replace_to only ever re-renders "notes/note", nothing
+    upstream of it) — putting the replies/form anywhere else (e.g. back in
+    notes/_list.html.erb, wrapping this partial) would wipe them out on
+    every edit. A REPLY skips that block entirely: one-level threading
+    (Note#parent_must_be_root) means a reply never has its own replies or
+    reply form.
 
-    The author · date byline is NOT a section heading — it must not use
-    `with_alert_title` (AlertComponent::TitleComponent unconditionally emits
-    an <h5>, which would skip from the surrounding <h2>/<h3> straight to
-    <h5>, an AAA "no skipped heading levels" violation). It renders as a
-    plain <p> inside the description slot instead, ahead of the note body. %>
-<%= ui :alert, tone: (note.alert? ? :warning : :neutral) do |a| %>
-  <% a.with_alert_description do %>
-    <p class="text-sm font-medium text-text-heading">
-      <%= note.author.full_name %> · <%= l(note.created_at, format: :short) %>
-    </p>
-    <%= note.body %>
+    tone: :danger (not phase 4's :warning) for note.alert? is a deliberate
+    departure from the read-only phase-4 partial this upgrades: D15 requires
+    a live-prepended alert to announce as role="alert"/aria-live="assertive"
+    so it's heard immediately, and UI::AlertComponent's ROLES table ties
+    that combination to the :danger tone only (:warning renders
+    role="status"/aria-live="polite") — there is no way to get a literal
+    role="alert" out of this shared, AAA-proven primitive at any other tone
+    without hand-rolling markup the design system already owns. %>
+<li id="<%= dom_id(note) %>" class="space-y-2">
+  <%= ui :alert, tone: (note.alert? ? :danger : :neutral) do |a| %>
+    <% a.with_alert_description do %>
+      <p class="text-sm font-medium text-text-heading">
+        <%= note.author.full_name %> · <%= l(note.created_at, format: :short) %>
+      </p>
+      <div class="prose-sm"><%= note.body %></div>
+
+      <% if policy(note).update? || policy(note).destroy? %>
+        <div class="action-group mt-2">
+          <% if policy(note).update? %>
+            <details>
+              <summary class="btn-text btn-text-interactive cursor-pointer">
+                <%= t("notes.actions.edit") %>
+              </summary>
+              <div class="mt-2">
+                <%= render "notes/form", notable: note.notable, parent: note.parent, note: note %>
+              </div>
+            </details>
+          <% end %>
+
+          <% if policy(note).destroy? %>
+            <%= button_to t("notes.actions.delete"), note_path(note), method: :delete,
+                  class: "btn-text btn-text-danger",
+                  data: { turbo_confirm: t("notes.actions.delete_confirm") } %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
   <% end %>
-<% end %>
+
+  <% if note.parent_id.nil? %>
+    <ul id="<%= dom_id(note) %>_replies" class="ml-6 mt-2 space-y-2">
+      <% note.replies.includes(:author, :rich_text_body).each do |reply| %>
+        <%= render "notes/note", note: reply %>
+      <% end %>
+    </ul>
+
+    <% if policy(Note.new(notable: note.notable)).create? %>
+      <details class="ml-6 mt-2">
+        <summary class="btn-text btn-text-interactive cursor-pointer"><%= t("notes.actions.reply") %></summary>
+        <div id="<%= dom_id(note, :new_reply) %>" class="mt-2">
+          <%= render "notes/form", notable: note.notable, parent: note %>
+        </div>
+      </details>
+    <% end %>
+  <% end %>
+</li>

@@ -44,6 +44,16 @@ resources :buildings, only: [ :index, :show, :edit, :update ] do
   end
 end
 
+# Notes & alerts (MiClassrooms Phase 5 Task 7, Brief §14.1, D15): a product
+# resource, NOT nested under rooms/buildings — a note's own
+# notable_type/notable_id (hidden fields on notes/_form.html.erb) says which
+# record it's on, mirroring how NotePolicy authorizes off `record.notable`
+# rather than a parent resource in the URL. Only create/update/destroy ship
+# here — notes render inline via notes/_list (rendered from rooms#show), so
+# there is no #index/#show/#edit; edit is an inline Turbo Stream swap on the
+# same page, not a separate route.
+resources :notes, only: [ :create, :update, :destroy ]
+
 # Admin bulk upload (MiClassrooms Phase 4 Task 11, Brief §5.3): a stateless
 # drop -> review -> commit flow with NO persisted model, so only :new/:create
 # are drawn — a deliberate SUBSET of the roadmap contract's bare

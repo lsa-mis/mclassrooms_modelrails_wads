@@ -1,0 +1,17 @@
+en:
+  notes:
+    form:
+      body_label: "Note"
+      alert_label: "Flag as an alert"
+      create_submit: "Add note"
+      reply_submit: "Post reply"
+      update_submit: "Save changes"
+    actions:
+      edit: "Edit"
+      delete: "Delete"
+      delete_confirm: "Delete this note? This cannot be undone."
+      reply: "Reply"
+    toasts:
+      create: "Note added."
+      update: "Note updated."
+      destroy: "Note deleted."
