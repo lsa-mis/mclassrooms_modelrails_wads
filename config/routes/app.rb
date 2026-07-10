@@ -74,10 +74,18 @@ resources :notes, only: [ :create, :update, :destroy ]
 # nothing to edit (EditorAssignmentPolicy defines exactly index?/new?/
 # create?/destroy?, mirroring the announcements precedent's deliberate
 # subset).
+#
+# Admin reference data (MiClassrooms Phase 5 Task 11, Brief §11.4/§14.1):
+# CharacteristicDisplayRule/UnitDisplayName/SyncScopeRule — standard REST
+# minus #show (the index already renders every row's editable fields inline;
+# there is no separate detail page), mirroring the announcements precedent.
 namespace :admin do
   resources :bulk_uploads, only: [ :new, :create ]
   resources :announcements, except: [ :show ]
   resources :editor_assignments, only: [ :index, :new, :create, :destroy ]
+  resources :characteristic_display_rules, except: [ :show ]
+  resources :unit_display_names, except: [ :show ]
+  resources :sync_scope_rules, except: [ :show ]
 end
 
 # Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for

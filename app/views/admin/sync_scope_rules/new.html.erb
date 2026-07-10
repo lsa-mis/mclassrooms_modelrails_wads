@@ -1,0 +1,11 @@
+<%# MiClassrooms Phase 5 Task 11 (Brief §11.4/§14.1): new sync scope rule. %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+
+  <%= form_with model: @sync_scope_rule, url: admin_sync_scope_rules_path,
+        class: "mt-8 space-y-6" do |form| %>
+    <%= render "form", form: form %>
+  <% end %>
+</div>

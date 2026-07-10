@@ -1,0 +1,28 @@
+<%# locals: (form:) %>
+<%# MiClassrooms Phase 5 Task 11 (Brief §11.4/§14.1): shared new/edit form for
+    CharacteristicDisplayRule. `icon_key` is constrained to IconRegistry's
+    available icon set (app/lib/icon_registry.rb) rather than a free-text
+    field, so a rule can never reference an icon that doesn't exist. %>
+<%= form.error_summary %>
+
+<%= ui :card do %>
+  <%= ui :card_content, class: "space-y-6" do %>
+    <%= form.text_field :short_code,
+          label: t("admin.characteristic_display_rules.form.short_code_label"), required: true %>
+
+    <%= form.select :icon_key,
+          IconRegistry.available_icons.map { |icon| [ icon.to_s.humanize, icon.to_s ] },
+          { label: t("admin.characteristic_display_rules.form.icon_key_label"),
+            prompt: t("admin.characteristic_display_rules.form.icon_key_prompt") },
+          {} %>
+
+    <%= form.text_field :category_override,
+          label: t("admin.characteristic_display_rules.form.category_override_label") %>
+
+    <%= form.check_box :filterable, label: t("admin.characteristic_display_rules.form.filterable_label") %>
+
+    <%= form.check_box :team_learning, label: t("admin.characteristic_display_rules.form.team_learning_label") %>
+  <% end %>
+<% end %>
+
+<%= form.submit t("admin.characteristic_display_rules.form.submit") %>
