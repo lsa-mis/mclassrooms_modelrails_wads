@@ -214,6 +214,14 @@ end
 # JSON, floors (with a representative classroom's floor-plan link), and
 # read-only notes. Sibling top-level example group (not nested above),
 # mirroring rooms_spec.rb's "GET /rooms/:id" split.
+#
+# Phase 5 Task 4 reconciliation: BuildingPolicy#show? is no longer
+# admin-only — buildings/rooms follow a realty/Airbnb model where the
+# detail PAGE is viewer-visible on a VISIBLE building (mirrors
+# RoomPolicy#show? exactly), with every admin control gated WITHIN the page
+# instead. A HIDDEN building stays admin-only (defense-in-depth backstop,
+# same reasoning as a hidden room) — see the two "as a non-admin viewer"
+# examples below, split on building visibility.
 RSpec.describe "GET /buildings/:id", type: :request do
   let(:workspace) { create(:workspace, slug: "buildings-show-spec-workspace", personal: false) }
 
@@ -233,10 +241,23 @@ RSpec.describe "GET /buildings/:id", type: :request do
   let!(:classroom) { create(:room, building: building, workspace: workspace) }
 
   describe "as a non-admin viewer" do
-    it_behaves_like "an admin-only action" do
-      let(:actor) { membership_with("viewer") }
-      let(:http_method) { :get }
-      let(:request_path) { building_path(building) }
+    it "returns 200 for a VISIBLE building — buildings are viewer-visible pages (realty/Airbnb model), admin controls gated within" do
+      viewer = membership_with("viewer")
+      sign_in(viewer)
+
+      get building_path(building)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(building.display_name)
+    end
+
+    describe "on a HIDDEN building" do
+      it_behaves_like "an admin-only action" do
+        let(:building) { create(:building, :hidden, workspace: workspace, name: "Hidden Hall") }
+        let(:actor) { membership_with("viewer") }
+        let(:http_method) { :get }
+        let(:request_path) { building_path(building) }
+      end
     end
   end
 
