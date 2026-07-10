@@ -45,6 +45,7 @@ en:
       share:
         button: "Share"
         copied: "Link copied to clipboard"
+      edit_link: "Edit room"
     edit:
       title: "Edit %{room}"
       curated_heading: "Room details"
@@ -73,6 +74,8 @@ en:
       submit: "Save changes"
       success: "Room updated."
       stale_gallery: "One or more gallery rows are out of date; please reload and try again."
+      media_admin_only_hint: "Photos, panorama, seating chart, and gallery images are managed by administrators. If you notice a media issue,"
+      media_admin_only_hint_link: "add a note on the room page"
     hide:
       button: "Hide room"
       success: "Room hidden."
