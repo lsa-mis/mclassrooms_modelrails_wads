@@ -1,0 +1,8 @@
+en:
+  announcements:
+    slots:
+      home_page: "Home page"
+      find_a_room_page: "Find a Room page"
+      about_page: "About page"
+    banner:
+      aria_label: "Site announcement"

@@ -1,0 +1,13 @@
+<%# MiClassrooms Phase 5 Task 8 (Brief §14.1): new announcement — the picker
+    (rendered by _form) only ever lists slots with no announcement yet;
+    #new redirects back to #index before this ever renders when all three
+    are already filled (Admin::AnnouncementsController#new). %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+
+  <%= form_with model: @announcement, url: admin_announcements_path, class: "mt-8 space-y-6" do |form| %>
+    <%= render "form", form: form, unfilled_slots: @unfilled_slots %>
+  <% end %>
+</div>

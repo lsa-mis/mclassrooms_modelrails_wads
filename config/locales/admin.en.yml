@@ -32,3 +32,27 @@ en:
           one: "1 file attached."
           other: "%{count} files attached."
         partial_failure: "%{attached} attached, %{failed} could not be attached (invalid file)."
+    announcements:
+      index:
+        title: "Announcements"
+        filled: "Published"
+        empty: "No announcement set"
+        edit: "Edit"
+        delete: "Delete"
+        delete_confirm: "Delete this announcement? This cannot be undone."
+        create: "Create"
+      new:
+        title: "New announcement"
+        no_unfilled_slots: "All three announcement slots already have an announcement."
+      edit:
+        title: "Edit announcement"
+      form:
+        slot_label: "Page"
+        body_label: "Announcement"
+        submit: "Save announcement"
+      create:
+        success: "Announcement created."
+      update:
+        success: "Announcement updated."
+      destroy:
+        success: "Announcement deleted."
