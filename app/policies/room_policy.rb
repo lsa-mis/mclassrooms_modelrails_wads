@@ -1,36 +1,65 @@
-# MiClassrooms Phase 3 Task 1 (spec D5, Brief §3.2): read-side authorization
-# for the Find a Room screen. Every action here consults RoleResolver.for —
-# never `role.permissions` directly — so the admin/editor matrix stays
-# centralized in one place (app/lib/role_resolver.rb).
-class RoomPolicy < ApplicationPolicy
-  # DirectoryScoped already requires sign-in before any policy runs; these
-  # just pin that browsing/viewing listed classrooms isn't further
-  # role-gated. Room-detail (show) itself ships in phase 4 — this phase only
-  # needs the predicate to exist for the index screen's link-through.
-  def index? = user.present?
-  def show? = user.present?
+# MiClassrooms Phase 5 Task 3 (Brief §14.1): the full admin/editor/viewer
+# capability matrix for rooms, driven entirely by RoleResolver (via
+# DirectoryPolicy#grant) — never `role.permissions` directly, so the matrix
+# stays centralized in one place (app/lib/role_resolver.rb). Supersedes the
+# phase-3/4 viewer-only index?/show? and admin-only edit?/update? — see
+# git history for the superseded predicates.
+class RoomPolicy < DirectoryPolicy
+  # Brief §14.1: any viewer-or-above (i.e. any current member) can browse the
+  # directory; a signed-in user with no membership at all gets no directory
+  # access. Under the shared-workspace onboarding posture every signed-in
+  # user auto-joins with a membership, so this only bites a caller with a
+  # revoked/discarded membership.
+  def index? = grant.viewer?
 
-  # Rooms exist only via the nightly sync (Brief §5.3) — manual creation is
-  # denied for everyone, admins included. Pinned explicitly (rather than
-  # relying on ApplicationPolicy's default-false) so this reads as a
-  # deliberate rule, not an oversight.
-  def create? = false
+  # Hidden / out-of-feed rooms are invisible to non-admins EVERYWHERE,
+  # including direct URLs (Brief §3.2, §8 rule 5) — editors included: an
+  # editor who hides a room loses sight of it (Brief §14.1 one-way hide).
+  # This is defense-in-depth: RoomsController's redirect_inactive_for_non_admins
+  # before_action already gives non-admins a friendly redirect for the common
+  # case (GET /rooms/:id, /rooms/:id/floor_plan) before #authorize ever runs;
+  # this predicate is the backstop for any path that reaches #authorize
+  # directly.
+  def show? = grant.admin? || (grant.viewer? && visible_record?)
+  def floor_plan? = show?
+
+  # Curated fields only (nickname, ada_seat_count, ...); media is
+  # manage_media?, admin-only even for editors. An editor can only edit a
+  # room that is BOTH in their assigned unit AND currently visible — hiding
+  # a room (even one's own unit's) removes editing access along with
+  # visibility, matching #show?'s reasoning above.
+  def update? = grant.admin? || (grant.can_edit_room?(record) && visible_record?)
+  def edit? = update?
+
+  def hide?   = grant.admin? || (grant.can_edit_room?(record) && visible_record?)
+  def unhide? = grant.admin?            # one-way for editors (Brief §14.1)
+
+  def manage_media?       = grant.admin?  # photos, galleries, panoramas, charts, floor plans
+  def destroy_attachment? = grant.admin?
+
+  # Rooms exist only via the nightly sync (Brief §5.3) — manual creation/
+  # deletion is denied for everyone, admins included. Pinned explicitly
+  # (rather than relying on ApplicationPolicy's default-false) so this reads
+  # as a deliberate rule, not an oversight.
+  def create?  = false
+  def destroy? = false
 
   # Gates the admin-only "show hidden / not-in-feed rooms" toggle (Brief
-  # §14.1). Editors do NOT get inactive views this phase — RoleResolver's
-  # editor branch is still a phase-5 stub, so `admin?` is the only real
-  # signal available.
-  def view_inactive? = user.present? && RoleResolver.for(user).admin?
+  # §14.1). Not itself part of the §14.1 action matrix (it authorizes a
+  # controller-level view mode, not an action on a room record), but
+  # required by RoomsController#base_scope's `authorize Room, :view_inactive?`
+  # for the inactive-rooms/inactive-buildings views. Editors do NOT get
+  # inactive views — RoleResolver's admin? is the only signal that grants
+  # this, consistent with every other admin-only predicate above.
+  def view_inactive? = grant.admin?
 
-  # MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): admin-only THIS phase for
-  # BOTH curated fields (nickname, ADA seat count) and media. Phase 5 widens
-  # curated-field editing to editors via RoleResolver#can_edit_room? (already
-  # unit-scoped on the Grant, per app/lib/role_resolver.rb) — media stays
-  # admin-only per §14.1 even after that widening, so #edit/#update will need
-  # to split into a curated-fields check vs. a media check at that point,
-  # not just loosen this one predicate.
-  def edit? = user.present? && RoleResolver.for(user).admin?
-  def update? = edit?
+  private
+
+  # A room is in-scope for a non-admin only while it's both synced into the
+  # feed and not curator-hidden — the same "listed" definition Room::listed
+  # encodes at the query layer, checked here at the record layer for a
+  # single already-loaded room.
+  def visible_record? = record.in_feed? && !record.hidden?
 
   class Scope < ApplicationPolicy::Scope
     # The safe default for every caller, admin included: listed classrooms
