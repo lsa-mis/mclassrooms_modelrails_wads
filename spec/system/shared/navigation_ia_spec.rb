@@ -4,9 +4,10 @@ require "rails_helper"
 # signed-in shell must read as a single-tenant directory app — no workspace
 # switcher, no "All workspaces" link (the switcher's "see all" companion —
 # see shared/_user_menu), and no workspace-creation affordance anywhere in
-# the header/nav chrome. An admin-only "Admin" nav region (a labeled,
-# currently-empty disclosure — phases 4-8 populate it) is gated by
-# RoleResolver via the current_grant helper (app/helpers/application_helper.rb).
+# the header/nav chrome. An admin-only "Admin" nav region (a labeled
+# disclosure, populated by the product-navigation phase with the admin
+# section links) is gated by RoleResolver via the current_grant helper
+# (app/helpers/application_helper.rb).
 #
 # Stubs Rails.configuration.x.tenancy the same way spec/requests/test_login_spec.rb
 # and spec/requests/omniauth_okta_spec.rb do, rather than relying on process
@@ -103,9 +104,15 @@ RSpec.describe "Navigation IA (MiClassrooms signed-in shell)", type: :system do
       expect(page).to have_button(I18n.t("navigation.admin.label"), visible: :all)
     end
 
-    it "reveals the (currently empty) Admin panel on click" do
+    it "reveals the populated Admin panel on click (product navigation phase)" do
       click_button I18n.t("navigation.admin.label")
-      expect(page).to have_text(I18n.t("navigation.admin.empty"))
+      expect(page).to have_link(I18n.t("navigation.admin.buildings"), href: buildings_path)
+      expect(page).to have_link(I18n.t("navigation.admin.announcements"), href: admin_announcements_path)
+      expect(page).to have_link(I18n.t("navigation.admin.editor_assignments"), href: admin_editor_assignments_path)
+      expect(page).to have_link(I18n.t("navigation.admin.bulk_upload"), href: new_admin_bulk_upload_path)
+      expect(page).to have_link(I18n.t("navigation.admin.characteristic_display_rules"), href: admin_characteristic_display_rules_path)
+      expect(page).to have_link(I18n.t("navigation.admin.unit_display_names"), href: admin_unit_display_names_path)
+      expect(page).to have_link(I18n.t("navigation.admin.sync_scope_rules"), href: admin_sync_scope_rules_path)
     end
 
     it "still hides the workspace switcher and All workspaces link" do
