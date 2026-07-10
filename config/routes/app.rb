@@ -68,9 +68,16 @@ resources :notes, only: [ :create, :update, :destroy ]
 # separate detail page to link to — a deliberate SUBSET of the seven Pundit
 # actions AnnouncementPolicy defines, mirroring the `resources :bulk_uploads`
 # precedent just above.
+#
+# Admin editor assignments (MiClassrooms Phase 5 Task 9, Brief §14.1): grant/
+# revoke unit editor claims. No #show/#edit/#update — a grant/revoke pair has
+# nothing to edit (EditorAssignmentPolicy defines exactly index?/new?/
+# create?/destroy?, mirroring the announcements precedent's deliberate
+# subset).
 namespace :admin do
   resources :bulk_uploads, only: [ :new, :create ]
   resources :announcements, except: [ :show ]
+  resources :editor_assignments, only: [ :index, :new, :create, :destroy ]
 end
 
 # Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
