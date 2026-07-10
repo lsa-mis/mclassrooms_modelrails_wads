@@ -127,8 +127,13 @@ class RoomsController < ApplicationController
 
   # MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): the phase's first admin
   # mutation — curated fields (nickname, ADA seat count) plus media
-  # attach/remove/reorder, all in one form. `RoomPolicy#edit?` is admin-only
-  # this phase (see the policy file's phase-5 seam comment).
+  # attach/remove/reorder, all in one form. Phase 5 Task 3 widened
+  # `RoomPolicy#edit?`/`#update?` to admit the room's assigned-unit editor
+  # (still gated on the room being currently visible), not just an admin;
+  # media management stays admin-only via `RoomPolicy#manage_media?`, enforced
+  # here by the strong-params branch in `room_params` below. See the
+  # `#update` comment below for how that curated-vs-media split shows up in
+  # the audit trail.
   def edit
     authorize @room
     build_blank_gallery_images
