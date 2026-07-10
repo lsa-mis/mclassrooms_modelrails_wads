@@ -80,3 +80,15 @@ if TenancyConfig.shared?
   shared_workspace = Workspace.find_by!(slug: ENV.fetch("TENANCY_SHARED_WORKSPACE_SLUG"))
   ReferenceData.seed!(workspace: shared_workspace)
 end
+
+# --- MiClassrooms DEV-ONLY sample data (fork-owned) --------------------------
+# Populates Find a Room / room pages / admin consoles with realistic
+# browsable data — buildings, floors, units, rooms, characteristics, editor
+# assignments, notes, and announcements. Guarded so it NEVER runs outside
+# development, and only ever writes to the shared workspace (never any
+# other tenant). See db/seeds/development_sample.rb; also runnable standalone
+# via `rails dev:sample_data` (lib/tasks/dev.rake). Idempotent either way.
+if Rails.env.development? && TenancyConfig.shared?
+  require_relative "seeds/development_sample"
+  DevelopmentSampleData.seed!
+end
