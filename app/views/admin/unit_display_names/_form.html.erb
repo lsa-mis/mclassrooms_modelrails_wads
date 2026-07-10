@@ -1,0 +1,17 @@
+<%# locals: (form:) %>
+<%# MiClassrooms Phase 5 Task 11 (Brief §11.4/§14.1): shared new/edit form for
+    UnitDisplayName — the department_group -> display_name override consumed
+    wherever a unit's human-facing name renders (e.g. RoomSearch.unit_options). %>
+<%= form.error_summary %>
+
+<%= ui :card do %>
+  <%= ui :card_content, class: "space-y-6" do %>
+    <%= form.text_field :department_group,
+          label: t("admin.unit_display_names.form.department_group_label"), required: true %>
+
+    <%= form.text_field :display_name,
+          label: t("admin.unit_display_names.form.display_name_label"), required: true %>
+  <% end %>
+<% end %>
+
+<%= form.submit t("admin.unit_display_names.form.submit") %>

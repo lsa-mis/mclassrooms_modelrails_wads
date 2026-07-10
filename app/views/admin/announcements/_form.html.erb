@@ -1,0 +1,34 @@
+<%# locals: (form:, unfilled_slots: nil) %>
+<%# MiClassrooms Phase 5 Task 8 (Brief §14.1): shared new/edit form.
+    `unfilled_slots` is present (an Array) only from #new — the slot picker
+    only ever offers slots with no announcement yet. #edit passes nothing:
+    a slot is fixed the moment its row is created (AnnouncementsController
+    #update never permits a `:slot` param at all), so the edit form renders
+    it as read-only text instead of a control. %>
+<%= form.error_summary %>
+
+<%= ui :card do %>
+  <%= ui :card_content, class: "space-y-6" do %>
+    <% if unfilled_slots %>
+      <%= form.select :slot,
+            unfilled_slots.map { |slot| [ t("announcements.slots.#{slot}"), slot ] },
+            { label: t("admin.announcements.form.slot_label") },
+            {} %>
+    <% else %>
+      <div class="space-y-2">
+        <span class="block text-sm font-medium text-text-body">
+          <%= t("admin.announcements.form.slot_label") %>
+        </span>
+        <p class="text-text-heading"><%= t("announcements.slots.#{form.object.slot}") %></p>
+      </div>
+    <% end %>
+
+    <div class="space-y-2">
+      <%= form.label :body, t("admin.announcements.form.body_label"),
+            class: "block text-sm font-medium text-text-body" %>
+      <%= form.rich_text_area :body %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= form.submit t("admin.announcements.form.submit") %>

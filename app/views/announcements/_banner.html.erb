@@ -1,0 +1,21 @@
+<%# locals: (announcement:) %>
+<%# MiClassrooms Phase 5 Task 8 (Brief §14.1): the shared announcement
+    banner — rendered on home, about, and find-a-room. No-ops when the slot
+    is empty (a nil `announcement:` local, e.g. Announcement.for(:about_page)
+    finding nothing), so every call site can render this unconditionally,
+    the way rooms/index.html.erb already did for find_a_room_page before
+    this task consolidated it onto this shared partial.
+
+    Wrapped in a landmark <aside> (not just ui :banner's own role="region"
+    div) so assistive tech can find/skip it as its own labelled region
+    regardless of which page it renders on. Deliberately does NOT pass a
+    custom `label:` to `ui :banner` itself — its default "Announcement"
+    region label stays generic/inner, while THIS <aside>'s aria-label is
+    the one callers actually navigate by. %>
+<% if announcement %>
+  <aside aria-label="<%= t("announcements.banner.aria_label") %>" class="mt-4">
+    <%= ui :banner, variant: :info do %>
+      <%= announcement.body %>
+    <% end %>
+  </aside>
+<% end %>

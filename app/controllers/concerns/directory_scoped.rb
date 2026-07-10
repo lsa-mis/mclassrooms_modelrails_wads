@@ -11,9 +11,23 @@ module DirectoryScoped
   included do
     include Authenticatable
     before_action :set_directory_workspace
+    helper_method :current_grant
   end
 
   private
+
+  # Phase 5 Task 5 (Brief §14.1): the hide button's confirmation copy
+  # branches on admin-vs-editor (RoomsController#hide's caller — see
+  # rooms/_visibility_actions.html.erb), and both RoomsController and
+  # BuildingsController include this concern, so it's memoized here rather
+  # than duplicated per controller. RoleResolver.for re-derives from the
+  # database on every call by design (app/lib/role_resolver.rb) — memoizing
+  # per-request is safe (a role change mid-request is not a case this app
+  # guards against anywhere else) and avoids re-querying Membership/
+  # EditorAssignment for every predicate check a single view render makes.
+  def current_grant
+    @current_grant ||= RoleResolver.for(Current.user)
+  end
 
   # Mirrors WorkspaceScoped's redirect-with-flash convention for the locked/
   # missing edges (a 500 would be worse than a flash + redirect), but there

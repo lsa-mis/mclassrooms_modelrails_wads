@@ -16,6 +16,8 @@ class PagesController < ApplicationController
   # find_a_room_path (DirectoryScoped redirects a suspended workspace back
   # to root_path, which would otherwise loop forever).
   def home
+    @announcement = Announcement.for(:home_page)
+
     return unless authenticated? # home allows unauthenticated access; resume the session explicitly
     return if RoleResolver.for(Current.user).admin? # admins keep the landing page
 
@@ -23,7 +25,13 @@ class PagesController < ApplicationController
     redirect_to find_a_room_path if workspace && !workspace.suspended?
   end
 
+  # Phase 5 Task 8 (Brief §14.1): the about_page announcement slot, rendered
+  # through the same shared announcements/_banner partial as home/find-a-room
+  # (Announcement.for is a deliberate GLOBAL find_by — see app/models/
+  # announcement.rb — so no workspace context is required here, unlike the
+  # authenticated product pages).
   def about
+    @announcement = Announcement.for(:about_page)
   end
 
   def privacy

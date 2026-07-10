@@ -1,0 +1,79 @@
+<%# locals: (notable:, parent: nil, note: nil) %>
+<%# MiClassrooms Phase 5 Task 7 (Brief §14.1, D15): one form partial serves
+    three contexts — a top-level create (parent/note nil), a reply create
+    (parent: the root being replied to), and an in-place edit (note: the
+    persisted record). `record` below picks the right target/verb for each;
+    `form.rich_text_area :body` is Lexxy's editor (config/application.rb
+    wires Rails' own ActionText editor adapter to Lexxy — no special helper
+    name needed).
+
+    This partial itself carries NO id for a NEW record: the CALLER wraps it
+    in a spacing <div id="..."> (notes/_list.html.erb's `_new_note` divs,
+    notes/_note.html.erb's `_new_reply` div), and that div's id is the exact
+    string NotesController#reset_target_for computes (dom_id(notable,
+    :new_note) for a root create, dom_id(parent, :new_reply) for a reply).
+    Giving this form the SAME id as its wrapping div would be a duplicate id
+    (invalid HTML, and `getElementById`/turbo_stream targeting would resolve
+    to the div instead of the form) — so after a successful create, the
+    controller's turbo_stream response does `turbo_stream.update(reset_target,
+    ...)`, which replaces the wrapping div's INNER content with a freshly
+    rendered (blank) copy of this same partial while the div itself (and its
+    mt-3/mt-2 spacing) stays put, resetting the form for the actor without
+    disturbing the wrapper a second submission still needs. An edit form
+    needs no such id: Note's own broadcast_replace_to swaps the ENTIRE note
+    (this form included) back to read mode for every subscriber, actor
+    included.
+
+    Whole-branch review I-1 (WCAG 2.2 AAA): `form_with model: record` derives
+    its field ids from `record.model_name.param_key`, which is "note" for a
+    Note whether new OR persisted — so without help, every context below
+    (top-level create, each root note's reply form, each note's inline edit
+    form) would emit the SAME `note_body` field id, and every
+    `form.label :body` would resolve to the FIRST one in document order.
+    `namespace:` prefixes every field id (and the label's `for`, computed the
+    same way) with a per-context string — reusing the exact id each
+    context's own CONTAINER already uses above the form (the create/reply
+    wrapper div's id, or the note's own li id for an edit), so it's
+    guaranteed unique per context without inventing a second id scheme. This
+    only changes generated FIELD ids: it never touches submitted param names
+    (still note[body], note[alert], …) nor any container/broadcast target
+    id (dom_id(notable)_notes, dom_id(note)_replies, dom_id(note) are
+    computed independently in notes/_list.html.erb and notes/_note.html.erb
+    and are untouched by this). %>
+<%
+  record = note || Note.new(notable: notable, parent: parent)
+  persisted = record.persisted?
+  url = persisted ? note_path(record) : notes_path
+  namespace = if persisted
+                dom_id(record)
+  elsif parent
+                dom_id(parent, :new_reply)
+  else
+                dom_id(notable, :new_note)
+  end
+  submit_label = if persisted
+                   t("notes.form.update_submit")
+  elsif parent
+                   t("notes.form.reply_submit")
+  else
+                   t("notes.form.create_submit")
+  end
+%>
+<%= form_with model: record, url: url, method: (persisted ? :patch : :post),
+      namespace: namespace, class: "space-y-3" do |form| %>
+  <%= form.error_summary %>
+  <%= form.hidden_field :notable_type, value: notable.class.name %>
+  <%= form.hidden_field :notable_id, value: notable.id %>
+  <% if parent %>
+    <%= form.hidden_field :parent_id, value: parent.id %>
+  <% end %>
+
+  <div class="space-y-2">
+    <%= form.label :body, t("notes.form.body_label"), class: "block text-sm font-medium text-text-body" %>
+    <%= form.rich_text_area :body %>
+  </div>
+
+  <%= form.check_box :alert, label: t("notes.form.alert_label") %>
+
+  <%= form.submit submit_label %>
+<% end %>

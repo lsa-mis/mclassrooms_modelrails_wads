@@ -1,0 +1,36 @@
+<%# MiClassrooms Phase 5 Task 8 (Brief §14.1): admin index for the three
+    fixed announcement slots. Always renders exactly three rows
+    (Announcement.slots.keys), each either filled (edit/delete) or empty
+    (a "create" affordance linking to #new with the slot preselected) — an
+    empty slot is a first-class row here, never simply omitted. %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+
+  <ul class="mt-8 space-y-4">
+    <% Announcement.slots.keys.each do |slot| %>
+      <% announcement = @announcements_by_slot[slot] %>
+      <li class="bg-surface-raised rounded-lg border border-border p-4
+                  flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p class="font-medium text-text-heading"><%= t("announcements.slots.#{slot}") %></p>
+          <p class="mt-1 text-sm text-text-muted">
+            <%= announcement ? t(".filled") : t(".empty") %>
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <% if announcement %>
+            <%= link_to t(".edit"), edit_admin_announcement_path(announcement), class: "btn-secondary" %>
+            <%= button_to t(".delete"), admin_announcement_path(announcement), method: :delete,
+                  class: "btn-danger",
+                  data: { turbo_confirm: t(".delete_confirm") } %>
+          <% else %>
+            <%= link_to t(".create"), new_admin_announcement_path(slot: slot), class: "btn-primary" %>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</div>

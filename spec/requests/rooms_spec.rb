@@ -75,6 +75,33 @@ RSpec.describe "GET /find-a-room", type: :request do
     end
   end
 
+  # Fix wave (task-8 review): the shared announcements/_banner partial is
+  # wired at this call site via @announcement = Announcement.for(:find_a_room_page)
+  # (RoomsController#index) — proves the render actually reaches the page
+  # (would fail if that call site were removed or the slot name typo'd),
+  # mirroring the home_page banner proof in
+  # spec/requests/admin/announcements_spec.rb.
+  describe "the find_a_room_page banner" do
+    let(:viewer) { membership_with("viewer") }
+
+    before { sign_in(viewer) }
+
+    it "renders the find_a_room_page announcement's body" do
+      create(:announcement, workspace: workspace, slot: "find_a_room_page", body: "Room finder tips")
+
+      get find_a_room_path
+
+      expect(response.body).to include("Room finder tips")
+      expect(response.body).to include(I18n.t("announcements.banner.aria_label"))
+    end
+
+    it "renders nothing when no find_a_room_page announcement exists" do
+      get find_a_room_path
+
+      expect(response.body).not_to include(I18n.t("announcements.banner.aria_label"))
+    end
+  end
+
   describe "pagination clamp" do
     let(:viewer) { membership_with("viewer") }
     let(:building) { create(:building, workspace: workspace) }
@@ -892,6 +919,12 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
     # isolation (spec/lib/curation/apply_spec.rb): a real column change
     # (nickname) appears in before_after; this pins that RoomsController's
     # #update wires it correctly end-to-end, one ActivityLog per request.
+    #
+    # Phase 5 Task 6 retrofit: action string changed from the phase-4
+    # "room.curated" (one combined call) to "room.updated" (the curated half
+    # of the now-split curated/media Curation::Apply pair) — a curated-only
+    # submission like this one never touches the media half at all, so this
+    # is still exactly one ActivityLog.
     it "updates the curated field via Curation::Apply and writes exactly one audited ActivityLog" do
       expect {
         patch room_path(room), params: { room: { nickname: "New Name" } }
@@ -901,10 +934,25 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(room.reload.nickname).to eq("New Name")
 
       log = ActivityLog.last
-      expect(log.action).to eq("room.curated")
+      expect(log.action).to eq("room.updated")
       expect(log.before_after).to eq(
         "before" => { "nickname" => "Old Name" }, "after" => { "nickname" => "New Name" }
       )
+    end
+
+    # Phase 5 Task 6 audit contract: an AUTHORIZED resubmission of the exact
+    # same value is a genuine no-op — apply_curated_change's `@room.changed?`
+    # guard means this never reaches Curation::Apply, so it must write ZERO
+    # ActivityLogs. Distinct from both specs above: neither the
+    # unauthorized-viewer PATCH (shared example) nor the validation-failure
+    # PATCH below covers the authorized-and-genuinely-nothing-changed branch
+    # those changed?/media_change? guards exist for.
+    it "writes no ActivityLog when an admin resubmits the same nickname unchanged" do
+      expect {
+        patch room_path(room), params: { room: { nickname: room.nickname } }
+      }.not_to change(ActivityLog, :count)
+
+      expect(room.reload.nickname).to eq("Old Name")
     end
 
     # Room's own `content_type: [:png, :jpeg, :webp]` validation on :photo is
@@ -920,6 +968,32 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(room.reload.photo).not_to be_attached
+    end
+
+    # Pins the documented trade-off in #update's comment: curated and media
+    # changes are now TWO separate Curation::Apply calls (two transactions),
+    # so a valid curated change can commit even though the accompanying media
+    # change fails validation in the same request — the nickname save is not
+    # rolled back by the photo's content_type rejection. Exactly one
+    # ActivityLog ("room.updated") is written; no "room.media_updated" row
+    # exists for the failed media half.
+    it "commits the curated change even when the accompanying media change fails validation" do
+      expect {
+        patch room_path(room), params: {
+          room: {
+            nickname: "New Name",
+            photo: fixture_file_upload("seating_chart.pdf", "application/pdf")
+          }
+        }
+      }.to change(ActivityLog, :count).by(1)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(room.reload.nickname).to eq("New Name")
+      expect(room.photo).not_to be_attached
+
+      log = ActivityLog.last
+      expect(log.action).to eq("room.updated")
+      expect(ActivityLog.where(action: "room.media_updated").count).to eq(0)
     end
 
     it "persists a gallery reorder" do

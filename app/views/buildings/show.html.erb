@@ -1,10 +1,11 @@
-<%# MiClassrooms Phase 4 Task 8 (Brief §5.3, §14.1): admin building detail —
+<%# MiClassrooms Phase 4 Task 8 (Brief §5.3, §14.1): building detail —
     breadcrumb, photo, address/campus, a floors list (each linking to a
     representative classroom's floor-plan view — Task 6), and read-only
-    notes (Task 4's notes/list partial, reused as-is). Admin-only page
-    (BuildingPolicy#show?), so the hidden-building banner needs no extra
-    RoleResolver check the way rooms/_header.html.erb's does — every
-    visitor here already cleared that bar in the controller. %>
+    notes (Task 4's notes/list partial, reused as-is). Viewer-visible for a
+    visible building (BuildingPolicy#show?) — this is not an admin-only
+    page. Any admin-only affordance added here (e.g. an edit/hide action)
+    MUST be gated behind `policy(@building).<action>?`; none exists today,
+    so there's nothing to gate yet. %>
 <% content_for(:title) { @building.display_name } %>
 
 <div class="max-w-5xl mx-auto px-4 py-8">
@@ -20,6 +21,26 @@
   <% end %>
 
   <h1 class="mt-4 text-2xl font-bold text-text-heading"><%= @building.display_name %></h1>
+
+  <%# Phase 5 Task 5 (Brief §14.1): admin-only hide/unhide (BuildingPolicy
+      #hide?/#unhide? are both grant.admin?, so this never renders for a
+      viewer). Branches on `@building.hidden?` first, same reasoning as
+      rooms/_visibility_actions.html.erb: only one action is ever relevant
+      to the building's current state. %>
+  <% if @building.hidden? %>
+    <% if policy(@building).unhide? %>
+      <div class="mt-4">
+        <%= button_to t("buildings.unhide.button"), unhide_building_path(@building), method: :post,
+              class: "btn-secondary" %>
+      </div>
+    <% end %>
+  <% elsif policy(@building).hide? %>
+    <div class="mt-4">
+      <%= button_to t("buildings.hide.button"), hide_building_path(@building), method: :post,
+            class: "btn-danger",
+            data: { turbo_confirm: t("buildings.hide.confirmation") } %>
+    </div>
+  <% end %>
 
   <% if @building.photo.attached? %>
     <div class="mt-6">

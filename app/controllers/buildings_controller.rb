@@ -14,7 +14,10 @@ class BuildingsController < ApplicationController
   # raise_on_missing_callback_actions: true), which is why #edit/#update
   # couldn't join this list until they existed. Mirrors RoomsController's
   # identical `set_room` extension in its own Task 7.
-  before_action :set_building, only: [ :show, :edit, :update ]
+  #
+  # Phase 5 Task 5: `:hide, :unhide` join for the same reason — both actions
+  # need @building loaded to authorize/mutate.
+  before_action :set_building, only: [ :show, :edit, :update, :hide, :unhide ]
 
   # Admin-only page (BuildingPolicy#index?), so `show_hidden=1` needs no
   # extra gate beyond the action-level `authorize` below — there is no
@@ -148,6 +151,26 @@ class BuildingsController < ApplicationController
       load_floors
       render :edit, status: :unprocessable_entity
     end
+  end
+
+  # Phase 5 Task 5 (Brief §14.1): admin-only hide/unhide — BuildingPolicy
+  # #hide?/#unhide? are both `grant.admin?`, so unlike RoomsController#hide
+  # there's no editor grantee to route away from the record; `policy(
+  # @building).show?` is always true immediately after an admin hides one
+  # (BuildingPolicy#show? admits `grant.admin?` unconditionally), so the
+  # ternary mirrors RoomsController#hide's shape for consistency even though
+  # its "else" branch is unreachable under the current policy.
+  def hide
+    authorize @building, :hide?
+    @building.hide!(actor: Current.user)
+    redirect_to policy(@building).show? ? building_path(@building) : buildings_path,
+                notice: t("buildings.hide.success")
+  end
+
+  def unhide
+    authorize @building, :unhide?
+    @building.unhide!(actor: Current.user)
+    redirect_to building_path(@building), notice: t("buildings.unhide.success")
   end
 
   private
