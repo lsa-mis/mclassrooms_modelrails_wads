@@ -73,6 +73,14 @@ en:
       submit: "Save changes"
       success: "Room updated."
       stale_gallery: "One or more gallery rows are out of date; please reload and try again."
+    hide:
+      button: "Hide room"
+      success: "Room hidden."
+      admin_confirmation: "Hide this room from Find a Room results?"
+      editor_confirmation: "An administrator will be required to re-activate this room."
+    unhide:
+      button: "Unhide room"
+      success: "Room unhidden."
     floor_plan:
       title: "%{building}, floor %{floor}"
       plan_alt: "Floor plan of %{building}, floor %{floor}"

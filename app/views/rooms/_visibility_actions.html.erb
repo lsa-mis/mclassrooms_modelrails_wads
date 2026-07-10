@@ -1,0 +1,29 @@
+<%# locals: (room:) %>
+<%# MiClassrooms Phase 5 Task 5 (Brief §14.1): the one-way editor hide /
+    admin unhide controls. Only one action is ever relevant to a room's
+    CURRENT state — hidden shows Unhide (admin-only), listed shows Hide
+    (admin, or the room's assigned-unit editor while it's still visible) —
+    so this branches on `room.hidden?` first rather than rendering both
+    buttons side by side and relying on policy alone to disambiguate
+    (RoomPolicy#unhide? is `grant.admin?` regardless of the record's current
+    hidden state, so an admin viewing a LISTED room would otherwise still
+    pass that check).
+
+    current_grant (DirectoryScoped, memoized per request) picks the
+    editor-specific one-way warning over the admin's plain confirmation —
+    exact copy for the editor case is Brief §14.1. %>
+<% if room.hidden? %>
+  <% if policy(room).unhide? %>
+    <div class="mt-6">
+      <%= button_to t("rooms.unhide.button"), unhide_room_path(room), method: :post,
+            class: "btn-secondary" %>
+    </div>
+  <% end %>
+<% elsif policy(room).hide? %>
+  <div class="mt-6">
+    <%= button_to t("rooms.hide.button"), hide_room_path(room), method: :post,
+          class: "btn-danger",
+          data: { turbo_confirm: current_grant.admin? ?
+                    t("rooms.hide.admin_confirmation") : t("rooms.hide.editor_confirmation") } %>
+  </div>
+<% end %>

@@ -16,6 +16,13 @@
 <div class="max-w-3xl mx-auto px-4 py-8">
   <h1 class="text-2xl font-bold text-text-heading"><%= t("rooms.edit.title", room: @room.display_name) %></h1>
 
+  <%# Phase 5 Task 5 (Brief §14.1): an admin reaches this page for a HIDDEN
+      room too (RoomPolicy#edit? admits admin? unconditionally, unlike an
+      editor who needs the room visible) — the Unhide control belongs here
+      as much as on show, since an admin fixing up a hidden room's details
+      may want to re-list it from the same page. %>
+  <%= render "rooms/visibility_actions", room: @room %>
+
   <%= form_with model: @room, url: room_path(@room), method: :patch, multipart: true,
         class: "mt-8 space-y-8" do |form| %>
     <%= form.error_summary %>

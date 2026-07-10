@@ -127,6 +127,22 @@ class Room < ApplicationRecord
 
   def hidden? = hidden_at.present?
 
+  # Phase 5 Task 5 (Brief §14.1): the one-way editor hide / admin unhide
+  # flow. Both mutations are real column changes (hidden_at/hidden_by), so
+  # Curation::Apply's `before_after` diff captures them without any special
+  # casing (unlike the attachment writers above, whose diff is always
+  # empty). `hidden_by: actor` assigns the belongs_to directly — no
+  # `_id` juggling needed since `actor` is already a User.
+  def hide!(actor:)
+    Curation::Apply.call(record: self, actor: actor, action: "room.hidden",
+                         attributes: { hidden_at: Time.current, hidden_by: actor })
+  end
+
+  def unhide!(actor:)
+    Curation::Apply.call(record: self, actor: actor, action: "room.unhidden",
+                         attributes: { hidden_at: nil, hidden_by: nil })
+  end
+
   # Prefix-match FTS5 query; tokens are quoted so input can't inject MATCH syntax.
   def self.search_name(q)
     match = q.to_s.scan(/[[:alnum:]]+/).map { |t| %("#{t}"*) }.join(" ")

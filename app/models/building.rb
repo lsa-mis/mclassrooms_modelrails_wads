@@ -59,6 +59,22 @@ class Building < ApplicationRecord
 
   def hidden? = hidden_at.present?
 
+  # Phase 5 Task 5 (Brief §14.1): admin-only hide/unhide, mirroring Room's
+  # identical `#hide!`/`#unhide!` (app/models/room.rb) with the
+  # `"building.*"` action strings. Buildings have no one-way editor
+  # posture (BuildingPolicy#hide?/#unhide? are both admin-only) — these
+  # exist purely so BuildingsController's actions have the same
+  # attribute-assignment-via-Curation::Apply shape as Room's.
+  def hide!(actor:)
+    Curation::Apply.call(record: self, actor: actor, action: "building.hidden",
+                         attributes: { hidden_at: Time.current, hidden_by: actor })
+  end
+
+  def unhide!(actor:)
+    Curation::Apply.call(record: self, actor: actor, action: "building.unhidden",
+                         attributes: { hidden_at: nil, hidden_by: nil })
+  end
+
   # Phase 4 Task 9 (Brief §5.3): attribute-shaped remover so a "delete photo"
   # checkbox flows through strong params + Curation::Apply.call(attributes:)
   # exactly like `nickname` — no separate purge call in the controller.
