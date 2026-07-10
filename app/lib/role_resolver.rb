@@ -31,7 +31,10 @@ class RoleResolver
     # marketing page, which has no DirectoryScoped before_action to resolve
     # it first. Both resolve to the same single shared workspace (D1).
     workspace = Current.workspace || TenancyConfig.shared_workspace
-    membership = user && workspace&.memberships&.kept&.find_by(user: user)
+    # includes(:role): keep the resolve at two queries, not three — dropping
+    # this makes membership&.role&.slug below fire a separate SELECT on
+    # every authorized request (whole-branch review M-1).
+    membership = user && workspace&.memberships&.kept&.includes(:role)&.find_by(user: user)
     @admin = ADMIN_ROLE_SLUGS.include?(membership&.role&.slug)
     @viewer = membership.present?
     # A discarded (revoked) membership nullifies editor grants: default-deny.
