@@ -78,6 +78,12 @@ gem "active_storage_validations"
 gem "geocoder"
 
 group :development, :test do
+  # Load .env for every Rails command (server, console, rake/seed), not just
+  # the foreman-run server (bin/dev). The tenancy preset in config/application.rb
+  # resolves from ENV at boot, so `rails db:seed` needs .env too or it silently
+  # runs in :personal posture. Dev/test only — production env comes from the host.
+  gem "dotenv-rails"
+
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
