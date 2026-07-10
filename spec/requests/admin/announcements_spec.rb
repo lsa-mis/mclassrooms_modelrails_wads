@@ -125,6 +125,22 @@ RSpec.describe "Admin announcements", type: :request do
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
+
+      # Assigning an out-of-enum value to a Rails `enum` raises ArgumentError
+      # at ASSIGNMENT time — before Curation::Apply's own rescue
+      # (ActiveRecord::RecordInvalid/RecordNotDestroyed) ever sees it — so a
+      # crafted slot must be caught by the controller before it ever reaches
+      # the enum setter, or this would 500 instead of 422.
+      it "rejects a crafted invalid slot with 422 (not 500), no new record, and no ActivityLog" do
+        expect {
+          post admin_announcements_path, params: { announcement: { slot: "not_a_slot", body: "Crafted" } }
+        }.not_to change(Announcement, :count)
+        expect {
+          post admin_announcements_path, params: { announcement: { slot: "not_a_slot", body: "Crafted" } }
+        }.not_to change(ActivityLog, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
     end
   end
 

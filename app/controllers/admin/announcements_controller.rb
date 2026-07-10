@@ -48,6 +48,13 @@ module Admin
     def create
       authorize Announcement
       @announcement = Announcement.new(workspace: Current.workspace)
+
+      unless valid_slot?
+        @announcement.errors.add(:slot, :inclusion)
+        @unfilled_slots = unfilled_slots
+        return render :new, status: :unprocessable_entity
+      end
+
       result = Curation::Apply.call(record: @announcement, actor: Current.user,
                                     action: "announcement.created", attributes: announcement_params)
 
@@ -75,6 +82,12 @@ module Admin
     # changes body.
     def update
       authorize @announcement
+
+      unless valid_slot?
+        @announcement.errors.add(:slot, :inclusion)
+        return render :edit, status: :unprocessable_entity
+      end
+
       result = Curation::Apply.call(record: @announcement, actor: Current.user,
                                     action: "announcement.updated", attributes: announcement_params)
 
@@ -126,6 +139,20 @@ module Admin
     def announcement_params
       permitted = action_name == "create" ? [ :slot, :body ] : [ :body ]
       params.expect(announcement: permitted)
+    end
+
+    # A crafted slot outside the enum (e.g. "not_a_slot") raises ArgumentError
+    # at ASSIGNMENT time — before Curation::Apply's own rescue
+    # (ActiveRecord::RecordInvalid/RecordNotDestroyed) ever runs — so it must
+    # be checked here, before the value ever reaches the enum setter, to turn
+    # what would otherwise be an unhandled 500 into the same 422 shape as
+    # every other validation failure on this controller. #update never
+    # permits :slot (see announcement_params above), so this is a no-op
+    # there in practice; it's kept identical in shape to #create's guard for
+    # consistency and defense-in-depth.
+    def valid_slot?
+      value = announcement_params[:slot]
+      value.blank? || Announcement.slots.key?(value)
     end
   end
 end
