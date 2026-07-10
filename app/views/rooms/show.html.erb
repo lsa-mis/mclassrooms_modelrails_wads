@@ -8,6 +8,8 @@
 <div class="max-w-5xl mx-auto px-4 py-8">
   <%= render "rooms/header", room: @room, presenter: @presenter %>
 
+  <%= render "rooms/visibility_actions", room: @room %>
+
   <%= render "rooms/media", room: @room %>
 
   <%= render "rooms/characteristics", presenter: @presenter %>

@@ -20,7 +20,16 @@ class RoomsController < ApplicationController
   # #edit/#update at all — RoomPolicy#edit?/#update? deny them via `authorize`
   # below, the same redirect-with-alert as every other Pundit denial in this
   # app.
-  before_action :set_room, only: [ :show, :floor_plan, :edit, :update ]
+  #
+  # Phase 5 Task 5: #hide/#unhide join set_room too (they need @room loaded
+  # to authorize/mutate), but deliberately do NOT join
+  # redirect_inactive_for_non_admins below — a hide POST acts on a room that
+  # is, by definition, still visible when the request is issued (RoomPolicy
+  # #hide? requires visible_record? for a non-admin editor), and an admin
+  # unhiding a room is unhiding a currently-HIDDEN one on purpose. Neither
+  # case should be intercepted by the hidden-room redirect the way a GET
+  # /rooms/:id is.
+  before_action :set_room, only: [ :show, :floor_plan, :edit, :update, :hide, :unhide ]
   before_action :redirect_inactive_for_non_admins, only: [ :show, :floor_plan ]
 
   def index
@@ -156,6 +165,33 @@ class RoomsController < ApplicationController
       build_blank_gallery_images
       render :edit, status: :unprocessable_entity
     end
+  end
+
+  # Phase 5 Task 5 (Brief §14.1): one-way editor hide. `authorize @room,
+  # :hide?` covers both grantees RoomPolicy#hide? allows — an admin, or the
+  # room's assigned-unit editor while it's still visible — Room#hide! is the
+  # same audited call either way. The redirect branches on the ACTOR, not a
+  # role check duplicated here: `policy(@room).show?` re-evaluates
+  # RoomPolicy for the now-hidden record, which is false for an editor (an
+  # editor loses sight of a room the instant they hide it — the "one-way"
+  # half of the brief) and true for an admin (RoomPolicy#show? admits
+  # `grant.admin?` unconditionally). Reusing `policy(@room).show?` here
+  # rather than re-deriving "is this actor an admin" keeps the branch
+  # anchored to the same predicate the next GET /rooms/:id would itself
+  # re-check via redirect_inactive_for_non_admins.
+  def hide
+    authorize @room, :hide?
+    @room.hide!(actor: Current.user)
+    redirect_to policy(@room).show? ? room_path(@room) : find_a_room_path,
+                notice: t("rooms.hide.success")
+  end
+
+  # Admin-only (RoomPolicy#unhide?) — always lands back on the room, since
+  # only an admin ever reaches this action and an admin can always see it.
+  def unhide
+    authorize @room, :unhide?
+    @room.unhide!(actor: Current.user)
+    redirect_to room_path(@room), notice: t("rooms.unhide.success")
   end
 
   private
