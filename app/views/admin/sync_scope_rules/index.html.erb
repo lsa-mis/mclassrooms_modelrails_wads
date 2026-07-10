@@ -1,0 +1,40 @@
+<%# MiClassrooms Phase 5 Task 11 (Brief §11.4/§14.1): admin index for
+    SyncScopeRule rows, ordered by rule_type then value
+    (Admin::SyncScopeRulesController#index). The warning banner is a
+    deliberate, permanent fixture of this index (not a one-time dismissible
+    notice) — a rule change here never takes effect on the room the admin is
+    currently looking at, only on the NEXT scheduled sync run, and that gap is
+    easy to forget without a standing reminder. %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+    <%= link_to t(".new"), new_admin_sync_scope_rule_path, class: "btn-primary" %>
+  </div>
+
+  <%= ui :banner, t(".sync_effective_notice"), variant: :warning, class: "mt-6" %>
+
+  <% if @sync_scope_rules.empty? %>
+    <p class="mt-8 text-text-muted"><%= t(".empty") %></p>
+  <% else %>
+    <ul class="mt-8 space-y-4">
+      <% @sync_scope_rules.each do |rule| %>
+        <li class="bg-surface-raised rounded-lg border border-border p-4
+                    flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p class="font-medium text-text-heading"><%= t("admin.sync_scope_rules.rule_types.#{rule.rule_type}") %></p>
+            <p class="mt-1 text-sm text-text-muted"><%= rule.value %></p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <%= link_to t(".edit"), edit_admin_sync_scope_rule_path(rule), class: "btn-secondary" %>
+            <%= button_to t(".delete"), admin_sync_scope_rule_path(rule), method: :delete,
+                  class: "btn-danger",
+                  data: { turbo_confirm: t(".delete_confirm") } %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

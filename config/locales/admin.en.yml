@@ -75,3 +75,81 @@ en:
         success: "Editor access granted."
       destroy:
         success: "Editor access revoked."
+    characteristic_display_rules:
+      index:
+        title: "Characteristic display rules"
+        new: "New rule"
+        empty: "No characteristic display rules yet."
+        icon_key: "Icon: %{icon_key}"
+        none: "none"
+        category_override: "Category: %{category}"
+        edit: "Edit"
+        delete: "Delete"
+        delete_confirm: "Delete this characteristic display rule? This cannot be undone."
+      new:
+        title: "New characteristic display rule"
+      edit:
+        title: "Edit characteristic display rule"
+      form:
+        short_code_label: "Short code"
+        icon_key_label: "Icon"
+        icon_key_prompt: "Select an icon"
+        category_override_label: "Category override"
+        filterable_label: "Filterable"
+        team_learning_label: "Team learning"
+        submit: "Save rule"
+      create:
+        success: "Characteristic display rule created."
+      update:
+        success: "Characteristic display rule updated."
+      destroy:
+        success: "Characteristic display rule deleted."
+    unit_display_names:
+      index:
+        title: "Unit display names"
+        new: "New display name"
+        empty: "No unit display names yet."
+        edit: "Edit"
+        delete: "Delete"
+        delete_confirm: "Delete this unit display name? This cannot be undone."
+      new:
+        title: "New unit display name"
+      edit:
+        title: "Edit unit display name"
+      form:
+        department_group_label: "Department group"
+        display_name_label: "Display name"
+        submit: "Save display name"
+      create:
+        success: "Unit display name created."
+      update:
+        success: "Unit display name updated."
+      destroy:
+        success: "Unit display name deleted."
+    sync_scope_rules:
+      index:
+        title: "Sync scope rules"
+        new: "New rule"
+        empty: "No sync scope rules yet."
+        sync_effective_notice: "Changes take effect on the next sync run."
+        edit: "Edit"
+        delete: "Delete"
+        delete_confirm: "Delete this sync scope rule? This cannot be undone."
+      new:
+        title: "New sync scope rule"
+      edit:
+        title: "Edit sync scope rule"
+      form:
+        rule_type_label: "Rule type"
+        value_label: "Value"
+        submit: "Save rule"
+      rule_types:
+        campus_allow: "Campus allow"
+        building_allow: "Building allow"
+        building_exclude: "Building exclude"
+      create:
+        success: "Sync scope rule created."
+      update:
+        success: "Sync scope rule updated."
+      destroy:
+        success: "Sync scope rule deleted."

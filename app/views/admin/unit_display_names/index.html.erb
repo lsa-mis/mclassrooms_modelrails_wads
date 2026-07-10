@@ -1,0 +1,34 @@
+<%# MiClassrooms Phase 5 Task 11 (Brief §11.4/§14.1): admin index for
+    UnitDisplayName overrides, one row per department_group, ordered by
+    department_group (Admin::UnitDisplayNamesController#index). %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+    <%= link_to t(".new"), new_admin_unit_display_name_path, class: "btn-primary" %>
+  </div>
+
+  <% if @unit_display_names.empty? %>
+    <p class="mt-8 text-text-muted"><%= t(".empty") %></p>
+  <% else %>
+    <ul class="mt-8 space-y-4">
+      <% @unit_display_names.each do |name| %>
+        <li class="bg-surface-raised rounded-lg border border-border p-4
+                    flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p class="font-medium text-text-heading"><%= name.display_name %></p>
+            <p class="mt-1 text-sm text-text-muted"><%= name.department_group %></p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <%= link_to t(".edit"), edit_admin_unit_display_name_path(name), class: "btn-secondary" %>
+            <%= button_to t(".delete"), admin_unit_display_name_path(name), method: :delete,
+                  class: "btn-danger",
+                  data: { turbo_confirm: t(".delete_confirm") } %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

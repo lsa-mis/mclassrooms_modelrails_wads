@@ -1,0 +1,19 @@
+<%# locals: (form:) %>
+<%# MiClassrooms Phase 5 Task 11 (Brief §11.4/§14.1): shared new/edit form for
+    SyncScopeRule. `rule_type` is a native <select> constrained to the
+    model's own enum keys (SyncScopeRule.rule_types) rather than a free-text
+    field. %>
+<%= form.error_summary %>
+
+<%= ui :card do %>
+  <%= ui :card_content, class: "space-y-6" do %>
+    <%= form.select :rule_type,
+          SyncScopeRule.rule_types.keys.map { |type| [ t("admin.sync_scope_rules.rule_types.#{type}"), type ] },
+          { label: t("admin.sync_scope_rules.form.rule_type_label") },
+          {} %>
+
+    <%= form.text_field :value, label: t("admin.sync_scope_rules.form.value_label"), required: true %>
+  <% end %>
+<% end %>
+
+<%= form.submit t("admin.sync_scope_rules.form.submit") %>
