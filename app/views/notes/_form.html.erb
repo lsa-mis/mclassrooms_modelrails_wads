@@ -7,19 +7,26 @@
     wires Rails' own ActionText editor adapter to Lexxy — no special helper
     name needed).
 
-    The wrapping element's id matters only for a NEW record: it's the exact
-    string NotesController#reset_target_for computes
-    (dom_id(notable, :new_note) for a root create, dom_id(parent, :new_reply)
-    for a reply) — after a successful create, the controller's turbo_stream
-    response replaces that id with a freshly rendered (blank) copy of this
-    same partial, resetting the form for the actor. An edit form needs no
-    such id: Note's own broadcast_replace_to swaps the ENTIRE note (this
-    form included) back to read mode for every subscriber, actor included. %>
+    This partial itself carries NO id for a NEW record: the CALLER wraps it
+    in a spacing <div id="..."> (notes/_list.html.erb's `_new_note` divs,
+    notes/_note.html.erb's `_new_reply` div), and that div's id is the exact
+    string NotesController#reset_target_for computes (dom_id(notable,
+    :new_note) for a root create, dom_id(parent, :new_reply) for a reply).
+    Giving this form the SAME id as its wrapping div would be a duplicate id
+    (invalid HTML, and `getElementById`/turbo_stream targeting would resolve
+    to the div instead of the form) — so after a successful create, the
+    controller's turbo_stream response does `turbo_stream.update(reset_target,
+    ...)`, which replaces the wrapping div's INNER content with a freshly
+    rendered (blank) copy of this same partial while the div itself (and its
+    mt-3/mt-2 spacing) stays put, resetting the form for the actor without
+    disturbing the wrapper a second submission still needs. An edit form
+    needs no such id: Note's own broadcast_replace_to swaps the ENTIRE note
+    (this form included) back to read mode for every subscriber, actor
+    included. %>
 <%
   record = note || Note.new(notable: notable, parent: parent)
   persisted = record.persisted?
   url = persisted ? note_path(record) : notes_path
-  wrapper_id = persisted ? nil : dom_id(parent || notable, parent ? :new_reply : :new_note)
   submit_label = if persisted
                    t("notes.form.update_submit")
   elsif parent
@@ -29,7 +36,7 @@
   end
 %>
 <%= form_with model: record, url: url, method: (persisted ? :patch : :post),
-      html: { id: wrapper_id }, class: "space-y-3" do |form| %>
+      class: "space-y-3" do |form| %>
   <%= form.error_summary %>
   <%= form.hidden_field :notable_type, value: notable.class.name %>
   <%= form.hidden_field :notable_id, value: notable.id %>

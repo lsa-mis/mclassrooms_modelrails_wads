@@ -147,6 +147,51 @@ RSpec.describe "Notes", type: :request do
     end
   end
 
+  # Finding 1 regression (Phase 5 Task 7 review): the only a11y/rendering
+  # sweep that visits a room's notes section (spec/system/rooms/show_spec.rb)
+  # runs as a plain (non-authoring) user, so it never renders the create-note
+  # form and never caught the duplicate DOM id below. notes/_list.html.erb
+  # wraps "notes/form" in a `<div id="#{dom_id(notable, :new_note)}">`; the
+  # form partial used to ALSO carry that same id on its own `<form>` tag
+  # (invalid HTML — two elements sharing one id), and NotesController's reset
+  # stream used to `replace` that id, which a browser's `getElementById`
+  # resolves to the FIRST (outer) element — dropping the div's `mt-3`
+  # spacing after the first successful submit. Both are fixed: the id lives
+  # on the div only now, and the reset stream `update`s the div's inner
+  # content instead of replacing the div itself.
+  describe "GET /rooms/:id (inline authoring form ids)" do
+    let(:editor) { editor_for(unit) }
+    before { sign_in(editor) }
+
+    it "renders the create-note form's DOM id exactly once" do
+      get room_path(room_in_unit)
+
+      expect(response).to have_http_status(:ok)
+
+      new_note_id = ActionView::RecordIdentifier.dom_id(room_in_unit, :new_note)
+      expect(response.body.scan(%r{id="#{new_note_id}"}).size).to eq(1)
+    end
+
+    it "resets the create form via turbo_stream.update (not .replace), so the wrapper survives for a second submit" do
+      new_note_id = ActionView::RecordIdentifier.dom_id(room_in_unit, :new_note)
+
+      post notes_path, params: { note: note_params_for(room_in_unit) }, as: :turbo_stream
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(action="update" target="#{new_note_id}"))
+      expect(response.body).not_to include(%(action="replace" target="#{new_note_id}"))
+
+      # A second submit against the exact same target must still succeed:
+      # if the first reset had `replace`d the wrapper div (consuming its
+      # id), a real browser's next reset stream would have nothing left to
+      # target. Two-for-two proves the wrapper (and its id) survives.
+      expect {
+        post notes_path, params: { note: note_params_for(room_in_unit) }, as: :turbo_stream
+      }.to change(Note, :count).by(1)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(action="update" target="#{new_note_id}"))
+    end
+  end
+
   describe "PATCH /notes/:id" do
     let!(:note) { create(:note, notable: room_in_unit, workspace: workspace) }
 
@@ -194,6 +239,7 @@ RSpec.describe "Notes", type: :request do
         }.not_to change(ActivityLog, :count)
 
         expect(note.reload.body.to_plain_text).not_to eq("Hijacked")
+        expect(response).to redirect_to(workspace_path(workspace))
       end
     end
 
@@ -205,6 +251,8 @@ RSpec.describe "Notes", type: :request do
         expect {
           patch note_path(note), params: { note: { body: "Hijacked" } }
         }.not_to change(ActivityLog, :count)
+
+        expect(response).to redirect_to(workspace_path(workspace))
       end
     end
   end
@@ -245,6 +293,19 @@ RSpec.describe "Notes", type: :request do
       end
     end
 
+    context "as the other unit's editor" do
+      let(:other_editor) { editor_for(other_unit) }
+      before { sign_in(other_editor) }
+
+      it "is denied destroying the note" do
+        expect {
+          delete note_path(note)
+        }.not_to change(Note, :count)
+
+        expect(response).to redirect_to(workspace_path(workspace))
+      end
+    end
+
     context "as a viewer" do
       let(:viewer) { membership_with("viewer") }
       before { sign_in(viewer) }
@@ -253,6 +314,8 @@ RSpec.describe "Notes", type: :request do
         expect {
           delete note_path(note)
         }.not_to change(Note, :count)
+
+        expect(response).to redirect_to(workspace_path(workspace))
       end
     end
   end
