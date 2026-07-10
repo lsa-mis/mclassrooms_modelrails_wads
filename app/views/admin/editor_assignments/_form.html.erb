@@ -1,0 +1,26 @@
+<%# locals: (form:, members:, units:) %>
+<%# MiClassrooms Phase 5 Task 9 (Brief §14.1): the grant form — a kept
+    workspace member and a unit, both resolved server-side from the current
+    workspace (Admin::EditorAssignmentsController). The user_id/unit_id
+    selected here are re-validated against that same workspace scope on
+    submit — this picker only narrows the UI, it is not itself the security
+    boundary (see the controller's tenant-safety header comment). %>
+<%= form.error_summary %>
+
+<%= ui :card do %>
+  <%= ui :card_content, class: "space-y-6" do %>
+    <%= form.select :user_id,
+          members.map { |member| [ member.full_name, member.id ] },
+          { label: t("admin.editor_assignments.form.user_label"),
+            prompt: t("admin.editor_assignments.form.user_prompt") },
+          {} %>
+
+    <%= form.select :unit_id,
+          units.map { |unit| [ unit.display_name, unit.id ] },
+          { label: t("admin.editor_assignments.form.unit_label"),
+            prompt: t("admin.editor_assignments.form.unit_prompt") },
+          {} %>
+  <% end %>
+<% end %>
+
+<%= form.submit t("admin.editor_assignments.form.submit") %>

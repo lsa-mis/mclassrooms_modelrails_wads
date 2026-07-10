@@ -1,0 +1,12 @@
+<%# MiClassrooms Phase 5 Task 9 (Brief §14.1): grant a unit editor claim — a
+    kept workspace member + a unit, both offered as select choices resolved
+    from the current workspace (Admin::EditorAssignmentsController#new). %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+
+  <%= form_with model: @editor_assignment, url: admin_editor_assignments_path, class: "mt-8 space-y-6" do |form| %>
+    <%= render "form", form: form, members: @members, units: @units %>
+  <% end %>
+</div>

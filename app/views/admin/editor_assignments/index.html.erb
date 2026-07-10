@@ -1,0 +1,36 @@
+<%# MiClassrooms Phase 5 Task 9 (Brief §14.1): admin index for granted unit
+    editor assignments, grouped by unit — only units with at least one grant
+    appear (Admin::EditorAssignmentsController#index), each with a revoke
+    control per assignment. %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+    <%= link_to t(".grant"), new_admin_editor_assignment_path, class: "btn-primary" %>
+  </div>
+
+  <% if @assignments_by_unit.empty? %>
+    <p class="mt-8 text-text-muted"><%= t(".no_assignments") %></p>
+  <% else %>
+    <ul class="mt-8 space-y-6">
+      <% @assignments_by_unit.each do |unit, assignments| %>
+        <li class="bg-surface-raised rounded-lg border border-border p-4">
+          <h2 class="font-medium text-text-heading"><%= unit.display_name %></h2>
+
+          <ul class="mt-3 space-y-3">
+            <% assignments.each do |assignment| %>
+              <li class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <span class="text-text-body"><%= assignment.user.full_name %></span>
+                <%= button_to t(".revoke", user: assignment.user.full_name, unit: unit.display_name),
+                      admin_editor_assignment_path(assignment), method: :delete,
+                      class: "btn-danger",
+                      data: { turbo_confirm: t(".revoke_confirm", user: assignment.user.full_name, unit: unit.display_name) } %>
+              </li>
+            <% end %>
+          </ul>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

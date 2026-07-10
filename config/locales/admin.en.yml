@@ -56,3 +56,22 @@ en:
         success: "Announcement updated."
       destroy:
         success: "Announcement deleted."
+    editor_assignments:
+      index:
+        title: "Unit editors"
+        grant: "Grant editor access"
+        no_assignments: "No editor access has been granted yet."
+        revoke: "Revoke %{user}'s access to %{unit}"
+        revoke_confirm: "Revoke %{user}'s editor access to %{unit}? They will lose edit access on their next request."
+      new:
+        title: "Grant editor access"
+      form:
+        user_label: "Member"
+        user_prompt: "Select a member"
+        unit_label: "Unit"
+        unit_prompt: "Select a unit"
+        submit: "Grant access"
+      create:
+        success: "Editor access granted."
+      destroy:
+        success: "Editor access revoked."
