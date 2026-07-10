@@ -1,16 +1,29 @@
-<%# MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): admin room edit — curated
-    fields (nickname, ADA seat count), the three media slots
+<%# MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): room edit — curated fields
+    (nickname, ADA seat count), the three media slots
     (photo/panorama/seating_chart) with attach + remove, and gallery
     add/remove/reorder. Everything below is ONE form posting to #update,
-    which routes the whole payload through Curation::Apply (RoomsController)
-    so every mutation here — curated field or attachment — is audited.
+    which routes curated-field changes and media changes through TWO
+    Curation::Apply calls (RoomsController, Phase 5 Task 6) so every
+    mutation here is audited.
+
+    Phase 5 Task 6 retrofit (Brief §14.1): RoomPolicy#update?/#edit? now admit
+    the room's unit editor too, so this page is no longer admin-only — but
+    RoomPolicy#manage_media? stays admin-only, so the media markup (extracted
+    into rooms/edit/_media_sections) renders ONLY when
+    `policy(@room).manage_media?`. An editor instead sees a hint pointing them
+    at notes (§14.1: editors flag media issues via notes, they don't manage
+    media directly) — this is a policy-gated CONTROL, not merely hidden UI:
+    the corresponding strong-params boundary in RoomsController#room_params
+    is what actually stops a crafted request, this view only keeps what's
+    rendered consistent with what's permitted.
 
     `multipart: true` is explicit (not auto-detected): TailwindFormBuilder's
     `file_field` renders via UI::FileInputComponent directly rather than
     delegating to Rails' own Tags::File, so it never flips the FormBuilder's
     `@multipart` flag the way `form_with`'s auto-detection relies on. Without
     this, the browser would submit the three media/gallery file inputs as
-    empty strings (x-www-form-urlencoded), not their file contents. %>
+    empty strings (x-www-form-urlencoded), not their file contents. Harmless
+    to keep `multipart: true` even for an editor who never sees a file input. %>
 <% content_for(:title) { t("rooms.edit.title", room: @room.display_name) } %>
 
 <div class="max-w-3xl mx-auto px-4 py-8">
@@ -27,167 +40,15 @@
         class: "mt-8 space-y-8" do |form| %>
     <%= form.error_summary %>
 
-    <%= ui :card do %>
-      <%= ui :card_header do %>
-        <%= ui :card_title, t("rooms.edit.curated_heading"), level: 2 %>
-      <% end %>
-      <%= ui :card_content, class: "space-y-6" do %>
-        <%= form.text_field :nickname,
-              label: t("rooms.edit.nickname_label"),
-              help: t("rooms.edit.nickname_hint") %>
+    <%= render "rooms/edit/curated_fields", form: form %>
 
-        <%= form.number_field :ada_seat_count,
-              label: t("rooms.edit.ada_seat_count_label"),
-              help: t("rooms.edit.ada_seat_count_hint"),
-              min: 0 %>
-      <% end %>
-    <% end %>
-
-    <%= ui :card_title, t("rooms.edit.media_heading"), level: 2 %>
-
-    <%# --- Photo -------------------------------------------------------- %>
-    <%= ui :card do %>
-      <%= ui :card_header do %>
-        <%= ui :card_title, t("rooms.edit.photo_label") %>
-      <% end %>
-      <%= ui :card_content, class: "space-y-4" do %>
-        <% if @room.photo.attached? %>
-          <% if @room.photo.variable? %>
-            <%= ui :figure do %>
-              <%= ui :image,
-                    src: rails_representation_path(@room.photo.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                    alt: t("rooms.show.photo_alt", room: @room.display_name),
-                    width: 150, height: 150,
-                    class: "size-[150px] rounded-md object-cover" %>
-            <% end %>
-          <% else %>
-            <%# Only reachable transiently: a failed #update re-render where the
-                just-submitted (not-yet-persisted, and about to be rejected by
-                Room's own content_type validation) photo isn't image-variable —
-                e.g. a PDF attempted for this image-only slot. Skip the variant
-                transform (ActiveStorage::InvariableError) rather than 500. %>
-            <p class="text-sm text-text-muted"><%= t("rooms.edit.attachment_present_notice") %></p>
-          <% end %>
-          <div>
-            <%= form.check_box :remove_photo,
-                  label: t("rooms.edit.remove_photo_label", room: @room.display_name) %>
-            <p class="mt-1 text-sm text-text-muted"><%= t("rooms.edit.delete_confirm") %></p>
-          </div>
-        <% end %>
-
-        <%= form.file_field :photo,
-              label: t("rooms.edit.photo_label"),
-              help: t("rooms.edit.photo_hint"),
-              accept: "image/png,image/jpeg,image/webp" %>
-      <% end %>
-    <% end %>
-
-    <%# --- Panorama ------------------------------------------------------ %>
-    <%= ui :card do %>
-      <%= ui :card_header do %>
-        <%= ui :card_title, t("rooms.edit.panorama_label") %>
-      <% end %>
-      <%= ui :card_content, class: "space-y-4" do %>
-        <% if @room.panorama.attached? %>
-          <% if @room.panorama.variable? %>
-            <%= ui :figure do %>
-              <%= ui :image,
-                    src: rails_representation_path(@room.panorama.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                    alt: t("rooms.show.panorama_label", room: @room.display_name),
-                    width: 150, height: 150,
-                    class: "size-[150px] rounded-md object-cover" %>
-            <% end %>
-          <% else %>
-            <p class="text-sm text-text-muted"><%= t("rooms.edit.attachment_present_notice") %></p>
-          <% end %>
-          <div>
-            <%= form.check_box :remove_panorama,
-                  label: t("rooms.edit.remove_panorama_label", room: @room.display_name) %>
-            <p class="mt-1 text-sm text-text-muted"><%= t("rooms.edit.delete_confirm") %></p>
-          </div>
-        <% end %>
-
-        <%= form.file_field :panorama,
-              label: t("rooms.edit.panorama_label"),
-              help: t("rooms.edit.panorama_hint"),
-              accept: "image/png,image/jpeg,image/webp" %>
-      <% end %>
-    <% end %>
-
-    <%# --- Seating chart -------------------------------------------------- %>
-    <%= ui :card do %>
-      <%= ui :card_header do %>
-        <%= ui :card_title, t("rooms.edit.seating_chart_label") %>
-      <% end %>
-      <%= ui :card_content, class: "space-y-4" do %>
-        <% if @room.seating_chart.attached? %>
-          <% if @room.seating_chart.content_type == "application/pdf" %>
-            <%= link_to t("rooms.show.seating_chart_link", room: @room.display_name),
-                  rails_blob_path(@room.seating_chart, disposition: :inline),
-                  class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
-          <% elsif @room.seating_chart.variable? %>
-            <%= ui :figure do %>
-              <%= ui :image,
-                    src: rails_representation_path(@room.seating_chart.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                    alt: t("rooms.show.seating_chart_alt", room: @room.display_name),
-                    width: 150, height: 150,
-                    class: "size-[150px] rounded-md object-cover" %>
-            <% end %>
-          <% else %>
-            <p class="text-sm text-text-muted"><%= t("rooms.edit.attachment_present_notice") %></p>
-          <% end %>
-          <div>
-            <%= form.check_box :remove_seating_chart,
-                  label: t("rooms.edit.remove_seating_chart_label", room: @room.display_name) %>
-            <p class="mt-1 text-sm text-text-muted"><%= t("rooms.edit.delete_confirm") %></p>
-          </div>
-        <% end %>
-
-        <%= form.file_field :seating_chart,
-              label: t("rooms.edit.seating_chart_label"),
-              help: t("rooms.edit.seating_chart_hint"),
-              accept: "image/png,image/jpeg,image/webp,application/pdf" %>
-      <% end %>
-    <% end %>
-
-    <%# --- Gallery: existing images (reorder/destroy) + blank add rows --- %>
-    <%= ui :card do %>
-      <%= ui :card_header do %>
-        <%= ui :card_title, t("rooms.edit.gallery_heading"), level: 2 %>
-      <% end %>
-      <%= ui :card_content, class: "space-y-6" do %>
-        <%= form.fields_for :gallery_images, @room.gallery_images.sort_by(&:position) do |gf| %>
-          <% gallery_image = gf.object %>
-          <% if gallery_image.persisted? %>
-            <div class="flex flex-col gap-4 border-b border-border pb-6 last:border-b-0 last:pb-0 sm:flex-row sm:items-start">
-              <%= ui :figure do %>
-                <%= ui :image,
-                      src: rails_representation_path(gallery_image.image.variant(resize_to_fill: [ 96, 96 ], format: :webp)),
-                      alt: t("rooms.show.gallery_alt", room: @room.display_name, position: gf.index + 1),
-                      width: 96, height: 96,
-                      class: "size-24 shrink-0 rounded-md object-cover" %>
-              <% end %>
-              <div class="flex-1 space-y-3">
-                <%= gf.number_field :position,
-                      label: t("rooms.edit.position_label", position: gf.index + 1), min: 0, required: true %>
-                <%= gf.check_box :_destroy,
-                      label: t("rooms.edit.gallery_destroy_label", position: gf.index + 1, room: @room.display_name) %>
-              </div>
-            </div>
-          <% else %>
-            <div class="border-b border-border pb-6 last:border-b-0 last:pb-0">
-              <%= gf.hidden_field :position %>
-              <%= gf.file_field :image,
-                    label: t("rooms.edit.gallery_add_label", position: gf.index + 1),
-                    help: t("rooms.edit.gallery_add_hint"),
-                    accept: "image/png,image/jpeg,image/webp" %>
-            </div>
-          <% end %>
-        <% end %>
-
-        <% if @room.gallery_images.none? { |image| image.new_record? } && @room.gallery_images.size >= 5 %>
-          <p class="text-sm text-text-muted"><%= t("rooms.edit.gallery_full_notice") %></p>
-        <% end %>
+    <% if policy(@room).manage_media? %>
+      <%= render "rooms/edit/media_sections", room: @room, form: form %>
+    <% else %>
+      <%= ui :banner, variant: :info do %>
+        <%= t("rooms.edit.media_admin_only_hint") %>
+        <%= link_to t("rooms.edit.media_admin_only_hint_link"), room_path(@room),
+              class: "underline underline-offset-4 hover:no-underline focus-ring rounded-sm" %>
       <% end %>
     <% end %>
 

@@ -1,0 +1,22 @@
+<%# locals: (form:) %>
+<%# MiClassrooms Phase 5 Task 6 (Brief §14.1): extracted out of rooms/edit so
+    it can render on its own — curated fields (nickname, ADA seat count) are
+    the part of the edit form BOTH an admin and the room's unit editor reach
+    (RoomPolicy#update?/#edit? admit either grantee); rooms/edit.html.erb
+    always renders this partial, then separately gates
+    rooms/edit/_media_sections behind `policy(@room).manage_media?`. %>
+<%= ui :card do %>
+  <%= ui :card_header do %>
+    <%= ui :card_title, t("rooms.edit.curated_heading"), level: 2 %>
+  <% end %>
+  <%= ui :card_content, class: "space-y-6" do %>
+    <%= form.text_field :nickname,
+          label: t("rooms.edit.nickname_label"),
+          help: t("rooms.edit.nickname_hint") %>
+
+    <%= form.number_field :ada_seat_count,
+          label: t("rooms.edit.ada_seat_count_label"),
+          help: t("rooms.edit.ada_seat_count_hint"),
+          min: 0 %>
+  <% end %>
+<% end %>

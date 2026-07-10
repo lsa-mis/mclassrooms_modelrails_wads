@@ -892,6 +892,12 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
     # isolation (spec/lib/curation/apply_spec.rb): a real column change
     # (nickname) appears in before_after; this pins that RoomsController's
     # #update wires it correctly end-to-end, one ActivityLog per request.
+    #
+    # Phase 5 Task 6 retrofit: action string changed from the phase-4
+    # "room.curated" (one combined call) to "room.updated" (the curated half
+    # of the now-split curated/media Curation::Apply pair) — a curated-only
+    # submission like this one never touches the media half at all, so this
+    # is still exactly one ActivityLog.
     it "updates the curated field via Curation::Apply and writes exactly one audited ActivityLog" do
       expect {
         patch room_path(room), params: { room: { nickname: "New Name" } }
@@ -901,7 +907,7 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(room.reload.nickname).to eq("New Name")
 
       log = ActivityLog.last
-      expect(log.action).to eq("room.curated")
+      expect(log.action).to eq("room.updated")
       expect(log.before_after).to eq(
         "before" => { "nickname" => "Old Name" }, "after" => { "nickname" => "New Name" }
       )
