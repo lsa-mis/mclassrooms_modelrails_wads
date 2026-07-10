@@ -1,0 +1,48 @@
+<%# locals: (notable:, parent: nil, note: nil) %>
+<%# MiClassrooms Phase 5 Task 7 (Brief §14.1, D15): one form partial serves
+    three contexts — a top-level create (parent/note nil), a reply create
+    (parent: the root being replied to), and an in-place edit (note: the
+    persisted record). `record` below picks the right target/verb for each;
+    `form.rich_text_area :body` is Lexxy's editor (config/application.rb
+    wires Rails' own ActionText editor adapter to Lexxy — no special helper
+    name needed).
+
+    The wrapping element's id matters only for a NEW record: it's the exact
+    string NotesController#reset_target_for computes
+    (dom_id(notable, :new_note) for a root create, dom_id(parent, :new_reply)
+    for a reply) — after a successful create, the controller's turbo_stream
+    response replaces that id with a freshly rendered (blank) copy of this
+    same partial, resetting the form for the actor. An edit form needs no
+    such id: Note's own broadcast_replace_to swaps the ENTIRE note (this
+    form included) back to read mode for every subscriber, actor included. %>
+<%
+  record = note || Note.new(notable: notable, parent: parent)
+  persisted = record.persisted?
+  url = persisted ? note_path(record) : notes_path
+  wrapper_id = persisted ? nil : dom_id(parent || notable, parent ? :new_reply : :new_note)
+  submit_label = if persisted
+                   t("notes.form.update_submit")
+  elsif parent
+                   t("notes.form.reply_submit")
+  else
+                   t("notes.form.create_submit")
+  end
+%>
+<%= form_with model: record, url: url, method: (persisted ? :patch : :post),
+      html: { id: wrapper_id }, class: "space-y-3" do |form| %>
+  <%= form.error_summary %>
+  <%= form.hidden_field :notable_type, value: notable.class.name %>
+  <%= form.hidden_field :notable_id, value: notable.id %>
+  <% if parent %>
+    <%= form.hidden_field :parent_id, value: parent.id %>
+  <% end %>
+
+  <div class="space-y-2">
+    <%= form.label :body, t("notes.form.body_label"), class: "block text-sm font-medium text-text-body" %>
+    <%= form.rich_text_area :body %>
+  </div>
+
+  <%= form.check_box :alert, label: t("notes.form.alert_label") %>
+
+  <%= form.submit submit_label %>
+<% end %>

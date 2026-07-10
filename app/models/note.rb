@@ -1,6 +1,7 @@
 class Note < ApplicationRecord
   include Tenanted
   include Broadcastable
+  include ActionView::RecordIdentifier # dom_id, used by broadcast_changes below
 
   belongs_to :notable, polymorphic: true
   belongs_to :author, class_name: "User"
@@ -20,9 +21,43 @@ class Note < ApplicationRecord
   scope :plain_notes, -> { where(alert: false) }
   scope :roots,       -> { where(parent_id: nil) }
 
+  # Phase 5 Task 7 (D15): action-specific streams instead of Broadcastable's
+  # default create/update-only refresh — see broadcast_changes below.
+  def self.broadcast_events = [ :create, :update, :destroy ]
+
   private
 
   def broadcast_target = notable
+
+  # D15 ("interactive, threaded, LIVE notes & alerts"): a broadcast failure
+  # must never break the write — same rescue posture as Broadcastable's own
+  # default, reimplemented here because the target/action differ per
+  # lifecycle event instead of a single broadcast_refresh_to.
+  #
+  # Target strings are load-bearing — they must exactly match the DOM ids
+  # notes/_list.html.erb and notes/_note.html.erb render:
+  #   - a new ROOT note prepends into "#{dom_id(notable)}_notes"
+  #   - a new REPLY prepends into "#{dom_id(parent)}_replies"
+  #   - an update replaces, and a destroy removes, this note's own
+  #     "#{dom_id(self)}" element (the same id for both a root and a reply).
+  # A destroyed root's replies cascade-delete (dependent: :destroy above),
+  # each firing its OWN after_destroy_commit — redundant "remove" broadcasts
+  # for elements the root's own removal already took with it are harmless
+  # (Turbo's remove is a no-op on a target that's already gone).
+  def broadcast_changes
+    if destroyed?
+      broadcast_remove_to broadcast_target, target: dom_id(self)
+    elsif previously_new_record?
+      list = parent_id? ? "#{dom_id(parent)}_replies" : "#{dom_id(notable)}_notes"
+      broadcast_prepend_to broadcast_target, target: list,
+                           partial: "notes/note", locals: { note: self }
+    else
+      broadcast_replace_to broadcast_target, target: dom_id(self),
+                           partial: "notes/note", locals: { note: self }
+    end
+  rescue StandardError => e
+    Rails.logger.error("Broadcast failed for Note##{id}: #{e.class}: #{e.message}")
+  end
 
   def parent_must_be_root
     errors.add(:parent_id, :nested_reply_not_allowed) if parent&.parent_id.present?
