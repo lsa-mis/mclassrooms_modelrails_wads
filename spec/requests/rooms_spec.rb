@@ -913,6 +913,21 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       )
     end
 
+    # Phase 5 Task 6 audit contract: an AUTHORIZED resubmission of the exact
+    # same value is a genuine no-op — apply_curated_change's `@room.changed?`
+    # guard means this never reaches Curation::Apply, so it must write ZERO
+    # ActivityLogs. Distinct from both specs above: neither the
+    # unauthorized-viewer PATCH (shared example) nor the validation-failure
+    # PATCH below covers the authorized-and-genuinely-nothing-changed branch
+    # those changed?/media_change? guards exist for.
+    it "writes no ActivityLog when an admin resubmits the same nickname unchanged" do
+      expect {
+        patch room_path(room), params: { room: { nickname: room.nickname } }
+      }.not_to change(ActivityLog, :count)
+
+      expect(room.reload.nickname).to eq("Old Name")
+    end
+
     # Room's own `content_type: [:png, :jpeg, :webp]` validation on :photo is
     # the natural, already-existing validation reachable through this form —
     # a PDF is allowed for seating_chart but not photo, so attaching one here
@@ -926,6 +941,32 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(room.reload.photo).not_to be_attached
+    end
+
+    # Pins the documented trade-off in #update's comment: curated and media
+    # changes are now TWO separate Curation::Apply calls (two transactions),
+    # so a valid curated change can commit even though the accompanying media
+    # change fails validation in the same request — the nickname save is not
+    # rolled back by the photo's content_type rejection. Exactly one
+    # ActivityLog ("room.updated") is written; no "room.media_updated" row
+    # exists for the failed media half.
+    it "commits the curated change even when the accompanying media change fails validation" do
+      expect {
+        patch room_path(room), params: {
+          room: {
+            nickname: "New Name",
+            photo: fixture_file_upload("seating_chart.pdf", "application/pdf")
+          }
+        }
+      }.to change(ActivityLog, :count).by(1)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(room.reload.nickname).to eq("New Name")
+      expect(room.photo).not_to be_attached
+
+      log = ActivityLog.last
+      expect(log.action).to eq("room.updated")
+      expect(ActivityLog.where(action: "room.media_updated").count).to eq(0)
     end
 
     it "persists a gallery reorder" do
