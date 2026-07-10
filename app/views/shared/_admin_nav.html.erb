@@ -2,30 +2,70 @@
     site on current_grant.admin? (app/helpers/application_helper.rb), not
     here — this partial assumes it should render.
 
-    Phases 4-8 populate the panel with real admin navigation; until then
-    this is a genuinely empty, accessible region (not a dead link, not a
-    "coming soon" placeholder) so the affordance's shape — a labeled
-    navigation landmark — is stable across phases and doesn't need
-    reshaping once content lands.
+    Navigation phase (product nav): the panel is now populated with the
+    admin section links (Buildings, Announcements, Editor assignments, Bulk
+    upload, and the three reference-data screens). Desktop gets an
+    interactive disclosure (reuses the existing `dropdown` Stimulus
+    controller for the click/outside-click/Escape wiring already proven by
+    shared/_workspace_switcher and shared/_user_menu — no new JS). It
+    previously deliberately avoided role="menu"/"menuitem" while the panel
+    was empty (an ARIA menu with zero menuitem children fails
+    aria-required-children) — now that real items exist, it adopts full menu
+    semantics, EXACTLY mirroring shared/_user_menu.html.erb's desktop menu
+    (role="menu" on the panel, role="menuitem" tabindex="-1" + the same item
+    classes on each link, border-t border-border between items). Mobile
+    renders as a static labeled group (matching the "Workspaces" mobile group
+    style) since it already lives inside the collapsible hamburger accordion
+    — a second, nested disclosure toggle there would be redundant.
 
-    Desktop gets an interactive disclosure (reuses the existing `dropdown`
-    Stimulus controller for the click/outside-click/Escape wiring already
-    proven by shared/_workspace_switcher and shared/_user_menu — no new JS).
-    It deliberately does NOT use role="menu"/"menuitem" the way those two
-    do: an ARIA menu with zero menuitem children fails aria-required-children,
-    and there's nothing menu-shaped to put in it yet. Mobile renders as a
-    static labeled group (matching the "Workspaces" mobile group style) since
-    it already lives inside the collapsible hamburger accordion — a second,
-    nested disclosure toggle there would be redundant. -%>
+    Route helpers are anchored via main_app — the header (and this partial)
+    also renders inside the markdowndocs engine layout
+    (layouts/markdowndocs/application.html.erb), where bare path helpers
+    would resolve against the engine's route set instead of the host app's;
+    same reasoning as every route helper in shared/_user_menu. -%>
 <% if local_assigns[:mobile] %>
   <nav aria-label="<%= t("navigation.admin.aria_label") %>"
        class="md:hidden px-1 pt-3 mt-1 border-t border-border">
     <p class="px-2 py-1 text-xs font-semibold text-text-muted uppercase tracking-wide">
       <%= t("navigation.admin.label") %>
     </p>
-    <p class="px-2 py-2 text-sm text-text-muted">
-      <%= t("navigation.admin.empty") %>
-    </p>
+    <div class="flex flex-col gap-1">
+      <%= link_to t("navigation.admin.buildings"), main_app.buildings_path,
+            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+                    text-sm text-text-body
+                    hover:bg-surface-sunken hover:text-interactive-hover rounded
+                    focus-ring" %>
+      <%= link_to t("navigation.admin.announcements"), main_app.admin_announcements_path,
+            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+                    text-sm text-text-body
+                    hover:bg-surface-sunken hover:text-interactive-hover rounded
+                    focus-ring" %>
+      <%= link_to t("navigation.admin.editor_assignments"), main_app.admin_editor_assignments_path,
+            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+                    text-sm text-text-body
+                    hover:bg-surface-sunken hover:text-interactive-hover rounded
+                    focus-ring" %>
+      <%= link_to t("navigation.admin.bulk_upload"), main_app.new_admin_bulk_upload_path,
+            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+                    text-sm text-text-body
+                    hover:bg-surface-sunken hover:text-interactive-hover rounded
+                    focus-ring" %>
+      <%= link_to t("navigation.admin.characteristic_display_rules"), main_app.admin_characteristic_display_rules_path,
+            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+                    text-sm text-text-body
+                    hover:bg-surface-sunken hover:text-interactive-hover rounded
+                    focus-ring" %>
+      <%= link_to t("navigation.admin.unit_display_names"), main_app.admin_unit_display_names_path,
+            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+                    text-sm text-text-body
+                    hover:bg-surface-sunken hover:text-interactive-hover rounded
+                    focus-ring" %>
+      <%= link_to t("navigation.admin.sync_scope_rules"), main_app.admin_sync_scope_rules_path,
+            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+                    text-sm text-text-body
+                    hover:bg-surface-sunken hover:text-interactive-hover rounded
+                    focus-ring" %>
+    </div>
   </nav>
 <% else %>
   <nav aria-label="<%= t("navigation.admin.aria_label") %>"
@@ -41,10 +81,64 @@
     </button>
 
     <div data-dropdown-target="menu" id="admin-nav-panel"
+         role="menu"
          aria-labelledby="admin-nav-button"
          class="hidden absolute right-0 mt-2 w-64 rounded-lg bg-surface-raised
-                border border-border shadow-lg z-50 p-4">
-      <p class="text-sm text-text-muted"><%= t("navigation.admin.empty") %></p>
+                border border-border shadow-lg z-50">
+      <%= link_to t("navigation.admin.buildings"), main_app.buildings_path,
+            role: "menuitem", tabindex: "-1",
+            class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                    text-sm text-text-body
+                    hover:bg-surface hover:text-interactive
+                    focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+      <div class="border-t border-border">
+        <%= link_to t("navigation.admin.announcements"), main_app.admin_announcements_path,
+              role: "menuitem", tabindex: "-1",
+              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                      text-sm text-text-body
+                      hover:bg-surface hover:text-interactive
+                      focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+      </div>
+      <div class="border-t border-border">
+        <%= link_to t("navigation.admin.editor_assignments"), main_app.admin_editor_assignments_path,
+              role: "menuitem", tabindex: "-1",
+              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                      text-sm text-text-body
+                      hover:bg-surface hover:text-interactive
+                      focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+      </div>
+      <div class="border-t border-border">
+        <%= link_to t("navigation.admin.bulk_upload"), main_app.new_admin_bulk_upload_path,
+              role: "menuitem", tabindex: "-1",
+              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                      text-sm text-text-body
+                      hover:bg-surface hover:text-interactive
+                      focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+      </div>
+      <div class="border-t border-border">
+        <%= link_to t("navigation.admin.characteristic_display_rules"), main_app.admin_characteristic_display_rules_path,
+              role: "menuitem", tabindex: "-1",
+              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                      text-sm text-text-body
+                      hover:bg-surface hover:text-interactive
+                      focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+      </div>
+      <div class="border-t border-border">
+        <%= link_to t("navigation.admin.unit_display_names"), main_app.admin_unit_display_names_path,
+              role: "menuitem", tabindex: "-1",
+              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                      text-sm text-text-body
+                      hover:bg-surface hover:text-interactive
+                      focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+      </div>
+      <div class="border-t border-border">
+        <%= link_to t("navigation.admin.sync_scope_rules"), main_app.admin_sync_scope_rules_path,
+              role: "menuitem", tabindex: "-1",
+              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                      text-sm text-text-body
+                      hover:bg-surface hover:text-interactive
+                      focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
+      </div>
     </div>
   </nav>
 <% end %>

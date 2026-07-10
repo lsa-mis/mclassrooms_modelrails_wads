@@ -28,6 +28,18 @@
         <div class="hidden md:block">
           <%= render "shared/theme_toggle", style: :icon %>
         </div>
+        <%# Product navigation: "Find a Room" is the primary entry point into
+            the directory for every signed-in user (viewer or admin alike),
+            so it renders before the admin-only and account-only regions
+            below. Rendered inside the markdowndocs engine layout too (see
+            layouts/markdowndocs/application.html.erb), so the route helper
+            is anchored via main_app — same reasoning as main_app.root_path
+            above and every route helper in shared/_user_menu. %>
+        <% if authenticated? %>
+          <%= link_to t("navigation.find_a_room"), main_app.find_a_room_path,
+                class: "hidden md:flex min-h-[44px] items-center px-3 rounded-lg
+                        text-text-body hover:bg-surface-sunken focus-ring" %>
+        <% end %>
         <%# Navigation IA (Task 10): MiClassrooms' :shared posture is one
             workspace for everyone — the switcher has nothing to switch
             between, so it's suppressed via TenancyConfig rather than
@@ -93,6 +105,13 @@
       <div class="flex flex-col gap-2">
         <% if authenticated? %>
           <%= render "shared/user_menu", context: :mobile %>
+          <%# Same primary-entry-point link as the desktop cluster above,
+              styled to match the surrounding mobile menu items. %>
+          <%= link_to t("navigation.find_a_room"), main_app.find_a_room_path,
+                class: "min-h-[var(--form-input-height)] flex items-center px-3 py-2
+                        text-sm text-text-body
+                        hover:bg-surface-sunken hover:text-interactive-hover rounded
+                        focus-ring" %>
           <% unless TenancyConfig.shared? %>
             <%= render "shared/workspace_switcher", mobile: true %>
           <% end %>

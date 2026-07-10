@@ -3,12 +3,15 @@
     + a definition list of room attributes, plus the admin-only inactive
     banner.
 
-    Task 8 retrofit: `building_path` now exists (BuildingsController), but
-    Buildings is an ADMIN-ONLY section (BuildingPolicy denies every action
-    to a non-admin) — a viewer following this crumb would hit a Pundit
-    not-authorized redirect, so the building crumb is a real link ONLY for
-    an admin; a non-admin still gets the plain, non-interactive text this
-    partial has always rendered. UI::BreadcrumbComponent requires every
+    Phase 5 realty-model retrofit: Buildings followed a realty/Airbnb model
+    (BuildingPolicy#show?) — the building detail PAGE is viewer-visible on a
+    non-hidden building, exactly like a room's own #show?. The building
+    crumb is therefore a real link whenever `policy(room.building).show?`
+    (true for an admin always, and for a viewer when the building isn't
+    hidden); a viewer hitting a hidden building still gets the plain,
+    non-interactive text this partial has always rendered, matching the
+    Pundit not-authorized outcome they'd get by following the link directly.
+    UI::BreadcrumbComponent requires every
     non-last item to be a link (it always renders `content_tag(:a, ...,
     href: item[:href])`, and a blank `href` still carries the link's hover/
     focus styling with nothing to click) — the whole trail is rendered by
@@ -24,7 +27,7 @@
       <span class="select-none text-text-muted" aria-hidden="true">/</span>
     </li>
     <li class="inline-flex items-center gap-1.5">
-      <% if RoleResolver.for(Current.user).admin? %>
+      <% if policy(room.building).show? %>
         <%= link_to room.building.display_name, building_path(room.building), class: UI::BreadcrumbComponent::LINK %>
       <% else %>
         <span class="text-text-muted"><%= room.building.display_name %></span>
