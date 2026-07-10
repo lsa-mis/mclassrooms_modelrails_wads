@@ -84,3 +84,5 @@ en:
           attributes:
             parent_id:
               nested_reply_not_allowed: "replies can only be one level deep"
+            notable:
+              must_match_parent_notable: "must match the parent note's notable"

@@ -94,6 +94,24 @@ RSpec.describe Note, type: :model do
     end
   end
 
+  describe "notable inherited from parent" do
+    it "is valid when a reply's notable matches its parent's" do
+      root = create(:note)
+      reply = build(:note, :reply, parent: root)
+
+      expect(reply).to be_valid
+    end
+
+    it "is invalid when a reply's notable differs from its parent's" do
+      root = create(:note)
+      other_room = create(:room)
+      reply = build(:note, :reply, parent: root, notable: other_room, workspace: other_room.workspace)
+
+      expect(reply).not_to be_valid
+      expect(reply.errors[:notable]).not_to be_empty
+    end
+  end
+
   describe "Broadcastable" do
     it "includes the Broadcastable concern" do
       expect(Note.include?(Broadcastable)).to be true

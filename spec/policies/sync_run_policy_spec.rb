@@ -13,17 +13,17 @@ RSpec.describe SyncRunPolicy do
 
   # Brief §14.1 (Task 4 table). Columns: admin, editor-in-unit,
   # editor-other-unit, viewer.
-  MATRIX = [
+  SYNC_RUN_MATRIX = [
     [ :index?,   :sync_run, true, true,  true,  false ],
     [ :show?,    :sync_run, true, true,  true,  false ],
     [ :resume?,  :sync_run, true, false, false, false ],
     [ :refresh?, :sync_run, true, false, false, false ]
   ].freeze
 
-  USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
+  SYNC_RUN_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
 
-  MATRIX.each do |action, record_name, *expected|
-    USERS.each_with_index do |user_name, i|
+  SYNC_RUN_MATRIX.each do |action, record_name, *expected|
+    SYNC_RUN_USERS.each_with_index do |user_name, i|
       it "#{action} on #{record_name} is #{expected[i]} for #{user_name}" do
         policy = described_class.new(send(user_name), send(record_name))
         expect(policy.public_send(action)).to be expected[i]

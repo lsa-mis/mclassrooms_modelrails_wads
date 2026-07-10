@@ -12,15 +12,15 @@ RSpec.describe AnalyticsPolicy do
   # editor-other-unit, viewer. `:analytics` (a bare symbol, not a record) is
   # the record every action is authorized against — neither predicate reads
   # `record` at all.
-  MATRIX = [
+  ANALYTICS_MATRIX = [
     [ :show?,    :analytics, true, true,  true,  false ],
     [ :refresh?, :analytics, true, false, false, false ]
   ].freeze
 
-  USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
+  ANALYTICS_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
 
-  MATRIX.each do |action, record_name, *expected|
-    USERS.each_with_index do |user_name, i|
+  ANALYTICS_MATRIX.each do |action, record_name, *expected|
+    ANALYTICS_USERS.each_with_index do |user_name, i|
       it "#{action} is #{expected[i]} for #{user_name}" do
         policy = described_class.new(send(user_name), record_name)
         expect(policy.public_send(action)).to be expected[i]

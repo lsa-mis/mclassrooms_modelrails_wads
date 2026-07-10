@@ -2,22 +2,24 @@ require "rails_helper"
 
 # MiClassrooms Phase 5 Task 4 (Brief §14.1): NotePolicy — editors author
 # notes on their own units' VISIBLE rooms only; notes on rooms outside their
-# unit, rooms with no unit at all, hidden rooms, and BUILDINGS (interpretation
-# 2 — buildings span units, so no single unit's editor owns building
-# authorship) are all admin-only. Replies inherit the rule through the
-# shared `notable` (Note#parent_must_be_root pins a reply to its parent's
-# notable), verified below.
+# unit, rooms with no unit at all, hidden rooms, rooms not in the feed, and
+# BUILDINGS (interpretation 2 — buildings span units, so no single unit's
+# editor owns building authorship) are all admin-only. Replies inherit the
+# rule through the shared `notable` — MODEL-ENFORCED by
+# Note#notable_must_match_parent, not merely assumed here — verified below.
 RSpec.describe NotePolicy do
   include_context "role matrix"
 
-  let(:note_on_room_in_unit)        { create(:note, notable: room_in_unit) }
-  let(:note_on_room_no_unit)        { create(:note, notable: room_no_unit) }
-  let(:note_on_hidden_room_in_unit) { create(:note, notable: hidden_room_in_unit) }
-  let(:note_on_building)            { create(:note, notable: building) }
+  let(:not_in_feed_room_in_unit)     { create(:room, unit: unit, in_feed: false) }
+  let(:note_on_room_in_unit)         { create(:note, notable: room_in_unit) }
+  let(:note_on_room_no_unit)         { create(:note, notable: room_no_unit) }
+  let(:note_on_hidden_room_in_unit)  { create(:note, notable: hidden_room_in_unit) }
+  let(:note_on_not_in_feed_room)     { create(:note, notable: not_in_feed_room_in_unit) }
+  let(:note_on_building)             { create(:note, notable: building) }
 
   # Brief §14.1 (Task 4 table). Columns: admin, editor-in-unit,
   # editor-other-unit, viewer.
-  MATRIX = [
+  NOTE_MATRIX = [
     [ :create?,  :note_on_room_in_unit,        true, true,  false, false ],
     [ :update?,  :note_on_room_in_unit,        true, true,  false, false ],
     [ :destroy?, :note_on_room_in_unit,        true, true,  false, false ],
@@ -27,15 +29,22 @@ RSpec.describe NotePolicy do
     [ :create?,  :note_on_hidden_room_in_unit, true, false, false, false ],
     [ :update?,  :note_on_hidden_room_in_unit, true, false, false, false ],
     [ :destroy?, :note_on_hidden_room_in_unit, true, false, false, false ],
+    # not_in_feed_room_in_unit is otherwise identical to room_in_unit (same
+    # unit, not hidden) — this is the falsifying row for the `in_feed?`
+    # conjunct in NotePolicy#writable?: an in-unit editor is denied here
+    # even though they're granted on room_in_unit above.
+    [ :create?,  :note_on_not_in_feed_room,    true, false, false, false ],
+    [ :update?,  :note_on_not_in_feed_room,    true, false, false, false ],
+    [ :destroy?, :note_on_not_in_feed_room,    true, false, false, false ],
     [ :create?,  :note_on_building,            true, false, false, false ],
     [ :update?,  :note_on_building,            true, false, false, false ],
     [ :destroy?, :note_on_building,            true, false, false, false ]
   ].freeze
 
-  USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
+  NOTE_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
 
-  MATRIX.each do |action, record_name, *expected|
-    USERS.each_with_index do |user_name, i|
+  NOTE_MATRIX.each do |action, record_name, *expected|
+    NOTE_USERS.each_with_index do |user_name, i|
       it "#{action} on #{record_name} is #{expected[i]} for #{user_name}" do
         policy = described_class.new(send(user_name), send(record_name))
         expect(policy.public_send(action)).to be expected[i]
@@ -44,9 +53,9 @@ RSpec.describe NotePolicy do
   end
 
   # Replies don't carry their own notable independent of the parent — they
-  # inherit it (Note#parent_must_be_root only allows a reply whose parent is
-  # itself a root note; both share the same `notable`). Pinned here so a
-  # reply's authorization doesn't silently diverge from its root note's.
+  # inherit it (Note#notable_must_match_parent model-enforces that a reply
+  # always shares its parent's `notable`). Pinned here so a reply's
+  # authorization doesn't silently diverge from its root note's.
   describe "a reply inherits its parent's notable" do
     let(:parent_note) { create(:note, notable: room_in_unit) }
     let(:reply) { create(:note, notable: room_in_unit, parent: parent_note) }

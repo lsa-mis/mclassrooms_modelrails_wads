@@ -16,6 +16,10 @@ FactoryBot.define do
 
     trait :reply do
       parent factory: :note
+      # Note#notable_must_match_parent requires a reply's notable to match
+      # its parent's — inherit it instead of letting the base factory build
+      # a fresh (mismatched) :room notable.
+      notable { parent.notable }
     end
   end
 end
