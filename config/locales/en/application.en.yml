@@ -13,6 +13,7 @@ en:
     not_found: "The requested record could not be found."
   navigation:
     aria_label: "Main navigation"
+    find_a_room: "Find a Room"
     sign_in: "Sign in"
     sign_up: "Sign up"
     sign_out: "Sign out"
@@ -50,6 +51,13 @@ en:
       label: "Admin"
       aria_label: "Admin navigation"
       empty: "Nothing here yet — admin tools land in later phases."
+      buildings: "Buildings"
+      announcements: "Announcements"
+      editor_assignments: "Editor assignments"
+      bulk_upload: "Bulk upload"
+      characteristic_display_rules: "Characteristic display rules"
+      unit_display_names: "Unit display names"
+      sync_scope_rules: "Sync scope rules"
   theme:
     light: "Light"
     dark: "Dark"
