@@ -2,9 +2,9 @@
 # own units' rooms; notes on buildings stay admin-only (interpretation 2 —
 # buildings span units, so there's no single unit's editor to hand building
 # authorship to). Replies inherit the rule through the shared `notable`
-# (a reply's notable is always the same record as its parent's, per
-# Note#parent_must_be_root), so no separate reply-authorship check is
-# needed.
+# (a reply's notable is always the same record as its parent's — MODEL-
+# ENFORCED by Note#notable_must_match_parent, not merely assumed here), so
+# no separate reply-authorship check is needed.
 class NotePolicy < DirectoryPolicy
   def create?  = writable?
   def update?  = writable?
@@ -15,8 +15,10 @@ class NotePolicy < DirectoryPolicy
   # §14.1 matrix: editors author notes on their units' ROOMS. Notes on
   # BUILDINGS are admin-only — building-level actions (including building
   # notes) stay with admins because buildings span units (interpretation 2).
-  # Replies inherit the rule through the shared notable. Editors cannot
-  # touch notes on rooms they cannot see (hidden / no unit).
+  # Replies inherit the rule through the shared notable, which
+  # Note#notable_must_match_parent enforces at the model layer — a reply
+  # can never carry a notable that diverges from its parent's. Editors
+  # cannot touch notes on rooms they cannot see (hidden / no unit).
   def writable?
     return true if grant.admin?
     notable = record.notable

@@ -19,7 +19,7 @@ RSpec.describe BuildingPolicy do
   # editor-other-unit, viewer. Buildings have no unit/editor-assignment
   # relationship at all, so editor-in-unit and editor-other-unit behave
   # identically here — neither carries any special claim over a building.
-  MATRIX = [
+  BUILDING_MATRIX = [
     [ :show?,               :building,        true,  true,  true,  true  ],
     [ :show?,               :hidden_building, true,  false, false, false ],
     [ :update?,             :building,        true,  false, false, false ],
@@ -31,10 +31,10 @@ RSpec.describe BuildingPolicy do
     [ :destroy?,            :building,        false, false, false, false ]
   ].freeze
 
-  USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
+  BUILDING_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
 
-  MATRIX.each do |action, record_name, *expected|
-    USERS.each_with_index do |user_name, i|
+  BUILDING_MATRIX.each do |action, record_name, *expected|
+    BUILDING_USERS.each_with_index do |user_name, i|
       it "#{action} on #{record_name} is #{expected[i]} for #{user_name}" do
         policy = described_class.new(send(user_name), send(record_name))
         expect(policy.public_send(action)).to be expected[i]
@@ -47,7 +47,7 @@ RSpec.describe BuildingPolicy do
   # here so the aliasing doesn't silently drift from its target.
   describe "#edit? aliasing" do
     it "mirrors update? for every actor" do
-      USERS.each do |user_name|
+      BUILDING_USERS.each do |user_name|
         policy = described_class.new(send(user_name), building)
         expect(policy.edit?).to eq(policy.update?)
       end
