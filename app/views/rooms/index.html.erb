@@ -2,19 +2,18 @@
     Turbo-frame results, building cards. Filter submissions target the
     `find_a_room_results` frame only (see `_filters.html.erb`'s
     `data-turbo-frame`/`data-turbo-action`), so the heading/announcement/form
-    chrome outside the frame never re-renders on a filter change. %>
+    chrome outside the frame never re-renders on a filter change.
+
+    Phase 5 Task 8: the announcement banner is now the SHARED
+    announcements/_banner partial (also rendered on pages#home/#about)
+    instead of its own inline markup — see that partial for the no-op-on-nil
+    and landmark-<aside> contract. %>
 <% content_for(:title) { t("rooms.index.title") } %>
 
 <div class="max-w-5xl mx-auto px-4 py-8">
   <h1 class="text-2xl font-bold text-text-heading"><%= t("rooms.index.title") %></h1>
 
-  <% if @announcement %>
-    <div class="mt-4">
-      <%= ui :banner, variant: :info do %>
-        <%= @announcement.body %>
-      <% end %>
-    </div>
-  <% end %>
+  <%= render "announcements/banner", announcement: @announcement %>
 
   <%= render "filters", search: @search, filter_groups: @filter_groups %>
 

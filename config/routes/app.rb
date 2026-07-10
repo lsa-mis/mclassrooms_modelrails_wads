@@ -61,8 +61,16 @@ resources :notes, only: [ :create, :update, :destroy ]
 # the "review" step is just #create re-rendering a template (params[:confirmed]
 # unset) rather than a separate route, and the final commit redirects back to
 # #new rather than to a #show that doesn't exist.
+#
+# Admin announcements (MiClassrooms Phase 5 Task 8, Brief §14.1): the three
+# fixed slots (home_page/find_a_room_page/about_page). No #show: the index
+# already renders each slot's filled/empty state inline, so there is no
+# separate detail page to link to — a deliberate SUBSET of the seven Pundit
+# actions AnnouncementPolicy defines, mirroring the `resources :bulk_uploads`
+# precedent just above.
 namespace :admin do
   resources :bulk_uploads, only: [ :new, :create ]
+  resources :announcements, except: [ :show ]
 end
 
 # Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
