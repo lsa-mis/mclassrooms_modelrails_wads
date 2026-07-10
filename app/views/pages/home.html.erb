@@ -12,6 +12,12 @@
       cta_secondary: t("pages.home.hero.cta_secondary"),
       cta_secondary_path: about_path %>
 
+<%# Phase 5 Task 8 (Brief §14.1): the home_page announcement slot, shared
+    with pages#about and rooms#index via announcements/_banner. %>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+  <%= render "announcements/banner", announcement: @announcement %>
+</div>
+
 <%= render "shared/section",
       title: t("pages.home.features.title"),
       subtitle: t("pages.home.features.subtitle"),

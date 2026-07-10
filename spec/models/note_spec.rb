@@ -94,6 +94,24 @@ RSpec.describe Note, type: :model do
     end
   end
 
+  describe "notable inherited from parent" do
+    it "is valid when a reply's notable matches its parent's" do
+      root = create(:note)
+      reply = build(:note, :reply, parent: root)
+
+      expect(reply).to be_valid
+    end
+
+    it "is invalid when a reply's notable differs from its parent's" do
+      root = create(:note)
+      other_room = create(:room)
+      reply = build(:note, :reply, parent: root, notable: other_room, workspace: other_room.workspace)
+
+      expect(reply).not_to be_valid
+      expect(reply.errors[:notable]).not_to be_empty
+    end
+  end
+
   describe "Broadcastable" do
     it "includes the Broadcastable concern" do
       expect(Note.include?(Broadcastable)).to be true
@@ -102,6 +120,72 @@ RSpec.describe Note, type: :model do
     it "broadcasts to the notable record" do
       note = create(:note)
       expect(note.send(:broadcast_target)).to eq(note.notable)
+    end
+
+    # Phase 5 Task 7 (D15): action-specific streams instead of Broadcastable's
+    # create/update-only default — Note also broadcasts destroys.
+    it "broadcasts create, update, AND destroy" do
+      expect(Note.broadcast_events).to contain_exactly(:create, :update, :destroy)
+    end
+
+    it "broadcasts a prepend into the notable's roots list on create" do
+      room = create(:room)
+      stream = room.to_gid_param
+
+      expect {
+        create(:note, notable: room, workspace: room.workspace)
+      }.to have_broadcasted_to(stream).with { |html|
+        expect(html).to include('action="prepend"')
+        expect(html).to include("#{ActionView::RecordIdentifier.dom_id(room)}_notes")
+      }
+    end
+
+    it "broadcasts a prepend into the parent's replies list when a reply is created" do
+      root = create(:note)
+      stream = root.notable.to_gid_param
+
+      expect {
+        create(:note, :reply, parent: root)
+      }.to have_broadcasted_to(stream).with { |html|
+        expect(html).to include('action="prepend"')
+        expect(html).to include("#{ActionView::RecordIdentifier.dom_id(root)}_replies")
+      }
+    end
+
+    it "broadcasts a replace targeting the note's own dom id on update" do
+      note = create(:note)
+      stream = note.notable.to_gid_param
+
+      expect {
+        note.update!(body: "Updated body")
+      }.to have_broadcasted_to(stream).with { |html|
+        expect(html).to include('action="replace"')
+        expect(html).to include(ActionView::RecordIdentifier.dom_id(note))
+      }
+    end
+
+    it "broadcasts a remove targeting the note's own dom id on destroy" do
+      note = create(:note)
+      stream = note.notable.to_gid_param
+
+      expect {
+        note.destroy!
+      }.to have_broadcasted_to(stream).with { |html|
+        expect(html).to include('action="remove"')
+        expect(html).to include(ActionView::RecordIdentifier.dom_id(note))
+      }
+    end
+
+    # D15's non-negotiable: whatever goes wrong on the wire, the business
+    # write must still land. Stubs Turbo::StreamsChannel itself (not Note),
+    # matching how broadcast_prepend_to ultimately reaches the wire.
+    it "logs and does not raise when the broadcast itself fails" do
+      allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to).and_raise(StandardError, "cable down")
+      expect(Rails.logger).to receive(:error).with(/Broadcast failed for Note/)
+
+      note = build(:note)
+      expect { note.save! }.not_to raise_error
+      expect(note).to be_persisted
     end
   end
 end

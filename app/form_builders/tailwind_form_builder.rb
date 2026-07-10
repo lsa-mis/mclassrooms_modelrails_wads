@@ -298,8 +298,16 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     object&.errors&.[](method)&.any? || false
   end
 
+  # Mirror Rails' own namespaced id generation so labels/help/error ids
+  # computed here match the input ids Rails emits via `super` (check_box,
+  # rich_text_area, etc.). Without the namespace, a `form_with namespace:`
+  # form (e.g. the per-context notes forms, whole-branch review I-1) gives
+  # every input a namespaced id while this helper hands the matching label a
+  # bare `note_body`/`note_alert` `for` — orphaning the label (WCAG label
+  # association failure). `options[:namespace]` is nil for ordinary forms, so
+  # their ids are unchanged.
   def field_id(method)
-    "#{@object_name}_#{method}"
+    [ options[:namespace], @object_name, method ].compact.join("_")
   end
 
   def merge_classes(*classes)

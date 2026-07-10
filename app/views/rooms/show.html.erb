@@ -8,6 +8,20 @@
 <div class="max-w-5xl mx-auto px-4 py-8">
   <%= render "rooms/header", room: @room, presenter: @presenter %>
 
+  <%# Phase 5 Task 6 (Brief §14.1): gated on edit? (admin OR the room's unit
+      editor while it's visible), not update? directly — edit?/update? are
+      aliased (RoomPolicy), but this is the "can this actor reach the edit
+      page at all" question the link itself asks. An editor now lands on a
+      curated-fields-only form (RoomPolicy#manage_media? stays admin-only,
+      gated inside rooms/edit.html.erb itself). %>
+  <% if policy(@room).edit? %>
+    <div class="mt-4">
+      <%= link_to t("rooms.show.edit_link"), edit_room_path(@room), class: "btn-secondary" %>
+    </div>
+  <% end %>
+
+  <%= render "rooms/visibility_actions", room: @room %>
+
   <%= render "rooms/media", room: @room %>
 
   <%= render "rooms/characteristics", presenter: @presenter %>

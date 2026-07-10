@@ -1,42 +1,57 @@
-# Phase 0 skeleton (MiClassrooms spec D5): the single role/scope abstraction
-# every future Pundit policy consults. `admin?` and `viewer?` are real;
-# `editor?` / `editor_unit_ids` are stubbed — always false / empty — because
-# the EditorAssignment model doesn't exist until phase 5. `can_edit_room?`
-# is therefore admin-only for now; once editor_unit_ids is populated, the
-# non-admin branch below starts returning true for matching units without
-# any change to this method's callers.
+# frozen_string_literal: true
+
+# Single role/scope abstraction (spec D5, Brief §14.1). Resolves a user's
+# effective grant — admin / editor / viewer — from the DATABASE on every
+# call; never session-cached (fixes Brief §11.1). Policies consult only this
+# object for the §14.1 capability matrix. Swapping the assignment source
+# later (e.g. an OktaClaimsResolver) touches only this file.
 #
-# `.for` is intentionally NOT memoized: every call re-reads the membership
-# (and its role) fresh from the database, so a role change made between two
-# calls is reflected immediately rather than served from a stale grant.
+# `RoleResolver` is itself the grant: `.for(user)` builds a fresh instance
+# rather than returning a separate Grant value, so a role change made
+# between two calls is reflected immediately rather than served stale.
 # Callers that need a single consistent grant across several checks should
-# hold on to the returned Grant themselves rather than calling `.for` again.
+# hold on to the returned instance themselves rather than calling `.for`
+# again.
 class RoleResolver
-  Grant = Data.define(:admin, :editor_unit_ids, :viewer) do
-    def admin? = admin
-    def viewer? = viewer
-    def editor? = editor_unit_ids.any?
-
-    def can_edit_room?(room)
-      return true if admin?
-      room.unit_id.present? && editor_unit_ids.include?(room.unit_id)
-    end
-  end
-
   # Matched on Role#slug — the stable identifier Role.system_default! keys
   # on (app/models/role.rb) and what TestLoginsController#grant_test_role
   # matches elsewhere — not Role#name, which is just the display label.
   ADMIN_ROLE_SLUGS = %w[owner admin].freeze
 
   def self.for(user)
-    # includes(:role): this runs on every authorized request once policies
-    # consult the resolver — keep the resolve at two queries, not three.
-    membership = TenancyConfig.shared_workspace&.memberships&.kept&.includes(:role)&.find_by(user:)
+    new(user)
+  end
 
-    Grant.new(
-      admin: membership.present? && ADMIN_ROLE_SLUGS.include?(membership.role.slug),
-      editor_unit_ids: [], # phase 5: EditorAssignment.where(user:).pluck(:unit_id)
-      viewer: membership.present?
-    )
+  def initialize(user)
+    # Prefer the request-resolved Current.workspace (set by DirectoryScoped/
+    # WorkspaceScoped) so this doesn't re-derive tenancy when a controller
+    # already has. Fall back to TenancyConfig.shared_workspace for callers
+    # that run before any workspace-scoping concern sets Current.workspace —
+    # e.g. PagesController#home's admin check on the unauthenticated-access
+    # marketing page, which has no DirectoryScoped before_action to resolve
+    # it first. Both resolve to the same single shared workspace (D1).
+    workspace = Current.workspace || TenancyConfig.shared_workspace
+    # includes(:role): keep the resolve at two queries, not three — dropping
+    # this makes membership&.role&.slug below fire a separate SELECT on
+    # every authorized request (whole-branch review M-1).
+    membership = user && workspace&.memberships&.kept&.includes(:role)&.find_by(user: user)
+    @admin = ADMIN_ROLE_SLUGS.include?(membership&.role&.slug)
+    @viewer = membership.present?
+    # A discarded (revoked) membership nullifies editor grants: default-deny.
+    @editor_unit_ids = @viewer ? EditorAssignment.where(user: user).pluck(:unit_id) : []
+  end
+
+  attr_reader :editor_unit_ids
+
+  def admin? = @admin
+  def viewer? = @viewer
+  def editor? = @editor_unit_ids.any?
+
+  # Brief §14.1: blank/unknown department group => admin-only.
+  # No unit means no editor claim.
+  def can_edit_room?(room)
+    return true if admin?
+    return false if room.unit_id.nil?
+    editor_unit_ids.include?(room.unit_id)
   end
 end

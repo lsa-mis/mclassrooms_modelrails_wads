@@ -49,3 +49,10 @@ en:
       submit: "Save changes"
       success: "Building updated."
       stale_floor: "One or more floor rows are out of date; please reload and try again."
+    hide:
+      button: "Hide building"
+      success: "Building hidden."
+      confirmation: "Hide this building from Find a Room results?"
+    unhide:
+      button: "Unhide building"
+      success: "Building unhidden."

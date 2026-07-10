@@ -1,0 +1,39 @@
+<%# MiClassrooms Phase 5 Task 11 (Brief §11.4/§14.1): admin index for
+    CharacteristicDisplayRule overrides, one row per rule, ordered by
+    short_code (Admin::CharacteristicDisplayRulesController#index). %>
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+    <%= link_to t(".new"), new_admin_characteristic_display_rule_path, class: "btn-primary" %>
+  </div>
+
+  <% if @characteristic_display_rules.empty? %>
+    <p class="mt-8 text-text-muted"><%= t(".empty") %></p>
+  <% else %>
+    <ul class="mt-8 space-y-4">
+      <% @characteristic_display_rules.each do |rule| %>
+        <li class="bg-surface-raised rounded-lg border border-border p-4
+                    flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p class="font-medium text-text-heading"><%= rule.short_code %></p>
+            <p class="mt-1 text-sm text-text-muted">
+              <%= t(".icon_key", icon_key: rule.icon_key.presence || t(".none")) %>
+              <% if rule.category_override.present? %>
+                &middot; <%= t(".category_override", category: rule.category_override) %>
+              <% end %>
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <%= link_to t(".edit"), edit_admin_characteristic_display_rule_path(rule), class: "btn-secondary" %>
+            <%= button_to t(".delete"), admin_characteristic_display_rule_path(rule), method: :delete,
+                  class: "btn-danger",
+                  data: { turbo_confirm: t(".delete_confirm") } %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

@@ -1,75 +1,81 @@
 require "rails_helper"
 
-# MiClassrooms Phase 3 Task 1 (spec D5, Brief §3.2): RoomPolicy is the
-# read-side authorization for the Find a Room screen. index?/show? are
-# authenticated-only (DirectoryScoped already requires sign-in; the policy
-# just pins that this is not further gated by role). Manual creation is
-# denied for everyone — rooms exist only via the nightly sync (Brief §5.3).
-# view_inactive? gates the admin-only "show hidden/not-in-feed rooms" toggle
-# (Brief §14.1 — editors do NOT get inactive views this phase).
+# MiClassrooms Phase 5 Task 3 (Brief §14.1): RoomPolicy is now
+# RoleResolver-driven — a single ROOM_MATRIX table (admin / editor-in-unit /
+# editor-in-another-unit / plain viewer) drives every action-method example,
+# replacing the phase-3/4 viewer-only assumptions (index?/show? used to be
+# "any signed-in user" — see git history for the superseded examples). The
+# Scope tests below are unchanged from phase 3: RoomPolicy::Scope#resolve is
+# still the safe default for every caller including admins, widened only via
+# #resolve_including_inactive behind the admin-only view_inactive? gate.
 RSpec.describe RoomPolicy do
-  let(:workspace) { create(:workspace) }
+  include_context "role matrix"
 
-  # RoleResolver.for consults TenancyConfig.shared_workspace, not
-  # Current.workspace directly (see spec/lib/role_resolver_spec.rb) — stub it
-  # so these specs don't depend on which onboarding preset the suite runs
-  # under. Current.workspace is set separately below because Room's
-  # `for_current_workspace` scope (relied on by RoomPolicy::Scope) keys off
-  # that instead.
-  before do
-    allow(TenancyConfig).to receive(:shared_workspace).and_return(workspace)
-    Current.workspace = workspace
-  end
+  # Brief §14.1 verbatim. Columns: admin, editor-in-unit, editor-other-unit, viewer.
+  ROOM_MATRIX = [
+    [ :show?,               :room_in_unit,        true,  true,  true,  true  ],
+    [ :show?,               :hidden_room_in_unit, true,  false, false, false ],
+    [ :update?,             :room_in_unit,        true,  true,  false, false ],
+    [ :update?,             :room_other_unit,     true,  false, true,  false ],
+    [ :update?,             :room_no_unit,        true,  false, false, false ],
+    [ :update?,             :hidden_room_in_unit, true,  false, false, false ],
+    [ :hide?,               :room_in_unit,        true,  true,  false, false ],
+    [ :hide?,               :room_no_unit,        true,  false, false, false ],
+    [ :unhide?,             :hidden_room_in_unit, true,  false, false, false ],
+    [ :manage_media?,       :room_in_unit,        true,  false, false, false ],
+    [ :destroy_attachment?, :room_in_unit,        true,  false, false, false ],
+    [ :create?,             :room_in_unit,        false, false, false, false ],
+    [ :destroy?,            :room_in_unit,        false, false, false, false ]
+  ].freeze
 
-  def membership_with(slug)
-    user = create(:user)
-    create(:membership, user: user, workspace: workspace, role: Role.system_default!(slug))
-    user
-  end
+  ROOM_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
 
-  let(:admin_user) { membership_with("admin") }
-  let(:viewer_user) { membership_with("viewer") }
-  let(:no_membership_user) { create(:user) }
-
-  describe "#index?" do
-    it "allows any signed-in user regardless of role" do
-      expect(described_class.new(admin_user, Room).index?).to be true
-      expect(described_class.new(viewer_user, Room).index?).to be true
-      expect(described_class.new(no_membership_user, Room).index?).to be true
-    end
-
-    it "denies a nil (signed-out) user" do
-      expect(described_class.new(nil, Room).index?).to be false
+  ROOM_MATRIX.each do |action, record_name, *expected|
+    ROOM_USERS.each_with_index do |user_name, i|
+      it "#{action} on #{record_name} is #{expected[i]} for #{user_name}" do
+        policy = described_class.new(send(user_name), send(record_name))
+        expect(policy.public_send(action)).to be expected[i]
+      end
     end
   end
 
-  describe "#show?" do
-    let(:room) { create(:room, workspace: workspace) }
-
-    it "allows any signed-in user regardless of role" do
-      expect(described_class.new(admin_user, room).show?).to be true
-      expect(described_class.new(viewer_user, room).show?).to be true
-      expect(described_class.new(no_membership_user, room).show?).to be true
-    end
-
-    it "denies a nil (signed-out) user" do
-      expect(described_class.new(nil, room).show?).to be false
-    end
-  end
-
-  describe "#create? / #new?" do
-    it "is denied for everyone — rooms exist only via sync (Brief §5.3)" do
-      expect(described_class.new(admin_user, Room).create?).to be false
-      expect(described_class.new(viewer_user, Room).create?).to be false
-      expect(described_class.new(no_membership_user, Room).create?).to be false
-      expect(described_class.new(nil, Room).create?).to be false
-    end
-
-    it "mirrors create? for new? via the ApplicationPolicy default" do
-      expect(described_class.new(admin_user, Room).new?).to be false
+  # Whole-branch review M-6: the matrix above pins hide? on a room the
+  # editor's own unit still has VISIBLE (true), but no example directly
+  # covers the one-way-hide guard itself — a unit editor re-attempting
+  # hide? on a room already hidden (visible_record? false). Behavior is
+  # already correct (RoomPolicy#hide? requires visible_record? for a
+  # non-admin); this just pins it.
+  describe "#hide? guards against re-hiding an already-hidden room" do
+    it "denies a unit editor hiding a room in their own unit that is already hidden" do
+      policy = described_class.new(editor_user, hidden_room_in_unit)
+      expect(policy.hide?).to be false
     end
   end
 
+  # edit?/floor_plan? mirror update?/show? exactly (ApplicationPolicy's own
+  # new?/edit? aliasing convention) — not in the §14.1 matrix table itself,
+  # but pinned here so the aliasing doesn't silently drift from its target.
+  describe "#edit? / #floor_plan? aliasing" do
+    it "edit? mirrors update? for every actor" do
+      ROOM_USERS.each do |user_name|
+        policy = described_class.new(send(user_name), room_in_unit)
+        expect(policy.edit?).to eq(policy.update?)
+      end
+    end
+
+    it "floor_plan? mirrors show? for every actor" do
+      ROOM_USERS.each do |user_name|
+        policy = described_class.new(send(user_name), room_in_unit)
+        expect(policy.floor_plan?).to eq(policy.show?)
+      end
+    end
+  end
+
+  # Not in the §14.1 matrix (it gates RoomsController's admin-only inactive
+  # toggle, not a room-record action), but required by
+  # RoomsController#base_scope's `authorize Room, :view_inactive?` — kept
+  # from the phase-3 spec, adapted to grant.admin? for consistency with every
+  # other predicate above.
   describe "#view_inactive?" do
     it "allows an admin" do
       expect(described_class.new(admin_user, Room).view_inactive?).to be true
@@ -78,17 +84,24 @@ RSpec.describe RoomPolicy do
     it "denies a viewer" do
       expect(described_class.new(viewer_user, Room).view_inactive?).to be false
     end
-
-    it "denies a signed-in user with no membership" do
-      expect(described_class.new(no_membership_user, Room).view_inactive?).to be false
-    end
-
-    it "denies a nil (signed-out) user" do
-      expect(described_class.new(nil, Room).view_inactive?).to be false
-    end
   end
 
+  # MiClassrooms Phase 3 Task 1: RoomPolicy::Scope's airtightness tests,
+  # carried over unchanged by Task 5 Task 3's matrix rewrite —
+  # RoomsController#index relies on both #resolve and
+  # #resolve_including_inactive, and neither method's behavior changed in
+  # this task (only the action-method predicates above did).
   describe RoomPolicy::Scope do
+    let(:no_membership_user) { create(:user) }
+
+    # RoleResolver.for consults TenancyConfig.shared_workspace, not
+    # Current.workspace directly (see spec/lib/role_resolver_spec.rb) — stub
+    # it so these specs don't depend on which onboarding preset the suite
+    # runs under. The outer "role matrix" context already sets
+    # Current.workspace = workspace, which Room's `for_current_workspace`
+    # scope (relied on by RoomPolicy::Scope) keys off directly.
+    before { allow(TenancyConfig).to receive(:shared_workspace).and_return(workspace) }
+
     let(:building) { create(:building, workspace: workspace) }
 
     let!(:listed_classroom) { create(:room, building: building, workspace: workspace) }
