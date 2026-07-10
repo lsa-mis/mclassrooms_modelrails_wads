@@ -75,6 +75,33 @@ RSpec.describe "GET /find-a-room", type: :request do
     end
   end
 
+  # Fix wave (task-8 review): the shared announcements/_banner partial is
+  # wired at this call site via @announcement = Announcement.for(:find_a_room_page)
+  # (RoomsController#index) — proves the render actually reaches the page
+  # (would fail if that call site were removed or the slot name typo'd),
+  # mirroring the home_page banner proof in
+  # spec/requests/admin/announcements_spec.rb.
+  describe "the find_a_room_page banner" do
+    let(:viewer) { membership_with("viewer") }
+
+    before { sign_in(viewer) }
+
+    it "renders the find_a_room_page announcement's body" do
+      create(:announcement, workspace: workspace, slot: "find_a_room_page", body: "Room finder tips")
+
+      get find_a_room_path
+
+      expect(response.body).to include("Room finder tips")
+      expect(response.body).to include(I18n.t("announcements.banner.aria_label"))
+    end
+
+    it "renders nothing when no find_a_room_page announcement exists" do
+      get find_a_room_path
+
+      expect(response.body).not_to include(I18n.t("announcements.banner.aria_label"))
+    end
+  end
+
   describe "pagination clamp" do
     let(:viewer) { membership_with("viewer") }
     let(:building) { create(:building, workspace: workspace) }
