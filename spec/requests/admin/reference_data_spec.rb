@@ -127,6 +127,28 @@ RSpec.describe "Admin reference data", type: :request do
 
           expect(response).to have_http_status(:unprocessable_entity)
         end
+
+        # CodeNormalizer.normalize (app/lib/code_normalizer.rb) downcases and
+        # strips every non-alphanumeric character, so "Whtbrd>25" and
+        # "whtbrd25" are two visibly-different raw strings that BOTH
+        # normalize to "whtbrd25" — CharacteristicDisplayRule#normalize_short_code
+        # runs before_validation, so the model's uniqueness check compares the
+        # normalized value, not the literal one. This proves the collision is
+        # caught even when no raw string repeats verbatim.
+        it "rejects a short_code that normalizes to a collision with an existing rule, with 422, no new record, and no ActivityLog" do
+          create(:characteristic_display_rule, workspace: workspace, short_code: "Whtbrd>25")
+
+          expect {
+            post admin_characteristic_display_rules_path,
+              params: { characteristic_display_rule: { short_code: "whtbrd25", icon_key: "wifi" } }
+          }.not_to change(CharacteristicDisplayRule, :count)
+          expect {
+            post admin_characteristic_display_rules_path,
+              params: { characteristic_display_rule: { short_code: "whtbrd25", icon_key: "wifi" } }
+          }.not_to change(ActivityLog, :count)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
       end
     end
 
@@ -474,6 +496,24 @@ RSpec.describe "Admin reference data", type: :request do
           expect {
             post admin_sync_scope_rules_path,
               params: { sync_scope_rule: { rule_type: "campus_allow", value: "ANN_ARBOR" } }
+          }.not_to change(ActivityLog, :count)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
+
+        # Assigning an out-of-enum value to a Rails `enum` raises ArgumentError
+        # at ASSIGNMENT time — before Curation::Apply's own rescue
+        # (ActiveRecord::RecordInvalid/RecordNotDestroyed) ever sees it — so a
+        # crafted rule_type must be caught by the controller before it ever
+        # reaches the enum setter, or this would 500 instead of 422.
+        it "rejects a crafted invalid rule_type with 422 (not 500), no new record, and no ActivityLog" do
+          expect {
+            post admin_sync_scope_rules_path,
+              params: { sync_scope_rule: { rule_type: "not_a_type", value: "MLB" } }
+          }.not_to change(SyncScopeRule, :count)
+          expect {
+            post admin_sync_scope_rules_path,
+              params: { sync_scope_rule: { rule_type: "not_a_type", value: "MLB" } }
           }.not_to change(ActivityLog, :count)
 
           expect(response).to have_http_status(:unprocessable_entity)
