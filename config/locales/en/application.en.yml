@@ -50,7 +50,6 @@ en:
     admin:
       label: "Admin"
       aria_label: "Admin navigation"
-      empty: "Nothing here yet — admin tools land in later phases."
       buildings: "Buildings"
       announcements: "Announcements"
       editor_assignments: "Editor assignments"

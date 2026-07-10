@@ -1,5 +1,15 @@
 require "rails_helper"
 
+# MiClassrooms navigation: the rooms index lives at /find-a-room, so /rooms is
+# a route-level convenience redirect (config/routes/app.rb) for anyone who types
+# or bookmarks the obvious URL. Route-level redirect — fires before auth.
+RSpec.describe "GET /rooms", type: :request do
+  it "redirects to Find a Room" do
+    get "/rooms"
+    expect(response).to redirect_to("/find-a-room")
+  end
+end
+
 # MiClassrooms Phase 3 Task 4 (Brief §5.2, §3.2): Find a Room's controller —
 # wires RoomSearch (Task 2), CharacteristicFilterGroups (Task 3), and
 # RoomPolicy (Task 1) into GET /find-a-room. DirectoryScoped resolves
