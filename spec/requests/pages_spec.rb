@@ -53,6 +53,29 @@ RSpec.describe "Pages", type: :request do
     end
   end
 
+  # Fix wave (task-8 review): the shared announcements/_banner partial is
+  # wired at this call site via @announcement = Announcement.for(:about_page)
+  # (PagesController#about) — proves the render actually reaches the page
+  # (would fail if that call site were removed or the slot name typo'd),
+  # mirroring the home_page banner proof in
+  # spec/requests/admin/announcements_spec.rb.
+  describe "the about_page banner" do
+    it "renders the about_page announcement's body when present" do
+      create(:announcement, slot: "about_page", body: "About page notice")
+
+      get about_path
+
+      expect(response.body).to include("About page notice")
+      expect(response.body).to include(I18n.t("announcements.banner.aria_label"))
+    end
+
+    it "renders nothing when no about_page announcement exists" do
+      get about_path
+
+      expect(response.body).not_to include(I18n.t("announcements.banner.aria_label"))
+    end
+  end
+
   describe "GET /privacy" do
     it "returns the privacy page with policy sections" do
       get privacy_path
