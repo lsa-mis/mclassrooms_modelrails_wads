@@ -103,8 +103,33 @@
             class: "text-text-muted transition-transform group-open:rotate-180") %>
     </summary>
 
-    <div class="pt-2 space-y-4">
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="pt-3 space-y-5">
+      <%# One uniform grid (design-sprint prototype): borderless groups with
+          small bold titles, Unit and Capacity-at-most as equal cells at the
+          end. fieldset/legend semantics stay for AT grouping — only the box
+          chrome is gone. %>
+      <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+        <% panel_filter_groups(filter_groups).each do |group, entries| %>
+          <fieldset class="min-w-0">
+            <legend class="pb-1 text-sm font-semibold text-text-heading"><%= characteristic_group_name(group) %></legend>
+            <div class="space-y-2">
+              <% entries.each do |entry| %>
+                <%# No `title:` — a native title on the 16px input is mouse-hover-only
+                    and not reliably exposed to AT. The visible checkbox label IS the
+                    accessible name; the long description belongs to the glossary,
+                    not every filter checkbox. %>
+                <%= ui :checkbox,
+                      name: "characteristics[]",
+                      value: entry.short_code,
+                      label: characteristic_labels.fetch(entry.short_code, entry.label),
+                      checked: Array(params[:characteristics]).include?(entry.short_code),
+                      id: "characteristics_#{entry.short_code}",
+                      data: { action: "change->filter-form#submitNow" } %>
+              <% end %>
+            </div>
+          </fieldset>
+        <% end %>
+
         <%= ui :form_field, label: t("rooms.filters.unit_label"), id: "filter_unit_id" do |f| %>
           <%= ui :select, name: "unit_id",
                 options: [ [ "", t("rooms.filters.unit_all") ] ] + RoomSearch.unit_options.map { |u| [ u.id, u.display_name ] },
@@ -120,32 +145,6 @@
                 data: { action: "input->filter-form#submit" } %>
         <% end %>
       </div>
-
-      <fieldset class="space-y-4">
-        <legend class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.characteristics_legend") %></legend>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <% panel_filter_groups(filter_groups).each do |group, entries| %>
-            <fieldset class="rounded-md border border-border p-4">
-              <legend class="px-1 text-sm font-medium text-text-heading"><%= characteristic_group_name(group) %></legend>
-              <div class="mt-2 space-y-2">
-                <% entries.each do |entry| %>
-                  <%# No `title:` — a native title on the 16px input is mouse-hover-only
-                      and not reliably exposed to AT. The visible checkbox label IS the
-                      accessible name; the long description belongs to the glossary,
-                      not every filter checkbox. %>
-                  <%= ui :checkbox,
-                        name: "characteristics[]",
-                        value: entry.short_code,
-                        label: characteristic_labels.fetch(entry.short_code, entry.label),
-                        checked: Array(params[:characteristics]).include?(entry.short_code),
-                        id: "characteristics_#{entry.short_code}",
-                        data: { action: "change->filter-form#submitNow" } %>
-                <% end %>
-              </div>
-            </fieldset>
-          <% end %>
-        </div>
-      </fieldset>
 
       <div class="flex flex-wrap items-center gap-4">
         <%# The explicit submit is the no-JS fallback — live submits make it a
