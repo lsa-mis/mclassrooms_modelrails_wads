@@ -124,8 +124,8 @@
 # exists to preview.
 #
 # parse_room(row) / parse_department(row) isolation: RoomRecordNumber/
-# RoomNumber/RoomTypeDescription/DepartmentName/RoomSquareFeet/FloorNumber
-# (rooms) and DeptId/DeptDescription/DeptGroup/DeptGroupDescription
+# RoomNumber/RoomTypeDescription/DepartmentName/RoomSquareFeet/
+# RoomStationCount/FloorNumber (rooms) and DeptId/DeptDescription/DeptGroup/DeptGroupDescription
 # (departments) are confirmed against live credentialed access (sync-fix
 # Task 3; see the proven reference `lib/tasks/um_import.rake#upsert_room`/
 # `#load_department_index`) — no other code reaches into a raw API response
@@ -207,6 +207,7 @@ module Sync
         room_number: attrs[:room_number],
         room_type: attrs[:room_type],
         square_feet: attrs[:square_feet],
+        instructional_seat_count: attrs[:instructional_seat_count],
         in_feed: true
       }.merge(dept_attrs)
 
@@ -281,6 +282,13 @@ module Sync
       end
     end
 
+    # RoomStationCount -> instructional_seat_count (sync-fix Task 4): the
+    # real facility list (/aa/ClassroomList/v2/Classrooms, Sync::UpdateFacilityIds)
+    # has NO seat/Capacity field at all, so this is now the ONLY source for
+    # a room's seat count. Sync::UpdateFacilityIds runs AFTER this phase in
+    # RunPipeline's ordering and no longer touches instructional_seat_count
+    # itself — it only reads the value this phase already persisted when it
+    # recomputes Setting.capacity_filter_max (D12).
     def parse_room(row)
       {
         rmrecnbr: row.fetch("RoomRecordNumber").to_s,
@@ -288,6 +296,7 @@ module Sync
         room_type: row["RoomTypeDescription"],
         department_name: row["DepartmentName"].to_s.presence,
         square_feet: row["RoomSquareFeet"],
+        instructional_seat_count: row["RoomStationCount"],
         floor_label: normalize_floor_label(row.fetch("FloorNumber"))
       }
     end

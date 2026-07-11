@@ -1,0 +1,8 @@
+{
+  "Classrooms": {
+    "Classroom": [
+      { "FacilityID": "MLB1200", "BuildingID": "1005046", "BldDescrShort": "MLB", "CampusCd": "100", "CampusDescr": "Ann Arbor" },
+      { "FacilityID": "AH0100", "BuildingID": "1005046", "BldDescrShort": "MLB", "CampusCd": "100", "CampusDescr": "Ann Arbor" }
+    ]
+  }
+}

@@ -131,6 +131,22 @@ RSpec.describe Sync::UpdateRooms do
       expect(german.room_type).to eq("Classroom")
       expect(german.in_feed).to be true
     end
+
+    # sync-fix Task 4 (seat-count source move): the real facility list
+    # (/aa/ClassroomList/v2/Classrooms, Sync::UpdateFacilityIds) has no
+    # seat/Capacity field at all, so RoomInfo's own RoomStationCount
+    # (already carried by rooms_1005046.json) is now the ONLY source for a
+    # room's instructional_seat_count.
+    it "sets instructional_seat_count from RoomInfo's RoomStationCount" do
+      stub_departments_feed
+      stub_department_fallback
+      stub_rooms_feed
+
+      described_class.call(run: run, client: client)
+
+      german = Room.for_current_workspace.find_by!(rmrecnbr: "2005046")
+      expect(german.instructional_seat_count).to eq(60)
+    end
   end
 
   describe "floor_id (D10)" do
