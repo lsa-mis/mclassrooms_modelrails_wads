@@ -15,6 +15,12 @@ get "contact", to: "pages#contact"
 get "find-a-room",      to: "rooms#index",              as: :find_a_room
 get "filters-glossary", to: "characteristics#glossary", as: :filters_glossary
 
+# Convenience alias (product navigation): users naturally type /rooms
+# expecting the room directory; the real index lives at /find-a-room. This
+# redirect does not conflict with `resources :rooms` below, which only draws
+# /rooms/:id (no #index).
+get "rooms", to: redirect("/find-a-room")
+
 # Room detail (MiClassrooms Phase 4 Task 3, contract). Only #show ships this
 # task — #edit/#update land in Task 7, #floor_plan in Task 6 — but all three
 # routes are drawn now per the contract; nothing links to the unimplemented

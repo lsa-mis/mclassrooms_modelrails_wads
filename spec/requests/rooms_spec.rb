@@ -1,5 +1,15 @@
 require "rails_helper"
 
+# MiClassrooms navigation: the rooms index lives at /find-a-room, so /rooms is
+# a route-level convenience redirect (config/routes/app.rb) for anyone who types
+# or bookmarks the obvious URL. Route-level redirect — fires before auth.
+RSpec.describe "GET /rooms", type: :request do
+  it "redirects to Find a Room" do
+    get "/rooms"
+    expect(response).to redirect_to("/find-a-room")
+  end
+end
+
 # MiClassrooms Phase 3 Task 4 (Brief §5.2, §3.2): Find a Room's controller —
 # wires RoomSearch (Task 2), CharacteristicFilterGroups (Task 3), and
 # RoomPolicy (Task 1) into GET /find-a-room. DirectoryScoped resolves
@@ -459,16 +469,26 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).not_to include("(PDF)")
     end
 
-    # MiClassrooms Phase 4 Task 8 breadcrumb retrofit: `building_path` now
-    # exists, but Buildings is admin-only (BuildingPolicy denies every
-    # action to a non-admin) — a viewer must NOT get a link they can't
-    # follow, so the building crumb stays plain, non-interactive text for
-    # them (rooms/_header.html.erb's RoleResolver branch).
-    it "renders the building breadcrumb crumb as plain text, not a link" do
+    # Phase 5 realty-model retrofit (supersedes the original Task 8 admin-only
+    # gate — see git history for the superseded RoleResolver predicate):
+    # BuildingPolicy#show? opens a non-hidden building's detail page to any
+    # viewer, mirroring RoomPolicy#show? exactly — so rooms/_header.html.erb's
+    # `policy(room.building).show?` gate renders the crumb as a REAL link for
+    # a viewer once the building isn't hidden.
+    it "renders the building breadcrumb crumb as a link when the building is not hidden" do
       get room_path(room)
 
-      expect(response.body).not_to include(%(href="#{building_path(building)}"))
-      expect(response.body).to include(building.display_name)
+      expect(response.body).to include(%(href="#{building_path(building)}"))
+    end
+
+    it "renders the building breadcrumb crumb as plain text when the building is hidden" do
+      hidden_building = create(:building, :hidden, workspace: workspace)
+      room_in_hidden_building = create(:room, building: hidden_building, workspace: workspace, facility_code: "MLB1002")
+
+      get room_path(room_in_hidden_building)
+
+      expect(response.body).not_to include(%(href="#{building_path(hidden_building)}"))
+      expect(response.body).to include(hidden_building.display_name)
     end
   end
 
