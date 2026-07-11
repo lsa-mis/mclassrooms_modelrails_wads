@@ -1,0 +1,15 @@
+<%# locals: (entry:, label:) %>
+<%# Inline glossary description via UI::Popover's disclosure pattern — a real
+    button with aria-expanded/aria-controls and a role="dialog" panel that
+    Esc/outside-click closes with focus returned to the trigger. Deliberately
+    NOT a hover tooltip: hover-only fails AAA (1.4.13 + keyboard access).
+    Callers render this only when entry.long_description is present, so a
+    code without glossary copy simply gets no "?" button. %>
+<%= ui :popover, label: t("rooms.filters.about_filter", label: label), align: :end,
+      trigger_class: "btn-touch-target rounded-md text-text-muted hover:text-text-heading focus-ring" do |p| %>
+  <% p.with_trigger do %>
+    <span aria-hidden="true" class="text-sm font-semibold">?</span>
+    <span class="sr-only"><%= t("rooms.filters.about_filter", label: label) %></span>
+  <% end %>
+  <%= entry.long_description %>
+<% end %>

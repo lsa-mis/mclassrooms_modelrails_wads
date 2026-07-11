@@ -182,6 +182,37 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_css("label[for='characteristics_projdigit']", text: "Projector")
   end
 
+  # Filter-label description popovers: the accessible disclosure pattern
+  # (UI::Popover — real button, aria-expanded/controls, role=dialog panel,
+  # Esc/outside-click close) surfacing the glossary's long_description inline.
+  # Rendered ONLY when a description exists.
+  describe "filter description popovers" do
+    before do
+      RoomCharacteristic.find_by!(short_code: "blackout")
+        .update!(long_description: "Shades or curtains that fully darken the room.")
+      RoomCharacteristic.find_by!(short_code: "whtbrd")
+        .update!(long_description: "A wall-mounted dry-erase whiteboard.")
+    end
+
+    it "adds a popover trigger and dialog next to described panel labels" do
+      get find_a_room_path
+
+      panel = page.find("details#more_filters")
+      expect(panel).to have_css("button[aria-haspopup='dialog'][aria-expanded='false']", visible: :all)
+      expect(panel).to have_css("[role='dialog']", text: "Shades or curtains that fully darken the room.", visible: :all)
+    end
+
+    it "adds popovers to described promoted chips and skips undescribed labels" do
+      get find_a_room_path
+
+      popular = page.find("form#find_a_room_form fieldset", match: :first)
+      expect(popular).to have_css("button[aria-haspopup='dialog']")
+      expect(popular).to have_css("[role='dialog']", text: "wall-mounted dry-erase", visible: :all)
+      # projdigit has no long_description — its pill gets no trigger
+      expect(popular.all("button[aria-haspopup='dialog']", visible: :all).count).to eq(1)
+    end
+  end
+
   it "renames vendor group legends through the locale override map" do
     classroom(building, "2002", 30, codes: %w[ethrstud]).room_characteristics
       .first.update!(description: "Ethernet Connection: Students")

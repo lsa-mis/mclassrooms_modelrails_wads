@@ -76,8 +76,9 @@
           <%# Pill treatment (sprint prototype): the native checkbox stays
               visible inside the pill — the border/tint is presentation, the
               checkbox is the control. %>
-          <span class="inline-flex items-center rounded-full border border-border px-4 min-h-11
-                       has-checked:border-interactive has-checked:bg-interactive-subtle">
+          <span class="inline-flex items-center gap-1 rounded-full border border-border min-h-11
+                       has-checked:border-interactive has-checked:bg-interactive-subtle
+                       <%= entry.long_description.present? ? 'ps-4 pe-1' : 'px-4' %>">
             <%= ui :checkbox,
                   name: "characteristics[]",
                   value: entry.short_code,
@@ -85,6 +86,10 @@
                   checked: Array(params[:characteristics]).include?(entry.short_code),
                   id: "characteristics_#{entry.short_code}",
                   data: { action: "change->filter-form#submitNow" } %>
+            <% if entry.long_description.present? %>
+              <%= render "characteristic_help", entry: entry,
+                    label: characteristic_labels.fetch(entry.short_code, entry.label) %>
+            <% end %>
           </span>
         <% end %>
       </div>
@@ -112,19 +117,24 @@
         <% panel_filter_groups(filter_groups).each do |group, entries| %>
           <fieldset class="min-w-0">
             <legend class="pb-1 text-sm font-semibold text-text-heading"><%= characteristic_group_name(group) %></legend>
-            <div class="space-y-2">
+            <div class="space-y-1">
               <% entries.each do |entry| %>
-                <%# No `title:` — a native title on the 16px input is mouse-hover-only
-                    and not reliably exposed to AT. The visible checkbox label IS the
-                    accessible name; the long description belongs to the glossary,
-                    not every filter checkbox. %>
-                <%= ui :checkbox,
-                      name: "characteristics[]",
-                      value: entry.short_code,
-                      label: characteristic_labels.fetch(entry.short_code, entry.label),
-                      checked: Array(params[:characteristics]).include?(entry.short_code),
-                      id: "characteristics_#{entry.short_code}",
-                      data: { action: "change->filter-form#submitNow" } %>
+                <div class="flex items-center justify-between gap-2">
+                  <%# The visible checkbox label IS the accessible name; the
+                      long description rides in the popover partial (a real
+                      disclosure, not a hover-only title attribute). %>
+                  <%= ui :checkbox,
+                        name: "characteristics[]",
+                        value: entry.short_code,
+                        label: characteristic_labels.fetch(entry.short_code, entry.label),
+                        checked: Array(params[:characteristics]).include?(entry.short_code),
+                        id: "characteristics_#{entry.short_code}",
+                        data: { action: "change->filter-form#submitNow" } %>
+                  <% if entry.long_description.present? %>
+                    <%= render "characteristic_help", entry: entry,
+                          label: characteristic_labels.fetch(entry.short_code, entry.label) %>
+                  <% end %>
+                </div>
               <% end %>
             </div>
           </fieldset>
