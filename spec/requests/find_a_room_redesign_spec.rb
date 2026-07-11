@@ -54,7 +54,13 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(input["aria-label"]).to eq(I18n.t("rooms.filters.search_accessible_label"))
     expect(page).to have_css("label[for='filter_q']", text: /\A#{I18n.t("rooms.filters.search_label")}\z/)
     expect(page).to have_css("label[for='filter_capacity_min']", normalize_ws: true,
-                             text: "#{I18n.t('rooms.filters.capacity_label')} #{I18n.t('rooms.filters.capacity_qualifier')}")
+                             text: /\A#{I18n.t('rooms.filters.capacity_label')}\z/)
+    # "minimum" rides as a suffix hint, associated via aria-describedby so the
+    # accessible name stays the label while AT still hears the qualifier.
+    input = page.find("input[name='capacity_min']")
+    expect(input["aria-describedby"]).to eq("filter_capacity_min_hint")
+    expect(page).to have_css("#filter_capacity_min_hint", text: I18n.t("rooms.filters.capacity_min_hint"))
+    expect(I18n.t("rooms.filters.capacity_min_hint")).to eq("minimum")
   end
 
   it "keeps minimum capacity always visible and tucks maximum capacity behind More filters" do
