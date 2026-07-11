@@ -43,6 +43,20 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_no_css("input[name='room']")
   end
 
+  # Prototype labeling: compact visible labels, but accessible names stay
+  # descriptive — the aria-label is a superset of the visible label text
+  # (WCAG 2.5.3 Label in Name), and the placeholder is only a hint.
+  it "labels search compactly with a descriptive accessible name and prototype placeholder" do
+    get find_a_room_path
+
+    input = page.find("input[name='q']")
+    expect(input["placeholder"]).to eq(I18n.t("rooms.filters.search_placeholder"))
+    expect(input["aria-label"]).to eq(I18n.t("rooms.filters.search_accessible_label"))
+    expect(page).to have_css("label[for='filter_q']", text: /\A#{I18n.t("rooms.filters.search_label")}\z/)
+    expect(page).to have_css("label[for='filter_capacity_min']", normalize_ws: true,
+                             text: "#{I18n.t('rooms.filters.capacity_label')} #{I18n.t('rooms.filters.capacity_qualifier')}")
+  end
+
   it "keeps minimum capacity always visible and tucks maximum capacity behind More filters" do
     get find_a_room_path
 
