@@ -93,19 +93,28 @@ en:
       current_room: "Current room"
     index:
       title: "Find a Room"
+      subtitle: "Search classrooms by size, features, and location — results update as you filter."
       results_frame_label: "Room search results"
       results_heading: "Rooms"
       results_summary:
         one: "1 room found"
         other: "%{count} rooms found"
       no_results: "No rooms match your filters."
+      no_results_hint: "Remove a filter to widen the search — the count above updates as you do."
+      chips:
+        remove: "Remove filter:"
       buildings_heading: "Buildings"
       views_nav_label: "Visibility"
       views:
         active: "Listed"
         inactive_rooms: "Hidden rooms"
         inactive_buildings: "Hidden buildings"
+      inactive_view_notice:
+        inactive_rooms: "Viewing hidden rooms — these are not visible in public results."
+        inactive_buildings: "Viewing rooms in hidden buildings — these are not visible in public results."
+        back_to_active: "Back to listed rooms"
       summary:
+        query: "Search: %{value}"
         building: "Building: %{value}"
         room: "Room: %{value}"
         unit: "School/College: %{value}"
@@ -116,8 +125,15 @@ en:
         separator: ", "
     filters:
       form_label: "Filter rooms"
-      building_label: "Building"
-      room_label: "Room name or number"
+      card_title: "Filters"
+      clear_all: "Clear all"
+      applied_count:
+        one: "%{count} filter applied"
+        other: "%{count} filters applied"
+      search_label: "Search building or room"
+      capacity_min_hint: "seats or more"
+      popular_legend: "Popular features"
+      more_filters: "More filters"
       unit_label: "School/College"
       unit_all: "All schools/colleges"
       capacity_min_label: "Minimum capacity"
@@ -128,15 +144,14 @@ en:
         default: "Building, then room"
         capacity_asc: "Capacity (low to high)"
         capacity_desc: "Capacity (high to low)"
-      per_label: "Results per page"
       submit: "Apply filters"
       reset: "Reset filters"
       glossary_link: "What do these filters mean?"
     row:
       no_thumbnail: "No photo available"
-      capacity:
-        one: "1 seat"
-        other: "%{count} seats"
+      seats_label:
+        one: "seat"
+        other: "seats"
       ada:
         one: "+1 ADA"
         other: "+%{count} ADA"
@@ -144,7 +159,3 @@ en:
       room_number: "Room number"
       unit: "School/College"
       characteristics_heading: "Characteristics"
-    building_card:
-      classroom_count:
-        one: "1 classroom"
-        other: "%{count} classrooms"

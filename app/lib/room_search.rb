@@ -52,6 +52,7 @@ class RoomSearch
     scope = @base.joins(:building).left_outer_joins(:floor)
                  .preload(:building, :floor, :unit, :room_characteristics,
                           gallery_images: { image_attachment: :blob })
+    scope = filter_query(scope)
     scope = filter_building(scope)
     scope = filter_room_name(scope)
     scope = scope.where(unit_id: @params[:unit_id]) if @params[:unit_id].present?
@@ -78,6 +79,7 @@ class RoomSearch
   # Unbounded endpoints (0 / bound) drop out of the label entirely.
   def summary
     parts = []
+    parts << I18n.t("rooms.index.summary.query", value: @params[:q].strip) if @params[:q].present?
     parts << I18n.t("rooms.index.summary.building", value: @params[:building]) if @params[:building].present?
     parts << I18n.t("rooms.index.summary.room", value: @params[:room]) if @params[:room].present?
     parts << I18n.t("rooms.index.summary.unit", value: unit.display_name) if unit
@@ -107,6 +109,20 @@ class RoomSearch
     scope.where(building_id: Building.search_name(@params[:building]).select(:id))
   end
 
+  # Redesign (Brief §5.2 successor): the form's single search box. One query
+  # matched against building name OR room (same matchers as filter_room_name)
+  # — the union, so "Mason" lists a building's rooms and "mas1200" jumps to a
+  # room without the user choosing a field first. The legacy `building`/`room`
+  # params stay supported above for shared pre-redesign URLs.
+  def filter_query(scope)
+    q = @params[:q].to_s.strip
+    return scope if q.blank?
+    scope.merge(
+      Room.where(building_id: Building.search_name(q).select(:id))
+          .or(room_text_matches(q))
+    )
+  end
+
   # FTS vector OR normalized facility-code substring OR nickname substring
   # ("mlb1200" and "Aud 3" both work — Brief §5.2). SQLite's LIKE is already
   # ASCII-case-insensitive, so the comparison works regardless of case:
@@ -116,13 +132,15 @@ class RoomSearch
   def filter_room_name(scope)
     q = @params[:room].to_s.strip
     return scope if q.blank?
+    scope.merge(room_text_matches(q))
+  end
+
+  def room_text_matches(q)
     code = "%#{Room.sanitize_sql_like(q.gsub(/\s+/, '').upcase)}%"
     nick = "%#{Room.sanitize_sql_like(q)}%"
-    scope.merge(
-      Room.where(id: Room.search_name(q).select(:id))
-          .or(Room.where("rooms.facility_code_normalized LIKE ?", code))
-          .or(Room.where("rooms.nickname LIKE ?", nick))
-    )
+    Room.where(id: Room.search_name(q).select(:id))
+        .or(Room.where("rooms.facility_code_normalized LIKE ?", code))
+        .or(Room.where("rooms.nickname LIKE ?", nick))
   end
 
   def filter_capacity(scope)

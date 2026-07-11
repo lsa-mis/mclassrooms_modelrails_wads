@@ -445,3 +445,16 @@ body.a11y-sim-cataract     { filter: blur(1.5px) contrast(0.8) brightness(1.1); 
   50%      { scale: 1.15; }
 }
 
+/* Find a Room live-count flash: the results frame's children are REPLACED on
+   every filter change, so the fresh count node re-runs this one-shot animation
+   per re-render — no JS. Sunken-surface tint fading to transparent (semantic
+   token, swaps under .dark at use time); gated motion-safe: in the view. */
+@theme {
+  --animate-count-flash: count-flash 700ms ease-out;
+}
+
+@keyframes count-flash {
+  from { background-color: var(--color-surface-sunken); }
+  to   { background-color: transparent; }
+}
+

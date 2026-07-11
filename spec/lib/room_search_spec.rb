@@ -71,6 +71,36 @@ RSpec.describe RoomSearch do
     expect(described_class.new(building: "Angell").results).to contain_exactly(aud)
   end
 
+  # Redesign (2026-07 sprint): the form's single search box sends `q`, which
+  # matches EITHER a building name or a room (FTS/facility-code/nickname) —
+  # the union, not the intersection, so one box serves both mental models.
+  describe "merged q param" do
+    it "matches rooms by building name" do
+      expect(described_class.new(q: "Mason").results).to contain_exactly(big, small)
+    end
+
+    it "matches a room by facility code when no building matches" do
+      expect(described_class.new(q: "mas1200").results).to contain_exactly(big)
+    end
+
+    it "matches a room by nickname" do
+      aud.update!(nickname: "Grand Aud")
+      expect(described_class.new(q: "grand aud").results).to contain_exactly(aud)
+    end
+
+    it "composes with other filters" do
+      expect(described_class.new(q: "Mason", capacity_min: "40").results).to contain_exactly(big)
+    end
+
+    it "appears in the summary" do
+      expect(described_class.new(q: "Mason").summary).to include("Mason")
+    end
+
+    it "does not filter when blank" do
+      expect(described_class.new(q: "  ").results).to contain_exactly(big, small, aud)
+    end
+  end
+
   it "filters by unit_id alone" do
     unit_a = create(:unit, workspace: mason.workspace)
     unit_b = create(:unit, workspace: mason.workspace)

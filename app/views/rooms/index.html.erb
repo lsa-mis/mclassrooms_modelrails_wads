@@ -1,55 +1,134 @@
-<%# MiClassrooms Phase 3 Task 5 (Brief §5.2): Find a Room — filters, live
-    Turbo-frame results, building cards. Filter submissions target the
-    `find_a_room_results` frame only (see `_filters.html.erb`'s
-    `data-turbo-frame`/`data-turbo-action`), so the heading/announcement/form
-    chrome outside the frame never re-renders on a filter change.
+<%# Redesign (2026-07 design sprint) of the Phase 3 Task 5 page: filter card
+    (_filters.html.erb) above, results Turbo frame below. The frame now opens
+    with a STICKY results header — live count, removable applied-filter chips,
+    sort, and the admin view nav — so the live feedback stays in view while
+    the card grid scrolls (the sprint's core finding: the old full-height
+    filter form pushed results below the fold, making the already-working
+    Turbo updates invisible). Filter submissions still target only the
+    `find_a_room_results` frame; the heading/announcement/form chrome outside
+    it never re-renders. The `[busy]` opacity utility on the frame is the
+    pending state — Turbo sets/clears the attribute itself.
 
-    Phase 5 Task 8: the announcement banner is now the SHARED
-    announcements/_banner partial (also rendered on pages#home/#about)
-    instead of its own inline markup — see that partial for the no-op-on-nil
-    and landmark-<aside> contract. %>
+    The filter-form Stimulus controller sits on this wrapper (not the <form>)
+    so frame-side controls — the sort select, wired to the form via its
+    `form=` attribute — keep their actions after every frame re-render.
+
+    Phase 5 Task 8: the announcement banner is the SHARED announcements/_banner
+    partial (also rendered on pages#home/#about) — see that partial for the
+    no-op-on-nil and landmark-<aside> contract. %>
 <% content_for(:title) { t("rooms.index.title") } %>
 
-<div class="max-w-5xl mx-auto px-4 py-8">
+<div class="max-w-5xl mx-auto px-4 py-8" data-controller="filter-form">
   <h1 class="text-2xl font-bold text-text-heading"><%= t("rooms.index.title") %></h1>
+  <p class="mt-1 text-sm text-text-body"><%= t("rooms.index.subtitle") %></p>
 
   <%= render "announcements/banner", announcement: @announcement %>
 
   <%= render "filters", search: @search, filter_groups: @filter_groups %>
 
-  <%= turbo_frame_tag "find_a_room_results", "aria-label": t("rooms.index.results_frame_label"), class: "block mt-8" do %>
-    <%# Announces filter re-renders to assistive tech (Brief §5.2): the active-filter
-        summary plus a result count, in one polite live region so a screen-reader
-        user gets the same feedback a sighted user gets from watching the list change. %>
-    <p role="status" aria-live="polite" aria-atomic="true" class="text-text-body">
-      <% if @search.summary.present? %>
-        <span class="block font-medium text-text-heading"><%= @search.summary %></span>
+  <%= turbo_frame_tag "find_a_room_results", "aria-label": t("rooms.index.results_frame_label"),
+        class: "block mt-6 motion-safe:transition-opacity [&[busy]]:opacity-60" do %>
+    <% current_view = params[:view].presence_in(RoomsController::VIEWS) || "active" %>
+    <div class="sticky top-0 z-10 bg-surface border-b border-border py-3
+                flex flex-wrap items-center gap-x-4 gap-y-2">
+      <%# One polite live region announces re-renders to assistive tech: the
+          count plus the full active-filter sentence (visually the sentence is
+          replaced by the removable chips alongside). %>
+      <p role="status" aria-live="polite" aria-atomic="true"
+         class="text-lg font-semibold text-text-heading m-0 motion-safe:animate-count-flash rounded px-1 -mx-1">
+        <%= t("rooms.index.results_summary", count: @pagy.count) %>
+        <% if @search.summary.present? %>
+          <span class="sr-only"><%= @search.summary %></span>
+        <% end %>
+      </p>
+
+      <% chips = filter_chips(@filter_params) %>
+      <% if chips.any? %>
+        <span class="flex flex-wrap items-center gap-2">
+          <% chips.each do |label, url| %>
+            <%= link_to url,
+                  data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
+                  class: "inline-flex items-center gap-1.5 rounded-full border border-border
+                         bg-surface-sunken px-3 min-h-11 text-sm text-text-body focus-ring" do %>
+              <span class="sr-only"><%= t("rooms.index.chips.remove") %></span><%= label %><span aria-hidden="true" class="font-semibold">×</span>
+            <% end %>
+          <% end %>
+          <%# filter-form#clear empties the form's inputs alongside the frame
+              navigation — without it the results reset while the (out-of-frame)
+              search box still shows the old query. %>
+          <%= link_to t("rooms.filters.clear_all"),
+                find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
+                data: { turbo_frame: "find_a_room_results", turbo_action: "advance",
+                        action: "filter-form#clear" },
+                class: "text-sm text-interactive underline hover:no-underline
+                       min-h-11 inline-flex items-center focus-ring rounded" %>
+        </span>
       <% end %>
-      <%= t("rooms.index.results_summary", count: @pagy.count) %>
-    </p>
+
+      <span class="ms-auto flex flex-wrap items-center gap-4">
+        <%# Lives inside the frame (re-renders with results) but submits the
+            form outside it via `form=` — sort is a property of the results,
+            so it belongs with them (sprint decision; per-page dropped). %>
+        <%= ui :form_field, label: t("rooms.filters.sort_label"), id: "filter_sort" do |f| %>
+          <%= ui :select, name: "sort", form: "find_a_room_form",
+                options: RoomSearch::SORTS.map { |s| [ s, t("rooms.filters.sorts.#{s}") ] },
+                selected: @search.sort,
+                data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
+        <% end %>
+
+        <% if policy(Room).view_inactive? %>
+          <nav aria-label="<%= t('rooms.index.views_nav_label') %>" class="flex flex-wrap gap-4">
+            <% RoomsController::VIEWS.each do |view_key| %>
+              <%= link_to t("rooms.index.views.#{view_key}"), find_a_room_path(view: view_key),
+                    "aria-current": (current_view == view_key ? "page" : nil),
+                    data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
+                    class: "text-sm min-h-11 inline-flex items-center focus-ring rounded
+                           #{current_view == view_key ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" %>
+            <% end %>
+          </nav>
+        <% end %>
+      </span>
+    </div>
+
+    <% if current_view != "active" %>
+      <%# Sprint rule: entering admin mode is quiet, BEING in it is
+          unmistakable — a :warning alert (renders role="status"/polite, the
+          AAA-proven primitive) re-renders inside the frame on every filter
+          change for free. Only reachable when base_scope's view_inactive?
+          authorize passed, so no extra policy check here. %>
+      <div class="mt-4">
+        <%= ui :alert, tone: :warning do |a| %>
+          <% a.with_alert_description do %>
+            <p class="text-sm"><%= t("rooms.index.inactive_view_notice.#{current_view}") %></p>
+            <%= link_to t("rooms.index.inactive_view_notice.back_to_active"),
+                  find_a_room_path,
+                  data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
+                  class: "text-sm text-interactive underline hover:no-underline
+                         min-h-11 inline-flex items-center focus-ring rounded" %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
 
     <% if @rooms.any? %>
       <h2 class="sr-only"><%= t("rooms.index.results_heading") %></h2>
-      <ul class="mt-4 divide-y divide-border border-t border-border">
+      <ul class="mt-4 grid gap-3 sm:grid-cols-2">
         <% @rooms.each do |room| %>
           <%= render "room_row", room: room %>
         <% end %>
       </ul>
 
-      <% if @buildings.any? %>
-        <aside aria-label="<%= t('rooms.index.buildings_heading') %>" class="mt-8">
-          <h2 class="text-lg font-semibold text-text-heading"><%= t("rooms.index.buildings_heading") %></h2>
-          <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <% @buildings.each do |building| %>
-              <%= render "building_card", building: building %>
-            <% end %>
-          </div>
-        </aside>
-      <% end %>
-
       <%= render "shared/pagination", pagy: @pagy %>
     <% else %>
-      <p class="mt-6 text-text-muted"><%= t("rooms.index.no_results") %></p>
+      <div class="py-12 text-center">
+        <p class="text-text-body font-medium"><%= t("rooms.index.no_results") %></p>
+        <p class="mt-1 text-sm text-text-body"><%= t("rooms.index.no_results_hint") %></p>
+        <%= link_to t("rooms.filters.clear_all"),
+              find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
+              data: { turbo_frame: "find_a_room_results", turbo_action: "advance",
+                      action: "filter-form#clear" },
+              class: "mt-4 btn-secondary inline-flex items-center" %>
+      </div>
     <% end %>
   <% end %>
 </div>

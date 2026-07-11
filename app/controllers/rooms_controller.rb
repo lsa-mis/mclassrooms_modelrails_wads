@@ -65,15 +65,10 @@ class RoomsController < ApplicationController
 
   def index
     authorize Room
-    @search = RoomSearch.new(filter_params, base: base_scope)
+    @filter_params = filter_params
+    @search = RoomSearch.new(@filter_params, base: base_scope)
     @pagy, @rooms = pagy(:offset, @search.results, limit: @search.per_page)
     @filter_groups = CharacteristicFilterGroups.filters
-    # with_attached_photo (Rails' auto-generated has_one_attached scope) preloads
-    # photo_attachment + blob for every building in one pass — `_building_card`
-    # calls `building.photo.attached?` per card, which N+1s per building without
-    # it (Task 8 system specs surfaced this: Bullet raises with 2+ buildings in
-    # the results).
-    @buildings = Building.where(id: @rooms.map(&:building_id).uniq).order(:name).with_attached_photo
     @announcement = Announcement.for(:find_a_room_page)
     respond_to do |format|
       format.html # never fresh_when here — D14: results are live queries
@@ -459,8 +454,10 @@ class RoomsController < ApplicationController
     end
   end
 
+  # `q` is the redesign's merged search box; `building`/`room` stay permitted
+  # for shared pre-redesign URLs (RoomSearch still honors them).
   def filter_params
-    params.permit(:building, :room, :unit_id, :capacity_min, :capacity_max,
+    params.permit(:q, :building, :room, :unit_id, :capacity_min, :capacity_max,
                   :sort, :per, :view, characteristics: [])
   end
 

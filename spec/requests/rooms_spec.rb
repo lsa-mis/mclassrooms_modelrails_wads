@@ -343,13 +343,15 @@ RSpec.describe "GET /find-a-room", type: :request do
     end
 
     # Exercises the row branches a bare factory room never touches: a gallery
-    # thumbnail (Active Storage variant), the ADA badge, a real characteristic
-    # icon chip (icon_key must resolve via IconRegistry — the display_rule
-    # factory's own default "wifi" isn't a real icon, so this proves the
-    # happy path with one that is), and the building card. None of this is
-    # covered elsewhere, so a regression here (e.g. a bad variant call) would
-    # otherwise only surface in Task 8's system specs.
-    it "renders a gallery thumbnail, ADA badge, characteristic icon chip, and building card" do
+    # thumbnail (Active Storage variant), the ADA badge, and a real
+    # characteristic icon chip (icon_key must resolve via IconRegistry — the
+    # display_rule factory's own default "wifi" isn't a real icon, so this
+    # proves the happy path with one that is). None of this is covered
+    # elsewhere, so a regression here (e.g. a bad variant call) would
+    # otherwise only surface in Task 8's system specs. (The buildings card
+    # grid was dropped in the 2026-07 redesign — cards carry the building
+    # name themselves.)
+    it "renders a gallery thumbnail, ADA badge, and characteristic icon chip" do
       listed_classroom.update!(ada_seat_count: 5)
       create(:room_gallery_image, room: listed_classroom, workspace: workspace)
       # Normalization-stable short_code: RoomCharacteristic stores the raw value
@@ -366,7 +368,7 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("rooms.row.ada", count: 5))
-      expect(response.body).to include(I18n.t("rooms.building_card.classroom_count", count: 1))
+      expect(response.body).not_to include(I18n.t("rooms.index.buildings_heading"))
     end
 
     # Teeth for the nested-interactive a11y fix: the row's characteristic icon
@@ -384,9 +386,12 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       get find_a_room_path
 
-      summary_html = response.body[%r{<summary\b.*?</summary>}m]
+      # The page now has several <summary> elements (the More-filters
+      # disclosure ships one before any room card), so scan them all and pick
+      # the row summary carrying the chip.
+      summaries = response.body.scan(%r{<summary\b.*?</summary>}m)
+      summary_html = summaries.find { |s| s.include?('class="sr-only">Projector') }
       expect(summary_html).to be_present
-      expect(summary_html).to include('class="sr-only">Projector')
       # No focusable/interactive descendant of <summary>: the old ui :tooltip
       # wrapper carried tabindex="0" + role="tooltip"; the plain <span> chip does not.
       expect(summary_html).not_to include("tabindex")
