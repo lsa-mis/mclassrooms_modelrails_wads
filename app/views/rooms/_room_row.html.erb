@@ -12,16 +12,13 @@
   <details class="group">
     <summary class="list-none min-h-11 flex flex-wrap items-center gap-4 py-1 px-2 -mx-2
                     cursor-pointer rounded-md focus-ring">
+      <%# Photo only when one exists — an empty camera placeholder on most
+          cards is noise the sprint prototype dropped. %>
       <% if (thumbnail = room_thumbnail_image(room)) %>
         <%= ui :image,
               src: url_for(thumbnail.image.variant(resize_to_fill: [ 96, 96 ])),
               alt: room.display_name,
               class: "size-16 rounded-md object-cover shrink-0" %>
-      <% else %>
-        <span class="size-16 rounded-md bg-surface-sunken flex items-center justify-center shrink-0" aria-hidden="true">
-          <%= icon(:camera, size: :md, class: "text-text-muted") %>
-        </span>
-        <span class="sr-only"><%= t("rooms.row.no_thumbnail") %></span>
       <% end %>
 
       <span class="flex-1 min-w-40">
@@ -42,28 +39,25 @@
             <%= t("rooms.row.seats_label", count: room.instructional_seat_count.to_i) %>
           </span>
         </span>
-        <% if room.ada_seat_count.to_i.positive? %>
-          <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :info %>
-        <% end %>
-      </span>
-
-      <span class="flex items-center gap-1.5 shrink-0">
-        <% room_characteristic_icons(room).each do |icon_key, label| %>
-          <%# NON-interactive chip: HTML5 forbids focusable/interactive descendants
-              of <summary> (axe-core nested-interactive), so this is a plain <span>
-              — the aria-hidden icon plus a visually-hidden label give the chip an
-              accessible name WITHOUT any tabindex/keydown element. The long
-              description / hover tooltip lives in the glossary (Task 7) and on the
-              room detail page (phase 4), not on this row chip. %>
-          <span class="inline-flex items-center">
-            <span class="sr-only"><%= label %></span>
-            <%= icon(icon_key, size: :sm, class: "text-text-muted") %>
-          </span>
-        <% end %>
       </span>
 
       <%= icon(:chevron_down, size: :sm,
             class: "text-text-muted shrink-0 transition-transform group-open:rotate-180") %>
+
+      <%# Labeled tags, not icons (sprint prototype): a capped, priority-ordered
+          few read at a glance; the expanded details below still lists all.
+          Plain <span>s — HTML5 forbids interactive descendants of <summary>. %>
+      <% tags = room_card_tags(room) %>
+      <% if tags.any? || room.ada_seat_count.to_i.positive? %>
+        <span class="w-full flex flex-wrap gap-1.5 pt-1">
+          <% tags.each do |label| %>
+            <span class="text-xs border border-border rounded-md px-2 py-0.5 text-text-body"><%= label %></span>
+          <% end %>
+          <% if room.ada_seat_count.to_i.positive? %>
+            <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :success %>
+          <% end %>
+        </span>
+      <% end %>
     </summary>
 
     <div class="pl-2 pb-4 pt-1 text-sm text-text-body space-y-1">

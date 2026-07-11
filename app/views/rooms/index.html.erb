@@ -69,12 +69,13 @@
         <%# Lives inside the frame (re-renders with results) but submits the
             form outside it via `form=` — sort is a property of the results,
             so it belongs with them (sprint decision; per-page dropped). %>
-        <%= ui :form_field, label: t("rooms.filters.sort_label"), id: "filter_sort" do |f| %>
-          <%= ui :select, name: "sort", form: "find_a_room_form",
+        <label class="flex items-center gap-2 text-sm text-text-body" for="filter_sort">
+          <%= t("rooms.filters.sort_label") %>
+          <%= ui :select, name: "sort", form: "find_a_room_form", id: "filter_sort",
                 options: RoomSearch::SORTS.map { |s| [ s, t("rooms.filters.sorts.#{s}") ] },
                 selected: @search.sort,
-                data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
-        <% end %>
+                data: { action: "change->filter-form#submitNow" } %>
+        </label>
 
         <% if policy(Room).view_inactive? %>
           <nav aria-label="<%= t('rooms.index.views_nav_label') %>" class="flex flex-wrap gap-4">
