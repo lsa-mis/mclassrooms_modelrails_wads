@@ -84,4 +84,21 @@ RSpec.describe ReferenceData do
       expect(CharacteristicDisplayRule.where(workspace: other_workspace).count).to eq(1)
     end
   end
+
+  # Guards the REAL shipped seed file (not a throwaway fixture): every icon_key
+  # it references must resolve to an installed IconRegistry icon, or the
+  # characteristic chip renders with a blank/broken icon in the directory.
+  # Regression guard — computer/video-camera/table/whiteboard shipped invalid.
+  describe "db/seeds/reference_data.yml (shipped content)" do
+    it "references only icon_keys that IconRegistry actually provides" do
+      available = IconRegistry.available_icons.map(&:to_s)
+      rules = YAML.load_file(Rails.root.join("db/seeds/reference_data.yml")).fetch("characteristic_display_rules")
+      icon_keys = rules.filter_map { |rule| rule["icon_key"].presence }
+
+      missing = icon_keys.reject { |key| available.include?(key) }
+      expect(missing).to be_empty,
+        "reference_data.yml uses icon_keys IconRegistry does not provide: #{missing.inspect} " \
+        "(available: #{available.sort.inspect})"
+    end
+  end
 end
