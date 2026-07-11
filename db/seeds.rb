@@ -80,3 +80,20 @@ if TenancyConfig.shared?
   shared_workspace = Workspace.find_by!(slug: ENV.fetch("TENANCY_SHARED_WORKSPACE_SLUG"))
   ReferenceData.seed!(workspace: shared_workspace)
 end
+
+# --- MiClassrooms DEV-ONLY sample data (fork-owned) --------------------------
+# Populates Find a Room / room pages / admin consoles with realistic
+# browsable data — buildings, floors, units, rooms, characteristics, editor
+# assignments, notes, and announcements. Guarded so it NEVER runs outside
+# development, and only ever writes to the shared workspace (never any
+# other tenant). See db/seeds/development_sample.rb; also runnable standalone
+# via `rails dev:sample_data` (lib/tasks/dev.rake). Idempotent either way.
+# Disabled: real U-M data is now loaded via `rails "um:import"` (the
+# production-proven gateway recipe — see lib/tasks/um_import.rake), so db:seed
+# no longer auto-populates fake sample data into the shared workspace. The
+# fake dataset is still available on demand via `rails dev:sample_data` for
+# offline work without gateway credentials.
+# if Rails.env.development? && TenancyConfig.shared?
+#   require_relative "seeds/development_sample"
+#   DevelopmentSampleData.seed!
+# end
