@@ -21,6 +21,13 @@
         "ChrstcDescrShort": "Whtbrd>25",
         "ChrstcDescr": "Whiteboard (25+ sqft)",
         "ChrstcDescr254": "Whiteboard surface exceeding 25 square feet"
+      },
+      {
+        "RmRecNbr": "2005047",
+        "Chrstc": 201,
+        "ChrstcDescrShort": "Proj",
+        "ChrstcDescr": "Projector",
+        "ChrstcDescr254": "Ceiling-mounted projector"
       }
     ]
   }

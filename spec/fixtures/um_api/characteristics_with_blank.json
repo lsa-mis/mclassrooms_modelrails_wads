@@ -1,18 +1,20 @@
 {
-  "Characteristics": [
-    {
-      "Code": "INSTRCOMP",
-      "ShortCode": "InstrComp",
-      "Description": "Instructor Computer",
-      "LongDescription": "Instructor station computer with document camera",
-      "Status": "A"
-    },
-    {
-      "Code": "BADCODE",
-      "ShortCode": "@#$",
-      "Description": "Malformed short code",
-      "LongDescription": "A row whose short code is all punctuation and normalizes to blank",
-      "Status": "A"
-    }
-  ]
+  "Classrooms": {
+    "Classroom": [
+      {
+        "RmRecNbr": "2005046",
+        "Chrstc": 101,
+        "ChrstcDescrShort": "InstrComp",
+        "ChrstcDescr": "Instructor Computer",
+        "ChrstcDescr254": "Instructor station computer with document camera"
+      },
+      {
+        "RmRecNbr": "2005046",
+        "Chrstc": 999,
+        "ChrstcDescrShort": "@#$",
+        "ChrstcDescr": "Malformed short code",
+        "ChrstcDescr254": "A row whose short code is all punctuation and normalizes to blank"
+      }
+    ]
+  }
 }

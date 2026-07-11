@@ -1,16 +1,19 @@
 {
-  "Contacts": [
-    {
-      "SchedName": "LSA Classroom Scheduling",
-      "SchedEmail": "lsa.scheduling@umich.edu",
-      "SchedPhone": "734-555-0100",
-      "SchedDetailUrl": "https://lsa.umich.edu/classrooms/mlb1200",
-      "SchedUsageGuidelinesUrl": "https://lsa.umich.edu/classrooms/guidelines",
-      "SupportDeptId": "190000",
-      "SupportDeptDescr": "LSA Technology Services",
-      "SupportEmail": "lsa.support@umich.edu",
-      "SupportPhone": null,
-      "SupportUrl": "https://lsa.umich.edu/support"
-    }
-  ]
+  "Classrooms": {
+    "Classroom": [
+      {
+        "FacilityID": "MLB1200",
+        "RmRecNbr": "2005046",
+        "ContactName": "LSA Classroom Scheduling",
+        "Email": "lsa.scheduling@umich.edu",
+        "Phone": "734-555-0100",
+        "ScheduleURL": "https://lsa.umich.edu/classrooms/mlb1200",
+        "UsageGuideLinesURL": "https://lsa.umich.edu/classrooms/guidelines",
+        "SpptDeptID": "190000",
+        "SpptCntctEmail": "lsa.support@umich.edu",
+        "SpptCntctPhone": " ",
+        "SpptCntctURL": "https://lsa.umich.edu/support"
+      }
+    ]
+  }
 }
