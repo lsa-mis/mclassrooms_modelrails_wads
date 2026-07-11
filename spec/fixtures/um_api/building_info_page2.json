@@ -1,0 +1,19 @@
+{
+  "ListOfBldgs": {
+    "Buildings": [
+      {
+        "BuildingRecordNumber": "1005200",
+        "BuildingLongDescription": "Danto Engineering Development Center",
+        "BuildingShortDescription": "DEDC",
+        "BuildingCampusCode": "250",
+        "BuildingCampusDescription": "Michigan Medicine",
+        "BuildingStreetNumber": "4901",
+        "BuildingStreetDirection": null,
+        "BuildingStreetName": "Evergreen Rd",
+        "BuildingCity": "Dearborn",
+        "BuildingState": "MI",
+        "BuildingPostal": "48128"
+      }
+    ]
+  }
+}

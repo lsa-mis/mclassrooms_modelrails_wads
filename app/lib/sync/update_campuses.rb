@@ -24,12 +24,17 @@
 # workspace_id onto brand-new records for free (verified empirically — see
 # task-7-report.md).
 #
-# parse_campus(row) isolation: per spec/support/um_api_stubs.rb's fixture
-# disclaimer, the real Campuses endpoint's field names haven't been
-# confirmed against credentialed access. CampusCd/CampusDescr here match
-# spec/fixtures/um_api/campuses.json exactly; if phase 8's live cutover finds
-# different names, this is the ONLY method that needs to change — no other
-# code reaches into a raw API response hash directly.
+# parse_campus(row) isolation: CampusCd/CampusDescr are confirmed against
+# live credentialed access (sync-fix Task 2; see the proven reference
+# `lib/tasks/um_import.rake#import_campuses`) — no other code reaches into a
+# raw API response hash directly, so a future field-name change (unlikely;
+# this endpoint is already verified) would still only touch this one method.
+#
+# Listing call: `client.fetch_all(...)` (UmApi::Client, sync-fix Task 1)
+# replaces the old `each_page` — it pages via the real `$start_index`/
+# `$count` params and digs the real two-level envelope
+# (`resp["Campuses"]["Campus"]`) instead of `each_page`'s unverified `limit`
+# param and single-level auto-detected array.
 module Sync
   class UpdateCampuses < BasePhase
     KEY = "campuses"
@@ -39,7 +44,9 @@ module Sync
     def perform
       seen = []
 
-      client.each_page("/bf/Buildings/v2/Campuses", scope: "buildings") do |row|
+      rows = client.fetch_all("/bf/Buildings/v2/Campuses", array_path: %w[Campuses Campus], scope: "buildings")
+
+      rows.each do |row|
         attrs = parse_campus(row)
         seen << attrs[:code]
 

@@ -1,0 +1,27 @@
+{
+  "Classrooms": {
+    "Classroom": [
+      {
+        "RmRecNbr": "2005090",
+        "Chrstc": 301,
+        "ChrstcDescrShort": "Proj",
+        "ChrstcDescr": "Projector",
+        "ChrstcDescr254": "Ceiling-mounted projector"
+      },
+      {
+        "RmRecNbr": "2005090",
+        "Chrstc": 302,
+        "ChrstcDescrShort": "Whtbrd",
+        "ChrstcDescr": "Whiteboard",
+        "ChrstcDescr254": "Standard whiteboard surface"
+      },
+      {
+        "RmRecNbr": "2005090",
+        "Chrstc": 303,
+        "ChrstcDescrShort": "AC",
+        "ChrstcDescr": "Air Conditioning",
+        "ChrstcDescr254": "Room has independent air conditioning"
+      }
+    ]
+  }
+}
