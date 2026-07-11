@@ -5,6 +5,7 @@
 # (index) or @building (show).
 class BuildingsController < ApplicationController
   include DirectoryScoped
+  include PublicDirectoryChrome
 
   # Extended to `:edit, :update` now that both are real controller methods
   # (Task 9). `resources :buildings, only: [:index, :show, :edit, :update]`

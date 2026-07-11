@@ -60,9 +60,12 @@ RSpec.describe "Find a Room", type: :system do
 
   before { sign_in_via_form(user) }
 
+  # Cards render room number + building (2026-07 redesign), not facility codes.
+  def card_title(room) = "#{room.room_number} #{room.building.name}"
+
   it "filters via Turbo without a full reload and ANDs characteristics" do
     visit find_a_room_path
-    expect(page).to have_content(aud.display_name)
+    expect(page).to have_content(card_title(aud))
 
     page.execute_script("window.__stayedOnPage = true") # falsy again only after a full reload
     fill_in I18n.t("rooms.filters.search_label"), with: "Mason"
@@ -73,9 +76,9 @@ RSpec.describe "Find a Room", type: :system do
     check "InstrComp"
 
     within "#find_a_room_results" do
-      expect(page).to have_content(big.display_name)
-      expect(page).to have_no_content(small.display_name) # LectureCap only — AND semantics
-      expect(page).to have_no_content(aud.display_name)   # wrong building + InstrComp only
+      expect(page).to have_content(card_title(big))
+      expect(page).to have_no_content(card_title(small)) # LectureCap only — AND semantics
+      expect(page).to have_no_content(card_title(aud))   # wrong building + InstrComp only
     end
     expect(page).to have_content(I18n.t("rooms.index.summary.query", value: "Mason"))
     expect(page.evaluate_script("window.__stayedOnPage")).to be(true)
@@ -88,8 +91,8 @@ RSpec.describe "Find a Room", type: :system do
     fill_in I18n.t("rooms.filters.search_label"), with: "Mason"
 
     within "#find_a_room_results" do
-      expect(page).to have_content(big.display_name)
-      expect(page).to have_no_content(aud.display_name)
+      expect(page).to have_content(card_title(big))
+      expect(page).to have_no_content(card_title(aud))
     end
 
     # The chips-row Clear all navigates only the frame; filter-form#clear must
@@ -98,7 +101,7 @@ RSpec.describe "Find a Room", type: :system do
     click_link I18n.t("rooms.filters.clear_all")
 
     within "#find_a_room_results" do
-      expect(page).to have_content(aud.display_name)
+      expect(page).to have_content(card_title(aud))
     end
     expect(find_field(I18n.t("rooms.filters.search_label")).value).to eq("")
   end
@@ -134,15 +137,15 @@ RSpec.describe "Find a Room", type: :system do
       visit find_a_room_path
       expect(page).to have_content(I18n.t("rooms.index.views.inactive_rooms"))
       within "#find_a_room_results" do
-        expect(page).to have_content(big.display_name)
-        expect(page).to have_no_content(hidden_classroom.display_name)
+        expect(page).to have_content(card_title(big))
+        expect(page).to have_no_content(card_title(hidden_classroom))
       end
 
       click_link I18n.t("rooms.index.views.inactive_rooms")
 
       within "#find_a_room_results" do
-        expect(page).to have_content(hidden_classroom.display_name)
-        expect(page).to have_no_content(big.display_name)
+        expect(page).to have_content(card_title(hidden_classroom))
+        expect(page).to have_no_content(card_title(big))
       end
       expect(axe_violations(axe_options)).to be_empty
     end

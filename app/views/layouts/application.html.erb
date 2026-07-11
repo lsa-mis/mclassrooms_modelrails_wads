@@ -17,7 +17,9 @@
     <%= render "shared/passkey_enrollment_banner" %>
     <%= render "shared/toasts" %>
 
-    <% if Current.workspace %>
+    <%# @hide_workspace_chrome (PublicDirectoryChrome): viewer-facing directory
+        pages render the plain full-width branch even with a workspace set. %>
+    <% if Current.workspace && !@hide_workspace_chrome %>
       <%= render "shared/workspace_context_banner" %>
       <div class="flex-1 flex flex-col md:flex-row">
         <%# Desktop sidebar — hidden below md where the section_nav_strip

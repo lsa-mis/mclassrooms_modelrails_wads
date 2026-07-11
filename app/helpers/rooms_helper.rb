@@ -15,11 +15,53 @@ module RoomsHelper
   CARD_TAG_CODES = %w[projdigit lecturecap doccam whtbrd chkbrd teamtables instrcomp movetablet].freeze
   CARD_TAG_LIMIT = 4
 
+  # Vendor building names arrive ALL CAPS ("CHEMISTRY AND DOW WILLARD H
+  # LABORATORY"); humanize for display. Mixed-case (already-curated) names
+  # pass through untouched. Single letters and known campus acronyms keep
+  # their caps; small words downcase except in first position.
+  BUILDING_ACRONYMS = %w[LSA EECS NUB USB UMMA SPH CCRB IM SEB BSRB GGBL EWRE FXB].freeze
+  BUILDING_SMALL_WORDS = %w[AND OF THE FOR AT].freeze
+
+  def humanized_building_name(building)
+    name = building.display_name.to_s
+    return name unless name == name.upcase
+
+    name.split.map.with_index do |word, index|
+      if BUILDING_ACRONYMS.include?(word) || word.length == 1 then word
+      elsif BUILDING_SMALL_WORDS.include?(word) && index.positive? then word.downcase
+      else word.capitalize
+      end
+    end.join(" ")
+  end
+
+  # Card title (sprint prototype: "1300 Chemistry"): a curated nickname wins
+  # (display_name already prefers it), else room number + humanized building;
+  # rooms without a number fall back to the facility-code display name.
+  def room_card_title(room)
+    return room.display_name if room.nickname.present? || room.room_number.blank?
+
+    "#{room.room_number} #{humanized_building_name(room.building)}"
+  end
+
+  # Card meta (prototype: "LSA · 1st floor"): unit · floor. The building only
+  # appears here when the title above fell back to a code and doesn't carry it.
+  def room_card_meta(room)
+    [ (humanized_building_name(room.building) if room.room_number.blank? && room.nickname.blank?),
+      room.unit&.display_name,
+      (t("rooms.row.floor_label", label: room.floor.label) if room.floor) ].compact.join(" · ")
+  end
+
   def room_card_tags(room)
     codes = room.room_characteristics.map(&:short_code)
     CARD_TAG_CODES.select { |code| codes.include?(code) }
                   .first(CARD_TAG_LIMIT)
                   .map { |code| characteristic_labels.fetch(code, code) }
+  end
+
+  # Same override mechanism as characteristic_labels, for the vendor GROUP
+  # names the More-filters panel uses as fieldset legends.
+  def characteristic_group_name(group)
+    I18n.t("rooms.characteristic_group_overrides.#{group.name}", default: group.name)
   end
 
   def promoted_filter_entries(filter_groups)

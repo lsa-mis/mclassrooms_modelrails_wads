@@ -5,6 +5,7 @@
 # API shape consumed by future room-detail linking.
 class RoomsController < ApplicationController
   include DirectoryScoped
+  include PublicDirectoryChrome
 
   VIEWS = %w[active inactive_rooms inactive_buildings].freeze
 
