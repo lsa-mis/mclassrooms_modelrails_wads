@@ -164,6 +164,24 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_text("2001 LSA Building")
   end
 
+  it "falls back to the facility-code title with the building in the meta for numberless rooms" do
+    numberless = create(:room, building: building, workspace: workspace,
+                        room_number: nil, facility_code: "MASODD")
+
+    get find_a_room_path
+
+    card = page.all("turbo-frame#find_a_room_results li").find { |c| c.has_text?("MASODD") }
+    expect(card).to be_present
+    expect(card).to have_text("Mason Hall") # building surfaces in the meta line instead
+    expect(numberless.room_number).to be_nil
+  end
+
+  it "renders promoted chips with their locale-override labels" do
+    get find_a_room_path
+
+    expect(page).to have_css("label[for='characteristics_projdigit']", text: "Projector")
+  end
+
   it "renames vendor group legends through the locale override map" do
     classroom(building, "2002", 30, codes: %w[ethrstud]).room_characteristics
       .first.update!(description: "Ethernet Connection: Students")

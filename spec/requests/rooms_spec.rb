@@ -387,14 +387,13 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       get find_a_room_path
 
-      # The page has several <summary> elements (the More-filters disclosure
-      # ships one before any room card) — pick the card summary via its tag.
-      summaries = response.body.scan(%r{<summary\b.*?</summary>}m)
-      summary_html = summaries.find { |s| s.include?(">Projector<") }
-      expect(summary_html).to be_present
-      # No focusable/interactive descendant of <summary>.
-      expect(summary_html).not_to include("tabindex")
-      expect(summary_html).not_to include('role="tooltip"')
+      # Structural, not regex-over-HTML: find the card summary via its tag,
+      # then assert no focusable/interactive descendant inside it.
+      page = Capybara.string(response.body)
+      summary = page.all("li summary").find { |s| s.has_text?("Projector") }
+      expect(summary).to be_present
+      expect(summary).to have_no_css("[tabindex]")
+      expect(summary).to have_no_css("[role='tooltip']")
     end
   end
 end

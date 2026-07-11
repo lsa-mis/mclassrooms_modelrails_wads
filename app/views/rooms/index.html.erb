@@ -18,7 +18,8 @@
     no-op-on-nil and landmark-<aside> contract. %>
 <% content_for(:title) { t("rooms.index.title") } %>
 
-<div class="max-w-5xl mx-auto px-4 py-8" data-controller="filter-form">
+<div class="max-w-5xl mx-auto px-4 py-8" data-controller="filter-form"
+     data-action="turbo:frame-render->filter-form#restoreFocus">
   <h1 class="text-2xl font-bold text-text-heading"><%= t("rooms.index.title") %></h1>
   <p class="mt-1 text-sm text-text-body"><%= t("rooms.index.subtitle") %></p>
 
@@ -27,39 +28,41 @@
   <%= render "filters", search: @search, filter_groups: @filter_groups %>
 
   <%= turbo_frame_tag "find_a_room_results", "aria-label": t("rooms.index.results_frame_label"),
-        class: "block mt-6 motion-safe:transition-opacity [&[busy]]:opacity-60" do %>
+        class: "block mt-6 motion-safe:transition-opacity aria-busy:opacity-60" do %>
     <% current_view = params[:view].presence_in(RoomsController::VIEWS) || "active" %>
     <div class="sticky top-0 z-10 bg-surface border-b border-border py-3
                 flex flex-wrap items-center gap-x-4 gap-y-2">
-      <%# One polite live region announces re-renders to assistive tech: the
-          count plus the full active-filter sentence (visually the sentence is
-          replaced by the removable chips alongside). %>
+      <%# Count-only live region (panel review: an atomic region wrapping the
+          full filter sentence re-read the whole thing on every debounced
+          keystroke). The sentence stays discoverable as a plain sr-only
+          sibling, outside the live region. %>
       <p role="status" aria-live="polite" aria-atomic="true"
          class="text-lg font-semibold text-text-heading m-0 motion-safe:animate-count-flash rounded px-1 -mx-1">
         <%= t("rooms.index.results_summary", count: @pagy.count) %>
-        <% if @search.summary.present? %>
-          <span class="sr-only"><%= @search.summary %></span>
-        <% end %>
       </p>
+      <% if @search.summary.present? %>
+        <span class="sr-only"><%= @search.summary %></span>
+      <% end %>
 
+      <%# Chips and Clear-all are FULL visits, not frame navigations (panel
+          review, Jorge/Léonie): a frame swap can't update the out-of-frame
+          form's inputs (stale checkboxes/query re-submit on the next change)
+          and destroys the focused element, dropping AT users to <body>. A
+          fresh render clears both problems; Turbo Drive keeps it fast. %>
       <% chips = filter_chips(@filter_params) %>
       <% if chips.any? %>
         <span class="flex flex-wrap items-center gap-2">
           <% chips.each do |label, url| %>
             <%= link_to url,
-                  data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
+                  data: { turbo_frame: "_top" },
                   class: "inline-flex items-center gap-1.5 rounded-full border border-border
                          bg-surface-sunken px-3 min-h-11 text-sm text-text-body focus-ring" do %>
               <span class="sr-only"><%= t("rooms.index.chips.remove") %></span><%= label %><span aria-hidden="true" class="font-semibold">×</span>
             <% end %>
           <% end %>
-          <%# filter-form#clear empties the form's inputs alongside the frame
-              navigation — without it the results reset while the (out-of-frame)
-              search box still shows the old query. %>
           <%= link_to t("rooms.filters.clear_all"),
                 find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
-                data: { turbo_frame: "find_a_room_results", turbo_action: "advance",
-                        action: "filter-form#clear" },
+                data: { turbo_frame: "_top" },
                 class: "text-sm text-interactive underline hover:no-underline
                        min-h-11 inline-flex items-center focus-ring rounded" %>
         </span>
@@ -79,10 +82,13 @@
 
         <% if policy(Room).view_inactive? %>
           <nav aria-label="<%= t('rooms.index.views_nav_label') %>" class="flex flex-wrap gap-4">
+            <%# Full visits (not frame): a frame nav leaves the form's hidden
+                `view` field stale, so the NEXT filter change would silently
+                revert the admin's view — a fresh render re-renders the field. %>
             <% RoomsController::VIEWS.each do |view_key| %>
               <%= link_to t("rooms.index.views.#{view_key}"), find_a_room_path(view: view_key),
+                    data: { turbo_frame: "_top" },
                     "aria-current": (current_view == view_key ? "page" : nil),
-                    data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
                     class: "text-sm min-h-11 inline-flex items-center focus-ring rounded
                            #{current_view == view_key ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" %>
             <% end %>
@@ -103,7 +109,7 @@
             <p class="text-sm"><%= t("rooms.index.inactive_view_notice.#{current_view}") %></p>
             <%= link_to t("rooms.index.inactive_view_notice.back_to_active"),
                   find_a_room_path,
-                  data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
+                  data: { turbo_frame: "_top" },
                   class: "text-sm text-interactive underline hover:no-underline
                          min-h-11 inline-flex items-center focus-ring rounded" %>
           <% end %>
@@ -126,8 +132,7 @@
         <p class="mt-1 text-sm text-text-body"><%= t("rooms.index.no_results_hint") %></p>
         <%= link_to t("rooms.filters.clear_all"),
               find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
-              data: { turbo_frame: "find_a_room_results", turbo_action: "advance",
-                      action: "filter-form#clear" },
+                data: { turbo_frame: "_top" },
               class: "mt-4 btn-secondary inline-flex items-center" %>
       </div>
     <% end %>
