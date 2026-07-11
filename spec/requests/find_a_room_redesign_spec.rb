@@ -152,13 +152,36 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(card).to have_text(I18n.t("rooms.row.seats_label", count: 45))
   end
 
-  it "humanizes ALL-CAPS vendor building names in card titles" do
+  it "humanizes ALL-CAPS vendor building names in card titles, keeping campus acronyms" do
     caps = create(:building, workspace: workspace, name: "CHEMISTRY AND DOW WILLARD H LABORATORY")
+    acro = create(:building, workspace: workspace, name: "LSA BUILDING")
     classroom(caps, "1300", 500)
+    classroom(acro, "2001", 40)
 
     get find_a_room_path
 
     expect(page).to have_text("1300 Chemistry and Dow Willard H Laboratory")
+    expect(page).to have_text("2001 LSA Building")
+  end
+
+  it "renames vendor group legends through the locale override map" do
+    classroom(building, "2002", 30, codes: %w[ethrstud]).room_characteristics
+      .first.update!(description: "Ethernet Connection: Students")
+
+    get find_a_room_path
+
+    expect(page).to have_css("details#more_filters legend", text: "Ethernet", visible: :all)
+    expect(page).to have_no_css("details#more_filters legend", text: "Ethernet Connection", visible: :all)
+  end
+
+  it "hides the workspace shell on the other directory pages too" do
+    sidebar = "aside[aria-label='#{I18n.t("workspaces.sidebar.aria_label")}']"
+
+    get buildings_path
+    expect(page).to have_no_css(sidebar)
+
+    get filters_glossary_path
+    expect(page).to have_no_css(sidebar)
   end
 
   # Directory pages are public-facing: the workspace shell (sidebar, identity
