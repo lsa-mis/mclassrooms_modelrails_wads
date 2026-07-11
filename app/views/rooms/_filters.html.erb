@@ -36,25 +36,36 @@
 
   <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
     <div class="grow basis-64">
+      <%# Compact visible label ("Search"); the input's aria-label keeps the
+          descriptive superset name and the placeholder is only a hint —
+          see the search_accessible_label locale note. %>
       <%= ui :form_field, label: t("rooms.filters.search_label"), id: "filter_q" do |f| %>
         <%= ui :search_input, name: "q", value: params[:q],
-              label: t("rooms.filters.search_label"),
+              label: t("rooms.filters.search_accessible_label"),
+              placeholder: t("rooms.filters.search_placeholder"),
               data: { action: "input->filter-form#submit" }, **f.input_attrs %>
       <% end %>
     </div>
 
-    <%= ui :form_field, label: t("rooms.filters.capacity_min_label"), id: "filter_capacity_min" do |f| %>
+    <div>
+      <%# Hand-rolled label (not ui :form_field) so "(minimum)" renders in a
+          lighter weight INSIDE the label element — the full visible text IS
+          the accessible name, per WCAG 2.5.3. %>
+      <label for="filter_capacity_min" class="mb-1 block text-sm font-semibold text-text-heading">
+        <%= t("rooms.filters.capacity_label") %>
+        <span class="font-normal text-text-body"><%= t("rooms.filters.capacity_qualifier") %></span>
+      </label>
       <span class="flex items-center gap-2">
         <%# No `max:` — a max attribute makes form.requestSubmit() fail
             constraint validation SILENTLY for over-bound values, freezing
             every subsequent live filter change. An over-bound minimum should
             return an honest "0 rooms found" instead. %>
         <%= number_field_tag :capacity_min, params[:capacity_min],
-              min: 0, class: "form-field w-24", id: f.input_attrs[:id],
+              min: 0, class: "form-field w-24", id: "filter_capacity_min",
               data: { action: "input->filter-form#submit" } %>
-        <span class="text-sm text-text-body"><%= t("rooms.filters.capacity_min_hint") %></span>
+        <span class="text-sm font-medium text-text-body"><%= t("rooms.filters.capacity_min_hint") %></span>
       </span>
-    <% end %>
+    </div>
   </div>
 
   <% promoted = promoted_filter_entries(filter_groups) %>
