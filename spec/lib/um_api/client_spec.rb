@@ -3,9 +3,10 @@ require "rails_helper"
 # Task 5 of planning/plans/phase-2-ingestion.md: UmApi::Client is the single
 # HTTP entry point every sync service (Tasks 6+) uses to talk to the U-M
 # Facilities gateway (roadmap Lib section). #get_json fetches one URL;
-# #each_page walks a paginated listing endpoint, following `Link: <url>;
-# rel="next"` headers until a page omits one. Every request — each
-# #get_json call, and each page inside #each_page — runs
+# #fetch_all (sync-fix Task 1) walks a paginated listing endpoint using the
+# real `$start_index`/`$count` query params and the real two-level envelope
+# shape, stopping once a page comes back shorter than PAGE_SIZE. Every
+# request — each #get_json call, and each page inside #fetch_all — runs
 # `rate_limiter.throttle!` first and raises a UmApi::Error subclass (see
 # app/lib/um_api.rb) on any non-2xx response; #call_count totals HTTP
 # requests actually sent.
@@ -60,7 +61,7 @@ RSpec.describe UmApi::Client do
   describe "#get_json" do
     it "sends the bearer token, client id, and accept headers, and returns the parsed JSON body" do
       stub_um_token(scope: "buildings")
-      stub = stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json")
+      stub = stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
         .with(headers: {
           "Authorization" => "Bearer test-um-api-token-abc123",
           "x-ibm-client-id" => "test-client",
@@ -70,23 +71,28 @@ RSpec.describe UmApi::Client do
 
       body = client.get_json("/bf/Buildings/v2/Campuses", scope: "buildings")
 
-      expect(body["Campuses"].map { |c| c["CampusCd"] }).to contain_exactly("100", "250")
+      expect(body["Campuses"]["Campus"].map { |c| c["CampusCd"] }).to contain_exactly("100", "250")
       expect(stub).to have_been_requested
     end
 
+    # Real param name (sync-fix Task 1): the old `fiscalYear` example pinned
+    # a param no phase sends anymore (UmApi.fiscal_year was deleted once
+    # Sync::UpdateBuildings stopped using it) — `$start_index` is the real
+    # param #fetch_all sends, but #get_json itself is param-name-agnostic,
+    # so any real query string proves the same "params flow through" fact.
     it "sends given params as the query string" do
       stub_um_token(scope: "buildings")
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page1.json", query: { "fiscalYear" => "2027" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json", query: { "$start_index" => "0" })
       client = described_class.new(rate_limiter: ThrottleSpy.new)
 
-      body = client.get_json("/bf/Buildings/v2", params: { fiscalYear: "2027" }, scope: "buildings")
+      body = client.get_json("/bf/Buildings/v2/Campuses", params: { "$start_index" => "0" }, scope: "buildings")
 
-      expect(body["Buildings"].size).to eq(2)
+      expect(body["Campuses"]["Campus"].size).to eq(2)
     end
 
     it "increments call_count once per HTTP request made" do
       stub_um_token(scope: "buildings")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json")
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
       client = described_class.new(rate_limiter: ThrottleSpy.new)
 
       client.get_json("/bf/Buildings/v2/Campuses", scope: "buildings")
@@ -97,7 +103,7 @@ RSpec.describe UmApi::Client do
 
     it "calls rate_limiter.throttle! once before the request" do
       stub_um_token(scope: "buildings")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json")
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
       spy = ThrottleSpy.new
       client = described_class.new(rate_limiter: spy)
 
@@ -112,7 +118,7 @@ RSpec.describe UmApi::Client do
     # there prevents the request from ever being made.
     it "throttles before sending, so a throttle! failure prevents the HTTP call" do
       stub_um_token(scope: "buildings")
-      stub = stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json")
+      stub = stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
       raising_limiter = Class.new { def throttle! = raise("budget exhausted") }.new
       client = described_class.new(rate_limiter: raising_limiter)
 
@@ -144,110 +150,96 @@ RSpec.describe UmApi::Client do
     end
   end
 
-  describe "#each_page" do
-    it "requests PAGE_SIZE (1000) items per page via the limit param" do
+  # #fetch_all is the real-gateway-shaped pagination method (see
+  # .superpowers/sdd/sync-fix-plan.md §1): real U-M listing endpoints wrap
+  # their array TWO levels deep in the body (e.g. `resp["Campuses"]
+  # ["Campus"]`) and paginate via `$start_index`/`$count` query params,
+  # stopping when a page comes back shorter than `$count` — there is no
+  # `Link: rel="next"` header to follow. The old `#each_page` (a `limit`
+  # param + "whichever top-level value is an Array" auto-detection +
+  # `Link: rel="next"` header walk) never matched a real response — it was
+  # removed in sync-fix Task 5 once every phase migrated to #fetch_all.
+  describe "#fetch_all" do
+    it "fetches every row of a single-page listing by digging through the two-level array_path" do
       stub_um_token(scope: "buildings")
-      stub = stub_um_get("/bf/Buildings/v2", fixture: "buildings_page2.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
       client = described_class.new(rate_limiter: ThrottleSpy.new)
 
-      client.each_page("/bf/Buildings/v2", scope: "buildings") { |_item| }
+      rows = client.fetch_all("/bf/Buildings/v2/Campuses", array_path: %w[Campuses Campus], scope: "buildings")
+
+      expect(rows.map { |row| row["CampusCd"] }).to contain_exactly("100", "250")
+      expect(client.call_count).to eq(1)
+    end
+
+    it "sends $start_index and $count (not the old limit param) as the query string" do
+      stub_um_token(scope: "buildings")
+      stub = stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/Campuses")
+        .with(query: { "$start_index" => "0", "$count" => "1000" })
+        .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS, body: um_api_fixture("fetch_all_campuses.json"))
+      client = described_class.new(rate_limiter: ThrottleSpy.new)
+
+      client.fetch_all("/bf/Buildings/v2/Campuses", array_path: %w[Campuses Campus], scope: "buildings")
 
       expect(stub).to have_been_requested
     end
 
-    # Teeth: buildings_page1 has 2 items ("Modern Languages Building",
-    # "Angell Hall") and next_link points at page 2, whose fixture has one
-    # DISTINCT item ("Danto Engineering Development Center") not present
-    # on page 1. All three items must be yielded — page 1's alone, or
-    # page 2 fetched but not yielded, would both fail this — and the loop
-    # must stop after page 2, which is stubbed with no next_link (no Link
-    # header at all).
-    it "yields items across both pages and stops when there is no next link" do
+    # Teeth: page 1 comes back with exactly PAGE_SIZE (1000) rows, which
+    # must force a second request at $start_index=1000 ($count still
+    # 1000); page 2 comes back with fewer than PAGE_SIZE rows, which must
+    # stop the loop. Getting either half wrong — never requesting page 2,
+    # or looping forever after a short page — fails this example. Also
+    # proves the two-level array_path dig works against a DIFFERENT key
+    # pair (ListOfBldgs/Buildings) than the single-page example above, so
+    # array_path isn't accidentally hardcoded to Campuses/Campus.
+    it "requests a second page when the first is exactly PAGE_SIZE, and stops once a page is short" do
       stub_um_token(scope: "buildings")
-      next_page_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?page=2"
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page1.json", query: { "limit" => "1000" },
-        next_link: next_page_url)
-      last_page_stub = stub_um_get("/bf/Buildings/v2", fixture: "buildings_page2.json", query: { "page" => "2" })
+      page1_rows = Array.new(UmApi::Client::PAGE_SIZE) { |i| { "BuildingRecordNumber" => "page1-#{i}" } }
+      page2_rows = [
+        { "BuildingRecordNumber" => "9001" },
+        { "BuildingRecordNumber" => "9002" }
+      ]
+      page1_stub = stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/BuildingInfo")
+        .with(query: { "$start_index" => "0", "$count" => "1000" })
+        .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS,
+          body: { "ListOfBldgs" => { "Buildings" => page1_rows } }.to_json)
+      page2_stub = stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/BuildingInfo")
+        .with(query: { "$start_index" => "1000", "$count" => "1000" })
+        .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS,
+          body: { "ListOfBldgs" => { "Buildings" => page2_rows } }.to_json)
       client = described_class.new(rate_limiter: ThrottleSpy.new)
 
-      names = []
-      client.each_page("/bf/Buildings/v2", scope: "buildings") { |item| names << item["BldName"] }
+      rows = client.fetch_all("/bf/Buildings/v2/BuildingInfo", array_path: %w[ListOfBldgs Buildings], scope: "buildings")
 
-      expect(names).to contain_exactly(
-        "Modern Languages Building", "Angell Hall", "Danto Engineering Development Center"
-      )
-      expect(last_page_stub).to have_been_requested.once
+      expect(rows.size).to eq(UmApi::Client::PAGE_SIZE + 2)
+      expect(rows.last(2).map { |row| row["BuildingRecordNumber"] }).to eq(%w[9001 9002])
+      expect(page1_stub).to have_been_requested.once
+      expect(page2_stub).to have_been_requested.once
       expect(client.call_count).to eq(2)
     end
 
-    # Teeth for next_link's Link-header parsing: the header carries BOTH a
-    # rel="prev" and a rel="next" entry in one comma-separated value, and
-    # BOTH urls contain a literal comma in their own query string (e.g.
-    # `?ids=1,2,3`). The old implementation split the whole header on a
-    # bare "," before regex-matching each fragment, so a comma inside the
-    # rel="next" URL split that URL's `<...>` across two fragments and
-    # next_link returned nil — each_page would silently stop after page 1
-    # with no error. Scanning for every `<url>; rel="x"` pair instead of
-    # splitting first fixes that: this must yield page 2's item too.
-    it "follows only the rel=\"next\" link when the header also carries a rel=\"prev\" link, even when both URLs contain commas" do
+    it "returns an empty array, in a single request, when array_path digs to an empty listing" do
       stub_um_token(scope: "buildings")
-      prev_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?ids=9,8,7"
-      next_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?page=2&ids=1,2,3"
-      multi_rel_link_header = %(<#{prev_url}>; rel="prev", <#{next_url}>; rel="next")
-
-      stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2")
-        .with(query: { "limit" => "1000" })
-        .to_return(
-          status: 200,
-          headers: UmApiStubs::JSON_RESPONSE_HEADERS.merge("Link" => multi_rel_link_header),
-          body: um_api_fixture("buildings_page1.json")
-        )
-      next_page_stub = stub_request(:get, next_url)
-        .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS, body: um_api_fixture("buildings_page2.json"))
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses_empty.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
       client = described_class.new(rate_limiter: ThrottleSpy.new)
 
-      names = []
-      client.each_page("/bf/Buildings/v2", scope: "buildings") { |item| names << item["BldName"] }
+      rows = client.fetch_all("/bf/Buildings/v2/Campuses", array_path: %w[Campuses Campus], scope: "buildings")
 
-      expect(names).to contain_exactly(
-        "Modern Languages Building", "Angell Hall", "Danto Engineering Development Center"
-      )
-      expect(next_page_stub).to have_been_requested.once
-    end
-
-    it "runs rate_limiter.throttle! once per page fetched" do
-      stub_um_token(scope: "buildings")
-      next_page_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?page=2"
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page1.json", query: { "limit" => "1000" },
-        next_link: next_page_url)
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page2.json", query: { "page" => "2" })
-      spy = ThrottleSpy.new
-      client = described_class.new(rate_limiter: spy)
-
-      client.each_page("/bf/Buildings/v2", scope: "buildings") { |_item| }
-
-      expect(spy.calls).to eq(2)
-    end
-
-    it "increments call_count once per page fetched" do
-      stub_um_token(scope: "buildings")
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page2.json", query: { "limit" => "1000" })
-      client = described_class.new(rate_limiter: ThrottleSpy.new)
-
-      client.each_page("/bf/Buildings/v2", scope: "buildings") { |_item| }
-
+      expect(rows).to eq([])
       expect(client.call_count).to eq(1)
     end
 
-    it "raises UmApi::RateLimited from within each_page on a 429, without swallowing it" do
+    it "returns an empty array without raising when array_path digs into a key the response doesn't have" do
       stub_um_token(scope: "buildings")
-      stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2")
-        .with(query: { "limit" => "1000" })
-        .to_return(status: 429, body: "")
+      stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/Campuses")
+        .with(query: { "$start_index" => "0", "$count" => "1000" })
+        .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS, body: { "SomethingElse" => {} }.to_json)
       client = described_class.new(rate_limiter: ThrottleSpy.new)
 
-      expect { client.each_page("/bf/Buildings/v2", scope: "buildings") { |_item| } }
-        .to raise_error(UmApi::RateLimited)
+      rows = client.fetch_all("/bf/Buildings/v2/Campuses", array_path: %w[Campuses Campus], scope: "buildings")
+
+      expect(rows).to eq([])
     end
   end
 end

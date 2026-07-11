@@ -7,13 +7,14 @@
 # (`WebMock.disable_net_connect!(allow_localhost: true)`), so any HTTP call
 # that isn't stubbed here (or via Localhost, for Capybara/Playwright) raises.
 #
-# IMPORTANT — fixture-shape disclaimer: the JSON under spec/fixtures/um_api/
-# (envelope shape, field names like `CampusCd`/`BldRecNbr`/`RmRecNbr`, the
-# `Link: rel="next"` pagination convention) is a BEST-EFFORT RECONSTRUCTION
-# of the real U-M gateway, written before any credentialed access to it. It
-# is NOT verified against the live API. Phase 8's cutover task is where that
-# gets confirmed — if the real shape differs, only two kinds of files need
-# to change: these fixtures, and each phase service's `parse_*` methods
+# Fixture-shape status: the JSON under spec/fixtures/um_api/ (envelope shape
+# — every real listing endpoint wraps its array TWO levels deep, e.g.
+# `{"Campuses" => {"Campus" => [...]}}` — and field names like `CampusCd`/
+# `BuildingRecordNumber`/`RmRecNbr`) is now VERIFIED against the live U-M
+# gateway (sync-fix Tasks 1-4; see .superpowers/sdd/sync-fix-plan.md and
+# sync-fix-decisions.md) for every endpoint every Sync::* phase uses. If a
+# future cutover ever finds a shape drifted, only two kinds of files need to
+# change: these fixtures, and each phase service's `parse_*` methods
 # (Sync::UpdateCampuses#parse_campus and friends). No other code should ever
 # reach into a raw API response hash directly; that isolation is the entire
 # point of funneling every field access through a named `parse_*` method.
@@ -45,16 +46,10 @@ module UmApiStubs
   # "/bf/Buildings/v2/Campuses"); `query` narrows the stub to a specific
   # query-string (default `{}` matches a request with no query params at
   # all — pass the real params when the code under test sends any).
-  # `next_link:` (a full URL string) attaches a `Link: <url>; rel="next"`
-  # response header so UmApi::Client#each_page has something to follow;
-  # omit it (the default) to represent the last page.
-  def stub_um_get(path, fixture:, query: {}, next_link: nil)
-    headers = JSON_RESPONSE_HEADERS
-    headers = headers.merge("Link" => %(<#{next_link}>; rel="next")) if next_link
-
+  def stub_um_get(path, fixture:, query: {})
     stub_request(:get, "#{um_api_base_url}#{path}")
       .with(query: query)
-      .to_return(status: 200, headers: headers, body: um_api_fixture(fixture))
+      .to_return(status: 200, headers: JSON_RESPONSE_HEADERS, body: um_api_fixture(fixture))
   end
 
   private
