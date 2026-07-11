@@ -31,18 +31,15 @@ export default class extends Controller {
     this.form.requestSubmit()
   }
 
-  // For the Clear-all / empty-state links: they navigate only the results
-  // frame, so the form's (out-of-frame) inputs would otherwise keep showing
-  // the cleared query. Explicit emptying, not form.reset() — reset() restores
-  // the server-rendered value attributes, i.e. the very state being cleared.
-  // The link's own frame navigation resets the URL; no submit needed here.
-  clear() {
-    clearTimeout(this.timeout)
-    for (const el of this.form.elements) {
-      if (el.type === "checkbox") el.checked = false
-      else if (["text", "search", "number"].includes(el.type)) el.value = ""
-      else if (el.tagName === "SELECT") el.selectedIndex = 0
-    }
+  // Panel review (Léonie): a frame swap destroys the activated element and
+  // Turbo drops focus to <body>. After the reset-links became full visits,
+  // the only in-frame control left is the sort select (wired to the form via
+  // `form=`), so when a render leaves focus on <body>, return it there. A
+  // debounced text-input submit never trips this — focus stays in the form.
+  restoreFocus() {
+    if (document.activeElement !== document.body) return
+
+    this.element.querySelector("#filter_sort")?.focus()
   }
 
   get form() {

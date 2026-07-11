@@ -8,16 +8,20 @@
 <%# Redesign (2026-07 sprint): each result is a card in the index grid — the
     border moved from a row divider to the card itself; the <details>
     disclosure interaction is unchanged. %>
-<li class="rounded-lg border border-border p-3">
+<%# scroll-mt keeps a keyboard-focused card from sliding under the sticky
+    results header (WCAG 2.4.12 Focus Not Obscured, AAA). %>
+<li class="rounded-lg border border-border p-3 scroll-mt-24">
   <details class="group">
     <summary class="list-none min-h-11 flex flex-wrap items-center gap-4 py-1 px-2 -mx-2
                     cursor-pointer rounded-md focus-ring">
       <%# Photo only when one exists — an empty camera placeholder on most
           cards is noise the sprint prototype dropped. %>
       <% if (thumbnail = room_thumbnail_image(room)) %>
+        <%# alt="" — the adjacent title already names the room; a duplicate
+            alt makes AT announce the name twice (panel review). %>
         <%= ui :image,
               src: url_for(thumbnail.image.variant(resize_to_fill: [ 96, 96 ])),
-              alt: room.display_name,
+              alt: "",
               class: "size-16 rounded-md object-cover shrink-0" %>
       <% end %>
 
@@ -49,7 +53,7 @@
       <% if tags.any? || room.ada_seat_count.to_i.positive? %>
         <span class="w-full flex flex-wrap gap-1.5 pt-1">
           <% tags.each do |label| %>
-            <span class="text-xs border border-border rounded-md px-2 py-0.5 text-text-body"><%= label %></span>
+            <%= ui :badge, label, variant: :outline, tone: :neutral %>
           <% end %>
           <% if room.ada_seat_count.to_i.positive? %>
             <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :success %>
