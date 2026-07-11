@@ -1,15 +1,18 @@
 require "rails_helper"
 
-# Task 13 of planning/plans/phase-2-ingestion.md — the phase-2 gate. Every
-# other spec/lib/sync/*_spec.rb file exercises exactly ONE phase in
+# Task 13 of planning/plans/phase-2-ingestion.md — the phase-2 gate, RESTORED
+# in sync-fix Task 5 once every phase (Tasks 1-4) migrated off the wrong
+# guessed endpoints/params/field-names onto the real, live-verified gateway
+# shapes (see .superpowers/sdd/sync-fix-plan.md and sync-fix-decisions.md).
+# Every other spec/lib/sync/*_spec.rb file exercises exactly ONE phase in
 # isolation (a real client + WebMock, but only that phase's own endpoints
 # stubbed). This file is the first (and only) place `Sync::RunPipeline`
 # drives all SIX real Sync::BasePhase subclasses back-to-back against the
-# COMPLETE WebMock fixture set — no phase doubles anywhere. If a phase's
-# endpoint path/query doesn't match what another phase (or this spec)
-# expects, or two phases disagree about a room's shape, this is where that
-# surfaces: as a WebMock::NetConnectNotAllowedError (a missing stub) or a
-# wrong assertion, not a silent gap.
+# COMPLETE, real-shaped WebMock fixture set — no phase doubles anywhere. If a
+# phase's endpoint path/query doesn't match what another phase (or this
+# spec) expects, or two phases disagree about a room's shape, this is where
+# that surfaces: as a WebMock::NetConnectNotAllowedError (a missing stub) or
+# a wrong assertion, not a silent gap.
 #
 # `sleeper:` is a no-op lambda (spec D7: `PHASE_PAUSE_SECONDS` is 61 real
 # seconds between each of the 6 core phases; a bare `Sync::RunPipeline.call`
@@ -17,27 +20,36 @@ require "rails_helper"
 # default (a real `UmApi::Client.new`, per Task 12) — every HTTP call it
 # makes is intercepted by WebMock, never the network.
 #
-# Fixture-driven scope (spec/fixtures/um_api/): buildings_page1.json (MLB
-# "1005046", AH "1005090", both campus "100") and buildings_page2.json (DEDC
-# "1005200", campus "250") give one in-scope and one out-of-scope campus;
-# only a `campus_allow: "100"` SyncScopeRule (set once, top-level `before`)
-# is needed for DEDC to be filtered by Sync::UpdateBuildings — which matters
-# for wiring, not just filtering: Sync::UpdateRooms walks
-# `Building.for_current_workspace`, so DEDC never being persisted is also
-# why this spec never needs a rooms-feed stub for it.
+# Fixture-driven scope (spec/fixtures/um_api/): building_info_page1.json
+# (campus "100": MLB "1005046", Angell Hall "1005090", padded with campus
+# "999" filler rows to force fetch_all's short-page pagination — sync-fix
+# Task 2) and building_info_page2.json (campus "250": DEDC "1005200") give
+# one in-scope and one out-of-scope campus; only a `campus_allow: "100"`
+# SyncScopeRule (set once, top-level `before`) is needed for DEDC to be
+# filtered by Sync::UpdateBuildings — which matters for wiring, not just
+# filtering: Sync::UpdateRooms walks `Building.for_current_workspace`, so
+# DEDC never being persisted is also why this spec never needs a
+# rooms-feed/facility stub for it.
 #
-# Facility codes end up on exactly two rooms after Sync::UpdateFacilityIds
-# matches classroom_list.json: MLB1200 (rmrecnbr 2005046, the German
-# Classroom in MLB, seats 60) and AH0100 (rmrecnbr 2005090, the Math
-# Classroom in AH, seats 0) — those are the only two facility codes
-# Sync::UpdateCharacteristics/UpdateContacts ever request per-classroom
-# endpoints for in the two "clean" examples below. AH0100 is stubbed with
-# characteristics_empty.json (no characteristics_AH0100.json fixture exists;
-# an empty response is a legitimate, distinct shape already exercised in
-# isolation by update_characteristics_spec.rb) and contacts_AH0100.json
-# (which does exist and is exercised for real here).
-RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
-  skip: "restored in sync-fix Task 5 once all phases migrate to the real gateway shapes" do
+# Department join-by-name handoff (sync-fix Task 3): rooms_1005046.json's
+# Class Laboratory room names department "LSA - Chemistry", deliberately
+# ABSENT from departments.json's bulk preload — every run below genuinely
+# exercises Sync::UpdateRooms's `?DeptDescription=` fallback fetch
+# (department_190100.json), not a no-op. The Office row's blank
+# DepartmentName proves the admin-room (no unit) path in the same run.
+#
+# Facility crosswalk handoff (sync-fix Task 4): classroom_list_mlb_ah.json
+# (a NEW fixture for this spec — the per-phase update_facility_ids_spec.rb
+# fixtures map both its facilities to the SAME single seeded building,
+# which this whole-pipeline spec can't reuse since it has two real,
+# differently-numbered buildings) maps MLB1200 -> building "1005046" and
+# AH0100 -> building "1005090", matching exactly the two Classroom rows
+# Sync::UpdateRooms creates (German "2005046", Math "2005090") — this is the
+# rmrecnbr handoff Sync::UpdateFacilityIds's per-facility Characteristics
+# fetch must resolve correctly. Sync::UpdateCharacteristics/UpdateContacts
+# then independently re-fetch those same two facility codes (sync-fix-
+# decisions.md Risk 2, accepted per-facility double-fetch).
+RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
   around do |example|
     original = %w[UM_API_BASE_URL UM_API_TOKEN_URL UM_API_CLIENT_ID UM_API_CLIENT_SECRET].index_with { |key| ENV[key] }
 
@@ -58,12 +70,11 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
   # trips the rate limiter's own 400-calls/minute or 429-backoff sleeps (far
   # too few requests), so the default real client is safe to use unmodified.
   let(:no_op_sleeper) { ->(_seconds) { } }
-  let(:fiscal_year) { UmApi.fiscal_year(Date.current) }
 
   before do
     Current.workspace = workspace
     # In scope for every example: only campus "100" (MLB/AH). DEDC
-    # (campus "250", buildings_page2.json) is filtered out.
+    # (campus "250", building_info_page2.json) is filtered out.
     create(:sync_scope_rule, workspace: workspace, rule_type: "campus_allow", value: "100")
   end
 
@@ -85,35 +96,44 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
   end
 
   def stub_campuses_feed
-    stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+    stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
   end
 
   def stub_buildings_feed
-    stub_um_get("/bf/Buildings/v2", fixture: "buildings_page1.json",
-      query: { "limit" => "1000", "fiscalYear" => fiscal_year.to_s },
-      next_link: "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?page=2")
-    stub_um_get("/bf/Buildings/v2", fixture: "buildings_page2.json", query: { "page" => "2" })
+    stub_um_get("/bf/Buildings/v2/BuildingInfo", fixture: "building_info_page1.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
+    stub_um_get("/bf/Buildings/v2/BuildingInfo", fixture: "building_info_page2.json",
+      query: { "$start_index" => "1000", "$count" => "1000" })
+  end
+
+  def stub_departments_feed
+    stub_um_get("/bf/Department/v2/DeptData", fixture: "departments.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
+    stub_um_get("/bf/Department/v2/DeptData", fixture: "department_190100.json",
+      query: { "DeptDescription" => "LSA - Chemistry" })
   end
 
   def stub_rooms_feed
-    stub_um_get("/bf/Buildings/v2/Departments", fixture: "departments.json", query: { "limit" => "1000" })
-    stub_um_get("/bf/Buildings/v2/Departments/190100", fixture: "department_190100.json")
-    stub_um_get("/bf/Buildings/v2/1005046/Rooms", fixture: "rooms_1005046.json", query: { "limit" => "1000" })
-    stub_um_get("/bf/Buildings/v2/1005090/Rooms", fixture: "rooms_1005090.json", query: { "limit" => "1000" })
+    stub_um_get("/bf/Buildings/v2/RoomInfo/1005046", fixture: "rooms_1005046.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
+    stub_um_get("/bf/Buildings/v2/RoomInfo/1005090", fixture: "rooms_1005090.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
   end
 
   def stub_facility_ids_feed
-    stub_um_get("/bf/Buildings/v2/Classrooms", fixture: "classroom_list.json", query: { "limit" => "1000" })
+    stub_um_get("/aa/ClassroomList/v2/Classrooms", fixture: "classroom_list_mlb_ah.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
   end
 
   def stub_characteristics_feed
-    stub_um_get("/bf/Buildings/v2/Classrooms/MLB1200/Characteristics", fixture: "characteristics_MLB1200.json")
-    stub_um_get("/bf/Buildings/v2/Classrooms/AH0100/Characteristics", fixture: "characteristics_empty.json")
+    stub_um_get("/aa/ClassroomList/v2/Classrooms/MLB1200/Characteristics", fixture: "characteristics_MLB1200.json")
+    stub_um_get("/aa/ClassroomList/v2/Classrooms/AH0100/Characteristics", fixture: "characteristics_AH0100.json")
   end
 
   def stub_contacts_feed
-    stub_um_get("/bf/Buildings/v2/Classrooms/MLB1200/Contacts", fixture: "contacts_MLB1200.json")
-    stub_um_get("/bf/Buildings/v2/Classrooms/AH0100/Contacts", fixture: "contacts_AH0100.json")
+    stub_um_get("/aa/ClassroomList/v2/Classrooms/MLB1200/Contacts", fixture: "contacts_MLB1200.json")
+    stub_um_get("/aa/ClassroomList/v2/Classrooms/AH0100/Contacts", fixture: "contacts_AH0100.json")
   end
 
   # The full endpoint set every one of the six core phases hits on a run
@@ -127,6 +147,7 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
     stub_tokens
     stub_campuses_feed
     stub_buildings_feed
+    stub_departments_feed
     stub_rooms_feed
     stub_facility_ids_feed
     stub_characteristics_feed
@@ -157,12 +178,16 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
       expect(rooms.counters).to include("created" => 4, "api_calls" => 4)
       expect(counter(rooms, :deactivated)).to eq(0)
 
+      # api_calls: 1 (facility list) + 1 (MLB1200's Characteristics) +
+      # 1 (AH0100's Characteristics) = 3.
       facility_ids = phase_for(run, "facility_ids")
-      expect(facility_ids.counters).to include("updated" => 2, "api_calls" => 1)
+      expect(facility_ids.counters).to include("updated" => 2, "api_calls" => 3)
       expect(counter(facility_ids, :skipped)).to eq(0)
 
+      # 2 facility-coded rooms (German via MLB1200, Math via AH0100), 3
+      # characteristics each -> added 6, one api_call per room.
       characteristics = phase_for(run, "characteristics")
-      expect(characteristics.counters).to include("added" => 3, "api_calls" => 2)
+      expect(characteristics.counters).to include("added" => 6, "api_calls" => 2)
       expect(counter(characteristics, :removed)).to eq(0)
 
       contacts = phase_for(run, "contacts")
@@ -179,11 +204,13 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
       expect(Building.for_current_workspace.pluck(:bldrecnbr)).to contain_exactly("1005046", "1005090")
       expect(Building.for_current_workspace.exists?(bldrecnbr: "1005200")).to be false # DEDC, campus 250, out of scope
 
-      # Floors are created from room labels: MLB gives "1"/"B"/"3", AH gives "0".
+      # Floors are created from room labels: MLB gives "1"/"B"/"3" (Office's
+      # raw "03" normalized), AH gives "0".
       expect(Floor.for_current_workspace.count).to eq(4)
 
       # Every room's department group collapses to the ONE COLLEGE_OF_LSA
-      # unit (German 190000, Chem-lab 190100 via fallback, Math 180000 all
+      # unit (German's bulk-preloaded dept, Chem-lab's dept via the
+      # `?DeptDescription=` fallback, and Math's bulk-preloaded dept all
       # share the group code, Task 9's D10 keying rule).
       expect(Unit.for_current_workspace.count).to eq(1)
       unit = Unit.for_current_workspace.sole
@@ -202,19 +229,19 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
 
       office = Room.for_current_workspace.find_by!(rmrecnbr: "2005048")
       expect(office.room_type).to eq("Office")
-      expect(office.unit_id).to be_nil # blank department group -> admin-only, no unit (Brief §14.1)
+      expect(office.unit_id).to be_nil # blank department name -> admin-only, no unit (Brief §14.1)
 
       # Characteristics normalize their short_code through the shared
       # CodeNormalizer (downcase, strip non-alphanumeric): "Whtbrd>25" ->
-      # "whtbrd25".
+      # "whtbrd25". `code` is Chrstc.to_s (an int in the real feed).
       expect(german.room_characteristics.pluck(:short_code)).to contain_exactly("instrcomp", "lecturecap", "whtbrd25")
-      expect(german.room_characteristics.find_by!(code: "WHTBD25").short_code).to eq("whtbrd25")
+      expect(german.room_characteristics.find_by!(code: "103").short_code).to eq("whtbrd25")
 
       math = Room.for_current_workspace.find_by!(rmrecnbr: "2005090")
       expect(math.facility_code).to eq("AH0100")
       expect(math.room_contact.scheduling_name).to eq("Angell Hall Scheduling")
       expect(german.room_contact.scheduling_name).to eq("LSA Classroom Scheduling")
-      expect(german.room_contact.support_phone).to be_nil # JSON null coerced, never ""
+      expect(german.room_contact.support_phone).to be_nil # space-padded (" ") coerced, never stored as-is
     end
 
     it "recomputes Setting.capacity_filter_max from the ingested seat counts (D12)" do
@@ -222,9 +249,9 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
 
       run_pipeline
 
-      # ceil(60 / 25.0) * 25 = 75 (MLB1200's 60 seats; AH0100's 0 seats fails
-      # Room.classroom's `instructional_seat_count: 2..` floor and never
-      # contributes to the max).
+      # ceil(60 / 25.0) * 25 = 75 (German's 60 seats via MLB1200; Math's 0
+      # seats via AH0100 fails Room.classroom's `instructional_seat_count:
+      # 2..` floor and never contributes to the max).
       expect(Setting.capacity_filter_max).to eq(75)
     end
   end
@@ -286,7 +313,7 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
       # rooms exercising every OTHER destructive sweep in the pipeline:
       mlb_building = create(:building, workspace: workspace, bldrecnbr: "1005046", name: "Old MLB Name")
       stale_room = create(:room, workspace: workspace, building: mlb_building,
-        rmrecnbr: "9999999", facility_code: nil, in_feed: true) # rooms: would-deactivate
+        rmrecnbr: "9999997", facility_code: nil, in_feed: true) # rooms: would-deactivate
       stale_facility_room = create(:room, workspace: workspace, building: mlb_building,
         rmrecnbr: "8888888", facility_code: "OLD8888", in_feed: true) # facility_ids: would-clear
       german_room = create(:room, workspace: workspace, building: mlb_building,
@@ -299,8 +326,8 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
       # dry-run (that's the behavior under test), so it's still a
       # facility-coded room when Characteristics/Contacts iterate
       # `Room.where.not(facility_code: nil)` later in the same run.
-      stub_um_get("/bf/Buildings/v2/Classrooms/OLD8888/Characteristics", fixture: "characteristics_empty.json")
-      stub_um_get("/bf/Buildings/v2/Classrooms/OLD8888/Contacts", fixture: "contacts_MLB1200.json")
+      stub_um_get("/aa/ClassroomList/v2/Classrooms/OLD8888/Characteristics", fixture: "characteristics_empty.json")
+      stub_um_get("/aa/ClassroomList/v2/Classrooms/OLD8888/Contacts", fixture: "contacts_MLB1200.json")
 
       run = Sync::RunPipeline.call(dry_run: true, sleeper: no_op_sleeper)
 
@@ -321,7 +348,7 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
 
       rooms_phase = phase_for(run, "rooms")
       expect(counter(rooms_phase, :deactivated)).to eq(2) # stale_room + stale_facility_room
-      expect(rooms_phase.warnings).to include(a_string_matching(/9999999/))
+      expect(rooms_phase.warnings).to include(a_string_matching(/9999997/))
 
       facility_ids_phase = phase_for(run, "facility_ids")
       expect(counter(facility_ids_phase, :cleared)).to eq(1)
@@ -334,7 +361,7 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)",
       # Dry-run still upserts (routine, non-destructive, per BasePhase's
       # contract) — the German room's real characteristics from the feed ARE
       # created even though nothing already on file was removed.
-      expect(RoomCharacteristic.where(room: german_room, code: "INSTRCOMP")).to exist
+      expect(RoomCharacteristic.where(room: german_room, code: "101")).to exist
     end
   end
 end

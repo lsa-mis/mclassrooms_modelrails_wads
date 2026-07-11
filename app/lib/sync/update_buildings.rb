@@ -60,9 +60,8 @@
 # digging the real two-level envelope (`resp["ListOfBldgs"]["Buildings"]`).
 # No fiscal-year param: BuildingInfo doesn't scope by fiscal year at all —
 # the old `FISCAL_YEAR_PARAM`/`UmApi.fiscal_year(Date.current)` pairing was a
-# guess against the wrong endpoint and is dropped outright (UmApi.fiscal_year
-# itself stays defined; other still-unmigrated phases/comments may reference
-# it).
+# guess against the wrong endpoint and is dropped outright (sync-fix Task 5
+# deleted `UmApi.fiscal_year` itself, once this phase was its only caller).
 module Sync
   class UpdateBuildings < BasePhase
     KEY = "buildings"

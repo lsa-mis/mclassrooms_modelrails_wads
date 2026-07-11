@@ -39,48 +39,34 @@ RSpec.describe UmApiStubs do
 
   describe "#stub_um_get" do
     it "returns the named fixture's raw JSON for a matching GET" do
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json")
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
 
       response = Net::HTTP.get_response(URI("#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/Campuses"))
       body = JSON.parse(response.body)
 
       expect(response).to be_a(Net::HTTPSuccess)
-      expect(body["Campuses"].map { |c| c["CampusCd"] }).to contain_exactly("100", "250")
+      expect(body["Campuses"]["Campus"].map { |c| c["CampusCd"] }).to contain_exactly("100", "250")
     end
 
     it "matches only the given query params, not an unqualified request" do
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page1.json", query: { fiscalYear: "2027" })
+      stub_um_get("/bf/Buildings/v2/BuildingInfo", fixture: "building_info_page2.json",
+        query: { "$start_index" => "1000", "$count" => "1000" })
 
-      response = Net::HTTP.get_response(URI("#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?fiscalYear=2027"))
-      expect(JSON.parse(response.body)["Buildings"].size).to eq(2)
+      response = Net::HTTP.get_response(
+        URI("#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/BuildingInfo?$start_index=1000&$count=1000")
+      )
+      expect(JSON.parse(response.body)["ListOfBldgs"]["Buildings"].size).to eq(1)
 
       expect do
-        Net::HTTP.get_response(URI("#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2"))
+        Net::HTTP.get_response(URI("#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/BuildingInfo"))
       end.to raise_error(WebMock::NetConnectNotAllowedError)
-    end
-
-    it "attaches a Link: rel=\"next\" header when next_link is given" do
-      next_page_url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?page=2"
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page1.json", next_link: next_page_url)
-
-      response = Net::HTTP.get_response(URI("#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2"))
-
-      expect(response["Link"]).to eq(%(<#{next_page_url}>; rel="next"))
-    end
-
-    it "omits the Link header when next_link is not given (last page)" do
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_page2.json")
-
-      response = Net::HTTP.get_response(URI("#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2"))
-
-      expect(response["Link"]).to be_nil
     end
   end
 
   describe "fixture inventory" do
     it "ships every fixture file the roadmap's Test fixtures section names" do
       %w[
-        token.json campuses.json buildings_page1.json buildings_page2.json
+        token.json fetch_all_campuses.json building_info_page1.json building_info_page2.json
         rooms_1005046.json rooms_1005090.json classroom_list.json
         characteristics_MLB1200.json contacts_MLB1200.json
       ].each do |name|
