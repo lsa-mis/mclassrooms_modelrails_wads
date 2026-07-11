@@ -153,7 +153,6 @@ en:
       unit_label: "School/College"
       unit_all: "All schools/colleges"
       capacity_max_label: "Maximum capacity"
-      characteristics_legend: "Characteristics"
       sort_label: "Sort by"
       sorts:
         default: "Building, then room"
