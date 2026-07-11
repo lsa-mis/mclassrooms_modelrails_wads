@@ -58,9 +58,10 @@ RSpec.describe "GET /find-a-room", type: :request do
       get find_a_room_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(listed_classroom.display_name)
-      expect(response.body).not_to include(hidden_classroom.display_name)
-      expect(response.body).not_to include(non_classroom.display_name)
+      # Card titles are room number + building (2026-07 redesign), not codes.
+      expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
+      expect(response.body).not_to include(hidden_classroom.room_number)
+      expect(response.body).not_to include(non_classroom.room_number)
     end
 
     it "responds with the JSON shape: room keys + pagination block" do
@@ -321,8 +322,9 @@ RSpec.describe "GET /find-a-room", type: :request do
       get find_a_room_path, params: { building: "Mason" }
 
       expect(response.body).to include('id="find_a_room_results"')
-      expect(response.body).to include(listed_classroom.display_name)
-      expect(response.body).not_to include(other_room.display_name)
+      # Card titles are room number + building (2026-07 redesign), not codes.
+      expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
+      expect(response.body).not_to include(other_room.room_number)
     end
 
     it "hides the admin-only view toggles from a viewer" do

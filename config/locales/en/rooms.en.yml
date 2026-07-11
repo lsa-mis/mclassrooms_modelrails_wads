@@ -8,6 +8,10 @@ en:
     characteristic_label_overrides:
       projdigit: "Projector"
       movetablet: "Movable seating"
+    # Same idea for vendor GROUP names (More-filters fieldset legends).
+    characteristic_group_overrides:
+      "Ethernet Connection": "Ethernet"
+      "Team Based Learning": "Team-based learning"
     show:
       capacity: "%{students} students · %{ada} ADA-accessible seats"
       address: "Address"
@@ -161,6 +165,7 @@ en:
       ada:
         one: "+1 ADA"
         other: "+%{count} ADA"
+      floor_label: "Floor %{label}"
       room_number: "Room number"
       unit: "School/College"
       characteristics_heading: "Characteristics"

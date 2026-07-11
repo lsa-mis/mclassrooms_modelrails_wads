@@ -122,13 +122,32 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(response.body).not_to include(I18n.t("rooms.filters.applied_count", count: 3))
   end
 
-  it "renders card meta as building · floor and splits the capacity number from its label" do
+  it "renders a humanized card title, unit·floor meta, and a split capacity number" do
     get find_a_room_path
 
     card = page.find("turbo-frame#find_a_room_results li", match: :first)
-    expect(card).to have_text("Mason Hall · 1")
+    expect(card).to have_text("1401 Mason Hall") # room number + building, not the facility code
+    expect(card).to have_text(I18n.t("rooms.row.floor_label", label: "1"))
     expect(card).to have_text("45")
     expect(card).to have_text(I18n.t("rooms.row.seats_label", count: 45))
+  end
+
+  it "humanizes ALL-CAPS vendor building names in card titles" do
+    caps = create(:building, workspace: workspace, name: "CHEMISTRY AND DOW WILLARD H LABORATORY")
+    classroom(caps, "1300", 500)
+
+    get find_a_room_path
+
+    expect(page).to have_text("1300 Chemistry and Dow Willard H Laboratory")
+  end
+
+  # Directory pages are public-facing: the workspace shell (sidebar, identity
+  # bar, section-nav strip) is workspace-member chrome whose links make no
+  # sense to a viewer finding a room (Dave, 2026-07-11).
+  it "renders full-width, without the workspace sidebar shell" do
+    get find_a_room_path
+
+    expect(page).to have_no_css("aside[aria-label='#{I18n.t("workspaces.sidebar.aria_label")}']")
   end
 
   describe "admin inactive views" do

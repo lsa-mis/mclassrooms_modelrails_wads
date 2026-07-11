@@ -22,10 +22,8 @@
       <% end %>
 
       <span class="flex-1 min-w-40">
-        <span class="block font-semibold text-text-heading"><%= room.display_name %></span>
-        <span class="block text-sm text-text-muted">
-          <%= room.building.display_name %><% if room.floor %> · <%= room.floor.label %><% end %>
-        </span>
+        <span class="block font-semibold text-text-heading"><%= room_card_title(room) %></span>
+        <span class="block text-sm text-text-muted"><%= room_card_meta(room) %></span>
       </span>
 
       <span class="flex items-center gap-2 shrink-0">
