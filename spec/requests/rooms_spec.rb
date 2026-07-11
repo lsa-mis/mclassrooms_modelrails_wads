@@ -371,29 +371,26 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(response.body).not_to include(I18n.t("rooms.index.buildings_heading"))
     end
 
-    # Teeth for the nested-interactive a11y fix: the row's characteristic icon
-    # chip must give the (aria-hidden) icon a visually-hidden accessible name,
-    # and the <summary> subtree must contain NO focusable/interactive descendant
-    # — HTML5 forbids focusable descendants of <summary>, and axe-core's
-    # nested-interactive rule (Task 8) flags exactly a `tabindex`-bearing tooltip
-    # wrapper here. "Media: Projector" parses to the label "Projector" (Task 3
-    # grouping); "projector" is normalization-stable so the icon-key join hits.
-    it "renders the row characteristic chip with an sr-only name and no focusable element in the summary" do
+    # Teeth for the nested-interactive a11y posture: card tags are plain,
+    # LABELED <span>s (2026-07 redesign — labels over icons), and the
+    # <summary> subtree must contain NO focusable/interactive descendant —
+    # HTML5 forbids focusable descendants of <summary>, and axe-core's
+    # nested-interactive rule flags exactly a `tabindex`-bearing tooltip
+    # wrapper here. "projdigit" is in RoomsHelper::CARD_TAG_CODES and its
+    # locale override renders it as "Projector".
+    it "renders a labeled card tag and no focusable element in the summary" do
       create(:room_characteristic, room: listed_classroom, workspace: workspace,
-             short_code: "projector", description: "Media: Projector")
-      create(:characteristic_display_rule, workspace: workspace, short_code: "projector", icon_key: "computer_desktop")
+             short_code: "projdigit", description: "Projection: Digital Data&Video")
       sign_in(membership_with("viewer"))
 
       get find_a_room_path
 
-      # The page now has several <summary> elements (the More-filters
-      # disclosure ships one before any room card), so scan them all and pick
-      # the row summary carrying the chip.
+      # The page has several <summary> elements (the More-filters disclosure
+      # ships one before any room card) — pick the card summary via its tag.
       summaries = response.body.scan(%r{<summary\b.*?</summary>}m)
-      summary_html = summaries.find { |s| s.include?('class="sr-only">Projector') }
+      summary_html = summaries.find { |s| s.include?(">Projector<") }
       expect(summary_html).to be_present
-      # No focusable/interactive descendant of <summary>: the old ui :tooltip
-      # wrapper carried tabindex="0" + role="tooltip"; the plain <span> chip does not.
+      # No focusable/interactive descendant of <summary>.
       expect(summary_html).not_to include("tabindex")
       expect(summary_html).not_to include('role="tooltip"')
     end

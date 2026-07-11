@@ -7,7 +7,20 @@ module RoomsHelper
   # are EXCLUDED from the More-filters panel below so `characteristics[]` is
   # never rendered twice for one code (two same-name checked inputs would
   # double-submit).
-  PROMOTED_FILTER_CODES = %w[projdigit whtbrd lecturecap].freeze
+  PROMOTED_FILTER_CODES = %w[projdigit movetablet whtbrd].freeze
+
+  # Card tags (sprint prototype): a few LABELED tags beat a strip of ~15
+  # ambiguous icons. Priority-ordered; capped in the view. The expanded
+  # details still lists every characteristic.
+  CARD_TAG_CODES = %w[projdigit lecturecap doccam whtbrd chkbrd teamtables instrcomp movetablet].freeze
+  CARD_TAG_LIMIT = 4
+
+  def room_card_tags(room)
+    codes = room.room_characteristics.map(&:short_code)
+    CARD_TAG_CODES.select { |code| codes.include?(code) }
+                  .first(CARD_TAG_LIMIT)
+                  .map { |code| characteristic_labels.fetch(code, code) }
+  end
 
   def promoted_filter_entries(filter_groups)
     filter_groups.flat_map(&:entries)
@@ -65,38 +78,19 @@ module RoomsHelper
     chips
   end
 
-  # short_code => icon_key for characteristics that have an icon configured.
-  # Memoized per request (a plain ivar, not Rails.cache — CharacteristicDisplayRule
-  # rows rarely change and this only needs to survive one index render), so the
-  # N-row results list issues exactly one query for this lookup instead of one
-  # per row.
-  def characteristic_icon_keys
-    @characteristic_icon_keys ||=
-      CharacteristicDisplayRule.where.not(icon_key: [ nil, "" ]).pluck(:short_code, :icon_key).to_h
-  end
-
   # Request-scoped memo of the full short_code => label map (mirrors
   # characteristic_icon_keys above): CharacteristicFilterGroups.labels computes
   # data_version (4 aggregates) to build its cache key, so calling label_for
   # per characteristic per row re-ran those aggregates hundreds of times per
   # render. Resolving the hash ONCE collapses that to a single computation.
+  # Vendor labels (parsed from sync descriptions; CharacteristicDisplayRule
+  # has no label column, so they are NOT admin-editable) get product-level
+  # overrides from the locale — "Digital Data&Video" is a projector to every
+  # user of this page.
   def characteristic_labels
-    @characteristic_labels ||= CharacteristicFilterGroups.labels
-  end
-
-  # Icon chips for a room's key characteristics (Brief §5.2 row icons): only
-  # characteristics with a configured icon_key get a chip. `IconRegistry.exists?`
-  # guards a stale/typo'd icon_key (e.g. an admin renamed an icon file) so a
-  # display-rule data issue degrades to "no chip" rather than a 500 on this
-  # index page. `room.room_characteristics` reads the RoomSearch#results
-  # preload — no query here.
-  def room_characteristic_icons(room)
-    room.room_characteristics.filter_map do |rc|
-      icon_key = characteristic_icon_keys[rc.short_code]
-      next unless icon_key.present? && IconRegistry.exists?(icon_key)
-
-      [ icon_key, characteristic_labels.fetch(rc.short_code, rc.short_code) ]
-    end
+    @characteristic_labels ||= CharacteristicFilterGroups.labels.merge(
+      I18n.t("rooms.characteristic_label_overrides", default: {}).stringify_keys.transform_values(&:to_s)
+    )
   end
 
   # First gallery image, position-ordered. Deliberately sorts the ALREADY

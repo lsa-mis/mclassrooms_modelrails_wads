@@ -61,15 +61,21 @@
   <% if promoted.any? %>
     <fieldset>
       <legend class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.popular_legend") %></legend>
-      <div class="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+      <div class="mt-2 flex flex-wrap gap-2">
         <% promoted.each do |entry| %>
-          <%= ui :checkbox,
-                name: "characteristics[]",
-                value: entry.short_code,
-                label: entry.label,
-                checked: Array(params[:characteristics]).include?(entry.short_code),
-                id: "characteristics_#{entry.short_code}",
-                data: { action: "change->filter-form#submitNow" } %>
+          <%# Pill treatment (sprint prototype): the native checkbox stays
+              visible inside the pill — the border/tint is presentation, the
+              checkbox is the control. %>
+          <span class="inline-flex items-center rounded-full border border-border px-4 min-h-11
+                       has-checked:border-interactive has-checked:bg-interactive-subtle">
+            <%= ui :checkbox,
+                  name: "characteristics[]",
+                  value: entry.short_code,
+                  label: characteristic_labels.fetch(entry.short_code, entry.label),
+                  checked: Array(params[:characteristics]).include?(entry.short_code),
+                  id: "characteristics_#{entry.short_code}",
+                  data: { action: "change->filter-form#submitNow" } %>
+          </span>
         <% end %>
       </div>
     </fieldset>
@@ -120,7 +126,7 @@
                   <%= ui :checkbox,
                         name: "characteristics[]",
                         value: entry.short_code,
-                        label: entry.label,
+                        label: characteristic_labels.fetch(entry.short_code, entry.label),
                         checked: Array(params[:characteristics]).include?(entry.short_code),
                         id: "characteristics_#{entry.short_code}",
                         data: { action: "change->filter-form#submitNow" } %>
