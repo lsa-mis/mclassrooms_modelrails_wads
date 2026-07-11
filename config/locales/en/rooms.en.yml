@@ -138,6 +138,7 @@ en:
       form_label: "Filter rooms"
       card_title: "Filters"
       clear_all: "Clear all"
+      about_filter: "About the %{label} filter"
       applied_count:
         one: "%{count} filter applied"
         other: "%{count} filters applied"
