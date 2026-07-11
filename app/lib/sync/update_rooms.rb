@@ -7,60 +7,80 @@
 #
 # ALL ROOM TYPES (Brief §14.2): every row returned per building is ingested —
 # Classroom, Class Laboratory, Office, everything. There is deliberately NO
-# `RoomType == "Classroom"` filter here, even though the legacy app applied
-# one at ingestion time. `Room.classroom` (app/models/room.rb) is a DISPLAY
-# scope for the Find-a-Room UI, not an ingestion rule — an Office row is a
-# real room this app needs to know about (for department/unit assignment,
-# characteristics, contacts in later phases), it just never shows up in the
-# classroom-only listing.
+# `RoomTypeDescription == "Classroom"` filter here, even though the legacy
+# `lib/tasks/um_import.rake` (UmImport) applies one at ingestion time as a
+# DEV-only simplification (see sync-fix-decisions.md Risk 3: um_import's
+# Classroom-only was a deliberate dev shortcut, not a product policy — this
+# phase's all-room-types behavior is the actual product decision and stays).
+# `Room.classroom` (app/models/room.rb) is a DISPLAY scope for the
+# Find-a-Room UI, not an ingestion rule — an Office row is a real room this
+# app needs to know about (for department/unit assignment, characteristics,
+# contacts in later phases), it just never shows up in the classroom-only
+# listing.
 #
 # Per-building walk: rooms have no flat listing endpoint of their own in this
 # gateway's shape (unlike Campuses, a flat sub-resource of Buildings) — the
 # feed is inherently per-building, so #perform iterates
 # `Building.for_current_workspace` (already scope-filtered by
 # Sync::UpdateBuildings, Task 8 — this phase does no scope filtering of its
-# own) and calls `#each_page` once per building. `rooms_path` mirrors
-# UpdateBuildings's own "/bf/Buildings/v2" prefix for internal consistency;
-# like FISCAL_YEAR_PARAM there, this is a best-effort guess pending phase 8's
-# credentialed cutover (see spec/support/um_api_stubs.rb's fixture-shape
-# disclaimer) — only this method needs to change if the real path differs.
+# own) and calls `client.fetch_all` once per building against
+# `GET /bf/Buildings/v2/RoomInfo/{bldrecnbr}` (confirmed live, sync-fix Task
+# 3 — see the proven reference `lib/tasks/um_import.rake#import_rooms`),
+# array at `resp["ListOfRooms"]["RoomData"]`.
 #
 # floor_id / unit_id (D10 / Brief §14.1): `Floor.find_or_create_by!(building:,
 # label:)` creates the floor once per (building, label) — the DB's own
 # `[building_id, label]` unique index (db/schema.rb) makes this safe to call
 # on every room on that floor, every run. `Unit.find_or_create_by!
-# (department_group: <DeptGrp CODE>)` keys on the department group's STABLE
+# (department_group: <DeptGroup CODE>)` keys on the department group's STABLE
 # CODE (e.g. "COLLEGE_OF_LSA"), NOT its free-text description — many
 # departments share one group code, and a Unit IS a group, so keying on the
 # code collapses them to a single Unit, whereas keying on the (rewordable)
 # description would spuriously fork one group into several Units. The group
-# DESCRIPTION (DeptGrpDescr, "College of Literature, Science & the Arts") is
-# stored in `Unit.description` on create and refreshed if it later drifts —
-# a display attribute, never the key, so a reworded description updates the
-# existing Unit rather than creating a new one. That description feeds
-# `Unit#display_name`'s `|| description` fallback, and the phase-1 seed's
-# UnitDisplayName override (keyed on the same CODE) layers on top of it. Unit
-# resolution is skipped (unit_id: nil) when the group code is blank — the
-# admin-only-room case (Brief §14.1): a room with no department group has no
-# unit to assign. Both lookups are scoped `.for_current_workspace` (matching
-# Sync::UpdateCampuses's `find_or_initialize_by` precedent) so a brand-new
-# Floor or Unit is stamped with this run's workspace via `scope_for_create`,
-# and two workspaces never collide on the same (building, label) or
-# department_group code.
+# DESCRIPTION (DeptGroupDescription, "College of Literature, Science & the
+# Arts") is stored in `Unit.description` on create and refreshed if it later
+# drifts — a display attribute, never the key, so a reworded description
+# updates the existing Unit rather than creating a new one. That description
+# feeds `Unit#display_name`'s `|| description` fallback, and the phase-1
+# seed's UnitDisplayName override (keyed on the same CODE) layers on top of
+# it. Unit resolution is skipped (unit_id: nil) when the group code is blank
+# (the admin-only-room case, Brief §14.1): a room with no department group
+# has no unit to assign. Both lookups are scoped `.for_current_workspace`
+# (matching Sync::UpdateCampuses's `find_or_initialize_by` precedent) so a
+# brand-new Floor or Unit is stamped with this run's workspace via
+# `scope_for_create`, and two workspaces never collide on the same
+# (building, label) or department_group code.
+#
+# Department join key (sync-fix Task 3 — THE structural change of this
+# rewrite): `GET /bf/Buildings/v2/RoomInfo/{bldrecnbr}` carries no per-room
+# department id at all — only `DepartmentName`, a FREE-TEXT string. There is
+# no `DeptID` on a room row. The real department index
+# (`GET /bf/Department/v2/DeptData`, a different base path —
+# `/bf/Department/v2`, not `/bf/Buildings/v2`) is therefore keyed by its own
+# `DeptDescription` string, and every room's lookup is `department_lookup
+# [row_department_name]` — an O(1) hash read keyed on a STRING, never an id.
+# The room's persisted `department_id` column is populated *after* that
+# lookup succeeds, from the resolved department row's own `DeptId` field —
+# it is never read directly off a Rooms row (there is nothing to read; see
+# `#parse_room` below, which returns `department_name`, not `department_id`).
 #
 # Department enrichment (performance — Task 8's review flagged per-row Campus
 # lookups in UpdateBuildings; this phase has far higher row volume, so it
 # matters more here): `#preload_departments` makes ONE paged fetch before any
-# building is walked, building a `{dept_id => {description:, group:,
-# group_description:}}` hash. Every room's lookup after that is an O(1) hash
-# read — NOT a per-row gateway call. Only when a room's department id is
-# missing from that hash does `#fetch_department_fallback` make an
-# individual `get_json` call, and even that is wrapped in
+# building is walked, building a `{department_name => {id:, description:,
+# group:, group_description:}}` hash. Every room's lookup after that is an
+# O(1) hash read — NOT a per-row gateway call. Only when a room's department
+# name is missing from that hash does `#fetch_department_fallback` make an
+# individual query-param GET (`?DeptDescription={name}` — NOT a path segment;
+# `/DeptData/{id}` does not exist), and even that is wrapped in
 # `client.rate_limiter.backoff_429` so a transient 429 during the fallback
 # sleeps-and-retries instead of aborting the whole phase (same tool
 # UmApi::RateLimiter already gives every phase, roadmap Task 4). A room
-# whose department id is blank (the common admin-room case) never triggers
-# either path — there is nothing to look up.
+# whose department name is blank (the common admin-room case) never triggers
+# either path — there is nothing to look up. A fallback query that comes back
+# with zero rows (name genuinely not found even individually) degrades to
+# "no enrichment" rather than raising — same "do not fail on a data gap"
+# posture the rest of this phase takes.
 #
 # Deactivation sweep (Brief §6.1 phase 3 / §8.4: deactivate, never delete):
 # after every building has been walked, `#deactivate_stale_rooms` flips
@@ -103,20 +123,26 @@
 # half of this phase, only the deactivation is the destructive write dry-run
 # exists to preview.
 #
-# parse_room(row) / parse_department(row) isolation: per spec/support/
-# um_api_stubs.rb's fixture-shape disclaimer, these are the ONLY two places
-# that reach into a raw API response hash directly. RmRecNbr/BldRecNbr/
-# RoomNbr/RoomType/DeptID/SqFt/Floor (rooms) and DeptID/DeptDescr/DeptGrp/
-# DeptGrpDescr (departments) match spec/fixtures/um_api/rooms_*.json and
-# departments.json exactly, NOT verified against credentialed access — if
-# phase 8's cutover finds different field names or endpoint paths, only
-# these two methods and the two path constants below need to change.
+# parse_room(row) / parse_department(row) isolation: RoomRecordNumber/
+# RoomNumber/RoomTypeDescription/DepartmentName/RoomSquareFeet/FloorNumber
+# (rooms) and DeptId/DeptDescription/DeptGroup/DeptGroupDescription
+# (departments) are confirmed against live credentialed access (sync-fix
+# Task 3; see the proven reference `lib/tasks/um_import.rake#upsert_room`/
+# `#load_department_index`) — no other code reaches into a raw API response
+# hash directly, so a future field-name change would still only touch these
+# two methods and the two path constants below. `RoomName` is present on the
+# feed but has no column mapping in this app and is left unused, matching
+# `UmImport`. `normalize_floor_label` (ported from
+# `UmImport.normalize_floor_label`) strips a single leading zero unless doing
+# so would collapse the label to nothing ("01" -> "1", "0G" -> "G", "00" ->
+# "0") — new behavior; the pre-Task-3 code did zero normalization on the raw
+# floor value.
 module Sync
   class UpdateRooms < BasePhase
     KEY = "rooms"
 
-    BUILDINGS_PATH = "/bf/Buildings/v2"
-    DEPARTMENTS_PATH = "/bf/Buildings/v2/Departments"
+    ROOM_INFO_PATH = "/bf/Buildings/v2/RoomInfo"
+    DEPARTMENTS_PATH = "/bf/Department/v2/DeptData"
 
     private
 
@@ -125,7 +151,8 @@ module Sync
       seen = []
 
       Building.for_current_workspace.find_each do |building|
-        client.each_page(rooms_path(building), scope: "buildings") do |row|
+        rows = client.fetch_all(rooms_path(building), array_path: %w[ListOfRooms RoomData], scope: "buildings")
+        rows.each do |row|
           attrs = parse_room(row)
           seen << attrs[:rmrecnbr]
           upsert_room(attrs, building, department_lookup)
@@ -135,35 +162,41 @@ module Sync
       deactivate_stale_rooms(seen)
     end
 
-    def rooms_path(building) = "#{BUILDINGS_PATH}/#{building.bldrecnbr}/Rooms"
+    def rooms_path(building) = "#{ROOM_INFO_PATH}/#{building.bldrecnbr}"
 
     # ONE paged fetch, built before any building is walked — see header
-    # comment. Keyed by department id (string) so per-room lookups below are
-    # a plain hash read.
+    # comment. Keyed by the department's own DeptDescription (a free-text
+    # string — the exact join key RoomInfo's per-room DepartmentName
+    # repeats), so per-room lookups below are a plain hash read.
     def preload_departments
-      lookup = {}
-      client.each_page(DEPARTMENTS_PATH, scope: "department") do |row|
+      rows = client.fetch_all(DEPARTMENTS_PATH, array_path: %w[DepartmentList DeptData], scope: "department")
+      rows.each_with_object({}) do |row, lookup|
         parsed = parse_department(row)
-        lookup[parsed[:id]] = parsed
+        lookup[parsed[:description]] = parsed
       end
-      lookup
     end
 
-    # Individual per-department fallback for a room whose department id
-    # wasn't in the bulk preload. `backoff_429` (UmApi::RateLimiter, Task 4)
-    # sleeps-and-retries on a transient 429 instead of aborting the phase;
-    # `client.rate_limiter` is the same reader Sync::BasePhase itself uses to
-    # compute `rate_limit_sleeps` (see that class's header comment), so a
-    # sleep triggered here is counted the same way.
-    def fetch_department_fallback(department_id)
-      row = client.rate_limiter.backoff_429 do
-        client.get_json("#{DEPARTMENTS_PATH}/#{department_id}", scope: "department")
+    # Individual per-department-name fallback for a room whose department
+    # name wasn't in the bulk preload. Unlike the old id-keyed path-segment
+    # guess, the real single-department lookup is a query param on the SAME
+    # DEPARTMENTS_PATH, not a path segment (`/DeptData/{id}` does not exist).
+    # `backoff_429` (UmApi::RateLimiter, Task 4) sleeps-and-retries on a
+    # transient 429 instead of aborting the phase; `client.rate_limiter` is
+    # the same reader Sync::BasePhase itself uses to compute
+    # `rate_limit_sleeps` (see that class's header comment), so a sleep
+    # triggered here is counted the same way. A response with zero matching
+    # rows (name not found even individually) returns nil rather than
+    # raising — the caller treats that the same as "no enrichment available".
+    def fetch_department_fallback(department_name)
+      body = client.rate_limiter.backoff_429 do
+        client.get_json(DEPARTMENTS_PATH, params: { "DeptDescription" => department_name }, scope: "department")
       end
-      parse_department(row)
+      row = Array(body.dig("DepartmentList", "DeptData")).first
+      row && parse_department(row)
     end
 
     def upsert_room(attrs, building, department_lookup)
-      dept_attrs = department_attrs(attrs[:department_id], department_lookup)
+      dept_attrs = department_attrs(attrs[:department_name], department_lookup)
       floor = Floor.for_current_workspace.find_or_create_by!(building: building, label: attrs[:floor_label])
 
       assignable = {
@@ -171,7 +204,6 @@ module Sync
         building_name: building.name,
         floor: floor,
         unit_id: resolve_unit_id(dept_attrs[:department_group], dept_attrs[:department_group_description]),
-        department_id: attrs[:department_id],
         room_number: attrs[:room_number],
         room_type: attrs[:room_type],
         square_feet: attrs[:square_feet],
@@ -184,17 +216,27 @@ module Sync
       room.update!(assignable)
     end
 
-    # Blank department id (the admin-room case, Brief §14.1) skips
-    # enrichment entirely — nothing to look up, nothing to assign.
-    def department_attrs(department_id, department_lookup)
-      return { department_description: nil, department_group: nil, department_group_description: nil } if department_id.blank?
+    # Blank department name (the admin-room case, Brief §14.1) skips
+    # enrichment entirely — nothing to look up, nothing to assign. Same
+    # fallback-through-nil result when a name IS present but neither the
+    # bulk preload nor the individual fallback can resolve it (see
+    # #fetch_department_fallback) — a data gap, not a phase failure.
+    def department_attrs(department_name, department_lookup)
+      return blank_department_attrs if department_name.blank?
 
-      enrichment = department_lookup[department_id] || fetch_department_fallback(department_id)
+      enrichment = department_lookup[department_name] || fetch_department_fallback(department_name)
+      return blank_department_attrs unless enrichment
+
       {
+        department_id: enrichment[:id],
         department_description: enrichment[:description],
         department_group: enrichment[:group],
         department_group_description: enrichment[:group_description]
       }
+    end
+
+    def blank_department_attrs
+      { department_id: nil, department_description: nil, department_group: nil, department_group_description: nil }
     end
 
     # Keys the Unit on the department group CODE (stable), storing the group
@@ -241,22 +283,32 @@ module Sync
 
     def parse_room(row)
       {
-        rmrecnbr: row.fetch("RmRecNbr").to_s,
-        room_number: row["RoomNbr"],
-        room_type: row["RoomType"],
-        department_id: row["DeptID"].to_s.presence,
-        square_feet: row["SqFt"],
-        floor_label: row.fetch("Floor").to_s
+        rmrecnbr: row.fetch("RoomRecordNumber").to_s,
+        room_number: row["RoomNumber"],
+        room_type: row["RoomTypeDescription"],
+        department_name: row["DepartmentName"].to_s.presence,
+        square_feet: row["RoomSquareFeet"],
+        floor_label: normalize_floor_label(row.fetch("FloorNumber"))
       }
     end
 
     def parse_department(row)
       {
-        id: row.fetch("DeptID").to_s,
-        description: row["DeptDescr"],
-        group: row["DeptGrp"],
-        group_description: row["DeptGrpDescr"]
+        id: row.fetch("DeptId").to_s,
+        description: row["DeptDescription"],
+        group: row["DeptGroup"],
+        group_description: row["DeptGroupDescription"]
       }
+    end
+
+    # "01" -> "1", "0G" -> "G", "00" -> "0" — strips leading zeros but never
+    # collapses a label to nothing, matching the "1"/"2"/"G" style
+    # db/seeds/development_sample.rb already uses for hand-authored floors.
+    # Ported verbatim from `UmImport.normalize_floor_label`
+    # (`lib/tasks/um_import.rake`); the pre-Task-3 code did no normalization
+    # at all on the raw floor value.
+    def normalize_floor_label(raw)
+      raw.to_s.strip.sub(/\A0+(?=.)/, "")
     end
   end
 end
