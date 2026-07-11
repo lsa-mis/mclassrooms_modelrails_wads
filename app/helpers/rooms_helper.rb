@@ -1,5 +1,70 @@
 # MiClassrooms Phase 3 Task 5 (Brief §5.2): Find a Room row helpers.
 module RoomsHelper
+  # Redesign (2026-07 sprint): short_codes promoted as always-visible "popular
+  # features" chips in the filter card. A presentation choice (which filters
+  # earn top billing), so it lives here; labels still come from the
+  # admin-controlled display rules via the groups' own entries. Promoted codes
+  # are EXCLUDED from the More-filters panel below so `characteristics[]` is
+  # never rendered twice for one code (two same-name checked inputs would
+  # double-submit).
+  PROMOTED_FILTER_CODES = %w[projdigit whtbrd lecturecap].freeze
+
+  def promoted_filter_entries(filter_groups)
+    filter_groups.flat_map(&:entries)
+                 .select { |entry| PROMOTED_FILTER_CODES.include?(entry.short_code) }
+                 .sort_by { |entry| PROMOTED_FILTER_CODES.index(entry.short_code) }
+  end
+
+  # [group, remaining_entries] pairs for the More-filters panel; groups whose
+  # entries were all promoted drop out entirely.
+  def panel_filter_groups(filter_groups)
+    filter_groups.filter_map do |group|
+      entries = group.entries.reject { |entry| PROMOTED_FILTER_CODES.include?(entry.short_code) }
+      [ group, entries ] if entries.any?
+    end
+  end
+
+  # How many applied filters live behind the More-filters disclosure —
+  # panel-only characteristics plus unit and max capacity. Feeds the
+  # summary's applied-count badge and the open-on-load rule below.
+  def panel_filter_count(filter_params)
+    (Array(filter_params[:characteristics]) - PROMOTED_FILTER_CODES).size +
+      [ filter_params[:unit_id], filter_params[:capacity_max] ].count(&:present?)
+  end
+
+  # The More-filters disclosure opens on page load when it holds an applied
+  # filter — a shared URL must not hide the state that produced its results.
+  def more_filters_open?(filter_params) = panel_filter_count(filter_params).positive?
+
+  # Applied-filter chips: RoomSearch#summary itemized — each part becomes a
+  # link to the current search minus that one filter (plain GET links targeting
+  # the results frame, the same pattern as the Reset link). `view`/`sort` ride
+  # along untouched so removing a chip never resets an admin's inactive view or
+  # the chosen sort.
+  def filter_chips(filter_params)
+    base = filter_params.to_h.symbolize_keys
+    chips = []
+    add = ->(label, without) { chips << [ label, find_a_room_path(without.compact_blank) ] }
+
+    add.call(t("rooms.index.summary.query", value: base[:q].strip), base.except(:q)) if base[:q].present?
+    add.call(t("rooms.index.summary.building", value: base[:building]), base.except(:building)) if base[:building].present?
+    add.call(t("rooms.index.summary.room", value: base[:room]), base.except(:room)) if base[:room].present?
+    if base[:unit_id].present? && (unit = Unit.find_by(id: base[:unit_id]))
+      add.call(t("rooms.index.summary.unit", value: unit.display_name), base.except(:unit_id))
+    end
+    if base[:capacity_min].to_i.positive?
+      add.call(t("rooms.index.summary.capacity_min_only", min: base[:capacity_min].to_i), base.except(:capacity_min))
+    end
+    if base[:capacity_max].present?
+      add.call(t("rooms.index.summary.capacity_max_only", max: base[:capacity_max].to_i), base.except(:capacity_max))
+    end
+    Array(base[:characteristics]).each do |code|
+      add.call(t("rooms.index.summary.characteristics", value: characteristic_labels.fetch(code, code)),
+               base.merge(characteristics: Array(base[:characteristics]) - [ code ]))
+    end
+    chips
+  end
+
   # short_code => icon_key for characteristics that have an icon configured.
   # Memoized per request (a plain ivar, not Rails.cache — CharacteristicDisplayRule
   # rows rarely change and this only needs to survive one index render), so the
@@ -50,12 +115,5 @@ module RoomsHelper
   # Full characteristic label list for a row's expanded detail (Brief §5.2).
   def room_characteristic_labels(room)
     room.room_characteristics.map { |rc| characteristic_labels.fetch(rc.short_code, rc.short_code) }.sort
-  end
-
-  # Building-photo placeholder initials (Brief §5.2 building card): first
-  # letter of up to the first two words — "Mason Hall" -> "MH", "Angell" ->
-  # "A". Presentational only, so it lives here rather than as a model method.
-  def building_initials(building)
-    building.name.to_s.split.first(2).filter_map { |word| word[0] }.join.upcase
   end
 end

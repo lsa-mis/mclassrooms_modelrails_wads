@@ -5,9 +5,12 @@
     it; screen readers announce the expanded state natively). No link to
     rooms#show: that route ships in phase 4, so the row's summary IS the
     interactive surface. %>
-<li>
-  <details class="group border-b border-border last:border-b-0">
-    <summary class="list-none min-h-11 flex flex-wrap items-center gap-4 py-3 px-2 -mx-2
+<%# Redesign (2026-07 sprint): each result is a card in the index grid — the
+    border moved from a row divider to the card itself; the <details>
+    disclosure interaction is unchanged. %>
+<li class="rounded-lg border border-border p-3">
+  <details class="group">
+    <summary class="list-none min-h-11 flex flex-wrap items-center gap-4 py-1 px-2 -mx-2
                     cursor-pointer rounded-md focus-ring">
       <% if (thumbnail = room_thumbnail_image(room)) %>
         <%= ui :image,
@@ -22,13 +25,22 @@
       <% end %>
 
       <span class="flex-1 min-w-40">
-        <span class="block font-medium text-text-heading"><%= room.display_name %></span>
-        <span class="block text-sm text-text-muted"><%= room.building.display_name %></span>
+        <span class="block font-semibold text-text-heading"><%= room.display_name %></span>
+        <span class="block text-sm text-text-muted">
+          <%= room.building.display_name %><% if room.floor %> · <%= room.floor.label %><% end %>
+        </span>
       </span>
 
       <span class="flex items-center gap-2 shrink-0">
-        <span class="text-sm text-text-body">
-          <%= t("rooms.row.capacity", count: room.instructional_seat_count.to_i) %>
+        <%# Sprint card anatomy: the seat count is the card's number — split
+            from its label so it reads at a glance across the grid. %>
+        <span class="text-right">
+          <span class="block text-xl font-semibold text-text-heading tabular-nums leading-tight">
+            <%= room.instructional_seat_count.to_i %>
+          </span>
+          <span class="block text-xs uppercase tracking-wide text-text-muted">
+            <%= t("rooms.row.seats_label", count: room.instructional_seat_count.to_i) %>
+          </span>
         </span>
         <% if room.ada_seat_count.to_i.positive? %>
           <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :info %>
@@ -55,9 +67,6 @@
     </summary>
 
     <div class="pl-2 pb-4 pt-1 text-sm text-text-body space-y-1">
-      <% if room.floor %>
-        <p><span class="font-medium text-text-heading"><%= t("rooms.row.floor") %>:</span> <%= room.floor.label %></p>
-      <% end %>
       <% if room.room_number.present? %>
         <p><span class="font-medium text-text-heading"><%= t("rooms.row.room_number") %>:</span> <%= room.room_number %></p>
       <% end %>

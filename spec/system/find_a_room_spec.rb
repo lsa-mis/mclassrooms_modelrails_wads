@@ -65,7 +65,10 @@ RSpec.describe "Find a Room", type: :system do
     expect(page).to have_content(aud.display_name)
 
     page.execute_script("window.__stayedOnPage = true") # falsy again only after a full reload
-    fill_in I18n.t("rooms.filters.building_label"), with: "Mason"
+    fill_in I18n.t("rooms.filters.search_label"), with: "Mason"
+    # The characteristic long tail lives behind the More-filters disclosure
+    # (2026-07 redesign) — open it before checking boxes.
+    find("#more_filters > summary").click
     check "LectureCap"
     check "InstrComp"
 
@@ -74,26 +77,30 @@ RSpec.describe "Find a Room", type: :system do
       expect(page).to have_no_content(small.display_name) # LectureCap only — AND semantics
       expect(page).to have_no_content(aud.display_name)   # wrong building + InstrComp only
     end
-    expect(page).to have_content(I18n.t("rooms.index.summary.building", value: "Mason"))
+    expect(page).to have_content(I18n.t("rooms.index.summary.query", value: "Mason"))
     expect(page.evaluate_script("window.__stayedOnPage")).to be(true)
-    expect(page).to have_current_path(/building=Mason/) # turbo_action: advance keeps URL shareable
+    expect(page).to have_current_path(/q=Mason/) # turbo_action: advance keeps URL shareable
     expect(axe_violations(axe_options)).to be_empty
   end
 
-  it "round-trips the filter: reset brings the filtered-out room back" do
+  it "round-trips the filter: Clear all restores results AND empties the search box" do
     visit find_a_room_path
-    fill_in I18n.t("rooms.filters.building_label"), with: "Mason"
+    fill_in I18n.t("rooms.filters.search_label"), with: "Mason"
 
     within "#find_a_room_results" do
       expect(page).to have_content(big.display_name)
       expect(page).to have_no_content(aud.display_name)
     end
 
-    click_link I18n.t("rooms.filters.reset")
+    # The chips-row Clear all navigates only the frame; filter-form#clear must
+    # empty the out-of-frame form inputs alongside it, or the box would still
+    # read "Mason" over unfiltered results.
+    click_link I18n.t("rooms.filters.clear_all")
 
     within "#find_a_room_results" do
       expect(page).to have_content(aud.display_name)
     end
+    expect(find_field(I18n.t("rooms.filters.search_label")).value).to eq("")
   end
 
   describe "admin inactive-rooms toggle" do
