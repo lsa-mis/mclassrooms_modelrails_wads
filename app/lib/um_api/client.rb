@@ -67,11 +67,52 @@ module UmApi
       JSON.parse(response.body)
     end
 
+    # Fetches every row of a paginated U-M listing endpoint, the way the
+    # real gateway actually paginates (verified live — see
+    # `lib/tasks/um_import.rake`'s `paged_fetch`, the proven reference this
+    # mirrors): request params are `$start_index` (0-based offset) and
+    # `$count` (page size, `PAGE_SIZE`), and a page shorter than `$count`
+    # means it was the last page — there is no reliable `Link: rel="next"`
+    # header to follow on real responses.
+    #
+    # Every real listing endpoint wraps its array TWO levels deep in the
+    # JSON body (e.g. `{"Campuses" => {"Campus" => [...]}}`), not in a
+    # single top-level key — `array_path` is the list of keys to dig
+    # through to reach that array (e.g. `%w[Campuses Campus]`). A missing
+    # or non-Hash step in the dig (including an altogether-empty listing)
+    # yields an empty page rather than raising.
+    #
+    # Returns the full concatenated Array of rows (unlike #each_page, which
+    # yields one item at a time) — callers that want to iterate can just
+    # call `.each` on the result.
+    def fetch_all(path, array_path:, scope:, params: {})
+      rows = []
+      start_index = 0
+
+      loop do
+        body = get_json(path, params: params.merge("$start_index" => start_index, "$count" => PAGE_SIZE), scope: scope)
+        page = Array(array_path.reduce(body) { |acc, key| acc.is_a?(Hash) ? acc[key] : nil })
+        rows.concat(page)
+        break if page.size < PAGE_SIZE
+
+        start_index += PAGE_SIZE
+      end
+
+      rows
+    end
+
     # Walks a paginated listing endpoint, yielding every item from every
     # page to the block. Requests PAGE_SIZE items on the first page and
     # follows the `Link: <url>; rel="next"` response header — which is
     # expected to be a complete, ready-to-fetch URL — until a page omits
     # it.
+    #
+    # DEPRECATED (kept temporarily so every phase's existing spec stays
+    # green — see `.superpowers/sdd/sync-fix-plan.md` Task 1/5): the real
+    # gateway does not send a usable `Link: rel="next"` header and expects
+    # `$start_index`/`$count`, not `limit` — #each_page's pagination never
+    # advances against a real response. Use #fetch_all instead; every
+    # phase will be migrated off #each_page and this method removed.
     def each_page(path, params: {}, scope:)
       uri = build_uri(path, params.merge(PAGE_SIZE_PARAM => PAGE_SIZE))
 
