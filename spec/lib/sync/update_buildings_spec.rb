@@ -9,8 +9,8 @@ require "rails_helper"
 # 1. Scope filtering via SyncScopeRule (phase 1 model): a row passes when
 #    (its campus code is campus_allow-listed OR its own bldrecnbr is
 #    building_allow-listed) AND its bldrecnbr is NOT building_exclude-listed
-#    (Brief §6.1/§8.2). buildings_page1.json (campus "100": MLB, Angell
-#    Hall) and buildings_page2.json (campus "250": DEDC) give one allowed
+#    (Brief §6.1/§8.2). building_info_page1.json (campus "100": MLB, Angell
+#    Hall) and building_info_page2.json (campus "250": DEDC) give one allowed
 #    and one excluded-by-default campus to filter between.
 # 2. Warn-only absence (Brief §8.4) — buildings NEVER get hard-deleted
 #    (campuses, Task 7) or deactivated (rooms, Task 10): a building missing
@@ -28,13 +28,16 @@ require "rails_helper"
 # dry_run has no special-cased behavior here worth pinning — there is
 # nothing to preview that differs from a real run.
 #
-# Endpoint: "/bf/Buildings/v2" — matches spec/lib/um_api/client_spec.rb's
-# #each_page examples, which already exercise real pagination against this
-# exact path with these exact fixtures (buildings_page1/page2), the
-# strongest available signal for the real listing endpoint (Campuses hangs
-# off it as a sub-resource, "/bf/Buildings/v2/Campuses"). Per
-# spec/support/um_api_stubs.rb's fixture-shape disclaimer, this is a
-# best-effort reconstruction pending phase 8's credentialed cutover.
+# Endpoint: "/bf/Buildings/v2/BuildingInfo" (sync-fix Task 2) — confirmed
+# against live credentialed access (see the proven reference
+# `lib/tasks/um_import.rake`), scope "buildings", NO fiscal-year param.
+# Paged via `UmApi::Client#fetch_all` (sync-fix Task 1): real
+# `$start_index`/`$count` query params, real two-level envelope
+# (`resp["ListOfBldgs"]["Buildings"]`). building_info_page1.json carries the
+# two campus-100 buildings (MLB, Angell Hall) padded with campus-999 filler
+# rows out to exactly 1000 entries so fetch_all's "short page stops the
+# loop" rule genuinely forces a second request; building_info_page2.json
+# carries the single campus-250 building (DEDC) that request returns.
 RSpec.describe Sync::UpdateBuildings do
   around do |example|
     original = %w[UM_API_BASE_URL UM_API_TOKEN_URL UM_API_CLIENT_ID UM_API_CLIENT_SECRET].index_with { |key| ENV[key] }
@@ -52,7 +55,6 @@ RSpec.describe Sync::UpdateBuildings do
   let(:workspace) { create(:workspace) }
   let(:run) { create(:sync_run, workspace: workspace) }
   let(:client) { UmApi::Client.new }
-  let(:fiscal_year) { UmApi.fiscal_year(Date.current) }
 
   before do
     Current.workspace = workspace
@@ -69,11 +71,11 @@ RSpec.describe Sync::UpdateBuildings do
   # either way.
   def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
 
-  def stub_buildings_feed(next_link: nil)
-    page1_stub = stub_um_get("/bf/Buildings/v2", fixture: "buildings_page1.json",
-      query: { "limit" => "1000", "fiscalYear" => fiscal_year.to_s },
-      next_link: next_link || "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2?page=2")
-    stub_um_get("/bf/Buildings/v2", fixture: "buildings_page2.json", query: { "page" => "2" })
+  def stub_buildings_feed
+    page1_stub = stub_um_get("/bf/Buildings/v2/BuildingInfo", fixture: "building_info_page1.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
+    stub_um_get("/bf/Buildings/v2/BuildingInfo", fixture: "building_info_page2.json",
+      query: { "$start_index" => "1000", "$count" => "1000" })
     page1_stub
   end
 
@@ -101,7 +103,7 @@ RSpec.describe Sync::UpdateBuildings do
       expect(counter(phase, :updated)).to eq(0)
     end
 
-    it "stamps a new building with the local Campus matching its CampusCd" do
+    it "stamps a new building with the local Campus matching its BuildingCampusCode" do
       campus = create(:campus, workspace: workspace, code: "100")
       stub_buildings_feed
 
@@ -152,14 +154,6 @@ RSpec.describe Sync::UpdateBuildings do
 
       expect { described_class.call(run: run, client: client) }
         .to have_enqueued_job(GeocodeBuildingJob).exactly(2).times
-    end
-
-    it "requests the current fiscal year as a query param" do
-      stub = stub_buildings_feed
-
-      described_class.call(run: run, client: client)
-
-      expect(stub).to have_been_requested
     end
   end
 
@@ -259,8 +253,8 @@ RSpec.describe Sync::UpdateBuildings do
     it "emits one summary warning instead of one per building when the feed returns zero rows" do
       create(:building, workspace: workspace, bldrecnbr: "1005046", in_feed: true)
       create(:building, workspace: workspace, bldrecnbr: "1005090", in_feed: true)
-      stub_um_get("/bf/Buildings/v2", fixture: "buildings_empty.json",
-        query: { "limit" => "1000", "fiscalYear" => fiscal_year.to_s })
+      stub_um_get("/bf/Buildings/v2/BuildingInfo", fixture: "building_info_empty.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = described_class.call(run: run, client: client)
 

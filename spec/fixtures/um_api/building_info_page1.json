@@ -1,0 +1,5022 @@
+{
+  "ListOfBldgs": {
+    "Buildings": [
+      {
+        "BuildingRecordNumber": "1005046",
+        "BuildingLongDescription": "Modern Languages Building",
+        "BuildingShortDescription": "MLB",
+        "BuildingCampusCode": "100",
+        "BuildingCampusDescription": "Ann Arbor Central",
+        "BuildingStreetNumber": "812",
+        "BuildingStreetDirection": "E",
+        "BuildingStreetName": "Washington St",
+        "BuildingCity": "Ann Arbor",
+        "BuildingState": "MI",
+        "BuildingPostal": "48109"
+      },
+      {
+        "BuildingRecordNumber": "1005090",
+        "BuildingLongDescription": "Angell Hall",
+        "BuildingShortDescription": "AH",
+        "BuildingCampusCode": "100",
+        "BuildingCampusDescription": "Ann Arbor Central",
+        "BuildingStreetNumber": "435",
+        "BuildingStreetDirection": "S",
+        "BuildingStreetName": "State St",
+        "BuildingCity": "Ann Arbor",
+        "BuildingState": "MI",
+        "BuildingPostal": "48109"
+      },
+      {
+        "BuildingRecordNumber": "9000001",
+        "BuildingLongDescription": "Filler Building 1",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000002",
+        "BuildingLongDescription": "Filler Building 2",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000003",
+        "BuildingLongDescription": "Filler Building 3",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000004",
+        "BuildingLongDescription": "Filler Building 4",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000005",
+        "BuildingLongDescription": "Filler Building 5",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000006",
+        "BuildingLongDescription": "Filler Building 6",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000007",
+        "BuildingLongDescription": "Filler Building 7",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000008",
+        "BuildingLongDescription": "Filler Building 8",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000009",
+        "BuildingLongDescription": "Filler Building 9",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000010",
+        "BuildingLongDescription": "Filler Building 10",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000011",
+        "BuildingLongDescription": "Filler Building 11",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000012",
+        "BuildingLongDescription": "Filler Building 12",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000013",
+        "BuildingLongDescription": "Filler Building 13",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000014",
+        "BuildingLongDescription": "Filler Building 14",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000015",
+        "BuildingLongDescription": "Filler Building 15",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000016",
+        "BuildingLongDescription": "Filler Building 16",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000017",
+        "BuildingLongDescription": "Filler Building 17",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000018",
+        "BuildingLongDescription": "Filler Building 18",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000019",
+        "BuildingLongDescription": "Filler Building 19",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000020",
+        "BuildingLongDescription": "Filler Building 20",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000021",
+        "BuildingLongDescription": "Filler Building 21",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000022",
+        "BuildingLongDescription": "Filler Building 22",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000023",
+        "BuildingLongDescription": "Filler Building 23",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000024",
+        "BuildingLongDescription": "Filler Building 24",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000025",
+        "BuildingLongDescription": "Filler Building 25",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000026",
+        "BuildingLongDescription": "Filler Building 26",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000027",
+        "BuildingLongDescription": "Filler Building 27",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000028",
+        "BuildingLongDescription": "Filler Building 28",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000029",
+        "BuildingLongDescription": "Filler Building 29",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000030",
+        "BuildingLongDescription": "Filler Building 30",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000031",
+        "BuildingLongDescription": "Filler Building 31",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000032",
+        "BuildingLongDescription": "Filler Building 32",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000033",
+        "BuildingLongDescription": "Filler Building 33",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000034",
+        "BuildingLongDescription": "Filler Building 34",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000035",
+        "BuildingLongDescription": "Filler Building 35",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000036",
+        "BuildingLongDescription": "Filler Building 36",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000037",
+        "BuildingLongDescription": "Filler Building 37",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000038",
+        "BuildingLongDescription": "Filler Building 38",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000039",
+        "BuildingLongDescription": "Filler Building 39",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000040",
+        "BuildingLongDescription": "Filler Building 40",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000041",
+        "BuildingLongDescription": "Filler Building 41",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000042",
+        "BuildingLongDescription": "Filler Building 42",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000043",
+        "BuildingLongDescription": "Filler Building 43",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000044",
+        "BuildingLongDescription": "Filler Building 44",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000045",
+        "BuildingLongDescription": "Filler Building 45",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000046",
+        "BuildingLongDescription": "Filler Building 46",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000047",
+        "BuildingLongDescription": "Filler Building 47",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000048",
+        "BuildingLongDescription": "Filler Building 48",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000049",
+        "BuildingLongDescription": "Filler Building 49",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000050",
+        "BuildingLongDescription": "Filler Building 50",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000051",
+        "BuildingLongDescription": "Filler Building 51",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000052",
+        "BuildingLongDescription": "Filler Building 52",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000053",
+        "BuildingLongDescription": "Filler Building 53",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000054",
+        "BuildingLongDescription": "Filler Building 54",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000055",
+        "BuildingLongDescription": "Filler Building 55",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000056",
+        "BuildingLongDescription": "Filler Building 56",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000057",
+        "BuildingLongDescription": "Filler Building 57",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000058",
+        "BuildingLongDescription": "Filler Building 58",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000059",
+        "BuildingLongDescription": "Filler Building 59",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000060",
+        "BuildingLongDescription": "Filler Building 60",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000061",
+        "BuildingLongDescription": "Filler Building 61",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000062",
+        "BuildingLongDescription": "Filler Building 62",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000063",
+        "BuildingLongDescription": "Filler Building 63",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000064",
+        "BuildingLongDescription": "Filler Building 64",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000065",
+        "BuildingLongDescription": "Filler Building 65",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000066",
+        "BuildingLongDescription": "Filler Building 66",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000067",
+        "BuildingLongDescription": "Filler Building 67",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000068",
+        "BuildingLongDescription": "Filler Building 68",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000069",
+        "BuildingLongDescription": "Filler Building 69",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000070",
+        "BuildingLongDescription": "Filler Building 70",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000071",
+        "BuildingLongDescription": "Filler Building 71",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000072",
+        "BuildingLongDescription": "Filler Building 72",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000073",
+        "BuildingLongDescription": "Filler Building 73",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000074",
+        "BuildingLongDescription": "Filler Building 74",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000075",
+        "BuildingLongDescription": "Filler Building 75",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000076",
+        "BuildingLongDescription": "Filler Building 76",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000077",
+        "BuildingLongDescription": "Filler Building 77",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000078",
+        "BuildingLongDescription": "Filler Building 78",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000079",
+        "BuildingLongDescription": "Filler Building 79",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000080",
+        "BuildingLongDescription": "Filler Building 80",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000081",
+        "BuildingLongDescription": "Filler Building 81",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000082",
+        "BuildingLongDescription": "Filler Building 82",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000083",
+        "BuildingLongDescription": "Filler Building 83",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000084",
+        "BuildingLongDescription": "Filler Building 84",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000085",
+        "BuildingLongDescription": "Filler Building 85",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000086",
+        "BuildingLongDescription": "Filler Building 86",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000087",
+        "BuildingLongDescription": "Filler Building 87",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000088",
+        "BuildingLongDescription": "Filler Building 88",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000089",
+        "BuildingLongDescription": "Filler Building 89",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000090",
+        "BuildingLongDescription": "Filler Building 90",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000091",
+        "BuildingLongDescription": "Filler Building 91",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000092",
+        "BuildingLongDescription": "Filler Building 92",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000093",
+        "BuildingLongDescription": "Filler Building 93",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000094",
+        "BuildingLongDescription": "Filler Building 94",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000095",
+        "BuildingLongDescription": "Filler Building 95",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000096",
+        "BuildingLongDescription": "Filler Building 96",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000097",
+        "BuildingLongDescription": "Filler Building 97",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000098",
+        "BuildingLongDescription": "Filler Building 98",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000099",
+        "BuildingLongDescription": "Filler Building 99",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000100",
+        "BuildingLongDescription": "Filler Building 100",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000101",
+        "BuildingLongDescription": "Filler Building 101",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000102",
+        "BuildingLongDescription": "Filler Building 102",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000103",
+        "BuildingLongDescription": "Filler Building 103",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000104",
+        "BuildingLongDescription": "Filler Building 104",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000105",
+        "BuildingLongDescription": "Filler Building 105",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000106",
+        "BuildingLongDescription": "Filler Building 106",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000107",
+        "BuildingLongDescription": "Filler Building 107",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000108",
+        "BuildingLongDescription": "Filler Building 108",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000109",
+        "BuildingLongDescription": "Filler Building 109",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000110",
+        "BuildingLongDescription": "Filler Building 110",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000111",
+        "BuildingLongDescription": "Filler Building 111",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000112",
+        "BuildingLongDescription": "Filler Building 112",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000113",
+        "BuildingLongDescription": "Filler Building 113",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000114",
+        "BuildingLongDescription": "Filler Building 114",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000115",
+        "BuildingLongDescription": "Filler Building 115",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000116",
+        "BuildingLongDescription": "Filler Building 116",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000117",
+        "BuildingLongDescription": "Filler Building 117",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000118",
+        "BuildingLongDescription": "Filler Building 118",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000119",
+        "BuildingLongDescription": "Filler Building 119",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000120",
+        "BuildingLongDescription": "Filler Building 120",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000121",
+        "BuildingLongDescription": "Filler Building 121",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000122",
+        "BuildingLongDescription": "Filler Building 122",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000123",
+        "BuildingLongDescription": "Filler Building 123",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000124",
+        "BuildingLongDescription": "Filler Building 124",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000125",
+        "BuildingLongDescription": "Filler Building 125",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000126",
+        "BuildingLongDescription": "Filler Building 126",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000127",
+        "BuildingLongDescription": "Filler Building 127",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000128",
+        "BuildingLongDescription": "Filler Building 128",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000129",
+        "BuildingLongDescription": "Filler Building 129",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000130",
+        "BuildingLongDescription": "Filler Building 130",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000131",
+        "BuildingLongDescription": "Filler Building 131",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000132",
+        "BuildingLongDescription": "Filler Building 132",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000133",
+        "BuildingLongDescription": "Filler Building 133",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000134",
+        "BuildingLongDescription": "Filler Building 134",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000135",
+        "BuildingLongDescription": "Filler Building 135",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000136",
+        "BuildingLongDescription": "Filler Building 136",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000137",
+        "BuildingLongDescription": "Filler Building 137",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000138",
+        "BuildingLongDescription": "Filler Building 138",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000139",
+        "BuildingLongDescription": "Filler Building 139",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000140",
+        "BuildingLongDescription": "Filler Building 140",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000141",
+        "BuildingLongDescription": "Filler Building 141",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000142",
+        "BuildingLongDescription": "Filler Building 142",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000143",
+        "BuildingLongDescription": "Filler Building 143",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000144",
+        "BuildingLongDescription": "Filler Building 144",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000145",
+        "BuildingLongDescription": "Filler Building 145",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000146",
+        "BuildingLongDescription": "Filler Building 146",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000147",
+        "BuildingLongDescription": "Filler Building 147",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000148",
+        "BuildingLongDescription": "Filler Building 148",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000149",
+        "BuildingLongDescription": "Filler Building 149",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000150",
+        "BuildingLongDescription": "Filler Building 150",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000151",
+        "BuildingLongDescription": "Filler Building 151",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000152",
+        "BuildingLongDescription": "Filler Building 152",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000153",
+        "BuildingLongDescription": "Filler Building 153",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000154",
+        "BuildingLongDescription": "Filler Building 154",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000155",
+        "BuildingLongDescription": "Filler Building 155",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000156",
+        "BuildingLongDescription": "Filler Building 156",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000157",
+        "BuildingLongDescription": "Filler Building 157",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000158",
+        "BuildingLongDescription": "Filler Building 158",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000159",
+        "BuildingLongDescription": "Filler Building 159",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000160",
+        "BuildingLongDescription": "Filler Building 160",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000161",
+        "BuildingLongDescription": "Filler Building 161",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000162",
+        "BuildingLongDescription": "Filler Building 162",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000163",
+        "BuildingLongDescription": "Filler Building 163",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000164",
+        "BuildingLongDescription": "Filler Building 164",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000165",
+        "BuildingLongDescription": "Filler Building 165",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000166",
+        "BuildingLongDescription": "Filler Building 166",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000167",
+        "BuildingLongDescription": "Filler Building 167",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000168",
+        "BuildingLongDescription": "Filler Building 168",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000169",
+        "BuildingLongDescription": "Filler Building 169",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000170",
+        "BuildingLongDescription": "Filler Building 170",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000171",
+        "BuildingLongDescription": "Filler Building 171",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000172",
+        "BuildingLongDescription": "Filler Building 172",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000173",
+        "BuildingLongDescription": "Filler Building 173",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000174",
+        "BuildingLongDescription": "Filler Building 174",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000175",
+        "BuildingLongDescription": "Filler Building 175",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000176",
+        "BuildingLongDescription": "Filler Building 176",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000177",
+        "BuildingLongDescription": "Filler Building 177",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000178",
+        "BuildingLongDescription": "Filler Building 178",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000179",
+        "BuildingLongDescription": "Filler Building 179",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000180",
+        "BuildingLongDescription": "Filler Building 180",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000181",
+        "BuildingLongDescription": "Filler Building 181",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000182",
+        "BuildingLongDescription": "Filler Building 182",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000183",
+        "BuildingLongDescription": "Filler Building 183",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000184",
+        "BuildingLongDescription": "Filler Building 184",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000185",
+        "BuildingLongDescription": "Filler Building 185",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000186",
+        "BuildingLongDescription": "Filler Building 186",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000187",
+        "BuildingLongDescription": "Filler Building 187",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000188",
+        "BuildingLongDescription": "Filler Building 188",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000189",
+        "BuildingLongDescription": "Filler Building 189",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000190",
+        "BuildingLongDescription": "Filler Building 190",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000191",
+        "BuildingLongDescription": "Filler Building 191",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000192",
+        "BuildingLongDescription": "Filler Building 192",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000193",
+        "BuildingLongDescription": "Filler Building 193",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000194",
+        "BuildingLongDescription": "Filler Building 194",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000195",
+        "BuildingLongDescription": "Filler Building 195",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000196",
+        "BuildingLongDescription": "Filler Building 196",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000197",
+        "BuildingLongDescription": "Filler Building 197",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000198",
+        "BuildingLongDescription": "Filler Building 198",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000199",
+        "BuildingLongDescription": "Filler Building 199",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000200",
+        "BuildingLongDescription": "Filler Building 200",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000201",
+        "BuildingLongDescription": "Filler Building 201",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000202",
+        "BuildingLongDescription": "Filler Building 202",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000203",
+        "BuildingLongDescription": "Filler Building 203",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000204",
+        "BuildingLongDescription": "Filler Building 204",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000205",
+        "BuildingLongDescription": "Filler Building 205",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000206",
+        "BuildingLongDescription": "Filler Building 206",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000207",
+        "BuildingLongDescription": "Filler Building 207",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000208",
+        "BuildingLongDescription": "Filler Building 208",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000209",
+        "BuildingLongDescription": "Filler Building 209",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000210",
+        "BuildingLongDescription": "Filler Building 210",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000211",
+        "BuildingLongDescription": "Filler Building 211",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000212",
+        "BuildingLongDescription": "Filler Building 212",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000213",
+        "BuildingLongDescription": "Filler Building 213",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000214",
+        "BuildingLongDescription": "Filler Building 214",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000215",
+        "BuildingLongDescription": "Filler Building 215",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000216",
+        "BuildingLongDescription": "Filler Building 216",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000217",
+        "BuildingLongDescription": "Filler Building 217",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000218",
+        "BuildingLongDescription": "Filler Building 218",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000219",
+        "BuildingLongDescription": "Filler Building 219",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000220",
+        "BuildingLongDescription": "Filler Building 220",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000221",
+        "BuildingLongDescription": "Filler Building 221",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000222",
+        "BuildingLongDescription": "Filler Building 222",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000223",
+        "BuildingLongDescription": "Filler Building 223",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000224",
+        "BuildingLongDescription": "Filler Building 224",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000225",
+        "BuildingLongDescription": "Filler Building 225",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000226",
+        "BuildingLongDescription": "Filler Building 226",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000227",
+        "BuildingLongDescription": "Filler Building 227",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000228",
+        "BuildingLongDescription": "Filler Building 228",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000229",
+        "BuildingLongDescription": "Filler Building 229",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000230",
+        "BuildingLongDescription": "Filler Building 230",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000231",
+        "BuildingLongDescription": "Filler Building 231",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000232",
+        "BuildingLongDescription": "Filler Building 232",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000233",
+        "BuildingLongDescription": "Filler Building 233",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000234",
+        "BuildingLongDescription": "Filler Building 234",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000235",
+        "BuildingLongDescription": "Filler Building 235",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000236",
+        "BuildingLongDescription": "Filler Building 236",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000237",
+        "BuildingLongDescription": "Filler Building 237",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000238",
+        "BuildingLongDescription": "Filler Building 238",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000239",
+        "BuildingLongDescription": "Filler Building 239",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000240",
+        "BuildingLongDescription": "Filler Building 240",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000241",
+        "BuildingLongDescription": "Filler Building 241",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000242",
+        "BuildingLongDescription": "Filler Building 242",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000243",
+        "BuildingLongDescription": "Filler Building 243",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000244",
+        "BuildingLongDescription": "Filler Building 244",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000245",
+        "BuildingLongDescription": "Filler Building 245",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000246",
+        "BuildingLongDescription": "Filler Building 246",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000247",
+        "BuildingLongDescription": "Filler Building 247",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000248",
+        "BuildingLongDescription": "Filler Building 248",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000249",
+        "BuildingLongDescription": "Filler Building 249",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000250",
+        "BuildingLongDescription": "Filler Building 250",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000251",
+        "BuildingLongDescription": "Filler Building 251",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000252",
+        "BuildingLongDescription": "Filler Building 252",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000253",
+        "BuildingLongDescription": "Filler Building 253",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000254",
+        "BuildingLongDescription": "Filler Building 254",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000255",
+        "BuildingLongDescription": "Filler Building 255",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000256",
+        "BuildingLongDescription": "Filler Building 256",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000257",
+        "BuildingLongDescription": "Filler Building 257",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000258",
+        "BuildingLongDescription": "Filler Building 258",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000259",
+        "BuildingLongDescription": "Filler Building 259",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000260",
+        "BuildingLongDescription": "Filler Building 260",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000261",
+        "BuildingLongDescription": "Filler Building 261",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000262",
+        "BuildingLongDescription": "Filler Building 262",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000263",
+        "BuildingLongDescription": "Filler Building 263",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000264",
+        "BuildingLongDescription": "Filler Building 264",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000265",
+        "BuildingLongDescription": "Filler Building 265",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000266",
+        "BuildingLongDescription": "Filler Building 266",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000267",
+        "BuildingLongDescription": "Filler Building 267",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000268",
+        "BuildingLongDescription": "Filler Building 268",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000269",
+        "BuildingLongDescription": "Filler Building 269",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000270",
+        "BuildingLongDescription": "Filler Building 270",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000271",
+        "BuildingLongDescription": "Filler Building 271",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000272",
+        "BuildingLongDescription": "Filler Building 272",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000273",
+        "BuildingLongDescription": "Filler Building 273",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000274",
+        "BuildingLongDescription": "Filler Building 274",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000275",
+        "BuildingLongDescription": "Filler Building 275",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000276",
+        "BuildingLongDescription": "Filler Building 276",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000277",
+        "BuildingLongDescription": "Filler Building 277",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000278",
+        "BuildingLongDescription": "Filler Building 278",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000279",
+        "BuildingLongDescription": "Filler Building 279",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000280",
+        "BuildingLongDescription": "Filler Building 280",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000281",
+        "BuildingLongDescription": "Filler Building 281",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000282",
+        "BuildingLongDescription": "Filler Building 282",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000283",
+        "BuildingLongDescription": "Filler Building 283",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000284",
+        "BuildingLongDescription": "Filler Building 284",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000285",
+        "BuildingLongDescription": "Filler Building 285",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000286",
+        "BuildingLongDescription": "Filler Building 286",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000287",
+        "BuildingLongDescription": "Filler Building 287",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000288",
+        "BuildingLongDescription": "Filler Building 288",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000289",
+        "BuildingLongDescription": "Filler Building 289",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000290",
+        "BuildingLongDescription": "Filler Building 290",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000291",
+        "BuildingLongDescription": "Filler Building 291",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000292",
+        "BuildingLongDescription": "Filler Building 292",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000293",
+        "BuildingLongDescription": "Filler Building 293",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000294",
+        "BuildingLongDescription": "Filler Building 294",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000295",
+        "BuildingLongDescription": "Filler Building 295",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000296",
+        "BuildingLongDescription": "Filler Building 296",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000297",
+        "BuildingLongDescription": "Filler Building 297",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000298",
+        "BuildingLongDescription": "Filler Building 298",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000299",
+        "BuildingLongDescription": "Filler Building 299",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000300",
+        "BuildingLongDescription": "Filler Building 300",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000301",
+        "BuildingLongDescription": "Filler Building 301",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000302",
+        "BuildingLongDescription": "Filler Building 302",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000303",
+        "BuildingLongDescription": "Filler Building 303",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000304",
+        "BuildingLongDescription": "Filler Building 304",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000305",
+        "BuildingLongDescription": "Filler Building 305",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000306",
+        "BuildingLongDescription": "Filler Building 306",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000307",
+        "BuildingLongDescription": "Filler Building 307",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000308",
+        "BuildingLongDescription": "Filler Building 308",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000309",
+        "BuildingLongDescription": "Filler Building 309",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000310",
+        "BuildingLongDescription": "Filler Building 310",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000311",
+        "BuildingLongDescription": "Filler Building 311",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000312",
+        "BuildingLongDescription": "Filler Building 312",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000313",
+        "BuildingLongDescription": "Filler Building 313",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000314",
+        "BuildingLongDescription": "Filler Building 314",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000315",
+        "BuildingLongDescription": "Filler Building 315",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000316",
+        "BuildingLongDescription": "Filler Building 316",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000317",
+        "BuildingLongDescription": "Filler Building 317",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000318",
+        "BuildingLongDescription": "Filler Building 318",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000319",
+        "BuildingLongDescription": "Filler Building 319",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000320",
+        "BuildingLongDescription": "Filler Building 320",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000321",
+        "BuildingLongDescription": "Filler Building 321",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000322",
+        "BuildingLongDescription": "Filler Building 322",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000323",
+        "BuildingLongDescription": "Filler Building 323",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000324",
+        "BuildingLongDescription": "Filler Building 324",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000325",
+        "BuildingLongDescription": "Filler Building 325",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000326",
+        "BuildingLongDescription": "Filler Building 326",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000327",
+        "BuildingLongDescription": "Filler Building 327",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000328",
+        "BuildingLongDescription": "Filler Building 328",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000329",
+        "BuildingLongDescription": "Filler Building 329",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000330",
+        "BuildingLongDescription": "Filler Building 330",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000331",
+        "BuildingLongDescription": "Filler Building 331",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000332",
+        "BuildingLongDescription": "Filler Building 332",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000333",
+        "BuildingLongDescription": "Filler Building 333",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000334",
+        "BuildingLongDescription": "Filler Building 334",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000335",
+        "BuildingLongDescription": "Filler Building 335",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000336",
+        "BuildingLongDescription": "Filler Building 336",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000337",
+        "BuildingLongDescription": "Filler Building 337",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000338",
+        "BuildingLongDescription": "Filler Building 338",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000339",
+        "BuildingLongDescription": "Filler Building 339",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000340",
+        "BuildingLongDescription": "Filler Building 340",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000341",
+        "BuildingLongDescription": "Filler Building 341",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000342",
+        "BuildingLongDescription": "Filler Building 342",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000343",
+        "BuildingLongDescription": "Filler Building 343",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000344",
+        "BuildingLongDescription": "Filler Building 344",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000345",
+        "BuildingLongDescription": "Filler Building 345",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000346",
+        "BuildingLongDescription": "Filler Building 346",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000347",
+        "BuildingLongDescription": "Filler Building 347",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000348",
+        "BuildingLongDescription": "Filler Building 348",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000349",
+        "BuildingLongDescription": "Filler Building 349",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000350",
+        "BuildingLongDescription": "Filler Building 350",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000351",
+        "BuildingLongDescription": "Filler Building 351",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000352",
+        "BuildingLongDescription": "Filler Building 352",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000353",
+        "BuildingLongDescription": "Filler Building 353",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000354",
+        "BuildingLongDescription": "Filler Building 354",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000355",
+        "BuildingLongDescription": "Filler Building 355",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000356",
+        "BuildingLongDescription": "Filler Building 356",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000357",
+        "BuildingLongDescription": "Filler Building 357",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000358",
+        "BuildingLongDescription": "Filler Building 358",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000359",
+        "BuildingLongDescription": "Filler Building 359",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000360",
+        "BuildingLongDescription": "Filler Building 360",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000361",
+        "BuildingLongDescription": "Filler Building 361",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000362",
+        "BuildingLongDescription": "Filler Building 362",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000363",
+        "BuildingLongDescription": "Filler Building 363",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000364",
+        "BuildingLongDescription": "Filler Building 364",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000365",
+        "BuildingLongDescription": "Filler Building 365",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000366",
+        "BuildingLongDescription": "Filler Building 366",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000367",
+        "BuildingLongDescription": "Filler Building 367",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000368",
+        "BuildingLongDescription": "Filler Building 368",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000369",
+        "BuildingLongDescription": "Filler Building 369",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000370",
+        "BuildingLongDescription": "Filler Building 370",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000371",
+        "BuildingLongDescription": "Filler Building 371",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000372",
+        "BuildingLongDescription": "Filler Building 372",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000373",
+        "BuildingLongDescription": "Filler Building 373",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000374",
+        "BuildingLongDescription": "Filler Building 374",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000375",
+        "BuildingLongDescription": "Filler Building 375",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000376",
+        "BuildingLongDescription": "Filler Building 376",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000377",
+        "BuildingLongDescription": "Filler Building 377",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000378",
+        "BuildingLongDescription": "Filler Building 378",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000379",
+        "BuildingLongDescription": "Filler Building 379",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000380",
+        "BuildingLongDescription": "Filler Building 380",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000381",
+        "BuildingLongDescription": "Filler Building 381",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000382",
+        "BuildingLongDescription": "Filler Building 382",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000383",
+        "BuildingLongDescription": "Filler Building 383",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000384",
+        "BuildingLongDescription": "Filler Building 384",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000385",
+        "BuildingLongDescription": "Filler Building 385",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000386",
+        "BuildingLongDescription": "Filler Building 386",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000387",
+        "BuildingLongDescription": "Filler Building 387",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000388",
+        "BuildingLongDescription": "Filler Building 388",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000389",
+        "BuildingLongDescription": "Filler Building 389",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000390",
+        "BuildingLongDescription": "Filler Building 390",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000391",
+        "BuildingLongDescription": "Filler Building 391",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000392",
+        "BuildingLongDescription": "Filler Building 392",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000393",
+        "BuildingLongDescription": "Filler Building 393",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000394",
+        "BuildingLongDescription": "Filler Building 394",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000395",
+        "BuildingLongDescription": "Filler Building 395",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000396",
+        "BuildingLongDescription": "Filler Building 396",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000397",
+        "BuildingLongDescription": "Filler Building 397",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000398",
+        "BuildingLongDescription": "Filler Building 398",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000399",
+        "BuildingLongDescription": "Filler Building 399",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000400",
+        "BuildingLongDescription": "Filler Building 400",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000401",
+        "BuildingLongDescription": "Filler Building 401",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000402",
+        "BuildingLongDescription": "Filler Building 402",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000403",
+        "BuildingLongDescription": "Filler Building 403",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000404",
+        "BuildingLongDescription": "Filler Building 404",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000405",
+        "BuildingLongDescription": "Filler Building 405",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000406",
+        "BuildingLongDescription": "Filler Building 406",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000407",
+        "BuildingLongDescription": "Filler Building 407",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000408",
+        "BuildingLongDescription": "Filler Building 408",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000409",
+        "BuildingLongDescription": "Filler Building 409",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000410",
+        "BuildingLongDescription": "Filler Building 410",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000411",
+        "BuildingLongDescription": "Filler Building 411",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000412",
+        "BuildingLongDescription": "Filler Building 412",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000413",
+        "BuildingLongDescription": "Filler Building 413",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000414",
+        "BuildingLongDescription": "Filler Building 414",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000415",
+        "BuildingLongDescription": "Filler Building 415",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000416",
+        "BuildingLongDescription": "Filler Building 416",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000417",
+        "BuildingLongDescription": "Filler Building 417",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000418",
+        "BuildingLongDescription": "Filler Building 418",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000419",
+        "BuildingLongDescription": "Filler Building 419",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000420",
+        "BuildingLongDescription": "Filler Building 420",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000421",
+        "BuildingLongDescription": "Filler Building 421",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000422",
+        "BuildingLongDescription": "Filler Building 422",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000423",
+        "BuildingLongDescription": "Filler Building 423",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000424",
+        "BuildingLongDescription": "Filler Building 424",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000425",
+        "BuildingLongDescription": "Filler Building 425",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000426",
+        "BuildingLongDescription": "Filler Building 426",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000427",
+        "BuildingLongDescription": "Filler Building 427",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000428",
+        "BuildingLongDescription": "Filler Building 428",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000429",
+        "BuildingLongDescription": "Filler Building 429",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000430",
+        "BuildingLongDescription": "Filler Building 430",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000431",
+        "BuildingLongDescription": "Filler Building 431",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000432",
+        "BuildingLongDescription": "Filler Building 432",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000433",
+        "BuildingLongDescription": "Filler Building 433",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000434",
+        "BuildingLongDescription": "Filler Building 434",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000435",
+        "BuildingLongDescription": "Filler Building 435",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000436",
+        "BuildingLongDescription": "Filler Building 436",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000437",
+        "BuildingLongDescription": "Filler Building 437",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000438",
+        "BuildingLongDescription": "Filler Building 438",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000439",
+        "BuildingLongDescription": "Filler Building 439",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000440",
+        "BuildingLongDescription": "Filler Building 440",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000441",
+        "BuildingLongDescription": "Filler Building 441",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000442",
+        "BuildingLongDescription": "Filler Building 442",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000443",
+        "BuildingLongDescription": "Filler Building 443",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000444",
+        "BuildingLongDescription": "Filler Building 444",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000445",
+        "BuildingLongDescription": "Filler Building 445",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000446",
+        "BuildingLongDescription": "Filler Building 446",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000447",
+        "BuildingLongDescription": "Filler Building 447",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000448",
+        "BuildingLongDescription": "Filler Building 448",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000449",
+        "BuildingLongDescription": "Filler Building 449",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000450",
+        "BuildingLongDescription": "Filler Building 450",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000451",
+        "BuildingLongDescription": "Filler Building 451",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000452",
+        "BuildingLongDescription": "Filler Building 452",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000453",
+        "BuildingLongDescription": "Filler Building 453",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000454",
+        "BuildingLongDescription": "Filler Building 454",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000455",
+        "BuildingLongDescription": "Filler Building 455",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000456",
+        "BuildingLongDescription": "Filler Building 456",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000457",
+        "BuildingLongDescription": "Filler Building 457",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000458",
+        "BuildingLongDescription": "Filler Building 458",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000459",
+        "BuildingLongDescription": "Filler Building 459",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000460",
+        "BuildingLongDescription": "Filler Building 460",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000461",
+        "BuildingLongDescription": "Filler Building 461",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000462",
+        "BuildingLongDescription": "Filler Building 462",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000463",
+        "BuildingLongDescription": "Filler Building 463",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000464",
+        "BuildingLongDescription": "Filler Building 464",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000465",
+        "BuildingLongDescription": "Filler Building 465",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000466",
+        "BuildingLongDescription": "Filler Building 466",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000467",
+        "BuildingLongDescription": "Filler Building 467",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000468",
+        "BuildingLongDescription": "Filler Building 468",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000469",
+        "BuildingLongDescription": "Filler Building 469",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000470",
+        "BuildingLongDescription": "Filler Building 470",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000471",
+        "BuildingLongDescription": "Filler Building 471",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000472",
+        "BuildingLongDescription": "Filler Building 472",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000473",
+        "BuildingLongDescription": "Filler Building 473",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000474",
+        "BuildingLongDescription": "Filler Building 474",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000475",
+        "BuildingLongDescription": "Filler Building 475",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000476",
+        "BuildingLongDescription": "Filler Building 476",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000477",
+        "BuildingLongDescription": "Filler Building 477",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000478",
+        "BuildingLongDescription": "Filler Building 478",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000479",
+        "BuildingLongDescription": "Filler Building 479",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000480",
+        "BuildingLongDescription": "Filler Building 480",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000481",
+        "BuildingLongDescription": "Filler Building 481",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000482",
+        "BuildingLongDescription": "Filler Building 482",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000483",
+        "BuildingLongDescription": "Filler Building 483",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000484",
+        "BuildingLongDescription": "Filler Building 484",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000485",
+        "BuildingLongDescription": "Filler Building 485",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000486",
+        "BuildingLongDescription": "Filler Building 486",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000487",
+        "BuildingLongDescription": "Filler Building 487",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000488",
+        "BuildingLongDescription": "Filler Building 488",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000489",
+        "BuildingLongDescription": "Filler Building 489",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000490",
+        "BuildingLongDescription": "Filler Building 490",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000491",
+        "BuildingLongDescription": "Filler Building 491",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000492",
+        "BuildingLongDescription": "Filler Building 492",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000493",
+        "BuildingLongDescription": "Filler Building 493",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000494",
+        "BuildingLongDescription": "Filler Building 494",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000495",
+        "BuildingLongDescription": "Filler Building 495",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000496",
+        "BuildingLongDescription": "Filler Building 496",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000497",
+        "BuildingLongDescription": "Filler Building 497",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000498",
+        "BuildingLongDescription": "Filler Building 498",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000499",
+        "BuildingLongDescription": "Filler Building 499",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000500",
+        "BuildingLongDescription": "Filler Building 500",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000501",
+        "BuildingLongDescription": "Filler Building 501",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000502",
+        "BuildingLongDescription": "Filler Building 502",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000503",
+        "BuildingLongDescription": "Filler Building 503",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000504",
+        "BuildingLongDescription": "Filler Building 504",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000505",
+        "BuildingLongDescription": "Filler Building 505",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000506",
+        "BuildingLongDescription": "Filler Building 506",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000507",
+        "BuildingLongDescription": "Filler Building 507",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000508",
+        "BuildingLongDescription": "Filler Building 508",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000509",
+        "BuildingLongDescription": "Filler Building 509",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000510",
+        "BuildingLongDescription": "Filler Building 510",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000511",
+        "BuildingLongDescription": "Filler Building 511",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000512",
+        "BuildingLongDescription": "Filler Building 512",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000513",
+        "BuildingLongDescription": "Filler Building 513",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000514",
+        "BuildingLongDescription": "Filler Building 514",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000515",
+        "BuildingLongDescription": "Filler Building 515",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000516",
+        "BuildingLongDescription": "Filler Building 516",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000517",
+        "BuildingLongDescription": "Filler Building 517",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000518",
+        "BuildingLongDescription": "Filler Building 518",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000519",
+        "BuildingLongDescription": "Filler Building 519",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000520",
+        "BuildingLongDescription": "Filler Building 520",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000521",
+        "BuildingLongDescription": "Filler Building 521",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000522",
+        "BuildingLongDescription": "Filler Building 522",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000523",
+        "BuildingLongDescription": "Filler Building 523",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000524",
+        "BuildingLongDescription": "Filler Building 524",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000525",
+        "BuildingLongDescription": "Filler Building 525",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000526",
+        "BuildingLongDescription": "Filler Building 526",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000527",
+        "BuildingLongDescription": "Filler Building 527",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000528",
+        "BuildingLongDescription": "Filler Building 528",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000529",
+        "BuildingLongDescription": "Filler Building 529",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000530",
+        "BuildingLongDescription": "Filler Building 530",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000531",
+        "BuildingLongDescription": "Filler Building 531",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000532",
+        "BuildingLongDescription": "Filler Building 532",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000533",
+        "BuildingLongDescription": "Filler Building 533",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000534",
+        "BuildingLongDescription": "Filler Building 534",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000535",
+        "BuildingLongDescription": "Filler Building 535",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000536",
+        "BuildingLongDescription": "Filler Building 536",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000537",
+        "BuildingLongDescription": "Filler Building 537",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000538",
+        "BuildingLongDescription": "Filler Building 538",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000539",
+        "BuildingLongDescription": "Filler Building 539",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000540",
+        "BuildingLongDescription": "Filler Building 540",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000541",
+        "BuildingLongDescription": "Filler Building 541",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000542",
+        "BuildingLongDescription": "Filler Building 542",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000543",
+        "BuildingLongDescription": "Filler Building 543",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000544",
+        "BuildingLongDescription": "Filler Building 544",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000545",
+        "BuildingLongDescription": "Filler Building 545",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000546",
+        "BuildingLongDescription": "Filler Building 546",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000547",
+        "BuildingLongDescription": "Filler Building 547",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000548",
+        "BuildingLongDescription": "Filler Building 548",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000549",
+        "BuildingLongDescription": "Filler Building 549",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000550",
+        "BuildingLongDescription": "Filler Building 550",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000551",
+        "BuildingLongDescription": "Filler Building 551",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000552",
+        "BuildingLongDescription": "Filler Building 552",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000553",
+        "BuildingLongDescription": "Filler Building 553",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000554",
+        "BuildingLongDescription": "Filler Building 554",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000555",
+        "BuildingLongDescription": "Filler Building 555",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000556",
+        "BuildingLongDescription": "Filler Building 556",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000557",
+        "BuildingLongDescription": "Filler Building 557",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000558",
+        "BuildingLongDescription": "Filler Building 558",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000559",
+        "BuildingLongDescription": "Filler Building 559",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000560",
+        "BuildingLongDescription": "Filler Building 560",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000561",
+        "BuildingLongDescription": "Filler Building 561",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000562",
+        "BuildingLongDescription": "Filler Building 562",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000563",
+        "BuildingLongDescription": "Filler Building 563",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000564",
+        "BuildingLongDescription": "Filler Building 564",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000565",
+        "BuildingLongDescription": "Filler Building 565",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000566",
+        "BuildingLongDescription": "Filler Building 566",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000567",
+        "BuildingLongDescription": "Filler Building 567",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000568",
+        "BuildingLongDescription": "Filler Building 568",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000569",
+        "BuildingLongDescription": "Filler Building 569",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000570",
+        "BuildingLongDescription": "Filler Building 570",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000571",
+        "BuildingLongDescription": "Filler Building 571",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000572",
+        "BuildingLongDescription": "Filler Building 572",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000573",
+        "BuildingLongDescription": "Filler Building 573",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000574",
+        "BuildingLongDescription": "Filler Building 574",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000575",
+        "BuildingLongDescription": "Filler Building 575",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000576",
+        "BuildingLongDescription": "Filler Building 576",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000577",
+        "BuildingLongDescription": "Filler Building 577",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000578",
+        "BuildingLongDescription": "Filler Building 578",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000579",
+        "BuildingLongDescription": "Filler Building 579",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000580",
+        "BuildingLongDescription": "Filler Building 580",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000581",
+        "BuildingLongDescription": "Filler Building 581",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000582",
+        "BuildingLongDescription": "Filler Building 582",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000583",
+        "BuildingLongDescription": "Filler Building 583",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000584",
+        "BuildingLongDescription": "Filler Building 584",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000585",
+        "BuildingLongDescription": "Filler Building 585",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000586",
+        "BuildingLongDescription": "Filler Building 586",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000587",
+        "BuildingLongDescription": "Filler Building 587",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000588",
+        "BuildingLongDescription": "Filler Building 588",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000589",
+        "BuildingLongDescription": "Filler Building 589",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000590",
+        "BuildingLongDescription": "Filler Building 590",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000591",
+        "BuildingLongDescription": "Filler Building 591",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000592",
+        "BuildingLongDescription": "Filler Building 592",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000593",
+        "BuildingLongDescription": "Filler Building 593",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000594",
+        "BuildingLongDescription": "Filler Building 594",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000595",
+        "BuildingLongDescription": "Filler Building 595",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000596",
+        "BuildingLongDescription": "Filler Building 596",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000597",
+        "BuildingLongDescription": "Filler Building 597",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000598",
+        "BuildingLongDescription": "Filler Building 598",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000599",
+        "BuildingLongDescription": "Filler Building 599",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000600",
+        "BuildingLongDescription": "Filler Building 600",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000601",
+        "BuildingLongDescription": "Filler Building 601",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000602",
+        "BuildingLongDescription": "Filler Building 602",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000603",
+        "BuildingLongDescription": "Filler Building 603",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000604",
+        "BuildingLongDescription": "Filler Building 604",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000605",
+        "BuildingLongDescription": "Filler Building 605",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000606",
+        "BuildingLongDescription": "Filler Building 606",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000607",
+        "BuildingLongDescription": "Filler Building 607",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000608",
+        "BuildingLongDescription": "Filler Building 608",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000609",
+        "BuildingLongDescription": "Filler Building 609",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000610",
+        "BuildingLongDescription": "Filler Building 610",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000611",
+        "BuildingLongDescription": "Filler Building 611",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000612",
+        "BuildingLongDescription": "Filler Building 612",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000613",
+        "BuildingLongDescription": "Filler Building 613",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000614",
+        "BuildingLongDescription": "Filler Building 614",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000615",
+        "BuildingLongDescription": "Filler Building 615",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000616",
+        "BuildingLongDescription": "Filler Building 616",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000617",
+        "BuildingLongDescription": "Filler Building 617",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000618",
+        "BuildingLongDescription": "Filler Building 618",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000619",
+        "BuildingLongDescription": "Filler Building 619",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000620",
+        "BuildingLongDescription": "Filler Building 620",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000621",
+        "BuildingLongDescription": "Filler Building 621",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000622",
+        "BuildingLongDescription": "Filler Building 622",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000623",
+        "BuildingLongDescription": "Filler Building 623",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000624",
+        "BuildingLongDescription": "Filler Building 624",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000625",
+        "BuildingLongDescription": "Filler Building 625",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000626",
+        "BuildingLongDescription": "Filler Building 626",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000627",
+        "BuildingLongDescription": "Filler Building 627",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000628",
+        "BuildingLongDescription": "Filler Building 628",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000629",
+        "BuildingLongDescription": "Filler Building 629",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000630",
+        "BuildingLongDescription": "Filler Building 630",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000631",
+        "BuildingLongDescription": "Filler Building 631",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000632",
+        "BuildingLongDescription": "Filler Building 632",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000633",
+        "BuildingLongDescription": "Filler Building 633",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000634",
+        "BuildingLongDescription": "Filler Building 634",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000635",
+        "BuildingLongDescription": "Filler Building 635",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000636",
+        "BuildingLongDescription": "Filler Building 636",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000637",
+        "BuildingLongDescription": "Filler Building 637",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000638",
+        "BuildingLongDescription": "Filler Building 638",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000639",
+        "BuildingLongDescription": "Filler Building 639",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000640",
+        "BuildingLongDescription": "Filler Building 640",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000641",
+        "BuildingLongDescription": "Filler Building 641",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000642",
+        "BuildingLongDescription": "Filler Building 642",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000643",
+        "BuildingLongDescription": "Filler Building 643",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000644",
+        "BuildingLongDescription": "Filler Building 644",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000645",
+        "BuildingLongDescription": "Filler Building 645",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000646",
+        "BuildingLongDescription": "Filler Building 646",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000647",
+        "BuildingLongDescription": "Filler Building 647",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000648",
+        "BuildingLongDescription": "Filler Building 648",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000649",
+        "BuildingLongDescription": "Filler Building 649",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000650",
+        "BuildingLongDescription": "Filler Building 650",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000651",
+        "BuildingLongDescription": "Filler Building 651",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000652",
+        "BuildingLongDescription": "Filler Building 652",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000653",
+        "BuildingLongDescription": "Filler Building 653",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000654",
+        "BuildingLongDescription": "Filler Building 654",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000655",
+        "BuildingLongDescription": "Filler Building 655",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000656",
+        "BuildingLongDescription": "Filler Building 656",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000657",
+        "BuildingLongDescription": "Filler Building 657",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000658",
+        "BuildingLongDescription": "Filler Building 658",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000659",
+        "BuildingLongDescription": "Filler Building 659",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000660",
+        "BuildingLongDescription": "Filler Building 660",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000661",
+        "BuildingLongDescription": "Filler Building 661",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000662",
+        "BuildingLongDescription": "Filler Building 662",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000663",
+        "BuildingLongDescription": "Filler Building 663",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000664",
+        "BuildingLongDescription": "Filler Building 664",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000665",
+        "BuildingLongDescription": "Filler Building 665",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000666",
+        "BuildingLongDescription": "Filler Building 666",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000667",
+        "BuildingLongDescription": "Filler Building 667",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000668",
+        "BuildingLongDescription": "Filler Building 668",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000669",
+        "BuildingLongDescription": "Filler Building 669",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000670",
+        "BuildingLongDescription": "Filler Building 670",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000671",
+        "BuildingLongDescription": "Filler Building 671",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000672",
+        "BuildingLongDescription": "Filler Building 672",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000673",
+        "BuildingLongDescription": "Filler Building 673",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000674",
+        "BuildingLongDescription": "Filler Building 674",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000675",
+        "BuildingLongDescription": "Filler Building 675",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000676",
+        "BuildingLongDescription": "Filler Building 676",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000677",
+        "BuildingLongDescription": "Filler Building 677",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000678",
+        "BuildingLongDescription": "Filler Building 678",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000679",
+        "BuildingLongDescription": "Filler Building 679",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000680",
+        "BuildingLongDescription": "Filler Building 680",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000681",
+        "BuildingLongDescription": "Filler Building 681",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000682",
+        "BuildingLongDescription": "Filler Building 682",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000683",
+        "BuildingLongDescription": "Filler Building 683",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000684",
+        "BuildingLongDescription": "Filler Building 684",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000685",
+        "BuildingLongDescription": "Filler Building 685",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000686",
+        "BuildingLongDescription": "Filler Building 686",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000687",
+        "BuildingLongDescription": "Filler Building 687",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000688",
+        "BuildingLongDescription": "Filler Building 688",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000689",
+        "BuildingLongDescription": "Filler Building 689",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000690",
+        "BuildingLongDescription": "Filler Building 690",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000691",
+        "BuildingLongDescription": "Filler Building 691",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000692",
+        "BuildingLongDescription": "Filler Building 692",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000693",
+        "BuildingLongDescription": "Filler Building 693",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000694",
+        "BuildingLongDescription": "Filler Building 694",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000695",
+        "BuildingLongDescription": "Filler Building 695",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000696",
+        "BuildingLongDescription": "Filler Building 696",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000697",
+        "BuildingLongDescription": "Filler Building 697",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000698",
+        "BuildingLongDescription": "Filler Building 698",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000699",
+        "BuildingLongDescription": "Filler Building 699",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000700",
+        "BuildingLongDescription": "Filler Building 700",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000701",
+        "BuildingLongDescription": "Filler Building 701",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000702",
+        "BuildingLongDescription": "Filler Building 702",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000703",
+        "BuildingLongDescription": "Filler Building 703",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000704",
+        "BuildingLongDescription": "Filler Building 704",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000705",
+        "BuildingLongDescription": "Filler Building 705",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000706",
+        "BuildingLongDescription": "Filler Building 706",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000707",
+        "BuildingLongDescription": "Filler Building 707",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000708",
+        "BuildingLongDescription": "Filler Building 708",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000709",
+        "BuildingLongDescription": "Filler Building 709",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000710",
+        "BuildingLongDescription": "Filler Building 710",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000711",
+        "BuildingLongDescription": "Filler Building 711",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000712",
+        "BuildingLongDescription": "Filler Building 712",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000713",
+        "BuildingLongDescription": "Filler Building 713",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000714",
+        "BuildingLongDescription": "Filler Building 714",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000715",
+        "BuildingLongDescription": "Filler Building 715",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000716",
+        "BuildingLongDescription": "Filler Building 716",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000717",
+        "BuildingLongDescription": "Filler Building 717",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000718",
+        "BuildingLongDescription": "Filler Building 718",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000719",
+        "BuildingLongDescription": "Filler Building 719",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000720",
+        "BuildingLongDescription": "Filler Building 720",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000721",
+        "BuildingLongDescription": "Filler Building 721",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000722",
+        "BuildingLongDescription": "Filler Building 722",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000723",
+        "BuildingLongDescription": "Filler Building 723",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000724",
+        "BuildingLongDescription": "Filler Building 724",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000725",
+        "BuildingLongDescription": "Filler Building 725",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000726",
+        "BuildingLongDescription": "Filler Building 726",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000727",
+        "BuildingLongDescription": "Filler Building 727",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000728",
+        "BuildingLongDescription": "Filler Building 728",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000729",
+        "BuildingLongDescription": "Filler Building 729",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000730",
+        "BuildingLongDescription": "Filler Building 730",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000731",
+        "BuildingLongDescription": "Filler Building 731",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000732",
+        "BuildingLongDescription": "Filler Building 732",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000733",
+        "BuildingLongDescription": "Filler Building 733",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000734",
+        "BuildingLongDescription": "Filler Building 734",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000735",
+        "BuildingLongDescription": "Filler Building 735",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000736",
+        "BuildingLongDescription": "Filler Building 736",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000737",
+        "BuildingLongDescription": "Filler Building 737",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000738",
+        "BuildingLongDescription": "Filler Building 738",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000739",
+        "BuildingLongDescription": "Filler Building 739",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000740",
+        "BuildingLongDescription": "Filler Building 740",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000741",
+        "BuildingLongDescription": "Filler Building 741",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000742",
+        "BuildingLongDescription": "Filler Building 742",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000743",
+        "BuildingLongDescription": "Filler Building 743",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000744",
+        "BuildingLongDescription": "Filler Building 744",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000745",
+        "BuildingLongDescription": "Filler Building 745",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000746",
+        "BuildingLongDescription": "Filler Building 746",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000747",
+        "BuildingLongDescription": "Filler Building 747",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000748",
+        "BuildingLongDescription": "Filler Building 748",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000749",
+        "BuildingLongDescription": "Filler Building 749",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000750",
+        "BuildingLongDescription": "Filler Building 750",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000751",
+        "BuildingLongDescription": "Filler Building 751",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000752",
+        "BuildingLongDescription": "Filler Building 752",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000753",
+        "BuildingLongDescription": "Filler Building 753",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000754",
+        "BuildingLongDescription": "Filler Building 754",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000755",
+        "BuildingLongDescription": "Filler Building 755",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000756",
+        "BuildingLongDescription": "Filler Building 756",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000757",
+        "BuildingLongDescription": "Filler Building 757",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000758",
+        "BuildingLongDescription": "Filler Building 758",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000759",
+        "BuildingLongDescription": "Filler Building 759",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000760",
+        "BuildingLongDescription": "Filler Building 760",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000761",
+        "BuildingLongDescription": "Filler Building 761",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000762",
+        "BuildingLongDescription": "Filler Building 762",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000763",
+        "BuildingLongDescription": "Filler Building 763",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000764",
+        "BuildingLongDescription": "Filler Building 764",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000765",
+        "BuildingLongDescription": "Filler Building 765",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000766",
+        "BuildingLongDescription": "Filler Building 766",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000767",
+        "BuildingLongDescription": "Filler Building 767",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000768",
+        "BuildingLongDescription": "Filler Building 768",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000769",
+        "BuildingLongDescription": "Filler Building 769",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000770",
+        "BuildingLongDescription": "Filler Building 770",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000771",
+        "BuildingLongDescription": "Filler Building 771",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000772",
+        "BuildingLongDescription": "Filler Building 772",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000773",
+        "BuildingLongDescription": "Filler Building 773",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000774",
+        "BuildingLongDescription": "Filler Building 774",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000775",
+        "BuildingLongDescription": "Filler Building 775",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000776",
+        "BuildingLongDescription": "Filler Building 776",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000777",
+        "BuildingLongDescription": "Filler Building 777",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000778",
+        "BuildingLongDescription": "Filler Building 778",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000779",
+        "BuildingLongDescription": "Filler Building 779",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000780",
+        "BuildingLongDescription": "Filler Building 780",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000781",
+        "BuildingLongDescription": "Filler Building 781",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000782",
+        "BuildingLongDescription": "Filler Building 782",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000783",
+        "BuildingLongDescription": "Filler Building 783",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000784",
+        "BuildingLongDescription": "Filler Building 784",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000785",
+        "BuildingLongDescription": "Filler Building 785",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000786",
+        "BuildingLongDescription": "Filler Building 786",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000787",
+        "BuildingLongDescription": "Filler Building 787",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000788",
+        "BuildingLongDescription": "Filler Building 788",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000789",
+        "BuildingLongDescription": "Filler Building 789",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000790",
+        "BuildingLongDescription": "Filler Building 790",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000791",
+        "BuildingLongDescription": "Filler Building 791",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000792",
+        "BuildingLongDescription": "Filler Building 792",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000793",
+        "BuildingLongDescription": "Filler Building 793",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000794",
+        "BuildingLongDescription": "Filler Building 794",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000795",
+        "BuildingLongDescription": "Filler Building 795",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000796",
+        "BuildingLongDescription": "Filler Building 796",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000797",
+        "BuildingLongDescription": "Filler Building 797",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000798",
+        "BuildingLongDescription": "Filler Building 798",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000799",
+        "BuildingLongDescription": "Filler Building 799",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000800",
+        "BuildingLongDescription": "Filler Building 800",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000801",
+        "BuildingLongDescription": "Filler Building 801",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000802",
+        "BuildingLongDescription": "Filler Building 802",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000803",
+        "BuildingLongDescription": "Filler Building 803",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000804",
+        "BuildingLongDescription": "Filler Building 804",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000805",
+        "BuildingLongDescription": "Filler Building 805",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000806",
+        "BuildingLongDescription": "Filler Building 806",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000807",
+        "BuildingLongDescription": "Filler Building 807",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000808",
+        "BuildingLongDescription": "Filler Building 808",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000809",
+        "BuildingLongDescription": "Filler Building 809",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000810",
+        "BuildingLongDescription": "Filler Building 810",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000811",
+        "BuildingLongDescription": "Filler Building 811",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000812",
+        "BuildingLongDescription": "Filler Building 812",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000813",
+        "BuildingLongDescription": "Filler Building 813",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000814",
+        "BuildingLongDescription": "Filler Building 814",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000815",
+        "BuildingLongDescription": "Filler Building 815",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000816",
+        "BuildingLongDescription": "Filler Building 816",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000817",
+        "BuildingLongDescription": "Filler Building 817",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000818",
+        "BuildingLongDescription": "Filler Building 818",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000819",
+        "BuildingLongDescription": "Filler Building 819",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000820",
+        "BuildingLongDescription": "Filler Building 820",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000821",
+        "BuildingLongDescription": "Filler Building 821",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000822",
+        "BuildingLongDescription": "Filler Building 822",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000823",
+        "BuildingLongDescription": "Filler Building 823",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000824",
+        "BuildingLongDescription": "Filler Building 824",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000825",
+        "BuildingLongDescription": "Filler Building 825",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000826",
+        "BuildingLongDescription": "Filler Building 826",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000827",
+        "BuildingLongDescription": "Filler Building 827",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000828",
+        "BuildingLongDescription": "Filler Building 828",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000829",
+        "BuildingLongDescription": "Filler Building 829",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000830",
+        "BuildingLongDescription": "Filler Building 830",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000831",
+        "BuildingLongDescription": "Filler Building 831",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000832",
+        "BuildingLongDescription": "Filler Building 832",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000833",
+        "BuildingLongDescription": "Filler Building 833",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000834",
+        "BuildingLongDescription": "Filler Building 834",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000835",
+        "BuildingLongDescription": "Filler Building 835",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000836",
+        "BuildingLongDescription": "Filler Building 836",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000837",
+        "BuildingLongDescription": "Filler Building 837",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000838",
+        "BuildingLongDescription": "Filler Building 838",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000839",
+        "BuildingLongDescription": "Filler Building 839",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000840",
+        "BuildingLongDescription": "Filler Building 840",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000841",
+        "BuildingLongDescription": "Filler Building 841",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000842",
+        "BuildingLongDescription": "Filler Building 842",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000843",
+        "BuildingLongDescription": "Filler Building 843",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000844",
+        "BuildingLongDescription": "Filler Building 844",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000845",
+        "BuildingLongDescription": "Filler Building 845",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000846",
+        "BuildingLongDescription": "Filler Building 846",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000847",
+        "BuildingLongDescription": "Filler Building 847",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000848",
+        "BuildingLongDescription": "Filler Building 848",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000849",
+        "BuildingLongDescription": "Filler Building 849",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000850",
+        "BuildingLongDescription": "Filler Building 850",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000851",
+        "BuildingLongDescription": "Filler Building 851",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000852",
+        "BuildingLongDescription": "Filler Building 852",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000853",
+        "BuildingLongDescription": "Filler Building 853",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000854",
+        "BuildingLongDescription": "Filler Building 854",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000855",
+        "BuildingLongDescription": "Filler Building 855",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000856",
+        "BuildingLongDescription": "Filler Building 856",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000857",
+        "BuildingLongDescription": "Filler Building 857",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000858",
+        "BuildingLongDescription": "Filler Building 858",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000859",
+        "BuildingLongDescription": "Filler Building 859",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000860",
+        "BuildingLongDescription": "Filler Building 860",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000861",
+        "BuildingLongDescription": "Filler Building 861",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000862",
+        "BuildingLongDescription": "Filler Building 862",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000863",
+        "BuildingLongDescription": "Filler Building 863",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000864",
+        "BuildingLongDescription": "Filler Building 864",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000865",
+        "BuildingLongDescription": "Filler Building 865",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000866",
+        "BuildingLongDescription": "Filler Building 866",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000867",
+        "BuildingLongDescription": "Filler Building 867",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000868",
+        "BuildingLongDescription": "Filler Building 868",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000869",
+        "BuildingLongDescription": "Filler Building 869",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000870",
+        "BuildingLongDescription": "Filler Building 870",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000871",
+        "BuildingLongDescription": "Filler Building 871",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000872",
+        "BuildingLongDescription": "Filler Building 872",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000873",
+        "BuildingLongDescription": "Filler Building 873",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000874",
+        "BuildingLongDescription": "Filler Building 874",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000875",
+        "BuildingLongDescription": "Filler Building 875",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000876",
+        "BuildingLongDescription": "Filler Building 876",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000877",
+        "BuildingLongDescription": "Filler Building 877",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000878",
+        "BuildingLongDescription": "Filler Building 878",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000879",
+        "BuildingLongDescription": "Filler Building 879",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000880",
+        "BuildingLongDescription": "Filler Building 880",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000881",
+        "BuildingLongDescription": "Filler Building 881",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000882",
+        "BuildingLongDescription": "Filler Building 882",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000883",
+        "BuildingLongDescription": "Filler Building 883",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000884",
+        "BuildingLongDescription": "Filler Building 884",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000885",
+        "BuildingLongDescription": "Filler Building 885",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000886",
+        "BuildingLongDescription": "Filler Building 886",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000887",
+        "BuildingLongDescription": "Filler Building 887",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000888",
+        "BuildingLongDescription": "Filler Building 888",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000889",
+        "BuildingLongDescription": "Filler Building 889",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000890",
+        "BuildingLongDescription": "Filler Building 890",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000891",
+        "BuildingLongDescription": "Filler Building 891",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000892",
+        "BuildingLongDescription": "Filler Building 892",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000893",
+        "BuildingLongDescription": "Filler Building 893",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000894",
+        "BuildingLongDescription": "Filler Building 894",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000895",
+        "BuildingLongDescription": "Filler Building 895",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000896",
+        "BuildingLongDescription": "Filler Building 896",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000897",
+        "BuildingLongDescription": "Filler Building 897",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000898",
+        "BuildingLongDescription": "Filler Building 898",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000899",
+        "BuildingLongDescription": "Filler Building 899",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000900",
+        "BuildingLongDescription": "Filler Building 900",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000901",
+        "BuildingLongDescription": "Filler Building 901",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000902",
+        "BuildingLongDescription": "Filler Building 902",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000903",
+        "BuildingLongDescription": "Filler Building 903",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000904",
+        "BuildingLongDescription": "Filler Building 904",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000905",
+        "BuildingLongDescription": "Filler Building 905",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000906",
+        "BuildingLongDescription": "Filler Building 906",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000907",
+        "BuildingLongDescription": "Filler Building 907",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000908",
+        "BuildingLongDescription": "Filler Building 908",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000909",
+        "BuildingLongDescription": "Filler Building 909",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000910",
+        "BuildingLongDescription": "Filler Building 910",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000911",
+        "BuildingLongDescription": "Filler Building 911",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000912",
+        "BuildingLongDescription": "Filler Building 912",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000913",
+        "BuildingLongDescription": "Filler Building 913",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000914",
+        "BuildingLongDescription": "Filler Building 914",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000915",
+        "BuildingLongDescription": "Filler Building 915",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000916",
+        "BuildingLongDescription": "Filler Building 916",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000917",
+        "BuildingLongDescription": "Filler Building 917",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000918",
+        "BuildingLongDescription": "Filler Building 918",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000919",
+        "BuildingLongDescription": "Filler Building 919",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000920",
+        "BuildingLongDescription": "Filler Building 920",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000921",
+        "BuildingLongDescription": "Filler Building 921",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000922",
+        "BuildingLongDescription": "Filler Building 922",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000923",
+        "BuildingLongDescription": "Filler Building 923",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000924",
+        "BuildingLongDescription": "Filler Building 924",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000925",
+        "BuildingLongDescription": "Filler Building 925",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000926",
+        "BuildingLongDescription": "Filler Building 926",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000927",
+        "BuildingLongDescription": "Filler Building 927",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000928",
+        "BuildingLongDescription": "Filler Building 928",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000929",
+        "BuildingLongDescription": "Filler Building 929",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000930",
+        "BuildingLongDescription": "Filler Building 930",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000931",
+        "BuildingLongDescription": "Filler Building 931",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000932",
+        "BuildingLongDescription": "Filler Building 932",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000933",
+        "BuildingLongDescription": "Filler Building 933",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000934",
+        "BuildingLongDescription": "Filler Building 934",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000935",
+        "BuildingLongDescription": "Filler Building 935",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000936",
+        "BuildingLongDescription": "Filler Building 936",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000937",
+        "BuildingLongDescription": "Filler Building 937",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000938",
+        "BuildingLongDescription": "Filler Building 938",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000939",
+        "BuildingLongDescription": "Filler Building 939",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000940",
+        "BuildingLongDescription": "Filler Building 940",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000941",
+        "BuildingLongDescription": "Filler Building 941",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000942",
+        "BuildingLongDescription": "Filler Building 942",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000943",
+        "BuildingLongDescription": "Filler Building 943",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000944",
+        "BuildingLongDescription": "Filler Building 944",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000945",
+        "BuildingLongDescription": "Filler Building 945",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000946",
+        "BuildingLongDescription": "Filler Building 946",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000947",
+        "BuildingLongDescription": "Filler Building 947",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000948",
+        "BuildingLongDescription": "Filler Building 948",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000949",
+        "BuildingLongDescription": "Filler Building 949",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000950",
+        "BuildingLongDescription": "Filler Building 950",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000951",
+        "BuildingLongDescription": "Filler Building 951",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000952",
+        "BuildingLongDescription": "Filler Building 952",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000953",
+        "BuildingLongDescription": "Filler Building 953",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000954",
+        "BuildingLongDescription": "Filler Building 954",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000955",
+        "BuildingLongDescription": "Filler Building 955",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000956",
+        "BuildingLongDescription": "Filler Building 956",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000957",
+        "BuildingLongDescription": "Filler Building 957",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000958",
+        "BuildingLongDescription": "Filler Building 958",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000959",
+        "BuildingLongDescription": "Filler Building 959",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000960",
+        "BuildingLongDescription": "Filler Building 960",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000961",
+        "BuildingLongDescription": "Filler Building 961",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000962",
+        "BuildingLongDescription": "Filler Building 962",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000963",
+        "BuildingLongDescription": "Filler Building 963",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000964",
+        "BuildingLongDescription": "Filler Building 964",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000965",
+        "BuildingLongDescription": "Filler Building 965",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000966",
+        "BuildingLongDescription": "Filler Building 966",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000967",
+        "BuildingLongDescription": "Filler Building 967",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000968",
+        "BuildingLongDescription": "Filler Building 968",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000969",
+        "BuildingLongDescription": "Filler Building 969",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000970",
+        "BuildingLongDescription": "Filler Building 970",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000971",
+        "BuildingLongDescription": "Filler Building 971",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000972",
+        "BuildingLongDescription": "Filler Building 972",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000973",
+        "BuildingLongDescription": "Filler Building 973",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000974",
+        "BuildingLongDescription": "Filler Building 974",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000975",
+        "BuildingLongDescription": "Filler Building 975",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000976",
+        "BuildingLongDescription": "Filler Building 976",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000977",
+        "BuildingLongDescription": "Filler Building 977",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000978",
+        "BuildingLongDescription": "Filler Building 978",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000979",
+        "BuildingLongDescription": "Filler Building 979",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000980",
+        "BuildingLongDescription": "Filler Building 980",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000981",
+        "BuildingLongDescription": "Filler Building 981",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000982",
+        "BuildingLongDescription": "Filler Building 982",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000983",
+        "BuildingLongDescription": "Filler Building 983",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000984",
+        "BuildingLongDescription": "Filler Building 984",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000985",
+        "BuildingLongDescription": "Filler Building 985",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000986",
+        "BuildingLongDescription": "Filler Building 986",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000987",
+        "BuildingLongDescription": "Filler Building 987",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000988",
+        "BuildingLongDescription": "Filler Building 988",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000989",
+        "BuildingLongDescription": "Filler Building 989",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000990",
+        "BuildingLongDescription": "Filler Building 990",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000991",
+        "BuildingLongDescription": "Filler Building 991",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000992",
+        "BuildingLongDescription": "Filler Building 992",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000993",
+        "BuildingLongDescription": "Filler Building 993",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000994",
+        "BuildingLongDescription": "Filler Building 994",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000995",
+        "BuildingLongDescription": "Filler Building 995",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000996",
+        "BuildingLongDescription": "Filler Building 996",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000997",
+        "BuildingLongDescription": "Filler Building 997",
+        "BuildingCampusCode": "999"
+      },
+      {
+        "BuildingRecordNumber": "9000998",
+        "BuildingLongDescription": "Filler Building 998",
+        "BuildingCampusCode": "999"
+      }
+    ]
+  }
+}
