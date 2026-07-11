@@ -1,16 +1,18 @@
 {
-  "Departments": [
-    {
-      "DeptID": "190000",
-      "DeptDescr": "LSA - German",
-      "DeptGrp": "COLLEGE_OF_LSA",
-      "DeptGrpDescr": "College of Literature, Science & the Arts"
-    },
-    {
-      "DeptID": "180000",
-      "DeptDescr": "LSA - Mathematics",
-      "DeptGrp": "COLLEGE_OF_LSA",
-      "DeptGrpDescr": "College of Lit, Science & Arts"
-    }
-  ]
+  "DepartmentList": {
+    "DeptData": [
+      {
+        "DeptId": "190000",
+        "DeptDescription": "LSA - German",
+        "DeptGroup": "COLLEGE_OF_LSA",
+        "DeptGroupDescription": "College of Literature, Science & the Arts"
+      },
+      {
+        "DeptId": "180000",
+        "DeptDescription": "LSA - Mathematics",
+        "DeptGroup": "COLLEGE_OF_LSA",
+        "DeptGroupDescription": "College of Lit, Science & Arts"
+      }
+    ]
+  }
 }
