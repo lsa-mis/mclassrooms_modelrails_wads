@@ -27,7 +27,7 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
   let(:viewer)   { membership_with("viewer") }
   let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
   let(:floor)    { create(:floor, building: building, label: "1") }
-  let!(:room)    { classroom(building, "1401", 45, codes: %w[projdigit whtbrd blackout], floor: floor) }
+  let!(:room)    { classroom(building, "1401", 45, codes: %w[intrscreen movetablet whtbrd blackout], floor: floor) }
 
   before { sign_in(viewer) }
 
@@ -86,8 +86,8 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
   it "promotes popular features as chips outside the disclosure, without duplicating them inside" do
     get find_a_room_path
 
-    expect(page).to have_css("input[type='checkbox'][name='characteristics[]'][value='projdigit']")
-    expect(page).to have_no_css("details#more_filters input[value='projdigit']", visible: :all)
+    expect(page).to have_css("input[type='checkbox'][name='characteristics[]'][value='intrscreen']")
+    expect(page).to have_no_css("details#more_filters input[value='intrscreen']", visible: :all)
     # the long tail stays inside the disclosure
     expect(page).to have_css("details#more_filters input[type='checkbox'][name='characteristics[]'][value='blackout']", visible: :all)
   end
@@ -137,7 +137,7 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
   end
 
   it "counts panel-only filters on the More-filters summary, ignoring promoted chips" do
-    get find_a_room_path(characteristics: %w[blackout projdigit], capacity_max: "100")
+    get find_a_room_path(characteristics: %w[blackout intrscreen], capacity_max: "100")
 
     expect(response.body).to include(I18n.t("rooms.filters.applied_count", count: 2))
     expect(response.body).not_to include(I18n.t("rooms.filters.applied_count", count: 3))
@@ -180,7 +180,7 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
   it "renders promoted chips with their locale-override labels" do
     get find_a_room_path
 
-    expect(page).to have_css("label[for='characteristics_projdigit']", text: "Projector")
+    expect(page).to have_css("label[for='characteristics_movetablet']", text: "Movable seating")
   end
 
   # Filter-label description tooltips: hovering the label (or focusing the
@@ -213,8 +213,8 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
 
       popular = page.find("form#find_a_room_form fieldset", match: :first)
       expect(popular).to have_css("span[role='tooltip']", text: "wall-mounted dry-erase", visible: :all)
-      # projdigit has no long_description — plain checkbox, no describedby, no bubble
-      expect(popular.find("input[value='projdigit']")["aria-describedby"]).to be_nil
+      # intrscreen has no long_description — plain checkbox, no describedby, no bubble
+      expect(popular.find("input[value='intrscreen']")["aria-describedby"]).to be_nil
     end
   end
 
