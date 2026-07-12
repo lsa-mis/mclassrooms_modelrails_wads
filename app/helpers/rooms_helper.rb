@@ -7,7 +7,9 @@ module RoomsHelper
   # are EXCLUDED from the More-filters panel below so `characteristics[]` is
   # never rendered twice for one code (two same-name checked inputs would
   # double-submit).
-  PROMOTED_FILTER_CODES = %w[projdigit movetablet whtbrd].freeze
+  # Taxonomy sweep (2026-07-12): projdigit swapped out — at 376/388 rooms
+  # (97%) it filtered nothing; Interactive Screen splits the set near-evenly.
+  PROMOTED_FILTER_CODES = %w[intrscreen movetablet whtbrd].freeze
 
   # Card tags (sprint prototype): a few LABELED tags beat a strip of ~15
   # ambiguous icons. Priority-ordered; capped in the view. The expanded
