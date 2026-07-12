@@ -21,7 +21,7 @@
 <% end %>
 <% if entry.long_description.present? %>
   <% tip_id = "tip_characteristics_#{entry.short_code}" %>
-  <div class="group/tooltip relative <%= wrapper_class %>"
+  <div class="group/tooltip relative flex min-h-11 items-center <%= wrapper_class %>"
        style="anchor-name: --<%= tip_id %>"
        data-controller="floating"
        data-action="keydown.esc->floating#dismiss mouseleave->floating#clearDismissed focusout->floating#clearDismissed">
@@ -32,5 +32,9 @@
     </span>
   </div>
 <% else %>
-  <%= checkbox %>
+  <%# 44px row even without a tooltip wrapper — AAA target floor applies to
+      every panel checkbox, not just the promoted pills (audit, Wathan). %>
+  <div class="flex min-h-11 items-center <%= wrapper_class %>">
+    <%= checkbox %>
+  </div>
 <% end %>

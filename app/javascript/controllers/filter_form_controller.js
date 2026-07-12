@@ -31,6 +31,11 @@ export default class extends Controller {
     this.form.requestSubmit()
   }
 
+  frameRendered() {
+    this.restoreFocus()
+    this.announceResults()
+  }
+
   // Panel review (Léonie): a frame swap destroys the activated element and
   // Turbo drops focus to <body>. After the reset-links became full visits,
   // the only in-frame control left is the sort select (wired to the form via
@@ -40,6 +45,16 @@ export default class extends Controller {
     if (document.activeElement !== document.body) return
 
     this.element.querySelector("#filter_sort")?.focus()
+  }
+
+  // Pre-release audit (Léonie): a live region that is itself replaced by the
+  // frame swap is not reliably announced by screen readers. The persistent
+  // #results_announcer lives OUTSIDE the frame; copy the fresh count into it
+  // after each render so filtering is never silent to AT.
+  announceResults() {
+    const announcer = document.getElementById("results_announcer")
+    const count = this.element.querySelector("[data-results-count]")
+    if (announcer && count) announcer.textContent = count.textContent.trim()
   }
 
   get form() {

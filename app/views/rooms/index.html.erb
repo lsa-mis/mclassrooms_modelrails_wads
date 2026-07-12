@@ -19,7 +19,7 @@
 <% content_for(:title) { t("rooms.index.title") } %>
 
 <div class="max-w-5xl mx-auto px-4 py-8" data-controller="filter-form"
-     data-action="turbo:frame-render->filter-form#restoreFocus">
+     data-action="turbo:frame-render->filter-form#frameRendered">
   <h1 class="text-2xl font-bold text-text-heading"><%= t("rooms.index.title") %></h1>
   <p class="mt-1 text-sm text-text-body"><%= t("rooms.index.subtitle") %></p>
 
@@ -27,17 +27,22 @@
 
   <%= render "filters", search: @search, filter_groups: @filter_groups %>
 
-  <%= turbo_frame_tag "find_a_room_results", "aria-label": t("rooms.index.results_frame_label"),
+  <%# Persistent announcer OUTSIDE the frame (audit, Léonie): a live region
+      that is itself replaced on every frame swap is not reliably announced —
+      filter-form#frameRendered copies the fresh count here after each render. %>
+  <p id="results_announcer" aria-live="polite" class="sr-only"></p>
+
+  <%= turbo_frame_tag "find_a_room_results", role: "region",
+        "aria-label": t("rooms.index.results_frame_label"),
         class: "block mt-6 motion-safe:transition-opacity aria-busy:opacity-60" do %>
     <% current_view = params[:view].presence_in(RoomsController::VIEWS) || "active" %>
-    <div class="sticky top-0 z-10 bg-surface border-b border-border py-3
+    <div class="sticky top-0 z-10 bg-surface-raised shadow-sm border-b border-border px-2 py-3
                 flex flex-wrap items-center gap-x-4 gap-y-2">
-      <%# Count-only live region (panel review: an atomic region wrapping the
-          full filter sentence re-read the whole thing on every debounced
-          keystroke). The sentence stays discoverable as a plain sr-only
-          sibling, outside the live region. %>
-      <p role="status" aria-live="polite" aria-atomic="true"
-         class="text-lg font-semibold text-text-heading m-0 motion-safe:animate-count-flash rounded px-1 -mx-1">
+      <%# Visible count only — announcements come from the persistent
+          #results_announcer above; the filter sentence stays as a plain
+          sr-only sibling for reading order. %>
+      <p data-results-count
+         class="text-xl font-semibold text-text-heading m-0 motion-safe:animate-count-flash rounded px-1 -mx-1">
         <%= t("rooms.index.results_summary", count: @pagy.count) %>
       </p>
       <% if @search.summary.present? %>
@@ -56,15 +61,11 @@
             <%= link_to url,
                   data: { turbo_frame: "_top" },
                   class: "inline-flex items-center gap-1.5 rounded-full border border-border
-                         bg-surface-sunken px-4 min-h-11 text-sm text-text-body focus-ring" do %>
+                         bg-surface-sunken px-4 min-h-11 text-sm text-text-body focus-ring
+                         transition-colors hover:border-border-strong hover:text-text-heading" do %>
               <span class="sr-only"><%= t("rooms.index.chips.remove") %></span><%= label %><span aria-hidden="true" class="font-semibold">×</span>
             <% end %>
           <% end %>
-          <%= link_to t("rooms.filters.clear_all"),
-                find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
-                data: { turbo_frame: "_top" },
-                class: "text-sm text-interactive underline hover:no-underline
-                       min-h-11 inline-flex items-center focus-ring rounded" %>
         </span>
       <% end %>
 
@@ -72,7 +73,7 @@
         <%# Lives inside the frame (re-renders with results) but submits the
             form outside it via `form=` — sort is a property of the results,
             so it belongs with them (sprint decision; per-page dropped). %>
-        <label class="flex items-center gap-2 text-sm text-text-body" for="filter_sort">
+        <label class="flex items-center gap-2 text-sm text-text-body whitespace-nowrap" for="filter_sort">
           <%= t("rooms.filters.sort_label") %>
           <%= ui :select, name: "sort", form: "find_a_room_form", id: "filter_sort",
                 options: RoomSearch::SORTS.map { |s| [ s, t("rooms.filters.sorts.#{s}") ] },
@@ -119,7 +120,7 @@
 
     <% if @rooms.any? %>
       <h2 class="sr-only"><%= t("rooms.index.results_heading") %></h2>
-      <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+      <ul class="mt-4 grid gap-4 md:grid-cols-2">
         <% @rooms.each do |room| %>
           <%= render "room_row", room: room %>
         <% end %>
@@ -127,13 +128,11 @@
 
       <%= render "shared/pagination", pagy: @pagy %>
     <% else %>
+      <%# One clear control per page (audit, Fried): the filter card's own
+          "Clear filters" is always visible — no duplicate button here. %>
       <div class="py-12 text-center">
         <p class="text-text-body font-medium"><%= t("rooms.index.no_results") %></p>
         <p class="mt-1 text-sm text-text-body"><%= t("rooms.index.no_results_hint") %></p>
-        <%= link_to t("rooms.filters.clear_all"),
-              find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
-                data: { turbo_frame: "_top" },
-              class: "mt-4 btn-secondary inline-flex items-center" %>
       </div>
     <% end %>
   <% end %>
