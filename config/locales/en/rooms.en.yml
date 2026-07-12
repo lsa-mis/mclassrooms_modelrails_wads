@@ -170,7 +170,13 @@ en:
       reset: "Clear filters"
       glossary_link: "What do these filters mean?"
     row:
-      view_room: "View full room page"
+      details_toggle: "Details"
+      alerts:
+        one: "1 alert"
+        other: "%{count} alerts"
+      notes:
+        one: "1 note"
+        other: "%{count} notes"
       seats_label:
         one: "seat"
         other: "seats"

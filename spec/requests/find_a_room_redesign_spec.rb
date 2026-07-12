@@ -152,8 +152,10 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(card).to have_text(I18n.t("rooms.row.floor_label", label: "1"))
     expect(card).to have_text("45")
     expect(card).to have_text(I18n.t("rooms.row.seats_label", count: 45))
-    # the expanded disclosure links through to the full room page
-    expect(card).to have_link(I18n.t("rooms.row.view_room"), visible: :all)
+    # the title itself links to the room page (audit: no disclosure two-step)
+    expect(card).to have_link("1401 Mason Hall", href: room_path(room))
+    # the Details disclosure holds the full chiclet set
+    expect(card).to have_css("details summary", text: I18n.t("rooms.row.details_toggle"))
   end
 
   it "humanizes ALL-CAPS vendor building names in card titles, keeping campus acronyms" do

@@ -387,11 +387,13 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       get find_a_room_path
 
-      # Structural, not regex-over-HTML: find the card summary via its tag,
-      # then assert no focusable/interactive descendant inside it.
+      # Card restructure: the visible tag rides the card body (not the
+      # summary — that's now just the Details toggle, which must stay free of
+      # focusable/interactive descendants).
       page = Capybara.string(response.body)
-      summary = page.all("li summary").find { |s| s.has_text?("Projector") }
-      expect(summary).to be_present
+      card = page.all("li").find { |li| li.has_text?("Projector") }
+      expect(card).to be_present
+      summary = card.find("details summary")
       expect(summary).to have_no_css("[tabindex]")
       expect(summary).to have_no_css("[role='tooltip']")
     end

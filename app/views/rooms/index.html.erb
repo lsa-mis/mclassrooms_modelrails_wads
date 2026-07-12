@@ -122,7 +122,7 @@
       <h2 class="sr-only"><%= t("rooms.index.results_heading") %></h2>
       <ul class="mt-4 grid gap-4 md:grid-cols-2">
         <% @rooms.each do |room| %>
-          <%= render "room_row", room: room %>
+          <%= render "room_row", room: room, note_stats: @note_stats %>
         <% end %>
       </ul>
 
