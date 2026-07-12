@@ -1,0 +1,35 @@
+<%# locals: (room:) %>
+<%# The click-to-load Pannellum stage, unchanged in behavior from the
+    original media suite: static poster (the preview variant doubles as
+    Pannellum's own `preview:`), explicit opt-in load button, lazy
+    `import("pannellum")`. `data-turbo-permanent` + id keep the booted WebGL
+    viewer alive across morphs (panel review, Wathan). pannellum.css loads
+    only here via content_for(:head). %>
+<% content_for(:head) do %>
+  <%= stylesheet_link_tag "pannellum", "data-turbo-track": "reload" %>
+<% end %>
+<% panorama_preview_path =
+     rails_representation_path(room.panorama.variant(resize_to_limit: [ 1024, 512 ], format: :webp)) %>
+<%= ui :aspect_ratio, ratio: 2,
+      id: "room_panorama_stage",
+      class: "relative rounded-md bg-surface-sunken overflow-hidden",
+      data: {
+        turbo_permanent: "",
+        controller: "panorama",
+        panorama_url_value: rails_blob_path(room.panorama),
+        panorama_preview_url_value: panorama_preview_path,
+        panorama_label_value: t("rooms.show.panorama_label", room: room.display_name)
+      } do %>
+  <%= image_tag panorama_preview_path, alt: "", loading: :eager,
+        class: "absolute inset-0 size-full object-cover" %>
+  <div data-panorama-target="viewer" hidden class="absolute inset-0"></div>
+  <div class="absolute inset-0 flex items-center justify-center gap-2">
+    <%= ui :button, t("rooms.show.load_panorama"), variant: :outline, tone: :neutral,
+          data: { panorama_target: "loadButton", action: "panorama#load" } %>
+    <%= render(UI::TooltipComponent.new(text: t("rooms.show.panorama_hint"))) do %>
+      <span class="inline-flex items-center justify-center rounded-full bg-surface-overlay p-1.5 shadow-sm">
+        <%= icon(:information_circle, size: :sm) %>
+      </span>
+    <% end %>
+  </div>
+<% end %>

@@ -1,25 +1,15 @@
-<%# locals: (room:, presenter:) %>
-<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): breadcrumb + h1 + capacity line
-    + a definition list of room attributes, plus the admin-only inactive
-    banner.
+<%# locals: (room:) %>
+<%# Redesign v4: this partial is now breadcrumb + admin banner only — the h1
+    moved onto the media stage / empty band (the panel's requirement that the
+    overlay name BE the page heading), and the old attribute <dl> folded into
+    the stage's meta line + the rail's location card.
 
-    Phase 5 realty-model retrofit: Buildings followed a realty/Airbnb model
-    (BuildingPolicy#show?) — the building detail PAGE is viewer-visible on a
-    non-hidden building, exactly like a room's own #show?. The building
-    crumb is therefore a real link whenever `policy(room.building).show?`
-    (true for an admin always, and for a viewer when the building isn't
-    hidden); a viewer hitting a hidden building still gets the plain,
-    non-interactive text this partial has always rendered, matching the
-    Pundit not-authorized outcome they'd get by following the link directly.
-    UI::BreadcrumbComponent requires every
-    non-last item to be a link (it always renders `content_tag(:a, ...,
-    href: item[:href])`, and a blank `href` still carries the link's hover/
-    focus styling with nothing to click) — the whole trail is rendered by
-    hand here (reusing the component's own LINK/CURRENT style constants so
-    the visual language stays identical) so the conditional plain-text-vs-
-    link building crumb is possible at all; the shared component itself
-    still can't express "linked for some viewers, plain for others." %>
-
+    Phase 5 realty-model note (unchanged): the building crumb is a real link
+    whenever `policy(room.building).show?`; a viewer hitting a hidden building
+    gets plain text — UI::BreadcrumbComponent can't express "linked for some
+    viewers, plain for others" (it always renders every non-last item as an
+    <a>), so the trail is hand-rolled reusing the component's own LINK/CURRENT
+    style constants. %>
 <nav aria-label="<%= t("ui.breadcrumb.label", default: "Breadcrumb") %>">
   <ol class="flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5">
     <li class="inline-flex items-center gap-1.5">
@@ -45,51 +35,3 @@
     <%= ui :banner, t("rooms.show.inactive_banner"), variant: :warning %>
   </div>
 <% end %>
-
-<h1 class="mt-4 text-2xl font-bold text-text-heading"><%= room.display_name %></h1>
-
-<p class="mt-1 text-text-body"><%= presenter.capacity_line %></p>
-
-<dl class="mt-4 grid gap-x-6 gap-y-2 text-sm text-text-body sm:grid-cols-2">
-  <% if room.building.full_address.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.address") %></dt>
-      <dd><%= room.building.full_address %></dd>
-    </div>
-  <% end %>
-
-  <% if room.floor %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.floor") %></dt>
-      <dd><%= room.floor.label %></dd>
-    </div>
-  <% end %>
-
-  <% if room.room_number.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.room_number") %></dt>
-      <dd><%= room.room_number %></dd>
-    </div>
-  <% end %>
-
-  <% if room.square_feet.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.square_feet") %></dt>
-      <dd><%= number_with_delimiter(room.square_feet) %></dd>
-    </div>
-  <% end %>
-
-  <% if room.unit %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.department") %></dt>
-      <dd><%= room.unit.display_name %></dd>
-    </div>
-  <% end %>
-
-  <% if room.room_type.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.room_type") %></dt>
-      <dd><%= room.room_type %></dd>
-    </div>
-  <% end %>
-</dl>

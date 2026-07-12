@@ -54,8 +54,16 @@ en:
       notes_heading: "Notes"
       building_notes_heading: "Building notes"
       share:
-        button: "Share"
+        button: "Copy link"
         copied: "Link copied to clipboard"
+      media_label: "Room media"
+      media_tabs:
+        pano: "360° view"
+        photos: "Photos"
+      add_photos: "Add photos"
+      documents_heading: "Plans & documents"
+      seats_unit: "seats"
+      square_feet_value: "%{value} sq ft"
       edit_link: "Edit room"
     edit:
       title: "Edit %{room}"

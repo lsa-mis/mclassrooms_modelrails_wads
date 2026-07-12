@@ -1,0 +1,35 @@
+<%# locals: (room:, gallery_images:) %>
+<%# The photo side of the media stage: the main photo renders stage-sized
+    with its existing lightbox (UI::Dialog wrapper gives focus trap/restore
+    for free); the gallery keeps UI::Gallery's own thumbnails + lightbox. %>
+<div class="space-y-3">
+  <% if room.photo.attached? %>
+    <%= ui :dialog, title: room.display_name do |dialog| %>
+      <% dialog.with_trigger do %>
+        <button type="button" data-testid="room-photo-thumb"
+                class="block w-full overflow-hidden rounded-md cursor-zoom-in focus-ring">
+          <%= ui :image,
+                src: rails_representation_path(room.photo.variant(resize_to_limit: [ 1600, 800 ], format: :webp)),
+                alt: t("rooms.show.photo_alt", room: room.display_name),
+                class: "aspect-[2/1] w-full object-cover" %>
+        </button>
+      <% end %>
+      <%= ui :figure do %>
+        <%= ui :image,
+              src: rails_blob_path(room.photo),
+              alt: t("rooms.show.photo_alt", room: room.display_name),
+              loading: :eager,
+              class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if gallery_images.any? %>
+    <%= ui :gallery do |g| %>
+      <% gallery_images.each.with_index(1) do |gallery_image, position| %>
+        <% alt = t("rooms.show.gallery_alt", room: room.display_name, position: position) %>
+        <% g.with_image(src: rails_blob_path(gallery_image.image), alt: alt) %><%# herb:disable erb-no-unused-expressions %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
