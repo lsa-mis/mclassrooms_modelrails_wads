@@ -1,0 +1,28 @@
+<%# locals: (room:, presenter:) %>
+<%# The MAJORITY case — most rooms carry zero media. A quiet, deliberately
+    short branded band: no "not found" wording (nothing is broken), no fake
+    tabs, never hero height. The mark uses the fork's brand tokens
+    (bg-interactive / text-accent) so another fork gets its own colors
+    through _brand.css without touching this view. Editors get the curation
+    prompt in the slot. %>
+<div data-testid="empty-media-band"
+     class="mt-6 relative overflow-hidden rounded-md bg-interactive min-h-36
+            flex items-center justify-center py-10">
+  <%# Watermark mark, not text-accent: under workspace branding, accent and
+      interactive share a hue family, so an accent M on an interactive band
+      disappears. on-interactive at low alpha reads as a quiet watermark on
+      any fork's brand color. %>
+  <span aria-hidden="true" class="text-6xl font-extrabold leading-none text-text-on-interactive/25 select-none">M</span>
+
+  <div class="absolute left-4 bottom-3 min-w-0 pe-32">
+    <h1 class="text-xl font-bold text-text-on-interactive"><%= room.display_name %></h1>
+    <p class="text-sm text-text-on-interactive/90">
+      <%= room_meta_line(room) %> · <%= presenter.capacity_line %>
+    </p>
+  </div>
+
+  <% if policy(room).edit? %>
+    <%= link_to t("rooms.show.add_photos"), edit_room_path(room),
+          class: "btn-secondary absolute right-3 bottom-3 bg-surface" %>
+  <% end %>
+</div>

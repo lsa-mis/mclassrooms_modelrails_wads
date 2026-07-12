@@ -51,6 +51,17 @@ module RoomsHelper
       (t("rooms.row.floor_label", label: room.floor.label) if room.floor) ].compact.join(" · ")
   end
 
+  # One-line identity meta for the room page's stage overlay / empty band:
+  # building · Floor N · unit · type · N sq ft — only what exists.
+  def room_meta_line(room)
+    [ humanized_building_name(room.building),
+      (t("rooms.row.floor_label", label: room.floor.label) if room.floor),
+      room.unit&.display_name,
+      room.room_type.presence,
+      (t("rooms.show.square_feet_value", value: number_with_delimiter(room.square_feet)) if room.square_feet.present?) ]
+      .compact.join(" · ")
+  end
+
   def room_card_tags(room)
     codes = room.room_characteristics.map(&:short_code)
     CARD_TAG_CODES.select { |code| codes.include?(code) }

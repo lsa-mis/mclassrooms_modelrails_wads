@@ -1,43 +1,100 @@
-<%# MiClassrooms Phase 4 Task 5 (Brief §5.3): room detail — header (breadcrumb,
-    h1, attribute list, admin-only inactive banner), the media suite (photo
-    lightbox, gallery, panorama, seating chart, floor-plan link),
-    characteristic chips, grouped features, contacts, read-only notes, and
-    the copy-to-clipboard share button. %>
+<%# Room detail, redesign v4 (2026-07 sprint, panel-reviewed): breadcrumb +
+    actions row up top, then THE MEDIA STAGE — panorama/photos as one shared
+    window with the identity overlay carrying the page's h1 — or the quiet
+    branded band when the room has no media (the majority case). Below, a
+    two-column body: characteristics + live notes in the main column;
+    contacts, documents, and location cards in the rail. The share button
+    says what it does: Copy link. %>
 <% content_for(:title) { @room.display_name } %>
 
-<div class="max-w-5xl mx-auto px-4 py-8">
-  <%= render "rooms/header", room: @room, presenter: @presenter %>
+<% gallery_images = @room.gallery_images.ordered.includes(image_attachment: :blob).first(5) %>
+<% has_pano = @room.panorama.attached? %>
+<% has_photos = @room.photo.attached? || gallery_images.any? %>
 
-  <%# Phase 5 Task 6 (Brief §14.1): gated on edit? (admin OR the room's unit
-      editor while it's visible), not update? directly — edit?/update? are
-      aliased (RoomPolicy), but this is the "can this actor reach the edit
-      page at all" question the link itself asks. An editor now lands on a
-      curated-fields-only form (RoomPolicy#manage_media? stays admin-only,
-      gated inside rooms/edit.html.erb itself). %>
-  <% if policy(@room).edit? %>
-    <div class="mt-4">
-      <%= link_to t("rooms.show.edit_link"), edit_room_path(@room), class: "btn-secondary" %>
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <%= render "rooms/header", room: @room %>
+
+    <div data-controller="share"
+         data-share-text-value="<%= @presenter.share_text %>"
+         data-share-copied-message-value="<%= t('rooms.show.share.copied') %>"
+         class="flex flex-col items-end gap-1">
+      <div class="flex items-center gap-2">
+        <button type="button" data-action="share#copy" class="btn-secondary">
+          <%= t("rooms.show.share.button") %>
+        </button>
+        <% if policy(@room).edit? %>
+          <%= link_to t("rooms.show.edit_link"), edit_room_path(@room), class: "btn-secondary" %>
+        <% end %>
+      </div>
+      <span data-share-target="status" aria-live="polite" class="text-sm text-text-body"></span>
     </div>
-  <% end %>
+  </div>
 
   <%= render "rooms/visibility_actions", room: @room %>
 
-  <%= render "rooms/media", room: @room %>
+  <% if has_pano || has_photos %>
+    <%= render "rooms/media_stage", room: @room, presenter: @presenter,
+          gallery_images: gallery_images, has_pano: has_pano, has_photos: has_photos %>
+  <% else %>
+    <%= render "rooms/media_empty_band", room: @room, presenter: @presenter %>
+  <% end %>
 
-  <%= render "rooms/characteristics", presenter: @presenter %>
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div class="min-w-0 space-y-8">
+      <%= render "rooms/characteristics", presenter: @presenter %>
+      <%= render "notes/list", notable: @room %>
+    </div>
 
-  <%= render "rooms/contacts", room: @room %>
+    <div class="space-y-4">
+      <%= render "rooms/contacts", room: @room %>
 
-  <%= render "notes/list", notable: @room %>
+      <% if @room.seating_chart.attached? || @room.floor.present? %>
+        <div data-testid="documents-card" class="rounded-lg border border-border p-4">
+          <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.show.documents_heading") %></h2>
+          <div class="mt-3 space-y-3">
+            <% if @room.seating_chart.attached? %>
+              <% if @room.seating_chart.content_type == "application/pdf" %>
+                <%= link_to t("rooms.show.seating_chart_link", room: @room.display_name),
+                      rails_blob_path(@room.seating_chart, disposition: :inline),
+                      class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+              <% else %>
+                <%= ui :dialog, title: @room.display_name do |dialog| %>
+                  <% dialog.with_trigger do %>
+                    <button type="button" data-testid="seating-chart-thumb"
+                            class="block overflow-hidden rounded-md cursor-zoom-in focus-ring">
+                      <%= ui :image,
+                            src: rails_representation_path(@room.seating_chart.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
+                            alt: t("rooms.show.seating_chart_alt", room: @room.display_name),
+                            width: 150, height: 150,
+                            class: "size-[150px] object-cover" %>
+                    </button>
+                  <% end %>
+                  <%= ui :figure do %>
+                    <%= ui :image,
+                          src: rails_blob_path(@room.seating_chart),
+                          alt: t("rooms.show.seating_chart_alt", room: @room.display_name),
+                          loading: :eager,
+                          class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
+                  <% end %>
+                <% end %>
+              <% end %>
+            <% end %>
+            <% if @room.floor.present? %>
+              <div>
+                <%= link_to t("rooms.show.floor_plan_link"), floor_plan_room_path(@room), class: "btn-secondary" %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
 
-  <div class="mt-8"
-       data-controller="share"
-       data-share-text-value="<%= @presenter.share_text %>"
-       data-share-copied-message-value="<%= t('rooms.show.share.copied') %>">
-    <button type="button" data-action="share#copy" class="btn-secondary">
-      <%= t("rooms.show.share.button") %>
-    </button>
-    <span data-share-target="status" aria-live="polite"
-          class="mt-2 block text-sm text-text-body"></span>
+      <% if @room.building.full_address.present? %>
+        <div data-testid="location-card" class="rounded-lg border border-border p-4">
+          <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.show.address") %></h2>
+          <p class="mt-2 text-sm text-text-body"><%= @room.building.full_address %></p>
+        </div>
+      <% end %>
+    </div>
   </div>
 </div>

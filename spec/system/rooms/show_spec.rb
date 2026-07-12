@@ -133,17 +133,20 @@ RSpec.describe "Room show", type: :system do
     # `role="dialog"` on a plain `<div>`, and it stays on the page throughout,
     # so an unscoped selector both false-matches it opened and never closes
     # it after Escape.
+    # Panorama pane is the media stage's default tab: assert the opt-in
+    # "Load 360°" button, not a booted WebGL viewer — headless Chromium may
+    # lack WebGL, and the point of click-to-load is nothing renders until
+    # this button is pressed.
+    expect(page).to have_button(I18n.t("rooms.show.load_panorama"))
+
+    # Redesign v4: photos are the stage's second tab — switching panes hides
+    # (never removes) the panorama panel, per the WebGL-survival rule.
+    click_button I18n.t("rooms.show.media_tabs.photos")
     find("[data-testid='room-photo-thumb']").click
     expect(page).to have_css("dialog[role='dialog'] img")
     send_keys(:escape)
     expect(page).to have_no_css("dialog[role='dialog']")
     expect(page.evaluate_script("document.activeElement.dataset.testid")).to eq("room-photo-thumb")
-
-    # Panorama: assert the opt-in "Load 360°" button is present, not a
-    # booted WebGL viewer — headless Chromium may lack WebGL, and the point
-    # of the click-to-load design is that nothing renders until this button
-    # is pressed.
-    expect(page).to have_button(I18n.t("rooms.show.load_panorama"))
 
     # Floor-plan link renders (the room has a floor) but is NOT clicked —
     # RoomsController#floor_plan ships in Task 6, so the route 500s until then.
