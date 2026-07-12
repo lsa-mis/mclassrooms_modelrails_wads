@@ -80,6 +80,29 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
     expect(page).to have_css("[role='tabpanel']", count: 2, visible: :all)
   end
 
+  # Audit (Fried, Dave-approved): a card of "Not available" rows answers no
+  # question. No contact record → one honest sentence; partial record → only
+  # the fields that exist.
+  describe "contact cards" do
+    it "collapses to a single honest line when no contact exists" do
+      get room_path(room)
+
+      expect(page).to have_text(I18n.t("rooms.show.contacts.none"))
+      expect(response.body).not_to include(I18n.t("rooms.show.not_available"))
+    end
+
+    it "renders only the fields that are present" do
+      room.create_room_contact!(workspace: workspace, scheduling_email: "lsa-scheduling@umich.edu")
+      get room_path(room)
+
+      expect(page).to have_link("lsa-scheduling@umich.edu")
+      expect(response.body).not_to include(I18n.t("rooms.show.not_available"))
+      # empty support section renders no card at all
+      expect(page).to have_no_text(I18n.t("rooms.show.contacts.support_heading"))
+      expect(page).to have_no_text(I18n.t("rooms.show.contacts.scheduling_phone"))
+    end
+  end
+
   it "keeps documents and location in the rail and relabels share to Copy link" do
     floor = create(:floor, building: building, label: "1")
     room.update!(floor: floor)

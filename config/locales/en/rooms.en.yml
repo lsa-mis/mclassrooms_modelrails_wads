@@ -42,6 +42,8 @@ en:
         support_phone: "Phone"
         support_link_label: "Support page"
         support_link: "Visit support page"
+        heading: "Contacts"
+        none: "No scheduling or support contacts are listed for this room."
       not_available: "Not available"
       photo_alt: "Photo of %{room}"
       gallery_alt: "Photo %{position} of %{room}"

@@ -111,7 +111,9 @@ RSpec.describe "Room show", type: :system do
 
     # room.room_contact is nil — every contact field falls back to
     # "Not available" rather than raising on a missing association.
-    expect(page).to have_content(I18n.t("rooms.show.not_available"))
+    # room.room_contact is nil — the contact cards collapse to one honest
+    # sentence instead of a wall of "Not available" rows (audit, Fried).
+    expect(page).to have_content(I18n.t("rooms.show.contacts.none"))
 
     # Room notes (own alert + own plain) and the building's note all render
     # their RichText body content — protects the swallowed-body fix. Bullet
