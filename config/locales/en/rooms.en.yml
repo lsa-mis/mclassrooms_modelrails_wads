@@ -170,6 +170,7 @@ en:
       reset: "Reset filters"
       glossary_link: "What do these filters mean?"
     row:
+      view_room: "View full room page"
       seats_label:
         one: "seat"
         other: "seats"

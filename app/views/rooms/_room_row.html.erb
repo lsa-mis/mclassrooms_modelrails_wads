@@ -76,6 +76,13 @@
           <%= labels.join(", ") %>
         </p>
       <% end %>
+      <p class="pt-1">
+        <%# _top: the card sits inside the results frame — this navigation is
+            a real page change, not a frame swap. %>
+        <%= link_to t("rooms.row.view_room"), room_path(room),
+              data: { turbo_frame: "_top" },
+              class: "text-interactive underline hover:no-underline min-h-11 inline-flex items-center focus-ring rounded" %>
+      </p>
     </div>
   </details>
 </li>
