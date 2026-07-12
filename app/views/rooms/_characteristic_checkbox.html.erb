@@ -21,13 +21,13 @@
 <% end %>
 <% if entry.long_description.present? %>
   <% tip_id = "tip_characteristics_#{entry.short_code}" %>
-  <div class="group relative <%= wrapper_class %>"
+  <div class="group/tooltip relative <%= wrapper_class %>"
        style="anchor-name: --<%= tip_id %>"
        data-controller="floating"
        data-action="keydown.esc->floating#dismiss mouseleave->floating#clearDismissed focusout->floating#clearDismissed">
     <%= checkbox %>
     <span id="<%= tip_id %>" role="tooltip" style="position-anchor: --<%= tip_id %>"
-          class="<%= UI::TooltipComponent::BUBBLE_BASE %> <%= UI::TooltipComponent::POSITIONS.fetch(:bottom) %>">
+          class="<%= UI::TooltipComponent.bubble_classes(side: :bottom) %>">
       <%= entry.long_description %>
     </span>
   </div>

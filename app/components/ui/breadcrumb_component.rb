@@ -53,7 +53,9 @@ module UI
           content_tag(:span, item[:label], class: CURRENT, "aria-current": "page")
         else
           safe_join([
-            content_tag(:a, item[:label], href: item[:href], class: LINK),
+            # href-less items render as plain text — "linked for some viewers,
+            # plain for others" (e.g. a hidden building crumb) is expressible.
+            (item[:href].present? ? content_tag(:a, item[:label], href: item[:href], class: LINK) : content_tag(:span, item[:label], class: "text-text-muted")),
             content_tag(:span, @separator, class: "select-none text-text-muted", "aria-hidden": "true")
           ])
         end

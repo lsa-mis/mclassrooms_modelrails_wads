@@ -1,34 +1,15 @@
 <%# locals: (room:) %>
-<%# Redesign v4: this partial is now breadcrumb + admin banner only — the h1
-    moved onto the media stage / empty band (the panel's requirement that the
-    overlay name BE the page heading), and the old attribute <dl> folded into
-    the stage's meta line + the rail's location card.
-
-    Phase 5 realty-model note (unchanged): the building crumb is a real link
-    whenever `policy(room.building).show?`; a viewer hitting a hidden building
-    gets plain text — UI::BreadcrumbComponent can't express "linked for some
-    viewers, plain for others" (it always renders every non-last item as an
-    <a>), so the trail is hand-rolled reusing the component's own LINK/CURRENT
-    style constants. %>
-<nav aria-label="<%= t("ui.breadcrumb.label", default: "Breadcrumb") %>">
-  <ol class="flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5">
-    <li class="inline-flex items-center gap-1.5">
-      <%= link_to t("rooms.index.title"), find_a_room_path, class: UI::BreadcrumbComponent::LINK %>
-      <span class="select-none text-text-muted" aria-hidden="true">/</span>
-    </li>
-    <li class="inline-flex items-center gap-1.5">
-      <% if policy(room.building).show? %>
-        <%= link_to room.building.display_name, building_path(room.building), class: UI::BreadcrumbComponent::LINK %>
-      <% else %>
-        <span class="text-text-muted"><%= room.building.display_name %></span>
-      <% end %>
-      <span class="select-none text-text-muted" aria-hidden="true">/</span>
-    </li>
-    <li class="inline-flex items-center gap-1.5">
-      <span class="<%= UI::BreadcrumbComponent::CURRENT %>" aria-current="page"><%= room.display_name %></span>
-    </li>
-  </ol>
-</nav>
+<%# Redesign v4: breadcrumb + admin banner only — the h1 lives on the media
+    stage / empty band. UI::Breadcrumb now accepts href-less items (rendered
+    as plain text), so the phase-5 "linked for some viewers, plain for
+    others" building crumb no longer needs a hand-rolled trail: a viewer on a
+    hidden building simply gets no href. %>
+<%= ui :breadcrumb, items: [
+      { label: t("rooms.index.title"), href: find_a_room_path },
+      { label: room.building.display_name,
+        href: (building_path(room.building) if policy(room.building).show?) },
+      { label: room.display_name }
+    ] %>
 
 <% if RoleResolver.for(Current.user).admin? && room.hidden? %>
   <div class="mt-4">
