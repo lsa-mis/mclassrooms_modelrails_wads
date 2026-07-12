@@ -47,10 +47,12 @@ module RoomsHelper
 
   # Card meta (prototype: "LSA · 1st floor"): unit · floor. The building only
   # appears here when the title above fell back to a code and doesn't carry it.
+  # Floor leads (audit, Fried): it's the token a person needs to find the
+  # door; the long college name follows.
   def room_card_meta(room)
     [ (humanized_building_name(room.building) if room.room_number.blank? && room.nickname.blank?),
-      room.unit&.display_name,
-      (t("rooms.row.floor_label", label: room.floor.label) if room.floor) ].compact.join(" · ")
+      (t("rooms.row.floor_label", label: room.floor.label) if room.floor),
+      room.unit&.display_name ].compact.join(" · ")
   end
 
   # One-line identity meta for the room page's stage overlay / empty band:
@@ -64,11 +66,36 @@ module RoomsHelper
       .compact.join(" · ")
   end
 
+  # Card tags only earn their place when they DISCRIMINATE (audit, Fried:
+  # four identical tags on every card carry no signal). The filterable set is
+  # exactly the curated "questions people ask" list — demoted/ubiquitous
+  # codes stay off the cards automatically as curation improves.
+  def filterable_codes
+    # Reuse the controller's @filter_groups when present — a fresh .filters
+    # call recomputes the data_version cache key (4 aggregate queries), which
+    # the query-budget spec rightly rejects.
+    @filterable_codes ||= (@filter_groups || CharacteristicFilterGroups.filters)
+                          .flat_map(&:entries).map(&:short_code).to_set
+  end
+
   def room_card_tags(room)
-    codes = room.room_characteristics.map(&:short_code)
-    CARD_TAG_CODES.select { |code| codes.include?(code) }
-                  .first(CARD_TAG_LIMIT)
-                  .map { |code| characteristic_labels.fetch(code, code) }
+    codes = room.room_characteristics.map(&:short_code).select { |code| filterable_codes.include?(code) }
+    (CARD_TAG_CODES.select { |code| codes.include?(code) } + (codes - CARD_TAG_CODES).sort)
+      .first(CARD_TAG_LIMIT)
+      .map { |code| characteristic_labels.fetch(code, code) }
+  end
+
+  # Breadcrumb return path (audit, Fried): "Find a Room" should take you back
+  # to YOUR search, not a bare reset. Same-origin referers pointing at the
+  # index (with whatever query) qualify; anything else falls back clean.
+  def find_a_room_return_path
+    ref = URI.parse(request.referer.to_s)
+    return find_a_room_path unless request.referer.present? &&
+                                   ref.host == request.host && ref.path == find_a_room_path
+
+    ref.request_uri
+  rescue URI::InvalidURIError
+    find_a_room_path
   end
 
   # Same override mechanism as characteristic_labels, for the vendor GROUP

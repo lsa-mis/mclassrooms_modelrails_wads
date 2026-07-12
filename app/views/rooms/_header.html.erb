@@ -4,8 +4,11 @@
     as plain text), so the phase-5 "linked for some viewers, plain for
     others" building crumb no longer needs a hand-rolled trail: a viewer on a
     hidden building simply gets no href. %>
+<%# find_a_room_return_path: the crumb carries the user's search back with
+    them when they arrived from the index (audit, Fried — a crumb that
+    silently resets your filters is a trap). %>
 <%= ui :breadcrumb, items: [
-      { label: t("rooms.index.title"), href: find_a_room_path },
+      { label: t("rooms.index.title"), href: find_a_room_return_path },
       { label: humanized_building_name(room.building),
         href: (building_path(room.building) if policy(room.building).show?) },
       { label: room.display_name }

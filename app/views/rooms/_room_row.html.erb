@@ -1,91 +1,96 @@
-<%# locals: (room:) %>
-<%# MiClassrooms Phase 3 Task 5 (Brief §5.2): one result row per room. A native
-    <details>/<summary> disclosure — no JS needed for keyboard operability or
-    the expand/collapse semantics (Enter/Space on the focused summary toggles
-    it; screen readers announce the expanded state natively). No link to
-    rooms#show: that route ships in phase 4, so the row's summary IS the
-    interactive surface. %>
-<%# Redesign (2026-07 sprint): each result is a card in the index grid — the
-    border moved from a row divider to the card itself; the <details>
-    disclosure interaction is unchanged. %>
-<%# scroll-mt keeps a keyboard-focused card from sliding under the sticky
-    results header (WCAG 2.4.12 Focus Not Obscured, AAA). %>
+<%# locals: (room:, note_stats: {}) %>
+<%# Result card, restructured per Dave's calls on the pre-release audit:
+    the TITLE links straight to the room page (no more disclosure-then-link
+    two-step — a link can't live inside <summary>, so the header row sits
+    outside the disclosure entirely); tags are the room's DISTINCTIVE,
+    filterable characteristics; alerts/notes get an always-visible line; and
+    the "Details" disclosure holds the full characteristic set as chiclets
+    with description tooltips (chiclets won over the duplicate text list). %>
 <li class="rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-24">
-  <details class="group">
-    <summary class="list-none min-h-11 flex flex-wrap items-center gap-4 py-1 px-2 -mx-2
-                    cursor-pointer rounded-md focus-ring
-                    transition-colors hover:bg-surface-sunken">
-      <%# Photo only when one exists — an empty camera placeholder on most
-          cards is noise the sprint prototype dropped. %>
-      <% if (thumbnail = room_thumbnail_image(room)) %>
-        <%# alt="" — the adjacent title already names the room; a duplicate
-            alt makes AT announce the name twice (panel review). %>
-        <%= ui :image,
-              src: url_for(thumbnail.image.variant(resize_to_fill: [ 96, 96 ])),
-              alt: "",
-              class: "size-16 rounded-md object-cover shrink-0" %>
-      <% end %>
+  <div class="flex flex-wrap items-center gap-4">
+    <% if (thumbnail = room_thumbnail_image(room)) %>
+      <%= ui :image,
+            src: url_for(thumbnail.image.variant(resize_to_fill: [ 96, 96 ])),
+            alt: "",
+            class: "size-16 rounded-md object-cover shrink-0" %>
+    <% end %>
 
-      <%# h3 (audit, Léonie): 30 headingless cards were a screen-reader
-          navigation desert — each card is now a heading stop. div wrapper
-          (not span): headings are flow content. %>
-      <div class="flex-1 min-w-40">
-        <h3 class="font-semibold text-text-heading"><%= room_card_title(room) %></h3>
-        <span class="block text-sm text-text-muted"><%= room_card_meta(room) %></span>
-      </div>
+    <div class="flex-1 min-w-40">
+      <h3 class="font-semibold text-text-heading">
+        <%= link_to room_card_title(room), room_path(room),
+              data: { turbo_frame: "_top" },
+              class: "hover:underline focus-ring rounded" %>
+      </h3>
+      <span class="block text-sm text-text-muted"><%= room_card_meta(room) %></span>
+    </div>
 
-      <span class="flex items-center gap-2 shrink-0">
-        <%# Sprint card anatomy: the seat count is the card's number — split
-            from its label so it reads at a glance across the grid. %>
-        <span class="text-right">
-          <span class="block text-xl font-semibold text-text-heading tabular-nums leading-tight">
-            <%= room.instructional_seat_count.to_i %>
-          </span>
-          <span class="block text-xs uppercase tracking-wide text-text-muted">
-            <%= t("rooms.row.seats_label", count: room.instructional_seat_count.to_i) %>
-          </span>
+    <span class="flex items-center gap-2 shrink-0">
+      <span class="text-right">
+        <span class="block text-xl font-semibold text-text-heading tabular-nums leading-tight">
+          <%= room.instructional_seat_count.to_i %>
+        </span>
+        <span class="block text-xs uppercase tracking-wide text-text-muted">
+          <%= t("rooms.row.seats_label", count: room.instructional_seat_count.to_i) %>
         </span>
       </span>
-
-      <%= icon(:chevron_down, size: :sm,
-            class: "text-text-muted shrink-0 transition-transform group-open:rotate-180") %>
-
-      <%# Labeled tags, not icons (sprint prototype): a capped, priority-ordered
-          few read at a glance; the expanded details below still lists all.
-          Plain <span>s — HTML5 forbids interactive descendants of <summary>. %>
-      <% tags = room_card_tags(room) %>
-      <% if tags.any? || room.ada_seat_count.to_i.positive? %>
-        <span class="w-full flex flex-wrap gap-1.5 pt-1">
-          <% tags.each do |label| %>
-            <%= ui :badge, label, variant: :outline, tone: :neutral %>
-          <% end %>
-          <% if room.ada_seat_count.to_i.positive? %>
-            <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :success %>
-          <% end %>
-        </span>
+      <% if room.ada_seat_count.to_i.positive? %>
+        <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :success %>
       <% end %>
+    </span>
+  </div>
+
+  <% tags = room_card_tags(room) %>
+  <% if tags.any? %>
+    <div class="flex flex-wrap gap-1.5 pt-2">
+      <% tags.each do |label| %>
+        <%= ui :badge, label, variant: :outline, tone: :neutral %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% alerts = note_stats[[ room.id, true ]].to_i %>
+  <% notes  = note_stats[[ room.id, false ]].to_i %>
+  <% if alerts.positive? || notes.positive? %>
+    <p class="flex flex-wrap items-center gap-2 pt-2 text-sm text-text-muted">
+      <% if alerts.positive? %>
+        <%= ui :badge, t("rooms.row.alerts", count: alerts), variant: :soft, tone: :warning %>
+      <% end %>
+      <% if notes.positive? %>
+        <span><%= t("rooms.row.notes", count: notes) %></span>
+      <% end %>
+    </p>
+  <% end %>
+
+  <details class="group mt-1">
+    <summary class="list-none min-h-11 inline-flex items-center gap-1 cursor-pointer
+                    text-sm text-text-body focus-ring rounded
+                    transition-colors hover:text-interactive">
+      <%= t("rooms.row.details_toggle") %>
+      <%= icon(:chevron_down, size: :sm,
+            class: "text-text-muted transition-transform group-open:rotate-180") %>
     </summary>
 
-    <div class="pl-2 pb-4 pt-1 text-sm text-text-body space-y-1">
-      <% if room.room_number.present? %>
-        <p><span class="font-medium text-text-heading"><%= t("rooms.row.room_number") %>:</span> <%= room.room_number %></p>
+    <div class="pb-2 pt-1">
+      <% if room.room_characteristics.any? %>
+        <ul class="flex flex-wrap gap-1.5">
+          <% room.room_characteristics.sort_by { |c| characteristic_labels.fetch(c.short_code, c.short_code) }.each do |characteristic| %>
+            <% label = characteristic_labels.fetch(characteristic.short_code, characteristic.short_code) %>
+            <li>
+              <% if characteristic.long_description.present? %>
+                <%# The chiclet is non-interactive content, so UI::Tooltip's
+                    focusable wrapper is the CORRECT trigger here (hover +
+                    keyboard focus, Esc dismiss) — its named group/tooltip
+                    variants make it safe inside this details.group. %>
+                <%= ui :tooltip, text: characteristic.long_description do %>
+                  <%= ui :badge, label, variant: :outline, tone: :neutral %>
+                <% end %>
+              <% else %>
+                <%= ui :badge, label, variant: :outline, tone: :neutral %>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
       <% end %>
-      <% if room.unit %>
-        <p><span class="font-medium text-text-heading"><%= t("rooms.row.unit") %>:</span> <%= room.unit.display_name %></p>
-      <% end %>
-      <% labels = room_characteristic_labels(room) %>
-      <% if labels.any? %>
-        <p>
-          <span class="font-medium text-text-heading"><%= t("rooms.row.characteristics_heading") %>:</span>
-          <%= labels.join(", ") %>
-        </p>
-      <% end %>
-      <p class="pt-1">
-        <%# _top: the card sits inside the results frame — this navigation is
-            a real page change, not a frame swap. %>
-        <%= link_to t("rooms.row.view_room"), room_path(room),
-              data: { turbo_frame: "_top" }, class: "text-sm link-inline" %>
-      </p>
     </div>
   </details>
 </li>

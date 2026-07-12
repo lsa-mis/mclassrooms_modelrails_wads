@@ -70,6 +70,12 @@ class RoomsController < ApplicationController
     @search = RoomSearch.new(@filter_params, base: base_scope)
     @pagy, @rooms = pagy(:offset, @search.results, limit: @search.per_page)
     @filter_groups = CharacteristicFilterGroups.filters
+    # Per-room note/alert counts for the result cards in ONE grouped query
+    # (rendering bodies per card would N+1 Action Text; counts are enough —
+    # the full live notes surface lives on the room page). Roots only, so
+    # threaded replies don't inflate the count.
+    @note_stats = Note.roots.where(notable_type: "Room", notable_id: @rooms.map(&:id))
+                      .group(:notable_id, :alert).count
     @announcement = Announcement.for(:find_a_room_page)
     respond_to do |format|
       format.html # never fresh_when here — D14: results are live queries
