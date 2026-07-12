@@ -14,11 +14,14 @@
     per-page, Reset, and the admin view nav all moved to the results header
     (index.html.erb); the hidden `view` field stays here so a filter submit
     never silently resets an admin's inactive view. %>
+<%# role/aria-label MUST ride in html: — form_with silently drops unknown
+    top-level kwargs (pre-release audit: the rendered DOM had no search
+    landmark at all). %>
 <%= form_with url: find_a_room_path, method: :get, id: "find_a_room_form",
       data: { turbo_frame: "find_a_room_results", turbo_action: "advance",
               filter_form_target: "form" },
-      role: "search", "aria-label": t("rooms.filters.form_label"),
-      class: "mt-6 rounded-lg border border-border p-4 space-y-4" do |form| %>
+      html: { role: "search", "aria-label": t("rooms.filters.form_label") },
+      class: "mt-6 rounded-lg border border-border dark:border-border-strong p-4 space-y-4" do |form| %>
 
   <div class="flex items-baseline justify-between gap-4">
     <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.card_title") %></h2>
@@ -28,13 +31,12 @@
         the fast in-frame path with filter-form#clear. %>
     <%= link_to t("rooms.filters.reset"),
           find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
-          class: "text-sm text-interactive underline hover:no-underline
-                 min-h-11 inline-flex items-center focus-ring rounded" %>
+          class: "text-sm link-inline" %>
   </div>
 
   <%= hidden_field_tag :view, params[:view] if params[:view].present? %>
 
-  <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
+  <div class="flex flex-wrap items-start gap-x-6 gap-y-4">
     <div class="grow basis-64">
       <%# Compact visible label ("Search"); the input's aria-label keeps the
           descriptive superset name and the placeholder is only a hint —
@@ -75,6 +77,7 @@
               visible inside the pill — the border/tint is presentation, the
               checkbox is the control. %>
           <span class="inline-flex items-center rounded-full border border-border px-4 min-h-11
+                       transition-colors hover:bg-surface-sunken
                        has-checked:border-interactive has-checked:bg-interactive-subtle">
             <%= render "characteristic_checkbox", entry: entry,
                   label: characteristic_labels.fetch(entry.short_code, entry.label),
@@ -93,7 +96,8 @@
   <%= tag.details id: "more_filters", open: more_filters_open?(params),
         class: "group/disclosure border-t border-border" do %>
     <summary class="list-none min-h-11 flex items-center gap-2 cursor-pointer
-                    text-sm font-semibold text-text-heading focus-ring rounded">
+                    text-sm font-semibold text-text-heading focus-ring rounded
+                    transition-colors hover:text-interactive">
       <%= t("rooms.filters.more_filters") %>
       <% if (applied = panel_filter_count(params)).positive? %>
         <%= ui :badge, t("rooms.filters.applied_count", count: applied), variant: :soft, tone: :info %>
@@ -111,7 +115,7 @@
         <% panel_filter_groups(filter_groups).each do |group, entries| %>
           <fieldset class="min-w-0">
             <legend class="pb-1 text-sm font-semibold text-text-heading"><%= characteristic_group_name(group) %></legend>
-            <div class="space-y-2">
+            <div class="space-y-0">
               <% entries.each do |entry| %>
                 <%= render "characteristic_checkbox", entry: entry,
                       label: characteristic_labels.fetch(entry.short_code, entry.label) %>
@@ -141,8 +145,7 @@
             no-op with JS on, so it stays visually secondary. %>
         <button type="submit" class="btn-secondary"><%= t("rooms.filters.submit") %></button>
         <%= link_to t("rooms.filters.glossary_link"), filters_glossary_path,
-              class: "text-sm text-interactive underline hover:no-underline
-                     min-h-11 inline-flex items-center focus-ring rounded" %>
+              class: "text-sm link-inline" %>
       </div>
     </div>
   <% end %>

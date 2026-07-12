@@ -146,7 +146,6 @@ en:
     filters:
       form_label: "Filter rooms"
       card_title: "Filters"
-      clear_all: "Clear all"
       applied_count:
         one: "%{count} filter applied"
         other: "%{count} filters applied"
@@ -168,7 +167,7 @@ en:
         capacity_asc: "Capacity (low to high)"
         capacity_desc: "Capacity (high to low)"
       submit: "Apply filters"
-      reset: "Reset filters"
+      reset: "Clear filters"
       glossary_link: "What do these filters mean?"
     row:
       view_room: "View full room page"

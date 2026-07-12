@@ -81,6 +81,9 @@ RSpec.describe "Find a Room", type: :system do
       expect(page).to have_no_content(card_title(aud))   # wrong building + InstrComp only
     end
     expect(page).to have_content(I18n.t("rooms.index.summary.query", value: "Mason"))
+    # the persistent out-of-frame announcer carries the fresh count to AT
+    # (an in-frame live region replaced by the swap is unreliable — audit)
+    expect(page.find("#results_announcer", visible: :all)).to have_text(I18n.t("rooms.index.results_summary", count: 1))
     expect(page.evaluate_script("window.__stayedOnPage")).to be(true)
     expect(page).to have_current_path(/q=Mason/) # turbo_action: advance keeps URL shareable
     expect(axe_violations(axe_options)).to be_empty
@@ -95,10 +98,9 @@ RSpec.describe "Find a Room", type: :system do
       expect(page).to have_no_content(card_title(aud))
     end
 
-    # The chips-row Clear all navigates only the frame; filter-form#clear must
-    # empty the out-of-frame form inputs alongside it, or the box would still
-    # read "Mason" over unfiltered results.
-    click_link I18n.t("rooms.filters.clear_all")
+    # One clear control (audit): the filter card header link — a full visit,
+    # so the fresh render resets both results and form inputs.
+    click_link I18n.t("rooms.filters.reset")
 
     within "#find_a_room_results" do
       expect(page).to have_content(card_title(aud))

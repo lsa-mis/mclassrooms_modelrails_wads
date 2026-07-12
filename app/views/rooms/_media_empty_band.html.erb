@@ -13,8 +13,10 @@
       accent and interactive share a hue family, so an accent M on an
       interactive band disappears; on-interactive at low alpha reads as a
       quiet watermark on any fork's brand color. %>
+  <%# Center-top: clear of BOTH the left identity block and the right-aligned
+      capacity column (audit: right-pinned, it collided with the seat count). %>
   <span aria-hidden="true"
-        class="absolute right-6 top-2 text-6xl font-extrabold leading-none text-text-on-interactive/25 select-none">M</span>
+        class="absolute left-1/2 -translate-x-1/2 top-2 text-6xl font-extrabold leading-none text-text-on-interactive/25 select-none">M</span>
 
   <div class="flex w-full items-end justify-between gap-4 px-4 pb-1">
     <div class="min-w-0">
@@ -30,8 +32,10 @@
         </span>
       </span>
       <% if policy(room).edit? %>
+        <%# focus outline recolored: the default focus token IS the band's own
+            interactive hue — invisible here (audit, Léonie / 2.4.7). %>
         <%= link_to t("rooms.show.add_photos"), edit_room_path(room),
-              class: "btn-secondary mt-2 bg-surface" %>
+              class: "btn-secondary mt-2 bg-surface focus-visible:outline-text-on-interactive" %>
       <% end %>
     </div>
   </div>

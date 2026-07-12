@@ -130,10 +130,11 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_text(I18n.t("rooms.index.subtitle"))
   end
 
-  it "labels the chips-row reset as Clear all" do
+  it "has exactly one clear control — the filter card header link" do
     get find_a_room_path(q: "Mason")
 
-    expect(page.find("turbo-frame#find_a_room_results")).to have_link(I18n.t("rooms.filters.clear_all"))
+    expect(page).to have_link(I18n.t("rooms.filters.reset"), count: 1)
+    expect(page.find("turbo-frame#find_a_room_results")).to have_no_link(I18n.t("rooms.filters.reset"))
   end
 
   it "counts panel-only filters on the More-filters summary, ignoring promoted chips" do

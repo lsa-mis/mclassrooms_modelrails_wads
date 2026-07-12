@@ -10,10 +10,11 @@
     disclosure interaction is unchanged. %>
 <%# scroll-mt keeps a keyboard-focused card from sliding under the sticky
     results header (WCAG 2.4.12 Focus Not Obscured, AAA). %>
-<li class="rounded-lg border border-border p-3 scroll-mt-24">
+<li class="rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-24">
   <details class="group">
     <summary class="list-none min-h-11 flex flex-wrap items-center gap-4 py-1 px-2 -mx-2
-                    cursor-pointer rounded-md focus-ring">
+                    cursor-pointer rounded-md focus-ring
+                    transition-colors hover:bg-surface-sunken">
       <%# Photo only when one exists — an empty camera placeholder on most
           cards is noise the sprint prototype dropped. %>
       <% if (thumbnail = room_thumbnail_image(room)) %>
@@ -25,10 +26,13 @@
               class: "size-16 rounded-md object-cover shrink-0" %>
       <% end %>
 
-      <span class="flex-1 min-w-40">
-        <span class="block font-semibold text-text-heading"><%= room_card_title(room) %></span>
+      <%# h3 (audit, Léonie): 30 headingless cards were a screen-reader
+          navigation desert — each card is now a heading stop. div wrapper
+          (not span): headings are flow content. %>
+      <div class="flex-1 min-w-40">
+        <h3 class="font-semibold text-text-heading"><%= room_card_title(room) %></h3>
         <span class="block text-sm text-text-muted"><%= room_card_meta(room) %></span>
-      </span>
+      </div>
 
       <span class="flex items-center gap-2 shrink-0">
         <%# Sprint card anatomy: the seat count is the card's number — split
@@ -80,8 +84,7 @@
         <%# _top: the card sits inside the results frame — this navigation is
             a real page change, not a frame swap. %>
         <%= link_to t("rooms.row.view_room"), room_path(room),
-              data: { turbo_frame: "_top" },
-              class: "text-interactive underline hover:no-underline min-h-11 inline-flex items-center focus-ring rounded" %>
+              data: { turbo_frame: "_top" }, class: "text-sm link-inline" %>
       </p>
     </div>
   </details>
