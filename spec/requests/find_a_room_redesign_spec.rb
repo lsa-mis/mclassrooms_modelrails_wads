@@ -182,11 +182,12 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_css("label[for='characteristics_projdigit']", text: "Projector")
   end
 
-  # Filter-label description popovers: the accessible disclosure pattern
-  # (UI::Popover — real button, aria-expanded/controls, role=dialog panel,
-  # Esc/outside-click close) surfacing the glossary's long_description inline.
-  # Rendered ONLY when a description exists.
-  describe "filter description popovers" do
+  # Filter-label description tooltips: hovering the label (or focusing the
+  # checkbox) raises the glossary long_description. Follows UI::Tooltip's own
+  # guidance for interactive triggers — aria-describedby on the checkbox
+  # itself wired to a role="tooltip" bubble, Esc-dismissable. Rendered ONLY
+  # when a description exists; no extra tab stops, no trigger buttons.
+  describe "filter label description tooltips" do
     before do
       RoomCharacteristic.find_by!(short_code: "blackout")
         .update!(long_description: "Shades or curtains that fully darken the room.")
@@ -194,22 +195,25 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
         .update!(long_description: "A wall-mounted dry-erase whiteboard.")
     end
 
-    it "adds a popover trigger and dialog next to described panel labels" do
+    it "wires described panel checkboxes to hover/focus tooltips via aria-describedby" do
       get find_a_room_path
 
       panel = page.find("details#more_filters")
-      expect(panel).to have_css("button[aria-haspopup='dialog'][aria-expanded='false']", visible: :all)
-      expect(panel).to have_css("[role='dialog']", text: "Shades or curtains that fully darken the room.", visible: :all)
+      input = panel.find("input[value='blackout']", visible: :all)
+      expect(input["aria-describedby"]).to eq("tip_characteristics_blackout")
+      expect(panel).to have_css("span#tip_characteristics_blackout[role='tooltip']",
+                                text: "Shades or curtains that fully darken the room.", visible: :all)
+      # no leftover popover trigger buttons anywhere in the panel
+      expect(panel).to have_no_css("button[aria-haspopup='dialog']", visible: :all)
     end
 
-    it "adds popovers to described promoted chips and skips undescribed labels" do
+    it "tooltips described promoted chips and skips undescribed labels" do
       get find_a_room_path
 
       popular = page.find("form#find_a_room_form fieldset", match: :first)
-      expect(popular).to have_css("button[aria-haspopup='dialog']")
-      expect(popular).to have_css("[role='dialog']", text: "wall-mounted dry-erase", visible: :all)
-      # projdigit has no long_description — its pill gets no trigger
-      expect(popular.all("button[aria-haspopup='dialog']", visible: :all).count).to eq(1)
+      expect(popular).to have_css("span[role='tooltip']", text: "wall-mounted dry-erase", visible: :all)
+      # projdigit has no long_description — plain checkbox, no describedby, no bubble
+      expect(popular.find("input[value='projdigit']")["aria-describedby"]).to be_nil
     end
   end
 
