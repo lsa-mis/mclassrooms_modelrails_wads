@@ -324,7 +324,9 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(response.body).to include('id="find_a_room_results"')
       # Card titles are room number + building (2026-07 redesign), not codes.
       expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
-      expect(response.body).not_to include(other_room.room_number)
+      # full title, not the bare 4-digit number — sequences can collide with
+      # unrelated digits elsewhere in the page (seat counts, other numbers)
+      expect(response.body).not_to include("#{other_room.room_number} #{other_room.building.display_name}")
     end
 
     it "hides the admin-only view toggles from a viewer" do
