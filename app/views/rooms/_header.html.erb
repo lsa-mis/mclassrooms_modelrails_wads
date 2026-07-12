@@ -6,7 +6,7 @@
     hidden building simply gets no href. %>
 <%= ui :breadcrumb, items: [
       { label: t("rooms.index.title"), href: find_a_room_path },
-      { label: room.building.display_name,
+      { label: humanized_building_name(room.building),
         href: (building_path(room.building) if policy(room.building).show?) },
       { label: room.display_name }
     ] %>
