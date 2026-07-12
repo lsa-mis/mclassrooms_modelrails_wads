@@ -31,8 +31,9 @@ module UI
     # label:    accessible name for the tablist (aria-label; required; i18n at the call site).
     # selected: index of the initially-active tab (default 0).
     # id:       base id (auto-generated; → tab/panel ids).
-    def initialize(label:, selected: 0, id: nil, **html_attrs)
+    def initialize(label:, selected: 0, id: nil, tablist_class: nil, **html_attrs)
       @label = label
+      @tablist_class = tablist_class
       @selected = selected.to_i
       @id = id || "tabs-#{SecureRandom.hex(4)}"
       @extra_class = html_attrs.delete(:class)
@@ -54,7 +55,7 @@ module UI
         role: "tablist",
         "aria-label": @label,
         "aria-orientation": "horizontal",
-        class: TABLIST)
+        class: cn(TABLIST, @tablist_class))
     end
 
     def trigger(tab, index)

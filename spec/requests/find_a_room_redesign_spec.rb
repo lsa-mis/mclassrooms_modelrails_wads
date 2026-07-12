@@ -55,11 +55,12 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_css("label[for='filter_q']", text: /\A#{I18n.t("rooms.filters.search_label")}\z/)
     expect(page).to have_css("label[for='filter_capacity_min']", normalize_ws: true,
                              text: /\A#{I18n.t('rooms.filters.capacity_label')}\z/)
-    # "minimum" rides as a suffix hint, associated via aria-describedby so the
-    # accessible name stays the label while AT still hears the qualifier.
+    # "minimum" rides as UI::FormField's own hint, wired via aria-describedby
+    # (component convention: "#{id}-hint") so the accessible name stays the
+    # label while AT still hears the qualifier.
     input = page.find("input[name='capacity_min']")
-    expect(input["aria-describedby"]).to eq("filter_capacity_min_hint")
-    expect(page).to have_css("#filter_capacity_min_hint", text: I18n.t("rooms.filters.capacity_min_hint"))
+    expect(input["aria-describedby"]).to include("filter_capacity_min-hint")
+    expect(page).to have_css("#filter_capacity_min-hint", text: I18n.t("rooms.filters.capacity_min_hint"))
     expect(I18n.t("rooms.filters.capacity_min_hint")).to eq("minimum")
   end
 
@@ -253,7 +254,10 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
       sign_in(admin)
       get find_a_room_path(view: "inactive_rooms")
 
-      expect(response.body).to include(I18n.t("rooms.index.inactive_view_notice.inactive_rooms"))
+      # role="note", not a live region: persistent context must not re-announce
+      # on every filter re-render (UI::Alert's role: override).
+      expect(page.find("[role='note']"))
+        .to have_text(I18n.t("rooms.index.inactive_view_notice.inactive_rooms"))
       expect(page.find("turbo-frame#find_a_room_results"))
         .to have_link(I18n.t("rooms.index.inactive_view_notice.back_to_active"))
     end

@@ -74,11 +74,12 @@ module UI
     # Use slots (with_alert_title / with_alert_description) for rich HTML.
     # Slots take precedence over kwargs when both are provided.
     # icon: true renders the tone's severity glyph (ICONS); false suppresses it.
-    def initialize(tone: :neutral, variant: nil, title: nil, description: nil, icon: true, **html_attrs)
+    def initialize(tone: :neutral, variant: nil, title: nil, description: nil, icon: true, role: nil, **html_attrs)
       @tone = coerce_tone(tone, variant)
       @title = title
       @description = description
       @icon = icon
+      @role_override = role
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
@@ -86,8 +87,9 @@ module UI
     def call
       content_tag(:div, safe_join([ tone_icon, resolved_title, resolved_description ].compact),
         **@html_attrs,
-        role: ROLES.fetch(@tone),
-        "aria-live": LIVE.fetch(@tone),
+        role: @role_override || ROLES.fetch(@tone),
+        # role overrides (e.g. :note for persistent context) are NOT live regions
+        "aria-live": (@role_override ? nil : LIVE.fetch(@tone)),
         class: cn(OUTER_CLASSES, VARIANTS.fetch(@tone), @extra_class))
     end
 

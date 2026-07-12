@@ -99,12 +99,12 @@
 
     <% if current_view != "active" %>
       <%# Sprint rule: entering admin mode is quiet, BEING in it is
-          unmistakable — a :warning alert (renders role="status"/polite, the
-          AAA-proven primitive) re-renders inside the frame on every filter
-          change for free. Only reachable when base_scope's view_inactive?
-          authorize passed, so no extra policy check here. %>
+          unmistakable. role: :note (panel review, Léonie): this is persistent
+          context, not a status update — as a live region it re-announced its
+          unchanged text on every filter keystroke. Only reachable when
+          base_scope's view_inactive? authorize passed. %>
       <div class="mt-4">
-        <%= ui :alert, tone: :warning do |a| %>
+        <%= ui :alert, tone: :warning, role: :note do |a| %>
           <% a.with_alert_description do %>
             <p class="text-sm"><%= t("rooms.index.inactive_view_notice.#{current_view}") %></p>
             <%= link_to t("rooms.index.inactive_view_notice.back_to_active"),
