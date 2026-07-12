@@ -62,6 +62,7 @@ en:
         photos: "Photos"
       add_photos: "Add photos"
       documents_heading: "Plans & documents"
+      features_heading: "What this room supports"
       seats_unit: "seats"
       square_feet_value: "%{value} sq ft"
       edit_link: "Edit room"
