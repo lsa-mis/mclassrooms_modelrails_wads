@@ -15,7 +15,7 @@ module UI
   # - The native webkit disclosure marker is hidden so caller-supplied trigger markup
   #   owns the open/closed affordance.
   class CollapsibleComponent < ApplicationComponent
-    SUMMARY_CLS = "flex cursor-pointer list-none items-center justify-between gap-2 " \
+    SUMMARY_CLS = "flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 " \
                   "[&::-webkit-details-marker]:hidden focus-ring"
     CONTENT_CLS = "mt-2"
 

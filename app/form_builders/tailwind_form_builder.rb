@@ -76,7 +76,10 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     label_text = options.delete(:label) || method.to_s.humanize
     @template.content_tag(:div, class: "flex items-start gap-3") do
       super(method, options.merge(class: merge_classes(CHECKBOX_CLASSES, options[:class])), checked_value, unchecked_value) +
-        @template.label_tag(field_id(method), label_text, class: "text-sm text-text-body")
+        # min-h-11 label: the input+label union IS the pointer target — a
+        # bare text-sm label leaves it ~20px, under the 44px AAA floor
+        # (2026-07-13 a11y gate; matches UI::CheckboxComponent).
+        @template.label_tag(field_id(method), label_text, class: "inline-flex min-h-11 items-center text-sm text-text-body")
     end
   end
 

@@ -18,7 +18,10 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-screen flex flex-col bg-surface text-text-body">
+  <%# markdowndocs-chrome: scoping hook for the target-size overrides in
+      application.css — the engine's nav/TOC partials render from the GEM,
+      so the 44px floor is applied via scoped CSS until fixed upstream. %>
+  <body class="markdowndocs-chrome min-h-screen flex flex-col bg-surface text-text-body">
     <a href="#main-content"
        class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-surface-raised focus:text-interactive focus:underline">
       <%= t("application.skip_to_content") %>

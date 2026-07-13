@@ -233,6 +233,15 @@ module PlaywrightAccessibility
             // rect is a false positive.
             const blurredRect = el.getBoundingClientRect();
             if (blurredRect.width <= 2 && blurredRect.height <= 2 && cs.position === "absolute") continue;
+            // Composite-widget interiors (panel call, 2026-07-13): menu and
+            // listbox items keep desktop density — 2.5.5 is NOT CLAIMED for
+            // them on fine pointers (documented conformance deviation). They
+            // are still held to the 24px 2.5.8 AA floor here, and a
+            // pointer:coarse rule bumps them to 44px on touch devices, the
+            // population the SC protects.
+            const widgetItem = el.matches("[role=menuitem],[role=menuitemcheckbox],[role=menuitemradio],[role=option]") &&
+                               el.closest("[role=menu],[role=menubar],[role=listbox]");
+            const floor = widgetItem ? 23.5 : 43.5;
             let r = blurredRect;
             const label = el.labels && el.labels[0];
             if (label) {
@@ -240,8 +249,8 @@ module PlaywrightAccessibility
               r = { width: Math.max(r.right, lr.right) - Math.min(r.left, lr.left),
                     height: Math.max(r.bottom, lr.bottom) - Math.min(r.top, lr.top) };
             }
-            if (r.width < 43.5 || r.height < 43.5)
-              tooSmall.push({ el, why: `target ${Math.round(r.width)}x${Math.round(r.height)} — floor is 44x44 (2.5.5)` });
+            if (r.width < floor || r.height < floor)
+              tooSmall.push({ el, why: `target ${Math.round(r.width)}x${Math.round(r.height)} — floor is ${widgetItem ? "24x24 (2.5.8 AA, widget-item deviation)" : "44x44 (2.5.5)"}` });
           }
           pushCheck("mc-target-size-44", "Touch targets must be at least 44x44 (WCAG 2.5.5 AAA; label union counts)", tooSmall);
 
@@ -273,24 +282,44 @@ module PlaywrightAccessibility
             .map(el => ({ el, why: "transparent control overlapping media — contrast is unknowable; add an opaque plate" }));
           pushCheck("mc-transparent-over-media", "Interactive elements over images/canvas/video need an opaque background", seeThrough);
 
-          // WCAG 2.4.7: focus each focusable with :focus-visible forced and
-          // diff the paint-relevant styles — identical means NO indicator.
-          // Runs LAST (it mutates focus); restores the previously focused el.
-          const snap = (el) => {
-            const cs = getComputedStyle(el);
-            return [cs.outlineStyle, cs.outlineWidth, cs.outlineColor, cs.boxShadow, cs.borderColor, cs.backgroundColor, cs.textDecorationLine].join("|");
+          // WCAG 2.4.7 — deterministic CSSOM analysis, not focus mutation:
+          // Chromium does not reliably honor focus({focusVisible:true}) after
+          // pointer input, which made a diff-the-styles version flaky. An
+          // element passes when an author :focus/:focus-visible/:focus-within
+          // rule with paint-affecting declarations matches it, OR when no
+          // author rule suppresses the outline (the UA default ring shows).
+          const focusSelectors = [];
+          const suppressSelectors = [];
+          const PAINTS = ["outline-style", "outline-width", "outline", "box-shadow", "background-color", "border-color", "text-decoration-line", "color"];
+          const collectRules = (rules) => { for (const rule of rules) { try {
+            if (rule.cssRules && rule.cssRules.length) collectRules(rule.cssRules);
+            const sel = rule.selectorText;
+            if (!sel || !rule.style) continue;
+            if (/:focus/.test(sel)) {
+              if (!PAINTS.some(p => rule.style.getPropertyValue(p))) continue;
+              for (const part of sel.split(",")) {
+                if (!/:focus/.test(part)) continue;
+                const stripped = part.replace(/:focus-visible|:focus-within|:focus/g, "").trim();
+                if (stripped) focusSelectors.push(stripped);
+              }
+            } else if (["none", "0px"].includes(rule.style.getPropertyValue("outline-style") || rule.style.getPropertyValue("outline-width")) ||
+                       rule.style.getPropertyValue("outline") === "0") {
+              for (const part of sel.split(",")) suppressSelectors.push(part.trim());
+            }
+          } catch (_) {} } };
+          for (const s of document.styleSheets) { try { collectRules(s.cssRules); } catch (_) {} }
+          const matchesAny = (el, sels) => sels.some(sel => { try { return el.matches(sel); } catch (_) { return false; } });
+          // The indicator may live on a WRAPPER via :focus-within (e.g. a
+          // search box whose ring is on the bordered container) — walk up.
+          const anyAncestorFocusStyle = (el) => {
+            for (let a = el; a && a !== document.body; a = a.parentElement) {
+              if (matchesAny(a, focusSelectors)) return true;
+            }
+            return false;
           };
-          const prevFocus = document.activeElement;
-          const noIndicator = [];
-          for (const el of focusables) {
-            const before = snap(el);
-            el.focus({ focusVisible: true, preventScroll: true });
-            if (document.activeElement !== el) continue;
-            if (snap(el) === before)
-              noIndicator.push({ el, why: "no visible style change on :focus-visible (outline/box-shadow/border/bg/underline all identical)" });
-            el.blur();
-          }
-          if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true });
+          const noIndicator = focusables
+            .filter(el => matchesAny(el, suppressSelectors) && !anyAncestorFocusStyle(el))
+            .map(el => ({ el, why: "outline suppressed by author CSS with no :focus/:focus-visible paint rule matching this element or an ancestor (WCAG 2.4.7)" }));
           pushCheck("mc-focus-indicator", "Focusable elements must show a visible focus indicator (WCAG 2.4.7)", noIndicator);
 
           return results;

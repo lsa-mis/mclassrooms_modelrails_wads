@@ -17,7 +17,7 @@ module UI
     # inline-flex + min-h-11: 44px AAA target floor (2.5.5) — text-sm crumb
     # links measured ~20px tall (2026-07-13 gate upgrade, backlog #10). The
     # hit area grows; the text baseline is unchanged.
-    LINK = "inline-flex min-h-11 items-center rounded-sm text-text-muted transition-colors " \
+    LINK = "inline-flex min-h-11 min-w-11 items-center rounded-sm text-text-muted transition-colors " \
            "hover:text-text-heading " \
            "focus-ring focus-visible:text-text-heading"
     CURRENT = "font-medium text-text-heading"

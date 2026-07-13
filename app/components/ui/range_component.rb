@@ -37,7 +37,7 @@ module UI
   # No fail-loud guard — there's no enum axis to validate.
   class RangeComponent < ApplicationComponent
     BASE = "w-full cursor-pointer appearance-none rounded-full bg-surface-sunken outline-none " \
-           "h-2 accent-interactive " \
+           "h-11 accent-interactive " \
            "focus-ring " \
            "aria-invalid:ring-danger " \
            "disabled:pointer-events-none disabled:opacity-50 " \
