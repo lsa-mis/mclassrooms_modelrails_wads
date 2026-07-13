@@ -22,7 +22,7 @@ pin "lexxy", to: "lexxy.js"
 pin "@rails/activestorage", to: "activestorage.esm.js"
 pin "cropperjs", to: "https://cdn.jsdelivr.net/npm/cropperjs@2/dist/cropper.esm.js"
 
-# Pannellum (2.5.6 standalone build, bundles libpannellum) is vendored at
+# Pannellum (2.5.7 standalone build, bundles libpannellum) is vendored at
 # vendor/javascript/pannellum.js rather than fetched from a CDN — it has no
 # npm-published ESM build, so `pin "pannellum"` resolves through
 # importmap-rails' default vendor/javascript lookup. It sets `window.pannellum`
