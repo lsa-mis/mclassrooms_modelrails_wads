@@ -24,7 +24,9 @@ module UI
 
     TABLIST = "inline-flex h-9 items-center justify-center rounded-lg bg-surface-sunken p-1 text-text-muted"
     # rubocop:disable Layout/LineLength
-    TRIGGER = "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-all focus-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[state=active]:bg-surface-raised data-[state=active]:text-text-heading data-[state=active]:shadow"
+    # min-h-11: 44px AAA target floor (2.5.5) — tab buttons measured 28px
+    # (2026-07-13 gate upgrade, backlog #10).
+    TRIGGER = "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-all focus-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[state=active]:bg-surface-raised data-[state=active]:text-text-heading data-[state=active]:shadow"
     # rubocop:enable Layout/LineLength
     PANEL = "mt-2 focus-ring"
 

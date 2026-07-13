@@ -98,7 +98,7 @@ RSpec.describe "Room show", type: :system do
   # role "generic", which doesn't support naming). Fixed at the source by
   # adding `role="region"` to both containers — every page benefits, not
   # just this one.
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
+  let(:axe_options) { PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup }
 
   it "renders the header, chips, media, notes, and share accessibly in both themes" do
     visit room_path(room)
@@ -143,6 +143,11 @@ RSpec.describe "Room show", type: :system do
     # .pnlm-container and takes focus even when headless Chromium lacks WebGL
     # (it renders its error message inside), so this is CI-safe.
     expect(page).to have_button(I18n.t("rooms.show.load_panorama"))
+    # Audit the PRE-load stage state before clicking: the Load button + hint
+    # chip over the poster photo only exist now — the end-of-example sweep
+    # runs after the overlay is hidden and would never see them (this is the
+    # state the mc-transparent-over-media / 44px checks exist to guard).
+    expect(axe_violations(axe_options, include: "#room_panorama_stage")).to be_empty
     click_button I18n.t("rooms.show.load_panorama")
     expect(page).to have_css("#room_panorama_stage .pnlm-container")
     expect(page).to have_no_css("[data-panorama-target='overlay']", visible: :visible)

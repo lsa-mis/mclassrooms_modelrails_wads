@@ -44,6 +44,22 @@ module PlaywrightAccessibility
     ".highlight"
   ].freeze
 
+  # WCAG 2.2 AAA conformance is CUMULATIVE (2.0 + 2.1 + 2.2 at A/AA/AAA,
+  # WCAG §5) — but axe tags each version separately (wcag2a ≠ wcag21a ≠
+  # wcag22aa). Filtering on the 2.0-era tags alone silently skipped every
+  # 2.1/2.2 rule on every audit (backlog #10, found via the Load-360 button).
+  AXE_TAG_SET = %w[wcag2a wcag2aa wcag2aaa wcag21a wcag21aa wcag22aa].freeze
+
+  # target-size (2.5.8 AA, 24px) ships `enabled: false` in axe 4.x — the tag
+  # alone never runs it. The 44px AAA floor (2.5.5) has NO axe rule at all;
+  # the mc-target-size-44 custom check below covers it.
+  AXE_RULE_OVERRIDES = { "target-size" => { enabled: true } }.freeze
+
+  DEFAULT_AXE_OPTIONS = {
+    runOnly: { type: "tag", values: AXE_TAG_SET },
+    rules: AXE_RULE_OVERRIDES
+  }.freeze
+
   # Run axe accessibility audit on the current page.
   # `exclude` defaults to DEFERRED_AAA_EXCLUDES so tests don't fail on tracked
   # debt. Pass an explicit array (or `[]`) to override.
@@ -61,6 +77,13 @@ module PlaywrightAccessibility
   # messages reveal the cascade reality at scan time. See §2b flake
   # investigation for the motivating case.
   def run_axe_audit(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+    # Callers may narrow runOnly further, but the rule overrides (target-size
+    # enablement) always apply, and an options hash with no runOnly gets the
+    # full cumulative tag set rather than axe's open-ended default.
+    options = options.symbolize_keys
+    options[:runOnly] ||= DEFAULT_AXE_OPTIONS[:runOnly]
+    options[:rules] = AXE_RULE_OVERRIDES.merge(options[:rules] || {})
+
     Capybara.current_session.driver.with_playwright_page do |playwright_page|
       inject_axe(playwright_page)
 
@@ -144,6 +167,136 @@ module PlaywrightAccessibility
               };
             }
           }
+
+          // ------- backlog #10: checks axe cannot perform -------
+          const INTERACTIVE = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"]';
+          const excludedEl = (el) => exclude.some(sel => { try { return el.closest(sel); } catch (_) { return false; } });
+          const inScope = (el) => include.length === 0 || include.some(sel => { try { return el.closest(sel); } catch (_) { return false; } });
+          const visibleEl = (el) => {
+            const r = el.getBoundingClientRect();
+            const cs = getComputedStyle(el);
+            return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+          };
+          const describe = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") +
+            (el.classList.length ? "." + [...el.classList].slice(0, 3).join(".") : "");
+          const pushCheck = (id, help, nodes) => {
+            if (nodes.length) results.violations.push({ id, help, impact: "serious",
+              nodes: nodes.map(n => ({ html: n.el.outerHTML.slice(0, 160), target: [describe(n.el)], failureSummary: n.why })) });
+          };
+          const focusables = [...document.querySelectorAll(INTERACTIVE)]
+            .filter(el => visibleEl(el) && !excludedEl(el) && inScope(el) && !el.disabled);
+
+          const alphaOf = (color) => {
+            if (!color || color === "transparent") return 0;
+            const slash = color.match(/\\/\\s*([\\d.]+%?)\\s*\\)/);
+            if (slash) return slash[1].endsWith("%") ? parseFloat(slash[1]) / 100 : parseFloat(slash[1]);
+            const rgba = color.match(/rgba\\(([^)]+)\\)/);
+            if (rgba) { const parts = rgba[1].split(","); return parts.length === 4 ? parseFloat(parts[3]) : 1; }
+            return 1;
+          };
+          const hasOpaquePlate = (el) => {
+            let cur = el;
+            while (cur && cur !== document.documentElement) {
+              if (alphaOf(getComputedStyle(cur).backgroundColor) >= 0.9) return true;
+              cur = cur.parentElement;
+            }
+            return false;
+          };
+
+          // axe files can't-compute contrast under `incomplete` for many
+          // benign reasons (an <img> INSIDE a button, partial overlaps). The
+          // defect class is an interactive element with NO opaque plate
+          // anywhere up-chain — contrast genuinely unguaranteed. Elements on
+          // a solid ancestor are axe's limitation, not a design bug.
+          for (const v of (results.incomplete || [])) {
+            if (!v.id || !v.id.includes("color-contrast")) continue;
+            const nodes = (v.nodes || []).filter(n => {
+              const el = findNode(n.target || []);
+              return el && el.closest(INTERACTIVE) && !excludedEl(el) && inScope(el) &&
+                     !hasOpaquePlate(el.closest(INTERACTIVE));
+            });
+            if (nodes.length) results.violations.push({
+              id: v.id + "-incomplete-interactive", impact: "serious", nodes,
+              help: "axe could not compute contrast for an interactive element with no opaque background plate up-chain"
+            });
+          }
+
+          // WCAG 2.5.5 (AAA): 44x44 minimum target. The label union counts —
+          // a 20px checkbox inside a 44px-tall labelled row passes, matching
+          // how the SC measures the effective target.
+          const tooSmall = [];
+          for (const el of focusables) {
+            const cs = getComputedStyle(el);
+            if (cs.display === "inline" && el.matches("a[href]")) continue; // in-text link exception
+            // sr-only bypass links (skip-to-content) are clipped to ~1px while
+            // blurred BY DESIGN and expand on focus — measuring the blurred
+            // rect is a false positive.
+            const blurredRect = el.getBoundingClientRect();
+            if (blurredRect.width <= 2 && blurredRect.height <= 2 && cs.position === "absolute") continue;
+            let r = blurredRect;
+            const label = el.labels && el.labels[0];
+            if (label) {
+              const lr = label.getBoundingClientRect();
+              r = { width: Math.max(r.right, lr.right) - Math.min(r.left, lr.left),
+                    height: Math.max(r.bottom, lr.bottom) - Math.min(r.top, lr.top) };
+            }
+            if (r.width < 43.5 || r.height < 43.5)
+              tooSmall.push({ el, why: `target ${Math.round(r.width)}x${Math.round(r.height)} — floor is 44x44 (2.5.5)` });
+          }
+          pushCheck("mc-target-size-44", "Touch targets must be at least 44x44 (WCAG 2.5.5 AAA; label union counts)", tooSmall);
+
+          // A control whose composited background never reaches ~opacity over
+          // media has UNKNOWABLE contrast (the Load-360 defect class).
+          const media = [...document.querySelectorAll("img, canvas, video")].filter(visibleEl);
+          const intersects = (a, b) => !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
+          // The plate must sit BETWEEN the control and the media in paint
+          // order: an opaque background on an ancestor that CONTAINS the img
+          // paints beneath it (the stage's own bg fooled the first version).
+          // A focusable WRAPPER around an opaque child (UI::Tooltip's tabbable
+          // wrapper + plated chip) is plated by its own descendant when that
+          // descendant covers the wrapper's rect.
+          const coveredByOwnPlate = (el) => {
+            const r = el.getBoundingClientRect();
+            return [...el.querySelectorAll("*")].some(d => {
+              if (alphaOf(getComputedStyle(d).backgroundColor) < 0.9) return false;
+              const dr = d.getBoundingClientRect();
+              return dr.left <= r.left + 2 && dr.top <= r.top + 2 && dr.right >= r.right - 2 && dr.bottom >= r.bottom - 2;
+            });
+          };
+          const platedAbove = (el, m) => {
+            if (coveredByOwnPlate(el)) return true;
+            let cur = el;
+            while (cur && !cur.contains(m)) {
+              if (alphaOf(getComputedStyle(cur).backgroundColor) >= 0.9) return true;
+              cur = cur.parentElement;
+            }
+            return false;
+          };
+          const seeThrough = focusables
+            .filter(el => media.some(m =>
+              intersects(el.getBoundingClientRect(), m.getBoundingClientRect()) && !platedAbove(el, m)))
+            .map(el => ({ el, why: "transparent control overlapping media — contrast is unknowable; add an opaque plate" }));
+          pushCheck("mc-transparent-over-media", "Interactive elements over images/canvas/video need an opaque background", seeThrough);
+
+          // WCAG 2.4.7: focus each focusable with :focus-visible forced and
+          // diff the paint-relevant styles — identical means NO indicator.
+          // Runs LAST (it mutates focus); restores the previously focused el.
+          const snap = (el) => {
+            const cs = getComputedStyle(el);
+            return [cs.outlineStyle, cs.outlineWidth, cs.outlineColor, cs.boxShadow, cs.borderColor, cs.backgroundColor, cs.textDecorationLine].join("|");
+          };
+          const prevFocus = document.activeElement;
+          const noIndicator = [];
+          for (const el of focusables) {
+            const before = snap(el);
+            el.focus({ focusVisible: true, preventScroll: true });
+            if (document.activeElement !== el) continue;
+            if (snap(el) === before)
+              noIndicator.push({ el, why: "no visible style change on :focus-visible (outline/box-shadow/border/bg/underline all identical)" });
+            el.blur();
+          }
+          if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true });
+          pushCheck("mc-focus-indicator", "Focusable elements must show a visible focus indicator (WCAG 2.4.7)", noIndicator);
 
           return results;
         })();
@@ -322,11 +475,13 @@ RSpec.configure do |config|
         JS
       end
 
-      # Audits at WCAG 2.2 Level AAA — the project's design target. The
-      # `wcag2aaa` tag adds the AAA-only rules (notably 7:1 contrast for normal
-      # text, 4.5:1 for large text, plus 44x44 target-size on `wcag22aaa`).
-      options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
-      results = run_axe_audit(options)
+      # Audits at WCAG 2.2 Level AAA — the project's design target. The full
+      # CUMULATIVE tag set (2.0+2.1+2.2 at A/AA/AAA): the previous
+      # wcag2aaa-only filter ran just axe's 3 AAA-only rules and its comment
+      # wrongly credited a "wcag22aaa" tag that was never passed (and which
+      # covers no 44px rule anyway — the mc-* custom checks in run_axe_audit
+      # handle 44px targets, focus indicators, and over-media transparency).
+      results = run_axe_audit(DEFAULT_AXE_OPTIONS.dup)
       violations = results["violations"] || []
 
       formatted = violations.map { |v| format_violation(v) }
