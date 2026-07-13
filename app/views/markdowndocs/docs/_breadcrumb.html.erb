@@ -20,7 +20,7 @@
         <% if item[:current] %>
           <span class="font-medium text-text-heading" aria-current="page"><%= item[:name] %></span>
         <% elsif item[:path] %>
-          <%= link_to item[:name], item[:path], class: "hover:text-accent transition-colors" %>
+          <%= link_to item[:name], item[:path], class: "hover:text-accent transition-colors inline-flex min-h-11 min-w-11 items-center" %>
         <% else %>
           <span class="text-text-body"><%= item[:name] %></span>
         <% end %>

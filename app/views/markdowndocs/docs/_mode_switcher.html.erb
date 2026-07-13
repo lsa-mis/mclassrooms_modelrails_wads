@@ -34,7 +34,7 @@
           aria-pressed="<%= current_mode == mode %>"
           data-mode="<%= mode %>"
           data-action="click->docs-mode#rememberFocus"
-          class="focus-ring px-3 py-1.5 text-sm font-medium rounded-md border transition-colors
+          class="focus-ring inline-flex min-h-11 items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md border transition-colors
             <%= (current_mode == mode) ? 'border-cyan-500 bg-cyan-50 text-cyan-900 dark:bg-cyan-900/40 dark:border-cyan-400 dark:text-cyan-100' : 'border-border text-text-body hover:bg-surface-sunken' %>"
         >
           <%= t("markdowndocs.modes.#{mode}", default: mode.titleize) %>
