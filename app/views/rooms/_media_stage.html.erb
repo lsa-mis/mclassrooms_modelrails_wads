@@ -1,0 +1,44 @@
+<%# locals: (room:, presenter:, gallery_images:, has_pano:, has_photos:) %>
+<%# Redesign v4 (2026-07 sprint): ONE media stage. When both a panorama and
+    photos exist, UI::Tabs switches them — its panels are `hidden`, never
+    removed, which is exactly the WebGL survival rule from the panel review
+    (a DOM swap would destroy Pannellum's context and re-download the pano).
+    The tablist renders ABOVE the stage — the component has no overlay
+    placement API, and the bar above reads cleaner anyway (fewer zones on
+    the image). Identity + capacity overlay the image bottom (Dave's call)
+    on a translucent token surface plate rather than a bare gradient, so
+    contrast holds on arbitrary photos in both themes. %>
+<div data-testid="media-stage" class="mt-6 relative">
+  <% if has_pano && has_photos %>
+    <%= ui :tabs, label: t("rooms.show.media_label") do |tabs| %>
+      <% tabs.with_tab(title: t("rooms.show.media_tabs.pano")) do %>
+        <%= render "rooms/pano_pane", room: room %>
+      <% end %>
+      <% tabs.with_tab(title: t("rooms.show.media_tabs.photos")) do %>
+        <%= render "rooms/photos_pane", room: room, gallery_images: gallery_images %>
+      <% end %>
+    <% end %>
+  <% elsif has_pano %>
+    <%= render "rooms/pano_pane", room: room %>
+  <% else %>
+    <%= render "rooms/photos_pane", room: room, gallery_images: gallery_images %>
+  <% end %>
+
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-md
+              bg-surface-overlay/90 px-4 py-3
+              flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+    <div class="min-w-0">
+      <h1 class="text-xl font-bold text-text-heading"><%= room.display_name %></h1>
+      <p class="text-sm text-text-body"><%= room_meta_line(room) %></p>
+    </div>
+    <div class="text-right shrink-0">
+      <span class="sr-only"><%= presenter.capacity_line %></span>
+      <span aria-hidden="true">
+        <span class="block text-2xl font-bold text-text-heading tabular-nums leading-tight"><%= room.instructional_seat_count.to_i %></span>
+        <span class="block text-xs uppercase tracking-wide text-text-body">
+          <%= t("rooms.show.seats_unit") %><% if room.ada_seat_count.to_i.positive? %> · <%= t("rooms.row.ada", count: room.ada_seat_count) %><% end %>
+        </span>
+      </span>
+    </div>
+  </div>
+</div>

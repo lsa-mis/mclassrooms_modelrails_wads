@@ -1,95 +1,21 @@
-<%# locals: (room:, presenter:) %>
-<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): breadcrumb + h1 + capacity line
-    + a definition list of room attributes, plus the admin-only inactive
-    banner.
-
-    Phase 5 realty-model retrofit: Buildings followed a realty/Airbnb model
-    (BuildingPolicy#show?) — the building detail PAGE is viewer-visible on a
-    non-hidden building, exactly like a room's own #show?. The building
-    crumb is therefore a real link whenever `policy(room.building).show?`
-    (true for an admin always, and for a viewer when the building isn't
-    hidden); a viewer hitting a hidden building still gets the plain,
-    non-interactive text this partial has always rendered, matching the
-    Pundit not-authorized outcome they'd get by following the link directly.
-    UI::BreadcrumbComponent requires every
-    non-last item to be a link (it always renders `content_tag(:a, ...,
-    href: item[:href])`, and a blank `href` still carries the link's hover/
-    focus styling with nothing to click) — the whole trail is rendered by
-    hand here (reusing the component's own LINK/CURRENT style constants so
-    the visual language stays identical) so the conditional plain-text-vs-
-    link building crumb is possible at all; the shared component itself
-    still can't express "linked for some viewers, plain for others." %>
-
-<nav aria-label="<%= t("ui.breadcrumb.label", default: "Breadcrumb") %>">
-  <ol class="flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5">
-    <li class="inline-flex items-center gap-1.5">
-      <%= link_to t("rooms.index.title"), find_a_room_path, class: UI::BreadcrumbComponent::LINK %>
-      <span class="select-none text-text-muted" aria-hidden="true">/</span>
-    </li>
-    <li class="inline-flex items-center gap-1.5">
-      <% if policy(room.building).show? %>
-        <%= link_to room.building.display_name, building_path(room.building), class: UI::BreadcrumbComponent::LINK %>
-      <% else %>
-        <span class="text-text-muted"><%= room.building.display_name %></span>
-      <% end %>
-      <span class="select-none text-text-muted" aria-hidden="true">/</span>
-    </li>
-    <li class="inline-flex items-center gap-1.5">
-      <span class="<%= UI::BreadcrumbComponent::CURRENT %>" aria-current="page"><%= room.display_name %></span>
-    </li>
-  </ol>
-</nav>
+<%# locals: (room:) %>
+<%# Redesign v4: breadcrumb + admin banner only — the h1 lives on the media
+    stage / empty band. UI::Breadcrumb now accepts href-less items (rendered
+    as plain text), so the phase-5 "linked for some viewers, plain for
+    others" building crumb no longer needs a hand-rolled trail: a viewer on a
+    hidden building simply gets no href. %>
+<%# find_a_room_return_path: the crumb carries the user's search back with
+    them when they arrived from the index (audit, Fried — a crumb that
+    silently resets your filters is a trap). %>
+<%= ui :breadcrumb, items: [
+      { label: t("rooms.index.title"), href: find_a_room_return_path },
+      { label: humanized_building_name(room.building),
+        href: (building_path(room.building) if policy(room.building).show?) },
+      { label: room.display_name }
+    ] %>
 
 <% if RoleResolver.for(Current.user).admin? && room.hidden? %>
   <div class="mt-4">
     <%= ui :banner, t("rooms.show.inactive_banner"), variant: :warning %>
   </div>
 <% end %>
-
-<h1 class="mt-4 text-2xl font-bold text-text-heading"><%= room.display_name %></h1>
-
-<p class="mt-1 text-text-body"><%= presenter.capacity_line %></p>
-
-<dl class="mt-4 grid gap-x-6 gap-y-2 text-sm text-text-body sm:grid-cols-2">
-  <% if room.building.full_address.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.address") %></dt>
-      <dd><%= room.building.full_address %></dd>
-    </div>
-  <% end %>
-
-  <% if room.floor %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.floor") %></dt>
-      <dd><%= room.floor.label %></dd>
-    </div>
-  <% end %>
-
-  <% if room.room_number.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.room_number") %></dt>
-      <dd><%= room.room_number %></dd>
-    </div>
-  <% end %>
-
-  <% if room.square_feet.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.square_feet") %></dt>
-      <dd><%= number_with_delimiter(room.square_feet) %></dd>
-    </div>
-  <% end %>
-
-  <% if room.unit %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.department") %></dt>
-      <dd><%= room.unit.display_name %></dd>
-    </div>
-  <% end %>
-
-  <% if room.room_type.present? %>
-    <div>
-      <dt class="font-medium text-text-heading"><%= t("rooms.show.room_type") %></dt>
-      <dd><%= room.room_type %></dd>
-    </div>
-  <% end %>
-</dl>

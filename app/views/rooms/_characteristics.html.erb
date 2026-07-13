@@ -1,19 +1,11 @@
 <%# locals: (presenter:) %>
-<%# MiClassrooms Phase 4 Task 4 (Brief §5.3): the full characteristic-chip
-    list, then one h2 group per non-empty presenter category. Grouping is
-    data-driven by Task 2's RoomPresenter (CharacteristicDisplayRule#category_
-    override) rather than hardcoded per-characteristic logic; the
-    team-based-learning cluster forms regardless of category (the
-    presenter's own team_learning-overrides-category rule). %>
-
-<% if presenter.chips.any? %>
-  <ul data-testid="characteristic-chips" class="mt-4 flex flex-wrap gap-2">
-    <% presenter.chips.each do |chip| %>
-      <li><%= render "rooms/characteristic_chip", chip: chip %></li>
-    <% end %>
-  </ul>
-<% end %>
-
+<%# Redesign v4 (fidelity pass): ONE card — "What this room supports" — with
+    the presenter's data-driven groups as quiet h3 sections. The old flat
+    chip cloud is gone (it duplicated every grouped chip right above them),
+    and chip labels are now the parsed value without the vendor
+    "Category:" prefix (RoomPresenter#chip_label) — the group heading carries
+    the category. Grouping stays data-driven via
+    CharacteristicDisplayRule#category_override + the team_learning cluster. %>
 <%
   feature_groups = [
     [ t("rooms.show.features.amenities"), presenter.amenities ],
@@ -21,16 +13,25 @@
     [ t("rooms.show.features.projection"), presenter.projection ],
     [ t("rooms.show.features.instructor_computers"), presenter.instructor_computers ],
     [ t("rooms.show.features.team_based_learning"), presenter.team_based_learning ]
-  ]
+  ].reject { |_, chips| chips.blank? }
 %>
-<% feature_groups.each do |heading, chips| %>
-  <% next if chips.blank? %>
-  <div class="mt-6">
-    <h2 class="text-lg font-semibold text-text-heading"><%= heading %></h2>
-    <ul class="mt-2 flex flex-wrap gap-2">
-      <% chips.each do |chip| %>
-        <li><%= render "rooms/characteristic_chip", chip: chip %></li>
+<% if feature_groups.any? %>
+  <div data-testid="characteristic-chips" class="rounded-lg border border-border dark:border-border-strong p-4">
+    <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.show.features_heading") %></h2>
+    <div class="mt-3 space-y-4">
+      <% single_group = feature_groups.size == 1 %>
+      <% feature_groups.each do |heading, chips| %>
+        <div>
+          <%# A lone group heading directly under the card title is redundant
+              noise (audit, Fried) — skip it when there's only one group. %>
+          <h3 class="text-sm font-medium text-text-heading <%= 'sr-only' if single_group %>"><%= heading %></h3>
+          <ul class="mt-1.5 flex flex-wrap gap-2">
+            <% chips.each do |chip| %>
+              <li><%= render "rooms/characteristic_chip", chip: chip %></li>
+            <% end %>
+          </ul>
+        </div>
       <% end %>
-    </ul>
+    </div>
   </div>
 <% end %>

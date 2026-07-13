@@ -14,8 +14,13 @@ RSpec.describe MarkdowndocsLocalCategories do
     end
   end
 
-  it "returns the template map untouched when no local file exists (this repo)" do
-    missing = Rails.root.join("config/markdowndocs_categories.local.yml")
+  # Fork-proofed: the original example asserted the REAL seam path
+  # (config/markdowndocs_categories.local.yml) doesn't exist — which can
+  # never hold in a fork that uses the documented seam. Test the same
+  # missing-file behavior against a path that is absent by construction.
+  # (Worth upstreaming to the template.)
+  it "returns the template map untouched when no local file exists" do
+    missing = Rails.root.join("config/definitely_absent_categories.local.yml")
     expect(File.exist?(missing)).to be(false)
     expect(described_class.merge(template, missing)).to eq(template)
   end

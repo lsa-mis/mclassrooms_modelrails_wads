@@ -12,17 +12,53 @@ import { Controller } from "@hotwired/stimulus"
 // form's GET method + `data-turbo-frame`/`data-turbo-action` targeting (set
 // on the <form> itself) are preserved — this controller only decides WHEN to
 // submit, never how.
+// Redesign (2026-07 sprint): the controller now attaches to a WRAPPER around
+// the form AND the results frame (not the <form> itself), with the form as a
+// target — so controls living inside the re-rendering frame (the sort select,
+// via its `form=` attribute) can still fire filter-form actions after every
+// Turbo re-render without re-wiring.
 export default class extends Controller {
+  static targets = ["form"]
   static values = { delay: { type: Number, default: 300 } }
 
   submit() {
     clearTimeout(this.timeout)
-    this.timeout = setTimeout(() => this.element.requestSubmit(), this.delayValue)
+    this.timeout = setTimeout(() => this.form.requestSubmit(), this.delayValue)
   }
 
   submitNow() {
     clearTimeout(this.timeout)
-    this.element.requestSubmit()
+    this.form.requestSubmit()
+  }
+
+  frameRendered() {
+    this.restoreFocus()
+    this.announceResults()
+  }
+
+  // Panel review (Léonie): a frame swap destroys the activated element and
+  // Turbo drops focus to <body>. After the reset-links became full visits,
+  // the only in-frame control left is the sort select (wired to the form via
+  // `form=`), so when a render leaves focus on <body>, return it there. A
+  // debounced text-input submit never trips this — focus stays in the form.
+  restoreFocus() {
+    if (document.activeElement !== document.body) return
+
+    this.element.querySelector("#filter_sort")?.focus()
+  }
+
+  // Pre-release audit (Léonie): a live region that is itself replaced by the
+  // frame swap is not reliably announced by screen readers. The persistent
+  // #results_announcer lives OUTSIDE the frame; copy the fresh count into it
+  // after each render so filtering is never silent to AT.
+  announceResults() {
+    const announcer = document.getElementById("results_announcer")
+    const count = this.element.querySelector("[data-results-count]")
+    if (announcer && count) announcer.textContent = count.textContent.trim()
+  }
+
+  get form() {
+    return this.hasFormTarget ? this.formTarget : this.element
   }
 
   disconnect() {

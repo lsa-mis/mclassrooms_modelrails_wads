@@ -8,6 +8,7 @@
 # ApplicationController that would otherwise catch a missing authorize call.
 class CharacteristicsController < ApplicationController
   include DirectoryScoped
+  include PublicDirectoryChrome
 
   def glossary
     authorize :characteristic, :glossary?

@@ -1,118 +1,152 @@
 <%# locals: (search:, filter_groups:) %>
-<%# MiClassrooms Phase 3 Task 5 (Brief §5.2): Find a Room filter form. A plain
-    GET targeted at the results Turbo Frame (`data-turbo-frame` +
-    `data-turbo-action: advance`) so every filter change re-renders ONLY the
-    frame below and updates the URL (shareable/back-button-able) without a
-    full page reload. `role="search"` names this as the search landmark
-    (WCAG 2.2 AAA semantic-regions posture, Brief §5.2). %>
-<%= form_with url: find_a_room_path, method: :get,
-      data: { controller: "filter-form", turbo_frame: "find_a_room_results", turbo_action: "advance" },
-      role: "search", "aria-label": t("rooms.filters.form_label"),
-      class: "mt-6 space-y-6" do |form| %>
+<%# Redesign (2026-07 design sprint): the compact filter card. One merged
+    search box (`q` — building OR room, RoomSearch#filter_query), an
+    always-visible minimum capacity, promoted "popular features" chips
+    (RoomsHelper::PROMOTED_FILTER_CODES — excluded from the More-filters
+    panel below so `characteristics[]` is never rendered twice for one code),
+    and the characteristic long tail behind a native <details> disclosure —
+    the same zero-JS pattern as the result cards. The form stays OUTSIDE the
+    results Turbo frame (it never re-renders, so focus/IME state survives
+    every filter change); its `id` lets the sort select inside the frame
+    submit it via the `form=` attribute, and the filter-form Stimulus
+    controller lives on the WRAPPER in index.html.erb (form is a target) so
+    those frame-side controls keep working after every re-render. Sort,
+    per-page, Reset, and the admin view nav all moved to the results header
+    (index.html.erb); the hidden `view` field stays here so a filter submit
+    never silently resets an admin's inactive view. %>
+<%# role/aria-label MUST ride in html: — form_with silently drops unknown
+    top-level kwargs (pre-release audit: the rendered DOM had no search
+    landmark at all). %>
+<%= form_with url: find_a_room_path, method: :get, id: "find_a_room_form",
+      data: { turbo_frame: "find_a_room_results", turbo_action: "advance",
+              filter_form_target: "form" },
+      html: { role: "search", "aria-label": t("rooms.filters.form_label") },
+      class: "mt-6 rounded-lg border border-border dark:border-border-strong p-4 space-y-4" do |form| %>
 
-  <%# Preserve the current view (active/inactive_rooms/inactive_buildings) across
-      filter changes — it isn't a filter control here, so without this hidden
-      field every filter submit would silently reset an admin's inactive view
-      back to "active" (Brief §5.2, controller `view` param). %>
+  <div class="flex items-baseline justify-between gap-4">
+    <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.card_title") %></h2>
+    <%# Deliberately NOT frame-targeted: a header Reset must clear the form's
+        own inputs too, which only a fresh page render guarantees (the form
+        lives outside the results frame). The chips row's Clear-all handles
+        the fast in-frame path with filter-form#clear. %>
+    <%= link_to t("rooms.filters.reset"),
+          find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
+          class: "text-sm link-inline" %>
+  </div>
+
   <%= hidden_field_tag :view, params[:view] if params[:view].present? %>
 
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <%= ui :form_field, label: t("rooms.filters.building_label"), id: "filter_building" do |f| %>
-      <%= ui :search_input, name: "building", value: params[:building],
-            label: t("rooms.filters.building_label"),
-            data: { action: "input->filter-form#submit" }, **f.input_attrs %>
-    <% end %>
-
-    <%= ui :form_field, label: t("rooms.filters.room_label"), id: "filter_room" do |f| %>
-      <%= ui :search_input, name: "room", value: params[:room],
-            label: t("rooms.filters.room_label"),
-            data: { action: "input->filter-form#submit" }, **f.input_attrs %>
-    <% end %>
-
-    <%= ui :form_field, label: t("rooms.filters.unit_label"), id: "filter_unit_id" do |f| %>
-      <%= ui :select, name: "unit_id",
-            options: [ [ "", t("rooms.filters.unit_all") ] ] + RoomSearch.unit_options.map { |u| [ u.id, u.display_name ] },
-            selected: params[:unit_id],
-            data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
-    <% end %>
-
-    <div class="grid grid-cols-2 gap-4">
-      <%= ui :form_field, label: t("rooms.filters.capacity_min_label"), id: "filter_capacity_min" do |f| %>
-        <%= number_field_tag :capacity_min, params[:capacity_min],
-              min: 0, max: search.capacity_bound, class: "form-field", id: f.input_attrs[:id],
-              data: { action: "input->filter-form#submit" } %>
-      <% end %>
-
-      <%= ui :form_field, label: t("rooms.filters.capacity_max_label"), id: "filter_capacity_max" do |f| %>
-        <%= number_field_tag :capacity_max, params[:capacity_max],
-              min: 0, max: search.capacity_bound, class: "form-field", id: f.input_attrs[:id],
-              data: { action: "input->filter-form#submit" } %>
+  <div class="flex flex-wrap items-start gap-x-6 gap-y-4">
+    <div class="grow basis-64">
+      <%# Compact visible label ("Search"); the input's aria-label keeps the
+          descriptive superset name and the placeholder is only a hint —
+          see the search_accessible_label locale note. %>
+      <%= ui :form_field, label: t("rooms.filters.search_label"), id: "filter_q" do |f| %>
+        <%= ui :search_input, name: "q", value: params[:q],
+              label: t("rooms.filters.search_accessible_label"),
+              placeholder: t("rooms.filters.search_placeholder"),
+              data: { action: "input->filter-form#submit" }, **f.input_attrs %>
       <% end %>
     </div>
+
+    <%# form_field's own hint: API wires the "minimum" qualifier via
+        aria-describedby — accessible name stays "Capacity" (panel review:
+        both capacity fields now build through the component).
+        No `max:` — a max attribute makes form.requestSubmit() fail
+        constraint validation SILENTLY for over-bound values, freezing every
+        subsequent live filter change; an over-bound minimum should return an
+        honest "0 rooms found" instead. %>
+    <%= ui :form_field, label: t("rooms.filters.capacity_label"),
+          hint: t("rooms.filters.capacity_min_hint"), id: "filter_capacity_min" do |f| %>
+      <%# input_attrs speaks the UI::* dialect (describedby:), a raw Rails tag
+          helper needs the aria- translation by hand. %>
+      <%= number_field_tag :capacity_min, params[:capacity_min],
+            min: 0, class: "form-field w-24", id: f.input_attrs[:id],
+            "aria-describedby": f.input_attrs[:describedby],
+            data: { action: "input->filter-form#submit" } %>
+    <% end %>
   </div>
 
-  <fieldset class="space-y-4">
-    <legend class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.characteristics_legend") %></legend>
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <% filter_groups.each do |group| %>
-        <fieldset class="rounded-md border border-border p-4">
-          <legend class="px-1 text-sm font-medium text-text-heading"><%= group.name %></legend>
-          <div class="mt-2 space-y-2">
-            <% group.entries.each do |entry| %>
-              <%# No `title:` — a native title on the 16px input is mouse-hover-only
-                  and not reliably exposed to AT. The visible checkbox label IS the
-                  accessible name; the long description belongs to the glossary
-                  (Task 7), not every filter checkbox. %>
-              <%= ui :checkbox,
-                    name: "characteristics[]",
-                    value: entry.short_code,
-                    label: entry.label,
-                    checked: Array(params[:characteristics]).include?(entry.short_code),
-                    id: "characteristics_#{entry.short_code}",
-                    data: { action: "change->filter-form#submitNow" } %>
-            <% end %>
-          </div>
-        </fieldset>
+  <% promoted = promoted_filter_entries(filter_groups) %>
+  <% if promoted.any? %>
+    <fieldset>
+      <legend class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.popular_legend") %></legend>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <% promoted.each do |entry| %>
+          <%# Pill treatment (sprint prototype): the native checkbox stays
+              visible inside the pill — the border/tint is presentation, the
+              checkbox is the control. %>
+          <span class="inline-flex items-center rounded-full border border-border px-4 min-h-11
+                       transition-colors hover:bg-surface-sunken
+                       has-checked:border-interactive has-checked:bg-interactive-subtle">
+            <%= render "characteristic_checkbox", entry: entry,
+                  label: characteristic_labels.fetch(entry.short_code, entry.label),
+                  wrapper_class: "inline-flex" %>
+          </span>
+        <% end %>
+      </div>
+    </fieldset>
+  <% end %>
+
+  <%# Named group (group/disclosure): the checkbox tooltips inside use the
+      UNNAMED `group` variants from UI::Tooltip's constants, and Tailwind's
+      plain group-hover/focus-within match ANY .group ancestor — an unnamed
+      group on this details would raise every bubble whenever focus sits
+      anywhere in the panel (e.g. on this summary after a click). %>
+  <%= tag.details id: "more_filters", open: more_filters_open?(params),
+        class: "group/disclosure border-t border-border" do %>
+    <summary class="list-none min-h-11 flex items-center gap-2 cursor-pointer
+                    text-sm font-semibold text-text-heading focus-ring rounded
+                    transition-colors hover:text-interactive">
+      <%= t("rooms.filters.more_filters") %>
+      <% if (applied = panel_filter_count(params)).positive? %>
+        <%= ui :badge, t("rooms.filters.applied_count", count: applied), variant: :soft, tone: :info %>
       <% end %>
+      <%= icon(:chevron_down, size: :sm,
+            class: "text-text-muted transition-transform group-open/disclosure:rotate-180") %>
+    </summary>
+
+    <div class="pt-3 space-y-5">
+      <%# One uniform grid (design-sprint prototype): borderless groups with
+          small bold titles, Unit and Capacity-at-most as equal cells at the
+          end. fieldset/legend semantics stay for AT grouping — only the box
+          chrome is gone. %>
+      <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+        <% panel_filter_groups(filter_groups).each do |group, entries| %>
+          <fieldset class="min-w-0">
+            <legend class="pb-1 text-sm font-semibold text-text-heading"><%= characteristic_group_name(group) %></legend>
+            <div class="space-y-0">
+              <% entries.each do |entry| %>
+                <%= render "characteristic_checkbox", entry: entry,
+                      label: characteristic_labels.fetch(entry.short_code, entry.label) %>
+              <% end %>
+            </div>
+          </fieldset>
+        <% end %>
+
+        <%= ui :form_field, label: t("rooms.filters.unit_label"), id: "filter_unit_id" do |f| %>
+          <%= ui :select, name: "unit_id",
+                options: [ [ "", t("rooms.filters.unit_all") ] ] + RoomSearch.unit_options.map { |u| [ u.id, u.display_name ] },
+                selected: params[:unit_id],
+                data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
+        <% end %>
+
+        <%= ui :form_field, label: t("rooms.filters.capacity_max_label"), id: "filter_capacity_max" do |f| %>
+          <%# No `max:` for the same silent-block reason as capacity_min above;
+              RoomSearch already treats an over-bound max as unbounded. %>
+          <%= number_field_tag :capacity_max, params[:capacity_max],
+                min: 0, class: "form-field", id: f.input_attrs[:id],
+                data: { action: "input->filter-form#submit" } %>
+        <% end %>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4">
+        <%# The explicit submit is the no-JS fallback — live submits make it a
+            no-op with JS on, so it stays visually secondary. %>
+        <button type="submit" class="btn-secondary"><%= t("rooms.filters.submit") %></button>
+        <%= link_to t("rooms.filters.glossary_link"), filters_glossary_path,
+              class: "text-sm link-inline" %>
+      </div>
     </div>
-  </fieldset>
-
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <%= ui :form_field, label: t("rooms.filters.sort_label"), id: "filter_sort" do |f| %>
-      <%= ui :select, name: "sort",
-            options: RoomSearch::SORTS.map { |s| [ s, t("rooms.filters.sorts.#{s}") ] },
-            selected: search.sort,
-            data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
-    <% end %>
-
-    <%= ui :form_field, label: t("rooms.filters.per_label"), id: "filter_per" do |f| %>
-      <%= ui :select, name: "per",
-            options: [ 30, 60, 100 ].map { |n| [ n, n ] },
-            selected: search.per_page,
-            data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
-    <% end %>
-  </div>
-
-  <div class="flex flex-wrap items-center gap-4">
-    <button type="submit" class="btn-primary"><%= t("rooms.filters.submit") %></button>
-    <%= link_to t("rooms.filters.reset"), find_a_room_path,
-          data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
-          class: "btn-secondary" %>
-    <%= link_to t("rooms.filters.glossary_link"), filters_glossary_path,
-          class: "text-sm text-interactive underline hover:no-underline
-                 min-h-11 inline-flex items-center focus-ring rounded" %>
-  </div>
-
-  <% if policy(Room).view_inactive? %>
-    <% current_view = params[:view].presence_in(RoomsController::VIEWS) || "active" %>
-    <nav aria-label="<%= t('rooms.index.views_nav_label') %>" class="flex flex-wrap gap-4 border-t border-border pt-4">
-      <% RoomsController::VIEWS.each do |view_key| %>
-        <%= link_to t("rooms.index.views.#{view_key}"), find_a_room_path(view: view_key),
-              "aria-current": (current_view == view_key ? "page" : nil),
-              data: { turbo_frame: "find_a_room_results", turbo_action: "advance" },
-              class: "text-sm min-h-11 inline-flex items-center focus-ring rounded
-                     #{current_view == view_key ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" %>
-      <% end %>
-    </nav>
   <% end %>
 <% end %>

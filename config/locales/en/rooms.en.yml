@@ -1,6 +1,17 @@
 en:
   rooms:
     inactive_notice: "That room is no longer listed."
+    # Product-level display names for vendor characteristic labels (parsed
+    # from sync descriptions, not otherwise editable). Applied everywhere the
+    # Find-a-Room page names a characteristic: promoted chips, panel
+    # checkboxes, applied-filter chips, card tags.
+    characteristic_label_overrides:
+      projdigit: "Projector"
+      movetablet: "Movable seating"
+    # Same idea for vendor GROUP names (More-filters fieldset legends).
+    characteristic_group_overrides:
+      "Ethernet Connection": "Ethernet"
+      "Team Based Learning": "Team-based learning"
     show:
       capacity: "%{students} students · %{ada} ADA-accessible seats"
       address: "Address"
@@ -31,6 +42,8 @@ en:
         support_phone: "Phone"
         support_link_label: "Support page"
         support_link: "Visit support page"
+        heading: "Contacts"
+        none: "No scheduling or support contacts are listed for this room."
       not_available: "Not available"
       photo_alt: "Photo of %{room}"
       gallery_alt: "Photo %{position} of %{room}"
@@ -43,8 +56,17 @@ en:
       notes_heading: "Notes"
       building_notes_heading: "Building notes"
       share:
-        button: "Share"
+        button: "Copy link"
         copied: "Link copied to clipboard"
+      media_label: "Room media"
+      media_tabs:
+        pano: "360° view"
+        photos: "Photos"
+      add_photos: "Add photos"
+      documents_heading: "Plans & documents"
+      features_heading: "What this room supports"
+      seats_unit: "seats"
+      square_feet_value: "%{value} sq ft"
       edit_link: "Edit room"
     edit:
       title: "Edit %{room}"
@@ -93,19 +115,28 @@ en:
       current_room: "Current room"
     index:
       title: "Find a Room"
+      subtitle: "Search classrooms by size, features, and location — results update as you filter."
       results_frame_label: "Room search results"
       results_heading: "Rooms"
       results_summary:
         one: "1 room found"
         other: "%{count} rooms found"
       no_results: "No rooms match your filters."
+      no_results_hint: "Remove a filter to widen the search — the count above updates as you do."
+      chips:
+        remove: "Remove filter:"
       buildings_heading: "Buildings"
       views_nav_label: "Visibility"
       views:
         active: "Listed"
         inactive_rooms: "Hidden rooms"
         inactive_buildings: "Hidden buildings"
+      inactive_view_notice:
+        inactive_rooms: "Viewing hidden rooms — these are not visible in public results."
+        inactive_buildings: "Viewing rooms in hidden buildings — these are not visible in public results."
+        back_to_active: "Back to listed rooms"
       summary:
+        query: "Search: %{value}"
         building: "Building: %{value}"
         room: "Room: %{value}"
         unit: "School/College: %{value}"
@@ -116,35 +147,45 @@ en:
         separator: ", "
     filters:
       form_label: "Filter rooms"
-      building_label: "Building"
-      room_label: "Room name or number"
+      card_title: "Filters"
+      applied_count:
+        one: "%{count} filter applied"
+        other: "%{count} filters applied"
+      search_label: "Search"
+      # aria-label: a SUPERSET of the visible label (WCAG 2.5.3 Label in Name)
+      # so assistive tech keeps the descriptive name the compact label dropped.
+      search_accessible_label: "Search building or room"
+      search_placeholder: "Building or room number"
+      capacity_label: "Capacity"
+      capacity_min_hint: "minimum"
+      popular_legend: "Popular features"
+      more_filters: "More filters"
       unit_label: "School/College"
       unit_all: "All schools/colleges"
-      capacity_min_label: "Minimum capacity"
       capacity_max_label: "Maximum capacity"
-      characteristics_legend: "Characteristics"
       sort_label: "Sort by"
       sorts:
         default: "Building, then room"
         capacity_asc: "Capacity (low to high)"
         capacity_desc: "Capacity (high to low)"
-      per_label: "Results per page"
       submit: "Apply filters"
-      reset: "Reset filters"
+      reset: "Clear filters"
       glossary_link: "What do these filters mean?"
     row:
-      no_thumbnail: "No photo available"
-      capacity:
-        one: "1 seat"
-        other: "%{count} seats"
+      details_toggle: "Details"
+      alerts:
+        one: "1 alert"
+        other: "%{count} alerts"
+      notes:
+        one: "1 note"
+        other: "%{count} notes"
+      seats_label:
+        one: "seat"
+        other: "seats"
       ada:
         one: "+1 ADA"
         other: "+%{count} ADA"
-      floor: "Floor"
+      floor_label: "Floor %{label}"
       room_number: "Room number"
       unit: "School/College"
       characteristics_heading: "Characteristics"
-    building_card:
-      classroom_count:
-        one: "1 classroom"
-        other: "%{count} classrooms"
