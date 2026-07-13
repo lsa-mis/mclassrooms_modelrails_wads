@@ -20,6 +20,7 @@
          data-share-copied-message-value="<%= t('rooms.show.share.copied') %>"
          class="flex flex-col items-end gap-1">
       <div class="flex items-center gap-2">
+        <%= render "rooms/save_toggle", room: @room, saved_id: @saved_id %>
         <button type="button" data-action="share#copy" class="btn-secondary">
           <%= t("rooms.show.share.button") %>
         </button>

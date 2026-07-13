@@ -252,6 +252,34 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_no_css("aside[aria-label='#{I18n.t("workspaces.sidebar.aria_label")}']")
   end
 
+  describe "saved rooms shortlist" do
+    it "puts a save toggle on each card and the Saved count in the header" do
+      get find_a_room_path
+
+      card = page.find("turbo-frame#find_a_room_results li", match: :first)
+      expect(card).to have_css("form[action='#{saved_rooms_path}']")
+      expect(page).to have_css("#saved_rooms_count", text: "0")
+      expect(page).to have_link(text: /#{I18n.t("rooms.save.saved_filter")}/)
+    end
+
+    it "filters to saved rooms with a removable chip, composing with the form" do
+      classroom(building, "1402", 30)
+      SavedRoom.create!(user: viewer, room: room, workspace: workspace)
+
+      get find_a_room_path(saved: 1)
+
+      frame = page.find("turbo-frame#find_a_room_results")
+      expect(frame).to have_text("1401 Mason Hall")
+      expect(frame).to have_no_text("1402 Mason Hall")
+      # removable chip drops only the saved filter (the rounded-full pill —
+      # the header's "Saved rooms (N)" toggle shares the phrase legitimately)
+      chip = frame.find("a.rounded-full", text: I18n.t("rooms.index.summary.saved"))
+      expect(chip["href"]).not_to include("saved")
+      # the form carries the shortlist view across filter submits
+      expect(page).to have_css("form#find_a_room_form input[name='saved']", visible: :all)
+    end
+  end
+
   describe "admin inactive views" do
     let(:admin) { membership_with("admin") }
 

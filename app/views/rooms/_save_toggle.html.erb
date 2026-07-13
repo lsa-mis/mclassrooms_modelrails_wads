@@ -1,0 +1,19 @@
+<%# locals: (room:, saved_id:) %>
+<%# The shortlist toggle: button_to gives a real form (works without JS —
+    the controller's html format redirects back); with Turbo the stream
+    response flips this span in place. aria-pressed carries the state for
+    AT; the visible label changes with it. %>
+<span id="save_toggle_room_<%= room.id %>" class="inline-flex">
+  <% if saved_id %>
+    <%= button_to saved_room_path(saved_id), method: :delete,
+          class: "btn-secondary text-sm bg-interactive-subtle border-interactive",
+          "aria-pressed": true do %>
+      <%= t("rooms.save.saved") %>
+    <% end %>
+  <% else %>
+    <%= button_to saved_rooms_path, params: { room_id: room.id },
+          class: "btn-secondary text-sm", "aria-pressed": false do %>
+      <%= t("rooms.save.save") %>
+    <% end %>
+  <% end %>
+</span>

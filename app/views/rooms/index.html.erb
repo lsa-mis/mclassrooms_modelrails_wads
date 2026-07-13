@@ -70,6 +70,17 @@
       <% end %>
 
       <span class="ms-auto flex flex-wrap items-center gap-4">
+        <%# Shortlist view toggle: a FILTER state, so it composes with the
+            card's filters (and appears as a removable chip when active).
+            _top full visit — same staleness rule as the view nav. %>
+        <% saved_active = params[:saved].present? %>
+        <%= link_to find_a_room_path(saved_active ? @filter_params.to_h.except("saved") : @filter_params.to_h.merge("saved" => "1")),
+              data: { turbo_frame: "_top" },
+              "aria-current": (saved_active ? "true" : nil),
+              class: "text-sm min-h-11 inline-flex items-center gap-1 focus-ring rounded
+                     #{saved_active ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" do %>
+          <%= t("rooms.save.saved_filter") %> (<span id="saved_rooms_count"><%= @saved_count %></span>)
+        <% end %>
         <%# Lives inside the frame (re-renders with results) but submits the
             form outside it via `form=` — sort is a property of the results,
             so it belongs with them (sprint decision; per-page dropped). %>
@@ -122,7 +133,8 @@
       <h2 class="sr-only"><%= t("rooms.index.results_heading") %></h2>
       <ul class="mt-4 grid gap-4 md:grid-cols-2">
         <% @rooms.each do |room| %>
-          <%= render "room_row", room: room, note_stats: @note_stats %>
+          <%= render "room_row", room: room, note_stats: @note_stats,
+                saved_room_ids: @saved_room_ids %>
         <% end %>
       </ul>
 

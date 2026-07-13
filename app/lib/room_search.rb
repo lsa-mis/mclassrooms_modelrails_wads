@@ -52,6 +52,7 @@ class RoomSearch
     scope = @base.joins(:building).left_outer_joins(:floor)
                  .preload(:building, :floor, :unit, :room_characteristics,
                           gallery_images: { image_attachment: :blob })
+    scope = filter_saved(scope)
     scope = filter_query(scope)
     scope = filter_building(scope)
     scope = filter_room_name(scope)
@@ -79,6 +80,7 @@ class RoomSearch
   # Unbounded endpoints (0 / bound) drop out of the label entirely.
   def summary
     parts = []
+    parts << I18n.t("rooms.index.summary.saved") if saved?
     parts << I18n.t("rooms.index.summary.query", value: @params[:q].strip) if @params[:q].present?
     parts << I18n.t("rooms.index.summary.building", value: @params[:building]) if @params[:building].present?
     parts << I18n.t("rooms.index.summary.room", value: @params[:room]) if @params[:room].present?
@@ -114,6 +116,17 @@ class RoomSearch
   # — the union, so "Mason" lists a building's rooms and "mas1200" jumps to a
   # room without the user choosing a field first. The legacy `building`/`room`
   # params stay supported above for shared pre-redesign URLs.
+  # Shortlist filter: narrows to rooms the given user saved. Param-driven
+  # like everything else, but requires the caller to supply `saved_for:` (a
+  # User) — a bare `saved=1` in a hand-built URL is inert without it.
+  def saved? = @params[:saved].present? && @params[:saved_for].present?
+
+  def filter_saved(scope)
+    return scope unless saved?
+
+    scope.where(id: SavedRoom.where(user: @params[:saved_for]).select(:room_id))
+  end
+
   def filter_query(scope)
     q = @params[:q].to_s.strip
     return scope if q.blank?
