@@ -1,40 +1,39 @@
 {
-  "Rooms": [
-    {
-      "RmRecNbr": "2005046",
-      "BldRecNbr": "1005046",
-      "RoomNbr": "1200",
-      "RoomType": "Classroom",
-      "DeptID": "190000",
-      "DeptDescr": "LSA - German",
-      "DeptGrp": "COLLEGE_OF_LSA",
-      "DeptGrpDescr": "College of Literature, Science & the Arts",
-      "SqFt": 850,
-      "Floor": "1"
-    },
-    {
-      "RmRecNbr": "2005047",
-      "BldRecNbr": "1005046",
-      "RoomNbr": "B120",
-      "RoomType": "Class Laboratory",
-      "DeptID": "190100",
-      "DeptDescr": "LSA - Chemistry",
-      "DeptGrp": "COLLEGE_OF_LSA",
-      "DeptGrpDescr": "College of Literature, Science & the Arts",
-      "SqFt": 1200,
-      "Floor": "B"
-    },
-    {
-      "RmRecNbr": "2005048",
-      "BldRecNbr": "1005046",
-      "RoomNbr": "3100",
-      "RoomType": "Office",
-      "DeptID": "",
-      "DeptDescr": "",
-      "DeptGrp": "",
-      "DeptGrpDescr": "",
-      "SqFt": 150,
-      "Floor": "3"
-    }
-  ]
+  "ListOfRooms": {
+    "RoomData": [
+      {
+        "RoomRecordNumber": "2005046",
+        "BuildingRecordNumber": "1005046",
+        "RoomNumber": "1200",
+        "RoomTypeDescription": "Classroom",
+        "DepartmentName": "LSA - German",
+        "RoomSquareFeet": 850,
+        "RoomStationCount": 60,
+        "FloorNumber": "1",
+        "RoomName": "German Classroom"
+      },
+      {
+        "RoomRecordNumber": "2005047",
+        "BuildingRecordNumber": "1005046",
+        "RoomNumber": "B120",
+        "RoomTypeDescription": "Class Laboratory",
+        "DepartmentName": "LSA - Chemistry",
+        "RoomSquareFeet": 1200,
+        "RoomStationCount": 24,
+        "FloorNumber": "B",
+        "RoomName": "Chemistry Lab"
+      },
+      {
+        "RoomRecordNumber": "2005048",
+        "BuildingRecordNumber": "1005046",
+        "RoomNumber": "3100",
+        "RoomTypeDescription": "Office",
+        "DepartmentName": "",
+        "RoomSquareFeet": 150,
+        "RoomStationCount": 0,
+        "FloorNumber": "03",
+        "RoomName": "Office 3100"
+      }
+    ]
+  }
 }

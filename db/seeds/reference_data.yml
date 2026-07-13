@@ -19,18 +19,18 @@
 # re-seeding would raise a uniqueness error instead of being a no-op.
 characteristic_display_rules:
   - short_code: instrcomp
-    icon_key: computer
+    icon_key: computer_desktop
     filterable: true
   - short_code: lecturecap
-    icon_key: video-camera
+    icon_key: camera
     filterable: true
     category_override: Recording
   - short_code: teamtables
-    icon_key: table
+    icon_key: user_group
     filterable: true
     team_learning: true
   - short_code: whtbrd25
-    icon_key: whiteboard
+    icon_key: pencil
     filterable: false
 
 unit_display_names:

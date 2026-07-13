@@ -54,7 +54,8 @@ RSpec.describe Sync::UpdateCampuses do
 
   describe "a first run against an empty workspace" do
     it "creates every campus from the feed and reports accurate counters" do
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = described_class.call(run: run, client: client)
 
@@ -78,7 +79,8 @@ RSpec.describe Sync::UpdateCampuses do
     # would still pass the count/description assertions above (single
     # workspace, no collision) but would fail THIS one.
     it "stamps new campuses with the run's workspace" do
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       described_class.call(run: run, client: client)
 
@@ -89,7 +91,8 @@ RSpec.describe Sync::UpdateCampuses do
   describe "a second run with one changed description" do
     it "updates only the changed campus and counts it, leaving the unchanged one alone" do
       create(:campus, workspace: workspace, code: "100", description: "Stale Name")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = described_class.call(run: run, client: client)
 
@@ -101,7 +104,8 @@ RSpec.describe Sync::UpdateCampuses do
     it "does not count a no-op update when the fetched row is identical to what's already stored" do
       create(:campus, workspace: workspace, code: "100", description: "Ann Arbor Central")
       create(:campus, workspace: workspace, code: "250", description: "Michigan Medicine")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       described_class.call(run: run, client: client)
 
@@ -112,7 +116,8 @@ RSpec.describe Sync::UpdateCampuses do
 
   describe "idempotency" do
     it "reports 0 created/updated/deleted on a second run against the same feed" do
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       described_class.call(run: run, client: client)
       result = described_class.call(run: run, client: client)
@@ -128,7 +133,8 @@ RSpec.describe Sync::UpdateCampuses do
   describe "hard-delete of a campus that dropped out of the feed" do
     it "destroys an unreferenced pre-existing campus absent from the fixture and counts it" do
       create(:campus, workspace: workspace, code: "999", description: "Retired Campus")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = described_class.call(run: run, client: client)
 
@@ -149,7 +155,8 @@ RSpec.describe Sync::UpdateCampuses do
     it "skips a still-referenced campus with a warning instead of failing the phase" do
       stale = create(:campus, workspace: workspace, code: "999", description: "Retiring Campus")
       create(:building, workspace: workspace, campus: stale)
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = described_class.call(run: run, client: client)
 
@@ -168,7 +175,8 @@ RSpec.describe Sync::UpdateCampuses do
       referenced = create(:campus, workspace: workspace, code: "999", description: "Referenced")
       create(:building, workspace: workspace, campus: referenced)
       create(:campus, workspace: workspace, code: "888", description: "Unreferenced")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       described_class.call(run: run, client: client)
 
@@ -184,7 +192,8 @@ RSpec.describe Sync::UpdateCampuses do
     it "never deletes a same-codeless campus belonging to a different workspace" do
       other_workspace = create(:workspace)
       untouchable = create(:campus, workspace: other_workspace, code: "999", description: "Someone else's campus")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       described_class.call(run: run, client: client)
 
@@ -199,7 +208,8 @@ RSpec.describe Sync::UpdateCampuses do
     it "deletes nothing and warns instead of wiping every pre-existing campus" do
       create(:campus, workspace: workspace, code: "100", description: "Ann Arbor Central")
       create(:campus, workspace: workspace, code: "250", description: "Michigan Medicine")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses_empty.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses_empty.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = nil
       expect { result = described_class.call(run: run, client: client) }
@@ -218,7 +228,8 @@ RSpec.describe Sync::UpdateCampuses do
       create(:campus, workspace: workspace, code: "100", description: "Ann Arbor Central")
       create(:campus, workspace: workspace, code: "250", description: "Michigan Medicine")
       create(:campus, workspace: workspace, code: "999", description: "Retired Campus")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "campuses.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = nil
       expect { result = described_class.call(run: dry_run, client: client) }
