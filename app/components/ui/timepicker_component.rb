@@ -41,7 +41,7 @@ module UI
   class TimepickerComponent < ApplicationComponent
     WRAPPER  = "relative inline-block"
     HINT_CLS = "mt-1.5 block text-sm text-text-muted"
-    TRIGGER  = "flex h-9 w-36 cursor-pointer items-center gap-2 rounded-md border border-border-strong " \
+    TRIGGER  = "flex h-11 w-36 cursor-pointer items-center gap-2 rounded-md border border-border-strong " \
                "bg-surface-raised px-3 text-sm text-text-heading shadow-xs focus-ring transition " \
                "aria-expanded:border-border-focus"
     ICON_CLS = "size-4 shrink-0 text-text-muted"

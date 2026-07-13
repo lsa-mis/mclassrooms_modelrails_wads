@@ -26,7 +26,7 @@ module UI
   # - **You supply:** a `label:` (trigger text) and one or more `with_column` blocks.
 
   class MegaMenuComponent < ApplicationComponent
-    TRIGGER_CLS = "focus-ring inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-surface-raised " \
+    TRIGGER_CLS = "focus-ring inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-surface-raised " \
                   "px-4 py-2 text-sm font-medium transition-[color,box-shadow] " \
                   "hover:bg-surface-sunken hover:text-text-heading " \
                   "data-[state=open]:bg-surface-sunken/50 data-[state=open]:text-text-heading"

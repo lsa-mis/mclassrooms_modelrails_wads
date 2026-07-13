@@ -15,7 +15,7 @@
     <div class="flex items-start gap-2">
       <%= f.radio_button :join_policy, "invite", id: "join_policy_invite",
             class: "mt-1 focus-ring" %>
-      <label for="join_policy_invite" class="text-sm">
+      <label for="join_policy_invite" class="block min-h-11 text-sm">
         <span class="font-medium"><%= t("workspaces.settings.join_policy.invite_label") %></span>
         <span class="block text-text-muted"><%= t("workspaces.settings.join_policy.invite_help") %></span>
       </label>
@@ -25,7 +25,7 @@
       <%= f.radio_button :join_policy, "open_link", id: "join_policy_open_link",
             disabled: !open_link_permitted,
             class: "mt-1 focus-ring" %>
-      <label for="join_policy_open_link" class="text-sm <%= "opacity-60" unless open_link_permitted %>">
+      <label for="join_policy_open_link" class="block min-h-11 text-sm <%= "opacity-60" unless open_link_permitted %>">
         <span class="font-medium"><%= t("workspaces.settings.join_policy.open_link_label") %></span>
         <span class="block text-text-muted">
           <%= t("workspaces.settings.join_policy.open_link_help") %>

@@ -92,6 +92,9 @@ module UI
       if href
         @html_attrs[:href] = href
         @tag ||= :a
+        # A LINK badge is a pointer target — the 44px AAA floor applies
+        # (2026-07-13 gate). Static badges stay compact pills.
+        @extra_class = [ @extra_class, "min-h-11" ].compact.join(" ")
       end
     end
 
