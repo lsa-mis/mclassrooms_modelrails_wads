@@ -136,6 +136,7 @@ en:
         inactive_buildings: "Viewing rooms in hidden buildings — these are not visible in public results."
         back_to_active: "Back to listed rooms"
       summary:
+        saved: "Saved rooms"
         query: "Search: %{value}"
         building: "Building: %{value}"
         room: "Room: %{value}"
@@ -171,6 +172,10 @@ en:
       submit: "Apply filters"
       reset: "Clear filters"
       glossary_link: "What do these filters mean?"
+    save:
+      save: "Save room"
+      saved: "Saved"
+      saved_filter: "Saved rooms"
     row:
       details_toggle: "Details"
       alerts:

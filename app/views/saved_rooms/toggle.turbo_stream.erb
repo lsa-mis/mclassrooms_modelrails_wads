@@ -1,0 +1,6 @@
+<%# Shared by #create and #destroy: flip the button in place, refresh the
+    header count (a no-op on pages without #saved_rooms_count). %>
+<%= turbo_stream.replace "save_toggle_room_#{@room.id}" do %>
+  <%= render "rooms/save_toggle", room: @room, saved_id: @saved&.id %>
+<% end %>
+<%= turbo_stream.update "saved_rooms_count", @saved_count %>

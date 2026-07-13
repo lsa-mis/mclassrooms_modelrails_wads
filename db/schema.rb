@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_09_150715) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_12_210000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -372,6 +372,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150715) do
     t.index ["workspace_id"], name: "index_rooms_on_workspace_id"
   end
 
+  create_table "saved_rooms", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.integer "workspace_id", null: false
+    t.index ["room_id"], name: "index_saved_rooms_on_room_id"
+    t.index ["user_id", "room_id"], name: "index_saved_rooms_on_user_id_and_room_id", unique: true
+    t.index ["workspace_id"], name: "index_saved_rooms_on_workspace_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
@@ -593,6 +604,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_150715) do
   add_foreign_key "rooms", "units"
   add_foreign_key "rooms", "users", column: "hidden_by_id"
   add_foreign_key "rooms", "workspaces"
+  add_foreign_key "saved_rooms", "rooms"
+  add_foreign_key "saved_rooms", "users"
+  add_foreign_key "saved_rooms", "workspaces"
   add_foreign_key "sessions", "users"
   add_foreign_key "sync_phases", "sync_runs"
   add_foreign_key "sync_phases", "workspaces"

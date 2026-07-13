@@ -26,6 +26,10 @@ get "rooms", to: redirect("/find-a-room")
 # routes are drawn now per the contract; nothing links to the unimplemented
 # actions yet, and no routing-conformance spec in this checkout asserts every
 # drawn route resolves to an existing action (verified: no such spec exists).
+# Saved rooms (shortlist): plain REST create/destroy; the toggle button on
+# cards and room pages posts here and gets a Turbo Stream back.
+resources :saved_rooms, only: [ :create, :destroy ]
+
 resources :rooms, only: [ :show, :edit, :update ] do
   get :floor_plan, on: :member
   member do
