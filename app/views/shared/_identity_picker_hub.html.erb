@@ -169,14 +169,18 @@
           <%= t("identity_picker.initial_color_name") %>
         </span>
       </div>
+      <%# No explicit aria-valuemin/max/now: a native <input type=range>
+          exposes value/min/max to AT on its own AND keeps them current as
+          the user drags. An author-supplied aria-valuenow OVERRIDES the
+          implicit value and went stale on drag (handleColorChange never
+          updated it), so AT kept announcing the SSR hue (WCAG 4.1.2,
+          2026-07-13 review). min/max/step attributes stay — they are real. %>
       <input type="range" min="0" max="360" step="1"
              value="<%= current_hue %>"
              autocomplete="off"
              data-identity-picker-target="colorSlider"
              data-action="input->identity-picker#handleColorChange"
              aria-label="<%= t('identity_picker.color_aria_label') %>"
-             aria-valuemin="0" aria-valuemax="360"
-             aria-valuenow="<%= current_hue %>"
              class="w-full min-h-11 rounded-full appearance-none cursor-pointer
                     [&::-webkit-slider-thumb]:appearance-none
                     [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
