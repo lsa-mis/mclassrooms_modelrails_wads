@@ -18,10 +18,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <%# markdowndocs-chrome: scoping hook for the target-size overrides in
-      application.css — the engine's nav/TOC partials render from the GEM,
-      so the 44px floor is applied via scoped CSS until fixed upstream. %>
-  <body class="markdowndocs-chrome min-h-screen flex flex-col bg-surface text-text-body">
+  <body class="min-h-screen flex flex-col bg-surface text-text-body">
     <a href="#main-content"
        class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-surface-raised focus:text-interactive focus:underline">
       <%= t("application.skip_to_content") %>
@@ -36,31 +33,5 @@
 
     <%= render "shared/footer" %>
     <%= biscuit_banner %>
-    <%# Markdown tables from the ENGINE render inside horizontally scrollable
-        wrappers with no keyboard access (axe: scrollable-region-focusable,
-        WCAG 2.1.1). The gem owns that markup, so until it ships the fix
-        upstream, make each scrollable table container a focusable, named
-        region here. %>
-    <script nonce="<%= content_security_policy_nonce %>">
-      // Runs immediately (script sits at body end, DOM is parsed) AND on
-      // turbo:load — this layout may render without Turbo, where turbo:load
-      // never fires.
-      const fixDocsTables = () => {
-        document.querySelectorAll("main table").forEach((table) => {
-          // Prose CSS can make the TABLE ITSELF the scroll container
-          // (display:block; overflow-x:auto) — otherwise it's the wrapper.
-          const scrollsSelf = getComputedStyle(table).overflowX !== "visible";
-          const target = scrollsSelf ? table
-            : (table.parentElement && getComputedStyle(table.parentElement).overflowX !== "visible" ? table.parentElement : null);
-          if (!target || target.tabIndex >= 0) return;
-          target.tabIndex = 0;
-          target.setAttribute("role", "region");
-          target.setAttribute("aria-label", table.caption?.textContent?.trim() || "Table");
-          target.classList.add("focus-ring", "rounded");
-        });
-      };
-      fixDocsTables();
-      document.addEventListener("turbo:load", fixDocsTables);
-    </script>
   </body>
 </html>

@@ -141,30 +141,6 @@ summary::-webkit-details-marker { display: none; }
   }
 }
 
-/* markdowndocs engine chrome (a11y gate, 2026-07-13): the gem's nav/TOC
-   partials render 28-34px links and mode-toggle buttons — under the 44px
-   AAA floor. The app can't edit gem views, so the floor is applied via CSS
-   scoped to the layout override's .markdowndocs-chrome hook. Content-area
-   prose links stay untouched (inline links are the SC's own exception).
-   Remove once markdowndocs ships compliant chrome upstream. */
-.markdowndocs-chrome nav a,
-.markdowndocs-chrome aside a {
-  display: flex;
-  align-items: center;
-  min-height: var(--form-input-height);
-}
-.markdowndocs-chrome header a,
-.markdowndocs-chrome header button,
-.markdowndocs-chrome nav button,
-.markdowndocs-chrome button[data-mode],
-.markdowndocs-chrome a[href^="/docs"] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--form-input-height);
-  min-width: var(--form-input-height);
-}
-
 /* Lexxy rich-text editors: an empty contenteditable measured 24px tall —
    under the 44px floor and a needle-thin click target for composing. The
    min-width covers the collapsed inline note-edit case (measured 40px). */
