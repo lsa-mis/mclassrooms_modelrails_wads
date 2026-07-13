@@ -17,9 +17,12 @@ card always reflects what you'd get right now.
 - **Capacity** takes a minimum seat count. There's no upper clamp: asking for
   more seats than any room has honestly returns "0 rooms found."
 - **Popular features** are the most-asked-for characteristics, one click away.
-- **More filters** opens the full set, grouped (Boards, Seating, and so on).
-  Hover or keyboard-focus any filter label to see what it means; the full
-  glossary is linked at the bottom of the panel. Applied filters from this
+- **More filters** opens the full set, grouped by the question you're asking
+  (Seats & layout, Write on, Show & present, Recorded & accessible). Some
+  filters bundle related setups — "Movable seating" matches tablet armchairs
+  *or* tables with movable chairs; "Tiered or raked seating" covers sloped and
+  stepped rooms. Hover or keyboard-focus any filter label to see what it
+  means; the full glossary is linked at the bottom of the panel. Applied filters from this
   panel show a count on the toggle after a page load.
 
 Every applied filter appears as a removable chip beside the live count —

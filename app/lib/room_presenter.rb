@@ -12,12 +12,18 @@
 class RoomPresenter
   Chip = Data.define(:short_code, :label, :description, :icon_name, :team_learning)
 
+  # Taxonomy phase 2 (2026-07-12): the buckets are the same question-group
+  # vocabulary the Find-a-Room panel groups by — category_override holds the
+  # display-ready group name, so one data lever drives both pages. Anything
+  # un-overridden (or carrying a value outside this vocabulary) lands in
+  # #other_features rather than silently dropping.
   FEATURE_CATEGORIES = {
-    amenities: "amenities",
-    boards: "boards",
-    projection: "projection",
-    instructor_computers: "instructor_computers"
+    seats_layout: "Seats & layout",
+    write_on: "Write on",
+    show_present: "Show & present",
+    recorded_accessible: "Recorded & accessible"
   }.freeze
+  OTHER_CATEGORY = "other_features"
 
   # ADAPTATION: the phase-4 plan names `:sparkles` as the fallback icon, but
   # no `sparkles.svg` ships in this checkout's icon catalog
@@ -54,6 +60,14 @@ class RoomPresenter
 
   def team_based_learning
     chips.select(&:team_learning)
+  end
+
+  # The catch-all EXCLUDES team_learning chips: a categorized TBL chip shows
+  # in its question group AND the TBL cluster (pinned by spec), but an
+  # un-overridden one already has a home in the cluster — echoing it under
+  # "More details" would be pure noise.
+  def other_features
+    grouped_chips.fetch(OTHER_CATEGORY, []).reject(&:team_learning)
   end
 
   # One line: display name — full address — capacity — canonical URL (Brief
@@ -100,7 +114,8 @@ class RoomPresenter
   end
 
   def category_for(short_code)
-    @rules[short_code]&.category_override.presence || FEATURE_CATEGORIES[:amenities]
+    override = @rules[short_code]&.category_override.presence
+    FEATURE_CATEGORIES.value?(override) ? override : OTHER_CATEGORY
   end
 
   # The visible chip label is the parsed VALUE ("Document Camera", never
