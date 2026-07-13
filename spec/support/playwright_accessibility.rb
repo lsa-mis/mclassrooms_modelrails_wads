@@ -246,35 +246,30 @@ module PlaywrightAccessibility
           pushCheck("mc-target-size-44", "Touch targets must be at least 44x44 (WCAG 2.5.5 AAA; label union counts)", tooSmall);
 
           // A control whose composited background never reaches ~opacity over
-          // media has UNKNOWABLE contrast (the Load-360 defect class).
-          const media = [...document.querySelectorAll("img, canvas, video")].filter(visibleEl);
-          const intersects = (a, b) => !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
-          // The plate must sit BETWEEN the control and the media in paint
-          // order: an opaque background on an ancestor that CONTAINS the img
-          // paints beneath it (the stage's own bg fooled the first version).
-          // A focusable WRAPPER around an opaque child (UI::Tooltip's tabbable
-          // wrapper + plated chip) is plated by its own descendant when that
-          // descendant covers the wrapper's rect.
-          const coveredByOwnPlate = (el) => {
+          // media has UNKNOWABLE contrast (the Load-360 defect class). True
+          // PAINT-STACK test at the control's center (rect intersection
+          // false-positived on controls merely sharing a box with a sibling
+          // thumbnail): walking elementsFromPoint top-down, the control (or
+          // one of its descendants — a plated chip inside a tabbable tooltip
+          // wrapper) with an opaque background means plated; hitting media
+          // before ANY opaque background means unguaranteed contrast.
+          const overMediaUnplated = (el) => {
             const r = el.getBoundingClientRect();
-            return [...el.querySelectorAll("*")].some(d => {
-              if (alphaOf(getComputedStyle(d).backgroundColor) < 0.9) return false;
-              const dr = d.getBoundingClientRect();
-              return dr.left <= r.left + 2 && dr.top <= r.top + 2 && dr.right >= r.right - 2 && dr.bottom >= r.bottom - 2;
-            });
-          };
-          const platedAbove = (el, m) => {
-            if (coveredByOwnPlate(el)) return true;
-            let cur = el;
-            while (cur && !cur.contains(m)) {
-              if (alphaOf(getComputedStyle(cur).backgroundColor) >= 0.9) return true;
-              cur = cur.parentElement;
+            const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            if (!stack.includes(el)) return false; // center not on the control (covered/offscreen)
+            for (const node of stack) {
+              const opaque = alphaOf(getComputedStyle(node).backgroundColor) >= 0.9;
+              if (node === el || el.contains(node)) {
+                if (opaque) return false;
+                continue;
+              }
+              if (opaque) return false;
+              if (node.matches("img, canvas, video")) return true;
             }
             return false;
           };
           const seeThrough = focusables
-            .filter(el => media.some(m =>
-              intersects(el.getBoundingClientRect(), m.getBoundingClientRect()) && !platedAbove(el, m)))
+            .filter(overMediaUnplated)
             .map(el => ({ el, why: "transparent control overlapping media — contrast is unknowable; add an opaque plate" }));
           pushCheck("mc-transparent-over-media", "Interactive elements over images/canvas/video need an opaque background", seeThrough);
 

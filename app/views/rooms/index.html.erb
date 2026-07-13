@@ -108,7 +108,7 @@
               <%= link_to t("rooms.index.views.#{view_key}"), find_a_room_path(view: view_key),
                     data: { turbo_frame: "_top" },
                     "aria-current": (current_view == view_key ? "page" : nil),
-                    class: "text-sm min-h-11 inline-flex items-center focus-ring rounded
+                    class: "text-sm min-h-11 min-w-11 justify-center inline-flex items-center focus-ring rounded
                            #{current_view == view_key ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" %>
             <% end %>
           </nav>
