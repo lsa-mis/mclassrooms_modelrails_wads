@@ -81,7 +81,10 @@ module UI
 
     def wrapper_attrs
       {
-        class: cn("group/tooltip relative inline-flex", @extra_class),
+        # focus-ring: the wrapper is TABBABLE (tabindex below) — a focusable
+        # element with no visible focus indicator fails WCAG 2.4.7 (found on
+        # the pano pane's info chip, 2026-07-13; applies to every usage).
+        class: cn("group/tooltip relative inline-flex rounded-md focus-ring", @extra_class),
         style: "anchor-name: --#{@id}",
         tabindex: "0",
         "aria-describedby": @id,

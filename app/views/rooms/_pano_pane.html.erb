@@ -30,10 +30,17 @@
   <%# The whole overlay is a target: it paints OVER the viewer, so the
       controller must hide ALL of it on load or it eats every drag/zoom. %>
   <div data-panorama-target="overlay" class="absolute inset-0 flex items-center justify-center gap-2">
+    <%# Both controls sit over an ARBITRARY poster photo — contrast against a
+        raster is unknowable (and axe skips it), so each gets a fully opaque
+        surface-overlay plate. btn-secondary is transparent at rest by
+        design; the plate restores deterministic AAA text/border contrast.
+        The info chip is min 44px: the tooltip wrapper is TABBABLE, making
+        the chip a real target under the 2.5.5 floor. %>
     <%= ui :button, t("rooms.show.load_panorama"), variant: :outline, tone: :neutral,
+          class: "bg-surface-overlay shadow-sm",
           data: { action: "panorama#load" } %>
     <%= render(UI::TooltipComponent.new(text: t("rooms.show.panorama_hint"))) do %>
-      <span class="inline-flex items-center justify-center rounded-full bg-surface-overlay p-1.5 shadow-sm">
+      <span class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface-overlay shadow-sm">
         <%= icon(:information_circle, size: :sm) %>
       </span>
     <% end %>
