@@ -8,8 +8,9 @@
 <% content_for(:head) do %>
   <%= stylesheet_link_tag "pannellum", "data-turbo-track": "reload" %>
 <% end %>
-<% panorama_preview_path =
-     rails_representation_path(room.panorama.variant(resize_to_limit: [ 1024, 512 ], format: :webp)) %>
+<%# :poster is defined on the attachment (app/models/room.rb) so the ingest
+    task pre-processes the SAME variant this pane serves. %>
+<% panorama_preview_path = rails_representation_path(room.panorama.variant(:poster)) %>
 <%= ui :aspect_ratio, ratio: 2,
       id: "room_panorama_stage",
       class: "relative rounded-md bg-surface-sunken overflow-hidden",

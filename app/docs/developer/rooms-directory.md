@@ -42,6 +42,23 @@ panorama (~MBs); keep pane switching as show/hide forever. The panorama is
 click-to-load by design (static poster first). Rooms without media render
 `_media_empty_band` — a short branded band, never a hero-height placeholder.
 
+The poster is the `:poster` **named variant** on `Room#panorama`
+(`resize_to_limit: [1024, 512]`, webp) — defined on the attachment so the
+pano pane and the ingest task share one definition.
+
+### Bulk panorama ingest
+
+`bin/rails panoramas:ingest DIR=/path/to/panos` loads a directory of
+`<rmrecnbr>.jpg` files (the mi_locations export) onto matching rooms in the
+shared workspace (`WORKSPACE=` overrides; `DRY_RUN=1` reports without
+attaching; `REPLACE=1` re-attaches over existing panoramas — default is
+skip, so re-runs are idempotent). The `:poster` variant is **eagerly
+processed at ingest** so the first visitor never waits on a multi-MB vips
+transform. Two curation reports land in `tmp/panorama_ingest/`: files with
+no matching room, and listed classrooms still lacking a panorama. Logic
+lives in `PanoramaIngest` (`app/lib`); per-file failures collect into the
+result without stopping the run.
+
 ## Curation levers (mostly data, not code)
 
 | Lever | Mechanism | Effect |
