@@ -276,7 +276,7 @@ class BuildingsController < ApplicationController
   # submitted here is silently dropped by strong params, never assigned.
   def building_params
     params.require(:building).permit(
-      :nickname, :photo, :remove_photo,
+      :nickname, :short_name, :photo, :remove_photo,
       floors_attributes: [ :id, :plan, :remove_plan ]
     )
   end
