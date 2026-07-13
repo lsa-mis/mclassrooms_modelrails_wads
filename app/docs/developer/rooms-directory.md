@@ -47,10 +47,12 @@ click-to-load by design (static poster first). Rooms without media render
 | Lever | Mechanism | Effect |
 |---|---|---|
 | Filter vs informational | `CharacteristicDisplayRule#filterable` (admin UI) | `false` removes the checkbox from the filter panel; the room page and glossary still show it |
-| Regrouping | `CharacteristicDisplayRule#category_override` | Moves a characteristic between filter/feature groups |
-| Renaming a characteristic | `rooms.characteristic_label_overrides` (locale) | Product-wide label ("Digital Data&Video" → "Projector") — vendor labels parse from sync descriptions and have no DB column, so locale is the rename mechanism (a deploy per rename; see backlog if that outgrows) |
+| Regrouping | `CharacteristicDisplayRule#category_override` | Moves a characteristic between filter/feature groups. Since the question-group pass, the override holds the **display-ready group name** ("Seats & layout", "Write on", "Show & present", "Recorded & accessible") and drives BOTH the filter panel and the room page's feature sections — un-overridden codes land in the room page's "More details" |
+| Group order | `rooms.filters.group_order` (locale) | Panel groups render in this order; unlisted groups follow alphabetically |
+| Renaming a characteristic | `rooms.characteristic_label_overrides` (locale) | Product-wide label ("Digital Data&Video" → "Projector") — vendor labels parse from sync descriptions and have no DB column, so locale is the rename mechanism (a deploy per rename; see backlog if that outgrows). With vendor legends gone, panel labels must be self-contained ("Power Outlets: Students" → "Power outlets at seats") |
 | Renaming a group | `rooms.characteristic_group_overrides` (locale) | Fieldset legend names |
-| Promoted chips | `RoomsHelper::PROMOTED_FILTER_CODES` | The always-visible "Popular features"; promoted codes are excluded from the panel (duplicate inputs double-submit) |
+| Merged filter tokens | `RoomSearch::MERGED_CHARACTERISTICS` + locale label/description | One checkbox for one user question spanning several vendor codes ("Movable seating" = `movetablet ∪ tablesmov`; "Tiered or raked seating" = `floortier ∪ audseat`). ORs within members, ANDs against other selections; raw member codes in old URLs keep exact-match behavior; member codes never render their own checkboxes |
+| Promoted chips | `RoomsHelper::PROMOTED_FILTER_CODES` | The always-visible "Popular features"; promoted codes are excluded from the panel (duplicate inputs double-submit). May name a merged token — the chip renders only when a member code exists in the data |
 | Card tags | `RoomsHelper::CARD_TAG_CODES` + the filterable set | Cards only tag *distinctive* (filterable) characteristics — demoting a ubiquitous code also removes it from cards |
 | Building names | `RoomsHelper::BUILDING_ACRONYMS` + `humanized_building_name` | ALL-CAPS vendor names are title-cased; acronyms keep caps; curated nicknames win |
 

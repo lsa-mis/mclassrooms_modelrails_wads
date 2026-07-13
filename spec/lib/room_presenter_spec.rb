@@ -85,41 +85,52 @@ RSpec.describe RoomPresenter do
     end
   end
 
+  # Taxonomy phase 2 (2026-07-12 sprint): the room page buckets on the SAME
+  # question-group vocabulary the Find-a-Room panel uses — category_override
+  # holds the display-ready group name ("Seats & layout", …). One data lever,
+  # one mental model across both pages.
   describe "feature grouping" do
-    it "lands a rule-less characteristic in #amenities" do
+    it "lands a rule-less characteristic in #other_features" do
       create(:room_characteristic, room: room, code: "c1", short_code: "mystery")
 
-      expect(described_class.new(room).amenities.map(&:short_code)).to eq(%w[mystery])
+      expect(described_class.new(room).other_features.map(&:short_code)).to eq(%w[mystery])
     end
 
-    it "groups chips by CharacteristicDisplayRule#category_override, data-driven across all four categories" do
-      create(:characteristic_display_rule, workspace: room.workspace, short_code: "whiteboard", category_override: "boards")
-      create(:characteristic_display_rule, workspace: room.workspace, short_code: "projector", category_override: "projection")
-      create(:characteristic_display_rule, workspace: room.workspace, short_code: "clicker", category_override: "instructor_computers")
-      create(:characteristic_display_rule, workspace: room.workspace, short_code: "coffee", category_override: "amenities")
-      %w[whiteboard projector clicker coffee].each_with_index do |code, i|
+    it "lands an override OUTSIDE the question-group vocabulary in #other_features instead of dropping it" do
+      create(:characteristic_display_rule, workspace: room.workspace, short_code: "mystery", category_override: "Recording")
+      create(:room_characteristic, room: room, code: "c1", short_code: "mystery")
+
+      expect(described_class.new(room).other_features.map(&:short_code)).to eq(%w[mystery])
+    end
+
+    it "groups chips by CharacteristicDisplayRule#category_override, data-driven across all four question groups" do
+      create(:characteristic_display_rule, workspace: room.workspace, short_code: "whiteboard", category_override: "Write on")
+      create(:characteristic_display_rule, workspace: room.workspace, short_code: "projector", category_override: "Show & present")
+      create(:characteristic_display_rule, workspace: room.workspace, short_code: "capture", category_override: "Recorded & accessible")
+      create(:characteristic_display_rule, workspace: room.workspace, short_code: "tablet", category_override: "Seats & layout")
+      %w[whiteboard projector capture tablet].each_with_index do |code, i|
         create(:room_characteristic, room: room, code: "c#{i}", short_code: code)
       end
 
       presenter = described_class.new(room)
-      expect(presenter.boards.map(&:short_code)).to eq(%w[whiteboard])
-      expect(presenter.projection.map(&:short_code)).to eq(%w[projector])
-      expect(presenter.instructor_computers.map(&:short_code)).to eq(%w[clicker])
-      expect(presenter.amenities.map(&:short_code)).to eq(%w[coffee])
+      expect(presenter.write_on.map(&:short_code)).to eq(%w[whiteboard])
+      expect(presenter.show_present.map(&:short_code)).to eq(%w[projector])
+      expect(presenter.recorded_accessible.map(&:short_code)).to eq(%w[capture])
+      expect(presenter.seats_layout.map(&:short_code)).to eq(%w[tablet])
     end
 
     it "picks team_learning rules into #team_based_learning across categories, without removing them from their own category" do
       create(:characteristic_display_rule, workspace: room.workspace, short_code: "clicker",
-                                            category_override: "instructor_computers", team_learning: true)
+                                            category_override: "Show & present", team_learning: true)
       create(:characteristic_display_rule, workspace: room.workspace, short_code: "podtable",
-                                            category_override: "amenities", team_learning: true)
+                                            category_override: "Seats & layout", team_learning: true)
       create(:room_characteristic, room: room, code: "c1", short_code: "clicker")
       create(:room_characteristic, room: room, code: "c2", short_code: "podtable")
 
       presenter = described_class.new(room)
       expect(presenter.team_based_learning.map(&:short_code)).to contain_exactly("clicker", "podtable")
-      expect(presenter.instructor_computers.map(&:short_code)).to include("clicker")
-      expect(presenter.amenities.map(&:short_code)).to include("podtable")
+      expect(presenter.show_present.map(&:short_code)).to include("clicker")
+      expect(presenter.seats_layout.map(&:short_code)).to include("podtable")
     end
   end
 
