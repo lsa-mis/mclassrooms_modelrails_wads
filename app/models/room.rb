@@ -11,6 +11,7 @@ class Room < ApplicationRecord
   has_many :gallery_images, class_name: "RoomGalleryImage", dependent: :destroy # lazy,
   has_many :availability_blocks, dependent: :destroy   # so the model loads before them
   has_many :notes, as: :notable, dependent: :destroy
+  has_many :saved_rooms, dependent: :destroy
   has_one_attached :photo
   has_one_attached :panorama
   has_one_attached :seating_chart

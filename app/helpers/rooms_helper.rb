@@ -141,6 +141,7 @@ module RoomsHelper
     chips = []
     add = ->(label, without) { chips << [ label, find_a_room_path(without.compact_blank) ] }
 
+    add.call(t("rooms.index.summary.saved"), base.except(:saved)) if base[:saved].present?
     add.call(t("rooms.index.summary.query", value: base[:q].strip), base.except(:q)) if base[:q].present?
     add.call(t("rooms.index.summary.building", value: base[:building]), base.except(:building)) if base[:building].present?
     add.call(t("rooms.index.summary.room", value: base[:room]), base.except(:room)) if base[:room].present?

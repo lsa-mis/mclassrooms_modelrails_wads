@@ -108,6 +108,25 @@ RSpec.describe "Find a Room", type: :system do
     expect(find_field(I18n.t("rooms.filters.search_label")).value).to eq("")
   end
 
+  it "saves a room from a card, filters to the shortlist, and unsaves" do
+    visit find_a_room_path
+
+    within("#save_toggle_room_#{big.id}") { click_button I18n.t("rooms.save.save") }
+    # the Turbo Stream flips the toggle and the header count in place
+    expect(page).to have_css("#saved_rooms_count", text: "1")
+    within("#save_toggle_room_#{big.id}") { expect(page).to have_button(I18n.t("rooms.save.saved")) }
+
+    click_link I18n.t("rooms.save.saved_filter")
+    within "#find_a_room_results" do
+      expect(page).to have_content(card_title(big))
+      expect(page).to have_no_content(card_title(small))
+    end
+
+    within("#save_toggle_room_#{big.id}") { click_button I18n.t("rooms.save.saved") }
+    expect(page).to have_css("#saved_rooms_count", text: "0")
+    expect(axe_violations(axe_options)).to be_empty
+  end
+
   describe "admin inactive-rooms toggle" do
     # A real Classroom-scoped room (facility_code + seat count so
     # Room.classroom matches it) that is simply not in the live feed —

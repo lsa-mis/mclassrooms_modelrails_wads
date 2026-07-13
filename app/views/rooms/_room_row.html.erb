@@ -1,4 +1,4 @@
-<%# locals: (room:, note_stats: {}) %>
+<%# locals: (room:, note_stats: {}, saved_room_ids: {}) %>
 <%# Result card, restructured per Dave's calls on the pre-release audit:
     the TITLE links straight to the room page (no more disclosure-then-link
     two-step — a link can't live inside <summary>, so the header row sits
@@ -36,6 +36,7 @@
       <% if room.ada_seat_count.to_i.positive? %>
         <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :success %>
       <% end %>
+      <%= render "rooms/save_toggle", room: room, saved_id: saved_room_ids[room.id] %>
     </span>
   </div>
 
