@@ -104,6 +104,31 @@
    (pre-release audit, Wathan). Applies to every <details> in the app. */
 summary::-webkit-details-marker { display: none; }
 
+/* Pannellum viewer overrides. They live HERE, not in the vendored
+   app/assets/stylesheets/pannellum.css — that file is replaced verbatim on
+   library upgrades, so app rules appended there would silently vanish.
+   Descendant selectors (0,2,0) out-rank the vendor's single-class rules
+   regardless of stylesheet load order.
+   1. Control targets: the stock 26px sprite buttons sit below the 44px AAA
+      target floor (WCAG 2.5.5). The sprite sheet is a 26x208 SVG, so
+      everything scales crisply by 44/26 (positions and sizes x1.6923).
+   2. Focus: pannellum ships outline:0 on its container, and the media stage
+      (rounded + overflow-hidden) clips OUTWARD outlines — so the AAA focus
+      indicator is an INSET outline on :focus-visible. */
+.pnlm-container:focus-visible {
+  outline: 2px solid var(--color-interactive-focus);
+  outline-offset: -3px;
+}
+.pnlm-container .pnlm-sprite { background-size: 44px 352px; }
+.pnlm-container .pnlm-zoom-controls { width: 44px; height: 88px; }
+.pnlm-container .pnlm-zoom-out { background-position: 0 -44px; }
+.pnlm-container .pnlm-fullscreen-toggle-button,
+.pnlm-container .pnlm-orientation-button { width: 44px; height: 44px; }
+.pnlm-container .pnlm-fullscreen-toggle-button-inactive { background-position: 0 -88px; }
+.pnlm-container .pnlm-fullscreen-toggle-button-active { background-position: 0 -132px; }
+.pnlm-container .pnlm-orientation-button-inactive { background-position: 0 -264px; }
+.pnlm-container .pnlm-orientation-button-active { background-position: 0 -308px; }
+
 /* Component utilities — composition rules for repeated view patterns (not theme tokens). */
 
 @layer components {
