@@ -6,7 +6,14 @@ class Building < ApplicationRecord
   has_many :rooms, dependent: :destroy
   has_many :floors, dependent: :destroy
   has_many :notes, as: :notable, dependent: :destroy
-  has_one_attached :photo
+  # Named variants so one definition serves the views AND the ingest task's
+  # eager pre-processing (BuildingPhotoIngest — no visitor waits on a
+  # multi-MB original): :hero is the building page figure, :thumb the edit
+  # form preview.
+  has_one_attached :photo do |attachable|
+    attachable.variant :hero, resize_to_limit: [ 1600, 900 ], format: :webp
+    attachable.variant :thumb, resize_to_fill: [ 150, 150 ], format: :webp
+  end
 
   # Phase 4 Task 9 (Brief §5.3): the admin building-edit form's floors card
   # only attaches/replaces/removes each EXISTING floor's `plan` — floors are

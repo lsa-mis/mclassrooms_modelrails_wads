@@ -46,7 +46,7 @@ The poster is the `:poster` **named variant** on `Room#panorama`
 (`resize_to_limit: [1024, 512]`, webp) — defined on the attachment so the
 pano pane and the ingest task share one definition.
 
-### Bulk panorama ingest
+### Bulk media ingest
 
 `bin/rails panoramas:ingest DIR=/path/to/panos` loads a directory of
 `<rmrecnbr>.jpg` files (the mi_locations export) onto matching rooms in the
@@ -58,6 +58,16 @@ transform. Two curation reports land in `tmp/panorama_ingest/`: files with
 no matching room, and listed classrooms still lacking a panorama. Logic
 lives in `PanoramaIngest` (`app/lib`); per-file failures collect into the
 result without stopping the run.
+
+`bin/rails building_photos:ingest DIR=/path/to/buildings` is the sibling
+for building photos (`BuildingPhotoIngest`), with one difference: the files
+carry display NAMES ("Mason_Hall.jpg"), so matching is tiered —
+case-insensitive exact name, then a **unique** `Building.search_name` hit;
+multiple hits are refused into an `ambiguous_files` report rather than
+guessed (attach those by hand via the building edit form). Building photos
+get `:hero` (building page) and `:thumb` (edit preview) named variants,
+both eagerly processed; the building page serves `:hero`, never the raw
+blob. Reports land in `tmp/building_photo_ingest/`.
 
 ## Curation levers (mostly data, not code)
 
