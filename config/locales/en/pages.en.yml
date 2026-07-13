@@ -6,6 +6,7 @@ en:
         title: "Find your classroom on the Ann Arbor campus"
         subtitle: "MiClassrooms is the University of Michigan's directory of registrar-schedulable classrooms. Search by building or room and see everything you need before you teach or book — seating capacity (including ADA seating), equipment, photos, 360° panoramas, seating charts, floor plans, and scheduling and support contacts."
         cta_primary: "Sign in"
+        cta_primary_signed_in: "Find a room"
         cta_secondary: "Learn more"
       features:
         title: "Everything you need before class"
@@ -31,7 +32,9 @@ en:
       cta:
         title: "Ready to find a room?"
         subtitle: "Sign in to search and browse the full directory of registrar-schedulable classrooms."
+        subtitle_signed_in: "Search and browse the full directory of registrar-schedulable classrooms."
         button: "Sign in"
+        button_signed_in: "Find a room"
     about:
       title: "About MiClassrooms"
       hero:
