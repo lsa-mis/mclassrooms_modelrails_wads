@@ -8,8 +8,9 @@
 <% content_for(:head) do %>
   <%= stylesheet_link_tag "pannellum", "data-turbo-track": "reload" %>
 <% end %>
-<% panorama_preview_path =
-     rails_representation_path(room.panorama.variant(resize_to_limit: [ 1024, 512 ], format: :webp)) %>
+<%# :poster is defined on the attachment (app/models/room.rb) so the ingest
+    task pre-processes the SAME variant this pane serves. %>
+<% panorama_preview_path = rails_representation_path(room.panorama.variant(:poster)) %>
 <%= ui :aspect_ratio, ratio: 2,
       id: "room_panorama_stage",
       class: "relative rounded-md bg-surface-sunken overflow-hidden",
@@ -22,10 +23,15 @@
       } do %>
   <%= image_tag panorama_preview_path, alt: "", loading: :eager,
         class: "absolute inset-0 size-full object-cover" %>
+  <%# Focus indicator comes from .pnlm-container:focus-visible in
+      application.css (INSET — the stage's overflow-hidden clips the app's
+      standard outward focus-ring). %>
   <div data-panorama-target="viewer" hidden class="absolute inset-0"></div>
-  <div class="absolute inset-0 flex items-center justify-center gap-2">
+  <%# The whole overlay is a target: it paints OVER the viewer, so the
+      controller must hide ALL of it on load or it eats every drag/zoom. %>
+  <div data-panorama-target="overlay" class="absolute inset-0 flex items-center justify-center gap-2">
     <%= ui :button, t("rooms.show.load_panorama"), variant: :outline, tone: :neutral,
-          data: { panorama_target: "loadButton", action: "panorama#load" } %>
+          data: { action: "panorama#load" } %>
     <%= render(UI::TooltipComponent.new(text: t("rooms.show.panorama_hint"))) do %>
       <span class="inline-flex items-center justify-center rounded-full bg-surface-overlay p-1.5 shadow-sm">
         <%= icon(:information_circle, size: :sm) %>
