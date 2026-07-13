@@ -7,22 +7,17 @@
 class PagesController < ApplicationController
   allow_unauthenticated_access
 
-  # Phase 3 Task 6 (Brief §5.1): signed-in non-admins land on Find a Room
-  # instead of the marketing homepage; admins and anonymous visitors keep
-  # the landing page. Redirects only when TenancyConfig.shared_workspace
-  # is admittable (kept + not suspended) — the same gate DirectoryScoped
-  # uses to admit GET /find-a-room — so a suspended (or missing/personal-
-  # posture) shared workspace never bounces a viewer between root_path and
-  # find_a_room_path (DirectoryScoped redirects a suspended workspace back
-  # to root_path, which would otherwise loop forever).
+  # The landing renders for EVERYONE — anonymous, viewer, admin (panel call,
+  # 2026-07-13, retiring Phase 3 Task 6's non-admin redirect). The header
+  # logo links to root, and a link named for the site must mean the same
+  # thing for every role. "Signed-in users start in the product" still holds,
+  # but it's decided once at sign-in (ApplicationController#
+  # authenticated_home_path — the template's seam), not by hijacking root on
+  # every visit. This also un-hides the home_page announcement slot from
+  # viewers, who previously could never reach it; the view swaps the sign-in
+  # CTAs for Find-a-Room ones when authenticated.
   def home
     @announcement = Announcement.for(:home_page)
-
-    return unless authenticated? # home allows unauthenticated access; resume the session explicitly
-    return if RoleResolver.for(Current.user).admin? # admins keep the landing page
-
-    workspace = TenancyConfig.shared_workspace # nil unless shared posture + kept workspace exists
-    redirect_to find_a_room_path if workspace && !workspace.suspended?
   end
 
   # Phase 5 Task 8 (Brief §14.1): the about_page announcement slot, rendered
