@@ -28,6 +28,10 @@ module RoomsHelper
   BUILDING_SMALL_WORDS = %w[AND OF THE FOR AT].freeze
 
   def humanized_building_name(building)
+    # A curated short_name wins outright (backlog #8): humanization makes
+    # vendor names readable, only an admin can make them SHORT.
+    return building.short_name if building.short_name.present?
+
     name = building.display_name.to_s
     return name unless name == name.upcase
 

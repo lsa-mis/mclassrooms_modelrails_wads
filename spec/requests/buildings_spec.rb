@@ -484,6 +484,16 @@ RSpec.describe "PATCH /buildings/:id", type: :request do
       )
     end
 
+    # Backlog #8: short_name is a curated field like nickname — same strong
+    # params, same audited Curation::Apply path.
+    it "updates the curated short name through the same audited path" do
+      expect {
+        patch building_path(building), params: { building: { short_name: "Chem" } }
+      }.to change(ActivityLog, :count).by(1)
+
+      expect(building.reload.short_name).to eq("Chem")
+    end
+
     # Building's own `content_type: [:png, :jpeg, :webp]` validation on :photo
     # is the natural, already-existing validation reachable through this
     # form — a PDF is allowed for a floor's plan but not the building photo,

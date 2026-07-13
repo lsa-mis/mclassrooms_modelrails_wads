@@ -102,7 +102,12 @@
                     text-sm font-semibold text-text-heading focus-ring rounded
                     transition-colors hover:text-interactive">
       <%= t("rooms.filters.more_filters") %>
-      <% if (applied = panel_filter_count(params)).positive? %>
+      <%# Always-rendered holder (hidden at zero) so the controller's
+          syncPanelCount has a stable node to fill after frame renders —
+          the count text itself comes from the frame's [data-panel-count]
+          mirror (backlog #7). %>
+      <% applied = panel_filter_count(params) %>
+      <%= tag.span hidden: applied.zero?, data: { panel_badge: true } do %>
         <%= ui :badge, t("rooms.filters.applied_count", count: applied), variant: :soft, tone: :info %>
       <% end %>
       <%= icon(:chevron_down, size: :sm,
