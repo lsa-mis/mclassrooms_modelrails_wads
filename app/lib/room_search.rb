@@ -5,6 +5,17 @@ class RoomSearch
   SORTS            = %w[default capacity_asc capacity_desc].freeze
   FALLBACK_CAPACITY_BOUND = 600 # pre-first-sync only; Setting wins (D12)
 
+  # Merged filter tokens (taxonomy phase 3, approved 2026-07-12): one
+  # user-facing question spanning several vendor codes. A token ORs across its
+  # member codes while ANDing against every other selection; raw member codes
+  # in a shared pre-merge URL keep their exact-match behavior. Keys and members
+  # are CodeNormalizer-normalized. UI labels/descriptions live in the locale
+  # (rooms.characteristic_label_overrides / rooms.filters.merged_descriptions).
+  MERGED_CHARACTERISTICS = {
+    "movableseating" => %w[movetablet tablesmov],
+    "tieredraked"    => %w[floortier audseat]
+  }.freeze
+
   # Sort is SQL, not Ruby: it must compose with LIMIT/OFFSET pagination.
   # Lettered floors ("B", "M") sort before numeric ("2" < "10" naturally via
   # CAST); rooms without a floor sort last within their building. Room numbers
@@ -58,7 +69,12 @@ class RoomSearch
     scope = filter_room_name(scope)
     scope = scope.where(unit_id: @params[:unit_id]) if @params[:unit_id].present?
     scope = filter_capacity(scope)
-    scope = scope.merge(Room.with_all_characteristics(characteristic_codes)) if characteristic_codes.any?
+    scope = scope.merge(Room.with_all_characteristics(plain_characteristic_codes)) if plain_characteristic_codes.any?
+    # Chained .where (never .merge) per token group: merge collapses repeated
+    # hash conditions on rooms.id to the LAST one, silently dropping groups.
+    merged_characteristic_groups.each do |codes|
+      scope = scope.where(id: RoomCharacteristic.where(short_code: codes).select(:room_id))
+    end
     apply_sort(scope)
   end
 
@@ -91,7 +107,11 @@ class RoomSearch
       # label_for per selected code: label_for computes data_version (4
       # aggregate queries) to build its cache key, so N selected
       # characteristics meant N redundant data_version computations here.
-      labels = CharacteristicFilterGroups.labels
+      # Locale overrides layered on top name both the product-level renames
+      # AND the merged tokens, which have no vendor row to draw a label from.
+      labels = CharacteristicFilterGroups.labels.merge(
+        I18n.t("rooms.characteristic_label_overrides", default: {}).stringify_keys.transform_values(&:to_s)
+      )
       parts << I18n.t("rooms.index.summary.characteristics",
                        value: characteristic_codes.map { |c| labels.fetch(c, c) }.join(", "))
     end
@@ -180,6 +200,8 @@ class RoomSearch
   # hand-built query string) must still resolve to the same normalized form so
   # Room.with_all_characteristics' plain equality match still hits.
   def characteristic_codes = Array(@params[:characteristics]).filter_map { |c| CodeNormalizer.normalize(c) }
+  def plain_characteristic_codes = characteristic_codes.reject { |c| MERGED_CHARACTERISTICS.key?(c) }
+  def merged_characteristic_groups = characteristic_codes.filter_map { |c| MERGED_CHARACTERISTICS[c] }
   def unit = @params[:unit_id].present? ? Unit.find_by(id: @params[:unit_id]) : nil
 
   def apply_sort(scope)

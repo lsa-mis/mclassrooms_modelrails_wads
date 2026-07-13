@@ -7,7 +7,20 @@ en:
     # checkboxes, applied-filter chips, card tags.
     characteristic_label_overrides:
       projdigit: "Projector"
-      movetablet: "Movable seating"
+      movetablet: "Tablet armchairs"
+      # Merged filter tokens (RoomSearch::MERGED_CHARACTERISTICS) have no
+      # vendor row to draw a label from — these ARE their display names.
+      movableseating: "Movable seating"
+      tieredraked: "Tiered or raked seating"
+      # Question-group regroup (phase 2) removed the vendor legends that gave
+      # these labels their context — "Power Outlets: Students" read fine, a
+      # bare "Students" under "Seats & layout" does not. Self-contained names:
+      powerstud: "Power outlets at seats"
+      wcinst: "Wheelchair-accessible instructor station"
+      tablesconf: "Seminar/conference table"
+      tablesfix: "Fixed tables"
+      blackout: "Blackout shades"
+      bluraydvd: "Disc player (Blu-ray/DVD)"
     # Same idea for vendor GROUP names (More-filters fieldset legends).
     characteristic_group_overrides:
       "Ethernet Connection": "Ethernet"
@@ -22,11 +35,12 @@ en:
       room_type: "Room type"
       inactive_banner: "This room is hidden from Find a Room results."
       features:
-        amenities: "Amenities"
-        boards: "Boards"
-        projection: "Projection"
-        instructor_computers: "Instructor computers"
+        seats_layout: "Seats & layout"
+        write_on: "Write on"
+        show_present: "Show & present"
+        recorded_accessible: "Recorded & accessible"
         team_based_learning: "Team-based learning"
+        more: "More details"
       contacts:
         scheduling_heading: "Scheduling"
         support_heading: "Support"
@@ -172,6 +186,19 @@ en:
       submit: "Apply filters"
       reset: "Clear filters"
       glossary_link: "What do these filters mean?"
+      # Tooltip copy for merged tokens — no vendor long_description exists.
+      merged_descriptions:
+        movableseating: "Tablet armchairs or tables with chairs you can rearrange."
+        tieredraked: "Sloped or stepped seating — every seat has a clear view to the front."
+      # Panel group order (question groups first, in narrative order; unlisted
+      # groups follow alphabetically). Names match category_override values
+      # and the team_learning cluster's RAW group name.
+      group_order:
+        - "Seats & layout"
+        - "Write on"
+        - "Show & present"
+        - "Recorded & accessible"
+        - "Team Based Learning"
     save:
       save: "Save room"
       saved: "Saved"

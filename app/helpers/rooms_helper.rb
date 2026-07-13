@@ -9,7 +9,10 @@ module RoomsHelper
   # double-submit).
   # Taxonomy sweep (2026-07-12): projdigit swapped out — at 376/388 rooms
   # (97%) it filtered nothing; Interactive Screen splits the set near-evenly.
-  PROMOTED_FILTER_CODES = %w[intrscreen movetablet whtbrd].freeze
+  # Phase 3: the movable-seating slot is a MERGED token (see
+  # RoomSearch::MERGED_CHARACTERISTICS) — "can I move the furniture?" spans
+  # two vendor codes, so the chip ORs across both.
+  PROMOTED_FILTER_CODES = %w[intrscreen movableseating whtbrd].freeze
 
   # Card tags (sprint prototype): a few LABELED tags beat a strip of ~15
   # ambiguous icons. Priority-ordered; capped in the view. The expanded
@@ -105,18 +108,51 @@ module RoomsHelper
   end
 
   def promoted_filter_entries(filter_groups)
-    filter_groups.flat_map(&:entries)
-                 .select { |entry| PROMOTED_FILTER_CODES.include?(entry.short_code) }
-                 .sort_by { |entry| PROMOTED_FILTER_CODES.index(entry.short_code) }
+    by_code = filter_groups.flat_map(&:entries).index_by(&:short_code)
+    PROMOTED_FILTER_CODES.filter_map do |code|
+      members = RoomSearch::MERGED_CHARACTERISTICS[code]
+      next by_code[code] unless members
+
+      # A merged token earns its chip only when a member code exists in the
+      # data — same present-in-data rule plain promoted codes get for free.
+      merged_filter_entry(code) if members.any? { |member| by_code.key?(member) }
+    end
   end
 
   # [group, remaining_entries] pairs for the More-filters panel; groups whose
-  # entries were all promoted drop out entirely.
+  # entries were all promoted drop out entirely. Merged-token member codes
+  # never render their own checkboxes: a non-promoted token substitutes ONE
+  # synthetic entry into the first group holding a member (post-regroup
+  # they're all in the same question group anyway); promoted tokens' members
+  # simply drop, like any promoted code. Groups then follow the locale's
+  # question-group order (rooms.filters.group_order) — the builder's
+  # alphabetical sort is presentation-agnostic; the order is a product call.
   def panel_filter_groups(filter_groups)
-    filter_groups.filter_map do |group|
-      entries = group.entries.reject { |entry| PROMOTED_FILTER_CODES.include?(entry.short_code) }
-      [ group, entries ] if entries.any?
+    dropped  = PROMOTED_FILTER_CODES.to_set | RoomSearch::MERGED_CHARACTERISTICS.values.flatten
+    injected = Set.new
+    groups = filter_groups.filter_map do |group|
+      entries = group.entries.reject { |entry| dropped.include?(entry.short_code) }
+      RoomSearch::MERGED_CHARACTERISTICS.except(*PROMOTED_FILTER_CODES).each do |token, members|
+        next if injected.include?(token) || (group.entries.map(&:short_code) & members).none?
+
+        entries << merged_filter_entry(token)
+        injected << token
+      end
+      [ group, entries.sort_by { |entry| entry.label.downcase } ] if entries.any?
     end
+    order = Array(I18n.t("rooms.filters.group_order", default: [])).map(&:to_s)
+    groups.sort_by.with_index { |(group, _), index| [ order.index(group.name) || order.size, index ] }
+  end
+
+  # Synthetic panel/chip entry for a merged token: no vendor row backs it, so
+  # the label comes from the locale override map and the tooltip description
+  # from rooms.filters.merged_descriptions.
+  def merged_filter_entry(token)
+    CharacteristicFilterGroups::Entry.new(
+      short_code: token,
+      label: characteristic_labels.fetch(token, token),
+      long_description: t("rooms.filters.merged_descriptions.#{token}", default: nil)
+    )
   end
 
   # How many applied filters live behind the More-filters disclosure —
