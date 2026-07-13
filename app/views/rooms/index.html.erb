@@ -48,6 +48,13 @@
       <% if @search.summary.present? %>
         <span class="sr-only"><%= @search.summary %></span>
       <% end %>
+      <%# Hidden mirror of the panel-applied count (backlog #7): the badge on
+          the More-filters summary lives OUTSIDE this frame, so a frame-only
+          re-render left it stale. filter_form_controller#syncPanelCount
+          copies this text into [data-panel-badge] after every render —
+          same out-of-frame relay pattern as #results_announcer. %>
+      <% panel_applied = panel_filter_count(params) %>
+      <span data-panel-count hidden><%= t("rooms.filters.applied_count", count: panel_applied) if panel_applied.positive? %></span>
 
       <%# Chips and Clear-all are FULL visits, not frame navigations (panel
           review, Jorge/Léonie): a frame swap can't update the out-of-frame

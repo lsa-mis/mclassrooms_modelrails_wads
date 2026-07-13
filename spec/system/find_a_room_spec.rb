@@ -80,6 +80,10 @@ RSpec.describe "Find a Room", type: :system do
       expect(page).to have_no_content(card_title(small)) # LectureCap only — AND semantics
       expect(page).to have_no_content(card_title(aud))   # wrong building + InstrComp only
     end
+    # backlog #7: the out-of-frame applied-count badge updates live from the
+    # frame's [data-panel-count] mirror — two panel boxes checked, no reload
+    expect(page).to have_css("#more_filters summary [data-panel-badge]",
+                             text: I18n.t("rooms.filters.applied_count", count: 2))
     expect(page).to have_content(I18n.t("rooms.index.summary.query", value: "Mason"))
     # the persistent out-of-frame announcer carries the fresh count to AT
     # (an in-frame live region replaced by the swap is unreliable — audit)

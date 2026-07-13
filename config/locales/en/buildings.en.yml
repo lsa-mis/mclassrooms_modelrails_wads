@@ -33,6 +33,8 @@ en:
       curated_heading: "Building details"
       nickname_label: "Nickname"
       nickname_hint: "An optional friendly name shown alongside the building name, e.g. \"The Fishbowl.\""
+      short_name_label: "Short name"
+      short_name_hint: "An optional compact name used on room cards and tight layouts, e.g. \"Chem\" — replaces the full building name there."
       photo_heading: "Photo"
       photo_hint: "PNG, JPEG, or WEBP. Up to 10 MB."
       remove_photo_label: "Delete photo for %{building}"

@@ -34,6 +34,7 @@ export default class extends Controller {
   frameRendered() {
     this.restoreFocus()
     this.announceResults()
+    this.syncPanelCount()
   }
 
   // Panel review (Léonie): a frame swap destroys the activated element and
@@ -55,6 +56,22 @@ export default class extends Controller {
     const announcer = document.getElementById("results_announcer")
     const count = this.element.querySelector("[data-results-count]")
     if (announcer && count) announcer.textContent = count.textContent.trim()
+  }
+
+  // The applied-count badge sits on the More-filters summary, OUTSIDE the
+  // results frame, so a frame-only re-render leaves it stale (backlog #7).
+  // The frame carries a hidden [data-panel-count] mirror of the same
+  // server-side count — copy it into the badge after each render, so the
+  // server stays the single source of truth for the count AND its localized
+  // phrasing (same relay pattern as announceResults above).
+  syncPanelCount() {
+    const mirror = this.element.querySelector("[data-panel-count]")
+    const holder = this.element.querySelector("[data-panel-badge]")
+    if (!mirror || !holder) return
+
+    const text = mirror.textContent.trim()
+    holder.hidden = text === ""
+    if (text && holder.firstElementChild) holder.firstElementChild.textContent = text
   }
 
   get form() {
