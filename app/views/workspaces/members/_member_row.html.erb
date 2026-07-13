@@ -40,8 +40,8 @@
       <%= button_to t("workspaces.members.index.reactivate"),
             reactivate_workspace_member_path(workspace, membership),
             method: :patch,
-            class: "text-sm text-success hover:opacity-80 bg-transparent border-0 cursor-pointer p-0
-                    focus-ring rounded" %>
+            class: "text-sm text-success hover:opacity-80 bg-transparent border-0 cursor-pointer
+                    inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
     <% if policy(membership).transfer_ownership? %>
       <%= button_to t("workspaces.members.index.transfer_ownership"),

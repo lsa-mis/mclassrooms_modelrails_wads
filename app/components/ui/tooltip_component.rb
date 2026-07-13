@@ -84,7 +84,9 @@ module UI
         # focus-ring: the wrapper is TABBABLE (tabindex below) — a focusable
         # element with no visible focus indicator fails WCAG 2.4.7 (found on
         # the pano pane's info chip, 2026-07-13; applies to every usage).
-        class: cn("group/tooltip relative inline-flex rounded-md focus-ring", @extra_class),
+        # min-h-11: the wrapper is a TABBABLE target — the 44px AAA floor
+        # applies to it like any focusable (a11y gate, 2026-07-13).
+        class: cn("group/tooltip relative inline-flex min-h-11 items-center rounded-md focus-ring", @extra_class),
         style: "anchor-name: --#{@id}",
         tabindex: "0",
         "aria-describedby": @id,
