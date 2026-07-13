@@ -13,7 +13,12 @@ class Room < ApplicationRecord
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
   has_one_attached :photo
-  has_one_attached :panorama
+  # :poster is the pano pane's static preview AND the ingest task's eager
+  # pre-processing target (PanoramaIngest) — named here so one definition
+  # serves both and the first visitor never pays the vips transform.
+  has_one_attached :panorama do |attachable|
+    attachable.variant :poster, resize_to_limit: [ 1024, 512 ], format: :webp
+  end
   has_one_attached :seating_chart
 
   # Phase 4 Task 7 (Brief §5.3): admin gallery add/remove/reorder flows through
