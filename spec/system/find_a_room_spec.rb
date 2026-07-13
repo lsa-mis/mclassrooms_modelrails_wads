@@ -10,22 +10,10 @@ require "rails_helper"
 RSpec.describe "Find a Room", type: :system do
   include ClassroomBuilders
 
-  # `let`, not a top-level constant (a bare `AXE_AAA = ...` inside a
-  # `describe` block assigns to Object, so a sibling spec file defining the
-  # same name raises an "already initialized constant" warning when both
-  # load in the same process) — matches spec/system/docs_spec.rb's
-  # `axe_options` convention.
-  #
-  # Full conformance set (A + AA + AAA), not just wcag2aaa: axe's wcag2aaa
-  # tag only covers the 3 AAA-only rules (color-contrast-enhanced,
-  # identical-links-same-purpose, meta-refresh-no-exceptions). Baseline
-  # rules like label/button-name/aria-*/image-alt are tagged wcag2a/wcag2aa
-  # and never run under a wcag2aaa-only filter, even though AAA conformance
-  # requires A + AA + AAA per WCAG 2.2 §5. Product screens audit the full
-  # set; the shared CI after-each hook in playwright_accessibility.rb is
-  # left at wcag2aaa only so this fix doesn't blast-radius the template's
-  # own specs.
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
+  # The shared cumulative tag set + rule overrides (backlog #10): 2.0+2.1+2.2
+  # at A/AA/AAA plus target-size enablement and the mc-* custom checks that
+  # run inside every audit. One source of truth in playwright_accessibility.rb.
+  let(:axe_options) { PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup }
 
   # `find_a_room` runs under DirectoryScoped, which sets Current.workspace to
   # the ONE shared workspace resolved by TenancyConfig.shared_workspace_slug,

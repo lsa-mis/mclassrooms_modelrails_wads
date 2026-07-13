@@ -11,8 +11,10 @@
           `hidden`/`sm:hidden` (not sr-only-based hiding) is deliberate: the
           two logo links are never simultaneously present in the DOM, so
           screen readers never encounter two "ModelRails" links at once. %>
+      <%# min-h-11: 44px AAA target floor (2.5.5) — invisible growth, the
+          wordmark stays 28px tall inside a taller hit area. %>
       <%= link_to home_path,
-            class: "hidden sm:block hover:opacity-80 transition-opacity
+            class: "hidden sm:flex sm:items-center min-h-11 hover:opacity-80 transition-opacity
                     focus-ring rounded" do %>
         <%= render "shared/site_logo", size: :small, show_name: true %>
       <% end %>
