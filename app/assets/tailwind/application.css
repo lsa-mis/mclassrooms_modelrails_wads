@@ -99,6 +99,11 @@
   }
 }
 
+/* Safari/WebKit paints its default disclosure triangle unless the vendor
+   pseudo-element is suppressed — Tailwind list-none alone does not cover it
+   (pre-release audit, Wathan). Applies to every <details> in the app. */
+summary::-webkit-details-marker { display: none; }
+
 /* Component utilities — composition rules for repeated view patterns (not theme tokens). */
 
 @layer components {
@@ -125,6 +130,12 @@
     @apply text-interactive;
   }
 
+  /* Inline text link — the one link treatment for in-page actions (audit:
+     this exact class string was hand-rolled 7+ times across the rooms views). */
+  .link-inline {
+    @apply text-interactive underline hover:no-underline min-h-11 inline-flex items-center focus-ring rounded;
+  }
+
   /* Trailing button-group container; --space-action-group-gap keeps inline spacing consistent. */
   .action-group {
     @apply inline-flex items-center;
@@ -149,21 +160,21 @@
   /* Filled button family (primary/secondary/danger) — canonical button styling.
      Usage + variant guidance: Lookbook / UI::ButtonComponent / .modelrails_ui/agent-rules.md. */
   .btn-primary {
-    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer transition-colors;
     @apply focus-ring;
     @apply bg-interactive hover:bg-interactive-hover text-text-on-interactive;
     min-height: var(--form-input-height);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer transition-colors;
     @apply focus-ring;
     @apply border border-border text-text-body hover:bg-surface-sunken;
     min-height: var(--form-input-height);
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer transition-colors;
     @apply focus-ring;
     @apply bg-danger hover:bg-danger/90 text-text-on-interactive;
     min-height: var(--form-input-height);
@@ -443,5 +454,18 @@ body.a11y-sim-cataract     { filter: blur(1.5px) contrast(0.8) brightness(1.1); 
 @keyframes pulse-danger {
   0%, 100% { scale: 1; }
   50%      { scale: 1.15; }
+}
+
+/* Find a Room live-count flash: the results frame's children are REPLACED on
+   every filter change, so the fresh count node re-runs this one-shot animation
+   per re-render — no JS. Sunken-surface tint fading to transparent (semantic
+   token, swaps under .dark at use time); gated motion-safe: in the view. */
+@theme {
+  --animate-count-flash: count-flash 700ms ease-out;
+}
+
+@keyframes count-flash {
+  from { background-color: var(--color-surface-sunken); }
+  to   { background-color: transparent; }
 }
 

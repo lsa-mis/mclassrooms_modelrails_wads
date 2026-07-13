@@ -31,8 +31,8 @@ module UI
     BUBBLE_BASE = "z-50 w-max max-w-xs rounded-md px-3 py-1.5 text-xs text-balance " \
                   "bg-text-heading text-surface-raised whitespace-normal " \
                   "pointer-events-none opacity-0 transition-opacity duration-200 " \
-                  "group-hover:opacity-100 group-focus-within:opacity-100 " \
-                  "group-data-[dismissed]:opacity-0!"
+                  "group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 " \
+                  "group-data-[dismissed]/tooltip:opacity-0!"
 
     # Placement on the `position-area` grid — 4 edges + 4 corners. Each value carries the
     # gap margin, the modern path (gated by `supports-[position-area]`: `fixed` + a
@@ -52,6 +52,13 @@ module UI
       bottom_right: "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:right-0"
     }.freeze
     # rubocop:enable Layout/LineLength
+
+    # Public API for the documented "describe an existing interactive control"
+    # pattern (see "Do not use when"): callers build their own group/tooltip
+    # wrapper + aria-describedby and reuse the bubble exactly.
+    def self.bubble_classes(side: :top)
+      "#{BUBBLE_BASE} #{POSITIONS.fetch(side)}"
+    end
 
     # text: the hint (the bubble's content); id: bubble id (→ aria-describedby + anchor);
     # side: edge :top | :bottom | :left | :right, or corner :top_left | :top_right |
@@ -74,7 +81,7 @@ module UI
 
     def wrapper_attrs
       {
-        class: cn("group relative inline-flex", @extra_class),
+        class: cn("group/tooltip relative inline-flex", @extra_class),
         style: "anchor-name: --#{@id}",
         tabindex: "0",
         "aria-describedby": @id,

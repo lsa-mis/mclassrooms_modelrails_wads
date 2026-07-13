@@ -1,0 +1,40 @@
+<%# locals: (entry:, label:, wrapper_class: "") %>
+<%# A filter checkbox whose LABEL raises the glossary description on hover
+    and keyboard focus. UI::Tooltip's own contract says not to wrap an
+    already-interactive control (its wrapper is a second tab stop) — so this
+    follows the component's prescribed alternative: aria-describedby on the
+    checkbox input itself, with the bubble/positioning/Esc mechanics borrowed
+    verbatim from the component (its constants are the single source of truth
+    for the bubble's look and the anchor-positioning fallbacks). Hover
+    anywhere on the row or focus the checkbox → bubble shows
+    (group-hover/group-focus-within); Esc dismisses without moving focus
+    (WCAG 1.4.13) via the same shared floating controller. %>
+<% checkbox = capture do %>
+  <%= ui :checkbox,
+        name: "characteristics[]",
+        value: entry.short_code,
+        label: label,
+        checked: Array(params[:characteristics]).include?(entry.short_code),
+        id: "characteristics_#{entry.short_code}",
+        describedby: (entry.long_description.present? ? "tip_characteristics_#{entry.short_code}" : nil),
+        data: { action: "change->filter-form#submitNow" } %>
+<% end %>
+<% if entry.long_description.present? %>
+  <% tip_id = "tip_characteristics_#{entry.short_code}" %>
+  <div class="group/tooltip relative flex min-h-11 items-center <%= wrapper_class %>"
+       style="anchor-name: --<%= tip_id %>"
+       data-controller="floating"
+       data-action="keydown.esc->floating#dismiss mouseleave->floating#clearDismissed focusout->floating#clearDismissed">
+    <%= checkbox %>
+    <span id="<%= tip_id %>" role="tooltip" style="position-anchor: --<%= tip_id %>"
+          class="<%= UI::TooltipComponent.bubble_classes(side: :bottom) %>">
+      <%= entry.long_description %>
+    </span>
+  </div>
+<% else %>
+  <%# 44px row even without a tooltip wrapper — AAA target floor applies to
+      every panel checkbox, not just the promoted pills (audit, Wathan). %>
+  <div class="flex min-h-11 items-center <%= wrapper_class %>">
+    <%= checkbox %>
+  </div>
+<% end %>

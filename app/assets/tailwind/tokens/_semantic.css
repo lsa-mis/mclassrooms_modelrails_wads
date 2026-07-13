@@ -50,6 +50,10 @@
   --color-interactive-subtle: var(--primary-50);
 
   /* --- Accent (secondary highlights, prose links) --- */
+  /* NOTE: under workspace branding, accent and interactive share a hue
+     family — an accent-colored mark on an interactive surface can vanish.
+     Never pair text-accent with bg-interactive; use text-text-on-interactive
+     (opaque or low-alpha watermark) on interactive surfaces instead. */
   --color-accent:       var(--secondary-700);
   --color-accent-hover: var(--secondary-800);
 

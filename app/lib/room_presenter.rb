@@ -103,13 +103,25 @@ class RoomPresenter
     @rules[short_code]&.category_override.presence || FEATURE_CATEGORIES[:amenities]
   end
 
+  # The visible chip label is the parsed VALUE ("Document Camera", never
+  # "Equipment: Document Camera" — the category is the grouping heading, not
+  # part of the name), with the same product-level locale overrides the
+  # Find-a-Room page applies (rooms.characteristic_label_overrides).
+  def chip_label(characteristic)
+    overrides = I18n.t("rooms.characteristic_label_overrides", default: {}).stringify_keys
+    overrides.fetch(characteristic.short_code) do
+      value = characteristic.description.to_s.split(":", 2).last.to_s.strip
+      value.presence || characteristic.short_code
+    end
+  end
+
   def build_chip(characteristic)
     rule = @rules[characteristic.short_code]
     icon = rule&.icon_key
     icon = FALLBACK_ICON unless icon.present? && IconRegistry.exists?(icon)
     Chip.new(
       short_code: characteristic.short_code,
-      label: characteristic.description,
+      label: chip_label(characteristic),
       description: characteristic.long_description,
       icon_name: icon.to_sym,
       team_learning: rule&.team_learning? || false

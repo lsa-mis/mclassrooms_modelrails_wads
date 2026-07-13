@@ -60,40 +60,52 @@ RSpec.describe "Find a Room", type: :system do
 
   before { sign_in_via_form(user) }
 
+  # Cards render room number + building (2026-07 redesign), not facility codes.
+  def card_title(room) = "#{room.room_number} #{room.building.name}"
+
   it "filters via Turbo without a full reload and ANDs characteristics" do
     visit find_a_room_path
-    expect(page).to have_content(aud.display_name)
+    expect(page).to have_content(card_title(aud))
 
     page.execute_script("window.__stayedOnPage = true") # falsy again only after a full reload
-    fill_in I18n.t("rooms.filters.building_label"), with: "Mason"
+    fill_in I18n.t("rooms.filters.search_label"), with: "Mason"
+    # The characteristic long tail lives behind the More-filters disclosure
+    # (2026-07 redesign) — open it before checking boxes.
+    find("#more_filters > summary").click
     check "LectureCap"
     check "InstrComp"
 
     within "#find_a_room_results" do
-      expect(page).to have_content(big.display_name)
-      expect(page).to have_no_content(small.display_name) # LectureCap only — AND semantics
-      expect(page).to have_no_content(aud.display_name)   # wrong building + InstrComp only
+      expect(page).to have_content(card_title(big))
+      expect(page).to have_no_content(card_title(small)) # LectureCap only — AND semantics
+      expect(page).to have_no_content(card_title(aud))   # wrong building + InstrComp only
     end
-    expect(page).to have_content(I18n.t("rooms.index.summary.building", value: "Mason"))
+    expect(page).to have_content(I18n.t("rooms.index.summary.query", value: "Mason"))
+    # the persistent out-of-frame announcer carries the fresh count to AT
+    # (an in-frame live region replaced by the swap is unreliable — audit)
+    expect(page.find("#results_announcer", visible: :all)).to have_text(I18n.t("rooms.index.results_summary", count: 1))
     expect(page.evaluate_script("window.__stayedOnPage")).to be(true)
-    expect(page).to have_current_path(/building=Mason/) # turbo_action: advance keeps URL shareable
+    expect(page).to have_current_path(/q=Mason/) # turbo_action: advance keeps URL shareable
     expect(axe_violations(axe_options)).to be_empty
   end
 
-  it "round-trips the filter: reset brings the filtered-out room back" do
+  it "round-trips the filter: Clear all restores results AND empties the search box" do
     visit find_a_room_path
-    fill_in I18n.t("rooms.filters.building_label"), with: "Mason"
+    fill_in I18n.t("rooms.filters.search_label"), with: "Mason"
 
     within "#find_a_room_results" do
-      expect(page).to have_content(big.display_name)
-      expect(page).to have_no_content(aud.display_name)
+      expect(page).to have_content(card_title(big))
+      expect(page).to have_no_content(card_title(aud))
     end
 
+    # One clear control (audit): the filter card header link — a full visit,
+    # so the fresh render resets both results and form inputs.
     click_link I18n.t("rooms.filters.reset")
 
     within "#find_a_room_results" do
-      expect(page).to have_content(aud.display_name)
+      expect(page).to have_content(card_title(aud))
     end
+    expect(find_field(I18n.t("rooms.filters.search_label")).value).to eq("")
   end
 
   describe "admin inactive-rooms toggle" do
@@ -127,15 +139,15 @@ RSpec.describe "Find a Room", type: :system do
       visit find_a_room_path
       expect(page).to have_content(I18n.t("rooms.index.views.inactive_rooms"))
       within "#find_a_room_results" do
-        expect(page).to have_content(big.display_name)
-        expect(page).to have_no_content(hidden_classroom.display_name)
+        expect(page).to have_content(card_title(big))
+        expect(page).to have_no_content(card_title(hidden_classroom))
       end
 
       click_link I18n.t("rooms.index.views.inactive_rooms")
 
       within "#find_a_room_results" do
-        expect(page).to have_content(hidden_classroom.display_name)
-        expect(page).to have_no_content(big.display_name)
+        expect(page).to have_content(card_title(hidden_classroom))
+        expect(page).to have_no_content(card_title(big))
       end
       expect(axe_violations(axe_options)).to be_empty
     end

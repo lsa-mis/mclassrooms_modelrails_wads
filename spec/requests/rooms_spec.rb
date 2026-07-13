@@ -58,9 +58,10 @@ RSpec.describe "GET /find-a-room", type: :request do
       get find_a_room_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(listed_classroom.display_name)
-      expect(response.body).not_to include(hidden_classroom.display_name)
-      expect(response.body).not_to include(non_classroom.display_name)
+      # Card titles are room number + building (2026-07 redesign), not codes.
+      expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
+      expect(response.body).not_to include(hidden_classroom.room_number)
+      expect(response.body).not_to include(non_classroom.room_number)
     end
 
     it "responds with the JSON shape: room keys + pagination block" do
@@ -321,8 +322,11 @@ RSpec.describe "GET /find-a-room", type: :request do
       get find_a_room_path, params: { building: "Mason" }
 
       expect(response.body).to include('id="find_a_room_results"')
-      expect(response.body).to include(listed_classroom.display_name)
-      expect(response.body).not_to include(other_room.display_name)
+      # Card titles are room number + building (2026-07 redesign), not codes.
+      expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
+      # full title, not the bare 4-digit number — sequences can collide with
+      # unrelated digits elsewhere in the page (seat counts, other numbers)
+      expect(response.body).not_to include("#{other_room.room_number} #{other_room.building.display_name}")
     end
 
     it "hides the admin-only view toggles from a viewer" do
@@ -343,13 +347,15 @@ RSpec.describe "GET /find-a-room", type: :request do
     end
 
     # Exercises the row branches a bare factory room never touches: a gallery
-    # thumbnail (Active Storage variant), the ADA badge, a real characteristic
-    # icon chip (icon_key must resolve via IconRegistry — the display_rule
-    # factory's own default "wifi" isn't a real icon, so this proves the
-    # happy path with one that is), and the building card. None of this is
-    # covered elsewhere, so a regression here (e.g. a bad variant call) would
-    # otherwise only surface in Task 8's system specs.
-    it "renders a gallery thumbnail, ADA badge, characteristic icon chip, and building card" do
+    # thumbnail (Active Storage variant), the ADA badge, and a real
+    # characteristic icon chip (icon_key must resolve via IconRegistry — the
+    # display_rule factory's own default "wifi" isn't a real icon, so this
+    # proves the happy path with one that is). None of this is covered
+    # elsewhere, so a regression here (e.g. a bad variant call) would
+    # otherwise only surface in Task 8's system specs. (The buildings card
+    # grid was dropped in the 2026-07 redesign — cards carry the building
+    # name themselves.)
+    it "renders a gallery thumbnail, ADA badge, and characteristic icon chip" do
       listed_classroom.update!(ada_seat_count: 5)
       create(:room_gallery_image, room: listed_classroom, workspace: workspace)
       # Normalization-stable short_code: RoomCharacteristic stores the raw value
@@ -366,31 +372,32 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("rooms.row.ada", count: 5))
-      expect(response.body).to include(I18n.t("rooms.building_card.classroom_count", count: 1))
+      expect(response.body).not_to include(I18n.t("rooms.index.buildings_heading"))
     end
 
-    # Teeth for the nested-interactive a11y fix: the row's characteristic icon
-    # chip must give the (aria-hidden) icon a visually-hidden accessible name,
-    # and the <summary> subtree must contain NO focusable/interactive descendant
-    # — HTML5 forbids focusable descendants of <summary>, and axe-core's
-    # nested-interactive rule (Task 8) flags exactly a `tabindex`-bearing tooltip
-    # wrapper here. "Media: Projector" parses to the label "Projector" (Task 3
-    # grouping); "projector" is normalization-stable so the icon-key join hits.
-    it "renders the row characteristic chip with an sr-only name and no focusable element in the summary" do
+    # Teeth for the nested-interactive a11y posture: card tags are plain,
+    # LABELED <span>s (2026-07 redesign — labels over icons), and the
+    # <summary> subtree must contain NO focusable/interactive descendant —
+    # HTML5 forbids focusable descendants of <summary>, and axe-core's
+    # nested-interactive rule flags exactly a `tabindex`-bearing tooltip
+    # wrapper here. "projdigit" is in RoomsHelper::CARD_TAG_CODES and its
+    # locale override renders it as "Projector".
+    it "renders a labeled card tag and no focusable element in the summary" do
       create(:room_characteristic, room: listed_classroom, workspace: workspace,
-             short_code: "projector", description: "Media: Projector")
-      create(:characteristic_display_rule, workspace: workspace, short_code: "projector", icon_key: "computer_desktop")
+             short_code: "projdigit", description: "Projection: Digital Data&Video")
       sign_in(membership_with("viewer"))
 
       get find_a_room_path
 
-      summary_html = response.body[%r{<summary\b.*?</summary>}m]
-      expect(summary_html).to be_present
-      expect(summary_html).to include('class="sr-only">Projector')
-      # No focusable/interactive descendant of <summary>: the old ui :tooltip
-      # wrapper carried tabindex="0" + role="tooltip"; the plain <span> chip does not.
-      expect(summary_html).not_to include("tabindex")
-      expect(summary_html).not_to include('role="tooltip"')
+      # Card restructure: the visible tag rides the card body (not the
+      # summary — that's now just the Details toggle, which must stay free of
+      # focusable/interactive descendants).
+      page = Capybara.string(response.body)
+      card = page.all("li").find { |li| li.has_text?("Projector") }
+      expect(card).to be_present
+      summary = card.find("details summary")
+      expect(summary).to have_no_css("[tabindex]")
+      expect(summary).to have_no_css("[role='tooltip']")
     end
   end
 end

@@ -8,6 +8,26 @@ require_relative "../../lib/bullet_safelists"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  # Hermetic tenancy/auth baseline for the test suite. dotenv-rails loads the
+  # developer's .env in the test environment too, so a fork running the real
+  # product posture in .env (MiClassrooms sets WORKSPACE_ON_SIGNUP=shared,
+  # TENANCY_SHARED_WORKSPACE_SLUG=miclassrooms, TENANCY_SHARED_JOIN_ROLE=viewer,
+  # ALLOWED_GOOGLE_DOMAINS=umich.edu,...) would otherwise leak that config into
+  # tests: every un-stubbed create(:user) would hit User#join_shared_workspace
+  # and raise "shared workspace not found" (the test DB never seeds it), and
+  # Google OAuth specs using non-umich emails would be wrongly rejected. The
+  # suite is written against the template defaults (:personal onboarding, no
+  # shared workspace, no domain allowlist); posture-dependent specs stub
+  # config.x.tenancy per-example (see spec/models/user_spec.rb,
+  # spec/requests/buildings_spec.rb, spec/lib/tenancy_config_spec.rb). Pinning
+  # here mirrors config/application.rb's ENV.fetch defaults so local runs match
+  # CI (which has no .env). Keep in sync with those defaults.
+  config.x.tenancy.onboarding            = :personal
+  config.x.tenancy.workspace_creation    = :enabled
+  config.x.tenancy.shared_workspace_slug = nil
+  config.x.tenancy.shared_join_role      = "member"
+  config.x.auth.allowed_google_domains   = []
+
   # While tests run files are not watched, reloading is not necessary.
   config.enable_reloading = false
 

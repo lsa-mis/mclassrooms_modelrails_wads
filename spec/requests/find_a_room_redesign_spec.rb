@@ -1,0 +1,277 @@
+require "rails_helper"
+
+# Find a Room redesign (2026-07 design sprint, approved direction): a compact
+# filter card — one merged search box (`q`), always-visible minimum capacity,
+# promoted "popular features" chips — with the characteristic long tail behind
+# a native <details> "More filters" disclosure; count/sort header INSIDE the
+# results Turbo frame (so live feedback survives scrolling); removable
+# applied-filter chips; buildings grid dropped. Same tenancy stubbing pattern
+# as spec/requests/rooms_spec.rb.
+RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
+  include ClassroomBuilders
+
+  let(:workspace) { create(:workspace, slug: "redesign-spec-workspace", personal: false) }
+
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+  end
+
+  def membership_with(slug)
+    user = create(:user)
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    membership.update!(role: Role.system_default!(slug))
+    user
+  end
+
+  let(:viewer)   { membership_with("viewer") }
+  let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
+  let(:floor)    { create(:floor, building: building, label: "1") }
+  let!(:room)    { classroom(building, "1401", 45, codes: %w[intrscreen movetablet whtbrd blackout], floor: floor) }
+
+  before { sign_in(viewer) }
+
+  def page
+    Capybara.string(response.body)
+  end
+
+  it "renders one merged search box instead of separate building/room inputs" do
+    get find_a_room_path
+
+    expect(page).to have_css("input[name='q']")
+    expect(page).to have_no_css("input[name='building']")
+    expect(page).to have_no_css("input[name='room']")
+  end
+
+  # Prototype labeling: compact visible labels, but accessible names stay
+  # descriptive — the aria-label is a superset of the visible label text
+  # (WCAG 2.5.3 Label in Name), and the placeholder is only a hint.
+  it "labels search compactly with a descriptive accessible name and prototype placeholder" do
+    get find_a_room_path
+
+    input = page.find("input[name='q']")
+    expect(input["placeholder"]).to eq(I18n.t("rooms.filters.search_placeholder"))
+    expect(input["aria-label"]).to eq(I18n.t("rooms.filters.search_accessible_label"))
+    expect(page).to have_css("label[for='filter_q']", text: /\A#{I18n.t("rooms.filters.search_label")}\z/)
+    expect(page).to have_css("label[for='filter_capacity_min']", normalize_ws: true,
+                             text: /\A#{I18n.t('rooms.filters.capacity_label')}\z/)
+    # "minimum" rides as UI::FormField's own hint, wired via aria-describedby
+    # (component convention: "#{id}-hint") so the accessible name stays the
+    # label while AT still hears the qualifier.
+    input = page.find("input[name='capacity_min']")
+    expect(input["aria-describedby"]).to include("filter_capacity_min-hint")
+    expect(page).to have_css("#filter_capacity_min-hint", text: I18n.t("rooms.filters.capacity_min_hint"))
+    expect(I18n.t("rooms.filters.capacity_min_hint")).to eq("minimum")
+  end
+
+  it "keeps minimum capacity always visible and tucks maximum capacity behind More filters" do
+    get find_a_room_path
+
+    expect(page).to have_css("input[name='capacity_min']")
+    # visible: :all — the point is DOM placement behind the (closed) disclosure
+    expect(page).to have_css("details#more_filters input[name='capacity_max']", visible: :all)
+  end
+
+  # A `max=` on these inputs makes form.requestSubmit() FAIL constraint
+  # validation silently for over-bound values — typing 9999 froze every
+  # subsequent live filter change (verified in-browser). An over-bound minimum
+  # should return an honest "0 rooms found" instead.
+  it "leaves capacity inputs unclamped so over-bound values get zero results, not a blocked submit" do
+    get find_a_room_path
+
+    expect(page).to have_css("input[name='capacity_min']:not([max])")
+    expect(page).to have_css("details#more_filters input[name='capacity_max']:not([max])", visible: :all)
+  end
+
+  it "promotes popular features as chips outside the disclosure, without duplicating them inside" do
+    get find_a_room_path
+
+    expect(page).to have_css("input[type='checkbox'][name='characteristics[]'][value='intrscreen']")
+    expect(page).to have_no_css("details#more_filters input[value='intrscreen']", visible: :all)
+    # the long tail stays inside the disclosure
+    expect(page).to have_css("details#more_filters input[type='checkbox'][name='characteristics[]'][value='blackout']", visible: :all)
+  end
+
+  it "moves the unit select into More filters and drops the per-page select" do
+    get find_a_room_path
+
+    expect(page).to have_css("details#more_filters select[name='unit_id']", visible: :all)
+    expect(page).to have_no_css("select[name='per']", visible: :all)
+  end
+
+  it "puts the sort select inside the results frame, associated with the filter form" do
+    get find_a_room_path
+
+    expect(page).to have_css("turbo-frame#find_a_room_results select[name='sort'][form='find_a_room_form']")
+  end
+
+  it "renders applied filters as removable chip links inside the results frame" do
+    get find_a_room_path(q: "Mason", capacity_min: "40")
+
+    frame = page.find("turbo-frame#find_a_room_results")
+    expect(frame).to have_link(I18n.t("rooms.index.summary.query", value: "Mason"))
+    remove_query = frame.find_link(I18n.t("rooms.index.summary.query", value: "Mason"))["href"]
+    expect(remove_query).not_to include("q=")
+    expect(remove_query).to include("capacity_min=40")
+  end
+
+  it "no longer renders the buildings card grid" do
+    get find_a_room_path
+
+    expect(page).to have_no_css("turbo-frame#find_a_room_results aside")
+  end
+
+  it "gives the filter card a titled header with its own reset link, and a page subtitle" do
+    get find_a_room_path(q: "Mason")
+
+    form = page.find("form#find_a_room_form")
+    expect(form).to have_text(I18n.t("rooms.filters.card_title"))
+    expect(form).to have_link(I18n.t("rooms.filters.reset"))
+    expect(page).to have_text(I18n.t("rooms.index.subtitle"))
+  end
+
+  it "has exactly one clear control — the filter card header link" do
+    get find_a_room_path(q: "Mason")
+
+    expect(page).to have_link(I18n.t("rooms.filters.reset"), count: 1)
+    expect(page.find("turbo-frame#find_a_room_results")).to have_no_link(I18n.t("rooms.filters.reset"))
+  end
+
+  it "counts panel-only filters on the More-filters summary, ignoring promoted chips" do
+    get find_a_room_path(characteristics: %w[blackout intrscreen], capacity_max: "100")
+
+    expect(response.body).to include(I18n.t("rooms.filters.applied_count", count: 2))
+    expect(response.body).not_to include(I18n.t("rooms.filters.applied_count", count: 3))
+  end
+
+  it "renders a humanized card title, unit·floor meta, and a split capacity number" do
+    get find_a_room_path
+
+    card = page.find("turbo-frame#find_a_room_results li", match: :first)
+    expect(card).to have_text("1401 Mason Hall") # room number + building, not the facility code
+    expect(card).to have_text(I18n.t("rooms.row.floor_label", label: "1"))
+    expect(card).to have_text("45")
+    expect(card).to have_text(I18n.t("rooms.row.seats_label", count: 45))
+    # the title itself links to the room page (audit: no disclosure two-step)
+    expect(card).to have_link("1401 Mason Hall", href: room_path(room))
+    # the Details disclosure holds the full chiclet set
+    expect(card).to have_css("details summary", text: I18n.t("rooms.row.details_toggle"))
+  end
+
+  it "humanizes ALL-CAPS vendor building names in card titles, keeping campus acronyms" do
+    caps = create(:building, workspace: workspace, name: "CHEMISTRY AND DOW WILLARD H LABORATORY")
+    acro = create(:building, workspace: workspace, name: "LSA BUILDING")
+    classroom(caps, "1300", 500)
+    classroom(acro, "2001", 40)
+
+    get find_a_room_path
+
+    expect(page).to have_text("1300 Chemistry and Dow Willard H Laboratory")
+    expect(page).to have_text("2001 LSA Building")
+  end
+
+  it "falls back to the facility-code title with the building in the meta for numberless rooms" do
+    numberless = create(:room, building: building, workspace: workspace,
+                        room_number: nil, facility_code: "MASODD")
+
+    get find_a_room_path
+
+    card = page.all("turbo-frame#find_a_room_results li").find { |c| c.has_text?("MASODD") }
+    expect(card).to be_present
+    expect(card).to have_text("Mason Hall") # building surfaces in the meta line instead
+    expect(numberless.room_number).to be_nil
+  end
+
+  it "renders promoted chips with their locale-override labels" do
+    get find_a_room_path
+
+    expect(page).to have_css("label[for='characteristics_movetablet']", text: "Movable seating")
+  end
+
+  # Filter-label description tooltips: hovering the label (or focusing the
+  # checkbox) raises the glossary long_description. Follows UI::Tooltip's own
+  # guidance for interactive triggers — aria-describedby on the checkbox
+  # itself wired to a role="tooltip" bubble, Esc-dismissable. Rendered ONLY
+  # when a description exists; no extra tab stops, no trigger buttons.
+  describe "filter label description tooltips" do
+    before do
+      RoomCharacteristic.find_by!(short_code: "blackout")
+        .update!(long_description: "Shades or curtains that fully darken the room.")
+      RoomCharacteristic.find_by!(short_code: "whtbrd")
+        .update!(long_description: "A wall-mounted dry-erase whiteboard.")
+    end
+
+    it "wires described panel checkboxes to hover/focus tooltips via aria-describedby" do
+      get find_a_room_path
+
+      panel = page.find("details#more_filters")
+      input = panel.find("input[value='blackout']", visible: :all)
+      expect(input["aria-describedby"]).to eq("tip_characteristics_blackout")
+      expect(panel).to have_css("span#tip_characteristics_blackout[role='tooltip']",
+                                text: "Shades or curtains that fully darken the room.", visible: :all)
+      # no leftover popover trigger buttons anywhere in the panel
+      expect(panel).to have_no_css("button[aria-haspopup='dialog']", visible: :all)
+    end
+
+    it "tooltips described promoted chips and skips undescribed labels" do
+      get find_a_room_path
+
+      popular = page.find("form#find_a_room_form fieldset", match: :first)
+      expect(popular).to have_css("span[role='tooltip']", text: "wall-mounted dry-erase", visible: :all)
+      # intrscreen has no long_description — plain checkbox, no describedby, no bubble
+      expect(popular.find("input[value='intrscreen']")["aria-describedby"]).to be_nil
+    end
+  end
+
+  it "renames vendor group legends through the locale override map" do
+    classroom(building, "2002", 30, codes: %w[ethrstud]).room_characteristics
+      .first.update!(description: "Ethernet Connection: Students")
+
+    get find_a_room_path
+
+    expect(page).to have_css("details#more_filters legend", text: "Ethernet", visible: :all)
+    expect(page).to have_no_css("details#more_filters legend", text: "Ethernet Connection", visible: :all)
+  end
+
+  it "hides the workspace shell on the other directory pages too" do
+    sidebar = "aside[aria-label='#{I18n.t("workspaces.sidebar.aria_label")}']"
+
+    get buildings_path
+    expect(page).to have_no_css(sidebar)
+
+    get filters_glossary_path
+    expect(page).to have_no_css(sidebar)
+  end
+
+  # Directory pages are public-facing: the workspace shell (sidebar, identity
+  # bar, section-nav strip) is workspace-member chrome whose links make no
+  # sense to a viewer finding a room (Dave, 2026-07-11).
+  it "renders full-width, without the workspace sidebar shell" do
+    get find_a_room_path
+
+    expect(page).to have_no_css("aside[aria-label='#{I18n.t("workspaces.sidebar.aria_label")}']")
+  end
+
+  describe "admin inactive views" do
+    let(:admin) { membership_with("admin") }
+
+    it "banners the inactive scope with a way back to the active view" do
+      sign_in(admin)
+      get find_a_room_path(view: "inactive_rooms")
+
+      # role="note", not a live region: persistent context must not re-announce
+      # on every filter re-render (UI::Alert's role: override).
+      expect(page.find("[role='note']"))
+        .to have_text(I18n.t("rooms.index.inactive_view_notice.inactive_rooms"))
+      expect(page.find("turbo-frame#find_a_room_results"))
+        .to have_link(I18n.t("rooms.index.inactive_view_notice.back_to_active"))
+    end
+
+    it "shows no banner on the active view" do
+      sign_in(admin)
+      get find_a_room_path
+
+      expect(response.body).not_to include(I18n.t("rooms.index.inactive_view_notice.back_to_active"))
+    end
+  end
+end

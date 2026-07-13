@@ -1,0 +1,42 @@
+<%# locals: (room:, presenter:) %>
+<%# The MAJORITY case — most rooms carry zero media. A quiet, deliberately
+    short branded band: no "not found" wording (nothing is broken), no fake
+    tabs, never hero height. The mark uses the fork's brand tokens
+    (bg-interactive / text-accent) so another fork gets its own colors
+    through _brand.css without touching this view. Editors get the curation
+    prompt in the slot. %>
+<div data-testid="empty-media-band"
+     class="mt-6 relative overflow-hidden rounded-md bg-interactive min-h-36
+            flex items-end py-3">
+  <%# Watermark mark pinned to the top-right corner (out of the text's way —
+      the meta line can wrap). Not text-accent: under workspace branding,
+      accent and interactive share a hue family, so an accent M on an
+      interactive band disappears; on-interactive at low alpha reads as a
+      quiet watermark on any fork's brand color. %>
+  <%# Center-top: clear of BOTH the left identity block and the right-aligned
+      capacity column (audit: right-pinned, it collided with the seat count). %>
+  <span aria-hidden="true"
+        class="absolute left-1/2 -translate-x-1/2 top-2 text-6xl font-extrabold leading-none text-text-on-interactive/25 select-none">M</span>
+
+  <div class="flex w-full items-end justify-between gap-4 px-4 pb-1">
+    <div class="min-w-0">
+      <h1 class="text-xl font-bold text-text-on-interactive"><%= room.display_name %></h1>
+      <p class="text-sm text-text-on-interactive/90"><%= room_meta_line(room) %></p>
+    </div>
+    <div class="text-right shrink-0 pe-1">
+      <span class="sr-only"><%= presenter.capacity_line %></span>
+      <span aria-hidden="true">
+        <span class="block text-2xl font-bold text-text-on-interactive tabular-nums leading-tight"><%= room.instructional_seat_count.to_i %></span>
+        <span class="block text-xs uppercase tracking-wide text-text-on-interactive/90">
+          <%= t("rooms.show.seats_unit") %><% if room.ada_seat_count.to_i.positive? %> · <%= t("rooms.row.ada", count: room.ada_seat_count) %><% end %>
+        </span>
+      </span>
+      <% if policy(room).edit? %>
+        <%# focus outline recolored: the default focus token IS the band's own
+            interactive hue — invisible here (audit, Léonie / 2.4.7). %>
+        <%= link_to t("rooms.show.add_photos"), edit_room_path(room),
+              class: "btn-secondary mt-2 bg-surface focus-visible:outline-text-on-interactive" %>
+      <% end %>
+    </div>
+  </div>
+</div>
