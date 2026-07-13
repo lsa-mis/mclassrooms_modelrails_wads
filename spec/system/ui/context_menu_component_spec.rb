@@ -48,6 +48,20 @@ RSpec.describe "Context menu component accessibility", type: :system do
     expect(focused_text).to eq("Edit")
   end
 
+  # The trigger carries role="button" — so it must HONOR button activation.
+  # Enter and Space open the menu (anchored to the trigger) and focus the
+  # first item, not just the Shift+F10 path (2026-07-13 review: role=button
+  # was a name-role-value promise the trigger didn't keep).
+  %w[Enter Space].each do |key|
+    it "opens on #{key} (honoring role=button) and focuses the first item" do
+      page.evaluate_script("document.querySelector('[data-menu-target=trigger]').focus()")
+      page.driver.with_playwright_page { |pw| pw.keyboard.press(key) }
+
+      expect(page).to have_css("[role='menu']:not([hidden])")
+      expect(focused_text).to eq("Edit")
+    end
+  end
+
   it "ArrowDown wraps and SKIPS the disabled item" do
     open_by_right_click # focus on "Edit"
 

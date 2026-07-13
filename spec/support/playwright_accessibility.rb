@@ -269,6 +269,19 @@ module PlaywrightAccessibility
           // one of its descendants — a plated chip inside a tabbable tooltip
           // wrapper) with an opaque background means plated; hitting media
           // before ANY opaque background means unguaranteed contrast.
+          // "Media" for contrast purposes is not only <img>/<canvas>/<video>:
+          // an inline <svg> illustration, or a photo set via CSS
+          // `background-image: url(...)`, is just as unknowable a backdrop
+          // (2026-07-13 review — the archetypal "text over hero photo" is
+          // often a CSS background, not an <img>). A gradient/solid
+          // background-image is deliberately NOT treated as media here — it
+          // is not a raster photo — but its opacity is also not asserted, so
+          // a genuinely opaque background-color plate is still required.
+          const isMedia = (node) => {
+            if (node.matches && node.matches("img, canvas, video, svg")) return true;
+            const bg = getComputedStyle(node).backgroundImage;
+            return typeof bg === "string" && bg.includes("url(");
+          };
           const overMediaUnplated = (el) => {
             const r = el.getBoundingClientRect();
             const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -280,7 +293,7 @@ module PlaywrightAccessibility
                 continue;
               }
               if (opaque) return false;
-              if (node.matches("img, canvas, video")) return true;
+              if (isMedia(node)) return true;
             }
             return false;
           };
@@ -311,7 +324,17 @@ module PlaywrightAccessibility
               }
             } else if (["none", "0px"].includes(rule.style.getPropertyValue("outline-style") || rule.style.getPropertyValue("outline-width")) ||
                        rule.style.getPropertyValue("outline") === "0") {
-              for (const part of sel.split(",")) suppressSelectors.push(part.trim());
+              // Strip :focus* SYMMETRICALLY with the focus branch above. A
+              // suppressor written the idiomatic way — `.btn:focus-visible {
+              // outline: none }` — must reduce to `.btn` so it matches the
+              // element during this UNFOCUSED sweep; keeping the pseudo made
+              // `el.matches(".btn:focus-visible")` always false, so the check
+              // silently missed the single most common way focus rings are
+              // killed (found in the 2026-07-13 review).
+              for (const part of sel.split(",")) {
+                const stripped = part.replace(/:focus-visible|:focus-within|:focus/g, "").trim();
+                if (stripped) suppressSelectors.push(stripped);
+              }
             }
           } catch (_) {} } };
           for (const s of document.styleSheets) { try { collectRules(s.cssRules); } catch (_) {} }
