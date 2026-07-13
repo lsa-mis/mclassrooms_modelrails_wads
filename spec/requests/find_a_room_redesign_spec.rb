@@ -158,6 +158,40 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(card).to have_css("details summary", text: I18n.t("rooms.row.details_toggle"))
   end
 
+  # Backlog #7: the applied-count badge lives in the form, OUTSIDE the results
+  # frame — a frame-only re-render left it stale. The frame now carries a
+  # hidden [data-panel-count] mirror of the same server-side count;
+  # filter_form_controller copies it into the [data-panel-badge] holder after
+  # each render. Server stays the single source of truth for count + phrasing.
+  it "mirrors the panel-applied count inside the results frame for the live badge" do
+    get find_a_room_path(characteristics: %w[blackout])
+
+    frame = page.find("turbo-frame#find_a_room_results")
+    expect(frame).to have_css("[data-panel-count]", text: I18n.t("rooms.filters.applied_count", count: 1),
+                              visible: :all)
+    expect(page).to have_css("summary [data-panel-badge]:not([hidden])",
+                             text: I18n.t("rooms.filters.applied_count", count: 1))
+  end
+
+  it "renders an empty mirror and a hidden badge holder when nothing panel-applied" do
+    get find_a_room_path
+
+    expect(page.find("[data-panel-count]", visible: :all).text(:all)).to eq("")
+    expect(page).to have_css("summary [data-panel-badge][hidden]", visible: :all)
+  end
+
+  # Backlog #8: a curated short name beats humanization — "1018 Chemistry and
+  # Dow Willard H Laboratory" wraps on narrow cards; an admin-set short name
+  # is the compactness lever (data, not the acronym allowlist in code).
+  it "prefers a curated building short name over the humanized vendor name in card titles" do
+    building.update!(short_name: "Mason")
+
+    get find_a_room_path
+
+    expect(page).to have_text("1401 Mason")
+    expect(page).to have_no_text("1401 Mason Hall")
+  end
+
   it "humanizes ALL-CAPS vendor building names in card titles, keeping campus acronyms" do
     caps = create(:building, workspace: workspace, name: "CHEMISTRY AND DOW WILLARD H LABORATORY")
     acro = create(:building, workspace: workspace, name: "LSA BUILDING")
