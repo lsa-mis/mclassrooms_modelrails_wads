@@ -34,6 +34,24 @@ class ApplicationController < ActionController::Base
     Current.user
   end
 
+  # Fork override of the template's authenticated-landing seam
+  # (Authenticatable#authenticated_home_path): signing in drops a non-admin
+  # straight into the product — Find a Room — ONCE, at authentication time.
+  # Root itself never redirects (panel call, 2026-07-13: "where sign-in drops
+  # you" and "what home is" are different decisions — the logo links to root,
+  # and a link named for the site must mean the same thing for every role).
+  # Same admittable gate DirectoryScoped applies to GET /find-a-room, so a
+  # missing/personal-posture/suspended shared workspace falls back to the
+  # landing instead of chaining through DirectoryScoped's own redirect.
+  def authenticated_home_path
+    resume_session
+    workspace = TenancyConfig.shared_workspace # nil unless shared posture + kept workspace
+    return root_path unless Current.user && workspace && !workspace.suspended?
+    return root_path if RoleResolver.for(Current.user).admin? # admins keep the landing
+
+    find_a_room_path
+  end
+
   def user_not_authorized
     destination = if Current.workspace.present?
       workspace_path(Current.workspace)
