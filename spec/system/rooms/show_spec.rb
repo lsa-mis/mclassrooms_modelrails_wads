@@ -135,11 +135,18 @@ RSpec.describe "Room show", type: :system do
     # `role="dialog"` on a plain `<div>`, and it stays on the page throughout,
     # so an unscoped selector both false-matches it opened and never closes
     # it after Escape.
-    # Panorama pane is the media stage's default tab: assert the opt-in
-    # "Load 360°" button, not a booted WebGL viewer — headless Chromium may
-    # lack WebGL, and the point of click-to-load is nothing renders until
-    # this button is pressed.
+    # Panorama pane is the media stage's default tab. Clicking "Load 360°"
+    # must (1) hide the WHOLE overlay — a lingering inset-0 overlay swallows
+    # every drag/zoom, the 2026-07-13 interaction bug — and (2) hand focus to
+    # the viewer (hiding the focused button drops focus to <body>, WCAG
+    # 2.4.3). Only non-WebGL DOM outcomes are asserted: pannellum builds
+    # .pnlm-container and takes focus even when headless Chromium lacks WebGL
+    # (it renders its error message inside), so this is CI-safe.
     expect(page).to have_button(I18n.t("rooms.show.load_panorama"))
+    click_button I18n.t("rooms.show.load_panorama")
+    expect(page).to have_css("#room_panorama_stage .pnlm-container")
+    expect(page).to have_no_css("[data-panorama-target='overlay']", visible: :visible)
+    expect(page.evaluate_script("document.activeElement.classList.contains('pnlm-container')")).to be(true)
 
     # Redesign v4: photos are the stage's second tab — switching panes hides
     # (never removes) the panorama panel, per the WebGL-survival rule.
