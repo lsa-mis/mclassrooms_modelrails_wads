@@ -56,7 +56,7 @@
           <% if @building.photo.variable? %>
             <%= ui :figure do %>
               <%= ui :image,
-                    src: rails_representation_path(@building.photo.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
+                    src: rails_representation_path(@building.photo.variant(:thumb)),
                     alt: t("buildings.show.photo_alt", building: @building.display_name),
                     width: 150, height: 150,
                     class: "size-[150px] rounded-md object-cover" %>

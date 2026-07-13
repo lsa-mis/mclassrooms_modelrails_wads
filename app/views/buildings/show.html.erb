@@ -45,8 +45,10 @@
   <% if @building.photo.attached? %>
     <div class="mt-6">
       <%= ui :figure do %>
+        <%# :hero named variant (Building#photo), never the raw blob — the
+            originals run multi-MB and this box maxes out well under 1600px. %>
         <%= ui :image,
-              src: rails_blob_path(@building.photo),
+              src: rails_representation_path(@building.photo.variant(:hero)),
               alt: t(".photo_alt", building: @building.display_name),
               loading: :eager,
               class: "w-full max-h-96 rounded-md border border-border object-cover" %>
