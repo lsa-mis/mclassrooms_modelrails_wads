@@ -72,7 +72,11 @@ RSpec.describe "Okta OIDC", type: :request do
 
     it "signs the user in" do
       get "/auth/okta/callback"
-      expect(response).to redirect_to(root_path)
+      # Non-admin viewer signing in under the shared posture set up above:
+      # ApplicationController#authenticated_home_path drops them straight into
+      # the product (Find a Room), not the landing — same rule the session and
+      # magic-link sign-in paths follow.
+      expect(response).to redirect_to(find_a_room_path)
     end
 
     it "joins the shared workspace as Viewer (MiClassrooms' onboard_workspace posture)" do
@@ -104,7 +108,9 @@ RSpec.describe "Okta OIDC", type: :request do
       }.not_to change(User, :count)
 
       expect(user.authentications.where(provider: "okta").count).to eq(1)
-      expect(response).to redirect_to(root_path)
+      # Returning non-admin viewer: lands in Find a Room, same as a first
+      # sign-in (see "signs the user in" above).
+      expect(response).to redirect_to(find_a_room_path)
     end
   end
 
