@@ -9,6 +9,13 @@ export default class extends Controller {
   }
 
   connect() {
+    // Neutralize the panel's class-supplied `scale-95` on EVERY path — TW4
+    // compiles it to the separate scale: property, which composes with the
+    // inline transform below instead of being overridden; paths that skip
+    // animateIn (server-rendered open dialogs) otherwise rest 5% shrunken
+    // (a11y gate, 2026-07-13).
+    if (this.hasPanelTarget) this.panelTarget.style.scale = "1"
+
     this.prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     this.handleCancel = this.handleCancel.bind(this)
     this.handleClick = this.handleClick.bind(this)
@@ -86,6 +93,14 @@ export default class extends Controller {
   }
 
   animateIn() {
+    // Tailwind 4 regression (a11y gate, 2026-07-13): the panel's `scale-95`
+    // class compiles to the separate `scale:` property, which COMPOSES with
+    // the inline `transform: scale(1)` set below instead of being overridden
+    // by it — every open panel rested at 95% (44px close buttons measured
+    // 41.8px). Neutralize the class's channel; the inline transform owns the
+    // animation from here.
+    this.panelTarget.style.scale = "1"
+
     if (this.prefersReducedMotion) {
       this.panelTarget.style.opacity = "1"
       this.panelTarget.style.transform = this.enterTransformValue

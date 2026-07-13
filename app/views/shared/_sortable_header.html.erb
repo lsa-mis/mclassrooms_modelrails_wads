@@ -18,7 +18,7 @@
 <th scope="col" aria-sort="<%= aria_sort %>" class="text-left py-3 px-2">
   <%= link_to url.call(sort: column, direction: next_direction),
         data: { turbo_frame: "members_results" },
-        class: "group inline-flex items-center gap-1 text-sm font-medium text-text-muted
+        class: "group inline-flex min-h-11 min-w-11 items-center gap-1 text-sm font-medium text-text-muted
                 hover:text-interactive-hover
                 focus-ring rounded" do %>
     <%= title %>

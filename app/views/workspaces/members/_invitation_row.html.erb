@@ -29,15 +29,15 @@
       <%= button_to t("workspaces.members.index.pending_invitations.resend"),
             resend_workspace_invitation_path(workspace, invitation),
             method: :post,
-            class: "text-sm text-interactive hover:text-interactive-hover bg-transparent border-0 cursor-pointer p-0
-                    focus-ring rounded" %>
+            class: "text-sm text-interactive hover:text-interactive-hover bg-transparent border-0 cursor-pointer
+                    inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
     <% if policy(invitation).destroy? %>
       <%= button_to t("workspaces.members.index.pending_invitations.revoke"),
             workspace_invitation_path(workspace, invitation),
             method: :delete,
-            class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer p-0
-                    focus-ring rounded" %>
+            class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer
+                    inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
   </td>
 </tr>

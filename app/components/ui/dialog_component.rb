@@ -32,8 +32,13 @@ module UI
 
     SIZES = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", full: "max-w-4xl" }.freeze
 
+    # No `scale-95` rest class: TW4 compiles it to the separate scale:
+    # property, which COMPOSES with the modal controller's inline
+    # transform:scale(1) instead of being overridden — open panels rested 5%
+    # shrunken (a11y gate, 2026-07-13). The controller sets the pre-open
+    # transform inline; the closed <dialog> hides the panel regardless.
     PANEL = "relative w-full mx-auto rounded-lg bg-surface-overlay border border-border shadow-xl " \
-            "max-h-[calc(100vh-3rem)] flex flex-col opacity-0 scale-95"
+            "max-h-[calc(100vh-3rem)] flex flex-col opacity-0"
 
     # title:       heading text (also the accessible name via aria-labelledby)
     # id:          dialog id (auto-generated if omitted)

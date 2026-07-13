@@ -68,6 +68,15 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
     expect(page).to have_no_css("[data-testid='empty-media-band']")
     # single medium → no tabs
     expect(page).to have_no_css("[role='tablist']")
+
+    # Over-photo controls sit on OPAQUE surface-overlay plates (2026-07-13
+    # contrast audit): contrast against an arbitrary poster is unknowable and
+    # axe skips raster backgrounds, so the plate is the guarantee. The info
+    # chip is min-44px — its tooltip wrapper is tabbable, making it a real
+    # target under the AAA floor.
+    overlay = stage.find("[data-panorama-target='overlay']")
+    expect(overlay).to have_css("button.bg-surface-overlay", text: I18n.t("rooms.show.load_panorama"))
+    expect(overlay).to have_css("span.min-h-11.min-w-11.bg-surface-overlay")
   end
 
   it "tabs the stage only when both panorama and photos exist, panes hidden not removed" do

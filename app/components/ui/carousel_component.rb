@@ -19,8 +19,11 @@ module UI
     # widen the slide past one frame (else translateX(-100%) lands slides partially).
     SLIDE_CLS = "w-full shrink-0 overflow-hidden"
 
+    # bg at /95, not /80: the arrows float over slide IMAGES, and below ~90%
+    # opacity the plate can't guarantee glyph contrast over arbitrary photos
+    # (a11y gate, mc-transparent-over-media, 2026-07-13).
     BTN_BASE  = "absolute top-1/2 z-10 -translate-y-1/2 inline-flex size-11 items-center justify-center " \
-                "rounded-full bg-surface-raised/80 backdrop-blur border border-border shadow-sm " \
+                "rounded-full bg-surface-raised/95 backdrop-blur border border-border shadow-sm " \
                 "transition hover:bg-surface-raised disabled:opacity-40 focus-ring"
     BTN_PREV  = "left-2"
     BTN_NEXT  = "right-2"

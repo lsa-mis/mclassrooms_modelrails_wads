@@ -47,10 +47,12 @@ module UI
     EMPTY = "py-4 text-center text-sm text-text-muted"
 
     # Input height per size.
+    # All sizes meet the 44px AAA target floor (2026-07-13 gate); sm/md/lg
+    # now vary width/typography, not trigger height.
     SIZES = {
-      sm: "h-8",
-      md: "h-9",
-      lg: "h-10"
+      sm: "h-11",
+      md: "h-11",
+      lg: "h-11"
     }.freeze
 
     def initialize(name:, options: [], value: nil, placeholder: nil, label: nil, size: :md, **html_attrs)
