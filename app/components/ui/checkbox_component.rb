@@ -76,11 +76,15 @@ module UI
     # The label is the input's peer sibling so `peer-disabled:` style hooks apply,
     # and it is the larger clickable pointer target that satisfies AAA 2.5.5 — the
     # visual control stays size-4 (16px) by design; do not bloat it.
+    # min-h-11 + inline-flex: the CLAIM above was aspirational — a text-sm
+    # label measures ~16px tall, so input+label union was 100x16, far under
+    # the 44px floor (2026-07-13 gate upgrade, backlog #10). The hit area
+    # grows invisibly; text baseline unchanged.
     def label_tag
       content_tag(:label,
         @label,
         for: @id,
-        class: "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50")
+        class: "inline-flex min-h-11 items-center text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-50")
     end
   end
 end
