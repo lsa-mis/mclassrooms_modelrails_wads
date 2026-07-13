@@ -5,6 +5,6 @@
 <%= link_to workspace_path(workspace),
       id: "workspace-name-heading",
       aria: { label: t("workspaces.identity_bar.overview_link_label", name: workspace.name) },
-      class: "min-h-[44px] inline-flex items-center text-lg font-bold text-text-heading truncate rounded focus-ring hover:text-interactive" do %>
+      class: "min-h-[44px] min-w-11 inline-flex items-center text-lg font-bold text-text-heading truncate rounded focus-ring hover:text-interactive" do %>
   <%= workspace.name %>
 <% end %>

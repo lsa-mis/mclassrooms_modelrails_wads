@@ -249,8 +249,15 @@ module PlaywrightAccessibility
               r = { width: Math.max(r.right, lr.right) - Math.min(r.left, lr.left),
                     height: Math.max(r.bottom, lr.bottom) - Math.min(r.top, lr.top) };
             }
-            if (r.width < floor || r.height < floor)
-              tooSmall.push({ el, why: `target ${Math.round(r.width)}x${Math.round(r.height)} — floor is ${widgetItem ? "24x24 (2.5.8 AA, widget-item deviation)" : "44x44 (2.5.5)"}` });
+            // Layout-box fallback: getBoundingClientRect shrinks under
+            // transforms — an audit racing a dialog's 200ms close animation
+            // (panel at scale .95) measured 44px buttons at 42. offsetWidth/
+            // Height ignore transforms; persistent scale bugs are prevented
+            // at the source (no scale-* rest classes on panels).
+            const w = Math.max(r.width, el.offsetWidth || 0);
+            const h = Math.max(r.height, el.offsetHeight || 0);
+            if (w < floor || h < floor)
+              tooSmall.push({ el, why: `target ${Math.round(w)}x${Math.round(h)} — floor is ${widgetItem ? "24x24 (2.5.8 AA, widget-item deviation)" : "44x44 (2.5.5)"}` });
           }
           pushCheck("mc-target-size-44", "Touch targets must be at least 44x44 (WCAG 2.5.5 AAA; label union counts)", tooSmall);
 
@@ -466,7 +473,16 @@ RSpec.configure do |config|
 
   # In CI, automatically run axe accessibility audit after every system spec
   if ENV["CI"]
-    config.after(:each, type: :system) do
+    config.after(:each, type: :system) do |example|
+      # Deliberate-violation examples (component previews that DOCUMENT an
+      # anti-pattern) opt out explicitly — tag with `skip_axe_hook: true`
+      # and say why at the tag site.
+      next if example.metadata[:skip_axe_hook]
+
+      # Multi-session examples can end with an about:blank window current —
+      # auditing an empty document only produces a bogus document-title
+      # violation.
+      next if Capybara.current_session.current_url.start_with?("about:")
       # Prepare toasts for audit:
       # - Defeat in-progress animations (element opacity, transforms)
       # - Force a solid background so axe can reliably compute color contrast.
@@ -505,7 +521,10 @@ RSpec.configure do |config|
       # wrongly credited a "wcag22aaa" tag that was never passed (and which
       # covers no 44px rule anyway — the mc-* custom checks in run_axe_audit
       # handle 44px targets, focus indicators, and over-media transparency).
-      results = run_axe_audit(DEFAULT_AXE_OPTIONS.dup)
+      # Fully qualified: this block's LEXICAL scope is outside the module, so
+      # a bare constant NameErrors even though config.include provides the
+      # METHODS — and only CI runs this hook, so local runs never catch it.
+      results = run_axe_audit(PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup)
       violations = results["violations"] || []
 
       formatted = violations.map { |v| format_violation(v) }

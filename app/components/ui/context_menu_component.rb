@@ -99,7 +99,13 @@ module UI
     def trigger_region
       content_tag(:div, trigger,
         id: @trigger_id,
-        class: "select-none",
+        # min 44px: the trigger is TABBABLE (right-click/keyboard surface) —
+        # a real target under the AAA floor (a11y gate, 2026-07-13).
+        # role=button: aria-haspopup/aria-expanded are NOT allowed on a
+        # role-less div (axe aria-allowed-attr, critical); the trigger is
+        # operable (tabindex + keydown) and named by its contents.
+        role: "button",
+        class: "select-none inline-flex min-h-11 min-w-11 items-center",
         tabindex: "0",
         "aria-haspopup": "menu",
         "aria-expanded": "false",
