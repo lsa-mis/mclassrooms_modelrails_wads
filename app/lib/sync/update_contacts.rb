@@ -24,34 +24,35 @@
 # reports that uniformly whether the RoomContact was brand new or already on
 # file.
 #
-# "" -> nil coercion (never store an empty string): #parse_contact calls
-# `.presence` on every field pulled from the response. contacts_MLB1200.json
-# already demonstrates the gateway sending a JSON `null` for an absent field
-# (SupportPhone), which JSON.parse already turns into a Ruby nil;
-# contacts_AH0100.json additionally sends an explicit "" and omits several
-# keys entirely — `.presence` handles all three shapes ("" -> nil, JSON null
-# -> already nil -> nil, missing key -> nil -> nil) with one call.
+# "" -> nil coercion, and space-padded values (sync-fix-decisions.md Risk 1,
+# live-confirmed 2026-07-10): the real gateway sends every field
+# space-padded when empty (`" "`, not `""` or JSON `null`) — #parse_contact
+# therefore calls `.to_s.strip.presence` on every field, not a bare
+# `.presence`: `.to_s` tolerates a JSON `null` (already nil, `.to_s` -> `""`),
+# `.strip` collapses the space-padding to `""`, and `.presence` turns that
+# `""` into `nil` — never storing a blank or whitespace-only string either
+# way.
 #
 # parse_contact(row) / contacts_from(body) isolation: per spec/support/
 # um_api_stubs.rb's fixture-shape disclaimer, these are the ONLY two places
-# that reach into a raw API response hash directly.
-# SchedName/SchedEmail/SchedPhone/SchedDetailUrl/SchedUsageGuidelinesUrl/
-# SupportDeptId/SupportDeptDescr/SupportEmail/SupportPhone/SupportUrl
-# (parse_contact) match spec/fixtures/um_api/contacts_MLB1200.json exactly,
-# and the "Contacts" envelope key (contacts_from) matches that same
-# fixture's top-level shape — NOT verified against credentialed access — if
-# phase 8's cutover finds different field names or a different envelope key,
-# only these two methods need to change.
+# that reach into a raw API response hash directly. `ContactName`/`Email`/
+# `Phone`/`ScheduleURL`/`UsageGuideLinesURL`/`SpptDeptID`/`SpptCntctEmail`/
+# `SpptCntctPhone`/`SpptCntctURL` (parse_contact) and the "Classrooms" ->
+# "Classroom" envelope (contacts_from) are LIVE-CONFIRMED
+# (sync-fix-decisions.md Risk 1, 2026-07-10) against the real gateway — the
+# highest-uncertainty phase in the original sync-fix plan, now resolved.
+# `support_department_description` has no source field in the real feed at
+# all and is always nil.
 #
-# Endpoint path ("/bf/Buildings/v2/Classrooms/{facility_code}/Contacts"):
-# mirrors Sync::UpdateCharacteristics's own per-classroom nesting off the
-# same "/bf/Buildings/v2/Classrooms" parent — a best-effort guess pending
-# phase 8's credentialed cutover, like every other phase's path constants.
+# Endpoint path ("/aa/ClassroomList/v2/Classrooms"): confirmed against live
+# credentialed access (sync-fix Task 4) — replaces the earlier best-effort
+# guess ("/bf/Buildings/v2/Classrooms"); the "Contacts" sub-resource segment
+# is unchanged.
 module Sync
   class UpdateContacts < BasePhase
     KEY = "contacts"
 
-    CLASSROOMS_PATH = "/bf/Buildings/v2/Classrooms"
+    CLASSROOMS_PATH = "/aa/ClassroomList/v2/Classrooms"
 
     private
 
@@ -61,7 +62,7 @@ module Sync
       end
     end
 
-    def contacts_path(facility_code) = "#{CLASSROOMS_PATH}/#{facility_code}/Contacts"
+    def contacts_path(facility_code) = "#{CLASSROOMS_PATH}/#{ERB::Util.url_encode(facility_code)}/Contacts"
 
     def sync_contact(room)
       row = fetch_contact(room)
@@ -80,23 +81,23 @@ module Sync
       contacts_from(body).first
     end
 
-    # Single documented raw-access point for the response envelope's key —
-    # see header comment. If phase 8's cutover finds the envelope shaped
+    # Single documented raw-access point for the response envelope's shape —
+    # see header comment. If a future cutover finds the envelope shaped
     # differently, only this method needs to change.
-    def contacts_from(body) = body.fetch("Contacts", [])
+    def contacts_from(body) = body.dig("Classrooms", "Classroom") || []
 
     def parse_contact(row)
       {
-        scheduling_name: row["SchedName"].presence,
-        scheduling_email: row["SchedEmail"].presence,
-        scheduling_phone: row["SchedPhone"].presence,
-        scheduling_detail_url: row["SchedDetailUrl"].presence,
-        scheduling_usage_guidelines_url: row["SchedUsageGuidelinesUrl"].presence,
-        support_department_id: row["SupportDeptId"].presence,
-        support_department_description: row["SupportDeptDescr"].presence,
-        support_email: row["SupportEmail"].presence,
-        support_phone: row["SupportPhone"].presence,
-        support_url: row["SupportUrl"].presence
+        scheduling_name: row["ContactName"].to_s.strip.presence,
+        scheduling_email: row["Email"].to_s.strip.presence,
+        scheduling_phone: row["Phone"].to_s.strip.presence,
+        scheduling_detail_url: row["ScheduleURL"].to_s.strip.presence,
+        scheduling_usage_guidelines_url: row["UsageGuideLinesURL"].to_s.strip.presence,
+        support_department_id: row["SpptDeptID"].to_s.strip.presence,
+        support_department_description: nil,
+        support_email: row["SpptCntctEmail"].to_s.strip.presence,
+        support_phone: row["SpptCntctPhone"].to_s.strip.presence,
+        support_url: row["SpptCntctURL"].to_s.strip.presence
       }
     end
   end

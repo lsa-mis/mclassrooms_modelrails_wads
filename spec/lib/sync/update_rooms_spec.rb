@@ -8,30 +8,45 @@ require "rails_helper"
 # differences unique to rooms:
 #
 # 1. ALL ROOM TYPES (Brief §14.2) — rooms_1005046.json deliberately mixes a
-#    Classroom, a Class Laboratory, and an Office (blank department group)
-#    so a `RoomType == "Classroom"` filter (the legacy app's behavior) would
-#    be caught immediately by the first describe block below.
+#    Classroom, a Class Laboratory, and an Office (blank department name) so
+#    a `RoomTypeDescription == "Classroom"` filter (um_import's DEV-only
+#    shortcut — sync-fix-decisions.md Risk 3 — NOT this phase's product
+#    policy) would be caught immediately by the first describe block below.
 # 2. Per-building walk — there is no flat rooms listing endpoint; this phase
 #    walks `Building.for_current_workspace` (buildings must already exist —
 #    seeded directly via the :building factory here, not through
-#    Sync::UpdateBuildings) and fetches one paginated feed per building.
-# 3. Department bulk preload + per-id fallback — departments.json omits dept
-#    id "190100" (the Class Laboratory's department) on purpose, so every
-#    example that stubs the fallback endpoint is exercising a REAL miss, not
-#    a no-op.
+#    Sync::UpdateBuildings) and fetches one paginated feed per building via
+#    `GET /bf/Buildings/v2/RoomInfo/{bldrecnbr}`.
+# 3. Department join by NAME, not id (sync-fix Task 3 — the structural
+#    change of this rewrite) — RoomInfo carries no department id at all,
+#    only a free-text `DepartmentName`. `departments.json` (the bulk
+#    `GET /bf/Department/v2/DeptData` preload) omits "LSA - Chemistry" (the
+#    Class Laboratory's department name) on purpose, so every example that
+#    stubs the fallback endpoint is exercising a REAL miss resolved via the
+#    `?DeptDescription=` query-param GET, not a no-op.
 # 4. Deactivation is a single all-or-nothing TRANSACTION (Brief §6.1 phase
 #    3), unlike Campus's per-record-rescued hard-delete (Task 7) or
 #    Building's warn-only absence (Task 8) — the "rolls back" example below
 #    induces a real failure mid-sweep and asserts the DB shows zero partial
 #    deactivations, not just that the phase reports failure.
+# 5. Floor-label normalization (new in this rewrite) — the Office room's
+#    `FloorNumber` is deliberately `"03"` (not already-normalized `"3"`) so
+#    the `normalize_floor_label` port from `UmImport` gets real teeth: the
+#    persisted `Floor#label` must come back `"3"`, proving the leading zero
+#    was actually stripped and not just passed through.
 #
-# Endpoint paths ("/bf/Buildings/v2/{bldrecnbr}/Rooms",
-# "/bf/Buildings/v2/Departments{/id}") are, like every other phase's paths,
-# best-effort placeholders pending phase 8's credentialed cutover (see
-# spec/support/um_api_stubs.rb's fixture-shape disclaimer) — hardcoded here
-# rather than referencing Sync::UpdateRooms's own constants, so this spec
-# independently pins the external contract instead of trivially restating
-# the implementation.
+# Endpoint paths (`GET /bf/Buildings/v2/RoomInfo/{bldrecnbr}`,
+# `GET /bf/Department/v2/DeptData` bulk + `?DeptDescription=` fallback) are
+# confirmed against live credentialed access (sync-fix Task 3; see the
+# proven reference `lib/tasks/um_import.rake`) — hardcoded here rather than
+# referencing Sync::UpdateRooms's own constants, so this spec independently
+# pins the external contract instead of trivially restating the
+# implementation. The `?DeptDescription=` single-department fallback shape
+# itself is flagged live-smoke-only (sync-fix-plan.md §5 Risks): `um_import`
+# never needed to exercise it against real credentials (its bulk index
+# matched every department it encountered), so this spec's fallback fixture
+# is a best-effort reconstruction of the same `{"DepartmentList":
+# {"DeptData": [...]}}` envelope the bulk endpoint returns, with 0 or 1 rows.
 RSpec.describe Sync::UpdateRooms do
   around do |example|
     original = %w[UM_API_BASE_URL UM_API_TOKEN_URL UM_API_CLIENT_ID UM_API_CLIENT_SECRET].index_with { |key| ENV[key] }
@@ -66,16 +81,20 @@ RSpec.describe Sync::UpdateRooms do
   def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
 
   def stub_departments_feed
-    stub_um_get("/bf/Buildings/v2/Departments", fixture: "departments.json", query: { "limit" => "1000" })
+    stub_um_get("/bf/Department/v2/DeptData", fixture: "departments.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
   end
 
   def stub_department_fallback
-    stub_um_get("/bf/Buildings/v2/Departments/190100", fixture: "department_190100.json")
+    stub_um_get("/bf/Department/v2/DeptData", fixture: "department_190100.json",
+      query: { "DeptDescription" => "LSA - Chemistry" })
   end
 
   def stub_rooms_feed
-    stub_um_get("/bf/Buildings/v2/1005046/Rooms", fixture: "rooms_1005046.json", query: { "limit" => "1000" })
-    stub_um_get("/bf/Buildings/v2/1005090/Rooms", fixture: "rooms_1005090.json", query: { "limit" => "1000" })
+    stub_um_get("/bf/Buildings/v2/RoomInfo/1005046", fixture: "rooms_1005046.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
+    stub_um_get("/bf/Buildings/v2/RoomInfo/1005090", fixture: "rooms_1005090.json",
+      query: { "$start_index" => "0", "$count" => "1000" })
   end
 
   describe "all room types (Brief §14.2)" do
@@ -112,6 +131,22 @@ RSpec.describe Sync::UpdateRooms do
       expect(german.room_type).to eq("Classroom")
       expect(german.in_feed).to be true
     end
+
+    # sync-fix Task 4 (seat-count source move): the real facility list
+    # (/aa/ClassroomList/v2/Classrooms, Sync::UpdateFacilityIds) has no
+    # seat/Capacity field at all, so RoomInfo's own RoomStationCount
+    # (already carried by rooms_1005046.json) is now the ONLY source for a
+    # room's instructional_seat_count.
+    it "sets instructional_seat_count from RoomInfo's RoomStationCount" do
+      stub_departments_feed
+      stub_department_fallback
+      stub_rooms_feed
+
+      described_class.call(run: run, client: client)
+
+      german = Room.for_current_workspace.find_by!(rmrecnbr: "2005046")
+      expect(german.instructional_seat_count).to eq(60)
+    end
   end
 
   describe "floor_id (D10)" do
@@ -126,6 +161,20 @@ RSpec.describe Sync::UpdateRooms do
       german = Room.for_current_workspace.find_by!(rmrecnbr: "2005046")
       expect(german.floor.label).to eq("1")
       expect(german.floor.building).to eq(building_mlb)
+    end
+
+    # normalize_floor_label teeth: the Office row's raw FloorNumber is "03"
+    # (see rooms_1005046.json), not an already-normalized "3" — this fails
+    # if the leading zero is ever passed through unstripped.
+    it "strips a leading zero off FloorNumber via normalize_floor_label" do
+      stub_departments_feed
+      stub_department_fallback
+      stub_rooms_feed
+
+      described_class.call(run: run, client: client)
+
+      office = Room.for_current_workspace.find_by!(rmrecnbr: "2005048")
+      expect(office.floor.label).to eq("3")
     end
 
     it "reuses the same floor across runs instead of creating a duplicate" do
@@ -158,14 +207,14 @@ RSpec.describe Sync::UpdateRooms do
     end
 
     # THE keying teeth (product-owner-confirmed): a Unit is keyed on the
-    # STABLE department-group CODE (DeptGrp "COLLEGE_OF_LSA"), NOT the
-    # free-text description. departments.json deliberately gives dept 180000
-    # (Math) a REWORDED DeptGrpDescr ("College of Lit, Science & Arts") while
-    # depts 190000 (German) and 190100 (Chem, via fallback) keep the full
-    # "College of Literature, Science & the Arts" — same code, three source
-    # rows, TWO distinct descriptions. Under description-keying this forks
-    # into 2+ Units and this example fails; under code-keying all three rooms
-    # collapse to ONE Unit.
+    # STABLE department-group CODE (DeptGroup "COLLEGE_OF_LSA"), NOT the
+    # free-text description. departments.json deliberately gives "LSA -
+    # Mathematics" a REWORDED DeptGroupDescription ("College of Lit, Science
+    # & Arts") while "LSA - German" (bulk) and "LSA - Chemistry" (via
+    # fallback) keep the full "College of Literature, Science & the Arts" —
+    # same code, three source rows, TWO distinct descriptions. Under
+    # description-keying this forks into 2+ Units and this example fails;
+    # under code-keying all three rooms collapse to ONE Unit.
     it "collapses departments sharing a group CODE into one Unit even when their descriptions differ" do
       stub_departments_feed
       stub_department_fallback
@@ -349,8 +398,10 @@ RSpec.describe Sync::UpdateRooms do
     it "skips the sweep and warns instead of deactivating every room when every building's feed returns zero rows" do
       untouched = create(:room, workspace: workspace, building: building_mlb, rmrecnbr: "9999003", in_feed: true)
       stub_departments_feed
-      stub_um_get("/bf/Buildings/v2/1005046/Rooms", fixture: "rooms_empty.json", query: { "limit" => "1000" })
-      stub_um_get("/bf/Buildings/v2/1005090/Rooms", fixture: "rooms_empty.json", query: { "limit" => "1000" })
+      stub_um_get("/bf/Buildings/v2/RoomInfo/1005046", fixture: "rooms_empty.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
+      stub_um_get("/bf/Buildings/v2/RoomInfo/1005090", fixture: "rooms_empty.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
 
       result = described_class.call(run: run, client: client)
 

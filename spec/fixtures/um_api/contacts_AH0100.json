@@ -1,12 +1,16 @@
 {
-  "Contacts": [
-    {
-      "SchedName": "Angell Hall Scheduling",
-      "SchedEmail": "",
-      "SchedPhone": null,
-      "SchedDetailUrl": "https://lsa.umich.edu/classrooms/ah0100",
-      "SupportDeptId": "190000",
-      "SupportEmail": "lsa.support@umich.edu"
-    }
-  ]
+  "Classrooms": {
+    "Classroom": [
+      {
+        "FacilityID": "AH0100",
+        "RmRecNbr": "2005090",
+        "ContactName": "Angell Hall Scheduling",
+        "Email": "   ",
+        "Phone": " ",
+        "ScheduleURL": "https://lsa.umich.edu/classrooms/ah0100",
+        "SpptDeptID": "190000",
+        "SpptCntctEmail": "lsa.support@umich.edu"
+      }
+    ]
+  }
 }

@@ -1,6 +1,7 @@
 {
-  "Classrooms": [
-    { "RmRecNbr": "2005046", "FacilityCd": "MLB1200", "Capacity": 60 },
-    { "RmRecNbr": "2005090", "FacilityCd": "AH0100", "Capacity": 0 }
-  ]
+  "Classrooms": {
+    "Classroom": [
+      { "FacilityID": "MLB1200", "BuildingID": "1005046", "BldDescrShort": "MLB", "CampusCd": "100", "CampusDescr": "Ann Arbor" }
+    ]
+  }
 }

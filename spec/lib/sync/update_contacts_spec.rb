@@ -8,13 +8,24 @@ require "rails_helper"
 # at most ONE RoomContact (`has_one`, unique room_id, phase 1), so this
 # phase is a plain upsert of the scheduling_*/support_* attribute blocks.
 #
-# contacts_MLB1200.json (Task 2 fixture) already has one field the gateway
-# sent back as a JSON `null` (SupportPhone); contacts_AH0100.json (added
-# here) additionally sends an explicit empty string (SchedEmail) and omits
-# several keys entirely (SchedUsageGuidelinesUrl, SupportDeptDescr,
-# SupportPhone, SupportUrl) — between the two fixtures every shape the
-# gateway might use for "no value" is covered, and #parse_contact's
-# `.presence` call must coerce all of them to nil, never "".
+# Field mapping (sync-fix-decisions.md Risk 1, LIVE-CONFIRMED 2026-07-10 —
+# this was the highest-uncertainty phase in the whole sync-fix plan, now
+# resolved): `ContactName`/`Email`/`Phone`/`ScheduleURL`/
+# `UsageGuideLinesURL`/`SpptDeptID`/`SpptCntctEmail`/`SpptCntctPhone`/
+# `SpptCntctURL` map to `scheduling_name`/`scheduling_email`/
+# `scheduling_phone`/`scheduling_detail_url`/
+# `scheduling_usage_guidelines_url`/`support_department_id`/
+# `support_email`/`support_phone`/`support_url`. There is no real source
+# field for `support_department_description` at all — it is always nil.
+#
+# contacts_MLB1200.json (sync-fix Task 4 fixture) demonstrates the real
+# gateway's SPACE-PADDED "no value" convention (`SpptCntctPhone: " "`, not
+# JSON `null` or `""`) — #parse_contact's `.to_s.strip.presence` coercion
+# must turn that into nil, never a stored blank/whitespace string.
+# contacts_AH0100.json additionally sends an explicit space-padded value
+# (`Email: "   "`) and omits several keys entirely
+# (UsageGuideLinesURL/SpptCntctPhone/SpptCntctURL) — between the two
+# fixtures every shape the gateway might send for "no value" is covered.
 RSpec.describe Sync::UpdateContacts do
   around do |example|
     original = %w[UM_API_BASE_URL UM_API_TOKEN_URL UM_API_CLIENT_ID UM_API_CLIENT_SECRET].index_with { |key| ENV[key] }
@@ -49,7 +60,7 @@ RSpec.describe Sync::UpdateContacts do
   def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
 
   def stub_contacts(facility_code: "MLB1200", fixture: "contacts_MLB1200.json")
-    stub_um_get("/bf/Buildings/v2/Classrooms/#{facility_code}/Contacts", fixture: fixture)
+    stub_um_get("/aa/ClassroomList/v2/Classrooms/#{facility_code}/Contacts", fixture: fixture)
   end
 
   describe "upserting the room's single RoomContact" do
@@ -68,7 +79,7 @@ RSpec.describe Sync::UpdateContacts do
         scheduling_detail_url: "https://lsa.umich.edu/classrooms/mlb1200",
         scheduling_usage_guidelines_url: "https://lsa.umich.edu/classrooms/guidelines",
         support_department_id: "190000",
-        support_department_description: "LSA Technology Services",
+        support_department_description: nil,
         support_email: "lsa.support@umich.edu",
         support_url: "https://lsa.umich.edu/support"
       )
@@ -88,7 +99,7 @@ RSpec.describe Sync::UpdateContacts do
   end
 
   describe %(absent fields coerce to nil, never "") do
-    it "stores nil for a JSON null field" do
+    it "stores nil for a space-padded field" do
       room = create(:room, workspace: workspace, building: building, facility_code: "MLB1200")
       stub_contacts
 
@@ -97,7 +108,7 @@ RSpec.describe Sync::UpdateContacts do
       expect(room.reload.room_contact.support_phone).to be_nil
     end
 
-    it "stores nil for an explicit empty string, and for keys omitted entirely" do
+    it "stores nil for a space-padded value, and for keys omitted entirely" do
       room = create(:room, workspace: workspace, building: building, facility_code: "AH0100")
       stub_contacts(facility_code: "AH0100", fixture: "contacts_AH0100.json")
 
@@ -146,7 +157,7 @@ RSpec.describe Sync::UpdateContacts do
   describe "per-room 429 retry (Brief §6.1 phase 4)" do
     it "retries after a transient 429 from a room's contacts endpoint and still succeeds" do
       room = create(:room, workspace: workspace, building: building, facility_code: "MLB1200")
-      url = "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/Classrooms/MLB1200/Contacts"
+      url = "#{UmApiStubs::DEFAULT_BASE_URL}/aa/ClassroomList/v2/Classrooms/MLB1200/Contacts"
       stub_request(:get, url).to_return(
         { status: 429, body: "" },
         { status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS, body: um_api_fixture("contacts_MLB1200.json") }

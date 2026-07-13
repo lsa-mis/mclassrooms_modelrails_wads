@@ -2,21 +2,34 @@
 # (roadmap Lib section; Brief §6.1 phase 5). The first of the two lightweight
 # PER-CLASSROOM phases: unlike Sync::UpdateRooms/UpdateFacilityIds (one feed
 # walked once, or once per building), there is no bulk characteristics
-# listing endpoint — the gateway exposes characteristics one classroom at a
+# listing endpoint — the gateway exposes characteristics one FACILITY at a
 # time, keyed by facility_code. #perform iterates every facility-coded room
 # (Room.for_current_workspace.where.not(facility_code: nil) — only
 # classrooms carry a facility_code, D8) and makes ONE API call per room,
 # mirroring Sync::UpdateRooms's #fetch_department_fallback shape: each
 # per-room fetch is individually wrapped in client.rate_limiter.backoff_429
-# (NOT one backoff wrapping the whole loop, the way UpdateFacilityIds wraps
-# its single whole-feed walk — there is no single feed here to wrap; a 429
-# on one room's fetch must not force a retry of every other room already
+# (NOT one backoff wrapping a whole feed walk, the way UpdateFacilityIds's
+# facility-list fetch is wrapped — there is no single feed here to wrap; a
+# 429 on one room's fetch must not force a retry of every other room already
 # processed this run).
 #
+# A facility can cover MORE THAN ONE ROOM (sync-fix Task 4 — the structural
+# change of this rewrite): the real endpoint
+# (`GET /aa/ClassroomList/v2/Classrooms/{FacilityID}/Characteristics`, scope
+# "classrooms") is keyed by facility_code, not by room, and its response
+# rows carry their own `RmRecNbr` — the SAME crosswalk field
+# Sync::UpdateFacilityIds reads off this identical endpoint (accepted
+# per-facility double-fetch, sync-fix-decisions.md Risk 2 — see that
+# phase's header comment). Two rooms can legitimately share one
+# facility_code, so #characteristics_for groups the response by RmRecNbr
+# and applies only the group matching THIS room's rmrecnbr — a room whose
+# own rmrecnbr has no group in the response is treated exactly like an
+# empty response for that room (see below).
+#
 # PER-ROOM diff, not a whole-table sweep (this is the crux of the phase): for
-# each room, the API response for THAT classroom is the complete,
-# authoritative set of characteristics for THAT room only. #sync_characteristics
-# diffs it against room.room_characteristics, keyed on the natural key `code`
+# each room, the (RmRecNbr-filtered) response is the complete, authoritative
+# set of characteristics for THAT room only. #sync_characteristics diffs it
+# against room.room_characteristics, keyed on the natural key `code`
 # (RoomCharacteristic's own uniqueness scope, db/schema.rb) — CREATE any code
 # present in the response but missing from the DB, DELETE any code present in
 # the DB but missing from the response. An empty response for one room is not
@@ -26,7 +39,7 @@
 # right now, so every existing row for it is removed. There is no cross-room
 # delete-all failure mode here the way a single blank feed would wrongly
 # deactivate every room in Sync::UpdateRooms: this loop never touches any
-# room but the one whose response it just received.
+# room but the one whose (filtered) response it just received.
 #
 # No "updated" counter / no in-place attribute refresh (the counters this
 # phase reports are added/removed/api_calls/rate_limit_sleeps only): a code
@@ -54,26 +67,25 @@
 #
 # parse_characteristic(row) / characteristics_from(body) isolation: per
 # spec/support/um_api_stubs.rb's fixture-shape disclaimer, these are the ONLY
-# two places that reach into a raw API response hash directly.
-# Code/ShortCode/Description/LongDescription/Status (parse_characteristic)
-# match spec/fixtures/um_api/characteristics_MLB1200.json exactly, and the
-# "Characteristics" envelope key (characteristics_from) matches that same
-# fixture's top-level shape — NOT verified against credentialed access — if
-# phase 8's cutover finds different field names or a different envelope key,
-# only these two methods (and the normalization rule, if the real gateway
-# turns out to pre-normalize) need to change.
+# two places that reach into a raw API response hash directly. `Chrstc`
+# (int, per ground truth — coerced `.to_s` at the parse boundary since
+# RoomCharacteristic.code is a string column), `ChrstcDescrShort`,
+# `ChrstcDescr`, `ChrstcDescr254`, and `RmRecNbr` (parse_characteristic /
+# the RmRecNbr grouping above) are confirmed against live credentialed
+# access (sync-fix Task 4). There is no `Status` field in the real shape at
+# all — `status` is written as `nil` (RoomCharacteristic.status has no NOT
+# NULL constraint, `t.string "status"`, so nil is safe); if this is ever
+# promoted to a real column write, only this method needs to change.
 #
-# Endpoint path ("/bf/Buildings/v2/Classrooms/{facility_code}/Characteristics"):
-# mirrors Sync::UpdateFacilityIds's own "/bf/Buildings/v2/Classrooms" flat
-# listing endpoint as its parent, nested per-classroom the way
-# Sync::UpdateRooms nests its per-building Rooms endpoint off Buildings — a
-# best-effort guess pending phase 8's credentialed cutover, like every other
-# phase's path constants.
+# Endpoint path ("/aa/ClassroomList/v2/Classrooms"): confirmed against live
+# credentialed access (sync-fix Task 4) — replaces the earlier best-effort
+# guess ("/bf/Buildings/v2/Classrooms"); the "Characteristics" sub-resource
+# segment is unchanged.
 module Sync
   class UpdateCharacteristics < BasePhase
     KEY = "characteristics"
 
-    CLASSROOMS_PATH = "/bf/Buildings/v2/Classrooms"
+    CLASSROOMS_PATH = "/aa/ClassroomList/v2/Classrooms"
 
     private
 
@@ -83,13 +95,13 @@ module Sync
       end
     end
 
-    def characteristics_path(facility_code) = "#{CLASSROOMS_PATH}/#{facility_code}/Characteristics"
+    def characteristics_path(facility_code) = "#{CLASSROOMS_PATH}/#{ERB::Util.url_encode(facility_code)}/Characteristics"
 
     def sync_characteristics(room)
       existing = room.room_characteristics.index_by(&:code)
       seen = Set.new
 
-      fetch_characteristics(room).each do |row|
+      characteristics_for(room).each do |row|
         attrs = parse_characteristic(row)
         next if skip_blank_short_code?(room, attrs)
 
@@ -115,17 +127,23 @@ module Sync
       true
     end
 
-    def fetch_characteristics(room)
+    # Facility-keyed fetch, room-filtered result — see header comment: a
+    # facility can cover more than one room, so the response is grouped by
+    # RmRecNbr and only the group matching THIS room's rmrecnbr is returned.
+    # A room whose rmrecnbr has no group in the response (including a wholly
+    # empty response) gets an empty Array, which #sync_characteristics
+    # treats as "this room legitimately has zero characteristics right now".
+    def characteristics_for(room)
       body = client.rate_limiter.backoff_429 do
         client.get_json(characteristics_path(room.facility_code), scope: "classrooms")
       end
-      characteristics_from(body)
+      characteristics_from(body).group_by { |row| row["RmRecNbr"].to_s }[room.rmrecnbr.to_s] || []
     end
 
-    # Single documented raw-access point for the response envelope's key —
-    # see header comment. If phase 8's cutover finds the envelope shaped
+    # Single documented raw-access point for the response envelope's shape —
+    # see header comment. If a future cutover finds the envelope shaped
     # differently, only this method needs to change.
-    def characteristics_from(body) = body.fetch("Characteristics", [])
+    def characteristics_from(body) = body.dig("Classrooms", "Classroom") || []
 
     # Routine, idempotent create — never dry-run guarded (see header
     # comment). A code already present in `existing` is left completely
@@ -169,14 +187,17 @@ module Sync
     # transform CharacteristicDisplayRule#normalize_short_code uses — so
     # phase 3's join across the two tables matches. It returns nil for a
     # blank/all-punctuation code, which #skip_blank_short_code? then filters
-    # out. "Whtbrd>25" -> "whtbrd25".
+    # out. "Whtbrd>25" -> "whtbrd25". `Chrstc` is an int per ground truth
+    # (RoomCharacteristic.code is a string column, hence `.to_s`); there is
+    # no real `Status` source, so `status` is always nil (see header
+    # comment).
     def parse_characteristic(row)
       {
-        code: row.fetch("Code"),
-        short_code: CodeNormalizer.normalize(row["ShortCode"]),
-        description: row["Description"],
-        long_description: row["LongDescription"],
-        status: row["Status"]
+        code: row.fetch("Chrstc").to_s,
+        short_code: CodeNormalizer.normalize(row["ChrstcDescrShort"]),
+        description: row["ChrstcDescr"],
+        long_description: row["ChrstcDescr254"],
+        status: nil
       }
     end
   end

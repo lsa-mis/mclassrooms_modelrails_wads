@@ -5,8 +5,8 @@
 # structural differences the brief calls out:
 #
 # 1. Scope filtering (Brief §6.1/§8.2). The feed returns every building
-#    U-M-wide for the current fiscal year; SyncScopeRule (phase 1) narrows
-#    that to what this workspace actually tracks. A row is in scope when
+#    U-M-wide; SyncScopeRule (phase 1) narrows that to what this workspace
+#    actually tracks. A row is in scope when
 #    (its campus code is campus_allow-listed OR its own bldrecnbr is
 #    building_allow-listed) AND its bldrecnbr is NOT building_exclude-listed
 #    — exclude wins even over an explicit building_allow entry for the same
@@ -35,26 +35,38 @@
 # have no destructive write at all — add_warning is not a mutation — so
 # there is nothing here to guard.
 #
-# parse_building(row) isolation: per spec/support/um_api_stubs.rb's
-# fixture-shape disclaimer, BldRecNbr/BldName/BldNameShort/CampusCd/
-# Address/City/State/Zip/Country match spec/fixtures/um_api/
-# buildings_page*.json exactly, NOT verified against credentialed access.
-# If phase 8's live cutover finds different field names, this is the only
-# method that needs to change.
+# parse_building(row) isolation: BuildingRecordNumber/BuildingLongDescription/
+# BuildingShortDescription/BuildingCampusCode/BuildingStreetNumber/
+# BuildingStreetDirection/BuildingStreetName/BuildingCity/BuildingState/
+# BuildingPostal are confirmed against live credentialed access (sync-fix
+# Task 2; see the proven reference
+# `lib/tasks/um_import.rake#upsert_building`/`#building_address`) — no other
+# code reaches into a raw API response hash directly, so a future field-name
+# change (unlikely; this endpoint is already verified) would still only
+# touch this one method. `Country` is NOT in the feed at all — hardcoded to
+# "USA" here, matching `UmImport.upsert_building`.
 #
-# Endpoint path: "/bf/Buildings/v2" mirrors spec/lib/um_api/client_spec.rb's
-# #each_page examples, which already exercise real pagination against this
-# exact path with these exact fixtures — the strongest available signal for
-# the real listing endpoint (Campuses hangs off it as a sub-resource,
-# "/bf/Buildings/v2/Campuses"). The fiscal-year query param name
-# ("fiscalYear") is this phase's best-effort guess, like PAGE_SIZE_PARAM in
-# UmApi::Client — only this constant needs to change if phase 8 finds a
-# different name.
+# BuildingCampusDescription IS present per-row on BuildingInfo, but
+# `buildings.campus_description` isn't a real column (only `Campus#description`
+# is) — so it's deliberately left out of parse_building's return value rather
+# than parsed-and-discarded. Collapsing Sync::UpdateCampuses into this phase
+# (deriving Campus rows straight from Buildings rows, the way
+# `UmImport.import_campuses` does) is a live option given that overlap, but
+# is an optional redesign, not required by this fix (Sync::UpdateCampuses's
+# own dedicated endpoint already works) — out of scope here.
+#
+# Endpoint: `GET /bf/Buildings/v2/BuildingInfo` (BUILDING_INFO_PATH), scope
+# "buildings", paged via `client.fetch_all` (UmApi::Client, sync-fix Task 1)
+# digging the real two-level envelope (`resp["ListOfBldgs"]["Buildings"]`).
+# No fiscal-year param: BuildingInfo doesn't scope by fiscal year at all —
+# the old `FISCAL_YEAR_PARAM`/`UmApi.fiscal_year(Date.current)` pairing was a
+# guess against the wrong endpoint and is dropped outright (sync-fix Task 5
+# deleted `UmApi.fiscal_year` itself, once this phase was its only caller).
 module Sync
   class UpdateBuildings < BasePhase
     KEY = "buildings"
 
-    FISCAL_YEAR_PARAM = "fiscalYear"
+    BUILDING_INFO_PATH = "/bf/Buildings/v2/BuildingInfo"
 
     private
 
@@ -65,11 +77,9 @@ module Sync
 
       feed_bldrecnbrs = []
 
-      client.each_page(
-        "/bf/Buildings/v2",
-        params: { FISCAL_YEAR_PARAM => UmApi.fiscal_year(Date.current) },
-        scope: "buildings"
-      ) do |row|
+      rows = client.fetch_all(BUILDING_INFO_PATH, array_path: %w[ListOfBldgs Buildings], scope: "buildings")
+
+      rows.each do |row|
         attrs = parse_building(row)
         feed_bldrecnbrs << attrs[:bldrecnbr]
 
@@ -135,15 +145,15 @@ module Sync
 
     def parse_building(row)
       {
-        bldrecnbr: row.fetch("BldRecNbr").to_s,
-        campus_code: row.fetch("CampusCd").to_s,
-        name: row.fetch("BldName"),
-        abbreviation: row["BldNameShort"],
-        address: row["Address"],
-        city: row["City"],
-        state: row["State"],
-        zip: row["Zip"],
-        country: row["Country"]
+        bldrecnbr: row.fetch("BuildingRecordNumber").to_s,
+        campus_code: row.fetch("BuildingCampusCode").to_s,
+        name: row.fetch("BuildingLongDescription"),
+        abbreviation: row["BuildingShortDescription"],
+        address: [ row["BuildingStreetNumber"], row["BuildingStreetDirection"], row["BuildingStreetName"] ].compact_blank.join(" "),
+        city: row["BuildingCity"],
+        state: row["BuildingState"],
+        zip: row["BuildingPostal"],
+        country: "USA"
       }
     end
   end
