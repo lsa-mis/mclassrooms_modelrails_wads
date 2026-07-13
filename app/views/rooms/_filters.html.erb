@@ -35,6 +35,9 @@
   </div>
 
   <%= hidden_field_tag :view, params[:view] if params[:view].present? %>
+  <%# Same contract as :view — the Saved toggle isn't a form control, so
+      without this every filter submit would silently drop the shortlist view. %>
+  <%= hidden_field_tag :saved, params[:saved] if params[:saved].present? %>
 
   <div class="flex flex-wrap items-start gap-x-6 gap-y-4">
     <div class="grow basis-64">

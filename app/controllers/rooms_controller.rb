@@ -67,7 +67,7 @@ class RoomsController < ApplicationController
   def index
     authorize Room
     @filter_params = filter_params
-    @search = RoomSearch.new(@filter_params, base: base_scope)
+    @search = RoomSearch.new(@filter_params, base: base_scope, saved_for: Current.user)
     @pagy, @rooms = pagy(:offset, @search.results, limit: @search.per_page)
     @filter_groups = CharacteristicFilterGroups.filters
     # Per-room note/alert counts for the result cards in ONE grouped query
@@ -76,6 +76,9 @@ class RoomsController < ApplicationController
     # threaded replies don't inflate the count.
     @note_stats = Note.roots.where(notable_type: "Room", notable_id: @rooms.map(&:id))
                       .group(:notable_id, :alert).count
+    # Shortlist state for the cards + header count — two small queries, no N+1.
+    @saved_room_ids = Current.user.saved_rooms.where(room_id: @rooms.map(&:id)).pluck(:room_id, :id).to_h
+    @saved_count = Current.user.saved_rooms.where(workspace: Current.workspace).count
     @announcement = Announcement.for(:find_a_room_page)
     respond_to do |format|
       format.html # never fresh_when here — D14: results are live queries
@@ -91,6 +94,7 @@ class RoomsController < ApplicationController
   def show
     authorize @room
     @presenter = RoomPresenter.new(@room, url: room_url(@room))
+    @saved_id = Current.user.saved_rooms.find_by(room_id: @room.id)&.id
 
     # D14: conditional GET over room + contact + notes (own and building's) + all
     # media attachments. Cache-Control stays Rails-default `private, max-age=0,
@@ -465,7 +469,7 @@ class RoomsController < ApplicationController
   # for shared pre-redesign URLs (RoomSearch still honors them).
   def filter_params
     params.permit(:q, :building, :room, :unit_id, :capacity_min, :capacity_max,
-                  :sort, :per, :view, characteristics: [])
+                  :sort, :per, :view, :saved, characteristics: [])
   end
 
   # Phase 5 Task 6 (Brief §14.1): the authorization boundary itself (see
@@ -502,7 +506,9 @@ class RoomsController < ApplicationController
   # just the fix but the semantically correct column: a newly-attached photo
   # or gallery image is a brand-new row whose `created_at` bumps the max.
   def show_cache_key
-    [ @room, @room.room_contact, RoleResolver.for(Current.user).admin?,
+    # @saved_id is per-user save state rendered on the page — it must bust
+    # the conditional-GET cache like admin-ness does.
+    [ @room, @room.room_contact, RoleResolver.for(Current.user).admin?, @saved_id,
       @room.notes.maximum(:updated_at), @room.building.notes.maximum(:updated_at),
       media_attachments.maximum(:created_at) ]
   end

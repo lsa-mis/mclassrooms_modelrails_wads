@@ -74,6 +74,31 @@ RSpec.describe RoomSearch do
   # Redesign (2026-07 sprint): the form's single search box sends `q`, which
   # matches EITHER a building name or a room (FTS/facility-code/nickname) —
   # the union, not the intersection, so one box serves both mental models.
+  describe "saved filter" do
+    let(:user) { create(:user) }
+
+    it "narrows to the user's saved rooms" do
+      SavedRoom.create!(user: user, room: big, workspace: big.workspace)
+      expect(described_class.new(saved: "1", saved_for: user).results).to contain_exactly(big)
+    end
+
+    it "composes with other filters" do
+      SavedRoom.create!(user: user, room: big, workspace: big.workspace)
+      SavedRoom.create!(user: user, room: small, workspace: small.workspace)
+      expect(described_class.new(saved: "1", saved_for: user, capacity_min: "40").results)
+        .to contain_exactly(big)
+    end
+
+    it "is inert without a user" do
+      expect(described_class.new(saved: "1").results).to match_array([ big, small, aud ])
+    end
+
+    it "appears in the summary" do
+      expect(described_class.new(saved: "1", saved_for: user).summary)
+        .to include(I18n.t("rooms.index.summary.saved"))
+    end
+  end
+
   describe "merged q param" do
     it "matches rooms by building name" do
       expect(described_class.new(q: "Mason").results).to contain_exactly(big, small)
