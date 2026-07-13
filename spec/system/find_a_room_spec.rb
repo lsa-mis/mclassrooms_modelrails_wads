@@ -105,7 +105,13 @@ RSpec.describe "Find a Room", type: :system do
     within "#find_a_room_results" do
       expect(page).to have_content(card_title(aud))
     end
-    expect(find_field(I18n.t("rooms.filters.search_label")).value).to eq("")
+    # have_field(with:) RETRIES until the value predicate holds —
+    # `find_field(...).value` is a one-shot read that can catch Turbo's cache
+    # preview (the stale pre-clear snapshot painted while the fresh page is in
+    # flight; the aud assertion above can pass against that same preview,
+    # because the cached /find_a_room snapshot is the unfiltered first render).
+    # CI screenshot of the old flake shows the settled page WAS correct.
+    expect(page).to have_field(I18n.t("rooms.filters.search_label"), with: "")
   end
 
   it "saves a room from a card, filters to the shortlist, and unsaves" do

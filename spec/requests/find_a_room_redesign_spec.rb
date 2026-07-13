@@ -182,10 +182,45 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(numberless.room_number).to be_nil
   end
 
-  it "renders promoted chips with their locale-override labels" do
+  # Taxonomy phase 3: the promoted movable-seating chip is a MERGED token
+  # (movetablet ∪ tablesmov), rendered only when a member code exists in the
+  # data; its raw member codes never render their own checkboxes.
+  it "renders the merged Movable-seating promoted chip instead of its member codes" do
     get find_a_room_path
 
-    expect(page).to have_css("label[for='characteristics_movetablet']", text: "Movable seating")
+    expect(page).to have_css("label[for='characteristics_movableseating']", text: "Movable seating")
+    expect(page).to have_css("input[type='checkbox'][name='characteristics[]'][value='movableseating']")
+    expect(page).to have_no_css("input[name='characteristics[]'][value='movetablet']", visible: :all)
+  end
+
+  it "substitutes one Tiered-or-raked checkbox for its member codes in the panel" do
+    classroom(building, "3001", 120, codes: %w[FloorTier])
+    classroom(building, "3002", 240, codes: %w[AudSeat])
+
+    get find_a_room_path
+
+    panel = page.find("details#more_filters")
+    expect(panel).to have_css("input[type='checkbox'][name='characteristics[]'][value='tieredraked']",
+                              visible: :all, count: 1)
+    expect(panel).to have_css("label[for='characteristics_tieredraked']", text: "Tiered or raked seating",
+                              visible: :all)
+    expect(panel).to have_no_css("input[value='floortier']", visible: :all)
+    expect(panel).to have_no_css("input[value='audseat']", visible: :all)
+  end
+
+  # Taxonomy phase 2: panel groups follow the question-group order from the
+  # locale (rooms.filters.group_order), not the builder's alphabetical sort —
+  # alphabetically "Recorded…" beats "Show…", so this order proves the lever.
+  it "orders panel groups by the question-group locale order, not alphabetically" do
+    { "blackout" => "Show & present", "lecturecap" => "Recorded & accessible" }.each do |code, category|
+      create(:characteristic_display_rule, workspace: workspace, short_code: code, category_override: category)
+    end
+    classroom(building, "3003", 25, codes: %w[LectureCap])
+
+    get find_a_room_path
+
+    legends = page.all("details#more_filters legend", visible: :all).map { |l| l.text(:all) }
+    expect(legends.index("Show & present")).to be < legends.index("Recorded & accessible")
   end
 
   # Filter-label description tooltips: hovering the label (or focusing the

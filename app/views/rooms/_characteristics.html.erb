@@ -8,11 +8,12 @@
     CharacteristicDisplayRule#category_override + the team_learning cluster. %>
 <%
   feature_groups = [
-    [ t("rooms.show.features.amenities"), presenter.amenities ],
-    [ t("rooms.show.features.boards"), presenter.boards ],
-    [ t("rooms.show.features.projection"), presenter.projection ],
-    [ t("rooms.show.features.instructor_computers"), presenter.instructor_computers ],
-    [ t("rooms.show.features.team_based_learning"), presenter.team_based_learning ]
+    [ t("rooms.show.features.seats_layout"), presenter.seats_layout ],
+    [ t("rooms.show.features.write_on"), presenter.write_on ],
+    [ t("rooms.show.features.show_present"), presenter.show_present ],
+    [ t("rooms.show.features.recorded_accessible"), presenter.recorded_accessible ],
+    [ t("rooms.show.features.team_based_learning"), presenter.team_based_learning ],
+    [ t("rooms.show.features.more"), presenter.other_features ]
   ].reject { |_, chips| chips.blank? }
 %>
 <% if feature_groups.any? %>

@@ -169,4 +169,43 @@ RSpec.describe RoomSearch do
       expect(described_class.unit_options).to eq([ alpha, zeta ])
     end
   end
+
+  # Taxonomy phase 3 (2026-07-12 sprint, approved): merged filter tokens.
+  # One user-facing question ("can I move the furniture?") maps to several
+  # vendor codes; a token expands to OR within its member codes while still
+  # ANDing against every other selection. Raw member codes keep working so
+  # pre-merge shared URLs never break.
+  describe "merged characteristic tokens" do
+    let!(:tablet)  { classroom(mason, "4100", 30, codes: %w[MoveTablet]) }
+    let!(:movable) { classroom(mason, "4200", 40, codes: %w[TablesMov LectureCap]) }
+    let!(:fixed)   { classroom(mason, "4300", 50, codes: %w[TablesFix]) }
+
+    it "matches rooms having ANY member code of the token (OR within)" do
+      expect(described_class.new(characteristics: %w[movableseating]).results)
+        .to contain_exactly(tablet, movable)
+    end
+
+    it "still requires every OTHER selection alongside a token (AND across)" do
+      expect(described_class.new(characteristics: %w[movableseating LectureCap]).results)
+        .to contain_exactly(movable)
+    end
+
+    it "keeps raw member codes working standalone (pre-merge URLs)" do
+      expect(described_class.new(characteristics: %w[MoveTablet]).results)
+        .to contain_exactly(tablet)
+    end
+
+    it "merges tiered floors and auditorium seating under one token" do
+      tiered = classroom(angell, "5000", 100, codes: %w[FloorTier])
+      sloped = classroom(angell, "5100", 200, codes: %w[AudSeat])
+
+      expect(described_class.new(characteristics: %w[tieredraked]).results)
+        .to contain_exactly(tiered, sloped)
+    end
+
+    it "labels tokens in the summary through the locale override map" do
+      expect(described_class.new(characteristics: %w[movableseating]).summary)
+        .to include("Movable seating")
+    end
+  end
 end
