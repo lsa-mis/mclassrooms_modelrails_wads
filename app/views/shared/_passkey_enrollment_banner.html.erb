@@ -20,11 +20,11 @@
       <%= icon(:finger_print, class: "w-4 h-4 shrink-0") %>
       <span><%= t("passkeys.banner.message") %></span>
       <%= link_to t("passkeys.banner.add"), settings_passkeys_path,
-            class: "font-semibold underline hover:no-underline focus-ring rounded" %>
+            class: "inline-flex min-h-11 items-center font-semibold underline hover:no-underline focus-ring rounded" %>
       <%= button_to passkey_prompt_path,
             method: :patch,
             form: { class: "ml-auto inline" },
-            class: "inline-flex items-center font-semibold underline hover:no-underline focus-ring rounded",
+            class: "inline-flex min-h-11 min-w-11 items-center justify-center font-semibold underline hover:no-underline focus-ring rounded",
             aria: { label: t("passkeys.banner.dismiss") } do %>
         <%= icon(:x_mark, class: "w-4 h-4") %>
       <% end %>

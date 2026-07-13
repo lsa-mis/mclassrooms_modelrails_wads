@@ -30,7 +30,7 @@ module UI
   # - **You supply:** the field `name:` (cells post as `name[0]…name[length-1]`),
   #   the digit `length:`, and an optional `separator:`.
   class InputOtpComponent < ApplicationComponent
-    CELL_CLS = "h-12 w-10 rounded-md border border-border-strong bg-surface-raised text-text-heading " \
+    CELL_CLS = "h-12 w-11 rounded-md border border-border-strong bg-surface-raised text-text-heading " \
                "text-center text-lg font-medium shadow-xs transition-colors focus-ring " \
                "aria-invalid:border-danger aria-invalid:ring-2 aria-invalid:ring-danger " \
                "disabled:pointer-events-none disabled:opacity-50"

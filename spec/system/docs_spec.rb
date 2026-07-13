@@ -6,7 +6,7 @@ require "rails_helper"
 # Tailwind utility with a `dark:` variant. This spec is the canonical contrast
 # judge — axe-core at WCAG 2.2 AAA in both color schemes.
 RSpec.describe "Docs (markdowndocs gem)", type: :system do
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  let(:axe_options) { PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup }
 
   describe "/docs/developer/getting-started" do
     it "renders the document" do

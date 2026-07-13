@@ -98,7 +98,7 @@ module UI
       content_tag(:button, dismiss_icon,
         type: "button",
         "aria-label": dismiss_label,
-        class: "-m-1 shrink-0 rounded-md p-1 text-current hover:opacity-80 focus-ring",
+        class: "-m-2 shrink-0 rounded-md inline-flex min-h-11 min-w-11 items-center justify-center text-current hover:opacity-80 focus-ring",
         data: { action: "banner#dismiss" })
     end
 
