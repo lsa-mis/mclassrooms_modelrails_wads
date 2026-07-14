@@ -35,12 +35,16 @@ module UI
 
     PANEL_CLS   = "overflow-auto"
 
-    HANDLE_CLS  = "group relative flex items-center justify-center focus-ring " \
-                  "bg-border transition-colors hover:bg-interactive-focus " \
-                  "data-[direction=horizontal]:w-px data-[direction=horizontal]:cursor-col-resize " \
-                  "data-[direction=vertical]:h-px data-[direction=vertical]:cursor-row-resize"
+    HANDLE_CLS  = "group relative flex items-center justify-center focus-ring bg-transparent " \
+                  "before:absolute before:bg-border hover:before:bg-interactive-focus before:transition-colors " \
+                  "data-[direction=horizontal]:w-11 data-[direction=horizontal]:cursor-col-resize " \
+                  "data-[direction=horizontal]:before:inset-y-0 data-[direction=horizontal]:before:left-1/2 " \
+                  "data-[direction=horizontal]:before:w-px data-[direction=horizontal]:before:-translate-x-1/2 " \
+                  "data-[direction=vertical]:h-11 data-[direction=vertical]:cursor-row-resize " \
+                  "data-[direction=vertical]:before:inset-x-0 data-[direction=vertical]:before:top-1/2 " \
+                  "data-[direction=vertical]:before:h-px data-[direction=vertical]:before:-translate-y-1/2"
 
-    HANDLE_GRIP = "z-10 flex h-4 w-3 items-center justify-center rounded-sm border border-border bg-border"
+    HANDLE_GRIP = "z-10 h-4 w-1.5 rounded-sm border border-border bg-border"
 
     renders_many :panels, "UI::ResizableComponent::PanelComponent"
 

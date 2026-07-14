@@ -27,7 +27,7 @@ module UI
                   "opacity-0 transition-opacity group-hover:opacity-100 motion-reduce:transition-none"
 
     DIALOG_CLS  = "m-auto bg-transparent backdrop:bg-black/80 p-4"
-    PANEL_CLS   = "relative opacity-0 scale-95"
+    PANEL_CLS   = "relative opacity-0"
     LIGHTBOX_IMG_CLS = "max-h-[90vh] max-w-[90vw] rounded-md object-contain"
     CLOSE_CLS   = "absolute -top-2 -right-2 inline-flex size-11 items-center justify-center " \
                   "rounded-full bg-surface-overlay border border-border shadow-sm focus-ring"

@@ -44,6 +44,22 @@ module PlaywrightAccessibility
     ".highlight"
   ].freeze
 
+  # WCAG 2.2 AAA conformance is CUMULATIVE (2.0 + 2.1 + 2.2 at A/AA/AAA,
+  # WCAG §5) — but axe tags each version separately (wcag2a ≠ wcag21a ≠
+  # wcag22aa). Filtering on the 2.0-era tags alone silently skipped every
+  # 2.1/2.2 rule on every audit (backlog #10, found via the Load-360 button).
+  AXE_TAG_SET = %w[wcag2a wcag2aa wcag2aaa wcag21a wcag21aa wcag22aa].freeze
+
+  # target-size (2.5.8 AA, 24px) ships `enabled: false` in axe 4.x — the tag
+  # alone never runs it. The 44px AAA floor (2.5.5) has NO axe rule at all;
+  # the mc-target-size-44 custom check below covers it.
+  AXE_RULE_OVERRIDES = { "target-size" => { enabled: true } }.freeze
+
+  DEFAULT_AXE_OPTIONS = {
+    runOnly: { type: "tag", values: AXE_TAG_SET },
+    rules: AXE_RULE_OVERRIDES
+  }.freeze
+
   # Run axe accessibility audit on the current page.
   # `exclude` defaults to DEFERRED_AAA_EXCLUDES so tests don't fail on tracked
   # debt. Pass an explicit array (or `[]`) to override.
@@ -61,6 +77,13 @@ module PlaywrightAccessibility
   # messages reveal the cascade reality at scan time. See §2b flake
   # investigation for the motivating case.
   def run_axe_audit(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+    # Callers may narrow runOnly further, but the rule overrides (target-size
+    # enablement) always apply, and an options hash with no runOnly gets the
+    # full cumulative tag set rather than axe's open-ended default.
+    options = options.symbolize_keys
+    options[:runOnly] ||= DEFAULT_AXE_OPTIONS[:runOnly]
+    options[:rules] = AXE_RULE_OVERRIDES.merge(options[:rules] || {})
+
     Capybara.current_session.driver.with_playwright_page do |playwright_page|
       inject_axe(playwright_page)
 
@@ -144,6 +167,186 @@ module PlaywrightAccessibility
               };
             }
           }
+
+          // ------- backlog #10: checks axe cannot perform -------
+          const INTERACTIVE = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"]';
+          const excludedEl = (el) => exclude.some(sel => { try { return el.closest(sel); } catch (_) { return false; } });
+          const inScope = (el) => include.length === 0 || include.some(sel => { try { return el.closest(sel); } catch (_) { return false; } });
+          const visibleEl = (el) => {
+            const r = el.getBoundingClientRect();
+            const cs = getComputedStyle(el);
+            return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+          };
+          const describe = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") +
+            (el.classList.length ? "." + [...el.classList].slice(0, 3).join(".") : "");
+          const pushCheck = (id, help, nodes) => {
+            if (nodes.length) results.violations.push({ id, help, impact: "serious",
+              nodes: nodes.map(n => ({ html: n.el.outerHTML.slice(0, 160), target: [describe(n.el)], failureSummary: n.why })) });
+          };
+          const focusables = [...document.querySelectorAll(INTERACTIVE)]
+            .filter(el => visibleEl(el) && !excludedEl(el) && inScope(el) && !el.disabled);
+
+          const alphaOf = (color) => {
+            if (!color || color === "transparent") return 0;
+            const slash = color.match(/\\/\\s*([\\d.]+%?)\\s*\\)/);
+            if (slash) return slash[1].endsWith("%") ? parseFloat(slash[1]) / 100 : parseFloat(slash[1]);
+            const rgba = color.match(/rgba\\(([^)]+)\\)/);
+            if (rgba) { const parts = rgba[1].split(","); return parts.length === 4 ? parseFloat(parts[3]) : 1; }
+            return 1;
+          };
+          const hasOpaquePlate = (el) => {
+            let cur = el;
+            while (cur && cur !== document.documentElement) {
+              if (alphaOf(getComputedStyle(cur).backgroundColor) >= 0.9) return true;
+              cur = cur.parentElement;
+            }
+            return false;
+          };
+
+          // axe files can't-compute contrast under `incomplete` for many
+          // benign reasons (an <img> INSIDE a button, partial overlaps). The
+          // defect class is an interactive element with NO opaque plate
+          // anywhere up-chain — contrast genuinely unguaranteed. Elements on
+          // a solid ancestor are axe's limitation, not a design bug.
+          for (const v of (results.incomplete || [])) {
+            if (!v.id || !v.id.includes("color-contrast")) continue;
+            const nodes = (v.nodes || []).filter(n => {
+              const el = findNode(n.target || []);
+              return el && el.closest(INTERACTIVE) && !excludedEl(el) && inScope(el) &&
+                     !hasOpaquePlate(el.closest(INTERACTIVE));
+            });
+            if (nodes.length) results.violations.push({
+              id: v.id + "-incomplete-interactive", impact: "serious", nodes,
+              help: "axe could not compute contrast for an interactive element with no opaque background plate up-chain"
+            });
+          }
+
+          // WCAG 2.5.5 (AAA): 44x44 minimum target. The label union counts —
+          // a 20px checkbox inside a 44px-tall labelled row passes, matching
+          // how the SC measures the effective target.
+          const tooSmall = [];
+          for (const el of focusables) {
+            const cs = getComputedStyle(el);
+            if (cs.display === "inline" && el.matches("a[href]")) continue; // in-text link exception
+            // sr-only bypass links (skip-to-content) are clipped to ~1px while
+            // blurred BY DESIGN and expand on focus — measuring the blurred
+            // rect is a false positive.
+            const blurredRect = el.getBoundingClientRect();
+            if (blurredRect.width <= 2 && blurredRect.height <= 2 && cs.position === "absolute") continue;
+            // Composite-widget interiors (panel call, 2026-07-13): menu and
+            // listbox items keep desktop density — 2.5.5 is NOT CLAIMED for
+            // them on fine pointers (documented conformance deviation). They
+            // are still held to the 24px 2.5.8 AA floor here, and a
+            // pointer:coarse rule bumps them to 44px on touch devices, the
+            // population the SC protects.
+            const widgetItem = el.matches("[role=menuitem],[role=menuitemcheckbox],[role=menuitemradio],[role=option]") &&
+                               el.closest("[role=menu],[role=menubar],[role=listbox]");
+            const floor = widgetItem ? 23.5 : 43.5;
+            let r = blurredRect;
+            const label = el.labels && el.labels[0];
+            if (label) {
+              const lr = label.getBoundingClientRect();
+              r = { width: Math.max(r.right, lr.right) - Math.min(r.left, lr.left),
+                    height: Math.max(r.bottom, lr.bottom) - Math.min(r.top, lr.top) };
+            }
+            // Layout-box fallback: getBoundingClientRect shrinks under
+            // transforms — an audit racing a dialog's 200ms close animation
+            // (panel at scale .95) measured 44px buttons at 42. offsetWidth/
+            // Height ignore transforms; persistent scale bugs are prevented
+            // at the source (no scale-* rest classes on panels).
+            const w = Math.max(r.width, el.offsetWidth || 0);
+            const h = Math.max(r.height, el.offsetHeight || 0);
+            if (w < floor || h < floor)
+              tooSmall.push({ el, why: `target ${Math.round(w)}x${Math.round(h)} — floor is ${widgetItem ? "24x24 (2.5.8 AA, widget-item deviation)" : "44x44 (2.5.5)"}` });
+          }
+          pushCheck("mc-target-size-44", "Touch targets must be at least 44x44 (WCAG 2.5.5 AAA; label union counts)", tooSmall);
+
+          // A control whose composited background never reaches ~opacity over
+          // media has UNKNOWABLE contrast (the Load-360 defect class). True
+          // PAINT-STACK test at the control's center (rect intersection
+          // false-positived on controls merely sharing a box with a sibling
+          // thumbnail): walking elementsFromPoint top-down, the control (or
+          // one of its descendants — a plated chip inside a tabbable tooltip
+          // wrapper) with an opaque background means plated; hitting media
+          // before ANY opaque background means unguaranteed contrast.
+          // "Media" for contrast purposes is not only <img>/<canvas>/<video>:
+          // an inline <svg>, or a photo set via CSS `background-image: url()`,
+          // is just as unknowable a backdrop (2026-07-13 review). A gradient/
+          // solid background-image is NOT treated as media (not a raster), but
+          // its opacity is also not asserted — an opaque background-color plate
+          // is still required.
+          const isMedia = (node) => {
+            if (node.matches && node.matches("img, canvas, video, svg")) return true;
+            const bg = getComputedStyle(node).backgroundImage;
+            return typeof bg === "string" && bg.includes("url(");
+          };
+          const overMediaUnplated = (el) => {
+            const r = el.getBoundingClientRect();
+            const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            if (!stack.includes(el)) return false; // center not on the control (covered/offscreen)
+            for (const node of stack) {
+              const opaque = alphaOf(getComputedStyle(node).backgroundColor) >= 0.9;
+              if (node === el || el.contains(node)) {
+                if (opaque) return false;
+                continue;
+              }
+              if (opaque) return false;
+              if (isMedia(node)) return true;
+            }
+            return false;
+          };
+          const seeThrough = focusables
+            .filter(overMediaUnplated)
+            .map(el => ({ el, why: "transparent control overlapping media — contrast is unknowable; add an opaque plate" }));
+          pushCheck("mc-transparent-over-media", "Interactive elements over images/canvas/video need an opaque background", seeThrough);
+
+          // WCAG 2.4.7 — deterministic CSSOM analysis, not focus mutation:
+          // Chromium does not reliably honor focus({focusVisible:true}) after
+          // pointer input, which made a diff-the-styles version flaky. An
+          // element passes when an author :focus/:focus-visible/:focus-within
+          // rule with paint-affecting declarations matches it, OR when no
+          // author rule suppresses the outline (the UA default ring shows).
+          const focusSelectors = [];
+          const suppressSelectors = [];
+          const PAINTS = ["outline-style", "outline-width", "outline", "box-shadow", "background-color", "border-color", "text-decoration-line", "color"];
+          const collectRules = (rules) => { for (const rule of rules) { try {
+            if (rule.cssRules && rule.cssRules.length) collectRules(rule.cssRules);
+            const sel = rule.selectorText;
+            if (!sel || !rule.style) continue;
+            if (/:focus/.test(sel)) {
+              if (!PAINTS.some(p => rule.style.getPropertyValue(p))) continue;
+              for (const part of sel.split(",")) {
+                if (!/:focus/.test(part)) continue;
+                const stripped = part.replace(/:focus-visible|:focus-within|:focus/g, "").trim();
+                if (stripped) focusSelectors.push(stripped);
+              }
+            } else if (["none", "0px"].includes(rule.style.getPropertyValue("outline-style") || rule.style.getPropertyValue("outline-width")) ||
+                       rule.style.getPropertyValue("outline") === "0") {
+              // Strip :focus* SYMMETRICALLY with the focus branch above — a
+              // suppressor like `.btn:focus-visible { outline: none }` must
+              // reduce to `.btn` to match during this UNFOCUSED sweep (keeping
+              // the pseudo made el.matches() always false, silently missing
+              // the most common way focus rings are killed; 2026-07-13 review).
+              for (const part of sel.split(",")) {
+                const stripped = part.replace(/:focus-visible|:focus-within|:focus/g, "").trim();
+                if (stripped) suppressSelectors.push(stripped);
+              }
+            }
+          } catch (_) {} } };
+          for (const s of document.styleSheets) { try { collectRules(s.cssRules); } catch (_) {} }
+          const matchesAny = (el, sels) => sels.some(sel => { try { return el.matches(sel); } catch (_) { return false; } });
+          // The indicator may live on a WRAPPER via :focus-within (e.g. a
+          // search box whose ring is on the bordered container) — walk up.
+          const anyAncestorFocusStyle = (el) => {
+            for (let a = el; a && a !== document.body; a = a.parentElement) {
+              if (matchesAny(a, focusSelectors)) return true;
+            }
+            return false;
+          };
+          const noIndicator = focusables
+            .filter(el => matchesAny(el, suppressSelectors) && !anyAncestorFocusStyle(el))
+            .map(el => ({ el, why: "outline suppressed by author CSS with no :focus/:focus-visible paint rule matching this element or an ancestor (WCAG 2.4.7)" }));
+          pushCheck("mc-focus-indicator", "Focusable elements must show a visible focus indicator (WCAG 2.4.7)", noIndicator);
 
           return results;
         })();
@@ -289,7 +492,16 @@ RSpec.configure do |config|
 
   # In CI, automatically run axe accessibility audit after every system spec
   if ENV["CI"]
-    config.after(:each, type: :system) do
+    config.after(:each, type: :system) do |example|
+      # Deliberate-violation examples (component previews that DOCUMENT an
+      # anti-pattern) opt out explicitly — tag with `skip_axe_hook: true`
+      # and say why at the tag site.
+      next if example.metadata[:skip_axe_hook]
+
+      # Multi-session examples can end with an about:blank window current —
+      # auditing an empty document only produces a bogus document-title
+      # violation.
+      next if Capybara.current_session.current_url.start_with?("about:")
       # Prepare toasts for audit:
       # - Defeat in-progress animations (element opacity, transforms)
       # - Force a solid background so axe can reliably compute color contrast.
@@ -322,11 +534,16 @@ RSpec.configure do |config|
         JS
       end
 
-      # Audits at WCAG 2.2 Level AAA — the project's design target. The
-      # `wcag2aaa` tag adds the AAA-only rules (notably 7:1 contrast for normal
-      # text, 4.5:1 for large text, plus 44x44 target-size on `wcag22aaa`).
-      options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
-      results = run_axe_audit(options)
+      # Audits at WCAG 2.2 Level AAA — the project's design target. The full
+      # CUMULATIVE tag set (2.0+2.1+2.2 at A/AA/AAA): the previous
+      # wcag2aaa-only filter ran just axe's 3 AAA-only rules and its comment
+      # wrongly credited a "wcag22aaa" tag that was never passed (and which
+      # covers no 44px rule anyway — the mc-* custom checks in run_axe_audit
+      # handle 44px targets, focus indicators, and over-media transparency).
+      # Fully qualified: this block's LEXICAL scope is outside the module, so
+      # a bare constant NameErrors even though config.include provides the
+      # METHODS — and only CI runs this hook, so local runs never catch it.
+      results = run_axe_audit(PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup)
       violations = results["violations"] || []
 
       formatted = violations.map { |v| format_violation(v) }

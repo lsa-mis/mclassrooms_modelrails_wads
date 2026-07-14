@@ -10,7 +10,12 @@ namespace :tailwind do
     if markdowndocs_path
       target = vendor_dir.join("markdowndocs_views")
       source = File.join(markdowndocs_path, "app/views")
-      FileUtils.ln_sf(source, target)
+      # Remove an existing symlink BEFORE relinking: `ln_sf` dereferences a
+      # symlink whose target is a directory and creates the new link INSIDE
+      # it (polluting the old gem dir) instead of replacing the symlink — so
+      # a gem-version bump would silently keep pointing at the old version.
+      FileUtils.rm_f(target) if File.symlink?(target)
+      FileUtils.ln_s(source, target)
       puts "Linked #{target} → #{source}"
     end
   end

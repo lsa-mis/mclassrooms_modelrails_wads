@@ -99,12 +99,18 @@ module UI
     def trigger_region
       content_tag(:div, trigger,
         id: @trigger_id,
-        class: "select-none",
+        role: "button",
+        class: "select-none inline-flex min-h-11 min-w-11 items-center",
         tabindex: "0",
         "aria-haspopup": "menu",
         "aria-expanded": "false",
         "aria-controls": @id,
-        data: { menu_target: "trigger", action: "contextmenu->menu#openAt keydown->menu#openContextKey" })
+        # role=button is a PROMISE the trigger honors — triggerKeydown opens
+        # the menu on Enter/Space/ArrowDown (anchored to the trigger), so
+        # keyboard users get button semantics, not only Shift+F10 / the
+        # ContextMenu key (openContextKey). Right-click opens at the pointer.
+        data: { menu_target: "trigger",
+                action: "contextmenu->menu#openAt keydown->menu#openContextKey keydown->menu#triggerKeydown" })
     end
 
     def menu_panel

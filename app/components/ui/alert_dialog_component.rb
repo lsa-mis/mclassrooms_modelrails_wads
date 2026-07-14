@@ -32,7 +32,7 @@ module UI
     renders_one :footer
 
     PANEL = "relative w-full mx-auto rounded-lg bg-surface-overlay border border-border shadow-xl " \
-            "max-h-[calc(100vh-3rem)] flex flex-col opacity-0 scale-95"
+            "max-h-[calc(100vh-3rem)] flex flex-col opacity-0"
 
     # title:       heading text (also the accessible name via aria-labelledby) — required
     # id:          dialog id (auto-generated if omitted)

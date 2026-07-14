@@ -76,7 +76,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     label_text = options.delete(:label) || method.to_s.humanize
     @template.content_tag(:div, class: "flex items-start gap-3") do
       super(method, options.merge(class: merge_classes(CHECKBOX_CLASSES, options[:class])), checked_value, unchecked_value) +
-        @template.label_tag(field_id(method), label_text, class: "text-sm text-text-body")
+        @template.label_tag(field_id(method), label_text, class: "inline-flex min-h-11 items-center text-sm text-text-body")
     end
   end
 

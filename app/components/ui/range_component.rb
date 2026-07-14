@@ -36,16 +36,23 @@ module UI
   #
   # No fail-loud guard — there's no enum axis to validate.
   class RangeComponent < ApplicationComponent
-    BASE = "w-full cursor-pointer appearance-none rounded-full bg-surface-sunken outline-none " \
-           "h-2 accent-interactive " \
-           "focus-ring " \
-           "aria-invalid:ring-danger " \
+    # 2.5.5: the INTERACTION box is 44px tall (h-11) so the whole control is a
+    # 44px pointer target — but transparent, so the VISIBLE track stays slim.
+    # A slim track painted via ::-slider-runnable-track / ::-moz-range-track
+    # keeps the design (a naive `h-11 bg-surface-sunken` made the track a fat
+    # 44px pill — 2026-07-13 review). The thumb is 20px (up from 16) for a
+    # more grabbable handle, centered on the slim track (webkit `-mt-1.5` =
+    # -(20-8)/2 offsets the thumb onto the 8px runnable-track).
+    BASE = "w-full h-11 cursor-pointer appearance-none bg-transparent outline-none " \
+           "focus-ring rounded aria-invalid:ring-1 aria-invalid:ring-danger " \
            "disabled:pointer-events-none disabled:opacity-50 " \
-           "[&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none " \
+           "[&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-surface-sunken " \
+           "[&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-surface-sunken " \
+           "[&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:appearance-none " \
            "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-interactive " \
            "[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface-raised " \
            "[&::-webkit-slider-thumb]:shadow-xs [&::-webkit-slider-thumb]:transition-[color,box-shadow] " \
-           "[&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:appearance-none " \
+           "[&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:appearance-none " \
            "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-interactive " \
            "[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-surface-raised " \
            "[&::-moz-range-thumb]:border-solid [&::-moz-range-thumb]:shadow-xs"

@@ -9,6 +9,12 @@ export default class extends Controller {
   }
 
   connect() {
+    // Neutralize the panel's class-supplied scale on every path — TW4
+    // compiles scale-95 to the separate scale: property, which composes with
+    // the inline transform below instead of overriding it; paths that skip
+    // animateIn (server-rendered open dialogs) otherwise rest 5% shrunken.
+    if (this.hasPanelTarget) this.panelTarget.style.scale = "1"
+
     this.prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     this.handleCancel = this.handleCancel.bind(this)
     this.handleClick = this.handleClick.bind(this)
@@ -86,6 +92,7 @@ export default class extends Controller {
   }
 
   animateIn() {
+    this.panelTarget.style.scale = "1"
     if (this.prefersReducedMotion) {
       this.panelTarget.style.opacity = "1"
       this.panelTarget.style.transform = this.enterTransformValue

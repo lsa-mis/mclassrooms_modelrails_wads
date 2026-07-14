@@ -92,6 +92,7 @@ module UI
       if href
         @html_attrs[:href] = href
         @tag ||= :a
+        @extra_class = [ @extra_class, "min-h-11" ].compact.join(" ")
       end
     end
 

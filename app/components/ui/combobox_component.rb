@@ -48,9 +48,9 @@ module UI
 
     # Input height per size.
     SIZES = {
-      sm: "h-8",
-      md: "h-9",
-      lg: "h-10"
+      sm: "h-11",
+      md: "h-11",
+      lg: "h-11"
     }.freeze
 
     def initialize(name:, options: [], value: nil, placeholder: nil, label: nil, size: :md, **html_attrs)

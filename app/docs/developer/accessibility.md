@@ -23,24 +23,42 @@ These are the headline rules the automated gate checks, alongside the rest of th
 
 ## How the Gate Runs
 
-Accessibility is audited with [axe-core](https://github.com/dequelabs/axe-core), injected into the page through Playwright during system specs. The audit runs only the AAA rule set:
+Accessibility is audited with [axe-core](https://github.com/dequelabs/axe-core), injected into the page through Playwright during system specs. The audit runs the **cumulative** WCAG tag set — 2.0 + 2.1 + 2.2 at A/AA/AAA (`PlaywrightAccessibility::AXE_TAG_SET`; the versions are separate axe tags, and listing only the 2.0-era ones silently skips every 2.1/2.2 rule). axe's `target-size` rule (24px, 2.5.8) is explicitly enabled — it ships disabled.
 
-```ruby
-options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
-```
+In CI, this audit runs automatically after *every* system spec — there is no opt-in to forget. The hook lives in `spec/support/playwright_accessibility.rb` and uses `DEFAULT_AXE_OPTIONS`. If any rule fails, the spec fails and the build goes red. Locally the audit is opt-in so the suite stays fast — call the helpers on the pages you want checked.
 
-In CI, this audit runs automatically after *every* system spec — there is no opt-in to forget. The hook lives in `spec/support/playwright_accessibility.rb`:
+Beyond axe's own rules, every audit also runs (2026-07 gate upgrade):
 
-```ruby
-# CI only — runs after each system spec
-config.after(:each, type: :system) do
-  options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
-  results = run_axe_audit(options)
-  expect(results["violations"]).to be_empty
-end
-```
+- **Surfaced `incomplete` contrast**: axe files "can't compute" cases (text
+  over an image) as `incomplete`, not violations — the gate fails any
+  INTERACTIVE element in that bucket with no opaque background plate
+  up-chain.
+- **`mc-target-size-44`** — the AAA 44×44 floor (2.5.5), measured as the
+  input+label union for form controls. Exceptions: links inside running
+  text (the SC's own inline exception), sr-only bypass links, and the
+  composite-widget deviation below.
+- **`mc-focus-indicator`** — flags focusables whose outline is suppressed
+  by author CSS with no `:focus`/`:focus-visible` paint rule matching them
+  (2.4.7). Static CSSOM analysis: JS-only highlight schemes will flag and
+  need a real focus-state style.
+- **`mc-transparent-over-media`** — samples the real paint stack
+  (`elementsFromPoint`) and fails any interactive element that hits an
+  image/canvas/video before any opaque background. Contrast over a raster
+  is unknowable; give the control an opaque plate.
 
-If any rule fails, the spec fails and the build goes red. Locally the audit is opt-in so the suite stays fast — call the helpers on the pages you want checked.
+### Documented deviation: composite-widget interiors
+
+Dropdown menu items and listbox options (`role=menuitem|option` inside
+`role=menu|menubar|listbox`) keep desktop density and are **not claimed
+under 2.5.5** on fine-pointer devices — 2.5.5 has no "dense widget"
+exception, so this is an honest deviation, not a reinterpretation. Two
+compensations, both enforced: the gate holds those items to the **24px
+2.5.8 AA floor**, and a global `@media (pointer: coarse)` rule
+(`app/assets/tailwind/application.css`) bumps every widget item to the full
+44px on touch devices — the population target size protects. Everything
+else — buttons, links, form controls, chips, tabs, breadcrumbs — is held to
+44×44 with no exceptions. Do not widen this deviation without a design
+review.
 
 ## Auditing Locally
 

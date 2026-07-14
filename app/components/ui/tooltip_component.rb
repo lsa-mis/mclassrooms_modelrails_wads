@@ -74,7 +74,7 @@ module UI
 
     def wrapper_attrs
       {
-        class: cn("group relative inline-flex", @extra_class),
+        class: cn("group relative inline-flex min-h-11 items-center rounded-md focus-ring", @extra_class),
         style: "anchor-name: --#{@id}",
         tabindex: "0",
         "aria-describedby": @id,

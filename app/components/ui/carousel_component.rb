@@ -20,7 +20,7 @@ module UI
     SLIDE_CLS = "w-full shrink-0 overflow-hidden"
 
     BTN_BASE  = "absolute top-1/2 z-10 -translate-y-1/2 inline-flex size-11 items-center justify-center " \
-                "rounded-full bg-surface-raised/80 backdrop-blur border border-border shadow-sm " \
+                "rounded-full bg-surface-raised/95 backdrop-blur border border-border shadow-sm " \
                 "transition hover:bg-surface-raised disabled:opacity-40 focus-ring"
     BTN_PREV  = "left-2"
     BTN_NEXT  = "right-2"

@@ -19,7 +19,7 @@ RSpec.describe "Modal system", type: :system do
       wrapper.setAttribute('data-controller', 'modal');
       #{options[:open] ? "wrapper.setAttribute('data-modal-open-value', 'true');" : ""}
       wrapper.innerHTML = `
-        <button data-action="click->modal#open" id="test-modal-trigger">Open Modal</button>
+        <button data-action="click->modal#open" id="test-modal-trigger" style="min-width:44px;min-height:44px">Open Modal</button>
         <dialog data-modal-target="dialog" id="test-modal"
                 role="dialog" aria-modal="true" aria-labelledby="test-modal-title"
                 class="bg-transparent backdrop:bg-transparent p-4">
@@ -27,8 +27,8 @@ RSpec.describe "Modal system", type: :system do
                style="opacity:0; transform:scale(0.95); background:white; padding:24px; border-radius:8px; min-width:300px;">
             <h2 id="test-modal-title">Test Modal</h2>
             <p>Modal content for testing</p>
-            <button data-action="click->modal#close" id="test-modal-close" aria-label="Close dialog">Close</button>
-            <a href="#" id="test-modal-link">A focusable link</a>
+            <button data-action="click->modal#close" id="test-modal-close" aria-label="Close dialog" style="min-width:44px;min-height:44px">Close</button>
+            <a href="#" id="test-modal-link" style="display:inline-flex;min-width:44px;min-height:44px;align-items:center">A focusable link</a>
           </div>
         </dialog>
       `;

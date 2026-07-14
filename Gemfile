@@ -33,7 +33,7 @@ gem "omniauth-rails_csrf_protection"
 gem "pwned"
 gem "pundit"
 gem "pagy"
-gem "markdowndocs", "~> 0.10"
+gem "markdowndocs", "~> 0.11"
 
 # User-facing notifications (in-app, email, digest) — see `app/notifiers/`.
 gem "noticed", "~> 3.0"
@@ -137,7 +137,7 @@ group :development do
   # moment the branch moves). Dev-only, so no production/runtime impact.
   # Setup: run `rails g modelrails_ui:agent_rules` to scaffold your local agent rules
   # (.modelrails_ui/ + a CLAUDE.md import — kept local, like CLAUDE.md itself).
-  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.5.0"
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.7.0"
 
   # Living documentation / component explorer for the vendored UI::* components
   # (scaffolded by `rails g modelrails_ui:lookbook`). Mounted at /lookbook in

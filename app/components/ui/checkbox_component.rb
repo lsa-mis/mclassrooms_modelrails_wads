@@ -80,7 +80,7 @@ module UI
       content_tag(:label,
         @label,
         for: @id,
-        class: "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50")
+        class: "inline-flex min-h-11 items-center text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-50")
     end
   end
 end

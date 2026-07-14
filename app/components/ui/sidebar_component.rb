@@ -18,7 +18,7 @@ module UI
 
     HEADER_CLS = "flex h-14 items-center justify-between border-b border-border px-4"
 
-    TOGGLE_CLS = "inline-flex size-8 items-center justify-center rounded-md " \
+    TOGGLE_CLS = "inline-flex size-11 shrink-0 items-center justify-center rounded-md " \
                  "text-text-muted hover:bg-surface-sunken hover:text-text-heading " \
                  "focus-ring transition"
 
@@ -28,7 +28,7 @@ module UI
                   "transition-opacity group-data-[collapsed=true]:opacity-0 group-data-[collapsed=true]:h-0 " \
                   "group-data-[collapsed=true]:overflow-hidden group-data-[collapsed=true]:mb-0"
 
-    ITEM_CLS = "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors " \
+    ITEM_CLS = "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors " \
                "overflow-hidden " \
                "group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-0 " \
                "hover:bg-surface-sunken hover:text-text-heading " \

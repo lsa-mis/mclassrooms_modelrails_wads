@@ -99,6 +99,27 @@
   }
 }
 
+/* Composite-widget target sizing (WCAG 2.5.5 deviation — see
+   app/docs/developer/accessibility.md): menu and listbox interiors keep
+   desktop density (2.5.5 not claimed for them on fine pointers; the 24px
+   2.5.8 AA floor is enforced by the spec gate). On COARSE pointers — the
+   population target size actually protects — every widget item gets the
+   full 44px floor. */
+@media (any-pointer: coarse) {
+  [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"] {
+    min-height: var(--form-input-height);
+    min-width: var(--form-input-height);
+  }
+}
+
+/* Lexxy rich-text editors: an empty contenteditable measures ~24px tall —
+   under the 44px floor and a needle-thin click target for composing. The
+   min-width covers the collapsed inline-edit case. */
+.lexxy-editor__content {
+  min-height: var(--form-input-height);
+  min-width: var(--form-input-height);
+}
+
 /* Component utilities — composition rules for repeated view patterns (not theme tokens). */
 
 @layer components {
@@ -111,7 +132,10 @@
 
   /* Text-only button base; color/size stay at the call site. */
   .btn-text {
-    @apply font-medium underline rounded;
+    /* min 44px both axes: text buttons measured ~20px tall (short labels
+       ~26px wide) — under the AAA target floor (WCAG 2.5.5). Invisible
+       hit-area growth. */
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center font-medium underline rounded;
     @apply focus-ring;
     @apply hover:no-underline;
   }
@@ -213,7 +237,9 @@
   }
 
   .pagy.series-nav a {
-    @apply inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-md px-3 text-sm font-medium text-text-body outline-none transition-colors;
+    /* h-11 min-w-11: page links measured 36x36, under the 44px AAA target
+       floor (WCAG 2.5.5). */
+    @apply inline-flex h-11 min-w-11 items-center justify-center rounded-md px-3 text-sm font-medium text-text-body outline-none transition-colors;
     @apply hover:bg-surface-sunken hover:text-text-heading;
     @apply focus-ring;
   }

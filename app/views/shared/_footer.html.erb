@@ -12,7 +12,7 @@
           two logo links are never simultaneously present in the DOM, so
           screen readers never encounter two "ModelRails" links at once. %>
       <%= link_to home_path,
-            class: "hidden sm:block hover:opacity-80 transition-opacity
+            class: "hidden sm:flex sm:items-center min-h-11 hover:opacity-80 transition-opacity
                     focus-ring rounded" do %>
         <%= render "shared/site_logo", size: :small, show_name: true %>
       <% end %>
