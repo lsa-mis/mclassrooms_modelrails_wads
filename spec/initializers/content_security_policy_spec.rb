@@ -33,3 +33,26 @@ RSpec.describe "Content Security Policy" do
     expect(form_action).to include(:self).or include("'self'")
   end
 end
+
+# Regression: the nonce generator used `request.session.id.to_s`, which is
+# BLANK on a visitor's FIRST (sessionless) request — exactly when the cookie
+# consent banner appears. A blank nonce renders as `'nonce-'`, an invalid CSP
+# source browsers ignore, which then blocks EVERY inline script (the importmap
+# bootstrap + the module entry). Stimulus never boots, so the banner's buttons
+# (and all other controllers) do nothing. This was invisible to the suite
+# because CSP runs report-only in test.
+RSpec.describe "CSP nonce generator" do
+  let(:generator) { Rails.application.config.content_security_policy_nonce_generator }
+
+  it "returns a non-blank nonce even when the request has no session id yet" do
+    request = double("request", session: double("session", id: nil))
+
+    expect(generator.call(request)).to be_present
+  end
+
+  it "reuses the session id as the nonce once a session exists" do
+    request = double("request", session: double("session", id: "sess-abc123"))
+
+    expect(generator.call(request)).to eq("sess-abc123")
+  end
+end

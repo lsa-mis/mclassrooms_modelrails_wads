@@ -32,8 +32,15 @@ Rails.application.configure do
       "https://*.okta.com"
   end
 
-  # Generate session nonces for permitted importmap and inline scripts.
-  config.content_security_policy_nonce_generator = ->(request) { request.session.id.to_s }
+  # Generate nonces for permitted importmap and inline scripts. Prefer the
+  # session id (stable per session), but fall back to a random nonce whenever
+  # it is blank — a visitor's FIRST request has no session yet (exactly when
+  # the cookie-consent banner shows). A blank id would emit `'nonce-'`, an
+  # invalid CSP source browsers ignore, which then blocks every inline script
+  # (importmap bootstrap + module entry) and stops Stimulus from booting.
+  config.content_security_policy_nonce_generator = lambda do |request|
+    request.session.id&.to_s.presence || SecureRandom.base64(16)
+  end
   config.content_security_policy_nonce_directives = %w[script-src]
 
   # Enforce CSP in development and production. Report-only in test because
