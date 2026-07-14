@@ -91,6 +91,10 @@ group :development, :test do
   gem "rspec-rails"
   gem "factory_bot_rails"
   gem "faker"
+
+  # Multi-core spec runs via bin/parallel-rspec (CI + Lefthook pre-push).
+  # Dev group too: the parallel:* rake tasks load through the railtie.
+  gem "parallel_tests"
 end
 
 group :test do

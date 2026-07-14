@@ -46,7 +46,8 @@ bin/dev
 ### Running tests
 
 ```bash
-bundle exec rspec
+bin/parallel-rspec   # full suite across all cores + integrity gates (what CI runs)
+bundle exec rspec    # single-process run (focused files, debugging)
 ```
 
 With documentation output:

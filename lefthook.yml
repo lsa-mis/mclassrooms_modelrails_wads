@@ -86,7 +86,10 @@ pre-push:
       skip_empty: false
       env:
         CI: "true"
-      run: mise exec -- bundle exec rspec
+      # bin/parallel-rspec = full suite across all cores + integrity gates
+      # (example-count parity, merged coverage floor). Same gates as CI's test
+      # job. Worker count: PARALLEL_TEST_PROCESSORS env or core count.
+      run: mise exec -- bin/parallel-rspec
       skip:
         - merge
         - rebase

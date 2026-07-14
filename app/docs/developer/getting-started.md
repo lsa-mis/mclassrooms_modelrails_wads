@@ -65,11 +65,15 @@ modelrails_base supports several distinct product shapes — solo prosumer, inte
 ## Running Tests
 
 ```bash
-bundle exec rspec                        # Full suite
+bin/parallel-rspec                       # Full suite across all cores (what CI and pre-push run)
+bundle exec rspec spec/path/to_spec.rb   # Focused single-process run
 bundle exec rspec --format documentation # Verbose output
 ```
 
-Coverage report is generated at `coverage/index.html`.
+`bin/parallel-rspec` splits the suite across your CPU cores (each worker gets
+its own SQLite database and browser) and adds two integrity gates: the executed
+example count must match a dry-run enumeration, and the merged coverage must
+meet the 40% floor. Coverage report is generated at `coverage/index.html`.
 
 ## Development Tools
 
@@ -111,7 +115,8 @@ Biscuit's gem normally renders a floating "Manage cookies" button in the bottom-
 | Command | Purpose |
 |---------|---------|
 | `bin/dev` | Start development server |
-| `bundle exec rspec` | Run test suite |
+| `bin/parallel-rspec` | Run full test suite in parallel (CI parity) |
+| `bundle exec rspec` | Run focused specs single-process |
 | `bundle exec brakeman` | Security scan |
 | `rails users:unlock[email]` | Unlock a locked account |
 | `rails users:verify[email]` | Manually verify an email |
@@ -152,7 +157,7 @@ Runs the same checks plus additional linting:
 ### Development Workflow
 
 1. Create a feature branch: `git checkout -b my-feature`
-2. Write tests, implement, verify locally: `bundle exec rspec`
+2. Write tests, implement, verify locally: `bin/parallel-rspec`
 3. Commit (pre-commit hook auto-fixes Ruby style)
 4. Push (pre-push hook runs full CI locally)
 5. Open PR on GitHub (Actions run second round of checks)

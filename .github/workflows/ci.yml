@@ -101,6 +101,8 @@ jobs:
     env:
       RAILS_ENV: test
       CI: true
+      # Pin workers to the runner's 4 vCPUs (deterministic split + DB count).
+      PARALLEL_TEST_PROCESSORS: "4"
 
     steps:
       - name: Checkout code
@@ -119,8 +121,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Prepare database
-        run: bin/rails db:prepare
+      - name: Prepare parallel test databases
+        # db:prepare per worker (create + schema + seeds), matching the
+        # single-database semantics this job had before parallelization.
+        run: bundle exec rake "parallel:rake[db:prepare]"
 
       - name: Set up gem source symlinks for Tailwind
         run: bundle exec rake tailwind:setup_gem_sources
@@ -129,7 +133,9 @@ jobs:
         run: bin/rails assets:precompile
 
       - name: Run tests
-        run: bundle exec rspec --format progress
+        # Parallel suite + integrity gates (example-count parity, merged
+        # 40% coverage floor) — see bin/parallel-rspec.
+        run: bin/parallel-rspec
 
       - name: Upload test screenshots on failure
         uses: actions/upload-artifact@v7

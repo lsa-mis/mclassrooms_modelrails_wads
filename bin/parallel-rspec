@@ -1,0 +1,103 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Runs the full RSpec suite across all cores (parallel_tests) with two
+# integrity gates on top of pass/fail:
+#
+#   1. Example-count parity — a --dry-run enumeration fixes the expected
+#      example count; the per-worker counts (spec/support/
+#      parallel_example_count.rb) must sum to exactly that. Catches a
+#      splitter dropping or duplicating spec files.
+#   2. Merged coverage floor — workers skip the minimum (each sees ~1/N of
+#      the suite); SimpleCov.collate enforces it on the merged result.
+#
+# Worker count: PARALLEL_TEST_PROCESSORS or the machine's core count.
+# Plain `bundle exec rspec` remains the single-process reference path.
+
+require_relative "../config/boot"
+require "json"
+require "fileutils"
+require "pathname"
+
+class ParallelRspecRunner
+  COUNTS_DIR = "tmp/parallel_example_counts"
+  DRY_RUN_JSON = "tmp/parallel_rspec_dry_run.json"
+  MINIMUM_COVERAGE = 40 # keep in sync with spec/rails_helper.rb
+
+  def initialize(counts_dir: COUNTS_DIR, dry_run_json: DRY_RUN_JSON)
+    @counts_dir = Pathname.new(counts_dir)
+    @dry_run_json = Pathname.new(dry_run_json)
+  end
+
+  def run
+    reset_artifacts
+    enumerate!
+    puts "==> Expecting #{expected_count} examples"
+    run_suite!
+    verify_count!
+    puts "==> Example-count parity verified (#{executed_count}/#{expected_count})"
+    enforce_coverage!
+  end
+
+  def expected_count
+    JSON.parse(@dry_run_json.read).fetch("summary").fetch("example_count")
+  end
+
+  def executed_count
+    Pathname.glob(@counts_dir.join("*.count")).sum { |f| Integer(f.read) }
+  end
+
+  def verify_count!
+    return if executed_count == expected_count
+
+    per_worker = Pathname.glob(@counts_dir.join("*.count"))
+      .sort.map { |f| "worker #{f.basename('.count')}: #{f.read}" }.join(", ")
+    abort(<<~MSG)
+      parallel-rspec: example-count mismatch — expected #{expected_count}, ran #{executed_count}.
+      The parallel splitter dropped or duplicated at least one spec file.
+      Per-worker counts: #{per_worker.empty? ? '(none recorded)' : per_worker}
+    MSG
+  end
+
+  private
+
+  def reset_artifacts
+    FileUtils.rm_rf(@counts_dir)
+    FileUtils.rm_rf("coverage") # stale worker resultsets would pollute the merge
+    FileUtils.rm_f(@dry_run_json)
+  end
+
+  def enumerate!
+    puts "==> Enumerating expected example count (rspec --dry-run)"
+    FileUtils.mkdir_p(@dry_run_json.dirname)
+    system(
+      { "SKIP_COVERAGE" => "1" },
+      "bundle", "exec", "rspec", "--dry-run",
+      "--format", "json", "--out", @dry_run_json.to_s
+    ) || abort("parallel-rspec: dry-run enumeration failed")
+  end
+
+  def run_suite!
+    puts "==> Running the suite with parallel_rspec"
+    system("bundle", "exec", "parallel_rspec", "spec") ||
+      abort("parallel-rspec: spec failures (see output above)")
+  end
+
+  def enforce_coverage!
+    puts "==> Merging coverage and enforcing the #{MINIMUM_COVERAGE}% floor"
+    # Shell out so SimpleCov.collate's at_exit hook runs in a throwaway
+    # process (loading this file elsewhere must never register it).
+    collate = <<~RUBY
+      require "simplecov"
+      SimpleCov.collate Dir["coverage/.resultset.json"], "rails" do
+        enable_coverage :branch
+        merge_timeout 3600
+        minimum_coverage #{MINIMUM_COVERAGE}
+      end
+    RUBY
+    system("bundle", "exec", "ruby", "-e", collate) ||
+      abort("parallel-rspec: merged coverage below #{MINIMUM_COVERAGE}% (see report above)")
+  end
+end
+
+ParallelRspecRunner.new.run if $PROGRAM_NAME == __FILE__
