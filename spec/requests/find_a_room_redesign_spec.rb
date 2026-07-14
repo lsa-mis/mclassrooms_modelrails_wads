@@ -99,6 +99,17 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_no_css("select[name='per']", visible: :all)
   end
 
+  it "makes the More-filters toggle discoverable with a state-aware label" do
+    get find_a_room_path
+
+    summary = page.find("details#more_filters > summary")
+    # Discoverability (2026-07-14): a resting filled plate, not a bare heading.
+    expect(summary[:class]).to include("bg-surface-sunken")
+    # State-aware verb — both labels ship; CSS (group-open) swaps which shows.
+    expect(summary).to have_text(I18n.t("rooms.filters.more_filters"))
+    expect(summary).to have_text(I18n.t("rooms.filters.hide_filters"))
+  end
+
   it "puts the sort select inside the results frame, associated with the filter form" do
     get find_a_room_path
 
