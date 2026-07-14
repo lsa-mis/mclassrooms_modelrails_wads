@@ -452,6 +452,14 @@ dialog[open]::backdrop {
   --biscuit-padding: 1.25rem 1.5rem;
 }
 
+/* Pre-hide the banner when the server already recorded consent, so it doesn't
+   FLASH on every page load before the controller's connect() hides it. The gem
+   renders the banner unconditionally and only hides it via JS after boot, which
+   reads as the banner "coming back" on every navigation for a consented user. */
+[data-biscuit-already-consented-value="true"] [data-biscuit-target="banner"] {
+  display: none;
+}
+
 .dark .biscuit-banner {
   --biscuit-shadow-bottom: 0 -4px 16px rgba(0, 0, 0, 0.3);
   --biscuit-accent: var(--color-interactive);
