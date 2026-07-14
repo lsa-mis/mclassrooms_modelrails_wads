@@ -140,6 +140,20 @@ jobs:
       - name: Compile assets
         run: bin/rails assets:precompile
 
+      - name: Restore recorded spec runtimes (seeds balanced parallel split)
+        # parallel_tests reads this log to split by measured time instead of
+        # file size, evening out the slowest worker (#488). The unique per-sha
+        # key always misses on a fresh commit, so restore-keys pulls the newest
+        # prior log — on a PR that resolves to the base branch's latest, since
+        # GitHub scopes a run's cache reads to its own ref + the base + default
+        # branch. A miss is harmless: the split falls back to file size.
+        uses: actions/cache@v6
+        with:
+          path: tmp/parallel_runtime_rspec.log
+          key: parallel-runtime-${{ github.sha }}
+          restore-keys: |
+            parallel-runtime-
+
       - name: Run tests
         # Parallel suite + integrity gates (example-count parity, merged
         # 40% coverage floor) — see bin/parallel-rspec.

@@ -515,6 +515,36 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  describe "CI persists the spec runtime log for balanced parallel splits (#488)" do
+    # bin/parallel-rspec writes tmp/parallel_runtime_rspec.log (per-file spec
+    # timings); parallel_tests reads it on the NEXT run to split work by measured
+    # time instead of file size, evening out the slowest worker. That only helps
+    # if the log survives between runs — so the test job must cache it. Without
+    # the cache the log is cold every run and the split silently falls back to
+    # file size (still correct, just unbalanced — the #488 regression).
+    let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
+    let(:test_steps) { Array(ci_workflow.dig("jobs", "test", "steps")) }
+
+    it "caches tmp/parallel_runtime_rspec.log across runs" do
+      runtime_cache = test_steps.find do |step|
+        step["uses"].to_s.include?("actions/cache") &&
+          step.dig("with", "path").to_s.include?("parallel_runtime_rspec.log")
+      end
+      expect(runtime_cache).not_to be_nil,
+        "expected an actions/cache step in the test job persisting " \
+        "tmp/parallel_runtime_rspec.log so runtime-based worker balancing has a seed"
+    end
+
+    it "keys the cache so PRs restore the most recent recorded log" do
+      runtime_cache = test_steps.find { |s| s.dig("with", "path").to_s.include?("parallel_runtime_rspec.log") }
+      next if runtime_cache.nil?
+
+      expect(runtime_cache.dig("with", "restore-keys").to_s).to be_present,
+        "expected restore-keys on the runtime-log cache so a PR (whose exact key misses) " \
+        "still restores the newest log from the base branch"
+    end
+  end
+
   describe "Production topology safety (Rosa Gutiérrez + Ops panel, #130)" do
     # SQLite-on-Rails templates have non-obvious deploy hazards: rolling deploys
     # can race two containers on the same SQLite file; recurring jobs running in

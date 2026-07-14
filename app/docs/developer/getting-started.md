@@ -73,7 +73,10 @@ bundle exec rspec --format documentation # Verbose output
 `bin/parallel-rspec` splits the suite across your CPU cores (each worker gets
 its own SQLite database and browser) and adds two integrity gates: the executed
 example count must match a dry-run enumeration, and the merged coverage must
-meet the 40% floor. Coverage report is generated at `coverage/index.html`.
+meet the 40% floor. Each run records per-file timings to
+`tmp/parallel_runtime_rspec.log`, so the next run balances workers by measured
+runtime instead of file size (it falls back to file size when the log is
+absent). Coverage report is generated at `coverage/index.html`.
 
 ## Development Tools
 

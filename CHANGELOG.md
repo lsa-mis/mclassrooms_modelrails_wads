@@ -7,6 +7,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 ### Added
 
 - Parallel test suite — `bin/parallel-rspec` runs RSpec across all cores with example-count and merged-coverage integrity gates; CI and the Lefthook pre-push gate use it, cutting CI's test job from ~14 to ~8.5 minutes (#485; further wins tracked in #486–#488).
+- Runtime-balanced parallel test split — spec files split across workers by recorded per-file runtime instead of file size, evening out the slowest worker; the timing log (`tmp/parallel_runtime_rspec.log`) is written each run and cached in CI, and falls back to file-size splitting when absent (#488).
 - Add opt-in encrypted form-draft recovery on invitation and project forms.
 
 ### Fixed
