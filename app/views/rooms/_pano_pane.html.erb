@@ -29,20 +29,30 @@
   <div data-panorama-target="viewer" hidden class="absolute inset-0"></div>
   <%# The whole overlay is a target: it paints OVER the viewer, so the
       controller must hide ALL of it on load or it eats every drag/zoom. %>
-  <div data-panorama-target="overlay" class="absolute inset-0 flex items-center justify-center gap-2">
-    <%# Both controls sit over an ARBITRARY poster photo — contrast against a
-        raster is unknowable (and axe skips it), so each gets a fully opaque
-        surface-overlay plate. btn-secondary is transparent at rest by
-        design; the plate restores deterministic AAA text/border contrast.
-        The info chip is min 44px: the tooltip wrapper is TABBABLE, making
-        the chip a real target under the 2.5.5 floor. %>
-    <%= ui :button, t("rooms.show.load_panorama"), variant: :outline, tone: :neutral,
-          class: "bg-surface-overlay shadow-sm",
-          data: { action: "panorama#load" } %>
-    <%= render(UI::TooltipComponent.new(text: t("rooms.show.panorama_hint"))) do %>
-      <span class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface-overlay shadow-sm">
-        <%= icon(:information_circle, size: :sm) %>
+  <div data-panorama-target="overlay" class="absolute inset-0 flex items-center justify-center">
+    <%# The Load button sits over an ARBITRARY poster photo — contrast against a
+        raster is unknowable (and axe skips it), so it gets a fully opaque
+        surface-overlay plate for deterministic AAA text/border contrast. The
+        button carries its OWN hint (2026-07-14): the button is already the
+        focusable trigger, so we follow UI::Tooltip's prescribed
+        interactive-control pattern — aria-describedby + the bubble reused via
+        `bubble_classes`, NOT the component's own tabbable wrapper (which would
+        add a nested second tab stop next to the button). Hover or focus the
+        button → bubble; Esc dismisses via the shared floating controller
+        (WCAG 1.4.13). This replaces the old standalone info chip. %>
+    <% pano_tip_id = "tip_load_panorama_#{room.id}" %>
+    <div class="group/tooltip relative inline-flex min-h-11 items-center"
+         style="anchor-name: --<%= pano_tip_id %>"
+         data-controller="floating"
+         data-action="keydown.esc->floating#dismiss mouseleave->floating#clearDismissed focusout->floating#clearDismissed">
+      <%= ui :button, t("rooms.show.load_panorama"), variant: :outline, tone: :neutral,
+            class: "bg-surface-overlay shadow-sm",
+            aria: { describedby: pano_tip_id },
+            data: { action: "panorama#load" } %>
+      <span id="<%= pano_tip_id %>" role="tooltip" style="position-anchor: --<%= pano_tip_id %>"
+            class="<%= UI::TooltipComponent.bubble_classes(side: :top) %>">
+        <%= t("rooms.show.panorama_hint") %>
       </span>
-    <% end %>
+    </div>
   </div>
 <% end %>
