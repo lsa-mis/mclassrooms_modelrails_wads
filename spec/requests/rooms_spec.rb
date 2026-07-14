@@ -375,23 +375,31 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(response.body).not_to include(I18n.t("rooms.index.buildings_heading"))
     end
 
-    # Teeth for the nested-interactive a11y posture: card tags are plain,
-    # LABELED <span>s (2026-07 redesign — labels over icons), and the
-    # <summary> subtree must contain NO focusable/interactive descendant —
-    # HTML5 forbids focusable descendants of <summary>, and axe-core's
-    # nested-interactive rule flags exactly a `tabindex`-bearing tooltip
-    # wrapper here. "projdigit" is in RoomsHelper::CARD_TAG_CODES and its
-    # locale override renders it as "Projector".
-    it "renders a labeled card tag and no focusable element in the summary" do
+    # Teeth for the nested-interactive a11y posture: card chips are plain,
+    # LABELED spans, and the <details> <summary> — now the "+N more features"
+    # toggle (2026-07-14 unified-chiclet redesign) — must contain NO
+    # focusable/interactive descendant: HTML5 forbids focusable descendants of
+    # <summary>, and axe-core's nested-interactive rule flags exactly a
+    # `tabindex`-bearing tooltip wrapper here. The room needs more than
+    # CARD_TAG_LIMIT chips so a remainder disclosure actually renders;
+    # "projdigit" (CARD_TAG_CODES index 0, locale override "Projector") leads
+    # the always-visible strip.
+    it "renders a labeled card chip and no focusable element in the summary" do
+      # 5 chips total (4 here + seating_fixed from the before) → a strip of 4 +
+      # a one-item remainder disclosure whose summary must stay focusable-free.
       create(:room_characteristic, room: listed_classroom, workspace: workspace,
              short_code: "projdigit", description: "Projection: Digital Data&Video")
+      %w[lecturecap doccam whtbrd].each do |code|
+        create(:room_characteristic, room: listed_classroom, workspace: workspace,
+               short_code: code, description: "Media: #{code}")
+      end
       sign_in(membership_with("viewer"))
 
       get find_a_room_path
 
-      # Card restructure: the visible tag rides the card body (not the
-      # summary — that's now just the Details toggle, which must stay free of
-      # focusable/interactive descendants).
+      # The visible chip rides the card-body strip (not the summary — that's now
+      # the "+N more features" toggle, which must stay free of focusable/
+      # interactive descendants).
       page = Capybara.string(response.body)
       card = page.all("li").find { |li| li.has_text?("Projector") }
       expect(card).to be_present
