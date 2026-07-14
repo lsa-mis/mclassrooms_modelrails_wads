@@ -2,10 +2,12 @@
 <%# Result card, restructured per Dave's calls on the pre-release audit:
     the TITLE links straight to the room page (no more disclosure-then-link
     two-step — a link can't live inside <summary>, so the header row sits
-    outside the disclosure entirely); tags are the room's DISTINCTIVE,
-    filterable characteristics; alerts/notes get an always-visible line; and
-    the "Details" disclosure holds the full characteristic set as chiclets
-    with description tooltips (chiclets won over the duplicate text list). %>
+    outside the disclosure entirely); alerts/notes get an always-visible line.
+    Chiclet unification (2026-07-14): ONE priority-ordered room_card_chips
+    list feeds both the emphasized top-4 (CARD_TAG_LIMIT) strip (the room's
+    DISTINCTIVE, filterable characteristics) and a native <details> holding
+    the remainder, count-labeled "+N more features" — no separate tag/label
+    helper, no duplicate text list. %>
 <li class="rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-24">
   <div class="flex flex-wrap items-center gap-4">
     <% if (thumbnail = room_thumbnail_image(room)) %>

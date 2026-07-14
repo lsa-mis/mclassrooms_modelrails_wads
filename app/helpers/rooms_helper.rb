@@ -85,13 +85,6 @@ module RoomsHelper
                           .flat_map(&:entries).map(&:short_code).to_set
   end
 
-  def room_card_tags(room)
-    codes = room.room_characteristics.map(&:short_code).select { |code| filterable_codes.include?(code) }
-    (CARD_TAG_CODES.select { |code| codes.include?(code) } + (codes - CARD_TAG_CODES).sort)
-      .first(CARD_TAG_LIMIT)
-      .map { |code| characteristic_labels.fetch(code, code) }
-  end
-
   # ONE priority-ordered chip list for a results card (2026-07-14 redesign):
   # the same RoomPresenter::Chip objects the room page uses, ordered by a single
   # rule so the always-visible strip and the <details> remainder never diverge —
@@ -262,10 +255,5 @@ module RoomsHelper
   # (the RoomSearch unit spec) — using `.ordered` here would defeat it.
   def room_thumbnail_image(room)
     room.gallery_images.sort_by { |image| [ image.position, image.id ] }.first
-  end
-
-  # Full characteristic label list for a row's expanded detail (Brief §5.2).
-  def room_characteristic_labels(room)
-    room.room_characteristics.map { |rc| characteristic_labels.fetch(rc.short_code, rc.short_code) }.sort
   end
 end
