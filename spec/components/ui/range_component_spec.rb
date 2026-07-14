@@ -21,11 +21,16 @@ RSpec.describe UI::RangeComponent, type: :component do
     expect(page).not_to have_css("input[type='range'][value]")
   end
 
-  # AAA semantic token (the design-token guarantee), not raw Tailwind:
+  # AAA semantic token (the design-token guarantee), not raw Tailwind: the
+  # visible track is painted on ::-webkit-slider-runnable-track with the
+  # bg-surface-sunken token inside a transparent 44px hit box (2026-07-13
+  # redesign — `accent-interactive` is moot once appearance-none + a custom
+  # track/thumb replace the native accent).
   it "renders with the AAA semantic token" do
     render_inline(described_class.new)
 
-    expect(page).to have_css("input.accent-interactive")
+    expect(page).to have_css("input.bg-transparent.h-11")
+    expect(rendered_content).to include("slider-runnable-track]:bg-surface-sunken")
   end
 
   # invalid: drives a visible danger ring on the slider, not just aria-invalid.
