@@ -154,8 +154,37 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(card).to have_text(I18n.t("rooms.row.seats_label", count: 45))
     # the title itself links to the room page (audit: no disclosure two-step)
     expect(card).to have_link("1401 Mason Hall", href: room_path(room))
-    # the Details disclosure holds the full chiclet set
-    expect(card).to have_css("details summary", text: I18n.t("rooms.row.details_toggle"))
+    # the four characteristics all fit the emphasized strip — no disclosure
+    expect(card).to have_css("ul li span.bg-interactive-subtle")
+    expect(card).to have_no_css("details")
+  end
+
+  it "shows the top four as an emphasized strip and the rest in a count-labeled disclosure" do
+    # All in CARD_TAG_CODES: order = projdigit, lecturecap, doccam, whtbrd, chkbrd, teamtables
+    big = classroom(building, "1500", 50,
+                    codes: %w[projdigit lecturecap doccam whtbrd chkbrd teamtables], floor: floor)
+    big.room_characteristics.find_by(short_code: "projdigit").update!(long_description: "Fixed data projector")
+
+    get find_a_room_path
+    card = page.all("turbo-frame#find_a_room_results li").find { |li| li.has_text?("1500") }
+
+    # Strip: exactly the top 4, emphasized.
+    strip = card.first("ul")
+    expect(strip).to have_css("li span.bg-interactive-subtle", count: 4)
+
+    # Disclosure: the remainder (2), count-labeled, quiet — and NO overlap with the strip.
+    summary = card.find("details summary")
+    expect(summary).to have_text(I18n.t("rooms.row.more_features", count: 2))
+    # Capybara::Node::Simple treats a closed <details>'s content as hidden
+    # (no `open` attribute) — same reason other examples in this file target
+    # closed-disclosure content with `visible: :all` (see the More-filters
+    # panel assertions above).
+    details = card.find("details")
+    expect(details).to have_css("li span.border-border", count: 2, visible: :all)
+    expect(details).to have_no_css("span.bg-interactive-subtle", visible: :all)
+
+    # Popover: the described chip carries its long_description as a tooltip.
+    expect(card).to have_text("Fixed data projector")
   end
 
   # Backlog #7: the applied-count badge lives in the form, OUTSIDE the results

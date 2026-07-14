@@ -5,17 +5,22 @@ require "rails_helper"
 # data_version on EVERY call — 4 aggregate queries (count + maximum(:updated_at)
 # on both room_characteristics and characteristic_display_rules) — because
 # Ruby evaluates the cache KEY (which embeds data_version) before the cache
-# lookup runs. RoomsHelper#room_characteristic_icons/#room_characteristic_labels
-# used to call label_for once per characteristic per row, so a 30-room results
-# page thrashed data_version hundreds of times per render (Bullet can't catch
-# this — it's repeated class-level aggregates, not association N+1).
+# lookup runs. Pre-fix, RoomsHelper called label_for once per characteristic
+# per row, so a 30-room results page thrashed data_version hundreds of times
+# per render (Bullet can't catch this — it's repeated class-level aggregates,
+# not association N+1).
 #
 # The fix resolves CharacteristicFilterGroups.labels ONCE per request (a
-# RoomsHelper ivar memo mirroring the existing characteristic_icon_keys
-# pattern) and looks codes up in the resulting hash. This spec seeds a
-# workload that would explode pre-fix (10 rooms x 5 characteristics each) and
-# asserts the count of data_version-forming aggregate queries stays flat
-# instead of scaling with rows x characteristics.
+# RoomsHelper ivar memo) and looks codes up in the resulting hash. The card
+# strip itself has since been rebuilt (2026-07-14 chiclet unification) to
+# render via RoomPresenter#chips, fed by a REQUEST-memoized
+# CharacteristicDisplayRule index (RoomsHelper#card_display_rules) rather than
+# letting each row's RoomPresenter run its own default `.all.index_by` —
+# the same species of guardrail, one level down. This spec seeds a workload
+# that would explode either memo pre-fix (10 rooms x 5 characteristics each)
+# and asserts both the data_version aggregate count AND the plain
+# CharacteristicDisplayRule row-query count stay flat instead of scaling with
+# rows x characteristics.
 RSpec.describe "GET /find-a-room query budget", type: :request do
   let(:workspace) { create(:workspace, slug: "rooms-query-budget-workspace", personal: false) }
 
@@ -41,6 +46,14 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
   # they don't match.
   DATA_VERSION_AGGREGATE = /\b(COUNT|MAX)\s*\(.*(room_characteristics|characteristic_display_rules)|(room_characteristics|characteristic_display_rules).*\b(COUNT|MAX)\s*\(/i
 
+  # A plain row-fetch against characteristic_display_rules (CharacteristicDisplayRule.all,
+  # observed as `SELECT "characteristic_display_rules".* FROM "characteristic_display_rules"`)
+  # — deliberately NOT a COUNT/MAX, so this never double-counts a DATA_VERSION_AGGREGATE hit.
+  # Guards RoomsHelper#card_display_rules: without that request memo, each row's
+  # RoomPresenter.new(room) would run its own default `.all.index_by`, and this
+  # count would scale with the room count instead of staying flat.
+  CHARACTERISTIC_DISPLAY_RULES_ROW_FETCH = /FROM\s+["`]?characteristic_display_rules\b/i
+
   it "does not scale the data_version aggregate query count with rows x characteristics" do
     building = create(:building, workspace: workspace)
     # Normalization-stable (lowercase, alphanumeric-only) short_codes: RoomCharacteristic.short_code
@@ -56,17 +69,21 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
       end
     end
 
-    # One rule with a real icon_key (renders a chip via room_characteristic_icons),
-    # one filterable-only rule (no chip, still resolved via room_characteristic_labels).
+    # One rule with a real icon_key (renders an icon chip via RoomPresenter),
+    # one filterable-only rule (no icon, still resolved into a chip through
+    # the same request-memoized CharacteristicDisplayRule index).
     create(:characteristic_display_rule, workspace: workspace, short_code: "projector", icon_key: "computer_desktop")
     create(:characteristic_display_rule, workspace: workspace, short_code: "whiteboard")
 
     sign_in(membership_with("viewer"))
 
     aggregate_query_count = 0
+    rules_row_fetch_count = 0
     subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
       next if %w[CACHE SCHEMA].include?(payload[:name])
       aggregate_query_count += 1 if payload[:sql].match?(DATA_VERSION_AGGREGATE)
+      rules_row_fetch_count += 1 if !payload[:sql].match?(/\b(COUNT|MAX)\s*\(/i) &&
+                                     payload[:sql].match?(CHARACTERISTIC_DISPLAY_RULES_ROW_FETCH)
     end
 
     begin
@@ -80,5 +97,14 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     # call plus the helper's single CharacteristicFilterGroups.labels call — 4 aggregate
     # queries apiece). Pre-fix, 10 rooms x 5 characteristics drove this into the hundreds.
     expect(aggregate_query_count).to be <= 8
+
+    # Guards the `rules: card_display_rules` memo in RoomsHelper#card_chip_presenter —
+    # observed at 3 (CharacteristicFilterGroups.filters' own rules build,
+    # CharacteristicFilterGroups.labels/glossary's, and ONE request-wide
+    # RoomsHelper#card_display_rules resolution shared by all 10 rows). A
+    # per-row RoomPresenter default (dropping `rules:`) was verified to push
+    # this to 12 (2 + 10, one extra per room) — the <= 3 bound would catch
+    # that regression.
+    expect(rules_row_fetch_count).to be <= 3
   end
 end

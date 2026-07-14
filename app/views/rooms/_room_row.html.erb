@@ -2,10 +2,13 @@
 <%# Result card, restructured per Dave's calls on the pre-release audit:
     the TITLE links straight to the room page (no more disclosure-then-link
     two-step — a link can't live inside <summary>, so the header row sits
-    outside the disclosure entirely); tags are the room's DISTINCTIVE,
-    filterable characteristics; alerts/notes get an always-visible line; and
-    the "Details" disclosure holds the full characteristic set as chiclets
-    with description tooltips (chiclets won over the duplicate text list). %>
+    outside the disclosure entirely); alerts/notes get an always-visible line.
+    Chiclet unification (2026-07-14): ONE priority-ordered room_card_chips
+    list feeds both the emphasized top-4 (CARD_TAG_LIMIT) strip (the top few
+    of the room's priority-ordered characteristics — filterable differentiators
+    first, then the rest) and a native <details> holding the remainder,
+    count-labeled "+N more features" — no separate tag/label helper, no
+    duplicate text list. %>
 <li class="rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-24">
   <div class="flex flex-wrap items-center gap-4">
     <% if (thumbnail = room_thumbnail_image(room)) %>
@@ -40,13 +43,13 @@
     </span>
   </div>
 
-  <% tags = room_card_tags(room) %>
-  <% if tags.any? %>
-    <div class="flex flex-wrap gap-1.5 pt-2">
-      <% tags.each do |label| %>
-        <%= ui :badge, label, variant: :outline, tone: :neutral %>
+  <% chips = room_card_chips(room) %>
+  <% if chips.any? %>
+    <ul class="flex flex-wrap gap-1.5 pt-2">
+      <% chips.first(RoomsHelper::CARD_TAG_LIMIT).each do |chip| %>
+        <li><%= render "rooms/characteristic_chip", chip: chip, emphasis: true %></li>
       <% end %>
-    </div>
+    </ul>
   <% end %>
 
   <% alerts = note_stats[[ room.id, true ]].to_i %>
@@ -62,36 +65,21 @@
     </p>
   <% end %>
 
-  <details class="group mt-1">
-    <summary class="list-none min-h-11 inline-flex items-center gap-1 cursor-pointer
-                    text-sm text-text-body focus-ring rounded
-                    transition-colors hover:text-interactive">
-      <%= t("rooms.row.details_toggle") %>
-      <%= icon(:chevron_down, size: :sm,
-            class: "text-text-muted transition-transform group-open:rotate-180") %>
-    </summary>
-
-    <div class="pb-2 pt-1">
-      <% if room.room_characteristics.any? %>
-        <ul class="flex flex-wrap gap-1.5">
-          <% room.room_characteristics.sort_by { |c| characteristic_labels.fetch(c.short_code, c.short_code) }.each do |characteristic| %>
-            <% label = characteristic_labels.fetch(characteristic.short_code, characteristic.short_code) %>
-            <li>
-              <% if characteristic.long_description.present? %>
-                <%# The chiclet is non-interactive content, so UI::Tooltip's
-                    focusable wrapper is the CORRECT trigger here (hover +
-                    keyboard focus, Esc dismiss) — its named group/tooltip
-                    variants make it safe inside this details.group. %>
-                <%= ui :tooltip, text: characteristic.long_description do %>
-                  <%= ui :badge, label, variant: :outline, tone: :neutral %>
-                <% end %>
-              <% else %>
-                <%= ui :badge, label, variant: :outline, tone: :neutral %>
-              <% end %>
-            </li>
-          <% end %>
-        </ul>
-      <% end %>
-    </div>
-  </details>
+  <% remainder = chips.drop(RoomsHelper::CARD_TAG_LIMIT) %>
+  <% if remainder.any? %>
+    <details class="group mt-1">
+      <summary class="list-none min-h-11 inline-flex items-center gap-1 cursor-pointer
+                      text-sm text-text-body focus-ring rounded
+                      transition-colors hover:text-interactive">
+        <%= t("rooms.row.more_features", count: remainder.size) %>
+        <%= icon(:chevron_down, size: :sm,
+              class: "text-text-muted transition-transform group-open:rotate-180") %>
+      </summary>
+      <ul class="flex flex-wrap gap-1.5 pb-2 pt-2">
+        <% remainder.each do |chip| %>
+          <li><%= render "rooms/characteristic_chip", chip: chip %></li>
+        <% end %>
+      </ul>
+    </details>
+  <% end %>
 </li>

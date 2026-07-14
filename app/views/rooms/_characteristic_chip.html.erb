@@ -1,17 +1,19 @@
-<%# locals: (chip:) %>
+<%# locals: (chip:, emphasis: false) %>
 <%# MiClassrooms Phase 4 Task 4 (Brief §5.3): one characteristic chip — an
-    icon + visible-text badge. When the characteristic has a long
-    description, it is wrapped in UI::TooltipComponent as a SUPPLEMENTARY
-    hint (WCAG 1.4.13: hoverable, keyboard-focusable, Escape-dismissible) —
-    the badge itself already carries the visible label, so the tooltip only
-    adds detail and never gates the accessible name. The badge is a plain,
-    non-interactive <span>, so wrapping it in the tooltip's focusable
-    wrapper does NOT create a nested-interactive violation (unlike phase 3's
-    <summary>-nested tooltip, which wrapped a chip inside an already-
-    interactive disclosure widget). Decorative icon stays aria-hidden (the
-    `icon` helper's default — no aria_label passed). %>
+    icon + visible-text badge. When the characteristic has a long description it
+    is wrapped in UI::TooltipComponent as a SUPPLEMENTARY hint (WCAG 1.4.13:
+    hoverable, keyboard-focusable, Escape-dismissible) — the badge carries the
+    visible label, so the tooltip only adds detail and never gates the
+    accessible name. The badge is a plain, non-interactive <span>, so the
+    tooltip's focusable wrapper is not a nested-interactive violation.
+
+    2026-07-14: `emphasis: true` promotes the chip to the AAA-proven
+    [:soft, :primary] cell for the always-visible results-card strip; the quiet
+    [:outline, :neutral] default is what the room page AND the card's <details>
+    remainder use. NOTE: [:soft, :neutral] is NOT an AAA-proven Badge cell (it
+    raises), which is why emphasis rides :primary. %>
 <% badge = capture do %>
-  <%= ui :badge, variant: :outline, tone: :neutral do %>
+  <%= ui :badge, variant: (emphasis ? :soft : :outline), tone: (emphasis ? :primary : :neutral) do %>
     <%= icon(chip.icon_name, size: :xs) %>
     <%= chip.label %>
   <% end %>

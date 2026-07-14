@@ -85,11 +85,42 @@ module RoomsHelper
                           .flat_map(&:entries).map(&:short_code).to_set
   end
 
-  def room_card_tags(room)
-    codes = room.room_characteristics.map(&:short_code).select { |code| filterable_codes.include?(code) }
-    (CARD_TAG_CODES.select { |code| codes.include?(code) } + (codes - CARD_TAG_CODES).sort)
-      .first(CARD_TAG_LIMIT)
-      .map { |code| characteristic_labels.fetch(code, code) }
+  # ONE priority-ordered chip list for a results card (2026-07-14 redesign):
+  # the same RoomPresenter::Chip objects the room page uses, ordered by a single
+  # rule so the always-visible strip and the <details> remainder never diverge —
+  # CARD_TAG_CODES differentiators first (fixed priority), then remaining
+  # filterable characteristics alphabetically, then non-filterable ones. The view
+  # slices .first(CARD_TAG_LIMIT) into the emphasized strip and .drop(CARD_TAG_LIMIT)
+  # into the disclosure.
+  def room_card_chips(room)
+    card_chip_presenter(room).chips.sort_by { |chip| card_chip_sort_key(chip) }
+  end
+
+  # Reuse ONE CharacteristicDisplayRule index across every row (mirrors the
+  # filterable_codes / @filter_groups memo): RoomPresenter's default runs
+  # `.all.index_by` per instance, an N+1 Bullet raises on in test.
+  def card_display_rules
+    @card_display_rules ||= CharacteristicDisplayRule.all.index_by(&:short_code)
+  end
+
+  def card_chip_presenter(room)
+    RoomPresenter.new(room, rules: card_display_rules)
+  end
+
+  # [tier, priority-within-tier, label, short_code]. Tier 0 = CARD_TAG_CODES in
+  # listed order; tier 1 = remaining filterable, alpha by label; tier 2 = the
+  # rest, alpha. The short_code tacked on last breaks ties between chips whose
+  # labels collide after downcasing — Array#sort_by isn't stable, so without a
+  # unique tiebreaker those chips could reorder between runs.
+  def card_chip_sort_key(chip)
+    code = chip.short_code
+    if (index = CARD_TAG_CODES.index(code))
+      [ 0, index, "", code ]
+    elsif filterable_codes.include?(code)
+      [ 1, 0, chip.label.downcase, code ]
+    else
+      [ 2, 0, chip.label.downcase, code ]
+    end
   end
 
   # Breadcrumb return path (audit, Fried): "Find a Room" should take you back
@@ -227,10 +258,5 @@ module RoomsHelper
   # (the RoomSearch unit spec) — using `.ordered` here would defeat it.
   def room_thumbnail_image(room)
     room.gallery_images.sort_by { |image| [ image.position, image.id ] }.first
-  end
-
-  # Full characteristic label list for a row's expanded detail (Brief §5.2).
-  def room_characteristic_labels(room)
-    room.room_characteristics.map { |rc| characteristic_labels.fetch(rc.short_code, rc.short_code) }.sort
   end
 end
