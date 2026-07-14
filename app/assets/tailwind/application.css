@@ -132,12 +132,15 @@ summary::-webkit-details-marker { display: none; }
 /* Composite-widget target sizing (panel call, 2026-07-13 — see
    app/docs/developer/accessibility.md): menu and listbox interiors keep
    desktop density (WCAG 2.5.5 not claimed for them on fine pointers; the
-   24px 2.5.8 AA floor is enforced by the spec gate). On COARSE pointers —
-   the population target size actually protects — every widget item gets
-   the full 44px floor. */
-@media (pointer: coarse) {
+   24px 2.5.8 AA floor is enforced by the spec gate). When ANY available
+   pointer is coarse — the population target size protects — every widget
+   item gets the full 44px floor on BOTH axes. `any-pointer` (not `pointer`)
+   so touch laptops / 2-in-1s, whose PRIMARY pointer reports `fine`, still
+   size up for their touch users (2026-07-13 review). */
+@media (any-pointer: coarse) {
   [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"] {
     min-height: var(--form-input-height);
+    min-width: var(--form-input-height);
   }
 }
 
@@ -163,8 +166,9 @@ summary::-webkit-details-marker { display: none; }
   .btn-text {
     /* min 44px both axes: text buttons measured ~20px tall (and short
        labels like "Edit" ~26px wide) — under the AAA target floor
-       (a11y gate, 2026-07-13). Invisible hit-area growth. */
-    @apply inline-flex min-h-11 min-w-11 items-center font-medium underline rounded;
+       (a11y gate, 2026-07-13). justify-center so a short label sits centered
+       in the 44px box rather than left-aligned with a trailing gap. */
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center font-medium underline rounded;
     @apply focus-ring;
     @apply hover:no-underline;
   }

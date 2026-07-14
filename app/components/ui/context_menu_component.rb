@@ -101,16 +101,20 @@ module UI
         id: @trigger_id,
         # min 44px: the trigger is TABBABLE (right-click/keyboard surface) —
         # a real target under the AAA floor (a11y gate, 2026-07-13).
-        # role=button: aria-haspopup/aria-expanded are NOT allowed on a
-        # role-less div (axe aria-allowed-attr, critical); the trigger is
-        # operable (tabindex + keydown) and named by its contents.
+        # role=button + aria-haspopup/aria-expanded: NOT allowed on a
+        # role-less div (axe aria-allowed-attr, critical). role=button is a
+        # PROMISE the trigger honors — `triggerKeydown` opens the menu on
+        # Enter/Space/ArrowDown (anchored to the trigger), so keyboard users
+        # get button semantics, not just the Shift+F10 / ContextMenu-key path
+        # (openContextKey). Right-click still opens at the pointer (openAt).
         role: "button",
         class: "select-none inline-flex min-h-11 min-w-11 items-center",
         tabindex: "0",
         "aria-haspopup": "menu",
         "aria-expanded": "false",
         "aria-controls": @id,
-        data: { menu_target: "trigger", action: "contextmenu->menu#openAt keydown->menu#openContextKey" })
+        data: { menu_target: "trigger",
+                action: "contextmenu->menu#openAt keydown->menu#openContextKey keydown->menu#triggerKeydown" })
     end
 
     def menu_panel
