@@ -88,7 +88,7 @@ RSpec.describe "Form draft degradation", type: :system do
   # covered by the fact that no draft-enabled page is ever reachable signed-out
   # (the meta tags only render `if Current.user`, shared/_layout_head.html.erb).
   # Re-enable this example once the driver/browser pin resolves the protocol skew.
-  it "no-ops entirely without the key meta (fork-invariant)", skip: "capybara-playwright-driver 0.5.10 / playwright-ruby-client 1.61.0 vs cached chromium-1208: both Page#add_init_script and BrowserContext#add_init_script raise NoMethodError (nil result['disposable']) — see comment above" do
+  it "no-ops entirely without the key meta (fork-invariant)", skip: "add_init_script now works on playwright 1.61.1/chromium-1228, but this never-run example's assertion needs validating (evaluate_script of a removed node returns {} not nil) — separate follow-up" do
     page.driver.with_playwright_page do |pw|
       pw.context.add_init_script(script: <<~JS)
         document.addEventListener('DOMContentLoaded', () => {
