@@ -22,11 +22,14 @@
      data-biscuit-endpoint-value="<%= biscuit.consent_path %>"
      data-biscuit-already-consented-value="<%= consent.given? %>">
 
-  <div class="biscuit-banner"
-       data-biscuit-target="banner"
-       role="dialog"
-       aria-label="<%= t("biscuit.banner.aria_label") %>"
-       aria-modal="false">
+  <%# Server-render the banner hidden once a choice exists, so it never FLASHES
+      before the controller's connect() hides it. Reopen still works — it's the
+      same `hidden` attribute the gem's #showBanner/#hideBanner toggle. %>
+  <%= tag.div class: "biscuit-banner",
+        data: { biscuit_target: "banner" },
+        role: "dialog",
+        hidden: consent.given?,
+        aria: { label: t("biscuit.banner.aria_label"), modal: "false" } do %>
 
     <div class="biscuit-banner__inner">
       <p class="biscuit-banner__message">
@@ -118,7 +121,7 @@
         </div>
       <% end %>
     </div>
-  </div>
+  <% end %>
 
   <button type="button"
           class="biscuit-manage-link"
