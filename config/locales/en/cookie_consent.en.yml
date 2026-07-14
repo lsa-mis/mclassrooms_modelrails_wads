@@ -1,0 +1,12 @@
+en:
+  # Copy for the MiClassrooms override of the biscuit-rails cookie banner
+  # (app/views/biscuit/banner/_banner.html.erb). Unchanged strings still come
+  # from the gem's own `biscuit.*` keys; only the renamed/added copy lives here.
+  cookie_consent:
+    # Emphasized privacy-forward default. "Reject all" is the gem's wording, but
+    # "necessary" cookies can never be rejected, so this is clearer.
+    reject_non_essential: "Reject non-essential"
+    # Manage mode (shown when reopening after a choice was already recorded).
+    # States that unchecking + Save withdraws consent — withdrawal must be as
+    # easy as giving it.
+    manage_message: "Manage your cookie preferences. Uncheck a category and Save to withdraw your consent for it."
