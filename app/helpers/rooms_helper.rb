@@ -107,16 +107,19 @@ module RoomsHelper
     RoomPresenter.new(room, rules: card_display_rules)
   end
 
-  # [tier, priority-within-tier, label]. Tier 0 = CARD_TAG_CODES in listed order;
-  # tier 1 = remaining filterable, alpha by label; tier 2 = the rest, alpha.
+  # [tier, priority-within-tier, label, short_code]. Tier 0 = CARD_TAG_CODES in
+  # listed order; tier 1 = remaining filterable, alpha by label; tier 2 = the
+  # rest, alpha. The short_code tacked on last breaks ties between chips whose
+  # labels collide after downcasing — Array#sort_by isn't stable, so without a
+  # unique tiebreaker those chips could reorder between runs.
   def card_chip_sort_key(chip)
     code = chip.short_code
     if (index = CARD_TAG_CODES.index(code))
-      [ 0, index, "" ]
+      [ 0, index, "", code ]
     elsif filterable_codes.include?(code)
-      [ 1, 0, chip.label.downcase ]
+      [ 1, 0, chip.label.downcase, code ]
     else
-      [ 2, 0, chip.label.downcase ]
+      [ 2, 0, chip.label.downcase, code ]
     end
   end
 
