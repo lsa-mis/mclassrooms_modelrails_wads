@@ -175,6 +175,7 @@ en:
       capacity_min_hint: "minimum"
       popular_legend: "Popular features"
       more_filters: "More filters"
+      hide_filters: "Hide filters"
       unit_label: "School/College"
       unit_all: "All schools/colleges"
       capacity_max_label: "Maximum capacity"

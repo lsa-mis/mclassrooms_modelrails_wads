@@ -97,21 +97,31 @@
       group on this details would raise every bubble whenever focus sits
       anywhere in the panel (e.g. on this summary after a click). %>
   <%= tag.details id: "more_filters", open: more_filters_open?(params),
-        class: "group/disclosure border-t border-border" do %>
+        class: "group/disclosure mt-3" do %>
+    <%# A filled, pressable row (2026-07-14 discoverability pass): a bare bold
+        label + chevron read as a section HEADING and blended into the card, so
+        the summary now sits on a recessed bg-surface-sunken plate with the
+        chevron pushed to the right edge — the resting fill signals "control"
+        before any hover. The verb is state-aware with NO JS via the named
+        group/disclosure: "More filters" collapsed, "Hide filters" once open. %>
     <summary class="list-none min-h-11 flex items-center gap-2 cursor-pointer
-                    text-sm font-semibold text-text-heading focus-ring rounded
+                    rounded-md px-3 bg-surface-sunken
+                    text-sm font-semibold text-text-heading focus-ring
                     transition-colors hover:text-interactive">
-      <%= t("rooms.filters.more_filters") %>
+      <span class="group-open/disclosure:hidden"><%= t("rooms.filters.more_filters") %></span>
+      <span class="hidden group-open/disclosure:inline"><%= t("rooms.filters.hide_filters") %></span>
       <%# Always-rendered holder (hidden at zero) so the controller's
           syncPanelCount has a stable node to fill after frame renders —
           the count text itself comes from the frame's [data-panel-count]
-          mirror (backlog #7). %>
+          mirror (backlog #7). ml-auto pushes the applied-count + chevron to
+          the right edge; when the badge is hidden the chevron's own ml-auto
+          takes over. %>
       <% applied = panel_filter_count(params) %>
-      <%= tag.span hidden: applied.zero?, data: { panel_badge: true } do %>
+      <%= tag.span hidden: applied.zero?, class: "ml-auto", data: { panel_badge: true } do %>
         <%= ui :badge, t("rooms.filters.applied_count", count: applied), variant: :soft, tone: :info %>
       <% end %>
       <%= icon(:chevron_down, size: :sm,
-            class: "text-text-muted transition-transform group-open/disclosure:rotate-180") %>
+            class: "ml-auto text-text-muted transition-transform group-open/disclosure:rotate-180") %>
     </summary>
 
     <div class="pt-3 space-y-5">
