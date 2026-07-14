@@ -5,6 +5,14 @@ on:
   push:
     branches: [ main ]
 
+# A new push to a PR branch supersedes the in-flight run instead of letting a
+# stale ~8-min run finish (freeing runners + faster feedback). head_ref groups
+# a PR's runs; ref covers push events. cancel-in-progress is gated to PRs so
+# every push to main completes for the historical record.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest

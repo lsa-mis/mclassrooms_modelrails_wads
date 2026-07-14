@@ -398,6 +398,28 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  describe "CI cancels superseded runs (#486)" do
+    # Without a concurrency group, a second push to a PR branch lets the stale
+    # ~8-min run finish anyway — occupying runners and delaying the fresh run's
+    # feedback. cancel-in-progress must be gated to pull_request events: pushes
+    # to the default branch should each complete for the historical record.
+    let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
+
+    it "declares a top-level concurrency block keyed on the branch/PR ref" do
+      group = ci_workflow.dig("concurrency", "group").to_s
+      expect(group).to include("github."),
+        "expected a top-level concurrency.group keyed on the ref (e.g. github.head_ref || github.ref) " \
+        "so all runs for one branch share a group and supersede each other"
+    end
+
+    it "cancels in-progress runs only for pull_request events" do
+      cancel = ci_workflow.dig("concurrency", "cancel-in-progress").to_s
+      expect(cancel).to include("github.event_name == 'pull_request'"),
+        "expected cancel-in-progress gated to pull_request events so main-branch runs " \
+        "are never cancelled mid-flight (each push to main completes for the record)"
+    end
+  end
+
   describe "CI scans the production image for OS-level CVEs" do
     # brakeman covers app code and bundler-audit covers gem deps, but neither
     # sees the OS packages baked into ruby:slim (glibc, openssl, sqlite3,
