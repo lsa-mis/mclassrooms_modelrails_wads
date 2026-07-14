@@ -204,7 +204,6 @@ en:
       saved: "Saved"
       saved_filter: "Saved rooms"
     row:
-      details_toggle: "Details"
       more_features:
         one: "+%{count} more feature"
         other: "+%{count} more features"
