@@ -92,6 +92,41 @@ module RoomsHelper
       .map { |code| characteristic_labels.fetch(code, code) }
   end
 
+  # ONE priority-ordered chip list for a results card (2026-07-14 redesign):
+  # the same RoomPresenter::Chip objects the room page uses, ordered by a single
+  # rule so the always-visible strip and the <details> remainder never diverge —
+  # CARD_TAG_CODES differentiators first (fixed priority), then remaining
+  # filterable characteristics alphabetically, then non-filterable ones. The view
+  # slices .first(CARD_TAG_LIMIT) into the emphasized strip and .drop(CARD_TAG_LIMIT)
+  # into the disclosure.
+  def room_card_chips(room)
+    card_chip_presenter(room).chips.sort_by { |chip| card_chip_sort_key(chip) }
+  end
+
+  # Reuse ONE CharacteristicDisplayRule index across every row (mirrors the
+  # filterable_codes / @filter_groups memo): RoomPresenter's default runs
+  # `.all.index_by` per instance, an N+1 Bullet raises on in test.
+  def card_display_rules
+    @card_display_rules ||= CharacteristicDisplayRule.all.index_by(&:short_code)
+  end
+
+  def card_chip_presenter(room)
+    RoomPresenter.new(room, rules: card_display_rules)
+  end
+
+  # [tier, priority-within-tier, label]. Tier 0 = CARD_TAG_CODES in listed order;
+  # tier 1 = remaining filterable, alpha by label; tier 2 = the rest, alpha.
+  def card_chip_sort_key(chip)
+    code = chip.short_code
+    if (index = CARD_TAG_CODES.index(code))
+      [ 0, index, "" ]
+    elsif filterable_codes.include?(code)
+      [ 1, 0, chip.label.downcase ]
+    else
+      [ 2, 0, chip.label.downcase ]
+    end
+  end
+
   # Breadcrumb return path (audit, Fried): "Find a Room" should take you back
   # to YOUR search, not a bare reset. Same-origin referers pointing at the
   # index (with whatever query) qualify; anything else falls back clean.
