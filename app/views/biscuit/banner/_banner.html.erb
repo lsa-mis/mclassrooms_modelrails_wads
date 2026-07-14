@@ -1,0 +1,132 @@
+<%# MiClassrooms override of biscuit-rails 0.3.0's banner partial.
+
+    Two layouts, chosen SERVER-SIDE by whether a choice has been recorded:
+
+    • FIRST VISIT (no consent yet) — "Reject non-essential" is the emphasized
+      PRIMARY action; "Accept all" is the quiet secondary. This is the compliant,
+      privacy-forward default: rejecting must be at least as easy as accepting,
+      and highlighting Accept is a recognised dark pattern. Non-essential boxes
+      stay UNCHECKED (consent must be an affirmative act).
+
+    • MANAGE MODE (already consented, reopened via the footer "Cookie settings"
+      link) — the Accept/Reject/Manage shortcuts are gone; the user edits the
+      category checkboxes directly and Saves. Withdrawal is as easy as consent.
+
+    Every data-controller / data-biscuit-target / data-action is preserved
+    verbatim from the gem so its biscuit_controller.js keeps working — only the
+    layout, button emphasis, and copy change. If biscuit-rails changes its
+    banner markup or JS contract, revisit this file (biscuit-rails 0.3.0). %>
+<div data-controller="biscuit"
+     data-biscuit-position-value="<%= Biscuit.configuration.position %>"
+     data-biscuit-csrf-token-value="<%= form_authenticity_token %>"
+     data-biscuit-endpoint-value="<%= biscuit.consent_path %>"
+     data-biscuit-already-consented-value="<%= consent.given? %>">
+
+  <div class="biscuit-banner"
+       data-biscuit-target="banner"
+       role="dialog"
+       aria-label="<%= t("biscuit.banner.aria_label") %>"
+       aria-modal="false">
+
+    <div class="biscuit-banner__inner">
+      <p class="biscuit-banner__message">
+        <% if consent.given? %>
+          <%= t("cookie_consent.manage_message") %>
+        <% else %>
+          <%= t("biscuit.banner.message") %>
+          <a href="<%= Biscuit.configuration.privacy_policy_url %>" class="biscuit-learn-more">
+            <%= t("biscuit.banner.learn_more") %>
+          </a>
+        <% end %>
+      </p>
+
+      <%# First-visit shortcuts only. In manage mode the checkboxes + Save below
+          are the whole interaction. %>
+      <% unless consent.given? %>
+        <div class="biscuit-banner__actions">
+          <button type="button"
+                  class="biscuit-btn biscuit-btn--primary"
+                  data-action="click->biscuit#rejectAll"
+                  aria-label="<%= t("cookie_consent.reject_non_essential") %>">
+            <%= t("cookie_consent.reject_non_essential") %>
+          </button>
+
+          <button type="button"
+                  class="biscuit-btn biscuit-btn--secondary"
+                  data-action="click->biscuit#acceptAll"
+                  aria-label="<%= t("biscuit.banner.accept_all") %>">
+            <%= t("biscuit.banner.accept_all") %>
+          </button>
+
+          <button type="button"
+                  class="biscuit-btn biscuit-btn--secondary"
+                  data-action="click->biscuit#togglePreferences"
+                  aria-expanded="false"
+                  aria-controls="biscuit-preferences-panel">
+            <%= t("biscuit.banner.manage") %>
+          </button>
+        </div>
+      <% end %>
+
+      <%# One preferences panel (checkboxes + Save). Hidden behind the Manage
+          toggle on first visit; rendered open in manage mode. %>
+      <%= tag.div id: "biscuit-preferences-panel",
+            class: "biscuit-preferences#{' biscuit-preferences--open' if consent.given?}",
+            data: { biscuit_target: "preferencesPanel" },
+            hidden: !consent.given?,
+            aria: { label: t("biscuit.banner.manage") } do %>
+
+        <% Biscuit.configuration.categories.each do |key, opts| %>
+          <div class="biscuit-preference-row">
+            <% checkbox_id = "biscuit-category-#{key}" %>
+
+            <% if opts[:required] %>
+              <input type="checkbox"
+                     id="<%= checkbox_id %>"
+                     checked
+                     disabled
+                     aria-label="<%= t("biscuit.categories.#{key}.name") %>"
+                     aria-describedby="<%= checkbox_id %>-desc">
+            <% else %>
+              <%= tag.input type: "checkbox",
+                    id: checkbox_id,
+                    checked: consent.given? && consent.allowed?(key),
+                    data: { biscuit_target: "categoryCheckbox", category: key },
+                    aria: { label: t("biscuit.categories.#{key}.name"), describedby: "#{checkbox_id}-desc" } %>
+            <% end %>
+
+            <div class="biscuit-preference-row__label">
+              <label for="<%= checkbox_id %>" class="biscuit-preference-row__name">
+                <%= t("biscuit.categories.#{key}.name") %>
+                <% if opts[:required] %>
+                  <span aria-hidden="true"> (required)</span>
+                <% end %>
+              </label>
+              <span id="<%= checkbox_id %>-desc" class="biscuit-preference-row__description">
+                <%= t("biscuit.categories.#{key}.description") %>
+              </span>
+            </div>
+          </div>
+        <% end %>
+
+        <div class="biscuit-preferences__footer">
+          <button type="button"
+                  class="biscuit-btn biscuit-btn--primary"
+                  data-action="click->biscuit#savePreferences">
+            <%= t("biscuit.banner.save") %>
+          </button>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <button type="button"
+          class="biscuit-manage-link"
+          data-biscuit-target="manageLink"
+          data-biscuit-position-value="<%= Biscuit.configuration.position %>"
+          data-action="click->biscuit#reopen"
+          hidden
+          aria-label="<%= t("biscuit.banner.reopen") %>">
+    <%= t("biscuit.banner.reopen") %>
+  </button>
+</div>
