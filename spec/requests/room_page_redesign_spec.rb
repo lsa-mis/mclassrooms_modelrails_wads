@@ -69,14 +69,18 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
     # single medium → no tabs
     expect(page).to have_no_css("[role='tablist']")
 
-    # Over-photo controls sit on OPAQUE surface-overlay plates (2026-07-13
+    # The Load button sits on an OPAQUE surface-overlay plate (2026-07-13
     # contrast audit): contrast against an arbitrary poster is unknowable and
-    # axe skips raster backgrounds, so the plate is the guarantee. The info
-    # chip is min-44px — its tooltip wrapper is tabbable, making it a real
-    # target under the AAA floor.
+    # axe skips raster backgrounds, so the plate is the guarantee. The button
+    # carries its own hint via aria-describedby (2026-07-14, UI::Tooltip's
+    # interactive-control pattern) — no separate info chip.
     overlay = stage.find("[data-panorama-target='overlay']")
-    expect(overlay).to have_css("button.bg-surface-overlay", text: I18n.t("rooms.show.load_panorama"))
-    expect(overlay).to have_css("span.min-h-11.min-w-11.bg-surface-overlay")
+    button = overlay.find("button.bg-surface-overlay", text: I18n.t("rooms.show.load_panorama"))
+    tip_id = button["aria-describedby"]
+    expect(tip_id).to be_present
+    expect(overlay).to have_css("##{tip_id}[role='tooltip']", text: I18n.t("rooms.show.panorama_hint"))
+    # the standalone info chip is gone — the button IS the tooltip trigger now
+    expect(overlay).to have_no_css("span.min-w-11.bg-surface-overlay")
   end
 
   it "tabs the stage only when both panorama and photos exist, panes hidden not removed" do
