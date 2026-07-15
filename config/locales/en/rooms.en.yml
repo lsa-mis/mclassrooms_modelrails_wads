@@ -71,6 +71,7 @@ en:
       building_notes_heading: "Building notes"
       share:
         button: "Copy link"
+        native_button: "Share"
         copied: "Link copied to clipboard"
       media_label: "Room media"
       media_tabs:
