@@ -211,4 +211,17 @@ RSpec.describe "Find a Room", type: :system do
       expect(page).to have_current_path(room_path(big))
     end
   end
+
+  describe "dark-mode filter controls (2026-07-15 panel)" do
+    # The app toggles dark via a `.dark` class but never set `color-scheme`, so
+    # the browser drew native checkboxes in its default LIGHT appearance under
+    # dark mode — the filter checkboxes read as solid bright-white squares.
+    # `:root`/`.dark { color-scheme }` (application.css) fixes it globally.
+    it "sets color-scheme: dark so native checkboxes render dark, not bright white" do
+      visit find_a_room_path
+      ensure_dark_mode
+      scheme = cdp_evaluate("getComputedStyle(document.documentElement).colorScheme")
+      expect(scheme).to include("dark")
+    end
+  end
 end
