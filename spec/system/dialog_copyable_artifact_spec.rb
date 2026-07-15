@@ -19,9 +19,7 @@ RSpec.describe "Complete dialog behavior", type: :system do
 
     # Escape closes (reopen first if theme switching closed it)
     click_button "Open dialog" unless page.has_css?("dialog[open]")
-    page.driver.with_playwright_page do |pw_page|
-      pw_page.keyboard.press("Escape")
-    end
+    cdp_press("Escape")
     expect(page).to have_no_css("dialog[open]")
   end
 end

@@ -1,0 +1,72 @@
+---
+glob: "**/*.html{+*,}.erb"
+# CI installs gems to a project-local vendor/bundle/ (ruby/setup-ruby's
+# bundler-cache: true) — the glob above would otherwise recurse into every
+# vendored gem's own ERB templates (lookbook, markdowndocs, Rails itself).
+# Locally this never surfaces: gems live outside the project tree there.
+exclude:
+  - "vendor/**/*"
+
+# erb_lint enables a curated set of linters by default (RunnerConfig.default,
+# independent of each linter's own schema default) and merges this file on
+# top — so every linter must be listed EXPLICITLY here, using the exact
+# PascalCase class names (ERBLint::LinterRegistry.linters.map(&:simple_name)),
+# not the snake_case seen in --help/--enable-linters output. A snake_case key
+# here is silently ignored (a different, non-matching hash key), not an error.
+#
+# This config replicates the prior @herb-tools/linter (.herb.yml) coverage
+# exactly: only the interpolation-safety check is active. The extra rules
+# below (i18n strings, a11y autocomplete, deprecated classes, RuboCop-on-ERB)
+# are genuinely valuable — deliberately deferred to a follow-up so enabling
+# them is its own reviewed change, not bundled into this linter swap.
+linters:
+  ErbSafety:
+    enabled: true
+
+  # Matches herb-lint's disabled html-no-self-closing: void-element
+  # self-closing tags (<img />, <br />) are allowed, not flagged.
+  SelfClosingTag:
+    enabled: false
+
+  AllowedScriptType:
+    enabled: false
+  ClosingErbTagIndent:
+    enabled: false
+  CommentSyntax:
+    enabled: false
+  DeprecatedClasses:
+    enabled: false
+  ExtraNewline:
+    enabled: false
+  FinalNewline:
+    enabled: false
+  HardCodedString:
+    enabled: false
+  NoJavascriptTagHelper:
+    enabled: false
+  NoUnusedDisable:
+    enabled: false
+  ParserErrors:
+    enabled: false
+  PartialInstanceVariable:
+    enabled: false
+  RequireInputAutocomplete:
+    enabled: false
+  RequireScriptNonce:
+    enabled: false
+  RightTrim:
+    enabled: false
+  Rubocop:
+    enabled: false
+  RubocopText:
+    enabled: false
+  SpaceAroundErbTag:
+    enabled: false
+  SpaceInHtmlTag:
+    enabled: false
+  SpaceIndentation:
+    enabled: false
+  StrictLocals:
+    enabled: false
+  TrailingWhitespace:
+    enabled: false

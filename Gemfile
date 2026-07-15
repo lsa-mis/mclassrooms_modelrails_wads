@@ -102,12 +102,25 @@ group :development, :test do
   gem "rspec-rails"
   gem "factory_bot_rails"
   gem "faker"
+
+  # Multi-core spec runs via bin/parallel-rspec (CI + Lefthook pre-push).
+  # Dev group too: the parallel:* rake tasks load through the railtie.
+  gem "parallel_tests"
+
+  # HTML+ERB linter — replaces the npm @herb-tools/linter package. NOT the
+  # marcoroth/herb Ruby gem: its own `lint` subcommand shells out to the npm
+  # package under the hood (only parsing/analysis are Node-free there), so it
+  # doesn't actually remove the Node dependency it appears to. erb_lint is a
+  # genuinely independent, Node-free implementation.
+  gem "erb_lint", require: false
+
+  # Markdown linter — replaces the npm markdownlint-cli package.
+  gem "mdl", require: false
 end
 
 group :test do
   gem "capybara"
-  gem "playwright-ruby-client"
-  gem "capybara-playwright-driver"
+  gem "cuprite" # pure-Ruby CDP driver (ferrum) — no Node/browser-driver dependency
   gem "simplecov", require: false
   gem "webmock"
   gem "rails-controller-testing"
@@ -148,7 +161,7 @@ group :development do
   # moment the branch moves). Dev-only, so no production/runtime impact.
   # Setup: run `rails g modelrails_ui:agent_rules` to scaffold your local agent rules
   # (.modelrails_ui/ + a CLAUDE.md import — kept local, like CLAUDE.md itself).
-  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.7.0"
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.7.1"
 
   # Living documentation / component explorer for the vendored UI::* components
   # (scaffolded by `rails g modelrails_ui:lookbook`). Mounted at /lookbook in

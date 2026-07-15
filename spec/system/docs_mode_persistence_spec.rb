@@ -52,7 +52,7 @@ RSpec.describe "Docs mode persistence (markdowndocs gem)", type: :system do
     user.preferences.update!(docs_mode: "developer")
 
     # Drop all cookies (simulates fresh-browser scenario).
-    page.driver.with_playwright_page { |pw| pw.context.clear_cookies }
+    cdp_clear_cookies
     # Re-establish the session via sign-in.
     sign_in_via_form(user)
     visit "/docs/developer/getting-started"

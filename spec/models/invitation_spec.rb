@@ -332,6 +332,33 @@ RSpec.describe Invitation, type: :model do
         )
       }.to have_enqueued_mail(InvitationMailer, :invite)
     end
+
+    it "skips an email whose pending invitation was created concurrently instead of aborting the batch" do
+      # The lost race: another request commits the same pending invitation
+      # after bulk_invite! preloads pending emails but before create!. Hide
+      # the existing row from the preload so the partial unique index
+      # (index_invitations_on_email_and_invitable_pending) raises for real.
+      workspace.invitations.create!(
+        email: "raced@example.com",
+        role: role,
+        invited_by: inviter,
+        expires_at: 7.days.from_now
+      )
+      invitations = workspace.invitations
+      allow(workspace).to receive(:invitations).and_return(invitations)
+      allow(invitations).to receive(:pending).and_return(Invitation.none)
+
+      result = Invitation.bulk_invite!(
+        workspace: workspace,
+        emails: [ "raced@example.com", "fresh@example.com" ],
+        role: role,
+        invited_by: inviter
+      )
+
+      expect(result[:sent]).to eq(1)
+      expect(result[:skipped]).to eq(1)
+      expect(Invitation.where(email: "raced@example.com").count).to eq(1)
+    end
   end
 
   describe "email format validation" do

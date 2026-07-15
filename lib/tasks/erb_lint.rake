@@ -7,7 +7,7 @@ namespace :erb do
     if files.empty?
       puts "No ERB files found"
     else
-      sh "npx herb-lint #{files.join(" ")}"
+      sh "bundle exec erb_lint --lint-all"
     end
   end
 
@@ -15,6 +15,6 @@ namespace :erb do
   task :check do
     files = Dir.glob("app/**/*.erb")
     abort "No ERB files found" if files.empty?
-    sh "npx herb-lint #{files.join(" ")}"
+    sh "bundle exec erb_lint --lint-all"
   end
 end

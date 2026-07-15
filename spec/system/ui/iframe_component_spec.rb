@@ -42,8 +42,8 @@ RSpec.describe "Iframe component accessibility", type: :system do
   end
 
   # skip_axe_hook: this preview DELIBERATELY renders the anti-pattern (a
-  # title-less iframe) to document it — the CI after-each audit would
-  # rightly fail it, which is the point of the example, not a regression.
+  # title-less iframe) to document it — the CI after-each audit would rightly
+  # fail it, which is the point of the example, not a regression.
   it "dont_no_title: documents the failure mode with no live title-less iframe", skip_axe_hook: true do
     visit "/rails/view_components/ui/iframe_component/dont_no_title"
 

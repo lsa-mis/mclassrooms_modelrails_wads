@@ -10,12 +10,31 @@ require "rails_helper"
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative AAA
 # 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+#
+# Focus mechanism: the component listens for a real `focusin` event to open. A
+# JS-level `element.focus()` (via evaluate/execute_script) moves `document.
+# activeElement` but does NOT dispatch `focusin` under CDP — verified empirically
+# (a probe confirmed `activeElement` updates while a `focusin` listener never
+# fires, even combined into one evaluate call, ruling out a call-ordering
+# artifact). So we reach the trigger link via REAL CDP-dispatched Tab presses
+# (native browser tab-navigation), matching the pattern already established and
+# verified in switch_component_spec.rb for an analogous focus-trust gap.
 RSpec.describe "Hover card component accessibility", type: :system do
+  def tab_to_trigger
+    cdp_execute("document.activeElement && document.activeElement.blur()")
+    trigger_selector = '[data-controller="floating"] a'
+    reached = (1..10).any? do
+      cdp_press("Tab")
+      cdp_evaluate("document.activeElement === document.querySelector(#{trigger_selector.to_json})")
+    end
+    raise "could not reach the hover-card trigger via Tab navigation" unless reached
+  end
+
   it "basic: keyboard focus opens a reachable card that passes AAA in both themes" do
     visit "/rails/view_components/ui/hover_card_component/basic"
 
     # Opens on keyboard focus of the trigger link.
-    page.execute_script("document.querySelector('[data-controller=\"floating\"] a').focus()")
+    tab_to_trigger
     expect(page).to have_css("[data-controller='floating'][data-state='open']")
 
     # The card's interactive content is present and reachable while open.
@@ -32,10 +51,10 @@ RSpec.describe "Hover card component accessibility", type: :system do
   it "closes on Escape and returns focus to the trigger" do
     visit "/rails/view_components/ui/hover_card_component/basic"
 
-    page.execute_script("document.querySelector('[data-controller=\"floating\"] a').focus()")
+    tab_to_trigger
     expect(page).to have_css("[data-controller='floating'][data-state='open']")
 
-    page.send_keys(:escape)
+    cdp_press("Escape")
 
     expect(page).to have_css("[data-controller='floating'][data-state='closed']")
     expect(page.evaluate_script("document.activeElement.tagName")).to eq("A")

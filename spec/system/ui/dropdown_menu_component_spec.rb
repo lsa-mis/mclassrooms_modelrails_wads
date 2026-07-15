@@ -40,7 +40,8 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
 
   it "opens from the keyboard (Enter on the trigger) and focuses the first item" do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
-    find("button[aria-haspopup='menu']").send_keys(:enter)
+    find("button[aria-haspopup='menu']").native.node.focus
+    cdp_press(:enter)
 
     expect(page).to have_css("[role='menu']:not([hidden])")
     expect(focused_text).to eq("Edit")
@@ -48,7 +49,8 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
 
   it "ArrowUp on the trigger opens and focuses the last item" do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
-    find("button[aria-haspopup='menu']").send_keys(:up)
+    find("button[aria-haspopup='menu']").native.node.focus
+    cdp_press(:up)
 
     expect(focused_text).to eq("Open docs")
   end
@@ -57,11 +59,11 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
     open_menu # focus on "Edit"
 
-    page.send_keys(:down) # Duplicate
+    cdp_press(:down) # Duplicate
     expect(focused_text).to eq("Duplicate")
-    page.send_keys(:down) # skips disabled "Archive" → "Open docs"
+    cdp_press(:down) # skips disabled "Archive" → "Open docs"
     expect(focused_text).to eq("Open docs")
-    page.send_keys(:down) # wraps → "Edit"
+    cdp_press(:down) # wraps → "Edit"
     expect(focused_text).to eq("Edit")
   end
 
@@ -69,7 +71,7 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
     open_menu # focus on "Edit"
 
-    page.send_keys("d") # → "Duplicate"
+    cdp_browser.keyboard.type("d") # → "Duplicate"
     expect(focused_text).to eq("Duplicate")
   end
 
@@ -77,9 +79,9 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
     open_menu
 
-    page.send_keys(:end)
+    cdp_press(:end)
     expect(focused_text).to eq("Open docs")
-    page.send_keys(:home)
+    cdp_press(:home)
     expect(focused_text).to eq("Edit")
   end
 
@@ -87,7 +89,7 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
     open_menu
 
-    page.send_keys(:escape)
+    cdp_press(:escape)
 
     expect(page).to have_css("[role='menu'][hidden]", visible: :all)
     expect(page).to have_css("button[aria-haspopup='menu'][aria-expanded='false']")
@@ -98,7 +100,7 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
     open_menu
 
-    page.driver.with_playwright_page { |pw| pw.mouse.click(5, 5) }
+    cdp_click_at(5, 5)
 
     expect(page).to have_css("[role='menu'][hidden]", visible: :all)
   end

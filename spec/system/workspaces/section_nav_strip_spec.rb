@@ -6,7 +6,7 @@ RSpec.describe "Workspace shell section-nav strip (mobile)", type: :system do
   before do
     create(:membership, :owner, user: user, workspace: workspace)
     sign_in_via_form(user)
-    page.driver.with_playwright_page { |pw_page| pw_page.set_viewport_size(width: 375, height: 667) }
+    cdp_resize(375, 667)
   end
 
   it "shows Overview/Settings as an in-page strip with the current page marked" do

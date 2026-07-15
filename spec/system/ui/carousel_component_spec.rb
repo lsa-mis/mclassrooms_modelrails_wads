@@ -46,11 +46,19 @@ RSpec.describe "Carousel component accessibility", type: :system do
     # image overflow the slide to its intrinsic 600px while the track translated by
     # one 448px container-width, leaving slide 2 offset ~152px into the viewport.
     # Wait for the transition to settle, then measure the offset.
+    #
+    # Container selector: `[data-controller='carousel']`, NOT the `.overflow-hidden`
+    # utility class. That class is shared with each per-slide wrapper (SLIDE_CLS
+    # applies `overflow-hidden` too, for an unrelated flex-shrink reason — see
+    # carousel_component.rb), so `.overflow-hidden` is ambiguous: it happened to
+    # resolve to the true outer container only because that node is first in
+    # document order, an implicit and fragile coupling. `data-controller` is
+    # unique and semantic.
     offset = page.evaluate_async_script(<<~JS)
       const done = arguments[0]
       const track = document.querySelector("[data-carousel-target='track']")
       const measure = () => {
-        const container = document.querySelector("[data-test='carousel'] .overflow-hidden")
+        const container = document.querySelector("[data-test='carousel'] [data-controller='carousel']")
         const slide2 = track.querySelectorAll("[aria-roledescription='slide']")[1]
         done(Math.round(slide2.getBoundingClientRect().left - container.getBoundingClientRect().left))
       }

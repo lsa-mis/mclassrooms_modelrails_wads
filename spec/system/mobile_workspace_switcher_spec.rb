@@ -17,9 +17,7 @@ RSpec.describe "Mobile workspace switcher — hamburger panel", type: :system, j
 
   before do
     sign_in_via_form(user)
-    page.driver.with_playwright_page do |pw_page|
-      pw_page.set_viewport_size(width: 375, height: 667)
-    end
+    cdp_resize(375, 667)
   end
 
   it "shows both workspaces in the mobile panel after opening the hamburger" do

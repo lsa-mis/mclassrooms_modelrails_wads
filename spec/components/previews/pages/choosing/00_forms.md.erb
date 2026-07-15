@@ -68,5 +68,6 @@ primitive directly when you're outside a form or building something custom.
 | `label`      | captioning a control via `for:` (self-labelling `checkbox`/`radio_group` don't need it) | —              |
 | `form_field` | hand-composing a one-off labelled field with hint/error ARIA wiring           | `form_with` (the Rails form builder) |
 | `file_input` | an upload control with AAA styling + ARIA (inside `form_with`: `f.file_field`) | —                        |
+| `form_draft` | recovering unsaved form input after crashes or timeouts                       | —                        |
 
 <%= embed UI::FormFieldComponentPreview %>
