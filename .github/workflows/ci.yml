@@ -5,6 +5,14 @@ on:
   push:
     branches: [ main ]
 
+# A new push to a PR branch supersedes the in-flight run instead of letting a
+# stale ~8-min run finish (freeing runners + faster feedback). head_ref groups
+# a PR's runs; ref covers push events. cancel-in-progress is gated to PRs so
+# every push to main completes for the historical record.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
@@ -87,9 +95,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libvips42t64
 
-      - name: Install pinned lint tools (markdownlint-cli, @herb-tools/linter)
-        run: npm ci
-
       - name: Check markdown
         run: bundle exec rake markdown:check
 
@@ -101,6 +106,8 @@ jobs:
     env:
       RAILS_ENV: test
       CI: true
+      # Pin workers to the runner's 4 vCPUs (deterministic split + DB count).
+      PARALLEL_TEST_PROCESSORS: "4"
 
     steps:
       - name: Checkout code
@@ -116,11 +123,18 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libvips42t64
 
-      - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+      - name: Verify Chrome is available (Cuprite/ferrum connects to the runner's pre-installed browser)
+        # No install step: ubuntu-latest ships Google Chrome pre-installed and
+        # ferrum auto-detects it (no Node/npm involved). This check converts a
+        # silent runner-image assumption into a fast, explicit, loudly-failing
+        # one — if a future image ever drops Chrome, this step names the exact
+        # problem instead of 100+ confusing system-spec driver errors.
+        run: google-chrome --version || chromium-browser --version || chromium --version
 
-      - name: Prepare database
-        run: bin/rails db:prepare
+      - name: Prepare parallel test databases
+        # db:prepare per worker (create + schema + seeds), matching the
+        # single-database semantics this job had before parallelization.
+        run: bundle exec rake "parallel:rake[db:prepare]"
 
       - name: Set up gem source symlinks for Tailwind
         run: bundle exec rake tailwind:setup_gem_sources
@@ -128,8 +142,24 @@ jobs:
       - name: Compile assets
         run: bin/rails assets:precompile
 
+      - name: Restore recorded spec runtimes (seeds balanced parallel split)
+        # parallel_tests reads this log to split by measured time instead of
+        # file size, evening out the slowest worker (#488). The unique per-sha
+        # key always misses on a fresh commit, so restore-keys pulls the newest
+        # prior log — on a PR that resolves to the base branch's latest, since
+        # GitHub scopes a run's cache reads to its own ref + the base + default
+        # branch. A miss is harmless: the split falls back to file size.
+        uses: actions/cache@v6
+        with:
+          path: tmp/parallel_runtime_rspec.log
+          key: parallel-runtime-${{ github.sha }}
+          restore-keys: |
+            parallel-runtime-
+
       - name: Run tests
-        run: bundle exec rspec --format progress
+        # Parallel suite + integrity gates (example-count parity, merged
+        # 40% coverage floor) — see bin/parallel-rspec.
+        run: bin/parallel-rspec
 
       - name: Upload test screenshots on failure
         uses: actions/upload-artifact@v7

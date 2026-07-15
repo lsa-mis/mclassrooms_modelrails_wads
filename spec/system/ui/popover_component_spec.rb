@@ -45,7 +45,9 @@ RSpec.describe "Popover component accessibility", type: :system do
     visit "/rails/view_components/ui/popover_component/basic"
     open_popover
 
-    page.send_keys(:escape)
+    # cdp_press, not page.send_keys: Cuprite's send_keys clicks the active element
+    # (the focused panel) before typing, which can steal the focus this test asserts on.
+    cdp_press("Escape")
 
     expect(page).to have_css("[role='dialog'][hidden]", visible: :all)
     expect(page).to have_css("button[aria-haspopup='dialog'][aria-expanded='false']")
@@ -56,7 +58,7 @@ RSpec.describe "Popover component accessibility", type: :system do
     visit "/rails/view_components/ui/popover_component/basic"
     open_popover
 
-    page.driver.with_playwright_page { |pw| pw.mouse.click(5, 5) }
+    cdp_click_at(5, 5)
 
     expect(page).to have_css("[role='dialog'][hidden]", visible: :all)
   end

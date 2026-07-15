@@ -4,6 +4,17 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ## [Unreleased]
 
+### Added
+
+- Parallel test suite — `bin/parallel-rspec` runs RSpec across all cores with example-count and merged-coverage integrity gates; CI and the Lefthook pre-push gate use it, cutting CI's test job from ~14 to ~8.5 minutes (#485; further wins tracked in #486–#488).
+- Runtime-balanced parallel test split — spec files split across workers by recorded per-file runtime instead of file size, evening out the slowest worker; the timing log (`tmp/parallel_runtime_rspec.log`) is written each run and cached in CI, and falls back to file-size splitting when absent (#488).
+- Add opt-in encrypted form-draft recovery on invitation and project forms.
+
+### Fixed
+
+- Align `@playwright/test` to 1.61.1 (chromium-1228) to match the `playwright-ruby-client` gem's compatible version — fixes an `add_init_script` protocol skew that flaked the form-draft system specs.
+- Toast containers are named region landmarks — clears the app-wide aria-prohibited-attr axe violation and keeps toast content inside a landmark.
+
 ## v2.0.0 — Passwordless Auth, Workspace Lifecycle & Navigation IA (2026-07-06)
 
 ### Breaking

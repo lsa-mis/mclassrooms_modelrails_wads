@@ -27,15 +27,13 @@ RSpec.describe "Range component live value readout", type: :system do
   # Sets the slider's value and dispatches an `input` event (what the user's drag
   # would fire), driving the `input->range#sync` action on the live page.
   def set_range_value(new_value)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const input = document.querySelector(#{RANGE_INPUT_SELECTOR.to_json});
-          input.value = #{new_value.to_json};
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-        })()
-      JS
-    end
+    cdp_execute(<<~JS)
+      (() => {
+        const input = document.querySelector(#{RANGE_INPUT_SELECTOR.to_json});
+        input.value = #{new_value.to_json};
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      })()
+    JS
   end
 
   it "syncs the <output> to the slider value on connect" do

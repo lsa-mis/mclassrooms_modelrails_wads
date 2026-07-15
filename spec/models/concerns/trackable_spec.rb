@@ -78,6 +78,25 @@ RSpec.describe Trackable, type: :model do
       expect(Rails.logger).to have_received(:warn)
         .with(a_string_including("Workspace", workspace.id.to_s))
     end
+
+    it "does not break the primary operation when the activity insert fails beyond validation errors" do
+      allow(ActivityLog).to receive(:create!)
+        .and_raise(ActiveRecord::StatementInvalid.new("SQLite3::ReadOnlyException: attempt to write a readonly database"))
+      expect {
+        Workspace.create!(name: "Survives statement failure")
+      }.to change(Workspace, :count).by(1)
+    end
+
+    it "reports non-validation tracking failures to the error reporter" do
+      error = ActiveRecord::StatementInvalid.new("boom")
+      allow(ActivityLog).to receive(:create!).and_raise(error)
+      allow(Rails.error).to receive(:report)
+
+      Workspace.create!(name: "Reported Failure")
+
+      expect(Rails.error).to have_received(:report)
+        .with(error, hash_including(handled: true))
+    end
   end
 
   describe "workspace resolution" do

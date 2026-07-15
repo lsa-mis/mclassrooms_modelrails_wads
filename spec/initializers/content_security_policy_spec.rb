@@ -32,6 +32,48 @@ RSpec.describe "Content Security Policy" do
   it "always includes :self in form-action" do
     expect(form_action).to include(:self).or include("'self'")
   end
+
+  describe "report-only mode" do
+    # PR #120 deliberately enforced CSP in test (config/environments/test.rb
+    # sets report_only = false) specifically so bugs like the blank-nonce one
+    # below would fail the suite instead of shipping silently. But this
+    # initializer used to ALSO set content_security_policy_report_only, keyed
+    # on Rails.env.test? — loaded AFTER config/environments/test.rb in Rails'
+    # boot order, so it silently reverted PR #120's fix the whole time. Full
+    # system+request suite verified clean with enforcement actually live
+    # (1578 examples, 0 failures) before this was restored.
+    it "is enforced (not report-only) in test, matching dev/prod" do
+      expect(Rails.application.config.content_security_policy_report_only).to be(false)
+    end
+  end
+
+  describe "nonce generator" do
+    let(:nonce_generator) { Rails.application.config.content_security_policy_nonce_generator }
+
+    # The bug this guards against: on a visitor's FIRST request there is no
+    # session yet, so a generator that reads request.session.id directly
+    # returns "" — Rails then emits `script-src ... 'nonce-'`, an invalid CSP
+    # source the browser ignores, blocking every inline script (the importmap
+    # bootstrap + `import "application"`). Stimulus never boots for first-time
+    # visitors. A unit test on the generator is still the most direct guard
+    # (a request spec would only catch it now that CSP is actually enforced
+    # in test — see "report-only mode" above; belt and suspenders).
+    it "never returns a blank nonce, even when the session has no id yet" do
+      request_without_session = instance_double(ActionDispatch::Request, session: instance_double(ActionDispatch::Request::Session, id: nil))
+
+      nonce = nonce_generator.call(request_without_session)
+
+      expect(nonce).to be_present
+    end
+
+    it "returns the session id (stable per session) when a session exists" do
+      request_with_session = instance_double(ActionDispatch::Request, session: instance_double(ActionDispatch::Request::Session, id: "abc123"))
+
+      nonce = nonce_generator.call(request_with_session)
+
+      expect(nonce).to eq("abc123")
+    end
+  end
 end
 
 # Regression: the nonce generator used `request.session.id.to_s`, which is

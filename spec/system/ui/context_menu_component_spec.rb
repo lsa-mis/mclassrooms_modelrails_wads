@@ -42,7 +42,7 @@ RSpec.describe "Context menu component accessibility", type: :system do
 
   it "opens via the keyboard (Shift+F10 on the focused host) and focuses the first item" do
     page.evaluate_script("document.querySelector('[data-menu-target=trigger]').focus()")
-    page.driver.with_playwright_page { |pw| pw.keyboard.press("Shift+F10") }
+    cdp_browser.keyboard.type(%i[shift f10])
 
     expect(page).to have_css("[role='menu']:not([hidden])")
     expect(focused_text).to eq("Edit")
@@ -50,12 +50,11 @@ RSpec.describe "Context menu component accessibility", type: :system do
 
   # The trigger carries role="button" — so it must HONOR button activation.
   # Enter and Space open the menu (anchored to the trigger) and focus the
-  # first item, not just the Shift+F10 path (2026-07-13 review: role=button
-  # was a name-role-value promise the trigger didn't keep).
+  # first item, not just the Shift+F10 path (2026-07-13 review).
   %w[Enter Space].each do |key|
     it "opens on #{key} (honoring role=button) and focuses the first item" do
       page.evaluate_script("document.querySelector('[data-menu-target=trigger]').focus()")
-      page.driver.with_playwright_page { |pw| pw.keyboard.press(key) }
+      cdp_press(key)
 
       expect(page).to have_css("[role='menu']:not([hidden])")
       expect(focused_text).to eq("Edit")
@@ -65,23 +64,23 @@ RSpec.describe "Context menu component accessibility", type: :system do
   it "ArrowDown wraps and SKIPS the disabled item" do
     open_by_right_click # focus on "Edit"
 
-    page.send_keys(:down) # Duplicate
+    cdp_press(:down) # Duplicate
     expect(focused_text).to eq("Duplicate")
-    page.send_keys(:down) # skips disabled "Archive" → "Open docs"
+    cdp_press(:down) # skips disabled "Archive" → "Open docs"
     expect(focused_text).to eq("Open docs")
-    page.send_keys(:down) # wraps → "Edit"
+    cdp_press(:down) # wraps → "Edit"
     expect(focused_text).to eq("Edit")
   end
 
   it "type-ahead focuses the next item starting with the typed letter" do
     open_by_right_click
-    page.send_keys("d") # → "Duplicate"
+    cdp_browser.keyboard.type("d") # → "Duplicate"
     expect(focused_text).to eq("Duplicate")
   end
 
   it "closes on Escape and returns focus to the host" do
     open_by_right_click
-    page.send_keys(:escape)
+    cdp_press(:escape)
 
     expect(page).to have_css("[role='menu'][hidden]", visible: :all)
     expect(page).to have_css("[data-menu-target='trigger'][aria-expanded='false']")
@@ -90,7 +89,7 @@ RSpec.describe "Context menu component accessibility", type: :system do
 
   it "closes on an outside click" do
     open_by_right_click
-    page.driver.with_playwright_page { |pw| pw.mouse.click(5, 5) }
+    cdp_click_at(5, 5)
     expect(page).to have_css("[role='menu'][hidden]", visible: :all)
   end
 end

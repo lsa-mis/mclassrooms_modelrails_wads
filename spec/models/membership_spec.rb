@@ -192,10 +192,14 @@ RSpec.describe Membership, type: :model do
     let!(:bob_membership) { create(:membership, :admin, workspace: workspace) }
     let!(:carol_membership) { create(:membership, workspace: workspace) }
 
+    # Emails are pinned alongside names: .search also matches email_address,
+    # and the factory's Faker email can randomly contain another member's
+    # first name (e.g. "alice.baker@..."), making the exclusion assertions
+    # flake (issue #467).
     before do
-      alice_membership.user.update!(first_name: "Alice", last_name: "Anderson")
-      bob_membership.user.update!(first_name: "Bob", last_name: "Baker")
-      carol_membership.user.update!(first_name: "Carol", last_name: "Clark")
+      alice_membership.user.update!(first_name: "Alice", last_name: "Anderson", email_address: "alice.anderson@example.test")
+      bob_membership.user.update!(first_name: "Bob", last_name: "Baker", email_address: "bob.baker@example.test")
+      carol_membership.user.update!(first_name: "Carol", last_name: "Clark", email_address: "carol.clark@example.test")
     end
 
     describe ".search" do

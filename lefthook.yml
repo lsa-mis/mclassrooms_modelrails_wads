@@ -59,10 +59,10 @@ pre-push:
         - merge
         - rebase
     erb_lint:
-      # Matches CI's lint_docs job. herb-lint is a pinned devDependency run via
-      # `npx herb-lint` — `bin/setup` (npm ci) installs it; if you hit "command
-      # not found", run `npm ci`. Catches rules that bit PR #78:
-      # erb-no-output-in-attribute-position, html-no-empty-attributes, & friends.
+      # Matches CI's lint_docs job. Runs erb_lint (Ruby gem, config in
+      # .erb_lint.yml) — replaced the npm @herb-tools/linter package, whose
+      # own Ruby CLI wrapper still delegated to Node under the hood, so it
+      # never actually removed the Node dependency it appeared to.
       tags: style
       skip_empty: false
       run: mise exec -- bundle exec rake erb:check
@@ -86,7 +86,10 @@ pre-push:
       skip_empty: false
       env:
         CI: "true"
-      run: mise exec -- bundle exec rspec
+      # bin/parallel-rspec = full suite across all cores + integrity gates
+      # (example-count parity, merged coverage floor). Same gates as CI's test
+      # job. Worker count: PARALLEL_TEST_PROCESSORS env or core count.
+      run: mise exec -- bin/parallel-rspec
       skip:
         - merge
         - rebase

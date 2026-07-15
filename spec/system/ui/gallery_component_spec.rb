@@ -35,8 +35,18 @@ RSpec.describe "Gallery component accessibility", type: :system do
     visit "/rails/view_components/ui/gallery_component/default"
 
     # Keyboard-operability: the <button> opens the dialog on Return.
+    #
+    # NOT send_keys(:return): Cuprite's Node#send_keys performs a real click
+    # BEFORE dispatching keys (unlike Playwright), racing the click's own
+    # gallery#open handler against the synthetic Return keydown under load —
+    # intermittent under bin/parallel-rspec (verified: passed standalone,
+    # failed under 18-way parallel contention). Focus via JS (moves
+    # document.activeElement, which is all a native button-activates-on-
+    # Enter keydown needs — no focusin listener involved here) then a real
+    # CDP-dispatched Enter key, so only ONE trusted interaction occurs.
     first_trigger = find("[data-test='gallery'] button", match: :first)
-    first_trigger.send_keys(:return)
+    cdp_execute("document.querySelectorAll(\"[data-test='gallery'] button\")[0].focus()")
+    cdp_press("Enter")
 
     expect(page).to have_css("dialog[open]")
 
@@ -55,7 +65,7 @@ RSpec.describe "Gallery component accessibility", type: :system do
     first_trigger.click
     expect(page).to have_css("dialog[open]")
 
-    page.send_keys(:escape)
+    cdp_press("Escape") # not page.send_keys — see the keyboard-open test above
 
     expect(page).to have_no_css("dialog[open]")
 

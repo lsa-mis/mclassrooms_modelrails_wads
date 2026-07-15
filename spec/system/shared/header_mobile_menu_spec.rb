@@ -15,9 +15,7 @@ RSpec.describe "Shared header — mobile menu auto-close", type: :system, js: tr
 
   before do
     sign_in_via_form(user)
-    page.driver.with_playwright_page do |pw_page|
-      pw_page.set_viewport_size(width: 375, height: 667)
-    end
+    cdp_resize(375, 667)
   end
 
   it "wires closeOnLinkClick on the menu panel and dismisses on link tap" do

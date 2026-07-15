@@ -313,7 +313,8 @@ RSpec.describe "Template invariants" do
       "BUNDLE_GEMFILE"      => "set by Bundler, not an operator",
       "CI"                  => "set by the CI runner",
       "PIDFILE"             => "set by bin/dev / Foreman",
-      "SOLID_QUEUE_IN_PUMA" => "set in config/deploy.yml env.clear, not .env (documented in deployment.md)"
+      "SOLID_QUEUE_IN_PUMA" => "set in config/deploy.yml env.clear, not .env (documented in deployment.md)",
+      "TEST_ENV_NUMBER"     => "set by parallel_tests per worker (bin/parallel-rspec), never by a human"
     }
 
     it "documents every operator-settable ENV var the code reads (no rediscovery-by-grep)" do
@@ -370,6 +371,52 @@ RSpec.describe "Template invariants" do
       expect(cache_from).to include("type=gha"),
         "expected cache-from: type=gha for layer reuse across CI runs " \
         "(without it, every PR pays the full 3-5 min cold build cost)"
+    end
+  end
+
+  describe "CI and Lefthook run the same integrity-gated parallel suite" do
+    # CI and the local pre-push gate have drifted before (bundler-audit ran in
+    # CI only — PR #371), so the invariant is: BOTH run bin/parallel-rspec,
+    # which wraps parallel_tests with the example-count parity and merged
+    # coverage gates. A raw `rspec` invocation in either place silently loses
+    # those gates.
+    let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
+    let(:lefthook_config) { YAML.safe_load(File.read(root.join("lefthook.yml")), aliases: true) }
+
+    it "CI's test job runs bin/parallel-rspec" do
+      run_steps = Array(ci_workflow.dig("jobs", "test", "steps")).map { |s| s["run"].to_s }
+      expect(run_steps).to include(match(%r{bin/parallel-rspec})),
+        "expected CI's test job to run bin/parallel-rspec (parallel suite + integrity gates); " \
+        "a raw rspec invocation loses the example-count parity and merged-coverage gates"
+    end
+
+    it "Lefthook's pre-push rspec command runs bin/parallel-rspec" do
+      run = lefthook_config.dig("pre-push", "commands", "rspec", "run").to_s
+      expect(run).to include("bin/parallel-rspec"),
+        "expected the pre-push rspec gate to run bin/parallel-rspec so local pushes " \
+        "get the same gates as CI (drift bit us before — see lefthook.yml's bundler_audit note)"
+    end
+  end
+
+  describe "CI cancels superseded runs (#486)" do
+    # Without a concurrency group, a second push to a PR branch lets the stale
+    # ~8-min run finish anyway — occupying runners and delaying the fresh run's
+    # feedback. cancel-in-progress must be gated to pull_request events: pushes
+    # to the default branch should each complete for the historical record.
+    let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
+
+    it "declares a top-level concurrency block keyed on the branch/PR ref" do
+      group = ci_workflow.dig("concurrency", "group").to_s
+      expect(group).to include("github."),
+        "expected a top-level concurrency.group keyed on the ref (e.g. github.head_ref || github.ref) " \
+        "so all runs for one branch share a group and supersede each other"
+    end
+
+    it "cancels in-progress runs only for pull_request events" do
+      cancel = ci_workflow.dig("concurrency", "cancel-in-progress").to_s
+      expect(cancel).to include("github.event_name == 'pull_request'"),
+        "expected cancel-in-progress gated to pull_request events so main-branch runs " \
+        "are never cancelled mid-flight (each push to main completes for the record)"
     end
   end
 
@@ -465,6 +512,36 @@ RSpec.describe "Template invariants" do
       expect(with["ignore-unfixed"]).to be(true),
         "expected ignore-unfixed: true — Debian-stable bases always carry unfixed CVEs; " \
         "gating on them would make the scan permanently red and ignored"
+    end
+  end
+
+  describe "CI persists the spec runtime log for balanced parallel splits (#488)" do
+    # bin/parallel-rspec writes tmp/parallel_runtime_rspec.log (per-file spec
+    # timings); parallel_tests reads it on the NEXT run to split work by measured
+    # time instead of file size, evening out the slowest worker. That only helps
+    # if the log survives between runs — so the test job must cache it. Without
+    # the cache the log is cold every run and the split silently falls back to
+    # file size (still correct, just unbalanced — the #488 regression).
+    let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
+    let(:test_steps) { Array(ci_workflow.dig("jobs", "test", "steps")) }
+
+    it "caches tmp/parallel_runtime_rspec.log across runs" do
+      runtime_cache = test_steps.find do |step|
+        step["uses"].to_s.include?("actions/cache") &&
+          step.dig("with", "path").to_s.include?("parallel_runtime_rspec.log")
+      end
+      expect(runtime_cache).not_to be_nil,
+        "expected an actions/cache step in the test job persisting " \
+        "tmp/parallel_runtime_rspec.log so runtime-based worker balancing has a seed"
+    end
+
+    it "keys the cache so PRs restore the most recent recorded log" do
+      runtime_cache = test_steps.find { |s| s.dig("with", "path").to_s.include?("parallel_runtime_rspec.log") }
+      next if runtime_cache.nil?
+
+      expect(runtime_cache.dig("with", "restore-keys").to_s).to be_present,
+        "expected restore-keys on the runtime-log cache so a PR (whose exact key misses) " \
+        "still restores the newest log from the base branch"
     end
   end
 
@@ -752,37 +829,37 @@ RSpec.describe "Template invariants" do
   end
 
   describe "CI lint tooling is version-pinned (no silent drift across CI, local, and forks)" do
-    let(:package_json) { JSON.parse(File.read(root.join("package.json"))) }
-    let(:ci) { File.read(root.join(".github/workflows/ci.yml")) }
+    # Was npm-based (package.json + package-lock.json), replaced with Ruby
+    # gems (erb_lint, mdl) — Bundler/Gemfile.lock pin exact versions the same
+    # way, and `bundle exec` doesn't have npm's "unpinned global install"
+    # footgun (see #299) at all, so there's no equivalent failure mode to
+    # guard against there.
+    let(:gemfile_lock) { File.read(root.join("Gemfile.lock")) }
 
-    it "pins the npm lint tools in package.json devDependencies at exact versions" do
-      dev = package_json["devDependencies"] || {}
-      %w[@herb-tools/linter markdownlint-cli].each do |pkg|
-        version = dev[pkg]
-        expect(version).to be_present,
-          "expected #{pkg} in package.json devDependencies (lockfile-pinned), not an unpinned global install (see #299)"
-        expect(version).to match(/\A\d+\.\d+\.\d+\z/),
-          "expected #{pkg} pinned to an exact version (no ^ or ~) so CI, local, and forks run the same linter — got #{version.inspect}"
+    it "pins the lint gems in Gemfile.lock at an exact resolved version" do
+      %w[erb_lint mdl].each do |gem_name|
+        expect(gemfile_lock).to match(/^\s+#{Regexp.escape(gem_name)}\s+\(\d+\.\d+\.\d+\)/),
+          "expected #{gem_name} pinned to an exact resolved version in Gemfile.lock, " \
+          "so CI, local, and forks run the same linter"
       end
     end
 
-    it "installs lint tools via the lockfile in CI, not unpinned global installs" do
-      expect(ci).to include("npm ci"),
-        "CI should install the pinned devDependencies with `npm ci`"
-      expect(ci).not_to match(/npm install -g.*(markdownlint|herb)/),
-        "CI must not `npm install -g` the linters unpinned — they drift on every release (see #299)"
+    it "invokes the linters via bundle exec, not a bare global command" do
+      expect(File.read(root.join("lib/tasks/markdown_lint.rake"))).to include("bundle exec mdl"),
+        "markdown:check must run the pinned local mdl via bundle exec, not a bare global `mdl`"
+      expect(File.read(root.join("lib/tasks/erb_lint.rake"))).to include("bundle exec erb_lint"),
+        "erb:check must run the pinned local erb_lint via bundle exec, not a bare global `erb_lint`"
     end
 
-    it "invokes the linters from the local pinned install (npx), not a bare global command" do
-      expect(File.read(root.join("lib/tasks/markdown_lint.rake"))).to include("npx markdownlint"),
-        "markdown:check must run the pinned local markdownlint via npx, not a bare global `markdownlint`"
-      expect(File.read(root.join("lib/tasks/erb_lint.rake"))).to include("npx herb-lint"),
-        "erb:check must run the pinned local herb-lint via npx, not a bare global `herb-lint`"
-    end
-
-    it "installs node dependencies in bin/setup so the pinned linters are present locally" do
-      expect(File.read(root.join("bin/setup"))).to match(/npm ci|npm install/),
-        "bin/setup must install node deps so `npx markdownlint`/`herb-lint` resolve the pinned versions (no manual `npm install -g`)"
+    it "ships no leftover Node toolchain (package.json, lockfile, or .tool-versions entry)" do
+      %w[package.json package-lock.json].each do |file|
+        expect(File.exist?(root.join(file))).to be(false),
+          "expected #{file} to be absent — lint tooling is Ruby-gem-based now, a leftover Node " \
+          "manifest would re-invite the drift/toolchain-duplication this describe block guards against"
+      end
+      tool_versions = File.read(root.join(".tool-versions"))
+      expect(tool_versions).not_to match(/^node\b/),
+        "expected no `node` line in .tool-versions — nothing in the template needs Node anymore"
     end
 
     it "does not force brakeman to the latest released version (same drift anti-pattern)" do
