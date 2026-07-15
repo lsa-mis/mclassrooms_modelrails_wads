@@ -64,7 +64,12 @@
       <!-- Main content -->
       <main class="lg:col-span-8">
         <article class="bg-surface-raised rounded-lg shadow-sm p-8">
-          <div class="prose prose-indigo dark:prose-invert max-w-none">
+          <%# docs-code-focusable: makes horizontally-scrollable <pre> code
+              blocks keyboard-focusable (tabindex=0) so keyboard users can
+              scroll them — WCAG 2.1.1 / axe scrollable-region-focusable. The
+              gem does this for scrollable tables (gem #30) but not <pre>. %>
+          <div class="prose prose-indigo dark:prose-invert max-w-none"
+               data-controller="docs-code-focusable">
             <%= safe_html @rendered_content %>
           </div>
         </article>
