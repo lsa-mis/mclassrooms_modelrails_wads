@@ -148,8 +148,22 @@ RSpec.describe "Find a Room", type: :system do
       # Sign out the viewer via the user-menu dropdown (same ceremony as
       # spec/system/members_table_spec.rb's mid-example user switch), then
       # sign in as the admin.
-      find("#user-menu-button").click
-      click_button I18n.t("navigation.sign_out")
+      # Sign out via the user-menu dropdown. This page subscribes to the
+      # workspace Turbo Stream, and the `Membership#update!` above broadcasts on
+      # that stream (Membership Broadcastable) — the arriving broadcast re-renders
+      # the authenticated layout and churns the #user-menu subtree. Opening the
+      # menu and clicking sign-out can race that re-render and hit an obsolete
+      # node under Cuprite, so retry the open-and-click as a unit until it lands
+      # on a stable DOM. The churn is a one-shot (a single membership broadcast),
+      # so the retry is bounded.
+      menu_attempts = 0
+      begin
+        find("#user-menu-button").click
+        within("#user-menu") { click_button I18n.t("navigation.sign_out") }
+      rescue Capybara::Cuprite::ObsoleteNode, Ferrum::NodeNotFoundError
+        raise if (menu_attempts += 1) > 5
+        retry
+      end
       expect(page).to have_current_path(new_session_path)
       sign_in_via_form(admin)
 
