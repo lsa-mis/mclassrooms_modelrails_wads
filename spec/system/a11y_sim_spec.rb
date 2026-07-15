@@ -16,7 +16,7 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
   end
 
   def press_key(key)
-    page.driver.with_playwright_page { |pw_page| pw_page.keyboard.press(key) }
+    cdp_press(key)
   end
 
   describe "outside development" do

@@ -1,0 +1,37 @@
+<%# locals: (revealed: false) -%>
+<%#
+  Draft-recovery notice. Render INSIDE a form_with carrying
+  data-controller="form-draft" (see the form_draft docs page). Two pieces:
+
+  1. The visible warning chip — navigation-only, hidden until the controller
+     reveals it. NOT the announcement path (un-hiding a populated live region
+     announces unreliably).
+  2. The stable sr-only status region — always present, empty at render; the
+     controller writes announcements into it. Announcement strings ride data
+     attributes because Stimulus has no I18n.
+
+  `revealed:` exists for previews/render-tests only; production callers use
+  the default.
+-%>
+<%= tag.div data: { form_draft_target: "notice" },
+      hidden: !revealed,
+      class: "mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning-border bg-warning-surface px-4 py-3" do %>
+  <p class="font-medium text-warning">
+    <%= t("form_draft.notice", default: "You have an unsaved draft of this form.") %>
+  </p>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="btn-secondary focus-ring"
+            data-action="form-draft#recover">
+      <%= t("form_draft.recover", default: "Recover draft") %>
+    </button>
+    <button type="button" class="btn-secondary focus-ring"
+            data-action="form-draft#discard">
+      <%= t("form_draft.discard", default: "Discard draft") %>
+    </button>
+  </div>
+<% end %>
+<div data-form-draft-target="status"
+     role="status" aria-live="polite" aria-atomic="true" class="sr-only"
+     data-found-text="<%= t("form_draft.found", default: "Recoverable draft found. Recover and Discard buttons are before the form fields.") %>"
+     data-restored-text="<%= t("form_draft.restored", default: "Draft restored. %{count} fields updated.") %>"
+     data-discarded-text="<%= t("form_draft.discarded", default: "Draft discarded.") %>"></div>

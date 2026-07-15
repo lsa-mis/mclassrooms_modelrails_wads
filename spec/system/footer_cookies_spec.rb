@@ -37,4 +37,62 @@ RSpec.describe "Footer: Cookie settings reopens Biscuit banner", type: :system d
     expect(page).to have_css(".biscuit-manage-link", visible: :hidden)
     expect(page).not_to have_css(".biscuit-manage-link", visible: true)
   end
+
+  it "syncs category checkboxes to the saved consent before reopening (no stale state)" do
+    visit root_path
+
+    # Accept all: updates the cookie via a fetch POST, but never touches the
+    # (still-in-DOM, just-hidden) category checkboxes — they stay whatever
+    # they rendered as at page load (unchecked, on a first visit). No fresh
+    # server render happens here (it's an async fetch, not a navigation), so
+    # this stays the FIRST-VISIT DOM structure — reopen() only re-shows the
+    # outer banner; the checkboxes only become visible via the still-present
+    # "Manage preferences" toggle, exactly as they would for a real user
+    # who accepts, then reconsiders granular choices without reloading.
+    click_button I18n.t("biscuit.banner.accept_all")
+    expect(page).to have_css("[data-biscuit-target='banner'][hidden]", visible: :hidden, wait: 2)
+
+    within("footer") { click_button I18n.t("footer.cookie_settings") }
+    expect(page).to have_css("[data-biscuit-target='banner']:not([hidden])", wait: 2)
+
+    click_button I18n.t("biscuit.banner.manage")
+
+    # Without the sync fix, these would still read unchecked (stale from
+    # page load) even though the cookie now says every category is true.
+    checkboxes = all("[data-biscuit-target='categoryCheckbox']", wait: 2)
+    expect(checkboxes).not_to be_empty
+    checkboxes.each { |checkbox| expect(checkbox).to be_checked }
+  end
+
+  describe "manage-mode banner (reopened after a fresh page load with consent already given)" do
+    before do
+      visit root_path # establish the domain before setting a cookie on it
+      page.driver.browser.cookies.set(
+        name: "biscuit_consent",
+        value: Biscuit::Consent.build_value(analytics: true, marketing: false, preferences: false).to_json,
+        domain: URI.parse(page.current_url).host
+      )
+      visit root_path # fresh render: consent.given? is now true server-side
+    end
+
+    it "renders the banner hidden server-side (no flash), reopens on the footer click, and passes AAA" do
+      expect(page).to have_css("[data-biscuit-target='banner'][hidden]", visible: :hidden)
+
+      within("footer") { click_button I18n.t("footer.cookie_settings") }
+      expect(page).to have_css("[data-biscuit-target='banner']:not([hidden])", wait: 2)
+
+      # No "Manage preferences" toggle to click this time — manage mode
+      # renders the checkboxes directly (fresh server render, not carried
+      # over from a stale first-visit DOM like the test above).
+      expect(page).to have_css("input[data-category='analytics']:checked", wait: 2)
+      expect(page).to have_css("input[data-category='marketing']", wait: 2)
+      expect(page).not_to have_css("input[data-category='marketing']:checked")
+
+      scope = [ "[data-biscuit-target='banner']" ]
+      expect(axe_clean_in_both_themes?(include: scope)).to(
+        be(true),
+        axe_violations_in_both_themes(include: scope).join("\n")
+      )
+    end
+  end
 end

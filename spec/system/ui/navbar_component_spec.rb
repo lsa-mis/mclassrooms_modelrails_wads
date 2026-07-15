@@ -60,7 +60,7 @@ RSpec.describe "Navbar component accessibility", type: :system do
     toggle.click
     expect(page).to have_css("[data-navbar-target='menu']", visible: :visible)
 
-    page.driver.with_playwright_page { |pw| pw.mouse.click(10, 760) }
+    cdp_click_at(10, 760)
     expect(page).to have_css("[data-navbar-target='menu']", visible: :hidden)
     expect(toggle["aria-expanded"]).to eq("false")
   end

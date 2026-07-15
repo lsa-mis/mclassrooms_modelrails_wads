@@ -25,15 +25,13 @@ RSpec.describe "Workspace switcher (header)", type: :system do
   # Dispatch a KeyboardEvent directly to the dropdown Stimulus controller.
   # Reuses the same technique as user_menu_spec.rb.
   def send_switcher_key(key)
-    page.driver.with_playwright_page do |pw_page|
-      pw_page.evaluate(<<~JS)
-        (function() {
-          var el = document.querySelector('#workspace-switcher-button').closest('[data-controller~="dropdown"]');
-          var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'dropdown');
-          if (c) c.handleKeydown(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
-        })()
-      JS
-    end
+    cdp_execute(<<~JS)
+      (function() {
+        var el = document.querySelector('#workspace-switcher-button').closest('[data-controller~="dropdown"]');
+        var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'dropdown');
+        if (c) c.handleKeydown(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
+      })()
+    JS
   end
 
   before do

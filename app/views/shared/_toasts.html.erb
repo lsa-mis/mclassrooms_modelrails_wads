@@ -2,6 +2,12 @@
   toast_types = Rails.application.config.toasts[:types]
 %>
 <%# Top-center: success/info pills %>
+<%# role="region" (a named landmark) is load-bearing twice over: aria-label is
+    prohibited on a role-less (generic) div, and these fixed containers sit
+    outside <main>/<header>/<footer>, so any non-landmark role would leave
+    their content outside every landmark (axe: aria-prohibited-attr + region —
+    role="group" clears only the first). Announcement semantics live on the
+    per-toast role="status" elements; do not add aria-live here. %>
 <div id="toast-pills"
      role="region"
      aria-label="<%= t('toasts.pill_aria_label') %>"

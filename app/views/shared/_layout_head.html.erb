@@ -11,6 +11,12 @@
     <%= render "shared/theme_script" %>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <% if Current.user %>
+      <%# form-draft encryption key: scrubbed from the DOM by the controller on
+          first connect (import-once, non-extractable). The scope meta stays. %>
+      <meta name="form-draft-key" content="<%= Base64.strict_encode64(FormDraftKey.for(Current.user)) %>">
+      <meta name="form-draft-scope" content="<%= FormDraftKey.scope_for(Current.user) %>">
+    <% end %>
     <%= stylesheet_link_tag "biscuit/biscuit", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>

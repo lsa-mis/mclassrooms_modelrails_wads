@@ -105,7 +105,6 @@ find again.
 | Marketing copy | `config/locales/en/pages.en.yml` + `app/views/pages/` | Fork-owned — rewrite wholesale |
 | PWA app name | `public/manifest.webmanifest` (`name` / `short_name`) | Shown on the home screen if users install the PWA |
 | CI image tags | `.github/workflows/ci.yml` + `image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
-| npm lockfile name | `package-lock.json` | Auto-derived from the directory name — regenerates on `npm install` |
 | Devcontainer bundle-cache volume | `.devcontainer/devcontainer.json` | Optional; the invariant spec only checks the `bundle-cache` suffix |
 | Session cookie key | optional `config/initializers/session_store.rb` | Only if multiple forks will share a cookie domain |
 
@@ -113,8 +112,7 @@ Then verify nothing was missed:
 
 ```bash
 grep -ri modelrails . \
-  --exclude-dir={.git,node_modules,tmp,log,coverage,storage,vendor} \
-  --exclude=package-lock.json
+  --exclude-dir={.git,tmp,log,coverage,storage,vendor}
 bundle exec rspec
 ```
 
@@ -261,7 +259,7 @@ git merge upstream/main
 | Fork-owned paths | Shouldn't happen — the driver keeps yours. If it does, the driver isn't active: `git merge --abort`, run `git config merge.ours.driver true`, merge again |
 | Identity values (`config/deploy.yml` service/image/volumes, `config/application.rb` module) | Keep your names; take any structural changes around them |
 | `Gemfile` | Keep **both** sides' gems, then regenerate the lockfile |
-| `Gemfile.lock`, `package-lock.json` | Never hand-merge: `git checkout --theirs <file>`, then `bundle install` / `npm install`, commit the regenerated result |
+| `Gemfile.lock` | Never hand-merge: `git checkout --theirs Gemfile.lock`, then `bundle install`, commit the regenerated result |
 | Behavior (app code, specs, config) | Take theirs — unless you deliberately diverged, in which case consider sending your version upstream instead |
 | Two migrations, same timestamp | Keep both; rename yours to a later timestamp with `git mv`, then re-run `bin/rails db:migrate` |
 | Upstream renamed/moved a file you'd edited | Re-apply your edit at the new location, delete the old file. If the same resolution recurs every sync, turn on `git config rerere.enabled true` so git replays it for you |

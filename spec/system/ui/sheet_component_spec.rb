@@ -27,19 +27,19 @@ RSpec.describe "Sheet component accessibility", type: :system do
     expect(page).to have_css("dialog[open] [data-modal-target='panel']")
 
     # Await all CSS transitions on the panel before reading the computed transform.
-    page.driver.with_playwright_page do |pl|
-      pl.evaluate(<<~JS)
-        (async () => {
-          const panel = document.querySelector("dialog[open] [data-modal-target='panel']");
-          if (!panel) return;
+    cdp_evaluate_async(<<~JS)
+      (async () => {
+        const panel = document.querySelector("dialog[open] [data-modal-target='panel']");
+        if (panel) {
           const transitions = panel.getAnimations().filter(a => a instanceof CSSTransition);
           await Promise.race([
             Promise.allSettled(transitions.map(t => t.finished)),
             new Promise(r => setTimeout(r, 500))
           ]);
-        })();
-      JS
-    end
+        }
+        arguments[arguments.length - 1]();
+      })();
+    JS
 
     transform = page.evaluate_script(
       "getComputedStyle(document.querySelector(\"dialog[open] [data-modal-target='panel']\")).transform"
@@ -74,7 +74,10 @@ RSpec.describe "Sheet component accessibility", type: :system do
     visit "/rails/view_components/ui/sheet_component/basic"
     open_sheet
 
-    page.send_keys(:escape)
+    # cdp_press, not page.send_keys: Cuprite's send_keys clicks the active element (the
+    # focused dialog panel) before typing, which fails here — the click coordinates land
+    # outside anything clickable while the native <dialog> is open.
+    cdp_press("Escape")
 
     expect(page).to have_no_css("dialog[open]")
   end

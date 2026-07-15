@@ -161,7 +161,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
       # Sign out the existing user, then sign in as single_user.
       # If there's no project sign_out helper, just visit destroy session path
       # or restart by visiting new_session_path and re-authenticating.
-      page.driver.with_playwright_page { |p| p.context.clear_cookies }
+      cdp_clear_cookies
       sign_in_via_form(single_user)
       visit workspaces_path
 
@@ -196,9 +196,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
     end
 
     it "passes axe at iPhone-SE viewport in both themes (responsive sanity)" do
-      page.driver.with_playwright_page do |pw_page|
-        pw_page.set_viewport_size(width: 375, height: 667)
-      end
+      cdp_resize(375, 667)
       visit workspaces_path
       expect(axe_clean_in_both_themes?(axe_options)).to be(true),
         "AAA violations (375x667): #{axe_violations_in_both_themes(axe_options).join("\n")}"

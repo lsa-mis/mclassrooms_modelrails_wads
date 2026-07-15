@@ -22,7 +22,7 @@ RSpec.describe "Lookbook preview logical_path coverage" do
     "file_input" => "Forms & Inputs", "input_otp" => "Forms & Inputs", "combobox" => "Forms & Inputs",
     "date_picker" => "Forms & Inputs", "timepicker" => "Forms & Inputs", "calendar" => "Forms & Inputs",
     "rating_input" => "Forms & Inputs", "floating_label" => "Forms & Inputs", "label" => "Forms & Inputs",
-    "form_field" => "Forms & Inputs",
+    "form_field" => "Forms & Inputs", "form_draft" => "Forms & Inputs",
     "button" => "Actions", "button_group" => "Actions", "speed_dial" => "Actions", "command" => "Actions",
     "dialog" => "Overlays", "alert_dialog" => "Overlays", "drawer" => "Overlays", "sheet" => "Overlays",
     "popover" => "Overlays", "tooltip" => "Overlays", "hover_card" => "Overlays",

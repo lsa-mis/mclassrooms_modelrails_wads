@@ -25,19 +25,17 @@ RSpec.describe "User menu dropdown", type: :system do
     visit root_path
   end
 
-  # Invoke a keyboard event on the dropdown controller via Playwright.
-  # Programmatic KeyboardEvent dispatch does not reach main-world Stimulus
-  # listeners in Playwright's isolated context, so we call the handler directly.
+  # Invoke a keyboard event on the dropdown controller directly. Programmatic
+  # KeyboardEvent dispatch does not reliably reach Stimulus listeners through
+  # the driver's isolated evaluation context, so we call the handler directly.
   def send_dropdown_key(key)
-    page.driver.with_playwright_page do |pw_page|
-      pw_page.evaluate(<<~JS)
-        (function() {
-          var el = document.querySelector('[data-controller~="dropdown"]');
-          var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'dropdown');
-          if (c) c.handleKeydown(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
-        })()
-      JS
-    end
+    cdp_execute(<<~JS)
+      (function() {
+        var el = document.querySelector('[data-controller~="dropdown"]');
+        var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'dropdown');
+        if (c) c.handleKeydown(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
+      })()
+    JS
   end
 
   before do

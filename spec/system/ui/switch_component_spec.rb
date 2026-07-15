@@ -34,30 +34,28 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
   TRACK_SELECTOR = 'input[role="switch"] + span'
   THUMB_SELECTOR = 'span[aria-hidden="true"]'
 
-  # Read computed styles for the track + thumb off the live Playwright page.
-  # `pw.evaluate` returns a Hash with STRING keys; symbolize at the boundary so
+  # Read computed styles for the track + thumb off the live page.
+  # `cdp_evaluate` returns a Hash with STRING keys; symbolize at the boundary so
   # the rest of the spec reads cleanly.
   def computed_switch_styles
-    raw = Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const track = document.querySelector(#{TRACK_SELECTOR.to_json});
-          const thumb = document.querySelector(#{THUMB_SELECTOR.to_json});
-          const ts = track ? getComputedStyle(track) : null;
-          const hs = thumb ? getComputedStyle(thumb) : null;
-          return {
-            trackFound: !!track,
-            thumbFound: !!thumb,
-            trackBg: ts ? ts.backgroundColor : null,
-            // Tailwind 4 implements `translate-x-*` via the native CSS `translate`
-            // property (not the legacy `transform: translateX()`), so the thumb's
-            // movement shows up here, while computed `transform` stays "none".
-            thumbTranslate: hs ? hs.translate : null,
-            thumbTransform: hs ? hs.transform : null
-          };
-        })()
-      JS
-    end
+    raw = cdp_evaluate(<<~JS)
+      (() => {
+        const track = document.querySelector(#{TRACK_SELECTOR.to_json});
+        const thumb = document.querySelector(#{THUMB_SELECTOR.to_json});
+        const ts = track ? getComputedStyle(track) : null;
+        const hs = thumb ? getComputedStyle(thumb) : null;
+        return {
+          trackFound: !!track,
+          thumbFound: !!thumb,
+          trackBg: ts ? ts.backgroundColor : null,
+          // Tailwind 4 implements `translate-x-*` via the native CSS `translate`
+          // property (not the legacy `transform: translateX()`), so the thumb's
+          // movement shows up here, while computed `transform` stays "none".
+          thumbTranslate: hs ? hs.translate : null,
+          thumbTransform: hs ? hs.transform : null
+        };
+      })()
+    JS
     raw.transform_keys(&:to_sym)
   end
 
@@ -134,8 +132,11 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
   # ring) so the indicator survives overflow:hidden clipping and forced-colors mode.
   #
   # Approach: programmatic `.focus()` does not reliably trigger `:focus-visible` in
-  # Chromium, so we ask for keyboard-originated focus (`focus({ focusVisible: true })`)
-  # and fall back to simulating the keyboard modality so the heuristic latches.
+  # Chromium, nor does a JS-dispatched (untrusted) synthetic Tab keydown — Chromium's
+  # focus-modality heuristic only latches "keyboard" on a TRUSTED keyboard event. So we
+  # blur whatever's focused and Tab-navigate onto the switch input via REAL CDP-dispatched
+  # key presses — the browser's own native tab-navigation is what makes :focus-visible
+  # latch true (verified empirically against this driver's Chrome; JS-level tricks don't).
   #
   # The TRACK carries `transition-all`, which ANIMATES the (animatable) outline-width
   # 0 -> 2px over the transition duration. We poll a few frames until it settles so we
@@ -149,40 +150,37 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
 
       unfocused = track_outline
 
-      focused = Capybara.current_session.driver.with_playwright_page do |pw|
-        pw.evaluate(<<~JS)
-          (async () => {
-            const input = document.querySelector('input[role="switch"]');
-            // Focus from keyboard intent so :focus-visible matches (programmatic
-            // .focus() is ambiguous for the heuristic). focusVisible:true asks the
-            // engine to treat this as keyboard-originated focus.
-            input.focus({ focusVisible: true });
-            // Fallback for engines that ignore focusVisible: simulate the keyboard
-            // modality so the :focus-visible heuristic latches.
-            if (!input.matches(":focus-visible")) {
-              input.blur();
-              input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
-              input.focus();
-            }
-            const track = document.querySelector(#{TRACK_SELECTOR.to_json});
-            // Poll until the transitioned outline-width settles at its 2px target
-            // (or a generous deadline, so a genuine no-outline bug still fails loudly).
-            let cs = getComputedStyle(track);
-            const deadline = performance.now() + 800;
-            while (cs.outlineWidth !== "2px" && performance.now() < deadline) {
-              await new Promise((r) => requestAnimationFrame(r));
-              cs = getComputedStyle(track);
-            }
-            return {
-              focusVisible: input.matches(":focus-visible"),
-              focused: document.activeElement === input,
-              outlineStyle: cs.outlineStyle,
-              outlineWidth: cs.outlineWidth,
-              outlineColor: cs.outlineColor
-            };
-          })()
-        JS
+      # Real CDP Tab presses from a blurred state — walk the native tab order until
+      # landing on the switch input (bounded, so a genuine focus-order regression fails
+      # loudly instead of looping).
+      cdp_execute("document.activeElement && document.activeElement.blur()")
+      reached_switch = (1..10).any? do
+        cdp_press("Tab")
+        cdp_evaluate(%(document.activeElement === document.querySelector('input[role="switch"]')))
       end
+      raise "could not reach the switch input via Tab navigation" unless reached_switch
+
+      focused = cdp_evaluate_async(<<~JS)
+        (async () => {
+          const track = document.querySelector(#{TRACK_SELECTOR.to_json});
+          // Poll until the transitioned outline-width settles at its 2px target
+          // (or a generous deadline, so a genuine no-outline bug still fails loudly).
+          let cs = getComputedStyle(track);
+          const deadline = performance.now() + 800;
+          while (cs.outlineWidth !== "2px" && performance.now() < deadline) {
+            await new Promise((r) => requestAnimationFrame(r));
+            cs = getComputedStyle(track);
+          }
+          const input = document.querySelector('input[role="switch"]');
+          arguments[arguments.length - 1]({
+            focusVisible: input.matches(":focus-visible"),
+            focused: document.activeElement === input,
+            outlineStyle: cs.outlineStyle,
+            outlineWidth: cs.outlineWidth,
+            outlineColor: cs.outlineColor
+          });
+        })()
+      JS
 
       expect(focused["focused"]).to be(true), "switch input did not receive focus"
       expect(focused["focusVisible"]).to(
@@ -218,14 +216,12 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
 
   # Reads the track's computed outline longhands off the live page.
   def track_outline
-    result = Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const cs = getComputedStyle(document.querySelector(#{TRACK_SELECTOR.to_json}));
-          return { style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
-        })()
-      JS
-    end
+    result = cdp_evaluate(<<~JS)
+      (() => {
+        const cs = getComputedStyle(document.querySelector(#{TRACK_SELECTOR.to_json}));
+        return { style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
+      })()
+    JS
     result.transform_keys(&:to_sym)
   end
 end
