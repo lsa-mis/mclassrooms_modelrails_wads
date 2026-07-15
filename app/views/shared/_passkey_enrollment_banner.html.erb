@@ -18,7 +18,11 @@
        class="bg-info-surface text-info info-border border-b [&.passkeys-unsupported]:hidden">
     <div class="max-w-5xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
       <%= icon(:finger_print, class: "w-4 h-4 shrink-0") %>
-      <span><%= t("passkeys.banner.message") %></span>
+      <%# The full nudge wrapped across ~3 min-h-11 rows on a phone (~185px, the
+          whole first screen — 2026-07-15 panel). On mobile keep it for screen
+          readers but drop it visually: the fingerprint icon + the "Add a
+          passkey" link carry the intent in a one-line bar. Full text from sm up. %>
+      <span class="sr-only sm:not-sr-only"><%= t("passkeys.banner.message") %></span>
       <%= link_to t("passkeys.banner.add"), settings_passkeys_path,
             class: "inline-flex min-h-11 items-center font-semibold underline hover:no-underline focus-ring rounded" %>
       <%= button_to passkey_prompt_path,
