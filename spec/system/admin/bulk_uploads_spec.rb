@@ -47,11 +47,16 @@ RSpec.describe "Admin bulk uploads", type: :system do
     # `room`, its facility code), stray.txt matches no BulkUpload::Matcher
     # pattern. attach_file with an array on a `multiple` input drops all
     # three at once, the way a real admin would.
+    # `browser_upload_fixture` (spec/support/browser_upload_helpers.rb): under
+    # Cuprite, direct-uploading files handed to `attach_file` straight from the
+    # fixtures dir fails to read them (`NotReadableError`) and hangs the flow. A
+    # private per-example copy (basename preserved, so the filename matcher below
+    # still keys off "MLB1200") reads reliably. See the helper for the full note.
     attach_file I18n.t("admin.bulk_uploads.new.dropzone_label"),
       [
-        file_fixture("MLB1200.jpg").to_s,
-        file_fixture("MLB1200_chairs.pdf").to_s,
-        file_fixture("stray.txt").to_s
+        browser_upload_fixture("MLB1200.jpg"),
+        browser_upload_fixture("MLB1200_chairs.pdf"),
+        browser_upload_fixture("stray.txt")
       ]
 
     click_button I18n.t("admin.bulk_uploads.new.submit")

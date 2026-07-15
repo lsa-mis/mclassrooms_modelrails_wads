@@ -102,7 +102,11 @@ RSpec.describe "Buildings", type: :system do
     expect(page).to have_link(I18n.t("buildings.edit.plan_pdf_link", label: floor_with_pdf_plan.label))
 
     fill_in I18n.t("buildings.edit.nickname_label"), with: "The Mason"
-    attach_file I18n.t("buildings.edit.replace_plan_label", label: floor.label), file_fixture("room.jpg").to_s
+    # `browser_upload_fixture` (spec/support/browser_upload_helpers.rb): under
+    # Cuprite, uploading a file handed to `attach_file` straight from the
+    # fixtures dir hangs the submit with a browser-side `NotReadableError`. A
+    # private per-example copy reads reliably. See the helper for the full note.
+    attach_file I18n.t("buildings.edit.replace_plan_label", label: floor.label), browser_upload_fixture("room.jpg")
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"

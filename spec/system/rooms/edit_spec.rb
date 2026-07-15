@@ -59,7 +59,11 @@ RSpec.describe "Room edit", type: :system do
     expect(page).to have_selector("h1", text: I18n.t("rooms.edit.title", room: room.display_name))
 
     fill_in I18n.t("rooms.edit.nickname_label"), with: "New Name"
-    attach_file I18n.t("rooms.edit.photo_label"), file_fixture("room.jpg").to_s
+    # `browser_upload_fixture` (spec/support/browser_upload_helpers.rb): under
+    # Cuprite, uploading a file handed to `attach_file` straight from the
+    # fixtures dir hangs the submit with a browser-side `NotReadableError`. A
+    # private per-example copy reads reliably. See the helper for the full note.
+    attach_file I18n.t("rooms.edit.photo_label"), browser_upload_fixture("room.jpg")
 
     # Swap the two gallery images' positions (first ↔ second).
     fill_in I18n.t("rooms.edit.position_label", position: 1), with: "1"
