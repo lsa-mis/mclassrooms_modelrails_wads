@@ -24,6 +24,14 @@ RSpec.describe "Clientside projects", type: :request do
 
   it "redirects a non-client away from a project they have no access to" do
     other = create(:project, clientside_enabled: true)
+    # Force a slug that cannot collide with the client's own `project`. Project
+    # slugs are only workspace-unique (Sluggable), and the factory's small
+    # Faker::App.name pool occasionally names `other` identically to `project`,
+    # in a different workspace. When the slugs match, the allowlist-scoped
+    # lookup in Clientside::BaseController#set_client_project resolves to
+    # `project` (which IS accessible) and no redirect happens — the order-
+    # dependent flake tracked in #456. The record id guarantees distinctness.
+    other.update_column(:slug, "no-access-#{other.id}")
     get clientside_project_path(other)
     expect(response).to redirect_to(clientside_projects_path)
   end
