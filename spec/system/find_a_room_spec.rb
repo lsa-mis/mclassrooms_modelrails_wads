@@ -188,4 +188,27 @@ RSpec.describe "Find a Room", type: :system do
       expect(axe_violations(axe_options)).to be_empty
     end
   end
+
+  describe "tappable card (2026-07-15 panel: the whole card is the tap target)" do
+    it "opens the room when a NON-link region of the card (the meta line) is clicked" do
+      visit find_a_room_path
+      expect(page).to have_content(card_title(big))
+
+      # Click the dead-center of the meta line — a plain <span>, not a link. It
+      # navigates only because the title link's `after:` overlay stretches over
+      # the whole card (the fix); without the overlay this click does nothing.
+      point = cdp_evaluate(<<~JS)
+        (() => {
+          const li = [...document.querySelectorAll("#find_a_room_results li")]
+            .find(el => el.textContent.includes(#{card_title(big).to_json}));
+          const meta = li.querySelector("h3 + span");
+          const r = meta.getBoundingClientRect();
+          return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+        })()
+      JS
+      cdp_click_at(point["x"], point["y"])
+
+      expect(page).to have_current_path(room_path(big))
+    end
+  end
 end
