@@ -32,10 +32,23 @@ RSpec.describe "Admin announcements CRUD", type: :system do
   # spec/system/notes_live_updates_spec.rb's identical helper comment for why
   # `fill_in`-by-label can't resolve it (the `<label for=...>` targets the
   # outer `<lexxy-editor>`, not the nested `[contenteditable]` div the label
-  # text is actually describing). `.set` replaces existing content (verified
-  # against the edit form's pre-filled body), same as a normal text field.
+  # text is actually describing). Under Cuprite `.set` on a contenteditable
+  # APPENDS rather than replacing (Playwright's cleared first), so we select
+  # all existing content first — via the DOM Range API, which is
+  # platform-independent unlike a Ctrl/Cmd+A chord — then type over the
+  # selection so Lexxy's input listeners fire and its hidden field updates.
   def fill_in_lexxy(text)
-    find(".lexxy-editor__content").set(text)
+    editor = find(".lexxy-editor__content")
+    page.execute_script(<<~JS, editor)
+      const el = arguments[0];
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    JS
+    editor.send_keys(text)
   end
 
   # Reachable only by direct URL — admin nav is NOT wired to this console
