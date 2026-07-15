@@ -101,6 +101,11 @@ RSpec.describe "Room show", type: :system do
   let(:axe_options) { PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup }
 
   it "renders the header, chips, media, notes, and share accessibly in both themes" do
+    # Headless Chrome exposes navigator.share, which would relabel the button to
+    # "Share" and open the OS sheet; force the clipboard-fallback path here so
+    # the "Copy link" button + copied confirmation stay deterministic. The native
+    # share sheet is exercised in its own example below.
+    cdp_add_init_script("Object.defineProperty(navigator,'share',{value:undefined,configurable:true});")
     visit room_path(room)
 
     expect(page).to have_selector("h1", text: room.display_name)
@@ -201,6 +206,33 @@ RSpec.describe "Room show", type: :system do
       expect(desktop["bandTop"]).to be < desktop["panoBottom"],
         "desktop: identity band should overlay the panorama bottom " \
         "(bandTop=#{desktop['bandTop']} panoBottom=#{desktop['panoBottom']})"
+    end
+  end
+
+  describe "native share (2026-07-15 panel)" do
+    it "opens the OS share sheet and relabels the trigger when navigator.share is available" do
+      # Stub the share sheet before the page's JS runs so the controller sees it
+      # on connect. Record the payload the app hands it.
+      cdp_add_init_script(<<~JS)
+        window.__sharePayload = undefined;
+        navigator.share = (data) => { window.__sharePayload = data; return Promise.resolve(); };
+        navigator.canShare = () => true;
+      JS
+      visit room_path(room)
+
+      trigger = find("[data-share-target='button']")
+      expect(trigger).to have_text(I18n.t("rooms.show.share.native_button")) # relabelled "Share"
+
+      trigger.click
+      payload = nil
+      15.times do
+        payload = cdp_evaluate("window.__sharePayload || null")
+        break if payload
+        sleep 0.1
+      end
+      expect(payload).to be_present
+      expect(payload["url"]).to include(room.rmrecnbr)               # the canonical room link
+      expect(page).to have_no_content(I18n.t("rooms.show.share.copied")) # the sheet is the feedback
     end
   end
 end
