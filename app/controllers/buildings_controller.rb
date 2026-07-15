@@ -256,11 +256,12 @@ class BuildingsController < ApplicationController
   end
 
   def set_building
-    # for_current_workspace (CLAUDE.md deviation #1): tenant-scoped find,
-    # never a bare Building.find — mirrors RoomsController#set_room. Not
-    # `.listed`-filtered: this is the admin page, so a hidden building must
-    # still be reachable by id.
-    @building = Building.for_current_workspace.find(params[:id])
+    # Look up by bldrecnbr — the URL param (see Building#to_param) — scoped
+    # through for_current_workspace (CLAUDE.md deviation #1): tenant-scoped, never
+    # a bare Building.find — mirrors RoomsController#set_room. Not `.listed`-
+    # filtered: this is the admin page, so a hidden building must still be
+    # reachable. find_by! raises RecordNotFound (like find did).
+    @building = Building.for_current_workspace.find_by!(bldrecnbr: params[:id])
   end
 
   # Curated fields (nickname), the photo slot + its remove_photo purge

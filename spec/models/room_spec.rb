@@ -24,6 +24,17 @@ RSpec.describe Room, type: :model do
     expect(duplicate.errors[:rmrecnbr]).not_to be_empty
   end
 
+  describe "#to_param" do
+    it "routes by the stable rmrecnbr natural key, not the serial id" do
+      # rmrecnbr is the U-M-wide, unique, non-null natural key (see above), so
+      # room URLs (/rooms/:id) are stable and meaningful instead of exposing an
+      # internal auto-increment. RoomsController#set_room finds by rmrecnbr to
+      # match.
+      room = build(:room, rmrecnbr: "2900042")
+      expect(room.to_param).to eq("2900042")
+    end
+  end
+
   describe "associations" do
     it "requires a building" do
       expect(build(:room, building: nil, workspace: create(:workspace), building_name: "Modern Languages"))

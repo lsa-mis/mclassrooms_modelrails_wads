@@ -62,6 +62,11 @@ class Building < ApplicationRecord
   scope :not_in_feed, -> { where(in_feed: false) }
   scope :with_classrooms, -> { where(id: Room.classroom.select(:building_id)) }
 
+  # URL param: buildings are addressed by their stable bldrecnbr (the U-M-wide,
+  # unique, non-null natural key) rather than the serial id, so /buildings/:id
+  # URLs are stable. BuildingsController#set_building finds by bldrecnbr to match.
+  def to_param = bldrecnbr
+
   def display_name = nickname.present? ? "#{name} (#{nickname})" : name
 
   def hidden? = hidden_at.present?
