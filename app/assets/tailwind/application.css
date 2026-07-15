@@ -523,3 +523,29 @@ body.a11y-sim-cataract     { filter: blur(1.5px) contrast(0.8) brightness(1.1); 
   to   { background-color: transparent; }
 }
 
+/* Tooltip/popover bubbles (UI::TooltipComponent + bubble_classes) position with
+   CSS anchor positioning but only a `flip-block` try-fallback — that flips
+   top<->bottom, never SHIFTS horizontally. So a top-center bubble anchored to a
+   chip/button near a viewport edge clips off-screen on narrow (mobile) viewports
+   (2026-07-15 panel review: chip popover left edge at x=-38; pano hint). Enhance
+   the modern anchor path (Chrome/Baseline-2026) here in the fork stylesheet — no
+   change to the vendored component — with `span-*` fallbacks so the bubble shifts
+   inward toward the anchor's open side instead of clipping, plus a viewport width
+   cap. Pre-Baseline browsers keep the component's `absolute` fallback unchanged.
+   NOTE (follow-up): the real fix belongs in modelrails_ui's TooltipComponent so
+   every fork gets it. */
+@position-try --tooltip-top-span-right { position-area: top span-right; }
+@position-try --tooltip-top-span-left { position-area: top span-left; }
+@position-try --tooltip-bottom-span-right { position-area: bottom span-right; }
+@position-try --tooltip-bottom-span-left { position-area: bottom span-left; }
+
+@supports (position-area: top) {
+  [role="tooltip"] {
+    max-inline-size: min(20rem, calc(100vw - 1rem));
+    position-try-fallbacks:
+      flip-block,
+      --tooltip-top-span-right, --tooltip-top-span-left,
+      --tooltip-bottom-span-right, --tooltip-bottom-span-left;
+  }
+}
+
