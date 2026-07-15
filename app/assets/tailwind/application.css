@@ -13,6 +13,16 @@
 @import "./_prose.css";
 @import "./_syntax.css";
 
+/* Native form controls (checkboxes, number spinners, scrollbars, date pickers)
+   must know the active theme, or the browser draws them in its default LIGHT
+   appearance under our class-based `.dark` — the 2026-07-15 panel review caught
+   unchecked filter checkboxes rendering as solid bright-white squares in dark
+   mode. `color-scheme` per theme (the `.dark` class lives on <html>) makes the
+   browser render dark-appropriate native chrome; `accent-color` (inherited)
+   tints a checked control with the brand interactive color in both themes. */
+:root { color-scheme: light; accent-color: var(--color-interactive); }
+.dark { color-scheme: dark; }
+
 /* @theme inline (not @theme): these alias custom props that swap under .dark, so the var() refs must be inlined. */
 @theme inline {
   /* Surfaces */
