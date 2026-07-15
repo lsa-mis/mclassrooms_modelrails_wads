@@ -9,7 +9,16 @@
     first, then the rest) and a native <details> holding the remainder,
     count-labeled "+N more features" — no separate tag/label helper, no
     duplicate text list. %>
-<li class="rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-24">
+<%# The whole card is one tap target: the title link carries a stretched
+    `after:` overlay (relative parent below) so a click anywhere on the card
+    opens the room — the primary action is no longer a ~18px title link
+    (2026-07-15 panel: fails the 44px coarse-pointer floor on mobile). The two
+    genuinely-independent controls — Save and the "+N more" disclosure — sit
+    above the overlay (z-20). Chips stay under it, so a pointer tap navigates
+    (fixing card mis-taps into chip popovers) while keyboard users can still Tab
+    to each chip's tooltip. %>
+<li class="relative rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-24
+           transition-colors has-[a:hover]:border-border-strong dark:has-[a:hover]:border-interactive">
   <div class="flex flex-wrap items-center gap-4">
     <% if (thumbnail = room_thumbnail_image(room)) %>
       <%= ui :image,
@@ -20,9 +29,12 @@
 
     <div class="flex-1 min-w-40">
       <h3 class="font-semibold text-text-heading">
+        <%# after:absolute inset-0 stretches the click target over the whole
+            card; after:z-10 lifts it above the (unpositioned) card content so
+            taps hit the link, and the raised z-20 controls below still win. %>
         <%= link_to room_card_title(room), room_path(room),
               data: { turbo_frame: "_top" },
-              class: "hover:underline focus-ring rounded" %>
+              class: "hover:underline focus-ring rounded after:absolute after:inset-0 after:z-10 after:content-['']" %>
       </h3>
       <span class="block text-sm text-text-muted"><%= room_card_meta(room) %></span>
     </div>
@@ -39,7 +51,7 @@
       <% if room.ada_seat_count.to_i.positive? %>
         <%= ui :badge, t("rooms.row.ada", count: room.ada_seat_count), variant: :soft, tone: :success %>
       <% end %>
-      <%= render "rooms/save_toggle", room: room, saved_id: saved_room_ids[room.id] %>
+      <span class="relative z-20"><%= render "rooms/save_toggle", room: room, saved_id: saved_room_ids[room.id] %></span>
     </span>
   </div>
 
@@ -67,7 +79,7 @@
 
   <% remainder = chips.drop(RoomsHelper::CARD_TAG_LIMIT) %>
   <% if remainder.any? %>
-    <details class="group mt-1">
+    <details class="group relative z-20 mt-1">
       <summary class="list-none min-h-11 inline-flex items-center gap-1 cursor-pointer
                       text-sm text-text-body focus-ring rounded
                       transition-colors hover:text-interactive">
