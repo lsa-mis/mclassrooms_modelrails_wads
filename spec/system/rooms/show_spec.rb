@@ -172,4 +172,35 @@ RSpec.describe "Room show", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
+
+  describe "hero identity placement (2026-07-15 panel, Option A)" do
+    it "sits as a solid block BELOW the photo on mobile and overlays it from md up" do
+      visit room_path(room)
+      ensure_light_mode
+
+      band_vs_pano = lambda do
+        cdp_evaluate(<<~JS)
+          (() => {
+            const stage = document.querySelector("[data-testid='media-stage']");
+            const pano = document.querySelector("#room_panorama_stage");
+            const band = [...stage.children].find((c) => c.querySelector("h1"));
+            const p = pano.getBoundingClientRect(), b = band.getBoundingClientRect();
+            return { panoBottom: Math.round(p.bottom), bandTop: Math.round(b.top) };
+          })()
+        JS
+      end
+
+      cdp_resize(390, 1100)
+      mobile = band_vs_pano.call
+      expect(mobile["bandTop"]).to be >= (mobile["panoBottom"] - 2),
+        "mobile: identity band should sit BELOW the panorama " \
+        "(bandTop=#{mobile['bandTop']} panoBottom=#{mobile['panoBottom']})"
+
+      cdp_resize(1280, 900)
+      desktop = band_vs_pano.call
+      expect(desktop["bandTop"]).to be < desktop["panoBottom"],
+        "desktop: identity band should overlay the panorama bottom " \
+        "(bandTop=#{desktop['bandTop']} panoBottom=#{desktop['panoBottom']})"
+    end
+  end
 end
