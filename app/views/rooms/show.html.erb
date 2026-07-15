@@ -17,11 +17,14 @@
 
     <div data-controller="share"
          data-share-text-value="<%= @presenter.share_text %>"
+         data-share-url-value="<%= room_url(@room) %>"
+         data-share-title-value="<%= @room.display_name %>"
          data-share-copied-message-value="<%= t('rooms.show.share.copied') %>"
+         data-share-native-label-value="<%= t('rooms.show.share.native_button') %>"
          class="flex flex-col items-end gap-1">
       <div class="flex items-center gap-2">
         <%= render "rooms/save_toggle", room: @room, saved_id: @saved_id %>
-        <button type="button" data-action="share#copy" class="btn-secondary">
+        <button type="button" data-share-target="button" data-action="share#copy" class="btn-secondary">
           <%= t("rooms.show.share.button") %>
         </button>
         <% if policy(@room).edit? %>
