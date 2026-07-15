@@ -34,27 +34,23 @@ RSpec.describe "DataTable component runtime behavior", type: :system do
   # ordering via the sorted #filtered array; we read what the user actually sees
   # (rows whose display != none), top-to-bottom, returning the requested cell index.
   def visible_cell_column(cell_index)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const rows = Array.from(
-            document.querySelectorAll(#{DATA_TABLE_ROW_SEL.to_json})
-          ).filter(r => getComputedStyle(r).display !== "none");
-          rows.sort((a, b) =>
-            a.getBoundingClientRect().top - b.getBoundingClientRect().top
-          );
-          return rows.map(r => r.cells[#{cell_index}]?.textContent.trim());
-        })()
-      JS
-    end
+    cdp_evaluate(<<~JS)
+      (() => {
+        const rows = Array.from(
+          document.querySelectorAll(#{DATA_TABLE_ROW_SEL.to_json})
+        ).filter(r => getComputedStyle(r).display !== "none");
+        rows.sort((a, b) =>
+          a.getBoundingClientRect().top - b.getBoundingClientRect().top
+        );
+        return rows.map(r => r.cells[#{cell_index}]?.textContent.trim());
+      })()
+    JS
   end
 
   def aria_sort_of(th_selector)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        document.querySelector(#{th_selector.to_json})?.getAttribute("aria-sort")
-      JS
-    end
+    cdp_evaluate(<<~JS)
+      document.querySelector(#{th_selector.to_json})?.getAttribute("aria-sort")
+    JS
   end
 
   # Activate a sortable header's <button> from the keyboard. Programmatic key
@@ -63,34 +59,30 @@ RSpec.describe "DataTable component runtime behavior", type: :system do
   # dispatch a genuine keydown+click the way Enter/Space activate a native button.
   # The OUTCOME (reorder + aria-sort flip) is asserted for real below.
   def keyboard_activate(th_selector, key)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const btn = document.querySelector(#{th_selector.to_json} + " button");
-          btn.focus();
-          const focused = document.activeElement === btn;
-          // Native <button> activates on Enter/Space; mirror that so the Stimulus
-          // click->sort action fires exactly as a keyboard user triggers it.
-          btn.dispatchEvent(new KeyboardEvent("keydown", { key: #{key.to_json}, bubbles: true }));
-          btn.click();
-          document.body.offsetHeight;
-          return focused;
-        })()
-      JS
-    end
+    cdp_evaluate(<<~JS)
+      (() => {
+        const btn = document.querySelector(#{th_selector.to_json} + " button");
+        btn.focus();
+        const focused = document.activeElement === btn;
+        // Native <button> activates on Enter/Space; mirror that so the Stimulus
+        // click->sort action fires exactly as a keyboard user triggers it.
+        btn.dispatchEvent(new KeyboardEvent("keydown", { key: #{key.to_json}, bubbles: true }));
+        btn.click();
+        document.body.offsetHeight;
+        return focused;
+      })()
+    JS
   end
 
   def measure_min_dimension(selector, dimension)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const el = document.querySelector(#{selector.to_json});
-          if (!el) return null;
-          const r = el.getBoundingClientRect();
-          return #{dimension.to_json} === "height" ? r.height : r.width;
-        })()
-      JS
-    end
+    cdp_evaluate(<<~JS)
+      (() => {
+        const el = document.querySelector(#{selector.to_json});
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return #{dimension.to_json} === "height" ? r.height : r.width;
+      })()
+    JS
   end
 
   before { visit "#{DATA_TABLE_PREVIEW}/default" }
@@ -194,9 +186,7 @@ RSpec.describe "DataTable component runtime behavior", type: :system do
 
       fill_in_search("ada")
 
-      status_text = Capybara.current_session.driver.with_playwright_page do |pw|
-        pw.evaluate("document.querySelector(\"[role='status']\")?.textContent.trim()")
-      end
+      status_text = cdp_evaluate("document.querySelector(\"[role='status']\")?.textContent.trim()")
 
       # default preview: one row contains "ada" (Ada Lovelace / ada@example.com).
       expect(status_text).to(
@@ -228,15 +218,13 @@ RSpec.describe "DataTable component runtime behavior", type: :system do
   end
 
   def fill_in_search(query)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const input = document.querySelector("input[type='search']");
-          input.value = #{query.to_json};
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-          document.body.offsetHeight;
-        })()
-      JS
-    end
+    cdp_execute(<<~JS)
+      (() => {
+        const input = document.querySelector("input[type='search']");
+        input.value = #{query.to_json};
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        document.body.offsetHeight;
+      })()
+    JS
   end
 end

@@ -64,16 +64,12 @@ RSpec.describe "Modal system", type: :system do
     end
 
     it "closes on Escape key" do
-      page.driver.with_playwright_page do |pw_page|
-        pw_page.keyboard.press("Escape")
-      end
+      cdp_press("Escape")
       expect(page).to have_no_css("dialog[open]")
     end
 
     it "closes on backdrop click" do
-      page.driver.with_playwright_page do |pw_page|
-        pw_page.mouse.click(5, 5)
-      end
+      cdp_click_at(5, 5)
       expect(page).to have_no_css("dialog[open]")
     end
 
@@ -106,17 +102,23 @@ RSpec.describe "Modal system", type: :system do
     end
 
     it "close button is keyboard accessible" do
-      close_btn = find("#test-modal-close")
-      close_btn.send_keys(:enter)
+      # showModal() autofocuses the dialog's first focusable descendant (the
+      # close button), so a raw Enter press exercises the native
+      # focused-button activation path. Capybara's cross-driver `send_keys`
+      # is NOT usable here: Cuprite's implementation performs a real mouse
+      # click before typing (unlike Playwright's `press`), and that click
+      # closes the dialog and restores focus to the trigger button BEFORE
+      # the Enter keydown/keyup land — which then reopens the dialog via the
+      # trigger's own native Enter-activates-focused-button behavior.
+      find("#test-modal-close")
+      cdp_press("Enter")
       expect(page).to have_no_css("dialog[open]")
     end
   end
 
   describe "reduced motion" do
     it "skips animation when prefers-reduced-motion is set" do
-      page.driver.with_playwright_page do |pw_page|
-        pw_page.emulate_media(reducedMotion: "reduce")
-      end
+      cdp_emulate_reduced_motion
       inject_test_modal
       click_button "Open Modal"
       expect(page).to have_css("dialog[open]")

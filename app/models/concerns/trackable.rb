@@ -38,8 +38,12 @@ module Trackable
       workspace: resolve_workspace_for_activity,
       metadata: metadata
     )
-  rescue ActiveRecord::RecordInvalid => e
+  rescue StandardError => e
+    # Best-effort contract (see header): any tracking failure — validation,
+    # statement, or otherwise — is logged and reported, never raised into the
+    # business write that triggered it.
     Rails.logger.warn("Activity tracking failed for #{self.class.name}##{id} (#{action}): #{e.message}")
+    Rails.error.report(e, handled: true, context: { trackable: "#{self.class.name}##{id}", action: action })
   end
 
   def resolve_workspace_for_activity

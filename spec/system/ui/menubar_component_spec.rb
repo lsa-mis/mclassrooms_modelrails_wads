@@ -35,27 +35,30 @@ RSpec.describe "Menubar component accessibility", type: :system do
   end
 
   it "ArrowDown on a bar item opens its submenu and focuses the first item" do
-    bar_item("File").send_keys(:down)
+    bar_item("File").native.node.focus
+    cdp_press(:down)
     expect(page).to have_css("[role='menu']:not([hidden])")
     expect(focused_text).to eq("New file")
   end
 
   it "ArrowRight/Left move between bar items (no submenu open)" do
-    bar_item("File").send_keys(:right)
+    bar_item("File").native.node.focus
+    cdp_press(:right)
     expect(focused_text).to eq("Edit")
-    page.send_keys(:right)
+    cdp_press(:right)
     expect(focused_text).to eq("View")
-    page.send_keys(:right) # wraps
+    cdp_press(:right) # wraps
     expect(focused_text).to eq("File")
-    page.send_keys(:left) # wraps back
+    cdp_press(:left) # wraps back
     expect(focused_text).to eq("View")
   end
 
   it "ArrowRight from inside an open submenu follows to the adjacent menu" do
-    bar_item("File").send_keys(:down) # File submenu open, focus "New file"
+    bar_item("File").native.node.focus
+    cdp_press(:down) # File submenu open, focus "New file"
     expect(focused_text).to eq("New file")
 
-    page.send_keys(:right) # close File, open Edit, focus its first item
+    cdp_press(:right) # close File, open Edit, focus its first item
     expect(focused_text).to eq("Undo")
     expect(page).to have_css("[role='menu']:not([hidden])", count: 1)
     expect(bar_item("File")["aria-expanded"]).to eq("false")
@@ -63,23 +66,26 @@ RSpec.describe "Menubar component accessibility", type: :system do
   end
 
   it "ArrowDown wraps and SKIPS the disabled submenu item" do
-    bar_item("File").send_keys(:down) # New file
-    page.send_keys(:down) # Open…
+    bar_item("File").native.node.focus
+    cdp_press(:down) # New file
+    cdp_press(:down) # Open…
     expect(focused_text).to eq("Open…")
-    page.send_keys(:down) # skips disabled "Open recent" → Settings
+    cdp_press(:down) # skips disabled "Open recent" → Settings
     expect(focused_text).to eq("Settings")
   end
 
   it "Escape closes the submenu and returns focus to the bar item" do
-    bar_item("File").send_keys(:down)
-    page.send_keys(:escape)
+    bar_item("File").native.node.focus
+    cdp_press(:down)
+    cdp_press(:escape)
     expect(page).to have_css("[role='menu'][hidden]", visible: :all)
     expect(focused_text).to eq("File")
     expect(bar_item("File")["aria-expanded"]).to eq("false")
   end
 
   it "type-ahead at the bar level jumps to a matching item" do
-    bar_item("File").send_keys("e") # → Edit
+    bar_item("File").native.node.focus
+    cdp_browser.keyboard.type("e") # → Edit
     expect(focused_text).to eq("Edit")
   end
 
@@ -97,7 +103,7 @@ RSpec.describe "Menubar component accessibility", type: :system do
     bar_item("File").click
     expect(page).to have_css("[role='menu']:not([hidden])")
 
-    page.driver.with_playwright_page { |pw| pw.mouse.click(5, 5) }
+    cdp_click_at(5, 5)
     expect(page).to have_css("[role='menu'][hidden]", visible: :all)
   end
 end

@@ -1,0 +1,59 @@
+<%# Test-only harness (spec/support/harness): every form-draft field archetype
+    in one page. Tasks 8-11 reference these ids/labels verbatim — do not rename. -%>
+<div class="max-w-2xl p-6 space-y-10">
+  <% if @errors.any? %>
+    <div role="alert"><%= @errors.first %></div>
+  <% end %>
+
+  <%= form_with model: @harness_form, url: draft_harness_path, method: :post, scope: :draft,
+        id: "harness-main",
+        data: {
+          controller: "form-draft draft-harness",
+          action: "input->form-draft#save change->form-draft#save turbo:submit-end->form-draft#submitEnd"
+        } do |form| %>
+    <%= render "shared/form_draft_notice" %>
+
+    <%= form.text_field :title, label: "Title" %>
+
+    <%= form.text_area :notes, label: "Notes" %>
+
+    <%= form.check_box :published, label: "Published" %> <%# Rails hidden-"0" pair archetype %>
+
+    <fieldset>
+      <legend>Tags</legend>
+      <%# size-11 = 44px: the raw tag helpers bypass the design-system sizing,
+          and the CI axe gate's mc-target-size-44 rule audits this page too. %>
+      <% %w[ruby rails hotwire].each do |tag| %>
+        <%= form.label "tags_#{tag}", tag.capitalize %>
+        <%= check_box_tag "draft[tags][]", tag, false, id: "draft_tags_#{tag}", class: "size-11" %>
+      <% end %>
+    </fieldset>
+
+    <fieldset>
+      <legend>Priority</legend>
+      <%= form.label :priority_low, "Low" %>
+      <%= form.radio_button :priority, "low", class: "size-11" %>
+      <%= form.label :priority_high, "High" %>
+      <%= form.radio_button :priority, "high", class: "size-11" %>
+    </fieldset>
+
+    <%= form.select :categories, %w[alpha beta gamma], { label: "Categories" }, multiple: true %>
+
+    <%= form.text_field :secret, label: "Secret", data: { form_draft_ignore: "" } %>
+
+    <%= form.password_field :password, label: "Password" %>
+
+    <%= form.submit "Save" %>
+  <% end %>
+
+  <%= form_with model: @harness_form, url: draft_harness_path(mini: 1), method: :post, scope: :mini,
+        id: "harness-mini",
+        data: {
+          controller: "form-draft",
+          action: "input->form-draft#save change->form-draft#save turbo:submit-end->form-draft#submitEnd"
+        } do |form| %>
+    <%= render "shared/form_draft_notice" %>
+    <%= form.text_field :name, label: "Mini name" %>
+    <%= form.submit "Save mini" %>
+  <% end %>
+</div>

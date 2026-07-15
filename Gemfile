@@ -102,12 +102,25 @@ group :development, :test do
   gem "rspec-rails"
   gem "factory_bot_rails"
   gem "faker"
+
+  # Multi-core spec runs via bin/parallel-rspec (CI + Lefthook pre-push).
+  # Dev group too: the parallel:* rake tasks load through the railtie.
+  gem "parallel_tests"
+
+  # HTML+ERB linter — replaces the npm @herb-tools/linter package. NOT the
+  # marcoroth/herb Ruby gem: its own `lint` subcommand shells out to the npm
+  # package under the hood (only parsing/analysis are Node-free there), so it
+  # doesn't actually remove the Node dependency it appears to. erb_lint is a
+  # genuinely independent, Node-free implementation.
+  gem "erb_lint", require: false
+
+  # Markdown linter — replaces the npm markdownlint-cli package.
+  gem "mdl", require: false
 end
 
 group :test do
   gem "capybara"
-  gem "playwright-ruby-client"
-  gem "capybara-playwright-driver"
+  gem "cuprite" # pure-Ruby CDP driver (ferrum) — no Node/browser-driver dependency
   gem "simplecov", require: false
   gem "webmock"
   gem "rails-controller-testing"

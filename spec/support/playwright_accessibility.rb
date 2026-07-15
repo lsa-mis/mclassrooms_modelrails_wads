@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
-# Playwright accessibility testing helper using axe-core
-# Injects axe-core JavaScript and runs accessibility audits
+# Accessibility testing helper using axe-core. Injects axe-core JavaScript and
+# runs accessibility audits. Drives Chrome through the Ferrum/CDP helpers
+# (CdpHelpers, `page.driver.browser`) — the pure-Ruby CDP path — rather than
+# Playwright. The module name is kept as PlaywrightAccessibility for now to
+# avoid churn across the many specs that include it.
 module PlaywrightAccessibility
   AXE_SOURCE = Axe::Configuration.instance.jslib.freeze
 
@@ -84,14 +87,24 @@ module PlaywrightAccessibility
     options[:runOnly] ||= DEFAULT_AXE_OPTIONS[:runOnly]
     options[:rules] = AXE_RULE_OVERRIDES.merge(options[:rules] || {})
 
-    Capybara.current_session.driver.with_playwright_page do |playwright_page|
-      inject_axe(playwright_page)
+    inject_axe
 
-      exclude_list = Array(exclude)
-      include_list = Array(include)
+    exclude_list = Array(exclude)
+    include_list = Array(include)
 
-      playwright_page.evaluate(<<~JAVASCRIPT)
+    # Ferrum's evaluate_async appends a resolve callback as the LAST argument of
+    # the wrapping function; the async IIFE reaches it via
+    # `arguments[arguments.length - 1]` (arrow functions inherit the enclosing
+    # function's `arguments`). We resolve `JSON.stringify(results)` — a single
+    # string round-trip that mirrors Playwright's returnByValue JSON semantics —
+    # then JSON.parse below. Resolving the raw object instead would route through
+    # Ferrum's handle_response/reduce_props, a recursive CDP getProperties walk
+    # per nested object (thousands of round-trips over the full axe result) that
+    # also `.compact`s arrays. The try/catch guarantees resolve is always called
+    # so an in-IIFE throw surfaces as a raised error instead of a 20s timeout.
+    raw = cdp_evaluate_async(<<~JAVASCRIPT)
         (async () => {
+          try {
           const options = #{options.to_json};
           const exclude = #{exclude_list.to_json};
           const include = #{include_list.to_json};
@@ -270,13 +283,11 @@ module PlaywrightAccessibility
           // wrapper) with an opaque background means plated; hitting media
           // before ANY opaque background means unguaranteed contrast.
           // "Media" for contrast purposes is not only <img>/<canvas>/<video>:
-          // an inline <svg> illustration, or a photo set via CSS
-          // `background-image: url(...)`, is just as unknowable a backdrop
-          // (2026-07-13 review — the archetypal "text over hero photo" is
-          // often a CSS background, not an <img>). A gradient/solid
-          // background-image is deliberately NOT treated as media here — it
-          // is not a raster photo — but its opacity is also not asserted, so
-          // a genuinely opaque background-color plate is still required.
+          // an inline <svg>, or a photo set via CSS `background-image: url()`,
+          // is just as unknowable a backdrop (2026-07-13 review). A gradient/
+          // solid background-image is NOT treated as media (not a raster), but
+          // its opacity is also not asserted — an opaque background-color plate
+          // is still required.
           const isMedia = (node) => {
             if (node.matches && node.matches("img, canvas, video, svg")) return true;
             const bg = getComputedStyle(node).backgroundImage;
@@ -324,13 +335,11 @@ module PlaywrightAccessibility
               }
             } else if (["none", "0px"].includes(rule.style.getPropertyValue("outline-style") || rule.style.getPropertyValue("outline-width")) ||
                        rule.style.getPropertyValue("outline") === "0") {
-              // Strip :focus* SYMMETRICALLY with the focus branch above. A
-              // suppressor written the idiomatic way — `.btn:focus-visible {
-              // outline: none }` — must reduce to `.btn` so it matches the
-              // element during this UNFOCUSED sweep; keeping the pseudo made
-              // `el.matches(".btn:focus-visible")` always false, so the check
-              // silently missed the single most common way focus rings are
-              // killed (found in the 2026-07-13 review).
+              // Strip :focus* SYMMETRICALLY with the focus branch above — a
+              // suppressor like `.btn:focus-visible { outline: none }` must
+              // reduce to `.btn` to match during this UNFOCUSED sweep (keeping
+              // the pseudo made el.matches() always false, silently missing
+              // the most common way focus rings are killed; 2026-07-13 review).
               for (const part of sel.split(",")) {
                 const stripped = part.replace(/:focus-visible|:focus-within|:focus/g, "").trim();
                 if (stripped) suppressSelectors.push(stripped);
@@ -352,10 +361,22 @@ module PlaywrightAccessibility
             .map(el => ({ el, why: "outline suppressed by author CSS with no :focus/:focus-visible paint rule matching this element or an ancestor (WCAG 2.4.7)" }));
           pushCheck("mc-focus-indicator", "Focusable elements must show a visible focus indicator (WCAG 2.4.7)", noIndicator);
 
-          return results;
+          arguments[arguments.length - 1](JSON.stringify(results));
+          } catch (__axeErr) {
+            arguments[arguments.length - 1](JSON.stringify({
+              __axe_error: (__axeErr && __axeErr.message) || String(__axeErr),
+              __axe_stack: __axeErr && __axeErr.stack
+            }));
+          }
         })();
       JAVASCRIPT
+
+    result = JSON.parse(raw)
+    if result.is_a?(Hash) && result["__axe_error"]
+      raise "axe-core audit failed in the browser: #{result["__axe_error"]}\n#{result["__axe_stack"]}"
     end
+
+    result
   end
 
   # Check if page has any accessibility violations
@@ -458,9 +479,13 @@ module PlaywrightAccessibility
   private
 
   def set_theme(theme)
-    Capybara.current_session.driver.with_playwright_page do |playwright_page|
-      playwright_page.evaluate(<<~JS)
+    # Async: it AWAITS the color transitions, so it must run through
+    # cdp_evaluate_async (which awaits the Promise) and resolve the ferrum
+    # callback when done. The try/catch resolves `true` even on an unexpected
+    # throw so a post-await failure can never hang for the full 20s wait.
+    cdp_evaluate_async(<<~JS)
         (async () => {
+          try {
           const html = document.documentElement;
           html.dataset.themeThemeValue = #{theme.to_json};
           html.classList.toggle("dark", #{(theme == "dark").to_json});
@@ -478,16 +503,21 @@ module PlaywrightAccessibility
             Promise.allSettled(transitions.map(t => t.finished)),
             new Promise(r => setTimeout(r, 500))
           ]);
+          arguments[arguments.length - 1](true);
+          } catch (__themeErr) {
+            arguments[arguments.length - 1](true);
+          }
         })();
       JS
-    end
   end
 
-  def inject_axe(playwright_page)
-    already_loaded = playwright_page.evaluate("typeof axe !== 'undefined'")
-    return if already_loaded
+  def inject_axe
+    return if cdp_evaluate("typeof window.axe !== 'undefined'")
 
-    playwright_page.evaluate(AXE_SOURCE)
+    # `execute` (raw statement, no implicit `return`) — NOT `evaluate`, which
+    # wraps in `function(){ return … }` and breaks axe-core's UMD self-assign
+    # to `window`.
+    cdp_execute(AXE_SOURCE)
   end
 end
 
@@ -515,28 +545,27 @@ RSpec.configure do |config|
       #   "color-contrast" violation. Overriding to a solid-alpha version of
       #   the same OKLCH color gives axe a deterministic value to test against,
       #   without changing the production visual design.
-      Capybara.current_session.driver.with_playwright_page do |playwright_page|
-        playwright_page.evaluate(<<~JS)
-          document.querySelectorAll('[data-controller="toast-pill"], [data-controller="toast-card"]').forEach(el => {
-            el.style.transition = 'none';
-            el.style.opacity = '1';
-            el.style.transform = 'none';
+      # Synchronous DOM mutation, no return value -> cdp_execute (raw statement).
+      cdp_execute(<<~JS)
+        document.querySelectorAll('[data-controller="toast-pill"], [data-controller="toast-card"]').forEach(el => {
+          el.style.transition = 'none';
+          el.style.opacity = '1';
+          el.style.transform = 'none';
 
-            // Replace the computed background with a solid (no-alpha) version.
-            // getComputedStyle returns rgba(r, g, b, a) — drop the alpha to 1.
-            const bg = getComputedStyle(el).backgroundColor;
-            const match = bg.match(/rgba?\\(([^)]+)\\)/);
-            if (match) {
-              const parts = match[1].split(',').map(s => s.trim());
-              el.style.backgroundColor = `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
-            }
-          });
+          // Replace the computed background with a solid (no-alpha) version.
+          // getComputedStyle returns rgba(r, g, b, a) — drop the alpha to 1.
+          const bg = getComputedStyle(el).backgroundColor;
+          const match = bg.match(/rgba?\\(([^)]+)\\)/);
+          if (match) {
+            const parts = match[1].split(',').map(s => s.trim());
+            el.style.backgroundColor = `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+          }
+        });
 
-          // Force a synchronous reflow so the style overrides are reflected
-          // in computed styles before axe queries them.
-          document.body.offsetHeight;
-        JS
-      end
+        // Force a synchronous reflow so the style overrides are reflected
+        // in computed styles before axe queries them.
+        document.body.offsetHeight;
+      JS
 
       # Audits at WCAG 2.2 Level AAA — the project's design target. The full
       # CUMULATIVE tag set (2.0+2.1+2.2 at A/AA/AAA): the previous

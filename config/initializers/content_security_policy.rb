@@ -43,7 +43,10 @@ Rails.application.configure do
   end
   config.content_security_policy_nonce_directives = %w[script-src]
 
-  # Enforce CSP in development and production. Report-only in test because
-  # Playwright system specs don't forward nonces to injected scripts.
-  config.content_security_policy_report_only = Rails.env.test?
+  # Enforcement mode is NOT set here. Rails defaults to enforced (false)
+  # everywhere; config/environments/test.rb explicitly enforces it in test
+  # too (PR #120) so CSP bugs fail the suite instead of shipping silently.
+  # Do not reintroduce a Rails.env.test? override here — an earlier version
+  # of this line did exactly that, loaded after test.rb in Rails' boot order,
+  # and silently undid PR #120's fix for the lifetime of this bug.
 end

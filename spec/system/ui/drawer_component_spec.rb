@@ -35,19 +35,16 @@ RSpec.describe "Drawer component accessibility", type: :system do
 
       # Await all CSS transitions on the panel, then read the settled transform.
       # This mirrors the same pattern used in PlaywrightAccessibility#set_theme.
-      page.driver.with_playwright_page do |pl|
-        pl.evaluate(<<~JS)
-          (async () => {
-            const panel = document.querySelector("dialog[open] [data-modal-target='panel']");
-            if (!panel) return;
-            const transitions = panel.getAnimations().filter(a => a instanceof CSSTransition);
-            await Promise.race([
-              Promise.allSettled(transitions.map(t => t.finished)),
-              new Promise(r => setTimeout(r, 500))
-            ]);
-          })();
-        JS
-      end
+      cdp_evaluate_async(<<~JS)
+        const done = arguments[arguments.length - 1];
+        const panel = document.querySelector("dialog[open] [data-modal-target='panel']");
+        if (!panel) { done(); return; }
+        const transitions = panel.getAnimations().filter(a => a instanceof CSSTransition);
+        Promise.race([
+          Promise.allSettled(transitions.map(t => t.finished)),
+          new Promise(r => setTimeout(r, 500))
+        ]).then(() => done());
+      JS
 
       transform = page.evaluate_script(
         "getComputedStyle(document.querySelector(\"dialog[open] [data-modal-target='panel']\")).transform"
@@ -71,7 +68,7 @@ RSpec.describe "Drawer component accessibility", type: :system do
     visit "/rails/view_components/ui/drawer_component/basic"
     open_drawer
 
-    page.send_keys(:escape)
+    cdp_press(:escape)
 
     expect(page).to have_no_css("dialog[open]")
   end

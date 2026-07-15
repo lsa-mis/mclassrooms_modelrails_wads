@@ -70,12 +70,19 @@ class Invitation < ApplicationRecord
         next
       end
 
-      invitation = workspace.invitations.create!(
-        email: normalized,
-        role: role,
-        invited_by: invited_by,
-        expires_at: 7.days.from_now
-      )
+      begin
+        invitation = workspace.invitations.create!(
+          email: normalized,
+          role: role,
+          invited_by: invited_by,
+          expires_at: 7.days.from_now
+        )
+      rescue ActiveRecord::RecordNotUnique
+        # Concurrent request won the race to the pending-invite partial unique
+        # index after our preload; that invite already exists and was mailed.
+        skipped += 1
+        next
+      end
       existing_invites.add(normalized)
       InvitationMailer.invite(invitation).deliver_later
       sent += 1

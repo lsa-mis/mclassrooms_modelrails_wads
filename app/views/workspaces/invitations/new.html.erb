@@ -4,7 +4,15 @@
     <%= t("workspaces.invitations.new.title") %>
   </h1>
 
-  <%= form_with model: @invitation, url: workspace_invitations_path(@workspace), class: "mt-8 space-y-6" do |form| %>
+  <%= form_with model: @invitation, url: workspace_invitations_path(@workspace),
+        id: "new_invitation",
+        class: "mt-8 space-y-6",
+        data: {
+          controller: "form-draft",
+          action: "input->form-draft#save change->form-draft#save turbo:submit-end->form-draft#submitEnd"
+        } do |form| %>
+    <%= render "shared/form_draft_notice" %>
+
     <%= form.text_area :emails,
           label: t("workspaces.invitations.new.emails_label"),
           help: t("workspaces.invitations.new.emails_hint"),

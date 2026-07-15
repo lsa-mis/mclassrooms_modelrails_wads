@@ -59,7 +59,17 @@ module UI
 
     def call
       content_tag(:div,
-        class: cn("relative overflow-hidden", @extra_class),
+        # overflow-clip (not overflow-hidden): this wrapper only needs to
+        # visually clip the track — overflow:hidden is ALSO a scroll
+        # container, and focusing a control near its edge (e.g. Next/Prev)
+        # can trigger the browser's native scroll-into-view-on-focus, silently
+        # shifting the clipped viewport out of alignment with the transform-
+        # positioned track. overflow:clip provides identical visual clipping
+        # without scroll-container semantics, so that class of misalignment
+        # is structurally impossible. (Surfaced by a Playwright->Cuprite
+        # migration: Cuprite's click driver, unlike Playwright's, doesn't
+        # pre-empt Chrome's native auto-scroll-on-focus.)
+        class: cn("relative overflow-clip", @extra_class),
         role: "group",
         "aria-roledescription": "carousel",
         "aria-label": @label || t("ui.carousel.label", default: "Carousel"),

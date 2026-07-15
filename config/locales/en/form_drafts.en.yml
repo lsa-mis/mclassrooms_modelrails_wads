@@ -1,0 +1,8 @@
+en:
+  form_draft:
+    notice: You have an unsaved draft of this form.
+    recover: Recover draft
+    discard: Discard draft
+    found: Recoverable draft found. Recover and Discard buttons are before the form fields.
+    restored: "Draft restored. %{count} fields updated."
+    discarded: Draft discarded.

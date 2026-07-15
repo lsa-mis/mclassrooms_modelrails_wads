@@ -16,11 +16,9 @@ RSpec.describe "Notification preferences — mobile viewport", type: :system, js
     user.create_preferences!(timezone: "America/New_York")
     sign_in_via_form(user)
     # iPhone SE viewport — tightest realistic phone we target. Capybara
-    # spawns the Playwright session lazily on first visit (via sign_in
+    # spawns the Cuprite session lazily on first visit (via sign_in
     # above), so the page is live by the time we resize.
-    page.driver.with_playwright_page do |pw_page|
-      pw_page.set_viewport_size(width: 375, height: 667)
-    end
+    cdp_resize(375, 667)
   end
 
   def sign_in_via_form(user)

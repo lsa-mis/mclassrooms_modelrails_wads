@@ -15,12 +15,6 @@ FileUtils.chdir APP_ROOT do
   puts "== Installing dependencies =="
   system("bundle check") || system!("bundle install")
 
-  # Node dev tooling (pinned linters: markdownlint-cli, @herb-tools/linter,
-  # plus @playwright/test). `npm ci` installs the exact lockfile versions, so
-  # `npx markdownlint` / `npx herb-lint` and the Lefthook hooks run the same
-  # versions CI does — no manual `npm install -g`, no drift.
-  system! "npm ci"
-
   # Fork seam: downstream forks have an `upstream` remote (see /docs/developer/forking).
   # Activate the merge=ours driver for fork-owned paths there. Deliberately
   # NOT set in the template repo itself — it would silently mis-resolve the

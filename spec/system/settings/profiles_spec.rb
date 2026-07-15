@@ -147,9 +147,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
       find("button[data-identity-picker-target='photoPreview']").click
       wait_for_crop_view
 
-      page.driver.with_playwright_page do |playwright_page|
-        playwright_page.keyboard.press("Escape")
-      end
+      cdp_press("Escape")
 
       wait_for_hub_view
       expect(page).to have_css("dialog[open]")
@@ -195,19 +193,17 @@ RSpec.describe "Account profile — identity picker", type: :system do
       # Source cards are now links. Tab to the Initials link and press Enter.
       # For a default user (no Gravatar), available sources are ["upload", "initials"].
       # We Tab past the Photo link to reach Initials, then activate it.
-      page.driver.with_playwright_page do |playwright_page|
-        # Focus the first source card link (Photo)
-        playwright_page.evaluate(<<~JS)
-          const firstLink = document.querySelector(
-            "#identity-picker-hub [role='radiogroup'] a[role='radio']"
-          )
-          firstLink.focus()
-        JS
-        # Tab to the next source card (Initials)
-        playwright_page.keyboard.press("Tab")
-        # Activate the Initials link
-        playwright_page.keyboard.press("Enter")
-      end
+      # Focus the first source card link (Photo)
+      cdp_execute(<<~JS)
+        const firstLink = document.querySelector(
+          "#identity-picker-hub [role='radiogroup'] a[role='radio']"
+        )
+        firstLink.focus()
+      JS
+      # Tab to the next source card (Initials)
+      cdp_press("Tab")
+      # Activate the Initials link
+      cdp_press("Enter")
 
       # Wait for turbo frame to reload with Initials selected
       expect(page).to have_css("#identity-picker-hub", wait: 5)
@@ -223,7 +219,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
         text: I18n.t("identity_picker.sources.initials.title"))
 
       # Close the modal before the after(:each) axe audit runs.
-      page.driver.with_playwright_page { |pp| pp.keyboard.press("Escape") }
+      cdp_press("Escape")
       expect(page).to have_no_css("dialog[open]", wait: 3)
     end
   end
@@ -281,7 +277,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
       # Close the modal before the after(:each) axe audit runs.
       # The hub's initials source card uses oklch() with a CSS custom property
       # that axe-core can't resolve for contrast computation.
-      page.driver.with_playwright_page { |pp| pp.keyboard.press("Escape") }
+      cdp_press("Escape")
       expect(page).to have_no_css("dialog[open]", wait: 3)
     end
   end
@@ -298,14 +294,12 @@ RSpec.describe "Account profile — identity picker", type: :system do
       # happen within the in-flight window.
       patch_count = 0
 
-      page.driver.with_playwright_page do |playwright_page|
-        playwright_page.route("**/settings/avatar", ->(route, request) {
-          if request.method == "PATCH"
-            patch_count += 1
-            sleep 1  # keeps the first request in flight long enough for a second click
-          end
-          route.continue
-        })
+      cdp_intercept(%r{/settings/avatar}) do |request|
+        if request.method == "PATCH"
+          patch_count += 1
+          sleep 1 # keeps the first request in flight long enough for a second click
+        end
+        request.continue
       end
 
       # Click twice rapidly — the controller's _saving guard should drop the second click

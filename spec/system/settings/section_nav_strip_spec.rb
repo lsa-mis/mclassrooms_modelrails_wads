@@ -5,7 +5,7 @@ RSpec.describe "Settings section-nav strip (mobile)", type: :system do
 
   before do
     sign_in_via_form(user)
-    page.driver.with_playwright_page { |pw_page| pw_page.set_viewport_size(width: 390, height: 780) }
+    cdp_resize(390, 780)
   end
 
   it "shows the identity section nav as an in-page strip, not in the hamburger" do

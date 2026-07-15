@@ -3,6 +3,11 @@ Rails.application.routes.draw do
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
   mount Lookbook::Engine, at: "/lookbook" if Rails.env.development?
   mount Biscuit::Engine, at: "/biscuit"
+
+  # Test-only harness exercising every form-draft field archetype (the real
+  # adoption forms are text-only). Controller lives in spec/support/harness.
+  resource :draft_harness, only: %i[show create], controller: "draft_harness" if Rails.env.test?
+
   resource :session
   resource :email_verification, only: [ :new, :show ]
 

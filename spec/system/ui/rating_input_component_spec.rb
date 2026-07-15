@@ -41,12 +41,10 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
   # inspecting its class list (the controller toggles `text-warning-icon` on the
   # button itself). Returns an array of booleans in DISPLAY order: true = filled.
   def filled_stars
-    raw = Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        Array.from(document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json}))
-             .map(btn => btn.classList.contains("text-warning-icon"))
-      JS
-    end
+    raw = cdp_evaluate(<<~JS)
+      Array.from(document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json}))
+           .map(btn => btn.classList.contains("text-warning-icon"))
+    JS
     Array(raw)
   end
 
@@ -58,41 +56,35 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
   # display star (1-based). Stimulus reads `params.index` from the data attr, so a
   # plain dispatched event drives `preview` exactly like a real hover.
   def hover_star(display_index)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
-          stars[#{display_index - 1}].dispatchEvent(
-            new MouseEvent("mouseenter", { bubbles: true })
-          );
-        })()
-      JS
-    end
+    cdp_execute(<<~JS)
+      (() => {
+        const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
+        stars[#{display_index - 1}].dispatchEvent(
+          new MouseEvent("mouseenter", { bubbles: true })
+        );
+      })()
+    JS
   end
 
   # Dispatch `mouseleave` on the Nth star → controller resets to committed value.
   def leave_star(display_index)
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
-          stars[#{display_index - 1}].dispatchEvent(
-            new MouseEvent("mouseleave", { bubbles: true })
-          );
-        })()
-      JS
-    end
+    cdp_execute(<<~JS)
+      (() => {
+        const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
+        stars[#{display_index - 1}].dispatchEvent(
+          new MouseEvent("mouseleave", { bubbles: true })
+        );
+      })()
+    JS
   end
 
   def hidden_value
-    Capybara.current_session.driver.with_playwright_page do |pw|
-      pw.evaluate(<<~JS)
-        (() => {
-          const el = document.querySelector(#{RATING_HIDDEN_SELECTOR.to_json});
-          return el ? el.value : null;
-        })()
-      JS
-    end
+    cdp_evaluate(<<~JS)
+      (() => {
+        const el = document.querySelector(#{RATING_HIDDEN_SELECTOR.to_json});
+        return el ? el.value : null;
+      })()
+    JS
   end
 
   describe "AAA accessibility (graphic contrast of filled stars)" do
@@ -172,19 +164,17 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
       visit "#{RATING_PREVIEW}/in_a_form"
       expect(page).to have_css(RATING_STAR_SELECTOR, minimum: 3)
 
-      focused_tag = Capybara.current_session.driver.with_playwright_page do |pw|
-        pw.evaluate(<<~JS)
-          (() => {
-            const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
-            const target = stars[2]; // display star 3 (0-based index 2)
-            target.focus();
-            return {
-              isActive: document.activeElement === target,
-              tag: document.activeElement && document.activeElement.tagName
-            };
-          })()
-        JS
-      end
+      focused_tag = cdp_evaluate(<<~JS)
+        (() => {
+          const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
+          const target = stars[2]; // display star 3 (0-based index 2)
+          target.focus();
+          return {
+            isActive: document.activeElement === target,
+            tag: document.activeElement && document.activeElement.tagName
+          };
+        })()
+      JS
 
       expect(focused_tag["isActive"]).to be(true),
         "star <button> must be keyboard-focusable (got active=#{focused_tag["tag"]})"

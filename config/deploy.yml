@@ -156,7 +156,7 @@ builder:
   # Pass the Ruby version through so the production image always matches the
   # version Bundler enforces via Gemfile.lock. Keep in sync with .tool-versions.
   args:
-    RUBY_VERSION: "4.0.4"
+    RUBY_VERSION: "4.0.6"
 
   # secrets:
   #   - GITHUB_TOKEN
