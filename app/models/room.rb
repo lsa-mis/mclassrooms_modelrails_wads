@@ -126,6 +126,11 @@ class Room < ApplicationRecord
     normalized && find_by(facility_code_normalized: normalized)
   end
 
+  # URL param: rooms are addressed by their stable rmrecnbr (the U-M-wide,
+  # unique, non-null natural key) rather than the serial id, so /rooms/:id URLs
+  # are stable and meaningful. RoomsController#set_room finds by rmrecnbr to match.
+  def to_param = rmrecnbr
+
   def display_name
     base = facility_code.presence || [ building_name, room_number ].compact_blank.join(" ")
     nickname.present? ? "#{base} – #{nickname}" : base

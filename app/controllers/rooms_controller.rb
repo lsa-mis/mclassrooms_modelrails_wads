@@ -528,11 +528,13 @@ class RoomsController < ApplicationController
   end
 
   def set_room
-    # for_current_workspace keeps tenant isolation (CLAUDE.md deviation #1: no
-    # unscoped `Room.find`) but does NOT filter by listed/hidden, so hidden
-    # rooms stay findable here for the inactive-redirect/admin-banner logic
-    # below.
-    @room = Room.for_current_workspace.find(params[:id])
+    # Look up by rmrecnbr — the URL param (see Room#to_param) — scoped through
+    # for_current_workspace to keep tenant isolation (CLAUDE.md deviation #1: no
+    # unscoped `Room.find`). Does NOT filter by listed/hidden, so hidden rooms
+    # stay findable here for the inactive-redirect/admin-banner logic below.
+    # find_by! raises RecordNotFound (like find did), so the not-found path is
+    # unchanged.
+    @room = Room.for_current_workspace.find_by!(rmrecnbr: params[:id])
   end
 
   def redirect_inactive_for_non_admins

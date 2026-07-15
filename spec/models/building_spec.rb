@@ -36,6 +36,17 @@ RSpec.describe Building, type: :model do
     end
   end
 
+  describe "#to_param" do
+    it "routes by the stable bldrecnbr natural key, not the serial id" do
+      # bldrecnbr is the U-M-wide, unique, non-null natural key, so building
+      # URLs (/buildings/:id) are stable and meaningful rather than exposing an
+      # internal auto-increment. BuildingsController#set_building finds by
+      # bldrecnbr to match.
+      building = build(:building, bldrecnbr: "1000042")
+      expect(building.to_param).to eq("1000042")
+    end
+  end
+
   describe "visibility scopes (D6: sync-owned in_feed vs. curation-owned hidden_at)" do
     let!(:listed_building) { create(:building, in_feed: true, hidden_at: nil) }
     let!(:in_feed_but_hidden) { create(:building, in_feed: true, hidden_at: Time.current) }
