@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_06_215926) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -261,7 +261,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_215926) do
     t.datetime "created_at", null: false
     t.datetime "digest_last_sent_at"
     t.datetime "digest_next_due_at"
-    t.datetime "dismissed_notifications_redesign_banner_at"
     t.string "docs_mode"
     t.string "locale"
     t.json "notification_preferences", default: {"notification_types" => {"security" => true, "account_access" => true, "workspace_activity" => true, "project_activity" => true, "billing" => true}, "delivery_methods" => {"in_app" => {"enabled" => true}, "email" => {"enabled" => true, "frequency" => "instant"}}, "quiet_hours" => {"enabled" => false, "start" => "22:00", "end" => "07:00", "allow_urgent" => true, "active_days" => ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]}, "retention_days" => 90}, null: false

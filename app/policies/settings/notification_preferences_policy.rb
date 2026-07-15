@@ -6,8 +6,4 @@ class Settings::NotificationPreferencesPolicy < ApplicationPolicy
   def update?
     user.present?
   end
-
-  def dismiss_banner?
-    user.present?
-  end
 end

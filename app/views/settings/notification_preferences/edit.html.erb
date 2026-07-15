@@ -21,15 +21,6 @@
         title: t("settings.pages.notifications.h1"),
         description: t("settings.pages.notifications.description") %>
 
-  <%# Migration banner — renders only until the user dismisses it once.
-      Turbo replaces this frame with an empty body on dismiss, so the
-      banner vanishes without a full page reload. -%>
-  <% if @preferences.dismissed_notifications_redesign_banner_at.nil? %>
-    <%= render "migration_banner" %>
-  <% else %>
-    <%= turbo_frame_tag "notifications_redesign_banner" %>
-  <% end %>
-
   <%# === Timezone surface (Phase 0.5) ================================
       The <details>-based drawer + form lives in its own partial so the
       update.turbo_stream response from TimezonesController can replace

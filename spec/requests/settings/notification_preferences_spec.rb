@@ -11,11 +11,6 @@ RSpec.describe "Account Notification Preferences", type: :request do
       patch settings_notification_preferences_path
       expect(response).to redirect_to(new_session_path)
     end
-
-    it "redirects POST /account/notification_preferences/dismiss_banner to sign in" do
-      post dismiss_banner_settings_notification_preferences_path
-      expect(response).to redirect_to(new_session_path)
-    end
   end
 
   context "authenticated" do
@@ -277,54 +272,6 @@ RSpec.describe "Account Notification Preferences", type: :request do
       end
     end
 
-    describe "POST /account/notification_preferences/dismiss_banner" do
-      it "writes dismissed_notifications_redesign_banner_at on a fresh user" do
-        expect(user.preferences.dismissed_notifications_redesign_banner_at).to be_nil
-
-        freeze_time do
-          post dismiss_banner_settings_notification_preferences_path
-          expect(user.preferences.reload.dismissed_notifications_redesign_banner_at)
-            .to be_within(1.second).of(Time.current)
-        end
-      end
-
-      it "is idempotent — second dismiss does not bump the timestamp forward" do
-        post dismiss_banner_settings_notification_preferences_path
-        first_stamp = user.preferences.reload.dismissed_notifications_redesign_banner_at
-
-        travel 1.hour do
-          post dismiss_banner_settings_notification_preferences_path
-        end
-
-        expect(user.preferences.reload.dismissed_notifications_redesign_banner_at).to eq(first_stamp)
-      end
-
-      it "responds with turbo_stream when requested" do
-        post dismiss_banner_settings_notification_preferences_path,
-          headers: { "Accept" => "text/vnd.turbo-stream.html" }
-
-        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      end
-    end
-
-    describe "migration banner conditional rendering" do
-      it "renders the migration banner when dismissed_notifications_redesign_banner_at is NULL" do
-        user.preferences.update!(dismissed_notifications_redesign_banner_at: nil)
-
-        get edit_settings_notification_preferences_path
-
-        expect(response.body).to include(I18n.t("notifications.preferences.migration_banner.message"))
-      end
-
-      it "omits the migration banner once it has been dismissed" do
-        user.preferences.update!(dismissed_notifications_redesign_banner_at: 1.minute.ago)
-
-        get edit_settings_notification_preferences_path
-
-        expect(response.body).not_to include(I18n.t("notifications.preferences.migration_banner.message"))
-      end
-    end
-
     # Pundit wiring: stubbing the policy to deny the action proves authorize
     # is actually being invoked. If the controller skipped authorize the
     # policy would never run, the action would proceed, and the not_authorized
@@ -353,17 +300,6 @@ RSpec.describe "Account Notification Preferences", type: :request do
         expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
         # Preferences must NOT have been mutated.
         expect(user.preferences.reload.notification_preferences.dig("quiet_hours", "enabled")).to eq(false)
-      end
-
-      it "raises NotAuthorizedError → redirects when the policy denies dismiss_banner" do
-        allow(Settings::NotificationPreferencesPolicy).to receive(:new)
-          .and_return(instance_double(Settings::NotificationPreferencesPolicy, dismiss_banner?: false))
-
-        post dismiss_banner_settings_notification_preferences_path
-
-        expect(response).to have_http_status(:redirect)
-        expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
-        expect(user.preferences.reload.dismissed_notifications_redesign_banner_at).to be_nil
       end
     end
   end
