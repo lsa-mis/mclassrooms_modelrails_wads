@@ -145,24 +145,29 @@ RSpec.describe "Find a Room", type: :system do
       admin = create(:user)
       Membership.find_by!(user: admin, workspace: workspace).update!(role: Role.system_default!("admin"))
 
-      # Sign out the viewer via the user-menu dropdown (same ceremony as
-      # spec/system/members_table_spec.rb's mid-example user switch), then
-      # sign in as the admin.
-      # Sign out via the user-menu dropdown. This page subscribes to the
-      # workspace Turbo Stream, and the `Membership#update!` above broadcasts on
-      # that stream (Membership Broadcastable) — the arriving broadcast re-renders
-      # the authenticated layout and churns the #user-menu subtree. Opening the
-      # menu and clicking sign-out can race that re-render and hit an obsolete
-      # node under Cuprite, so retry the open-and-click as a unit until it lands
-      # on a stable DOM. The churn is a one-shot (a single membership broadcast),
-      # so the retry is bounded.
-      menu_attempts = 0
-      begin
-        find("#user-menu-button").click
-        within("#user-menu") { click_button I18n.t("navigation.sign_out") }
-      rescue Capybara::Cuprite::ObsoleteNode, Ferrum::NodeNotFoundError
-        raise if (menu_attempts += 1) > 5
-        retry
+      # Sign out the viewer via the user-menu dropdown, then sign in as the admin.
+      # This page subscribes to the workspace Turbo Stream, and the
+      # `Membership#update!` above broadcasts on it (Membership Broadcastable) —
+      # the arriving broadcast morphs the authenticated layout / #user-menu
+      # subtree. A sign-out click can race that re-render and either raise an
+      # ObsoleteNode (Cuprite) OR land on a to-be-replaced node and silently
+      # no-op, leaving us on /find-a-room. So: re-navigate for a quiescent page
+      # before each attempt (settles the one-shot broadcast and resets menu
+      # state), then verify the OUTCOME — retry the whole unit until sign-out
+      # actually reaches the sessions page.
+      sign_out_attempts = 0
+      loop do
+        sign_out_attempts += 1
+        visit find_a_room_path
+        begin
+          find("#user-menu-button").click
+          within("#user-menu") { click_button I18n.t("navigation.sign_out") }
+        rescue Capybara::Cuprite::ObsoleteNode, Ferrum::NodeNotFoundError
+          raise if sign_out_attempts > 5
+          next
+        end
+        break if page.has_current_path?(new_session_path, wait: 2)
+        raise "sign-out did not reach #{new_session_path} after #{sign_out_attempts} attempts" if sign_out_attempts > 5
       end
       expect(page).to have_current_path(new_session_path)
       sign_in_via_form(admin)
