@@ -23,4 +23,14 @@ RSpec.describe "Passkey enrollment prompt", type: :request do
     get root_path
     expect(response.body).not_to include('id="passkey-banner"')
   end
+
+  it "renders the nudge message screen-reader-only on mobile so the banner is a one-line bar" do
+    # 2026-07-15 panel: the full message wrapped to ~3 min-h-11 rows (~125px) on
+    # a phone — the whole first screen. It's now sr-only on mobile (the icon +
+    # the Add-a-passkey link carry the intent) and visible from sm up.
+    user.update!(passkey_prompt_seen_at: nil)
+    get root_path
+    expect(response.body).to include('id="passkey-banner"')
+    expect(response.body).to include("sr-only sm:not-sr-only")
+  end
 end
