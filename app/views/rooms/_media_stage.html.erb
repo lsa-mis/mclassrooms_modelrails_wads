@@ -24,9 +24,16 @@
     <%= render "rooms/photos_pane", room: room, gallery_images: gallery_images %>
   <% end %>
 
-  <div class="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-md
-              bg-surface-overlay/90 px-4 py-3
-              flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+  <%# Identity + capacity. On a phone the translucent overlay swallowed ~2/3 of
+      the panorama and left the Load-360 CTA fighting the bright image, so on
+      MOBILE this sits as a SOLID block BELOW the photo (2026-07-15 panel,
+      Option A) — full legibility, and the photo + CTA own the frame. From md up
+      it returns to the translucent plate overlaying the image bottom (Dave's
+      original desktop call), where there's room for it. %>
+  <div class="mt-2 rounded-md bg-surface-raised px-4 py-3
+              flex flex-wrap items-end justify-between gap-x-4 gap-y-1
+              md:mt-0 md:absolute md:inset-x-0 md:bottom-0 md:rounded-t-none
+              md:pointer-events-none md:bg-surface-overlay/90">
     <div class="min-w-0">
       <h1 class="text-xl font-bold text-text-heading"><%= room.display_name %></h1>
       <p class="text-sm text-text-body"><%= room_meta_line(room) %></p>
