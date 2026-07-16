@@ -21,7 +21,7 @@
       data: { turbo_frame: "find_a_room_results", turbo_action: "advance",
               filter_form_target: "form" },
       html: { role: "search", "aria-label": t("rooms.filters.form_label") },
-      class: "mt-6 rounded-lg border border-border dark:border-border-strong p-4 space-y-4" do |form| %>
+      class: "mt-6 rounded-lg border border-border dark:border-border-strong p-4 space-y-3 sm:space-y-4" do |form| %>
 
   <div class="flex items-baseline justify-between gap-4">
     <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.card_title") %></h2>
@@ -39,8 +39,14 @@
       without this every filter submit would silently drop the shortlist view. %>
   <%= hidden_field_tag :saved, params[:saved] if params[:saved].present? %>
 
-  <div class="flex flex-wrap items-start gap-x-6 gap-y-4">
-    <div class="grow basis-64">
+  <%# Search + minimum capacity share ONE row at every width (2026-07-16 panel,
+      D: mobile filter-card economy). On a phone the fixed-width capacity used
+      to wrap onto its own line below the growing search box, costing an extra
+      field-row above the results. No flex-wrap; search grows/shrinks
+      (flex-1 min-w-0), capacity stays a fixed narrow cell (shrink-0). items-end
+      bottom-aligns the two inputs so they line up even if a label wraps. %>
+  <div class="flex items-end gap-3 sm:gap-x-6">
+    <div class="flex-1 min-w-0">
       <%# Compact visible label ("Search"); the input's aria-label keeps the
           descriptive superset name and the placeholder is only a hint —
           see the search_accessible_label locale note. %>
@@ -59,12 +65,14 @@
         validation SILENTLY for over-bound values, freezing every subsequent
         live filter change; an over-bound minimum returns an honest "0 rooms
         found" instead. %>
-    <%= ui :form_field, label: t("rooms.filters.capacity_min_label"),
-          id: "filter_capacity_min" do |f| %>
-      <%= number_field_tag :capacity_min, params[:capacity_min],
-            min: 0, class: "form-field w-24", id: f.input_attrs[:id],
-            data: { action: "input->filter-form#submit" } %>
-    <% end %>
+    <div class="shrink-0">
+      <%= ui :form_field, label: t("rooms.filters.capacity_min_label"),
+            id: "filter_capacity_min" do |f| %>
+        <%= number_field_tag :capacity_min, params[:capacity_min],
+              min: 0, class: "form-field w-24", id: f.input_attrs[:id],
+              data: { action: "input->filter-form#submit" } %>
+      <% end %>
+    </div>
   </div>
 
   <% promoted = promoted_filter_entries(filter_groups) %>
@@ -76,7 +84,7 @@
           <%# Pill treatment (sprint prototype): the native checkbox stays
               visible inside the pill — the border/tint is presentation, the
               checkbox is the control. %>
-          <span class="inline-flex items-center rounded-full border border-border px-4 min-h-11
+          <span class="inline-flex items-center rounded-full border border-border px-3 sm:px-4 min-h-11
                        transition-colors hover:bg-surface-sunken
                        has-checked:border-interactive has-checked:bg-interactive-subtle">
             <%= render "characteristic_checkbox", entry: entry,
