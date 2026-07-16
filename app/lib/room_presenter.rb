@@ -124,20 +124,41 @@ class RoomPresenter
   # Find-a-Room page applies (rooms.characteristic_label_overrides).
   def chip_label(characteristic)
     overrides = I18n.t("rooms.characteristic_label_overrides", default: {}).stringify_keys
-    overrides.fetch(characteristic.short_code) do
-      value = characteristic.description.to_s.split(":", 2).last.to_s.strip
-      value.presence || characteristic.short_code
-    end
+    overrides.fetch(characteristic.short_code) { vendor_label(characteristic) }
+  end
+
+  # The registrar's own term for this characteristic, parsed straight from the
+  # sync description ("Seating: Moveable Tablet Chair" -> "Moveable Tablet
+  # Chair"). This is what the chip shows when NO override renames it.
+  def vendor_label(characteristic)
+    value = characteristic.description.to_s.split(":", 2).last.to_s.strip
+    value.presence || characteristic.short_code
+  end
+
+  # Supplementary tooltip text. When the visible label already IS the registrar
+  # term, it's the plain glossary line (unchanged). When a product override
+  # renamed the chip (F, 2026-07-16 panel), the registrar's original term is
+  # kept discoverable — appended in parentheses, or surfaced on its own when
+  # there is no glossary sentence — so a renamed chip never hides what the room
+  # actually lists.
+  def chip_description(characteristic, label)
+    base = characteristic.long_description.to_s.strip
+    original = vendor_label(characteristic)
+    return base.presence if label == original
+    return original if base.blank?
+
+    I18n.t("rooms.characteristic_tooltip_with_original", description: base, original: original)
   end
 
   def build_chip(characteristic)
     rule = @rules[characteristic.short_code]
     icon = rule&.icon_key
     icon = FALLBACK_ICON unless icon.present? && IconRegistry.exists?(icon)
+    label = chip_label(characteristic)
     Chip.new(
       short_code: characteristic.short_code,
-      label: chip_label(characteristic),
-      description: characteristic.long_description,
+      label: label,
+      description: chip_description(characteristic, label),
       icon_name: icon.to_sym,
       team_learning: rule&.team_learning? || false
     )

@@ -21,6 +21,32 @@ en:
       tablesfix: "Fixed tables"
       blackout: "Blackout shades"
       bluraydvd: "Disc player (Blu-ray/DVD)"
+      # 2026-07-16 panel (F): more registrar-speak -> plain language. Each
+      # chip's tooltip preserves the original vendor term, so these are
+      # display-only renames that lose no information. Codes whose parsed value
+      # is a bare, context-free word once the group legend is gone ("Any" /
+      # "Mac" / "PC" / "Students") are the most urgent — the same fix powerstud
+      # already got.
+      complabany: "Computer lab"
+      complabmac: "Mac computer lab"
+      complabpc: "PC computer lab"
+      comppodmac: "Mac instructor podium"
+      ethrstud: "Student Ethernet"
+      chairfix: "Fixed seating"
+      tablesany: "Tables"
+      tablesmov: "Movable tables"
+      soundprgrm: "Program audio"
+      soundvoice: "Voice amplification"
+      projslide: "Slide projector"
+      projdcin: "Digital cinema projector"
+      proj16mm: "16mm film projector"
+      proj35mm: "35mm film projector"
+      chkbrd25: "Chalkboard (over 25 ft)"
+      whtbrd25: "Whiteboard (over 25 ft)"
+      assistlis: "Assistive listening"
+    # Tooltip format when a chip's label was overridden: keep the registrar's
+    # original term discoverable in parentheses (F, 2026-07-16 panel).
+    characteristic_tooltip_with_original: "%{description} (%{original})"
     # Same idea for vendor GROUP names (More-filters fieldset legends).
     characteristic_group_overrides:
       "Ethernet Connection": "Ethernet"
