@@ -52,20 +52,17 @@
       <% end %>
     </div>
 
-    <%# form_field's own hint: API wires the "minimum" qualifier via
-        aria-describedby — accessible name stays "Capacity" (panel review:
-        both capacity fields now build through the component).
-        No `max:` — a max attribute makes form.requestSubmit() fail
-        constraint validation SILENTLY for over-bound values, freezing every
-        subsequent live filter change; an over-bound minimum should return an
-        honest "0 rooms found" instead. %>
-    <%= ui :form_field, label: t("rooms.filters.capacity_label"),
-          hint: t("rooms.filters.capacity_min_hint"), id: "filter_capacity_min" do |f| %>
-      <%# input_attrs speaks the UI::* dialect (describedby:), a raw Rails tag
-          helper needs the aria- translation by hand. %>
+    <%# "Min. capacity" as the label — was "Capacity" plus a separate "minimum"
+        hint that floated orphaned below the box (2026-07-15 panel). The self-
+        describing label IS the accessible name, so there's no hint to wire.
+        No `max:` — a max attribute makes form.requestSubmit() fail constraint
+        validation SILENTLY for over-bound values, freezing every subsequent
+        live filter change; an over-bound minimum returns an honest "0 rooms
+        found" instead. %>
+    <%= ui :form_field, label: t("rooms.filters.capacity_min_label"),
+          id: "filter_capacity_min" do |f| %>
       <%= number_field_tag :capacity_min, params[:capacity_min],
             min: 0, class: "form-field w-24", id: f.input_attrs[:id],
-            "aria-describedby": f.input_attrs[:describedby],
             data: { action: "input->filter-form#submit" } %>
     <% end %>
   </div>

@@ -51,6 +51,14 @@ RSpec.describe "Find a Room", type: :system do
   # Cards render room number + building (2026-07 redesign), not facility codes.
   def card_title(room) = "#{room.room_number} #{room.building.name}"
 
+  it "redirects a stale or unknown room link to the directory with a clear message" do
+    # 2026-07-15 panel: a shared/stale room link (unknown rmrecnbr) dead-ended on
+    # the marketing home with a generic toast; it now lands on Find a Room.
+    visit "/rooms/0000000"
+    expect(page).to have_current_path(find_a_room_path)
+    expect(page).to have_content(I18n.t("rooms.show.not_found"))
+  end
+
   it "filters via Turbo without a full reload and ANDs characteristics" do
     visit find_a_room_path
     expect(page).to have_content(card_title(aud))
