@@ -20,6 +20,16 @@ module RoomsHelper
   CARD_TAG_CODES = %w[projdigit lecturecap doccam whtbrd chkbrd teamtables instrcomp movetablet].freeze
   CARD_TAG_LIMIT = 4
 
+  # Near-universal characteristics (2026-07-16 corpus of 388 listed classrooms:
+  # projdigit 97%, soundprgrm 95%, instrcomp 91%, lecturecap 83%, doccam 78%).
+  # They sit on ~every room, so leading a card with them differentiates nothing —
+  # every card read "Projector · Lecture Capture · Document Camera" (2026-07-15
+  # panel). Demoted BELOW the distinctive chips so they fall into the "+N more"
+  # disclosure, UNLESS the user is actively filtering on one (then it's exactly
+  # what they asked for and stays emphasized — see #active_card_codes). Curated,
+  # not computed at request time, so the ordering is stable across tests + prod.
+  COMMON_CARD_CODES = %w[projdigit soundprgrm instrcomp lecturecap doccam].freeze
+
   # Vendor building names arrive ALL CAPS ("CHEMISTRY AND DOW WILLARD H
   # LABORATORY"); humanize for display. Mixed-case (already-curated) names
   # pass through untouched. Single letters and known campus acronyms keep
@@ -92,8 +102,18 @@ module RoomsHelper
   # filterable characteristics alphabetically, then non-filterable ones. The view
   # slices .first(CARD_TAG_LIMIT) into the emphasized strip and .drop(CARD_TAG_LIMIT)
   # into the disclosure.
-  def room_card_chips(room)
-    card_chip_presenter(room).chips.sort_by { |chip| card_chip_sort_key(chip) }
+  def room_card_chips(room, active_codes: active_card_codes)
+    card_chip_presenter(room).chips.sort_by { |chip| card_chip_sort_key(chip, active_codes) }
+  end
+
+  # The vendor codes the user is actively filtering on — merged filter tokens
+  # (RoomSearch::MERGED_CHARACTERISTICS) expanded to their members so a card chip
+  # (a vendor code) can match. A matched chip is emphasized first even if it's a
+  # COMMON code — it's the contextual reason this card is in the results.
+  def active_card_codes
+    Array(params[:characteristics]).flat_map { |token|
+      RoomSearch::MERGED_CHARACTERISTICS[token] || [ token ]
+    }.to_set
   end
 
   # Reuse ONE CharacteristicDisplayRule index across every row (mirrors the
@@ -107,19 +127,26 @@ module RoomsHelper
     RoomPresenter.new(room, rules: card_display_rules)
   end
 
-  # [tier, priority-within-tier, label, short_code]. Tier 0 = CARD_TAG_CODES in
-  # listed order; tier 1 = remaining filterable, alpha by label; tier 2 = the
-  # rest, alpha. The short_code tacked on last breaks ties between chips whose
-  # labels collide after downcasing — Array#sort_by isn't stable, so without a
-  # unique tiebreaker those chips could reorder between runs.
-  def card_chip_sort_key(chip)
+  # [tier, priority-within-tier, label, short_code]. Tiers, most-emphasized first:
+  #   0 = ACTIVELY FILTERED codes (contextual — why this card matched)
+  #   1 = distinctive CARD_TAG_CODES, fixed listed order
+  #   2 = remaining filterable, alpha by label
+  #   3 = non-filterable, alpha by label
+  #   4 = COMMON_CARD_CODES (near-universal) — demoted into the "+N more" disclosure
+  # The short_code tacked on last breaks ties between chips whose labels collide
+  # after downcasing — Array#sort_by isn't stable, so without a unique tiebreaker
+  # those chips could reorder between runs.
+  def card_chip_sort_key(chip, active_codes = Set.new)
     code = chip.short_code
+    return [ 0, CARD_TAG_CODES.index(code) || CARD_TAG_CODES.size, chip.label.downcase, code ] if active_codes.include?(code)
+    return [ 4, 0, chip.label.downcase, code ] if COMMON_CARD_CODES.include?(code)
+
     if (index = CARD_TAG_CODES.index(code))
-      [ 0, index, "", code ]
+      [ 1, index, "", code ]
     elsif filterable_codes.include?(code)
-      [ 1, 0, chip.label.downcase, code ]
-    else
       [ 2, 0, chip.label.downcase, code ]
+    else
+      [ 3, 0, chip.label.downcase, code ]
     end
   end
 
