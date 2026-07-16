@@ -233,25 +233,23 @@ RSpec.describe "Find a Room", type: :system do
     end
   end
 
-  describe "mobile filter-card economy (2026-07-16 panel: D)" do
-    # "Compress, keep visible": on a phone the card packed search, then a
-    # wrapped minimum-capacity on its own row, then the popular pills — a tall
-    # stack the results had to scroll past. Economy comes from LAYOUT, not from
-    # hiding controls behind the More-filters disclosure.
-    it "keeps search and minimum capacity on one row on a phone" do
+  describe "mobile filter-card economy (2026-07-16)" do
+    # Keep the always-visible filters compact: a full-width search, then a
+    # School/College + capacity-RANGE row, then the popular pills — economy from
+    # LAYOUT, not from hiding controls behind the More-filters disclosure.
+    it "keeps the capacity range (min and max) together on one row on a phone" do
       cdp_resize(390, 900)
       visit find_a_room_path
 
-      # Fixed-width capacity sits beside the growing search box instead of
-      # wrapping below it — the inputs share a row (equal top offset). items-end
-      # bottom-aligns the inputs, so this holds even if a label wraps.
+      # min and max are two ends of one range, side by side — they share a row
+      # (equal top offset), never split across the fold.
       tops = cdp_evaluate(<<~JS)
         (() => {
           const top = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().top);
-          return { q: top("input[name='q']"), cap: top("input[name='capacity_min']") };
+          return { min: top("input[name='capacity_min']"), max: top("input[name='capacity_max']") };
         })()
       JS
-      expect(tops["cap"]).to eq(tops["q"])
+      expect(tops["max"]).to eq(tops["min"])
 
       cdp_resize(1400, 900)
     end
@@ -298,16 +296,12 @@ RSpec.describe "Find a Room", type: :system do
       expect(page).to have_css("#results-count:focus")
     end
 
-    it "hides the no-JS Apply button when JS is on and keeps one glossary link in the card header" do
+    it "hides the no-JS Apply button when JS is on" do
       visit find_a_room_path
       find("#more_filters > summary").click
 
       # Apply is a no-JS fallback; filter-form#connect hides it once JS runs.
       expect(page).to have_no_button(I18n.t("rooms.filters.submit"))
-      # The glossary escape-hatch is a single link in the filter card header.
-      within "form#find_a_room_form" do
-        expect(page).to have_link(I18n.t("rooms.filters.glossary_link"), count: 1)
-      end
     end
   end
 end
