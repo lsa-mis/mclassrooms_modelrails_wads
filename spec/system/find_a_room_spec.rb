@@ -278,4 +278,36 @@ RSpec.describe "Find a Room", type: :system do
       cdp_resize(1400, 900)
     end
   end
+
+  describe "filter IA refinements (2026-07-16 panel)" do
+    it "puts Clear-all in the results toolbar and hands focus to the count after clearing" do
+      visit find_a_room_path
+      fill_in I18n.t("rooms.filters.search_label"), with: "Mason"
+
+      # Clear-all lives WITH the applied-filter chips, inside the results frame.
+      within "#find_a_room_results" do
+        expect(page).to have_link(I18n.t("rooms.filters.reset"))
+      end
+
+      click_link I18n.t("rooms.filters.reset")
+
+      # Full-visit clear restores unfiltered results and empties the search box.
+      expect(page).to have_field(I18n.t("rooms.filters.search_label"), with: "")
+      # ...and lands focus on the count, not <body> — the a11y requirement for
+      # the moved control (filter-form#connect, via the #results-count anchor).
+      expect(page).to have_css("#results-count:focus")
+    end
+
+    it "hides the no-JS Apply button when JS is on and keeps one glossary link in the card header" do
+      visit find_a_room_path
+      find("#more_filters > summary").click
+
+      # Apply is a no-JS fallback; filter-form#connect hides it once JS runs.
+      expect(page).to have_no_button(I18n.t("rooms.filters.submit"))
+      # The glossary escape-hatch is a single link in the filter card header.
+      within "form#find_a_room_form" do
+        expect(page).to have_link(I18n.t("rooms.filters.glossary_link"), count: 1)
+      end
+    end
+  end
 end

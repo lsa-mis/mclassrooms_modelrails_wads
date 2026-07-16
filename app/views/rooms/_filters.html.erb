@@ -23,14 +23,15 @@
       html: { role: "search", "aria-label": t("rooms.filters.form_label") },
       class: "mt-6 rounded-lg border border-border dark:border-border-strong p-4 space-y-3 sm:space-y-4" do |form| %>
 
-  <div class="flex items-baseline justify-between gap-4">
-    <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.card_title") %></h2>
-    <%# Deliberately NOT frame-targeted: a header Reset must clear the form's
-        own inputs too, which only a fresh page render guarantees (the form
-        lives outside the results frame). The chips row's Clear-all handles
-        the fast in-frame path with filter-form#clear. %>
-    <%= link_to t("rooms.filters.reset"),
-          find_a_room_path(params[:view].present? ? { view: params[:view] } : {}),
+  <%# The card is already a role="search" landmark with its own accessible
+      name, and Clear-all now lives with the applied-filter chips in the results
+      toolbar (IA review) — so a visible "Filters" title is redundant chrome.
+      Keep it sr-only for screen-reader heading nav, and surface a quiet
+      Glossary escape-hatch in its place (the per-filter popovers are the
+      inline glossary; this is the "see them all" link). %>
+  <div class="flex items-baseline justify-end gap-4">
+    <h2 class="sr-only"><%= t("rooms.filters.card_title") %></h2>
+    <%= link_to t("rooms.filters.glossary_link"), filters_glossary_path,
           class: "text-sm link-inline" %>
   </div>
 
@@ -160,12 +161,12 @@
         <% end %>
       </div>
 
+      <%# No-JS fallback only: filter-form#connect hides this the moment JS is
+          on (filtering is live). Kept in the DOM so the form still submits
+          without JavaScript. The glossary link moved to the card header. %>
       <div class="flex flex-wrap items-center gap-4">
-        <%# The explicit submit is the no-JS fallback — live submits make it a
-            no-op with JS on, so it stays visually secondary. %>
-        <button type="submit" class="btn-secondary"><%= t("rooms.filters.submit") %></button>
-        <%= link_to t("rooms.filters.glossary_link"), filters_glossary_path,
-              class: "text-sm link-inline" %>
+        <button type="submit" class="btn-secondary"
+                data-filter-form-target="applyButton"><%= t("rooms.filters.submit") %></button>
       </div>
     </div>
   <% end %>
