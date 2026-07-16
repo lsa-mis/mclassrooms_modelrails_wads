@@ -81,6 +81,34 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
       expect(item["aria-describedby"]).to be_present
     end
 
+    it "keeps the description tooltip within the viewport on a narrow (mobile) screen" do
+      # 2026-07-15 panel: the tip was pinned to the LEFT of the menu, which on a
+      # phone (menu hugging the left edge) put it off-screen at x=-199. It now
+      # falls back to above-the-menu, clamped to the viewport.
+      cdp_resize(390, 900)
+      visit root_path
+      dismiss_cookie_banner
+      trigger_button.click
+      mode_item(:protanopia).hover
+      expect(page).to have_css("[role='tooltip']", visible: true)
+
+      rect = cdp_evaluate(<<~JS)
+        (() => {
+          const t = document.querySelector("[data-a11y-sim-target='tooltip']");
+          const r = t.getBoundingClientRect();
+          return { left: Math.round(r.left), right: Math.round(r.right), vw: window.innerWidth };
+        })()
+      JS
+      expect(rect["left"]).to be >= 0, "tooltip clipped off the left (left=#{rect['left']})"
+      expect(rect["right"]).to be <= rect["vw"], "tooltip clipped off the right (right=#{rect['right']} vw=#{rect['vw']})"
+
+      # Restore state so the after-each full-page a11y audit doesn't run
+      # mid-interaction at mobile — the open drop-up overlays the footer, which
+      # is not this example's concern.
+      press_key(:escape)
+      cdp_resize(1400, 900)
+    end
+
     it "closes the menu and clears the body class when returning to Normal" do
       visit root_path
       dismiss_cookie_banner
