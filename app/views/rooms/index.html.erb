@@ -86,7 +86,9 @@
               "aria-current": (saved_active ? "true" : nil),
               class: "text-sm min-h-11 inline-flex items-center gap-1 focus-ring rounded
                      #{saved_active ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" do %>
-          <%= t("rooms.save.saved_filter") %> (<span id="saved_rooms_count"><%= @saved_count %></span>)
+          <%# One span so the label is a single flex item — the parent's gap-1
+              otherwise spaced the parens off the count as "Saved rooms ( 0 )". %>
+          <span><%= t("rooms.save.saved_filter") %> (<span id="saved_rooms_count"><%= @saved_count %></span>)</span>
         <% end %>
         <%# Lives inside the frame (re-renders with results) but submits the
             form outside it via `form=` — sort is a property of the results,

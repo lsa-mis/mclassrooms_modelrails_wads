@@ -58,12 +58,29 @@ export default class extends Controller {
 
   positionTooltip(item) {
     const tip = this.tooltipTarget
+    const gap = 8
+
+    // Reset so the tip measures at its natural size before we place it.
+    tip.style.left = tip.style.right = tip.style.top = tip.style.bottom = "auto"
+    tip.style.maxWidth = ""
+
     const menu = this.menuTarget.getBoundingClientRect()
     const rect = item.getBoundingClientRect()
-    tip.style.top = `${Math.max(8, rect.top)}px`
-    tip.style.right = `${window.innerWidth - menu.left + 8}px`
-    tip.style.left = "auto"
-    tip.style.bottom = "auto"
+
+    if (menu.left - tip.offsetWidth - gap >= gap) {
+      // Desktop: to the LEFT of the menu, top-aligned with the item — escapes
+      // the menu's overflow where there's room for it.
+      tip.style.top = `${Math.max(gap, rect.top)}px`
+      tip.style.right = `${window.innerWidth - menu.left + gap}px`
+    } else {
+      // Narrow (mobile) viewport: the menu hugs the left edge, so a left-of-menu
+      // tip runs off-screen (2026-07-15 panel: measured x=-199). Sit it ABOVE
+      // the menu, clamped to the viewport width.
+      tip.style.left = `${gap}px`
+      tip.style.right = `${gap}px`
+      tip.style.maxWidth = `${window.innerWidth - gap * 2}px`
+      tip.style.bottom = `${window.innerHeight - menu.top + gap}px`
+    }
   }
 
   openMenu() {

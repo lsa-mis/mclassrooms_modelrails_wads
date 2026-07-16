@@ -532,9 +532,14 @@ class RoomsController < ApplicationController
     # for_current_workspace to keep tenant isolation (CLAUDE.md deviation #1: no
     # unscoped `Room.find`). Does NOT filter by listed/hidden, so hidden rooms
     # stay findable here for the inactive-redirect/admin-banner logic below.
-    # find_by! raises RecordNotFound (like find did), so the not-found path is
-    # unchanged.
     @room = Room.for_current_workspace.find_by!(rmrecnbr: params[:id])
+  rescue ActiveRecord::RecordNotFound
+    # A shared or stale room link (unknown rmrecnbr, or a room in another
+    # workspace) should land on the room directory with a clear message — not
+    # the app's generic RecordNotFound handler, which redirects to the marketing
+    # home (2026-07-15 panel: a shared *room* link deserves a room-shaped miss).
+    # redirect_to in a before_action halts the filter chain.
+    redirect_to find_a_room_path, alert: t("rooms.show.not_found")
   end
 
   def redirect_inactive_for_non_admins
