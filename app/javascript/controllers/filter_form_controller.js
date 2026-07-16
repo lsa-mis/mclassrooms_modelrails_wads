@@ -18,8 +18,46 @@ import { Controller } from "@hotwired/stimulus"
 // via its `form=` attribute) can still fire filter-form actions after every
 // Turbo re-render without re-wiring.
 export default class extends Controller {
-  static targets = ["form"]
+  static targets = ["form", "applyButton"]
   static values = { delay: { type: Number, default: 300 } }
+
+  connect() {
+    // Progressive enhancement: the "Apply filters" button is a no-JS fallback.
+    // This controller connecting proves JS is on and filtering is live, so hide
+    // it. It stays in the DOM (not removed), so a no-JS render still submits.
+    if (this.hasApplyButtonTarget) this.applyButtonTarget.hidden = true
+
+    // "Clear all" is a full page visit, which drops browser focus to <body>.
+    // markCleared() set a one-shot sessionStorage flag on click that survives
+    // the navigation (a URL #fragment does NOT — Turbo Drive strips it on a
+    // full visit); consume it here to land focus on the results count, so
+    // keyboard/SR users hear the reset total instead of being stranded.
+    //
+    // Turbo Drive may render a cached PREVIEW before the fresh response, and
+    // connect() fires on each. Skip the preview pass: its DOM (and any focus we
+    // set) is about to be replaced, and consuming the flag there would leave
+    // the real render with nothing to act on.
+    if (document.documentElement.hasAttribute("data-turbo-preview")) return
+
+    let focusCount = false
+    try {
+      focusCount = window.sessionStorage.getItem("filter_cleared") === "1"
+      if (focusCount) window.sessionStorage.removeItem("filter_cleared")
+    } catch (_error) {
+      // sessionStorage unavailable (private mode / quota) — skip the handoff.
+    }
+    if (focusCount) this.element.querySelector("[data-results-count]")?.focus()
+  }
+
+  // Flag the imminent full-visit "Clear all" so connect() on the fresh page
+  // knows to move focus to the count. Fires on click, before the visit starts.
+  markCleared() {
+    try {
+      window.sessionStorage.setItem("filter_cleared", "1")
+    } catch (_error) {
+      // No sessionStorage → clear still works, just without the focus handoff.
+    }
+  }
 
   submit() {
     clearTimeout(this.timeout)
