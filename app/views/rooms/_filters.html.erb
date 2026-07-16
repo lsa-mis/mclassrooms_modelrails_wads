@@ -81,16 +81,8 @@
       <legend class="text-sm font-semibold text-text-heading"><%= t("rooms.filters.popular_legend") %></legend>
       <div class="mt-2 flex flex-wrap gap-2">
         <% promoted.each do |entry| %>
-          <%# Pill treatment (sprint prototype): the native checkbox stays
-              visible inside the pill — the border/tint is presentation, the
-              checkbox is the control. %>
-          <span class="inline-flex items-center rounded-full border border-border px-3 sm:px-4 min-h-11
-                       transition-colors hover:bg-surface-sunken
-                       has-checked:border-interactive has-checked:bg-interactive-subtle">
-            <%= render "characteristic_checkbox", entry: entry,
-                  label: characteristic_labels.fetch(entry.short_code, entry.label),
-                  wrapper_class: "inline-flex" %>
-          </span>
+          <%= render "characteristic_checkbox", entry: entry, pill: true,
+                label: characteristic_labels.fetch(entry.short_code, entry.label) %>
         <% end %>
       </div>
     </fieldset>
@@ -134,19 +126,24 @@
           small bold titles, Unit and Capacity-at-most as equal cells at the
           end. fieldset/legend semantics stay for AT grouping — only the box
           chrome is gone. %>
-      <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+      <%# Characteristic filters as pills, grouped by category — each group spans
+          the full panel width so long labels flow instead of crowding a narrow
+          column. Unit + max-capacity stay compact fields below. %>
+      <div class="space-y-5">
         <% panel_filter_groups(filter_groups).each do |group, entries| %>
-          <fieldset class="min-w-0">
-            <legend class="pb-1 text-sm font-semibold text-text-heading"><%= characteristic_group_name(group) %></legend>
-            <div class="space-y-0">
+          <fieldset>
+            <legend class="pb-2 text-sm font-semibold text-text-heading"><%= characteristic_group_name(group) %></legend>
+            <div class="flex flex-wrap gap-2">
               <% entries.each do |entry| %>
-                <%= render "characteristic_checkbox", entry: entry,
+                <%= render "characteristic_checkbox", entry: entry, pill: true,
                       label: characteristic_labels.fetch(entry.short_code, entry.label) %>
               <% end %>
             </div>
           </fieldset>
         <% end %>
+      </div>
 
+      <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2">
         <%= ui :form_field, label: t("rooms.filters.unit_label"), id: "filter_unit_id" do |f| %>
           <%= ui :select, name: "unit_id",
                 options: [ [ "", t("rooms.filters.unit_all") ] ] + RoomSearch.unit_options.map { |u| [ u.id, u.display_name ] },
