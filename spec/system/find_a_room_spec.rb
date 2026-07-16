@@ -232,4 +232,50 @@ RSpec.describe "Find a Room", type: :system do
       expect(scheme).to include("dark")
     end
   end
+
+  describe "mobile filter-card economy (2026-07-16 panel: D)" do
+    # "Compress, keep visible": on a phone the card packed search, then a
+    # wrapped minimum-capacity on its own row, then the popular pills — a tall
+    # stack the results had to scroll past. Economy comes from LAYOUT, not from
+    # hiding controls behind the More-filters disclosure.
+    it "keeps search and minimum capacity on one row on a phone" do
+      cdp_resize(390, 900)
+      visit find_a_room_path
+
+      # Fixed-width capacity sits beside the growing search box instead of
+      # wrapping below it — the inputs share a row (equal top offset). items-end
+      # bottom-aligns the inputs, so this holds even if a label wraps.
+      tops = cdp_evaluate(<<~JS)
+        (() => {
+          const top = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().top);
+          return { q: top("input[name='q']"), cap: top("input[name='capacity_min']") };
+        })()
+      JS
+      expect(tops["cap"]).to eq(tops["q"])
+
+      cdp_resize(1400, 900)
+    end
+
+    it "keeps the popular-features filters visible in the card, not tucked behind a disclosure" do
+      # whtbrd is a PROMOTED_FILTER_CODE, so a room carrying it makes the
+      # "Popular features" section actually render for this assertion.
+      classroom(mason, "1500", 30, codes: %w[Whtbrd])
+      cdp_resize(390, 900)
+      visit find_a_room_path
+
+      expect(page).to have_css("legend", text: I18n.t("rooms.filters.popular_legend"), visible: true)
+      # The promoted pills stay OUTSIDE #more_filters — compression must not
+      # regress into hiding them (that would break "keep visible").
+      in_disclosure = cdp_evaluate(<<~JS)
+        (() => {
+          const legend = [...document.querySelectorAll("legend")]
+            .find((e) => e.textContent.trim() === #{I18n.t('rooms.filters.popular_legend').to_json});
+          return legend ? !!legend.closest("#more_filters") : null;
+        })()
+      JS
+      expect(in_disclosure).to be(false)
+
+      cdp_resize(1400, 900)
+    end
+  end
 end
