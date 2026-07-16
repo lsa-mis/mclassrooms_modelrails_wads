@@ -60,8 +60,16 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(response).to have_http_status(:ok)
       # Card titles are room number + building (2026-07 redesign), not codes.
       expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
-      expect(response.body).not_to include(hidden_classroom.room_number)
-      expect(response.body).not_to include(non_classroom.room_number)
+      # Assert absence of each excluded room's full CARD TITLE (number +
+      # building), mirroring the positive check above. A bare room_number is a
+      # 4-digit string (sequence "%04d" -> "0106") that false-matches unrelated
+      # digits elsewhere in the body — e.g. a visible room's rmrecnbr link
+      # (/rooms/2000106 contains "0106") — once FactoryBot's global sequence
+      # shifts. The full card title is unique to the card and can't collide.
+      hidden_title = "#{hidden_classroom.room_number} #{hidden_classroom.building.display_name}"
+      non_classroom_title = "#{non_classroom.room_number} #{non_classroom.building.display_name}"
+      expect(response.body).not_to include(hidden_title)
+      expect(response.body).not_to include(non_classroom_title)
     end
 
     it "responds with the JSON shape: room keys + pagination block" do
