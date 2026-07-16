@@ -36,13 +36,20 @@
         "aria-label": t("rooms.index.results_frame_label"),
         class: "block mt-6 motion-safe:transition-opacity aria-busy:opacity-60" do %>
     <% current_view = params[:view].presence_in(RoomsController::VIEWS) || "active" %>
-    <div class="sticky top-0 z-10 bg-surface-raised shadow-sm border-b border-border px-2 py-3
+    <%# top-14 (not top-0): the site navbar is itself sticky at h-14/top-0, so a
+        top-0 toolbar tucks UNDER it. Offset by the navbar height so it pins
+        just below. %>
+    <div class="sticky top-14 z-10 bg-surface-raised shadow-sm border-b border-border px-2 py-3
                 flex flex-wrap items-center gap-x-4 gap-y-2">
       <%# Visible count only — announcements come from the persistent
           #results_announcer above; the filter sentence stays as a plain
           sr-only sibling for reading order. %>
-      <p data-results-count
-         class="text-xl font-semibold text-text-heading m-0 motion-safe:animate-count-flash rounded px-1 -mx-1">
+      <%# id + tabindex=-1: the focus target filter-form#connect lands on after a
+          full-visit "Clear all", so keyboard/SR users hear the reset total
+          rather than dropping to <body>. scroll-mt clears the navbar+toolbar
+          stack. Programmatic focus only (not in tab order), so no focus ring. %>
+      <p id="results-count" tabindex="-1" data-results-count
+         class="text-xl font-semibold text-text-heading m-0 scroll-mt-32 focus:outline-none motion-safe:animate-count-flash rounded px-1 -mx-1">
         <%= t("rooms.index.results_summary", count: @pagy.count) %>
       </p>
       <% if @search.summary.present? %>
@@ -73,6 +80,16 @@
               <span class="sr-only"><%= t("rooms.index.chips.remove") %></span><%= label %><span aria-hidden="true" class="font-semibold">×</span>
             <% end %>
           <% end %>
+          <%# Clear-all lives WITH the applied chips (IA review): remove-one and
+              remove-all are one undo cluster, kept next to the count and inside
+              the sticky bar. Full visit like the chips; the #results-count
+              fragment hands focus to the count (filter-form#connect). %>
+          <% clear_params = params[:view].present? ? { view: params[:view] } : {} %>
+          <%= link_to t("rooms.filters.reset"),
+                find_a_room_path(**clear_params),
+                data: { turbo_frame: "_top", action: "filter-form#markCleared" },
+                class: "min-h-11 inline-flex items-center text-sm font-medium text-interactive
+                       underline hover:no-underline focus-ring rounded" %>
         </span>
       <% end %>
 
