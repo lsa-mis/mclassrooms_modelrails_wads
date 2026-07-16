@@ -130,20 +130,26 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_no_css("turbo-frame#find_a_room_results aside")
   end
 
-  it "gives the filter card a titled header with its own reset link, and a page subtitle" do
+  it "keeps an sr-only card title + a glossary link in the filter card, clear-all OUT of it, and a page subtitle" do
     get find_a_room_path(q: "Mason")
 
     form = page.find("form#find_a_room_form")
+    # 2026-07-16 IA pass: the "Filters" title is now sr-only (still in the DOM
+    # for screen-reader heading nav); the glossary escape-hatch moved into the
+    # card header; clear-all moved OUT of the card into the results toolbar.
     expect(form).to have_text(I18n.t("rooms.filters.card_title"))
-    expect(form).to have_link(I18n.t("rooms.filters.reset"))
+    expect(form).to have_link(I18n.t("rooms.filters.glossary_link"))
+    expect(form).to have_no_link(I18n.t("rooms.filters.reset"))
     expect(page).to have_text(I18n.t("rooms.index.subtitle"))
   end
 
-  it "has exactly one clear control — the filter card header link" do
+  it "has exactly one clear-all — in the results toolbar — and only when filters are applied" do
     get find_a_room_path(q: "Mason")
-
     expect(page).to have_link(I18n.t("rooms.filters.reset"), count: 1)
-    expect(page.find("turbo-frame#find_a_room_results")).to have_no_link(I18n.t("rooms.filters.reset"))
+    expect(page.find("turbo-frame#find_a_room_results")).to have_link(I18n.t("rooms.filters.reset"))
+
+    get find_a_room_path
+    expect(page).to have_no_link(I18n.t("rooms.filters.reset"))
   end
 
   it "counts panel-only filters on the More-filters summary, ignoring promoted chips" do
