@@ -23,57 +23,62 @@
       html: { role: "search", "aria-label": t("rooms.filters.form_label") },
       class: "mt-6 rounded-lg border border-border dark:border-border-strong p-4 space-y-3 sm:space-y-4" do |form| %>
 
-  <%# The card is already a role="search" landmark with its own accessible
-      name, and Clear-all now lives with the applied-filter chips in the results
-      toolbar (IA review) — so a visible "Filters" title is redundant chrome.
-      Keep it sr-only for screen-reader heading nav, and surface a quiet
-      Glossary escape-hatch in its place (the per-filter popovers are the
-      inline glossary; this is the "see them all" link). %>
-  <div class="flex items-baseline justify-end gap-4">
-    <h2 class="sr-only"><%= t("rooms.filters.card_title") %></h2>
-    <%= link_to t("rooms.filters.glossary_link"), filters_glossary_path,
-          class: "text-sm link-inline" %>
-  </div>
+  <%# The card is a role="search" landmark with its own accessible name, so the
+      visible "Filters" title is redundant chrome — kept sr-only for
+      screen-reader heading nav. (The standalone glossary link was dropped: the
+      per-filter popovers are the inline glossary.) %>
+  <h2 class="sr-only"><%= t("rooms.filters.card_title") %></h2>
 
   <%= hidden_field_tag :view, params[:view] if params[:view].present? %>
   <%# Same contract as :view — the Saved toggle isn't a form control, so
       without this every filter submit would silently drop the shortlist view. %>
   <%= hidden_field_tag :saved, params[:saved] if params[:saved].present? %>
 
-  <%# Search + minimum capacity share ONE row at every width (2026-07-16 panel,
-      D: mobile filter-card economy). On a phone the fixed-width capacity used
-      to wrap onto its own line below the growing search box, costing an extra
-      field-row above the results. No flex-wrap; search grows/shrinks
-      (flex-1 min-w-0), capacity stays a fixed narrow cell (shrink-0). items-end
-      bottom-aligns the two inputs so they line up even if a label wraps. %>
-  <div class="flex items-end gap-3 sm:gap-x-6">
-    <div class="flex-1 min-w-0">
-      <%# Compact visible label ("Search"); the input's aria-label keeps the
-          descriptive superset name and the placeholder is only a hint —
-          see the search_accessible_label locale note. %>
-      <%= ui :form_field, label: t("rooms.filters.search_label"), id: "filter_q" do |f| %>
-        <%= ui :search_input, name: "q", value: params[:q],
-              label: t("rooms.filters.search_accessible_label"),
-              placeholder: t("rooms.filters.search_placeholder"),
-              data: { action: "input->filter-form#submit" }, **f.input_attrs %>
+  <%# Search on its own full-width row. Compact visible label ("Search"); the
+      input's aria-label keeps the descriptive superset name and the placeholder
+      is only a hint — see the search_accessible_label locale note. %>
+  <%= ui :form_field, label: t("rooms.filters.search_label"), id: "filter_q" do |f| %>
+    <%= ui :search_input, name: "q", value: params[:q],
+          label: t("rooms.filters.search_accessible_label"),
+          placeholder: t("rooms.filters.search_placeholder"),
+          data: { action: "input->filter-form#submit" }, **f.input_attrs %>
+  <% end %>
+
+  <%# School/College + Capacity range, promoted OUT of the More-filters panel to
+      just under Search (2026-07-16, Dave): School/College is a primary
+      room-finding facet, and min/max capacity are two ends of ONE range — keep
+      the pair together and always visible instead of split across the fold. %>
+  <div class="flex flex-wrap items-end gap-x-6 gap-y-3">
+    <div class="grow basis-56 min-w-0">
+      <%= ui :form_field, label: t("rooms.filters.unit_label"), id: "filter_unit_id" do |f| %>
+        <%= ui :select, name: "unit_id",
+              options: [ [ "", t("rooms.filters.unit_all") ] ] + RoomSearch.unit_options.map { |u| [ u.id, u.display_name ] },
+              selected: params[:unit_id],
+              data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
       <% end %>
     </div>
 
-    <%# "Min. capacity" as the label — was "Capacity" plus a separate "minimum"
-        hint that floated orphaned below the box (2026-07-15 panel). The self-
-        describing label IS the accessible name, so there's no hint to wire.
-        No `max:` — a max attribute makes form.requestSubmit() fail constraint
-        validation SILENTLY for over-bound values, freezing every subsequent
-        live filter change; an over-bound minimum returns an honest "0 rooms
-        found" instead. %>
-    <div class="shrink-0">
-      <%= ui :form_field, label: t("rooms.filters.capacity_min_label"),
-            id: "filter_capacity_min" do |f| %>
-        <%= number_field_tag :capacity_min, params[:capacity_min],
-              min: 0, class: "form-field w-24", id: f.input_attrs[:id],
+    <%# One capacity RANGE (min–max), not two scattered fields. Neither input
+        carries a `max=` HTML attribute: an over-bound value would make
+        form.requestSubmit() silently fail constraint validation and freeze
+        every later live filter change — RoomSearch treats an over-bound bound
+        as unbounded and returns an honest "0 rooms found" instead. %>
+    <fieldset class="shrink-0">
+      <legend class="text-sm font-medium text-text-heading"><%= t("rooms.filters.capacity_label") %></legend>
+      <div class="mt-1 flex items-center gap-2">
+        <label class="sr-only" for="filter_capacity_min"><%= t("rooms.filters.capacity_min_label") %></label>
+        <%= number_field_tag :capacity_min, params[:capacity_min], min: 0,
+              id: "filter_capacity_min", placeholder: t("rooms.filters.capacity_min_short"),
+              class: "form-field w-20",
               data: { action: "input->filter-form#submit" } %>
-      <% end %>
-    </div>
+        <span aria-hidden="true" class="text-text-muted">–</span>
+        <label class="sr-only" for="filter_capacity_max"><%= t("rooms.filters.capacity_max_label") %></label>
+        <%= number_field_tag :capacity_max, params[:capacity_max], min: 0,
+              id: "filter_capacity_max", placeholder: t("rooms.filters.capacity_max_short"),
+              class: "form-field w-20",
+              data: { action: "input->filter-form#submit" } %>
+      </div>
+    </fieldset>
   </div>
 
   <% promoted = promoted_filter_entries(filter_groups) %>
@@ -123,13 +128,10 @@
     </summary>
 
     <div class="pt-3 space-y-5">
-      <%# One uniform grid (design-sprint prototype): borderless groups with
-          small bold titles, Unit and Capacity-at-most as equal cells at the
-          end. fieldset/legend semantics stay for AT grouping — only the box
-          chrome is gone. %>
       <%# Characteristic filters as pills, grouped by category — each group spans
-          the full panel width so long labels flow instead of crowding a narrow
-          column. Unit + max-capacity stay compact fields below. %>
+          the full panel width so long labels flow. School/College and the
+          capacity range moved up to the always-visible filters above the
+          Popular-features row. %>
       <div class="space-y-5">
         <% panel_filter_groups(filter_groups).each do |group, entries| %>
           <fieldset>
@@ -141,23 +143,6 @@
               <% end %>
             </div>
           </fieldset>
-        <% end %>
-      </div>
-
-      <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2">
-        <%= ui :form_field, label: t("rooms.filters.unit_label"), id: "filter_unit_id" do |f| %>
-          <%= ui :select, name: "unit_id",
-                options: [ [ "", t("rooms.filters.unit_all") ] ] + RoomSearch.unit_options.map { |u| [ u.id, u.display_name ] },
-                selected: params[:unit_id],
-                data: { action: "change->filter-form#submitNow" }, **f.input_attrs %>
-        <% end %>
-
-        <%= ui :form_field, label: t("rooms.filters.capacity_max_label"), id: "filter_capacity_max" do |f| %>
-          <%# No `max:` for the same silent-block reason as capacity_min above;
-              RoomSearch already treats an over-bound max as unbounded. %>
-          <%= number_field_tag :capacity_max, params[:capacity_max],
-                min: 0, class: "form-field", id: f.input_attrs[:id],
-                data: { action: "input->filter-form#submit" } %>
         <% end %>
       </div>
 

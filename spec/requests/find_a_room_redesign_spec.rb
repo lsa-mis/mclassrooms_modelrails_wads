@@ -62,12 +62,14 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page.find("input[name='capacity_min']")["aria-describedby"]).to be_blank
   end
 
-  it "keeps minimum capacity always visible and tucks maximum capacity behind More filters" do
+  it "keeps the whole capacity range (min AND max) always visible, out of the More-filters disclosure" do
     get find_a_room_path
 
+    # 2026-07-16: min+max are one range promoted above the fold — neither is
+    # tucked behind the disclosure anymore.
     expect(page).to have_css("input[name='capacity_min']")
-    # visible: :all — the point is DOM placement behind the (closed) disclosure
-    expect(page).to have_css("details#more_filters input[name='capacity_max']", visible: :all)
+    expect(page).to have_css("input[name='capacity_max']")
+    expect(page).to have_no_css("details#more_filters input[name='capacity_max']", visible: :all)
   end
 
   # A `max=` on these inputs makes form.requestSubmit() FAIL constraint
@@ -78,7 +80,7 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     get find_a_room_path
 
     expect(page).to have_css("input[name='capacity_min']:not([max])")
-    expect(page).to have_css("details#more_filters input[name='capacity_max']:not([max])", visible: :all)
+    expect(page).to have_css("input[name='capacity_max']:not([max])")
   end
 
   it "promotes popular features as chips outside the disclosure, without duplicating them inside" do
@@ -90,10 +92,11 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_css("details#more_filters input[type='checkbox'][name='characteristics[]'][value='blackout']", visible: :all)
   end
 
-  it "moves the unit select into More filters and drops the per-page select" do
+  it "surfaces the School/College (unit) select in the always-visible filters, not the disclosure, and drops the per-page select" do
     get find_a_room_path
 
-    expect(page).to have_css("details#more_filters select[name='unit_id']", visible: :all)
+    expect(page).to have_css("select[name='unit_id']")
+    expect(page).to have_no_css("details#more_filters select[name='unit_id']", visible: :all)
     expect(page).to have_no_css("select[name='per']", visible: :all)
   end
 
@@ -130,15 +133,15 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_no_css("turbo-frame#find_a_room_results aside")
   end
 
-  it "keeps an sr-only card title + a glossary link in the filter card, clear-all OUT of it, and a page subtitle" do
+  it "keeps an sr-only card title, with clear-all and the glossary link OUT of the filter card, and a page subtitle" do
     get find_a_room_path(q: "Mason")
 
     form = page.find("form#find_a_room_form")
-    # 2026-07-16 IA pass: the "Filters" title is now sr-only (still in the DOM
-    # for screen-reader heading nav); the glossary escape-hatch moved into the
-    # card header; clear-all moved OUT of the card into the results toolbar.
+    # The "Filters" title is sr-only (still in the DOM for screen-reader heading
+    # nav); clear-all lives in the results toolbar; and the standalone glossary
+    # link was dropped — the per-filter popovers are the inline glossary.
     expect(form).to have_text(I18n.t("rooms.filters.card_title"))
-    expect(form).to have_link(I18n.t("rooms.filters.glossary_link"))
+    expect(form).to have_no_link(I18n.t("rooms.filters.glossary_link"))
     expect(form).to have_no_link(I18n.t("rooms.filters.reset"))
     expect(page).to have_text(I18n.t("rooms.index.subtitle"))
   end
@@ -152,11 +155,13 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(page).to have_no_link(I18n.t("rooms.filters.reset"))
   end
 
-  it "counts panel-only filters on the More-filters summary, ignoring promoted chips" do
-    get find_a_room_path(characteristics: %w[blackout intrscreen], capacity_max: "100")
+  it "counts only the panel's characteristic filters on the More-filters summary, ignoring promoted chips and now-visible unit/capacity" do
+    get find_a_room_path(characteristics: %w[blackout intrscreen], capacity_max: "100", unit_id: "5")
 
-    expect(response.body).to include(I18n.t("rooms.filters.applied_count", count: 2))
-    expect(response.body).not_to include(I18n.t("rooms.filters.applied_count", count: 3))
+    # blackout is the only panel characteristic left: intrscreen is promoted,
+    # and capacity_max + unit_id are now always-visible filters (out of panel).
+    expect(response.body).to include(I18n.t("rooms.filters.applied_count", count: 1))
+    expect(response.body).not_to include(I18n.t("rooms.filters.applied_count", count: 2))
   end
 
   it "renders a humanized card title, unit·floor meta, and a split capacity number" do
@@ -329,7 +334,9 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     it "tooltips described promoted chips and skips undescribed labels" do
       get find_a_room_path
 
-      popular = page.find("form#find_a_room_form fieldset", match: :first)
+      # Select the Popular-features fieldset by its legend — the capacity range
+      # is now also a fieldset (and comes first), so :first no longer works.
+      popular = page.find("form#find_a_room_form fieldset", text: I18n.t("rooms.filters.popular_legend"))
       expect(popular).to have_css("span[role='tooltip']", text: "wall-mounted dry-erase", visible: :all)
       # intrscreen has no long_description — plain checkbox, no describedby, no bubble
       expect(popular.find("input[value='intrscreen']")["aria-describedby"]).to be_nil
