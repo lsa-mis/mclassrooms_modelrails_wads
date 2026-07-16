@@ -221,8 +221,11 @@ module RoomsHelper
   # panel-only characteristics plus unit and max capacity. Feeds the
   # summary's applied-count badge and the open-on-load rule below.
   def panel_filter_count(filter_params)
-    (Array(filter_params[:characteristics]) - PROMOTED_FILTER_CODES).size +
-      [ filter_params[:unit_id], filter_params[:capacity_max] ].count(&:present?)
+    # Only the characteristic pills still live inside the More-filters panel;
+    # School/College (unit_id) and the capacity range moved up to the
+    # always-visible filters (2026-07-16), so they no longer count toward this
+    # disclosure's applied badge. Promoted pills are counted above the fold too.
+    (Array(filter_params[:characteristics]) - PROMOTED_FILTER_CODES).size
   end
 
   # The More-filters disclosure opens on page load when it holds an applied

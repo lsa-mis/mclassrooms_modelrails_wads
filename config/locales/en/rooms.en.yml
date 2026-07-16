@@ -199,7 +199,10 @@ en:
       # so assistive tech keeps the descriptive name the compact label dropped.
       search_accessible_label: "Search building or room"
       search_placeholder: "Building or room number"
+      capacity_label: "Capacity"
       capacity_min_label: "Min. capacity"
+      capacity_min_short: "Min"
+      capacity_max_short: "Max"
       popular_legend: "Popular features"
       more_filters: "More filters"
       hide_filters: "Hide filters"
