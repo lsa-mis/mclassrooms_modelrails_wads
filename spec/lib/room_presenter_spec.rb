@@ -36,7 +36,32 @@ RSpec.describe RoomPresenter do
 
       chip = described_class.new(room).chips.first
       expect(chip.label).to eq("Whiteboard")
+      # No override for "whiteboard": the label already IS the registrar term,
+      # so nothing is appended — the tooltip stays the plain glossary line.
       expect(chip.description).to eq("Wall-mounted dry-erase board")
+    end
+
+    # 2026-07-16 panel (F): when a product override renames a chip, the
+    # registrar's own term must stay discoverable in the supplementary tooltip.
+    it "appends the registrar's original label to a humanized chip's tooltip" do
+      # movetablet is renamed to "Tablet armchairs" by the override map; the
+      # vendor's own "Moveable Tablet Chair" is preserved in parentheses.
+      create(:room_characteristic, room: room, code: "c1", short_code: "movetablet",
+                                    description: "Seating: Moveable Tablet Chair",
+                                    long_description: "Movable chairs with a tablet writing surface.")
+
+      chip = described_class.new(room).chips.first
+      expect(chip.label).to eq(I18n.t("rooms.characteristic_label_overrides.movetablet"))
+      expect(chip.description).to eq("Movable chairs with a tablet writing surface. (Moveable Tablet Chair)")
+    end
+
+    it "surfaces the registrar's original label alone when a humanized chip has no glossary description" do
+      create(:room_characteristic, room: room, code: "c1", short_code: "movetablet",
+                                    description: "Seating: Moveable Tablet Chair", long_description: nil)
+
+      # Without a glossary sentence the tooltip is just the registrar term, so a
+      # renamed chip never hides what the room actually lists.
+      expect(described_class.new(room).chips.first.description).to eq("Moveable Tablet Chair")
     end
 
     it "falls back to FALLBACK_ICON when the characteristic has no matching display rule at all" do
