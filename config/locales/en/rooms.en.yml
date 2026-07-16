@@ -95,6 +95,7 @@ en:
       floor_plan_link: "View floor plan"
       notes_heading: "Notes"
       building_notes_heading: "Building notes"
+      not_found: "That room isn't available. It may have been removed, or the link is out of date."
       share:
         button: "Copy link"
         native_button: "Share"
@@ -198,8 +199,7 @@ en:
       # so assistive tech keeps the descriptive name the compact label dropped.
       search_accessible_label: "Search building or room"
       search_placeholder: "Building or room number"
-      capacity_label: "Capacity"
-      capacity_min_hint: "minimum"
+      capacity_min_label: "Min. capacity"
       popular_legend: "Popular features"
       more_filters: "More filters"
       hide_filters: "Hide filters"
