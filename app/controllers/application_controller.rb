@@ -65,12 +65,25 @@ class ApplicationController < ActionController::Base
   end
 
   def user_not_authorized
-    destination = if Current.workspace.present?
-      workspace_path(Current.workspace)
-    else
-      request.referer || root_path
-    end
-    redirect_to(destination, alert: t("errors.not_authorized"))
+    redirect_to(not_authorized_redirect_path, alert: t("errors.not_authorized"))
+  end
+
+  # Where a denied user lands. Reuses the fork's established idiom (see
+  # RoomsController#update, BuildingsController#update): send them to the
+  # record only if they can actually SEE it, else somewhere safe. Because
+  # WorkspacePolicy#show? is admin-only under the shared/directory posture, a
+  # non-admin denial that fell through to workspace_path would loop — so we
+  # only land there when show? permits, and otherwise drop the user at the
+  # product home they can reach.
+  # find_a_room requires a viewer grant (RoomPolicy#index?), so a non-member
+  # (e.g. membership revoked mid-session) falls through to root_path — which
+  # never redirects — keeping every branch loop-safe.
+  def not_authorized_redirect_path
+    return request.referer || root_path if Current.workspace.blank?
+    return workspace_path(Current.workspace) if policy(Current.workspace).show?
+    return find_a_room_path if Current.user && RoleResolver.for(Current.user).viewer?
+
+    root_path
   end
 
   def record_not_found
