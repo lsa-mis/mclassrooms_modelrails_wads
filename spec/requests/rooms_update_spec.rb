@@ -84,7 +84,7 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
         patch room_path(room_other_unit), params: { room: { nickname: "Hijacked" } }
       }.not_to change(ActivityLog, :count)
 
-      expect(response).to redirect_to(workspace_path(workspace))
+      expect(response).to redirect_to(find_a_room_path)
       expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
       expect(room_other_unit.reload.nickname).to be_nil
     end

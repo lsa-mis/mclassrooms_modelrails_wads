@@ -91,7 +91,7 @@ RSpec.describe "Building visibility (hide/unhide)", type: :request do
         post unhide_building_path(building)
       }.not_to change(ActivityLog, :count)
 
-      expect(response).to redirect_to(workspace_path(workspace))
+      expect(response).to redirect_to(find_a_room_path)
       expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
       expect(building.reload).to be_hidden
     end
