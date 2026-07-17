@@ -51,6 +51,13 @@ en:
     characteristic_group_overrides:
       "Ethernet Connection": "Ethernet"
       "Team Based Learning": "Team-based learning"
+      # 2026-07-16 (Fried copy review): plain nouns over clever phrases, and
+      # "Seats & layout" -> "Layout" now that capacity is labeled "Seats" (one
+      # meaning of "seats" per screen). Display-only: the group.name / stored
+      # category_override values stay unchanged, so grouping still matches.
+      "Seats & layout": "Layout"
+      "Write on": "Writing surfaces"
+      "Show & present": "Presentation"
     show:
       capacity: "%{students} students · %{ada} ADA-accessible seats"
       address: "Address"
@@ -61,9 +68,9 @@ en:
       room_type: "Room type"
       inactive_banner: "This room is hidden from Find a Room results."
       features:
-        seats_layout: "Seats & layout"
-        write_on: "Write on"
-        show_present: "Show & present"
+        seats_layout: "Layout"
+        write_on: "Writing surfaces"
+        show_present: "Presentation"
         recorded_accessible: "Recorded & accessible"
         team_based_learning: "Team-based learning"
         more: "More details"
@@ -194,18 +201,18 @@ en:
       applied_count:
         one: "%{count} filter applied"
         other: "%{count} filters applied"
-      search_label: "Search"
+      search_label: "Building or room"
       # aria-label: a SUPERSET of the visible label (WCAG 2.5.3 Label in Name)
       # so assistive tech keeps the descriptive name the compact label dropped.
       search_accessible_label: "Search building or room"
-      search_placeholder: "Building or room number"
-      capacity_label: "Capacity"
+      search_placeholder: "e.g. Mason Hall or 1200"
+      capacity_label: "Seats"
       capacity_min_label: "Min. capacity"
       capacity_min_short: "Min"
       capacity_max_short: "Max"
-      popular_legend: "Popular features"
+      popular_legend: "Popular filters"
       more_filters: "More filters"
-      hide_filters: "Hide filters"
+      hide_filters: "Fewer filters"
       unit_label: "School/College"
       unit_all: "All schools/colleges"
       capacity_max_label: "Maximum capacity"

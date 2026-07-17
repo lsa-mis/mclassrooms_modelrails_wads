@@ -302,8 +302,10 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
 
     get find_a_room_path
 
+    # category_override values ("Show & present" etc.) are the data-match keys;
+    # the rendered legend is the display override ("Presentation").
     legends = page.all("details#more_filters legend", visible: :all).map { |l| l.text(:all) }
-    expect(legends.index("Show & present")).to be < legends.index("Recorded & accessible")
+    expect(legends.index("Presentation")).to be < legends.index("Recorded & accessible")
   end
 
   # Filter-label description tooltips: hovering the label (or focusing the
