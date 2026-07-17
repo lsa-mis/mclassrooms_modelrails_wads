@@ -198,9 +198,12 @@ en:
     filters:
       form_label: "Filter rooms"
       card_title: "Filters"
+      # Badge on the More-filters bar. Scoped to what's SELECTED INSIDE that
+      # collapsed panel (not a page-wide total — the popular pills aren't
+      # counted here, and the applied-filter chips already show the full set).
       applied_count:
-        one: "%{count} filter applied"
-        other: "%{count} filters applied"
+        one: "%{count} selected"
+        other: "%{count} selected"
       search_label: "Building or room"
       # aria-label: a SUPERSET of the visible label (WCAG 2.5.3 Label in Name)
       # so assistive tech keeps the descriptive name the compact label dropped.
