@@ -28,11 +28,31 @@ RSpec.describe "GET /buildings", type: :request do
   let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
   let!(:classroom) { create(:room, building: building, workspace: workspace) }
 
+  # 2026-07-17 (Dave): /buildings is now viewer-visible (supersedes Task 4's
+  # admin-only index) — a viewer lists VISIBLE classroom-containing buildings,
+  # and the admin-only "show hidden" toggle can't leak hidden ones.
   describe "as a non-admin viewer" do
-    it_behaves_like "an admin-only action" do
-      let(:actor) { membership_with("viewer") }
-      let(:http_method) { :get }
-      let(:request_path) { buildings_path }
+    let(:viewer) { membership_with("viewer") }
+    before { sign_in(viewer) }
+
+    it "returns 200 listing visible buildings, without the admin show-hidden toggle" do
+      get buildings_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(building.display_name)
+      # the admin-only "show hidden" switch is gated out for a viewer
+      expect(response.body).not_to include(I18n.t("buildings.index.show_hidden"))
+    end
+
+    it "does not leak hidden buildings, even with ?show_hidden=1 (admin-only)" do
+      hidden = create(:building, workspace: workspace, name: "Hidden Hall", hidden_at: Time.current)
+      create(:room, building: hidden, workspace: workspace)
+
+      get buildings_path(show_hidden: "1")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(building.display_name)
+      expect(response.body).not_to include(hidden.display_name)
     end
   end
 

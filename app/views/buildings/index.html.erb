@@ -1,10 +1,10 @@
 <%# MiClassrooms Phase 4 Task 8 (Brief §5.3, §14.1): the admin Buildings
     index — FTS5 search (name/nickname/abbreviation via Building.search_name),
     a hidden-buildings toggle, and a plain server-rendered table for the
-    results. Admin-only page (BuildingPolicy#index?), so no view-toggle
-    gating is needed here the way rooms/index.html.erb gates its
-    inactive-view links — every visitor of this page already cleared that
-    bar in the controller.
+    results. Viewer-visible page (BuildingPolicy#index?): the "show hidden"
+    switch and the Hidden column are admin-only affordances, gated behind
+    policy(Building).view_inactive?, the way rooms/index.html.erb gates its
+    inactive-view links. Non-admins get only listed buildings from the scope.
 
     Deliberately NOT UI::DataTableComponent: this index is Pagy-paginated
     server-side, and DataTableComponent's own "Don't use when" contract
@@ -36,8 +36,10 @@
       <%= ui :search_input, name: "q", value: params[:q], label: t(".search_label"), **f.input_attrs %>
     <% end %>
 
-    <%= ui :switch, name: "show_hidden", value: "1", checked: params[:show_hidden] == "1",
-          label: t(".show_hidden"), data: { action: "change->auto-submit#submit" } %>
+    <% if policy(Building).view_inactive? %>
+      <%= ui :switch, name: "show_hidden", value: "1", checked: params[:show_hidden] == "1",
+            label: t(".show_hidden"), data: { action: "change->auto-submit#submit" } %>
+    <% end %>
 
     <button type="submit" class="btn-secondary"><%= t(".search_submit") %></button>
   <% end %>
@@ -51,7 +53,9 @@
             <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_abbreviation") %></th>
             <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_campus") %></th>
             <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_classroom_count") %></th>
-            <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_hidden") %></th>
+            <% if policy(Building).view_inactive? %>
+              <th scope="col" class="text-left py-3 px-2 text-sm font-medium text-text-muted"><%= t(".column_hidden") %></th>
+            <% end %>
           </tr>
         </thead>
         <tbody>
@@ -64,11 +68,13 @@
               <td class="py-3 px-2 text-text-muted"><%= building.abbreviation %></td>
               <td class="py-3 px-2 text-text-muted"><%= building.campus&.description %></td>
               <td class="py-3 px-2 text-text-muted"><%= @classroom_counts.fetch(building.id, 0) %></td>
-              <td class="py-3 px-2">
-                <% if building.hidden? %>
-                  <%= ui :badge, t(".hidden_badge"), variant: :soft, tone: :warning %>
-                <% end %>
-              </td>
+              <% if policy(Building).view_inactive? %>
+                <td class="py-3 px-2">
+                  <% if building.hidden? %>
+                    <%= ui :badge, t(".hidden_badge"), variant: :soft, tone: :warning %>
+                  <% end %>
+                </td>
+              <% end %>
             </tr>
           <% end %>
         </tbody>
