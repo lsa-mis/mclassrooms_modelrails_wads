@@ -20,14 +20,18 @@ class BuildingsController < ApplicationController
   # need @building loaded to authorize/mutate.
   before_action :set_building, only: [ :show, :edit, :update, :hide, :unhide ]
 
-  # Admin-only page (BuildingPolicy#index?), so `show_hidden=1` needs no
-  # extra gate beyond the action-level `authorize` below — there is no
-  # narrower "safe" scope to fall back to the way RoomPolicy::Scope#resolve
-  # is the safe default for a non-admin `view=inactive_rooms` request.
+  # Viewer-visible page (BuildingPolicy#index?). Non-admins get Scope#resolve
+  # (LISTED buildings only); the "show hidden" toggle is admin-gated by
+  # #view_inactive?, and Scope#resolve_including_hidden re-checks admin itself
+  # so a crafted `show_hidden=1` from a viewer can't leak hidden buildings.
   def index
     authorize Building
-    scope = BuildingPolicy::Scope.new(pundit_user, Building).resolve
-    scope = scope.listed unless params[:show_hidden] == "1"
+    scope_policy = BuildingPolicy::Scope.new(pundit_user, Building)
+    scope = if params[:show_hidden] == "1" && policy(Building).view_inactive?
+      scope_policy.resolve_including_hidden
+    else
+      scope_policy.resolve
+    end
     # `.where(id: ...)` (not `.merge`): both `with_classrooms` (from the
     # policy Scope) and `Building.search_name` filter on the SAME `id`
     # column via `where(id: ...)`. `Relation#merge` overrides — not ANDs — a

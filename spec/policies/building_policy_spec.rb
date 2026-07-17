@@ -58,16 +58,33 @@ RSpec.describe BuildingPolicy do
   # #index authorizes against the Building CLASS (`authorize Building`), not
   # a record instance, mirroring RoomPolicy's #view_inactive? standalone spec.
   describe "#index?" do
+    # 2026-07-17 (Dave): the building index is now viewer-visible (supersedes
+    # Task 4's admin-only listing), mirroring RoomPolicy#index? = grant.viewer?.
     it "allows an admin" do
       expect(described_class.new(admin_user, Building).index?).to be true
     end
 
+    it "allows an editor (viewer-or-above browses the directory)" do
+      expect(described_class.new(editor_user, Building).index?).to be true
+    end
+
+    it "allows a viewer" do
+      expect(described_class.new(viewer_user, Building).index?).to be true
+    end
+  end
+
+  # Gates the admin-only "show hidden buildings" toggle on the index.
+  describe "#view_inactive?" do
+    it "allows an admin" do
+      expect(described_class.new(admin_user, Building).view_inactive?).to be true
+    end
+
     it "denies an editor" do
-      expect(described_class.new(editor_user, Building).index?).to be false
+      expect(described_class.new(editor_user, Building).view_inactive?).to be false
     end
 
     it "denies a viewer" do
-      expect(described_class.new(viewer_user, Building).index?).to be false
+      expect(described_class.new(viewer_user, Building).view_inactive?).to be false
     end
   end
 end
