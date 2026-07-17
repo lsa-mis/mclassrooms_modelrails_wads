@@ -256,7 +256,12 @@ module RoomsHelper
       add.call(t("rooms.index.summary.capacity_max_only", max: base[:capacity_max].to_i), base.except(:capacity_max))
     end
     Array(base[:characteristics]).each do |code|
-      add.call(t("rooms.index.summary.characteristics", value: characteristic_labels.fetch(code, code)),
+      # Bare characteristic label as the chip text: the chip IS an applied
+      # filter, so a repeated "Filters:" prefix on each was pure noise
+      # (2026-07-17 panel). Field-typed chips (Search:/Capacity:/…) keep their
+      # prefix — it names the field. The sr-only RoomSearch#summary sentence is
+      # unaffected (it still reads "Filters: …" for reading-order clarity).
+      add.call(characteristic_labels.fetch(code, code),
                base.merge(characteristics: Array(base[:characteristics]) - [ code ]))
     end
     chips
