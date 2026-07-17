@@ -121,7 +121,7 @@ RSpec.describe "Notes", type: :request do
           post notes_path, params: { note: note_params_for(building) }
         }.not_to change(ActivityLog, :count)
 
-        expect(response).to redirect_to(workspace_path(workspace))
+        expect(response).to redirect_to(find_a_room_path)
       end
 
       it "is denied creating a note on another unit's room" do
@@ -129,7 +129,7 @@ RSpec.describe "Notes", type: :request do
           post notes_path, params: { note: note_params_for(room_other_unit) }
         }.not_to change(ActivityLog, :count)
 
-        expect(response).to redirect_to(workspace_path(workspace))
+        expect(response).to redirect_to(find_a_room_path)
       end
     end
 
@@ -142,7 +142,7 @@ RSpec.describe "Notes", type: :request do
           post notes_path, params: { note: note_params_for(room_in_unit) }
         }.not_to change(ActivityLog, :count)
 
-        expect(response).to redirect_to(workspace_path(workspace))
+        expect(response).to redirect_to(find_a_room_path)
       end
     end
   end
@@ -263,7 +263,7 @@ RSpec.describe "Notes", type: :request do
         }.not_to change(ActivityLog, :count)
 
         expect(note.reload.body.to_plain_text).not_to eq("Hijacked")
-        expect(response).to redirect_to(workspace_path(workspace))
+        expect(response).to redirect_to(find_a_room_path)
       end
     end
 
@@ -276,7 +276,7 @@ RSpec.describe "Notes", type: :request do
           patch note_path(note), params: { note: { body: "Hijacked" } }
         }.not_to change(ActivityLog, :count)
 
-        expect(response).to redirect_to(workspace_path(workspace))
+        expect(response).to redirect_to(find_a_room_path)
       end
     end
   end
@@ -326,7 +326,7 @@ RSpec.describe "Notes", type: :request do
           delete note_path(note)
         }.not_to change(Note, :count)
 
-        expect(response).to redirect_to(workspace_path(workspace))
+        expect(response).to redirect_to(find_a_room_path)
       end
     end
 
@@ -339,7 +339,7 @@ RSpec.describe "Notes", type: :request do
           delete note_path(note)
         }.not_to change(Note, :count)
 
-        expect(response).to redirect_to(workspace_path(workspace))
+        expect(response).to redirect_to(find_a_room_path)
       end
     end
   end

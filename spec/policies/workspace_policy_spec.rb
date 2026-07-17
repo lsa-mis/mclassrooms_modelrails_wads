@@ -95,4 +95,28 @@ RSpec.describe WorkspacePolicy do
       expect(policy.destroy?).to be false
     end
   end
+
+  # Fork divergence (MiClassrooms, 2026-07-17): under the SHARED (directory)
+  # posture the workspace dashboard is admin-only — only directory admins
+  # (owner/admin slugs) may show? it. Every other posture (including the default
+  # test env exercised above) keeps the member-visible dashboard. See
+  # WorkspacePolicy#show? and ApplicationController#not_authorized_redirect_path.
+  describe "show? under the shared (directory) posture" do
+    before { allow(TenancyConfig).to receive(:shared?).and_return(true) }
+
+    let(:owner)  { create(:user).tap { |u| create(:membership, :owner, user: u, workspace: workspace) } }
+    let(:admin)  { create(:user).tap { |u| create(:membership, user: u, workspace: workspace, role: Role.system_default!("admin")) } }
+    let(:member) { create(:user).tap { |u| create(:membership, user: u, workspace: workspace) } }
+    let(:viewer) { create(:user).tap { |u| create(:membership, user: u, workspace: workspace, role: Role.system_default!("viewer")) } }
+
+    it "allows directory admins (owner, admin) to view the dashboard" do
+      expect(described_class.new(owner, workspace).show?).to be true
+      expect(described_class.new(admin, workspace).show?).to be true
+    end
+
+    it "denies non-admin members and viewers (the dashboard is an admin surface)" do
+      expect(described_class.new(member, workspace).show?).to be false
+      expect(described_class.new(viewer, workspace).show?).to be false
+    end
+  end
 end

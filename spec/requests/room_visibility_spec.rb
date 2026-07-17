@@ -128,7 +128,7 @@ RSpec.describe "Room visibility (hide/unhide)", type: :request do
         post hide_room_path(room_other_unit)
       }.not_to change(ActivityLog, :count)
 
-      expect(response).to redirect_to(workspace_path(workspace))
+      expect(response).to redirect_to(find_a_room_path)
       expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
       expect(room_other_unit.reload).not_to be_hidden
     end
@@ -138,7 +138,7 @@ RSpec.describe "Room visibility (hide/unhide)", type: :request do
         post hide_room_path(room_no_unit)
       }.not_to change(ActivityLog, :count)
 
-      expect(response).to redirect_to(workspace_path(workspace))
+      expect(response).to redirect_to(find_a_room_path)
       expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
       expect(room_no_unit.reload).not_to be_hidden
     end
@@ -150,7 +150,7 @@ RSpec.describe "Room visibility (hide/unhide)", type: :request do
         post unhide_room_path(room_in_unit)
       }.not_to change(ActivityLog, :count)
 
-      expect(response).to redirect_to(workspace_path(workspace))
+      expect(response).to redirect_to(find_a_room_path)
       expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
       expect(room_in_unit.reload).to be_hidden
     end

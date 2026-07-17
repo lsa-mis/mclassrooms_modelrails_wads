@@ -165,7 +165,7 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       get find_a_room_path, params: { view: "inactive_rooms" }
 
-      expect(response).to redirect_to(workspace_path(workspace))
+      expect(response).to redirect_to(find_a_room_path)
       expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
 
       follow_redirect!
@@ -204,7 +204,7 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       get find_a_room_path, params: { view: "inactive_buildings" }
 
-      expect(response).to redirect_to(workspace_path(workspace))
+      expect(response).to redirect_to(find_a_room_path)
       expect(flash[:alert]).to eq(I18n.t("errors.not_authorized"))
     end
   end
