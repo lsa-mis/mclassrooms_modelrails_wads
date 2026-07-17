@@ -10,10 +10,11 @@
 # viewers reach a building only via a room's building card / breadcrumb nav,
 # never a standalone building directory listing (Task 4 brief).
 class BuildingPolicy < DirectoryPolicy
-  # Admin-only listing — mirrors the deliberate absence of a viewer-facing
-  # building index anywhere in the app (Task 4 brief: "viewers reach
-  # buildings via room→building nav, NOT a viewer building index").
-  def index? = grant.admin?
+  # Viewer-visible listing (2026-07-17, Dave — supersedes Task 4's admin-only
+  # index): any viewer-or-above browses the building directory, exactly like
+  # RoomPolicy#index?. Non-admins see only LISTED buildings (Scope#resolve);
+  # the admin-only "show hidden" toggle is gated by #view_inactive? below.
+  def index? = grant.viewer?
 
   # Hidden buildings are invisible to non-admins (defense-in-depth backstop,
   # same reasoning as RoomPolicy#show?): an editor or plain viewer who hits
@@ -29,6 +30,12 @@ class BuildingPolicy < DirectoryPolicy
 
   def hide?   = grant.admin?
   def unhide? = grant.admin?
+
+  # Gates the admin-only "show hidden buildings" toggle on the index (mirrors
+  # RoomPolicy#view_inactive?). Not part of the §14.1 record action matrix —
+  # it authorizes a controller-level view mode. BuildingsController#index only
+  # widens Scope#resolve to hidden buildings when this is true.
+  def view_inactive? = grant.admin?
 
   def manage_media?       = grant.admin?  # photo, floor-plan management
   def destroy_attachment? = grant.admin?
@@ -50,18 +57,22 @@ class BuildingPolicy < DirectoryPolicy
   def visible_record? = !record.hidden?
 
   class Scope < ApplicationPolicy::Scope
-    # Admin-only page: the "safe" scope and the "admin" scope are the same
-    # set (every classroom-containing building in the workspace, listed or
-    # hidden alike is still gated behind #index? itself) — unlike
-    # RoomPolicy::Scope there is no narrower default for a non-admin caller,
-    # because a non-admin never reaches this Scope at all (BuildingPolicy
-    # denies #index? before the controller ever resolves it). Kept as a real
-    # Scope class (rather than inlining `Building.for_current_workspace...`
-    # in the controller) so a future caller has one canonical place to widen
-    # or narrow this, per the brief's "Scope too OR the controller scopes
-    # explicitly" guidance — BuildingsController#index composes the
-    # show_hidden/search variations on top of #resolve here.
+    # Safe default for every caller (mirrors RoomPolicy::Scope now that the
+    # index is viewer-visible): LISTED classroom-containing buildings in the
+    # current workspace. Non-admins never see curator-hidden buildings.
+    # `for_current_workspace` is the defense-in-depth tenant backstop — Tenanted
+    # models don't default_scope, so every Scope applies it explicitly.
     def resolve
+      scope.for_current_workspace.with_classrooms.listed
+    end
+
+    # Admin-only expansion for the index's "show hidden" toggle. Belt-and-
+    # suspenders against a crafted show_hidden param reaching this without a
+    # #view_inactive? check: a non-admin (or signed-out) caller still gets
+    # exactly #resolve's listed set, never the hidden buildings.
+    def resolve_including_hidden
+      return resolve unless user.present? && RoleResolver.for(user).admin?
+
       scope.for_current_workspace.with_classrooms
     end
   end
