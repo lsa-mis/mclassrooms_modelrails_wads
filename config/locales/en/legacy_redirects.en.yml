@@ -1,0 +1,5 @@
+en:
+  legacy_redirects:
+    outdated_link: "That link has moved — here's the room you were looking for."
+    unknown_code: "We couldn't find that classroom. Try searching Find a Room."
+    visibility_moved: "Room visibility is managed here now — use Hide or Unhide on this page."

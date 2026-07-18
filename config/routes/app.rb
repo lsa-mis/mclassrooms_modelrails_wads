@@ -107,3 +107,7 @@ end
 if AuthConfig.test_login_enabled?
   get "test_login", to: "test_logins#create"
 end
+
+# D18 (Brief §5.9): retired Classroom Database URLs. Drawn last so the legacy
+# catch-alls (e.g. /classrooms/:facility_code) never shadow a product route.
+draw(:legacy)
