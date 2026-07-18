@@ -14,16 +14,20 @@ card always reflects what you'd get right now.
 
 - **Search** matches building names and room numbers in one box — "mason",
   "1300 chem", or a facility code like `mas1401` all work.
-- **Capacity** takes a minimum seat count. There's no upper clamp: asking for
-  more seats than any room has honestly returns "0 rooms found."
+- **School / College** narrows to the classrooms owned by a department group.
+  It's a primary facet, right under Search.
+- **Capacity** is a **range** — set a minimum, a maximum, or both. Leave an end
+  blank to leave it open; asking for more seats than any room has honestly
+  returns "0 rooms found."
 - **Popular features** are the most-asked-for characteristics, one click away.
 - **More filters** opens the full set, grouped by the question you're asking
   (Seats & layout, Write on, Show & present, Recorded & accessible). Some
   filters bundle related setups — "Movable seating" matches tablet armchairs
   *or* tables with movable chairs; "Tiered or raked seating" covers sloped and
-  stepped rooms. Hover or keyboard-focus any filter label to see what it
-  means; the full glossary is linked at the bottom of the panel. Applied filters from this
-  panel show a count on the toggle after a page load.
+  stepped rooms. Hover or keyboard-focus any filter to see what it means in an
+  inline popover — that's the glossary, right where you need it; a link to the
+  full glossary sits in the card header. Applied filters from this panel show a
+  count on the toggle.
 
 Every applied filter appears as a removable chip beside the live count —
 click a chip's × to drop just that filter, or **Clear filters** in the card
@@ -39,6 +43,20 @@ ADA-accessible seating, and tags for its *distinctive* features. Rooms with
 notes show a note count — and a highlighted badge when any note is an alert.
 **Details** expands the full characteristic list; hover any chiclet for its
 description.
+
+## Saving rooms
+
+Save a room to a personal shortlist with the **save toggle** on any result card
+or room page. The **Saved rooms** link above the results filters the list to
+just your saved rooms, with a live count that updates as you go. Your shortlist
+is private to your account.
+
+## Browsing buildings
+
+Every building has its own page listing the classrooms it contains — reachable
+from any room's page, or directly at `/buildings`. The buildings index shows the
+buildings that have listed classrooms, so you can start from a building and work
+down to a room.
 
 ## The room page
 
