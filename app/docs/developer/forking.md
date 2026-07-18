@@ -158,6 +158,17 @@ on every sync.
 | `app/assets/tailwind/tokens/_brand.css` | Brand-color overrides — swap the primary palette family ([Theming](theming)) |
 | `README.md` | Your product's README |
 
+A fork may also take `merge=ours` ownership of **template files it has rewritten
+so thoroughly they now describe a different product** — a deliberate choice to
+stop tracking upstream for those paths. This fork (MiClassrooms) owns three user
+docs on that basis: `app/docs/user/authentication.md`,
+`app/docs/user/welcome.md`, and `app/docs/user/workspaces.md` — rewritten for an
+SSO-first single-directory product rather than the template's
+multi-tenant/passwordless model. Unlike the prescribed seams above (which
+upstream froze), upstream *does* keep evolving these files, so the `merge=ours`
+mark means you silently keep your version and should watch for upstream doc
+improvements worth porting by hand.
+
 ### Fork seams — method overrides
 
 Beyond file-level seams, a handful of private methods are designed to be overridden in `ApplicationController` (or a concern it includes). These are stable hooks upstream won't break.

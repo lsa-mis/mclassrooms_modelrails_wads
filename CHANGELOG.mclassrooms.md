@@ -5,7 +5,7 @@ directory built on the [ModelRails](../CHANGELOG.md) template.
 
 This file tracks the **fork's** product work. Template (ModelRails) changes that
 arrive via upstream sync are recorded in [`CHANGELOG.md`](../CHANGELOG.md); this
-file is `merge=ours` so the two never collide. Format follows
+file has no upstream counterpart, so the two never collide. Format follows
 [Keep a Changelog](https://keepachangelog.com/); PR numbers are this repo
 (`lsa-mis/mclassrooms_modelrails_wads`).
 

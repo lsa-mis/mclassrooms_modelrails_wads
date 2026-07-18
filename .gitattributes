@@ -23,11 +23,10 @@ config/routes/app.rb merge=ours
 config/markdowndocs_categories.local.yml merge=ours
 app/assets/tailwind/tokens/_brand.css merge=ours
 README.md merge=ours
-# Fork product changelog — separate from the template's upstream-tracked CHANGELOG.md.
-CHANGELOG.mclassrooms.md merge=ours
 # User docs the fork rewrote for the MiClassrooms product (SSO-first auth, the
 # single shared directory, admin-only dashboard). They describe fork behavior,
 # not the template's multi-tenant/passwordless model, so the fork owns them.
+# (Documented in app/docs/developer/forking.md, enforced by template_invariants_spec.)
 app/docs/user/authentication.md merge=ours
 app/docs/user/welcome.md merge=ours
 app/docs/user/workspaces.md merge=ours
