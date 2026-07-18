@@ -1,43 +1,37 @@
 ---
 title: Welcome
-description: Get started as a user — sign in, manage your account, and collaborate with your team.
-keywords: welcome get started sign in passkey magic link account workspace
+description: Get started with MiClassrooms — sign in with U-M single sign-on and explore the classroom directory
+keywords: welcome get started sign in sso find a room buildings classrooms directory saved rooms
 ---
 
-# Welcome
+# Welcome to MiClassrooms
 
-This app is built on [ModelRails](https://github.com/modelrails), a production-ready Rails
-application template designed for teams who need accounts, workspaces, and collaboration out
-of the box.
+MiClassrooms is the University of Michigan classroom directory. Search and
+explore centrally-scheduled classrooms — with photos, 360° panoramas, seating
+charts, floor plans, capacities, and room features — all in one place.
 
 ## Signing in
 
-You sign in with a **magic link** or a **passkey** — no password required.
-
-- **Magic link** — enter your email address and follow the one-click link sent to your inbox.
-- **Passkey** — use Face ID, Touch ID, or a hardware security key registered to your device.
-
-Full details on sign-in options and account security are in [Authentication](/docs/user/authentication).
+Sign in with your **U-M account** using the **Google** or **Okta** button on the
+sign-in page. There's no separate password to create — MiClassrooms uses U-M
+single sign-on, and your account is created automatically the first time you sign
+in. See [Signing In](/docs/user/authentication) for details.
 
 ## What you can do
 
-Once you're signed in, here is what's available:
+Once you're signed in:
 
 | Area | What it covers | Doc |
-|------|---------------|-----|
-| **Account** | Profile, avatar, email, linked accounts | [Accounts](/docs/user/accounts) |
-| **Workspaces** | Create or join a workspace, manage settings | [Workspaces](/docs/user/workspaces) |
-| **Invitations** | Accept or send team invitations | [Invitations](/docs/user/invitations) |
-| **Notifications** | In-app and email notification preferences | [Notifications](/docs/user/notifications) |
+|------|----------------|-----|
+| **Find a Room** | Search and filter classrooms by building, capacity, and features; open a room's full page | [Finding a Room](/docs/user/finding-a-room) |
+| **Buildings** | Browse buildings and the classrooms in each | [Finding a Room](/docs/user/finding-a-room) |
+| **Saved rooms** | Keep a personal shortlist of rooms to compare | [Finding a Room](/docs/user/finding-a-room) |
+| **Your account** | Profile, avatar, and notification preferences | [Accounts](/docs/user/accounts) |
 
-## Joining a workspace
-
-If a teammate sent you an invitation link, click it and you will be walked through
-sign-up or sign-in automatically, then dropped straight into the workspace.
-
-See [Invitations](/docs/user/invitations) for the full flow.
+Administrators and unit editors have additional tools for curating rooms and
+managing the directory — see the [Administrator guide](/docs/admin/overview).
 
 ## Need help?
 
-Browse the topics in the sidebar, or use the search bar at the top of this page to find
-what you are looking for.
+Browse the topics in the sidebar, or use the search bar at the top of this page
+to find what you're looking for.
