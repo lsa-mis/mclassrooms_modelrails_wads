@@ -1,51 +1,54 @@
 ---
-title: Authentication
-description: How to sign in and out — magic links, passkeys, and OAuth (Google / GitHub)
-keywords: sign in sign out magic link passkey passwordless oauth google github account recovery first sign-in
+title: Signing In
+description: How to sign in and out of MiClassrooms with U-M single sign-on (Google or Okta)
+keywords: sign in sign out sso single sign-on google okta weblogin u-m umich authentication account
 ---
 
-## Signing in
+# Signing In
 
-This app is **passwordless-first**: you sign in by entering your email address, and a sign-in link is emailed to you. Click the link and you're in — no password needed.
+MiClassrooms uses **U-M single sign-on**. You sign in with the same University
+of Michigan account you already use everywhere else — there is no separate
+MiClassrooms password to create or remember.
 
-### Magic link (email)
+## Sign in with U-M Google or Okta
 
-1. Go to the sign-in page and enter your email address.
-2. Check your inbox for a sign-in email (subject: "Sign in to …"). It arrives within a few seconds.
-3. Click the link in the email — it signs you in immediately.
+On the sign-in page you'll see two buttons:
 
-The link is single-use and expires after a short window. If it expires, return to the sign-in page and request a fresh one.
+- **Sign in with Google** — for U-M Google accounts on approved U-M domains.
+- **Sign in with Okta** — for U-M Okta / Weblogin accounts.
 
-For more on the emails this process sends, see [Email Flows](/docs/user/emails).
+Click either one, authenticate with U-M as you normally would, and you're in.
+The **first** time you sign in, MiClassrooms creates your account automatically
+from your U-M identity — there is no separate registration or email-verification
+step. Which button your unit uses is up to how access is provisioned; both sign
+you into the same MiClassrooms account.
 
-### Passkeys (fingerprint / Face ID / device PIN)
+## Who can sign in
 
-Passkeys let you sign in with your device's biometric or PIN instead of waiting for an email. After your first magic-link sign-in, a banner invites you to add a passkey — it only appears once. You can also add or manage passkeys any time at **Settings → Passkeys**.
+Access follows your U-M identity:
 
-Once a passkey is registered, clicking "Sign in with a passkey" on the sign-in page lets your browser or device authenticate you instantly — no email required.
+- **Google** sign-in is limited to approved U-M email domains.
+- **Okta** sign-in is gated by your U-M Okta organization membership.
 
-For setup details (Relying Party configuration, browser support, troubleshooting), see [Passkeys](/docs/developer/passkeys).
-
-### OAuth (Google or GitHub)
-
-If Google or GitHub sign-in is enabled, you can use the provider button on the sign-in page instead of email. On your first visit the provider creates an account for you. On subsequent visits it signs you back in.
-
-If you already have an account (by email) and want to link Google or GitHub to it: sign in first, then click the provider button — if the provider email matches your account, the provider is linked automatically. Manage all linked sign-in methods at **Settings → Connected Accounts**.
-
-### First sign-in (new accounts)
-
-When you sign in for the very first time with a new email address, the app prompts you to enter your name before continuing. No separate verification step is required — clicking the magic link proves ownership of the email address.
-
-After registration, a non-blocking banner suggests adding a passkey. You can dismiss it or add one immediately; either way it will not appear again.
-
-## Account recovery
-
-There is no separate "forgot password" reset flow. If you can't sign in, request a **magic link** from the sign-in page — the same flow used for normal sign-in. Click the link to get back in, then visit **Settings → Password** if you want to update your password.
+Most U-M faculty, staff, and students can sign in and browse the classroom
+directory as a **viewer**. Editing rooms, curating content, and administering the
+directory are additional abilities granted by a MiClassrooms administrator — see
+the [Administrator guide](/docs/admin/overview) for the roles.
 
 ## Signing out
 
-Use the user menu (top right) to sign out. Sessions are not shared across browsers or devices.
+Use the account menu (top right) to sign out. Sessions are not shared across
+browsers or devices.
+
+## Administrator break-glass sign-in
+
+MiClassrooms is single-sign-on first, so the email/magic-link and passkey options
+are hidden on the sign-in page in normal operation. A small number of
+administrator accounts also have a password-based path as a **break-glass**
+fallback — used, for example, when SSO is unavailable. If you're an administrator
+who received a password-set link, you can set a password under **Settings** and
+sign in by email; everyone else uses the Google or Okta buttons above.
 
 ---
 
-**Related:** [Email Flows](/docs/user/emails) · [Invitations](/docs/user/invitations) · [Passkeys (developer)](/docs/developer/passkeys)
+**Related:** [Welcome](/docs/user/welcome) · [Finding a Room](/docs/user/finding-a-room) · [Notifications](/docs/user/notifications)
