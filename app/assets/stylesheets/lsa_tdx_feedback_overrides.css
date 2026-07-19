@@ -1,0 +1,76 @@
+/*
+ * WCAG 2.2 AAA override for the adopted lsa_tdx_feedback modal. Loaded right
+ * after the gem's own stylesheet (see shared/_layout_head) so these rules win
+ * the cascade. Verified by spec/system/accessibility/feedback_modal_axe_spec.rb.
+ *
+ * Two gaps vs. the gem's Bootstrap-default styling, both upstreamable as CSS
+ * custom properties so any consumer can theme to AAA:
+ *   1. Contrast — #6c757d (4.68:1) muted text/secondary buttons and #0d6efd
+ *      (white text = 4.5:1) primary/trigger clear AA but not our 7:1 gate.
+ *   2. Target size — the gem renders its buttons at 43px tall and the close ×
+ *      at 32×32, below our 44px floor (WCAG 2.5.5, mc-target-size-44).
+ */
+.lsa-tdx-feedback-help-text,
+.lsa-tdx-feedback-btn-secondary,
+.lsa-tdx-feedback-cancel-btn,
+.lsa-tdx-feedback-close-btn {
+  color: #33383f; /* dark neutral, >7:1 on white */
+}
+
+.lsa-tdx-feedback-trigger-btn,
+.lsa-tdx-feedback-btn-primary,
+.lsa-tdx-feedback-submit-btn {
+  background-color: #1e3a8a; /* dark blue; white text >7:1 */
+  color: #ffffff;
+}
+
+/*
+ * Target size — WCAG 2.5.5 AAA (44px floor, our custom mc-target-size-44 check).
+ * The gem renders its buttons at 43px tall and the close × at 32×32.
+ */
+.lsa-tdx-feedback-btn {
+  min-height: 44px;
+}
+
+.lsa-tdx-feedback-close-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/*
+ * Theme isolation. The gem's modal is a fixed light surface (white content
+ * panel), but our app is theme-aware and its dark-theme form styles bleed onto
+ * the modal's generic input/select/textarea — light text on the white panel,
+ * which fails contrast in dark mode. Pin the modal's text + fields to a light-
+ * surface palette so it reads consistently and stays AAA in both themes,
+ * independent of the app theme. Specificity (.lsa-tdx-feedback-modal + element)
+ * beats the app's bare element rules. Upstream target: ship the modal as
+ * theme-aware CSS custom properties instead.
+ */
+.lsa-tdx-feedback-modal-content {
+  color: #1a1a1a;
+}
+
+.lsa-tdx-feedback-modal input,
+.lsa-tdx-feedback-modal select,
+.lsa-tdx-feedback-modal textarea {
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+
+.lsa-tdx-feedback-modal input::placeholder,
+.lsa-tdx-feedback-modal textarea::placeholder {
+  color: #4b5563; /* muted, still ≥7:1 on white */
+}
+
+/*
+ * Hide the gem's floating trigger button. We open the modal from our own
+ * affordances instead — the footer "Send feedback" control and the /contact
+ * CTA (both -> window.LsaTdxFeedback.showModal() via the feedback Stimulus
+ * controller) — because a fixed floating button collides with our cookie
+ * banner and isn't part of our design language. Upstream target: make the
+ * built-in trigger opt-out so consumers can supply their own.
+ */
+.lsa-tdx-feedback-trigger-btn {
+  display: none;
+}

@@ -15,3 +15,12 @@
      aria-live="polite"
      aria-atomic="true"
      class="sr-only"></div>
+
+<%# Feedback widget: the adopted lsa_tdx_feedback modal + trigger (our view
+    override), rendered site-wide so feedback — including "I can't sign in" — is
+    always reachable, and its submission routes through our unauth-friendly,
+    rate-limited controller. The gem's JS is a global-scope IIFE (not an
+    importmap module); it self-initializes on load and re-binds on turbo:load.
+    Served from :self, so it satisfies script-src without a nonce. %>
+<%= lsa_tdx_feedback_modal %>
+<%= javascript_include_tag "lsa_tdx_feedback", defer: true, "data-turbo-track": "reload" %>
