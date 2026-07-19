@@ -9,6 +9,15 @@
       subtitle: t("pages.contact.hero.subtitle") %>
 
 <%= render "shared/section",
+      title: t("pages.contact.feedback.title"),
+      bg: "bg-surface-raised" do %>
+  <div class="text-center max-w-2xl mx-auto space-y-4">
+    <p class="text-text-body"><%= t("pages.contact.feedback.description") %></p>
+    <%= link_to t("pages.contact.feedback.cta"), new_feedback_path, class: "btn-solid btn-primary" %>
+  </div>
+<% end %>
+
+<%= render "shared/section",
       title: t("pages.contact.methods.title"),
       bg: "bg-surface" do %>
   <div class="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">

@@ -105,6 +105,10 @@ en:
       hero:
         title: "Get in touch"
         subtitle: "Have questions, feedback, or need help? We're here for you."
+      feedback:
+        title: "Send feedback"
+        description: "Report a problem or suggest an improvement — it goes straight to the MiClassrooms team."
+        cta: "Open the feedback form"
       methods:
         title: "Contact methods"
         email:

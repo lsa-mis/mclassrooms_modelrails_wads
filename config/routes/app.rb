@@ -64,6 +64,12 @@ end
 # same page, not a separate route.
 resources :notes, only: [ :create, :update, :destroy ]
 
+# Feedback / support (MiClassrooms Phase 8 Task 1-2, D17): a signed-in feedback
+# form that files a TeamDynamix ticket via the lsa_tdx_feedback gem's TicketClient
+# (Feedback::Submit), with an email-to-admins fallback when TDX isn't configured.
+# Singular resource — one form, no persisted record to show/edit.
+resource :feedback, only: [ :new, :create ]
+
 # Admin bulk upload (MiClassrooms Phase 4 Task 11, Brief §5.3): a stateless
 # drop -> review -> commit flow with NO persisted model, so only :new/:create
 # are drawn — a deliberate SUBSET of the roadmap contract's bare
