@@ -64,13 +64,77 @@
 }
 
 /*
- * Hide the gem's floating trigger button. We open the modal from our own
- * affordances instead — the footer "Send feedback" control and the /contact
- * CTA (both -> window.LsaTdxFeedback.showModal() via the feedback Stimulus
- * controller) — because a fixed floating button collides with our cookie
- * banner and isn't part of our design language. Upstream target: make the
- * built-in trigger opt-out so consumers can supply their own.
+ * Dark theme. The app toggles `.dark` on <html> (theme_controller.js); mirror
+ * it so the modal matches dark mode instead of flashing a white panel. Dark
+ * surface + light text/fields, every pairing ≥7:1. The primary/submit + trigger
+ * buttons already carry their own dark-blue bg + white text (above), so they
+ * hold in both themes and aren't restyled here. Upstream target: ship the modal
+ * as theme-aware CSS custom properties rather than this fork-side `.dark` block.
+ */
+.dark .lsa-tdx-feedback-modal-content {
+  background: #1e232b;
+  color: #f1f5f9;
+}
+
+.dark .lsa-tdx-feedback-modal-header {
+  border-bottom-color: #333b45;
+}
+
+.dark .lsa-tdx-feedback-modal-header h2 {
+  color: #f1f5f9;
+}
+
+.dark .lsa-tdx-feedback-form-group label {
+  color: #e2e8f0;
+}
+
+.dark .lsa-tdx-feedback-close-btn {
+  color: #cbd5e1;
+}
+
+.dark .lsa-tdx-feedback-close-btn:hover {
+  background: #2a313b;
+  color: #f1f5f9;
+}
+
+.dark .lsa-tdx-feedback-help-text {
+  color: #c4ccd6;
+}
+
+.dark .lsa-tdx-feedback-modal input,
+.dark .lsa-tdx-feedback-modal select,
+.dark .lsa-tdx-feedback-modal textarea {
+  background-color: #12161c;
+  color: #f1f5f9;
+  border-color: #3a424d;
+}
+
+.dark .lsa-tdx-feedback-modal input::placeholder,
+.dark .lsa-tdx-feedback-modal textarea::placeholder {
+  color: #b3bcc9; /* muted light, ≥7:1 on the dark field */
+}
+
+.dark .lsa-tdx-feedback-btn-secondary {
+  background: #2a313b;
+  color: #f1f5f9;
+  border-color: #3a424d;
+}
+
+.dark .lsa-tdx-feedback-btn-secondary:hover {
+  background: #333b45;
+  color: #ffffff;
+}
+
+/*
+ * Both entry points are active: the gem's floating trigger AND our own controls
+ * (the footer "Send feedback" button + the /contact CTA, each ->
+ * window.LsaTdxFeedback.showModal() via the feedback Stimulus controller).
+ * The gem pins the trigger at bottom-right (bottom: 20px), which overlaps our
+ * fixed cookie-consent banner (biscuit, z-index 9999) — raise the trigger above
+ * it so it stays clickable while the banner is showing.
+ * TODO(product): a config to enable/disable the floating trigger — see the
+ * upstream PR (trigger opt-out); this fork will want the same switch.
  */
 .lsa-tdx-feedback-trigger-btn {
-  display: none;
+  z-index: 10000;
 }
