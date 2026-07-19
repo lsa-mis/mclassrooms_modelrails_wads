@@ -154,6 +154,13 @@ gem "view_component", "~> 4.0"
 # `rounded-md`). Loaded in production, so it MUST stay a top-level gem.
 gem "tailwind_merge"
 
+# LSA's TeamDynamix feedback gem (Phase 8). We use its BACKEND only —
+# LsaTdxFeedback::TicketClient (OAuth + TDX ticket creation) — and build our own
+# modelrails_ui/AAA feedback form, because the gem's self-contained modal predates
+# our WCAG 2.2 AAA + strict-CSP gates. Token caching runs through Rails.cache
+# (Solid Cache here; no Redis, despite the gem's vestigial redis gemspec dep).
+gem "lsa_tdx_feedback", "~> 1.0"
+
 # Dev-only scaffolding tool that generates app/components/ui/*. Not shipped to
 # production; the host app vendors and owns the generated files.
 group :development do
