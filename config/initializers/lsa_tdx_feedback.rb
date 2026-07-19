@@ -28,3 +28,19 @@ LsaTdxFeedback.configure do |config|
   config.default_responsible_group_id = ENV["TDX_RESPONSIBLE_GROUP_ID"]&.to_i
   config.default_service_id           = ENV["TDX_SERVICE_ID"]&.to_i
 end
+
+# The gem's engine includes ApplicationControllerExtensions into EVERY controller
+# (initializer 'lsa_tdx_feedback.action_controller' -> on_load :action_controller),
+# adding a global `before_action :set_lsa_tdx_feedback_data`. That method calls
+# `current_user` UNCONDITIONALLY (in a log line), which raises NameError on any
+# controller that doesn't define it — ViewComponent's preview controller (333
+# preview specs), Rails' health/ActiveStorage controllers, etc. Those ivars only
+# feed the gem's self-contained modal, which we don't render (we call
+# LsaTdxFeedback::TicketClient directly from our own form). The gem exposes no
+# opt-out, so neutralize the hook to a no-op — redefined in the module so every
+# already-including controller picks it up through the ancestor chain.
+Rails.application.config.to_prepare do
+  LsaTdxFeedback::ApplicationControllerExtensions.module_eval do
+    def set_lsa_tdx_feedback_data; end
+  end
+end
