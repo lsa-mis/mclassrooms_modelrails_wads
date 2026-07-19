@@ -1,0 +1,18 @@
+<h1><%= t("feedback.mailer.submission.heading") %></h1>
+
+<p><strong><%= t("feedback.mailer.submission.from") %>:</strong> <%= @email %></p>
+<% if @category.present? %>
+  <p><strong><%= t("feedback.mailer.submission.category") %>:</strong> <%= @category %></p>
+<% end %>
+
+<p><strong><%= t("feedback.mailer.submission.message") %>:</strong></p>
+<%= simple_format(@message) %>
+
+<% if @additional_info.present? %>
+  <p><strong><%= t("feedback.mailer.submission.additional_info") %>:</strong></p>
+  <%= simple_format(@additional_info) %>
+<% end %>
+
+<% if @url.present? %>
+  <p><strong><%= t("feedback.mailer.submission.page") %>:</strong> <%= @url %></p>
+<% end %>

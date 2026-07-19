@@ -1,0 +1,14 @@
+<%= t("feedback.mailer.submission.heading") %>
+
+<%= t("feedback.mailer.submission.from") %>: <%= @email %>
+<% if @category.present? %><%= t("feedback.mailer.submission.category") %>: <%= @category %>
+<% end %>
+<%= t("feedback.mailer.submission.message") %>:
+<%= @message %>
+<% if @additional_info.present? %>
+<%= t("feedback.mailer.submission.additional_info") %>:
+<%= @additional_info %>
+<% end %>
+<% if @url.present? %>
+<%= t("feedback.mailer.submission.page") %>: <%= @url %>
+<% end %>
