@@ -1,0 +1,150 @@
+/*
+ * WCAG 2.2 AAA override for the adopted lsa_tdx_feedback modal. Loaded right
+ * after the gem's own stylesheet (see shared/_layout_head) so these rules win
+ * the cascade. Verified by spec/system/accessibility/feedback_modal_axe_spec.rb.
+ *
+ * Two gaps vs. the gem's Bootstrap-default styling, both upstreamable as CSS
+ * custom properties so any consumer can theme to AAA:
+ *   1. Contrast — #6c757d (4.68:1) muted text/secondary buttons and #0d6efd
+ *      (white text = 4.5:1) primary/trigger clear AA but not our 7:1 gate.
+ *   2. Target size — the gem renders its buttons at 43px tall and the close ×
+ *      at 32×32, below our 44px floor (WCAG 2.5.5, mc-target-size-44).
+ */
+.lsa-tdx-feedback-help-text,
+.lsa-tdx-feedback-btn-secondary,
+.lsa-tdx-feedback-cancel-btn,
+.lsa-tdx-feedback-close-btn {
+  color: #33383f; /* dark neutral, >7:1 on white */
+}
+
+.lsa-tdx-feedback-trigger-btn,
+.lsa-tdx-feedback-btn-primary,
+.lsa-tdx-feedback-submit-btn {
+  background-color: #1e3a8a; /* dark blue; white text >7:1 */
+  color: #ffffff;
+}
+
+/*
+ * Target size — WCAG 2.5.5 AAA (44px floor, our custom mc-target-size-44 check).
+ * The gem renders its buttons at 43px tall and the close × at 32×32.
+ */
+.lsa-tdx-feedback-btn {
+  min-height: 44px;
+}
+
+.lsa-tdx-feedback-close-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/*
+ * The trigger clears the floor at desktop but NOT at mobile: the gem's
+ * `@media (max-width: 768px)` shrinks its padding to 10px 16px and hides the
+ * text label, collapsing it to 52x40. Pin it at both breakpoints.
+ */
+.lsa-tdx-feedback-trigger-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/*
+ * Theme isolation. The gem's modal is a fixed light surface (white content
+ * panel), but our app is theme-aware and its dark-theme form styles bleed onto
+ * the modal's generic input/select/textarea — light text on the white panel,
+ * which fails contrast in dark mode. Pin the modal's text + fields to a light-
+ * surface palette so it reads consistently and stays AAA in both themes,
+ * independent of the app theme. Specificity (.lsa-tdx-feedback-modal + element)
+ * beats the app's bare element rules. Upstream target: ship the modal as
+ * theme-aware CSS custom properties instead.
+ */
+.lsa-tdx-feedback-modal-content {
+  color: #1a1a1a;
+}
+
+.lsa-tdx-feedback-modal input,
+.lsa-tdx-feedback-modal select,
+.lsa-tdx-feedback-modal textarea {
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+
+.lsa-tdx-feedback-modal input::placeholder,
+.lsa-tdx-feedback-modal textarea::placeholder {
+  color: #4b5563; /* muted, still ≥7:1 on white */
+}
+
+/*
+ * Dark theme. The app toggles `.dark` on <html> (theme_controller.js); mirror
+ * it so the modal matches dark mode instead of flashing a white panel. Dark
+ * surface + light text/fields, every pairing ≥7:1. The primary/submit + trigger
+ * buttons already carry their own dark-blue bg + white text (above), so they
+ * hold in both themes and aren't restyled here. Upstream target: ship the modal
+ * as theme-aware CSS custom properties rather than this fork-side `.dark` block.
+ */
+.dark .lsa-tdx-feedback-modal-content {
+  background: #1e232b;
+  color: #f1f5f9;
+}
+
+.dark .lsa-tdx-feedback-modal-header {
+  border-bottom-color: #333b45;
+}
+
+.dark .lsa-tdx-feedback-modal-header h2 {
+  color: #f1f5f9;
+}
+
+.dark .lsa-tdx-feedback-form-group label {
+  color: #e2e8f0;
+}
+
+.dark .lsa-tdx-feedback-close-btn {
+  color: #cbd5e1;
+}
+
+.dark .lsa-tdx-feedback-close-btn:hover {
+  background: #2a313b;
+  color: #f1f5f9;
+}
+
+.dark .lsa-tdx-feedback-help-text {
+  color: #c4ccd6;
+}
+
+.dark .lsa-tdx-feedback-modal input,
+.dark .lsa-tdx-feedback-modal select,
+.dark .lsa-tdx-feedback-modal textarea {
+  background-color: #12161c;
+  color: #f1f5f9;
+  border-color: #3a424d;
+}
+
+.dark .lsa-tdx-feedback-modal input::placeholder,
+.dark .lsa-tdx-feedback-modal textarea::placeholder {
+  color: #b3bcc9; /* muted light, ≥7:1 on the dark field */
+}
+
+.dark .lsa-tdx-feedback-btn-secondary {
+  background: #2a313b;
+  color: #f1f5f9;
+  border-color: #3a424d;
+}
+
+.dark .lsa-tdx-feedback-btn-secondary:hover {
+  background: #333b45;
+  color: #ffffff;
+}
+
+/*
+ * Both entry points are active: the gem's floating trigger AND our own controls
+ * (the footer "Send feedback" button + the /contact CTA, each ->
+ * window.LsaTdxFeedback.showModal() via the feedback Stimulus controller).
+ * The gem pins the trigger at bottom-right (bottom: 20px), which overlaps our
+ * fixed cookie-consent banner (biscuit, z-index 9999) — raise the trigger above
+ * it so it stays clickable while the banner is showing.
+ * TODO(product): a config to enable/disable the floating trigger — see the
+ * upstream PR (trigger opt-out); this fork will want the same switch.
+ */
+.lsa-tdx-feedback-trigger-btn {
+  z-index: 10000;
+}

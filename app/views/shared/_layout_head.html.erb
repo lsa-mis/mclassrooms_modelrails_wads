@@ -19,6 +19,12 @@
     <% end %>
     <%= stylesheet_link_tag "biscuit/biscuit", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%# Adopted lsa_tdx_feedback modal (rendered site-wide in the layout tail).
+        The gem's self-contained stylesheet, then our override which retunes its
+        Bootstrap colors to 7:1 and its touch targets to 44px so it clears the
+        WCAG 2.2 AAA gate — loaded second so those rules win the cascade. %>
+    <%= stylesheet_link_tag "lsa_tdx_feedback", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "lsa_tdx_feedback_overrides", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
     <%# Per-layout head injection (e.g. the settings layout's turbo_refreshes_with). %>
     <%= yield :head %>
