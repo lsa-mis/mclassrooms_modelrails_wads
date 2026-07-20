@@ -136,9 +136,9 @@
 }
 
 /*
- * Both entry points are active: the gem's floating trigger AND our own controls
- * (the footer "Send feedback" button + the /contact CTA, each ->
- * window.LsaTdxFeedback.showModal() via the feedback Stimulus controller).
+ * Both entry points are active: the gem's floating trigger AND the /contact CTA
+ * (which calls window.LsaTdxFeedback.showModal() via the feedback Stimulus
+ * controller).
  * The gem pins the trigger at bottom-right (bottom: 20px), which overlaps our
  * fixed cookie-consent banner (biscuit, z-index 9999) — raise the trigger above
  * it so it stays clickable while the banner is showing.
