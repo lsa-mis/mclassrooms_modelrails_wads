@@ -12,6 +12,13 @@ RSpec.describe Feedback::Submit do
   end
 
   describe "email fallback (TDX not configured)" do
+    # Force the unconfigured state so this path is deterministic regardless of
+    # ambient env: a developer's local .env TDX_* creds otherwise leak into the
+    # test env via dotenv and make configuration.valid? true, routing these
+    # cases down the TDX path instead of the fallback. (The "TDX path" block
+    # below conversely stubs valid? true.)
+    before { allow(LsaTdxFeedback.configuration).to receive(:valid?).and_return(false) }
+
     it "emails the workspace admins and returns success via :email" do
       expect {
         result = described_class.call(message: "The panorama won't load", email: "u@umich.edu")
