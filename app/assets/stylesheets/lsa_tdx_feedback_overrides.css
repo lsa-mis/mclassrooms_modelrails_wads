@@ -38,6 +38,16 @@
 }
 
 /*
+ * The trigger clears the floor at desktop but NOT at mobile: the gem's
+ * `@media (max-width: 768px)` shrinks its padding to 10px 16px and hides the
+ * text label, collapsing it to 52x40. Pin it at both breakpoints.
+ */
+.lsa-tdx-feedback-trigger-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/*
  * Theme isolation. The gem's modal is a fixed light surface (white content
  * panel), but our app is theme-aware and its dark-theme form styles bleed onto
  * the modal's generic input/select/textarea — light text on the white panel,
