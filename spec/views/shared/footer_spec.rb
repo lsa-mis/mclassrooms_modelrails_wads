@@ -61,6 +61,13 @@ RSpec.describe "shared/_footer", type: :view do
       expect(rendered).to have_css("#{selector} a", text: I18n.t("footer.contact"))
     end
 
+    it "contains a Send feedback button wired to feedback#open" do
+      expect(rendered).to have_css(
+        "#{selector} button[data-action*='click->feedback#open']",
+        text: I18n.t("footer.feedback")
+      )
+    end
+
     it "contains a Cookie settings button wired to footer#reopenCookies" do
       expect(rendered).to have_css(
         "#{selector} button[data-action*='click->footer#reopenCookies']",
@@ -79,9 +86,10 @@ RSpec.describe "shared/_footer", type: :view do
     end
 
     it "meets AAA target-size by applying --form-input-height to interactive elements" do
-      # Reads --form-input-height token (Design System Primitives v2 sweep)
+      # Reads --form-input-height token (Design System Primitives v2 sweep).
+      # Links: Privacy + Contact. Buttons: Send feedback + Cookie settings.
       expect(rendered).to have_css("#{selector} a.min-h-\\[var\\(--form-input-height\\)\\]", count: 2)
-      expect(rendered).to have_css("#{selector} button.min-h-\\[var\\(--form-input-height\\)\\]", count: 1)
+      expect(rendered).to have_css("#{selector} button.min-h-\\[var\\(--form-input-height\\)\\]", count: 2)
     end
   end
 end
