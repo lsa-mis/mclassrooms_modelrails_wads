@@ -60,6 +60,17 @@
                 class: "inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
                         hover:text-interactive-hover
                         focus-ring rounded" %>
+          <%# Opens the site-wide feedback modal (adopted lsa_tdx_feedback). A
+              footer control, mirroring Cookie settings, rather than the gem's
+              floating button — which would collide with the fixed cookie banner. %>
+          <button type="button"
+                  data-controller="feedback"
+                  data-action="click->feedback#open"
+                  class="inline-flex items-center min-h-[var(--form-input-height)] px-2 text-sm text-text-muted
+                         hover:text-interactive-hover
+                         focus-ring rounded">
+            <%= t("footer.feedback") %>
+          </button>
           <button type="button"
                   data-action="click->footer#reopenCookies"
                   aria-label="<%= t("footer.cookie_settings") %>"

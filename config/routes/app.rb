@@ -64,11 +64,15 @@ end
 # same page, not a separate route.
 resources :notes, only: [ :create, :update, :destroy ]
 
-# Feedback / support (MiClassrooms Phase 8 Task 1-2, D17): a signed-in feedback
-# form that files a TeamDynamix ticket via the lsa_tdx_feedback gem's TicketClient
-# (Feedback::Submit), with an email-to-admins fallback when TDX isn't configured.
-# Singular resource — one form, no persisted record to show/edit.
-resource :feedback, only: [ :new, :create ]
+# Feedback / support (MiClassrooms Phase 8, D17): we adopt the lsa_tdx_feedback
+# gem's self-contained modal (rendered site-wide in the app layout, themed to
+# our WCAG 2.2 AAA gate). Its JS POSTs to /lsa_tdx_feedback/feedback, so the
+# engine is mounted here; that route resolves to our app/controllers override
+# (LsaTdxFeedback::FeedbackController) which allows UNAUTHENTICATED submissions
+# (someone who can't sign in must still be able to report it), rate-limits by
+# IP, and routes through Feedback::Submit (TDX ticket, or email-to-admins
+# fallback when TDX isn't configured). The modal is the UI — no bespoke resource.
+mount LsaTdxFeedback::Engine => "/lsa_tdx_feedback"
 
 # Admin bulk upload (MiClassrooms Phase 4 Task 11, Brief §5.3): a stateless
 # drop -> review -> commit flow with NO persisted model, so only :new/:create

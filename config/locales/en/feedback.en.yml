@@ -2,7 +2,6 @@ en:
   feedback:
     new:
       title: "Send feedback"
-      intro: "Found a problem, or have a suggestion? Let us know — your message goes straight to our team."
     form:
       category_label: "Category"
       category_prompt: "Select a category"
@@ -15,11 +14,21 @@ en:
       message_label: "Your feedback"
       message_placeholder: "Describe what you ran into, or what you'd like to see."
       email_label: "Your email"
+      email_placeholder: "you@example.com"
       email_help: "We'll use this only to follow up on your feedback."
+      additional_info_label: "Additional information"
+      additional_info_placeholder: "Any extra context that might help — steps to reproduce, the room or building, etc."
+      cancel: "Cancel"
       submit: "Send feedback"
+      sending: "Sending…"
+      close: "Close"
+    trigger:
+      label: "Feedback"
+      title: "Send feedback"
     flash:
       submitted: "Thanks — your feedback has been sent."
       retry: "Sorry, something went wrong sending your feedback. Please try again."
+      rate_limited: "You've sent several messages just now. Please wait a moment and try again."
     errors:
       blank_message: "Please enter your feedback before sending."
     mailer:
