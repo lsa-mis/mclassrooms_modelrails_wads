@@ -136,15 +136,27 @@
 }
 
 /*
- * Both entry points are active: the gem's floating trigger AND the /contact CTA
- * (which calls window.LsaTdxFeedback.showModal() via the feedback Stimulus
- * controller).
- * The gem pins the trigger at bottom-right (bottom: 20px), which overlaps our
- * fixed cookie-consent banner (biscuit, z-index 9999) — raise the trigger above
- * it so it stays clickable while the banner is showing.
- * TODO(product): a config to enable/disable the floating trigger — see the
- * upstream PR (trigger opt-out); this fork will want the same switch.
+ * Stacking. The gem pins its trigger at bottom-right (position: fixed,
+ * bottom: 20px) with z-index: 9998, where it competes with our other bottom-
+ * anchored chrome: toast cards (--toast-z: 100, bottom-center, `100vw - 2rem`
+ * wide — so at phone width they span nearly the full viewport) and the
+ * cookie-consent banner (biscuit, z-index 9999).
+ *
+ * At the gem's 9998 the trigger paints OVER toasts (100) — a persistent, low-
+ * priority affordance covering transient, important UI. Measured at 375px, it
+ * covered a warning/error toast's right edge (trigger [308,608→360,652] vs card
+ * [16,581→359,651]), exactly where the toast's dismiss button sits. Drop the
+ * trigger just below the toast layer so toasts (and the banner) win — the
+ * correct priority. Tied to the token so it tracks any change to --toast-z.
+ *
+ * Trade-off: while a toast or the cookie banner overlaps it, the covered part of
+ * the trigger isn't clickable. /contact still opens the modal, and the trigger
+ * is fully usable otherwise.
+ *
+ * The structural fix belongs upstream: the gem should let a host opt out of the
+ * built-in trigger (and/or position it) rather than every consumer fighting a
+ * fixed corner. Tracked as the trigger opt-out contribution.
  */
 .lsa-tdx-feedback-trigger-btn {
-  z-index: 10000;
+  z-index: calc(var(--toast-z, 100) - 1);
 }
