@@ -30,13 +30,13 @@ LsaTdxFeedback.configure do |config|
   config.default_service_id           = ENV["TDX_SERVICE_ID"]&.to_i
 end
 
-# Whether to render the gem's built-in floating trigger button site-wide. We
-# ALSO open the modal from our own controls (the footer "Send feedback" button
-# + the /contact CTA), so this toggles only the *extra* floating button —
-# default on; set FEEDBACK_FLOATING_TRIGGER=false to rely on our controls alone
-# (e.g. to avoid the fixed button overlapping other bottom-fixed chrome like the
-# cookie banner). Read via FeedbackHelper#feedback_floating_trigger?. Fork mirror
-# of the gem's upstream trigger opt-out.
+# Whether to render the gem's built-in floating trigger button site-wide. The
+# /contact CTA opens the modal regardless, so this governs only the always-on
+# floating button — default on; set FEEDBACK_FLOATING_TRIGGER=false to rely on
+# /contact alone (e.g. to avoid the fixed button overlapping other bottom-fixed
+# chrome like the cookie banner). Read via
+# FeedbackHelper#feedback_floating_trigger?. Fork mirror of the gem's upstream
+# trigger opt-out.
 Rails.application.config.x.feedback_floating_trigger =
   ENV.fetch("FEEDBACK_FLOATING_TRIGGER", "true") != "false"
 
