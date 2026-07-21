@@ -122,7 +122,7 @@ Usage example:
 
 ## Cookie Consent (GDPR)
 
-The app includes a GDPR cookie consent banner via [biscuit-rails](https://github.com/garethfr/biscuit-rails). It renders at the bottom of every page and manages consent across 4 categories:
+The app includes a GDPR cookie consent banner via [biscuit-rails](https://github.com/garethfr/biscuit-rails), overridden at `app/views/biscuit/banner/_banner.html.erb` to fix three gaps in the gem's defaults (#500): **Reject non-essential** is the emphasized default action on first visit (not Accept — rejecting must be at least as easy as accepting), the banner is server-rendered `hidden` when consent already exists so it never flashes, and reopening the preferences panel (footer link) shows the visitor's actual saved choices instead of stale checkboxes. It renders at the bottom of every page and manages consent across 4 categories:
 
 | Category | Required | Purpose |
 |----------|:--------:|---------|

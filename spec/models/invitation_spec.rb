@@ -47,6 +47,29 @@ RSpec.describe Invitation, type: :model do
       create(:invitation, :expired)
       expect(Invitation.pending).to be_empty
     end
+
+    # Regression for #454: the members-index email search must treat LIKE
+    # wildcards (%, _) in the query as literal characters, matching the
+    # sibling Membership.search which already escapes via sanitize_sql_like.
+    # `_` is a valid email local-part char AND a single-char LIKE wildcard,
+    # so an unescaped query "a_b" would also match "axb@…".
+    describe ".for_members_index search escaping" do
+      let(:workspace) { create(:workspace) }
+
+      it "treats LIKE wildcards in the query as literal characters" do
+        create(:invitation, invitable: workspace, email: "a_b@example.com")
+        create(:invitation, invitable: workspace, email: "axb@example.com")
+
+        # pluck asserts on the WHERE clause directly (the point of this spec)
+        # without instantiating records — the scope eager-loads :role for the
+        # members index, which Bullet would flag as unused in isolation here.
+        emails = workspace.invitations
+                          .for_members_index(q: "a_b", role: nil, status: nil)
+                          .pluck(:email)
+
+        expect(emails).to contain_exactly("a_b@example.com")
+      end
+    end
   end
 
   describe "Invitation::NotAcceptable" do

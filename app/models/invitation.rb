@@ -42,7 +42,12 @@ class Invitation < ApplicationRecord
     return none if %w[active deactivated].include?(status)
 
     scope = pending.includes(:role)
-    scope = scope.where("LOWER(email) LIKE ?", "%#{q.to_s.downcase}%") if q.present?
+    # Escape LIKE wildcards (%, _) so they match literally, mirroring
+    # Membership.search — otherwise a query like "a_b" matches "axb" too.
+    if q.present?
+      sanitized = sanitize_sql_like(q.to_s.downcase)
+      scope = scope.where("LOWER(email) LIKE :q ESCAPE '\\'", q: "%#{sanitized}%")
+    end
     scope = scope.joins(:role).where(roles: { slug: role }) if role.present?
     scope
   }

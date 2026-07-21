@@ -106,6 +106,19 @@
       <% end %>
 
       <div class="biscuit-preferences__footer">
+        <%# Manage mode only (consent already given): let the user dismiss the
+            reopened panel without re-deciding. NOT rendered on first visit, so
+            an initial consent choice still can't be dodged. Wired to the small
+            biscuit-cancel controller (the gem exposes no public close action —
+            reopen()'s inverse #hideBanner/#showManageLink are private). %>
+        <% if consent.given? %>
+          <button type="button"
+                  class="biscuit-btn biscuit-btn--secondary"
+                  data-controller="biscuit-cancel"
+                  data-action="click->biscuit-cancel#dismiss">
+            <%= t("cookie_consent.cancel") %>
+          </button>
+        <% end %>
         <button type="button"
                 class="biscuit-btn biscuit-btn--primary"
                 data-action="click->biscuit#savePreferences">

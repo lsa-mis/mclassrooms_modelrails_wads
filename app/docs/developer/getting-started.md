@@ -9,12 +9,12 @@ keywords: setup install mise ruby bundle rspec tests oauth credentials developme
 ## Prerequisites
 
 - [mise](https://mise.jdx.dev/) for runtime version management (see `.tool-versions`)
-- Chromium (installed by Playwright for system tests)
+- Chromium (managed automatically by Cuprite/Ferrum for system tests)
 
 ## Setup
 
 ```bash
-mise install        # Install Ruby and Node from .tool-versions
+mise install        # Install Ruby from .tool-versions
 bin/setup           # Install deps, prepare database, start server
 ```
 
@@ -31,7 +31,7 @@ bin/dev             # Start development server
 
 ### Ruby version as single source of truth
 
-`.tool-versions` is the canonical pin for Ruby (and Node). It feeds three downstream consumers automatically:
+`.tool-versions` is the canonical pin for Ruby. It feeds three downstream consumers automatically:
 
 | Consumer | Mechanism |
 |---|---|
@@ -45,7 +45,7 @@ Bump Ruby in `.tool-versions`, run `bundle install`, and the lockfile + producti
 
 This template ships a Dev Container configuration so you can develop in an isolated environment that matches production runtime closely. Open the project in VS Code and accept the "Reopen in Container" prompt, or run **Dev Containers: Rebuild Container** from the command palette.
 
-The container is built on `ruby:4.0.4-slim` — the **same base image as the production `Dockerfile`** (Option C: shared base, separate files). That means libvips, glibc, SQLite, and OpenSSL versions all match prod. Bugs that depend on those library versions surface in dev rather than only in production.
+The container is built on `ruby:4.0.6-slim` — the **same base image as the production `Dockerfile`** (Option C: shared base, separate files). That means libvips, glibc, SQLite, and OpenSSL versions all match prod. Bugs that depend on those library versions surface in dev rather than only in production.
 
 Capabilities baked in:
 
@@ -154,7 +154,7 @@ Runs the same checks plus additional linting:
 | `scan_js` | importmap audit (JS dependency CVEs) |
 | `lint` | RuboCop with GitHub annotations |
 | `lint_docs` | markdownlint + herb ERB linter |
-| `test` | Full RSpec with Playwright, axe accessibility, screenshot artifacts on failure |
+| `test` | Full RSpec with Cuprite, axe accessibility, screenshot artifacts on failure |
 | `docker_build` | Verifies the production `Dockerfile` builds successfully on every PR (catches build-time regressions that structural specs cannot). Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/developer/deployment). |
 
 ### Development Workflow
