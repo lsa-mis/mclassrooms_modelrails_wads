@@ -339,8 +339,9 @@ real-crypto harnesses (no mocking the gem):
 - **Request specs** use the gem's `WebAuthn::FakeClient` (real attestation /
   assertion crypto). See `spec/lib/passkeys/*_spec.rb` and
   `spec/requests/passkeys/*_spec.rb`.
-- **System specs** use a Playwright **CDP virtual authenticator**, set up by
-  `spec/support/webauthn_virtual_authenticator.rb` (`page.context.new_cdp_session`
-  → `WebAuthn.enable` + `WebAuthn.addVirtualAuthenticator`). The example lives in
+- **System specs** use a Cuprite (Ferrum) **CDP virtual authenticator**, set up
+  by `spec/support/webauthn_virtual_authenticator.rb` (`page.driver.browser`
+  → raw CDP via `browser.page.command` → `WebAuthn.enable` +
+  `WebAuthn.addVirtualAuthenticator`). The example lives in
   `spec/system/passkey_auth_spec.rb`. Note: the virtual authenticator requires
   `Capybara.app_host` to match the configured RP origin.

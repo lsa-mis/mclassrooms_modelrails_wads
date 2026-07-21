@@ -7,12 +7,7 @@
     // moby:false installs Docker CE (Docker's apt repo) instead of Moby, which
     // ships no packages for the base image's Debian 13 "trixie" — with the
     // default (moby:true) the feature fails to install and the build dies.
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { "moby": false },
-    // Node + npm for dev tooling: bin/setup runs `npm ci` (pinned linters —
-    // markdownlint, herb-lint) and setup.sh runs `npx playwright`. The ruby:slim
-    // base ships no Node and prod doesn't need it (importmap + standalone
-    // Tailwind), so Node is dev-container-only. Version tracks .tool-versions.
-    "ghcr.io/devcontainers/features/node:1": { "version": "24.4.1" }
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { "moby": false }
   },
   "mounts": [
     "source=modelrails-bundle-cache,target=/usr/local/bundle,type=volume"
@@ -33,7 +28,6 @@
       "extensions": [
         "Shopify.ruby-lsp",
         "bradlc.vscode-tailwindcss",
-        "dbaeumer.vscode-eslint",
         "qwtel.sqlite-viewer"
       ],
       "settings": {
