@@ -52,14 +52,17 @@ if ! bin/rails runner 'exit(SolidQueue::Process.connection.table_exists?("solid_
   bin/rails db:reset:queue
 fi
 
-echo "=== Installing Playwright browser (chromium) ==="
-# Runs AFTER bin/setup's `npm ci`, so the pinned @playwright/test (and its
-# `playwright` CLI) is already in node_modules. --no-install forces npx to use
-# that local binary: it never fetches a package, so it can't hang on an
-# interactive "Ok to proceed?" prompt in a non-interactive postCreate, and it
-# installs the browser revision matching the pinned Playwright. `playwright
-# install` is itself idempotent (skips already-downloaded browsers).
-npx --no-install playwright install --with-deps chromium
+echo "=== Installing Chromium for Cuprite system specs ==="
+# System specs drive real headless Chrome via Cuprite/ferrum (pure-Ruby CDP —
+# no Node; see spec/support/capybara.rb). CI's ubuntu-latest runners ship Chrome
+# pre-installed, but the ruby:slim base does not, so install Debian's chromium
+# here (from trixie-security/main) — it lands at /usr/bin/chromium, the name
+# ferrum auto-detects on Linux. --no-install-recommends skips ~340 MB of font/
+# codec recommends; fonts-liberation is added back for basic text rendering.
+# apt-get install is idempotent (no-op once chromium is present).
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends chromium fonts-liberation
+sudo rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 if [ "${CODESPACES:-}" = "true" ]; then
   cat <<'NEXT_STEPS'

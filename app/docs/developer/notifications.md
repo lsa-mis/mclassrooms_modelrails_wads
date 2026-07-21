@@ -243,7 +243,7 @@ Validates a partial-change hash (the shape the preferences form posts), coerces 
 | Controller | Routes | Notes |
 |---|---|---|
 | `Settings::NotificationsController` | `index`, `update` (read-state toggle), `destroy`, `open` (mark read + redirect), `mark_all_read`, `destroy_all_read` | Pundit-gated; calls `broadcast_bell_refresh` on every read-state mutation |
-| `Settings::NotificationPreferencesController` | `edit`, `update`, `dismiss_banner` | Delegates validation to `NotificationPreferences#merge`; rescues `InvalidChange` → 422 |
+| `Settings::NotificationPreferencesController` | `edit`, `update` | Delegates validation to `NotificationPreferences#merge`; rescues `InvalidChange` → 422 |
 | `Settings::Preferences::TimezonesController` | `update` | Beacon-path returns 204; explicit-user path (`override=true`) returns Turbo Stream that closes the drawer + announces "Timezone updated" |
 
 ## Pundit policies
@@ -251,7 +251,7 @@ Validates a partial-change hash (the shape the preferences form posts), coerces 
 | Policy | Notes |
 |---|---|
 | `NotificationPolicy` | Per-record policy gates `update?`/`destroy?`/`open?` by `record.recipient_id == user.id`. `Scope` filters all of `Noticed::Notification` to the current user |
-| `Settings::NotificationPreferencesPolicy` | Trivial — `edit?`/`update?`/`dismiss_banner?` all return `user.present?` |
+| `Settings::NotificationPreferencesPolicy` | Trivial — `edit?`/`update?` both return `user.present?` |
 | `Settings::ThemePreferencesPolicy` | Same shape |
 | `Settings::TimezonePolicy` | Same shape |
 

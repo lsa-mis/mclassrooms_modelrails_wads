@@ -89,10 +89,6 @@ en:
           sunday: "Sunday"
         security_reassurance: "Security alerts will always come through."
         empty_days_warning: "No days selected — quiet hours have no effect. Pick at least one day, or disable quiet hours."
-      migration_banner:
-        message: "We simplified notifications — take a moment to review your preferences."
-        dismiss: "Dismiss"
-        dismiss_aria: "Dismiss the notifications-redesign banner"
       advanced:
         heading: "Advanced"
         retention_label: "Auto-delete read notifications after"

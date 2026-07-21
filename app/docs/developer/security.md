@@ -36,7 +36,7 @@ Configured in `config/initializers/security_headers.rb`:
 - `X-Content-Type-Options: nosniff` — prevents MIME sniffing
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy` — disables camera, microphone, geolocation by default
-- Content Security Policy via `content_security_policy.rb` (enforced in development and production, report-only in test for Playwright compatibility)
+- Content Security Policy via `content_security_policy.rb` (enforced in development, production, and test — see #499/#120 in `CHANGELOG.md` for why test enforcement matters)
 
 ### Password Security
 
