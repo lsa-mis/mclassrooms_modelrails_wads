@@ -29,23 +29,6 @@ module Settings
       head :unprocessable_entity
     end
 
-    # Idempotent dismiss for the migration-shift banner. First call stamps
-    # `dismissed_notifications_redesign_banner_at = Time.current`; subsequent
-    # calls are no-ops so the original dismissal time is preserved (matters
-    # for any analytics that watch first-dismissal latency).
-    def dismiss_banner
-      authorize @preferences, policy_class: Settings::NotificationPreferencesPolicy
-
-      if @preferences.dismissed_notifications_redesign_banner_at.nil?
-        @preferences.update!(dismissed_notifications_redesign_banner_at: Time.current)
-      end
-
-      respond_to do |format|
-        format.turbo_stream
-        format.html { redirect_to edit_settings_notification_preferences_path }
-      end
-    end
-
     private
 
     def set_preferences

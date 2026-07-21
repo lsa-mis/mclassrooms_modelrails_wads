@@ -64,6 +64,14 @@ RSpec.describe "Footer: Cookie settings reopens Biscuit banner", type: :system d
     checkboxes.each { |checkbox| expect(checkbox).to be_checked }
   end
 
+  it "does not offer Cancel on first visit (an explicit consent choice is required)" do
+    visit root_path
+    click_button I18n.t("biscuit.banner.manage") # open the preferences panel
+
+    expect(page).to have_button(I18n.t("biscuit.banner.save"))
+    expect(page).not_to have_button(I18n.t("cookie_consent.cancel"))
+  end
+
   describe "manage-mode banner (reopened after a fresh page load with consent already given)" do
     before do
       visit root_path # establish the domain before setting a cookie on it
@@ -93,6 +101,28 @@ RSpec.describe "Footer: Cookie settings reopens Biscuit banner", type: :system d
         be(true),
         axe_violations_in_both_themes(include: scope).join("\n")
       )
+    end
+
+    it "offers Cancel: dismisses without changing consent, discards toggles, and closes on Escape" do
+      within("footer") { click_button I18n.t("footer.cookie_settings") }
+      expect(page).to have_css("[data-biscuit-target='banner']:not([hidden])", wait: 2)
+      expect(page).to have_button(I18n.t("cookie_consent.cancel"))
+      expect(page).to have_css("input[data-category='analytics']:checked", wait: 2)
+
+      # Toggle analytics off (unsaved), then Cancel — the banner hides and no
+      # consent POST fires.
+      find("input[data-category='analytics']").click
+      click_button I18n.t("cookie_consent.cancel")
+      expect(page).to have_css("[data-biscuit-target='banner'][hidden]", visible: :hidden, wait: 2)
+
+      # Consent unchanged: reopen and analytics is still checked — the toggle
+      # was discarded, not saved.
+      within("footer") { click_button I18n.t("footer.cookie_settings") }
+      expect(page).to have_css("input[data-category='analytics']:checked", wait: 2)
+
+      # Escape dismisses the reopened panel too.
+      find("body").send_keys(:escape)
+      expect(page).to have_css("[data-biscuit-target='banner'][hidden]", visible: :hidden, wait: 2)
     end
   end
 end

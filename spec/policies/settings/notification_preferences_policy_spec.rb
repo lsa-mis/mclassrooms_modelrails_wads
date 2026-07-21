@@ -12,10 +12,6 @@ RSpec.describe Settings::NotificationPreferencesPolicy do
     it "allows update" do
       expect(described_class.new(user, preferences).update?).to be true
     end
-
-    it "allows dismiss_banner" do
-      expect(described_class.new(user, preferences).dismiss_banner?).to be true
-    end
   end
 
   describe "for a nil user (unauthenticated)" do
@@ -28,10 +24,6 @@ RSpec.describe Settings::NotificationPreferencesPolicy do
 
     it "denies update" do
       expect(described_class.new(user, preferences).update?).to be false
-    end
-
-    it "denies dismiss_banner" do
-      expect(described_class.new(user, preferences).dismiss_banner?).to be false
     end
   end
 end

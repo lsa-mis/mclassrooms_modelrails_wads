@@ -1,7 +1,7 @@
 ---
 title: Accessibility
 description: How this template enforces WCAG 2.2 Level AAA — the axe-core gate, the helpers, and the tracked exclusions
-keywords: accessibility wcag aaa axe-core contrast focus target size playwright system specs dark mode
+keywords: accessibility wcag aaa axe-core contrast focus target size cuprite system specs dark mode
 ---
 
 # Accessibility
@@ -23,7 +23,7 @@ These are the headline rules the automated gate checks, alongside the rest of th
 
 ## How the Gate Runs
 
-Accessibility is audited with [axe-core](https://github.com/dequelabs/axe-core), injected into the page through Playwright during system specs. The audit runs the **cumulative** WCAG tag set — 2.0 + 2.1 + 2.2 at A/AA/AAA (`PlaywrightAccessibility::AXE_TAG_SET`; the versions are separate axe tags, and listing only the 2.0-era ones silently skips every 2.1/2.2 rule). axe's `target-size` rule (24px, 2.5.8) is explicitly enabled — it ships disabled.
+Accessibility is audited with [axe-core](https://github.com/dequelabs/axe-core), injected into the page through Cuprite (Ferrum/CDP) during system specs. The audit runs the **cumulative** WCAG tag set — 2.0 + 2.1 + 2.2 at A/AA/AAA (`PlaywrightAccessibility::AXE_TAG_SET` — the helper module kept its name across the Playwright→Cuprite migration to avoid churn across every spec that includes it; the versions are separate axe tags, and listing only the 2.0-era ones silently skips every 2.1/2.2 rule). axe's `target-size` rule (24px, 2.5.8) is explicitly enabled — it ships disabled.
 
 In CI, this audit runs automatically after *every* system spec — there is no opt-in to forget. The hook lives in `spec/support/playwright_accessibility.rb` and uses `DEFAULT_AXE_OPTIONS`. If any rule fails, the spec fails and the build goes red. Locally the audit is opt-in so the suite stays fast — call the helpers on the pages you want checked.
 

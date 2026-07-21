@@ -9,11 +9,20 @@ All notable changes to ModelRails are documented here, organized by phase.
 - Parallel test suite — `bin/parallel-rspec` runs RSpec across all cores with example-count and merged-coverage integrity gates; CI and the Lefthook pre-push gate use it, cutting CI's test job from ~14 to ~8.5 minutes (#485; further wins tracked in #486–#488).
 - Runtime-balanced parallel test split — spec files split across workers by recorded per-file runtime instead of file size, evening out the slowest worker; the timing log (`tmp/parallel_runtime_rspec.log`) is written each run and cached in CI, and falls back to file-size splitting when absent (#488).
 - Add opt-in encrypted form-draft recovery on invitation and project forms.
+- Cancel superseded CI runs on new pushes to the same branch/PR (#489).
+
+### Changed
+
+- Replaced Playwright/Node with Cuprite (pure-Ruby CDP) for system specs, and swapped npm-based linters for Ruby gems (`erb_lint`, `mdl`) — the template no longer requires Node at all (#497).
+- Bumped Ruby to 4.0.6 (#501).
 
 ### Fixed
 
+- Devcontainer installs Chromium for Cuprite system specs — #502 removed the old `npx playwright install` browser step without a replacement, leaving the `ruby:slim`-based devcontainer with no browser to drive, so every system spec failed there; ferrum now auto-detects the apt-installed `chromium`. A template-invariant spec guards that a browser is installed and that Node stays out of `.devcontainer/`.
 - Align `@playwright/test` to 1.61.1 (chromium-1228) to match the `playwright-ruby-client` gem's compatible version — fixes an `add_init_script` protocol skew that flaked the form-draft system specs.
 - Toast containers are named region landmarks — clears the app-wide aria-prohibited-attr axe violation and keeps toast content inside a landmark.
+- **Security:** CSP nonce generator returned blank on a visitor's first request (no session yet), emitting an invalid `'nonce-'` source that blocked every inline script — Stimulus never booted for first-time visitors (#499).
+- Cookie-consent banner (biscuit-rails): reject is now the emphasized default action (not accept), the banner no longer flashes visible before JS hides it, and reopening the preferences panel shows the visitor's actual saved choices instead of stale checkboxes (#500).
 
 ## v2.0.0 — Passwordless Auth, Workspace Lifecycle & Navigation IA (2026-07-06)
 

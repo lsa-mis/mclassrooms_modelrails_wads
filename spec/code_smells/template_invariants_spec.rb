@@ -214,6 +214,15 @@ RSpec.describe "Template invariants" do
         "ships Ruby directly. Found: #{mise_feature_keys.inspect}"
     end
 
+    it "does not install Node (Cuprite drives Chrome from Ruby; nothing in the template needs Node)" do
+      node_feature_keys = (devcontainer["features"] || {}).keys.grep(/node/)
+
+      expect(node_feature_keys).to be_empty,
+        "expected no Node feature in devcontainer.json — #497 removed Node from the template " \
+        "(system specs use Cuprite/ferrum, a pure-Ruby CDP driver; linters are Ruby gems). " \
+        "Found: #{node_feature_keys.inspect}"
+    end
+
     it "enables docker-outside-of-docker so `kamal deploy` works from inside the devcontainer" do
       docker_keys = (devcontainer["features"] || {}).keys.grep(/docker-outside-of-docker/)
 
@@ -256,6 +265,16 @@ RSpec.describe "Template invariants" do
     it "no longer runs `mise install` (Ruby is in the base image now)" do
       expect(setup_sh).not_to match(/mise\s+install/),
         "setup.sh still calls `mise install`; the ruby:slim base image makes this unnecessary"
+    end
+
+    it "installs a browser for Cuprite system specs without resurrecting Node (no npm/npx)" do
+      expect(setup_sh).not_to match(/\bnpm\b|\bnpx\b|node_modules/),
+        "setup.sh still references npm/npx/node_modules — #497 removed Node; the devcontainer " \
+        "must not resurrect it"
+      expect(setup_sh).to match(/chromium|google-chrome/),
+        "expected setup.sh to apt-install a browser (chromium) for Cuprite system specs — the " \
+        "ruby:slim base ships none (unlike CI's ubuntu-latest runners), so without it ferrum has " \
+        "no browser to drive and every system spec fails in the devcontainer"
     end
 
     it "installs system packages that mirror the production Dockerfile" do
