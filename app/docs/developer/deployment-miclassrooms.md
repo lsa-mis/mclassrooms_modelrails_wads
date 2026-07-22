@@ -1,7 +1,7 @@
 ---
 title: MClassrooms Production Deployment
 description: MClassrooms-specific Kamal config, the environment-variable inventory, and the go-live cutover checklist
-keywords: deploy kamal production cutover ghcr okta um-api env inventory checklist miclassrooms ssl
+keywords: deploy kamal production cutover ghcr okta um-api env inventory checklist mclassrooms_modelrails_wads ssl
 ---
 
 # MClassrooms Production Deployment
@@ -15,9 +15,9 @@ here is what MClassrooms layers on top.
 
 `config/deploy.yml` is set for MClassrooms:
 
-- **service** `miclassrooms`, **image** `ghcr.io/lsa-mis/miclassrooms` (GitHub Container Registry).
+- **service** `mclassrooms_modelrails_wads`, **image** `ghcr.io/lsa-mis/mclassrooms_modelrails_wads` (GitHub Container Registry).
 - **SSL** enabled via kamal-proxy — `production.rb` already carries the paired `assume_ssl`/`force_ssl` and the `/up` redirect exclusion, so no app change is needed.
-- **Storage** on the `miclassrooms_storage` volume (SQLite DBs + Active Storage under `/rails/storage` — back this up off-server).
+- **Storage** on the `mclassrooms_modelrails_wads_storage` volume (SQLite DBs + Active Storage under `/rails/storage` — back this up off-server).
 - **Env** for the shared-directory tenancy posture, SSO-only auth, and the U-M Facilities gateway sync (inventory below).
 
 The **production-safety invariants** (`max-replicas: 1`, `stop_wait_time: 45`, `RUBY_VERSION` pinned to `.tool-versions`) are unchanged — leave them alone.
