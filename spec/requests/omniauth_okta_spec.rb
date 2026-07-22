@@ -19,7 +19,7 @@ RSpec.describe "Okta OIDC", type: :request do
   # role"): stub the tenancy config the same way rather than relying on process
   # ENV, since WORKSPACE_ON_SIGNUP isn't loaded into the test process (no
   # dotenv gem wired into the app boot — only .env.example documents it).
-  let(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MClassrooms", personal: false) }
+  let(:shared_workspace) { create(:workspace, slug: "mclassrooms", name: "MClassrooms", personal: false) }
 
   before do
     shared_workspace

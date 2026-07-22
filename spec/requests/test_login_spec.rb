@@ -31,7 +31,7 @@ RSpec.describe "GET /test_login", type: :request do
     end
   end
 
-  let!(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MClassrooms", personal: false) }
+  let!(:shared_workspace) { create(:workspace, slug: "mclassrooms", name: "MClassrooms", personal: false) }
 
   before do
     allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)

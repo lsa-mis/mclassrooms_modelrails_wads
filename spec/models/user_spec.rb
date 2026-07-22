@@ -599,9 +599,9 @@ RSpec.describe User, type: :model do
   # env TENANCY_SHARED_JOIN_ROLE) rather than the template's hardcoded
   # "member". MClassrooms overrides it to "viewer" (empty-permissions,
   # any-authenticated-U-M-user tier) so every new signup lands read-only in
-  # the single shared `miclassrooms` workspace until an admin promotes them.
+  # the single shared `mclassrooms` workspace until an admin promotes them.
   describe "#onboard_workspace under :shared posture with MClassrooms' configured join role" do
-    let!(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MClassrooms", personal: false) }
+    let!(:shared_workspace) { create(:workspace, slug: "mclassrooms", name: "MClassrooms", personal: false) }
 
     before do
       allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
@@ -610,7 +610,7 @@ RSpec.describe User, type: :model do
       allow(Rails.configuration.x.tenancy).to receive(:workspace_creation).and_return(:disabled)
     end
 
-    it "joins the miclassrooms workspace as Viewer, with exactly one membership and no personal workspace" do
+    it "joins the mclassrooms workspace as Viewer, with exactly one membership and no personal workspace" do
       user = create(:user)
 
       expect(user.personal_workspace_id).to be_nil
