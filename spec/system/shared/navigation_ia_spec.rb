@@ -1,6 +1,6 @@
 require "rails_helper"
 
-# Task 10 (Navigation IA): under MiClassrooms' :shared tenancy posture the
+# Task 10 (Navigation IA): under MClassrooms' :shared tenancy posture the
 # signed-in shell must read as a single-tenant directory app — no workspace
 # switcher, no "All workspaces" link (the switcher's "see all" companion —
 # see shared/_user_menu), and no workspace-creation affordance anywhere in
@@ -18,8 +18,8 @@ require "rails_helper"
 # spec/requests/mobile_workspace_switcher_spec.rb) already pin the opposite
 # direction — the switcher and "All workspaces" still render under the
 # default :personal posture — so that side isn't re-asserted here.
-RSpec.describe "Navigation IA (MiClassrooms signed-in shell)", type: :system do
-  let(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MiClassrooms", personal: false) }
+RSpec.describe "Navigation IA (MClassrooms signed-in shell)", type: :system do
+  let(:shared_workspace) { create(:workspace, slug: "mclassrooms", name: "MClassrooms", personal: false) }
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
   before do

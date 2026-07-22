@@ -1,6 +1,6 @@
-# MiClassrooms Changelog
+# MClassrooms Changelog
 
-All notable changes to **MiClassrooms** — the University of Michigan classroom
+All notable changes to **MClassrooms** — the University of Michigan classroom
 directory built on the [ModelRails](../CHANGELOG.md) template.
 
 This file tracks the **fork's** product work. Template (ModelRails) changes that
@@ -11,7 +11,7 @@ file has no upstream counterpart, so the two never collide. Format follows
 
 ## [Unreleased]
 
-The initial MiClassrooms build (phases 0–5), targeting the first production
+The initial MClassrooms build (phases 0–5), targeting the first production
 release — cutover to replace the legacy classroom directory. Availability
 (phase 6), analytics (phase 7), and the cutover/ops integrations (phase 8) are
 tracked separately and not yet included.

@@ -26,23 +26,28 @@
       title: t("pages.contact.methods.title"),
       bg: "bg-surface" do %>
   <div class="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-    <%= render "shared/feature_card",
-          title: t("pages.contact.methods.email.title"),
-          description: t("pages.contact.methods.email.description") %>
-    <%= render "shared/feature_card",
-          title: t("pages.contact.methods.bugs.title"),
-          description: t("pages.contact.methods.bugs.description") %>
-  </div>
-<% end %>
+    <%# LSA Technology Services — the app's owner and support path. Custom card
+        (shared/feature_card is text-only) so the phone and website are real,
+        focusable links. %>
+    <div class="p-6 bg-surface-raised rounded-lg border border-border">
+      <h3 class="text-lg font-semibold text-text-heading">
+        <%= t("pages.contact.methods.lsa_ts.title") %>
+      </h3>
+      <p class="mt-2 text-text-muted"><%= t("pages.contact.methods.lsa_ts.description") %></p>
+      <p class="mt-4 text-text-body">
+        <%= t("pages.contact.methods.lsa_ts.phone_label") %>:
+        <%= link_to t("pages.contact.methods.lsa_ts.phone"), "tel:+17346150100",
+              class: "text-interactive underline hover:no-underline focus-ring rounded" %>
+      </p>
+      <p class="mt-2">
+        <%= link_to t("pages.contact.methods.lsa_ts.website_label"),
+              "https://lsa.umich.edu/technology-services/",
+              class: "text-interactive underline hover:no-underline focus-ring rounded" %>
+      </p>
+    </div>
 
-<%= render "shared/section",
-      title: t("pages.contact.community.title"),
-      bg: "bg-surface-raised" do %>
-  <div class="grid sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-    <% %w[github discussions docs].each do |channel| %>
-      <%= render "shared/feature_card",
-            title: t("pages.contact.community.#{channel}.title"),
-            description: t("pages.contact.community.#{channel}.description") %>
-    <% end %>
+    <%= render "shared/feature_card",
+          title: t("pages.contact.methods.rooms.title"),
+          description: t("pages.contact.methods.rooms.description") %>
   </div>
 <% end %>

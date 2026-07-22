@@ -160,7 +160,7 @@ on every sync.
 
 A fork may also take `merge=ours` ownership of **template files it has rewritten
 so thoroughly they now describe a different product** — a deliberate choice to
-stop tracking upstream for those paths. This fork (MiClassrooms) owns three user
+stop tracking upstream for those paths. This fork (MClassrooms) owns three user
 docs on that basis: `app/docs/user/authentication.md`,
 `app/docs/user/welcome.md`, and `app/docs/user/workspaces.md` — rewritten for an
 SSO-first single-directory product rather than the template's

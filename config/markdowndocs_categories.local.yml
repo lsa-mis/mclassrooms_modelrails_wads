@@ -1,8 +1,8 @@
 # Fork-owned docs registration (this file is absent upstream, so template
 # merges never conflict here — see /docs/developer/forking).
-# Same-named categories would append to the template's; "MiClassrooms" is
+# Same-named categories would append to the template's; "MClassrooms" is
 # this fork's own section.
-MiClassrooms:
+MClassrooms:
   - user/finding-a-room
   - admin/overview
   - developer/rooms-directory
