@@ -1,7 +1,7 @@
 # Bulk panorama ingest (see app/lib/panorama_ingest.rb for the semantics).
 #
 #   bin/rails panoramas:ingest DIR=/path/to/ALL_PANOS
-#   bin/rails panoramas:ingest DIR=... WORKSPACE=miclassrooms REPLACE=1
+#   bin/rails panoramas:ingest DIR=... WORKSPACE=mclassrooms REPLACE=1
 #   bin/rails panoramas:ingest DIR=... DRY_RUN=1
 #
 # WORKSPACE defaults to the shared directory workspace. Writes the two

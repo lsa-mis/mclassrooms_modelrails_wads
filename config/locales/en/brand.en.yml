@@ -3,7 +3,7 @@
 # in a fork without merge conflicts. See /docs/developer/forking.
 en:
   application:
-    name: "MiClassrooms"
+    name: "MClassrooms"
     description: "The University of Michigan's classroom directory — find registrar-schedulable classrooms on the Ann Arbor campus and see capacity, equipment, photos, and floor plans before you teach or book."
   footer:
     copyright: "The Regents of the University of Michigan. All rights reserved."

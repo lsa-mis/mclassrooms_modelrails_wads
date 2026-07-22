@@ -1,6 +1,6 @@
 require "rails_helper"
 
-# MiClassrooms Phase 5 Task 10 (Brief §14.1): admin CRUD coverage for the
+# MClassrooms Phase 5 Task 10 (Brief §14.1): admin CRUD coverage for the
 # three fixed announcement slots (Admin::AnnouncementsController) — the
 # home_page slot end to end (create → renders on the home page banner → edit
 # → delete), plus axe AAA on the admin index, the new/edit forms, and the
@@ -101,17 +101,17 @@ RSpec.describe "Admin announcements CRUD", type: :system do
     end
 
     expect(page).to have_selector("h1", text: I18n.t("admin.announcements.new.title"))
-    fill_in_lexxy("Welcome to MiClassrooms!")
+    fill_in_lexxy("Welcome to MClassrooms!")
     click_button I18n.t("admin.announcements.form.submit")
 
     expect(page).to have_current_path(admin_announcements_path)
     expect(page).to have_content(I18n.t("admin.announcements.create.success"))
 
     announcement = Announcement.find_by!(slot: "home_page")
-    expect(announcement.body.to_plain_text).to eq("Welcome to MiClassrooms!")
+    expect(announcement.body.to_plain_text).to eq("Welcome to MClassrooms!")
 
     visit root_path
-    expect(page).to have_content("Welcome to MiClassrooms!")
+    expect(page).to have_content("Welcome to MClassrooms!")
 
     visit admin_announcements_path
     within("li", text: I18n.t("announcements.slots.home_page")) do
@@ -129,7 +129,7 @@ RSpec.describe "Admin announcements CRUD", type: :system do
 
     visit root_path
     expect(page).to have_content("Updated welcome message!")
-    expect(page).to have_no_content("Welcome to MiClassrooms!")
+    expect(page).to have_no_content("Welcome to MClassrooms!")
 
     visit admin_announcements_path
     within("li", text: I18n.t("announcements.slots.home_page")) do

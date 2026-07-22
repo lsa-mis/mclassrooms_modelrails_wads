@@ -14,12 +14,12 @@ RSpec.describe "Okta OIDC", type: :request do
   # provisioning genuinely works out of the box, not just under a
   # test-mode artifact.
 
-  # MiClassrooms Task 4's shared-workspace posture (see spec/models/user_spec.rb
-  # "#onboard_workspace under :shared posture with MiClassrooms' configured join
+  # MClassrooms Task 4's shared-workspace posture (see spec/models/user_spec.rb
+  # "#onboard_workspace under :shared posture with MClassrooms' configured join
   # role"): stub the tenancy config the same way rather than relying on process
   # ENV, since WORKSPACE_ON_SIGNUP isn't loaded into the test process (no
   # dotenv gem wired into the app boot — only .env.example documents it).
-  let(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MiClassrooms", personal: false) }
+  let(:shared_workspace) { create(:workspace, slug: "mclassrooms", name: "MClassrooms", personal: false) }
 
   before do
     shared_workspace
@@ -79,7 +79,7 @@ RSpec.describe "Okta OIDC", type: :request do
       expect(response).to redirect_to(find_a_room_path)
     end
 
-    it "joins the shared workspace as Viewer (MiClassrooms' onboard_workspace posture)" do
+    it "joins the shared workspace as Viewer (MClassrooms' onboard_workspace posture)" do
       get "/auth/okta/callback"
       user = User.find_by(email_address: "wolverine@umich.edu")
 
