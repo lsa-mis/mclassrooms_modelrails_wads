@@ -8,6 +8,29 @@
     <%= t("pages.privacy.intro") %>
   </p>
 
+  <%# Authoritative U-M policies — MClassrooms defers to these; the rest of the
+      page is a plain-language summary specific to this app. Same-tab links (no
+      target=_blank) to avoid an unexpected-new-window AAA concern. %>
+  <div class="mt-10 rounded-lg border border-border bg-surface-raised p-6">
+    <h2 class="text-2xl font-semibold text-text-heading">
+      <%= t("pages.privacy.authoritative.title") %>
+    </h2>
+    <p class="mt-4 text-text-body"><%= t("pages.privacy.authoritative.description") %></p>
+    <%# Standalone policy links, so each needs a 44px-min touch target (2.5.5
+        AAA) — min-h-11 + inline-flex, the same pattern the footer links use. %>
+    <ul class="mt-4 space-y-1">
+      <li>
+        <%= link_to t("pages.privacy.authoritative.privacy_notice"), "https://umich.edu/about/privacy/",
+              class: "inline-flex items-center min-h-11 text-interactive underline hover:no-underline focus-ring rounded" %>
+      </li>
+      <li>
+        <%= link_to t("pages.privacy.authoritative.spg"), "https://spg.umich.edu/policy/601.41",
+              class: "inline-flex items-center min-h-11 text-interactive underline hover:no-underline focus-ring rounded" %>
+      </li>
+    </ul>
+  </div>
+
+  <%# What we collect / how we use it — item lists. %>
   <% %w[collection usage].each do |section| %>
     <div class="mt-10">
       <h2 class="text-2xl font-semibold text-text-heading">
@@ -24,33 +47,17 @@
     </div>
   <% end %>
 
-  <div class="mt-10">
-    <h2 class="text-2xl font-semibold text-text-heading">
-      <%= t("pages.privacy.sharing.title") %>
-    </h2>
-    <p class="mt-4 text-text-body"><%= t("pages.privacy.sharing.description") %></p>
-  </div>
+  <p class="mt-4 text-text-muted"><%= t("pages.privacy.usage.note") %></p>
 
-  <div class="mt-10">
-    <h2 class="text-2xl font-semibold text-text-heading">
-      <%= t("pages.privacy.security.title") %>
-    </h2>
-    <p class="mt-4 text-text-body"><%= t("pages.privacy.security.description") %></p>
-  </div>
-
-  <div class="mt-10">
-    <h2 class="text-2xl font-semibold text-text-heading">
-      <%= t("pages.privacy.rights.title") %>
-    </h2>
-    <ul class="mt-4 space-y-2">
-      <% t("pages.privacy.rights.items").each do |item| %>
-        <li class="flex items-start gap-2 text-text-body">
-          <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-interactive flex-shrink-0" aria-hidden="true"></span>
-          <%= item %>
-        </li>
-      <% end %>
-    </ul>
-  </div>
+  <%# Cookies / sharing / your rights — single descriptions. %>
+  <% %w[cookies sharing rights].each do |section| %>
+    <div class="mt-10">
+      <h2 class="text-2xl font-semibold text-text-heading">
+        <%= t("pages.privacy.#{section}.title") %>
+      </h2>
+      <p class="mt-4 text-text-body"><%= t("pages.privacy.#{section}.description") %></p>
+    </div>
+  <% end %>
 
   <div class="mt-10 text-sm text-text-muted">
     <p>

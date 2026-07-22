@@ -1,4 +1,4 @@
-# DEV-ONLY sample data for the MiClassrooms shared workspace (Rails.env
+# DEV-ONLY sample data for the MClassrooms shared workspace (Rails.env
 # development? only — see the guard in `seed!` below, mirrored in
 # db/seeds.rb and lib/tasks/dev.rake so both entry points are self-guarding).
 #
@@ -138,7 +138,7 @@ module DevelopmentSampleData
       "rooms, check capacities and features, and find the right space for your class.",
     "find_a_room_page" => "Use the filters below to narrow rooms by building, capacity, and features " \
       "like projectors, whiteboards, and ADA accessibility.",
-    "about_page" => "MiClassrooms is a directory of University of Michigan classrooms, maintained by " \
+    "about_page" => "MClassrooms is a directory of University of Michigan classrooms, maintained by " \
       "the Registrar's Office and campus facilities teams to help instructors and students find the " \
       "right room."
   }.freeze
@@ -159,7 +159,7 @@ module DevelopmentSampleData
     seed_announcements(workspace)
 
     Rails.logger.info(
-      "[dev-seed] MiClassrooms sample data ready in workspace '#{workspace.slug}': " \
+      "[dev-seed] MClassrooms sample data ready in workspace '#{workspace.slug}': " \
       "#{Unit.where(workspace: workspace).count} units, " \
       "#{Building.where(workspace: workspace).count} buildings, " \
       "#{Room.where(workspace: workspace).count} rooms."

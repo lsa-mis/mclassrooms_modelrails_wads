@@ -1,6 +1,6 @@
 require "rails_helper"
 
-# MiClassrooms Phase 0 Task 8: GET /test_login?token=... lets accessibility
+# MClassrooms Phase 0 Task 8: GET /test_login?token=... lets accessibility
 # crawlers (Siteimprove) that cannot complete Google/Okta SSO sign in as a
 # fixed test user. The route only exists when AuthConfig.test_login_enabled?
 # was true at boot (see config/routes/app.rb and spec/lib/auth_config_spec.rb
@@ -31,7 +31,7 @@ RSpec.describe "GET /test_login", type: :request do
     end
   end
 
-  let!(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MiClassrooms", personal: false) }
+  let!(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MClassrooms", personal: false) }
 
   before do
     allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)

@@ -1,19 +1,19 @@
 ---
 title: Roles & Access
-description: How MiClassrooms is organized — one shared directory, and the admin / editor / viewer roles
+description: How MClassrooms is organized — one shared directory, and the admin / editor / viewer roles
 keywords: roles access admin editor viewer directory shared workspace permissions unit editor dashboard
 ---
 
 # Roles & Access
 
-MiClassrooms runs as a **single shared directory** for the whole university.
+MClassrooms runs as a **single shared directory** for the whole university.
 There is one classroom directory and everyone works in it — you don't create,
 switch, or manage workspaces. Signing in with your U-M account puts you straight
 into the directory.
 
 ## What you can do depends on your role
 
-MiClassrooms has three levels of access:
+MClassrooms has three levels of access:
 
 | Role | Who | What they can do |
 |------|-----|------------------|

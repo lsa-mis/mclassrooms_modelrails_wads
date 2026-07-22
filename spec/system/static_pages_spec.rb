@@ -163,9 +163,20 @@ RSpec.describe "Static pages", type: :system do
     end
 
     it "has policy sections" do
+      expect(page).to have_text(I18n.t("pages.privacy.authoritative.title"))
       expect(page).to have_text(I18n.t("pages.privacy.collection.title"))
-      expect(page).to have_text(I18n.t("pages.privacy.usage.title"))
-      expect(page).to have_text(I18n.t("pages.privacy.security.title"))
+      expect(page).to have_text(I18n.t("pages.privacy.sharing.title"))
+    end
+
+    it "defers to the authoritative U-M privacy policies" do
+      expect(page).to have_link(I18n.t("pages.privacy.authoritative.privacy_notice"),
+                                href: "https://umich.edu/about/privacy/")
+      expect(page).to have_link(I18n.t("pages.privacy.authoritative.spg"),
+                                href: "https://spg.umich.edu/policy/601.41")
+    end
+
+    it "carries no leftover template branding" do
+      expect(page).not_to have_text("ModelRails")
     end
   end
 
@@ -178,6 +189,17 @@ RSpec.describe "Static pages", type: :system do
 
     it "displays contact methods" do
       expect(page).to have_text(I18n.t("pages.contact.methods.title"))
+    end
+
+    it "surfaces the LSA Technology Services support path" do
+      expect(page).to have_link(href: "tel:+17346150100")
+      expect(page).to have_link(I18n.t("pages.contact.methods.lsa_ts.website_label"),
+                                href: "https://lsa.umich.edu/technology-services/")
+    end
+
+    it "carries no leftover template branding" do
+      expect(page).not_to have_text("modelrails.dev")
+      expect(page).not_to have_text("ModelRails")
     end
   end
 
