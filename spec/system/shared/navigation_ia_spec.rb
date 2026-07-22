@@ -19,7 +19,7 @@ require "rails_helper"
 # direction — the switcher and "All workspaces" still render under the
 # default :personal posture — so that side isn't re-asserted here.
 RSpec.describe "Navigation IA (MClassrooms signed-in shell)", type: :system do
-  let(:shared_workspace) { create(:workspace, slug: "miclassrooms", name: "MClassrooms", personal: false) }
+  let(:shared_workspace) { create(:workspace, slug: "mclassrooms", name: "MClassrooms", personal: false) }
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
   before do

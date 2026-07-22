@@ -127,7 +127,7 @@ env:
     # The real values this fork runs with. See presets-single-tenant.md.
     WORKSPACE_ON_SIGNUP: shared
     TENANCY_WORKSPACE_CREATION: disabled
-    TENANCY_SHARED_WORKSPACE_SLUG: miclassrooms
+    TENANCY_SHARED_WORKSPACE_SLUG: mclassrooms
     TENANCY_SHARED_WORKSPACE_NAME: MClassrooms
     TENANCY_SHARED_JOIN_ROLE: viewer
     # Initial Owner the seed creates + mails a password-set link to (db:seed).

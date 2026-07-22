@@ -11,7 +11,7 @@ Rails.application.configure do
   # Hermetic tenancy/auth baseline for the test suite. dotenv-rails loads the
   # developer's .env in the test environment too, so a fork running the real
   # product posture in .env (MiClassrooms sets WORKSPACE_ON_SIGNUP=shared,
-  # TENANCY_SHARED_WORKSPACE_SLUG=miclassrooms, TENANCY_SHARED_JOIN_ROLE=viewer,
+  # TENANCY_SHARED_WORKSPACE_SLUG=mclassrooms, TENANCY_SHARED_JOIN_ROLE=viewer,
   # ALLOWED_GOOGLE_DOMAINS=umich.edu,...) would otherwise leak that config into
   # tests: every un-stubbed create(:user) would hit User#join_shared_workspace
   # and raise "shared workspace not found" (the test DB never seeds it), and
