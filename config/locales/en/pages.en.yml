@@ -1,10 +1,10 @@
 en:
   pages:
     home:
-      title: "MiClassrooms"
+      title: "MClassrooms"
       hero:
         title: "Find your classroom on the Ann Arbor campus"
-        subtitle: "MiClassrooms is the University of Michigan's directory of registrar-schedulable classrooms. Search by building or room and see everything you need before you teach or book — seating capacity (including ADA seating), equipment, photos, 360° panoramas, seating charts, floor plans, and scheduling and support contacts."
+        subtitle: "MClassrooms is the University of Michigan's directory of registrar-schedulable classrooms. Search by building or room and see everything you need before you teach or book — seating capacity (including ADA seating), equipment, photos, 360° panoramas, seating charts, floor plans, and scheduling and support contacts."
         cta_primary: "Sign in"
         cta_primary_signed_in: "Find a room"
         cta_secondary: "Learn more"
@@ -36,13 +36,13 @@ en:
         button: "Sign in"
         button_signed_in: "Find a room"
     about:
-      title: "About MiClassrooms"
+      title: "About MClassrooms"
       hero:
-        title: "About MiClassrooms"
+        title: "About MClassrooms"
         subtitle: "The University of Michigan's classroom directory for the Ann Arbor campus."
       mission:
-        title: "What MiClassrooms does"
-        description: "MiClassrooms helps U-M faculty, staff, and students find registrar-schedulable classrooms and see everything about a room before they teach or book it — seating capacity (including ADA seating), equipment and characteristics, photos, 360° panoramas, seating charts, floor plans, and scheduling and support contacts. Building and room data sync nightly from the university's official facilities systems, and admins post notes and alerts on top of it. It replaced the legacy LSA Classroom Database and still supports its old links."
+        title: "What MClassrooms does"
+        description: "MClassrooms helps U-M faculty, staff, and students find registrar-schedulable classrooms and see everything about a room before they teach or book it — seating capacity (including ADA seating), equipment and characteristics, photos, 360° panoramas, seating charts, floor plans, and scheduling and support contacts. Building and room data sync nightly from the university's official facilities systems, and admins post notes and alerts on top of it. It replaced the legacy LSA Classroom Database and still supports its old links."
       features:
         title: "What's included"
         items:
@@ -60,73 +60,66 @@ en:
           description: "Made for U-M faculty, staff, and students — sign in to search and browse the full directory."
         accessibility:
           title: "Built for everyone"
-          description: "MiClassrooms meets WCAG 2.2 AAA accessibility standards, including ADA seating counts on every room."
+          description: "MClassrooms meets WCAG 2.2 AAA accessibility standards, including ADA seating counts on every room."
         data:
           title: "Kept up to date"
           description: "Building and room data sync nightly from the university's facilities systems; photos, panoramas, and notes are curated locally."
         legacy:
           title: "Successor to the Classroom Database"
-          description: "MiClassrooms replaces the LSA Classroom Database and keeps its legacy links working."
+          description: "MClassrooms replaces the LSA Classroom Database and keeps its legacy links working."
     privacy:
-      title: "Privacy Policy"
-      intro: "This privacy policy describes how ModelRails handles your information. We are committed to protecting your privacy and being transparent about our practices."
+      title: "Privacy at MClassrooms"
+      intro: "MClassrooms is a service of the University of Michigan, College of LSA. Your use of it is governed by the University's own privacy policies — the authoritative sources linked below. This page summarizes, in plain language, what MClassrooms specifically does with your information."
+      authoritative:
+        title: "The policies that govern MClassrooms"
+        description: "These University of Michigan policies are authoritative. The summary on this page is specific to MClassrooms and does not replace them."
+        privacy_notice: "U-M Privacy Notice"
+        spg: "Standard Practice Guide 601.41"
       collection:
-        title: "Information we collect"
+        title: "What MClassrooms collects"
         items:
-          - "Account information (name, email address) when you sign up"
-          - "Authentication data (encrypted passwords, OAuth tokens)"
-          - "Usage data (workspace activity, project interactions)"
-          - "Technical data (IP address, browser type, session information)"
+          - "When you sign in through U-M single sign-on (Google or U-M Okta): your name, U-M email, and a unique account identifier — plus your profile photo if your sign-in provider supplies one."
+          - "To keep you signed in and secure: a session record that includes the IP address and browser you signed in from, and a recognized-device marker so we can alert you to sign-ins from a new device."
+          - "Your preferences (language, time zone, theme, and notification settings) and the rooms you save."
+          - "An administrative audit log: when an administrator or editor changes directory content, we record who made the change and what changed. We never log passwords or sign-in tokens."
+          - "Feedback you choose to send us — see \"How your information is shared\" below."
       usage:
-        title: "How we use your information"
+        title: "How MClassrooms uses your information"
         items:
-          - "To provide and maintain your account"
-          - "To authenticate your identity"
-          - "To send transactional emails (verification, password reset)"
-          - "To track workspace activity for your audit trail"
+          - "To authenticate you and keep your account secure, including new-device alerts and limiting abusive requests."
+          - "To operate the directory and remember your preferences and saved rooms."
+          - "To maintain an audit trail of content changes for accountability."
+          - "To respond to your feedback."
+        note: "MClassrooms does not sell your personal information and shows no advertising."
+      cookies:
+        title: "Cookies"
+        description: "MClassrooms uses a required sign-in session cookie and a cookie that stores your consent and theme choices. You can review and change your choices at any time under \"Cookie settings\" in the footer. MClassrooms does not currently load analytics or advertising cookies."
       sharing:
-        title: "Data sharing"
-        description: "We do not sell your personal information. We share data only as necessary to provide our services, comply with legal obligations, or protect our rights."
-      security:
-        title: "Data security"
-        description: "We implement industry-standard security measures including encrypted passwords, secure session management, rate-limited authentication, and sensitive data filtering in activity logs."
+        title: "How your information is shared"
+        description: "MClassrooms shares your information with U-M single sign-on (Google and U-M Okta) when you sign in, and with TeamDynamix — the University's IT service-management system — when you submit feedback, so that a support ticket can be created. Otherwise it is shared only as needed to operate the service or as required by law or University policy, and your data stays within University of Michigan systems and its service providers."
       rights:
-        title: "Your rights"
-        items:
-          - "Access your personal data"
-          - "Correct inaccurate information"
-          - "Request deletion of your account"
-          - "Export your data"
-      contact_text: "For privacy-related inquiries, please visit our"
+        title: "Your choices and rights"
+        description: "For access to, correction of, or deletion of your personal data — and for the University's full privacy commitments — see the U-M Privacy Notice above or contact LSA Technology Services."
+      contact_text: "Questions about privacy? Visit our"
       contact_link: "contact page"
       updated: "Last updated"
     contact:
-      title: "Contact Us"
+      title: "Contact"
       hero:
         title: "Get in touch"
-        subtitle: "Have questions, feedback, or need help? We're here for you."
+        subtitle: "Have a question about a classroom, or need help with MClassrooms? Here's how to reach us."
       feedback:
         title: "Send feedback"
-        description: "Report a problem or suggest an improvement — it goes straight to the MiClassrooms team."
+        description: "Report a problem or suggest an improvement — it goes straight to the MClassrooms team."
         cta: "Open the feedback form"
       methods:
-        title: "Contact methods"
-        email:
-          title: "Email"
-          description: "For general inquiries and support."
-          address: "support@modelrails.dev"
-        bugs:
-          title: "Bug reports"
-          description: "Found a bug? Report it on GitHub."
-          link_text: "Open an issue"
-      community:
-        title: "Community"
-        github:
-          title: "GitHub"
-          description: "Browse the source code, contribute, or star the project."
-        discussions:
-          title: "Discussions"
-          description: "Ask questions and share ideas with the community."
-        docs:
-          title: "Documentation"
-          description: "Browse the technical documentation and guides."
+        title: "Get help"
+        lsa_ts:
+          title: "LSA Technology Services"
+          description: "MClassrooms is built and maintained by LSA Technology Services."
+          phone_label: "Call"
+          phone: "734.615.0100"
+          website_label: "LSA Technology Services website"
+        rooms:
+          title: "Room-specific contacts"
+          description: "Each room page lists the scheduling and on-site support contacts for that specific classroom — check the room you're interested in for the most direct help."

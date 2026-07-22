@@ -6,7 +6,7 @@ keywords: admin administrator editor curation hide unhide bulk upload announceme
 
 # Administrator Guide
 
-MiClassrooms is a **curated directory**: automated syncs keep the underlying room
+MClassrooms is a **curated directory**: automated syncs keep the underlying room
 data fresh, and **administrators** and **unit editors** layer curated content —
 photos, descriptions, notes, and visibility decisions — on top. This guide covers
 those tools. For how roles look from a user's perspective, see
@@ -74,7 +74,7 @@ The admin console (`/admin/…`) has six screens:
 | Screen | What it's for |
 |--------|---------------|
 | **Announcements** | Post a banner in one of three slots — the home page, Find a Room, or the About page. One announcement per slot. |
-| **Bulk uploads** | Drop a batch of room photos / panoramas / seating charts; MiClassrooms matches each file to a room by its facility-code filename, shows matched vs. unmatched, and you commit the matched set. |
+| **Bulk uploads** | Drop a batch of room photos / panoramas / seating charts; MClassrooms matches each file to a room by its facility-code filename, shows matched vs. unmatched, and you commit the matched set. |
 | **Editor assignments** | Grant or revoke a user's **editor** access, scoped to a specific unit. This is how you make someone an editor. |
 | **Characteristic display rules** | Control how room characteristics appear — which show up as **filters** on Find a Room versus room-page information only, their grouping, and icons. |
 | **Unit display names** | Override a raw department-group name with a friendlier display name. |

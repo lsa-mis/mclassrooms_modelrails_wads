@@ -1,19 +1,19 @@
 ---
 title: Welcome
-description: Get started with MiClassrooms — sign in with U-M single sign-on and explore the classroom directory
+description: Get started with MClassrooms — sign in with U-M single sign-on and explore the classroom directory
 keywords: welcome get started sign in sso find a room buildings classrooms directory saved rooms
 ---
 
-# Welcome to MiClassrooms
+# Welcome to MClassrooms
 
-MiClassrooms is the University of Michigan classroom directory. Search and
+MClassrooms is the University of Michigan classroom directory. Search and
 explore centrally-scheduled classrooms — with photos, 360° panoramas, seating
 charts, floor plans, capacities, and room features — all in one place.
 
 ## Signing in
 
 Sign in with your **U-M account** using the **Google** or **Okta** button on the
-sign-in page. There's no separate password to create — MiClassrooms uses U-M
+sign-in page. There's no separate password to create — MClassrooms uses U-M
 single sign-on, and your account is created automatically the first time you sign
 in. See [Signing In](/docs/user/authentication) for details.
 

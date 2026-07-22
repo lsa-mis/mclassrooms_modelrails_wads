@@ -1,19 +1,19 @@
 ---
-title: MiClassrooms Production Deployment
-description: MiClassrooms-specific Kamal config, the environment-variable inventory, and the go-live cutover checklist
+title: MClassrooms Production Deployment
+description: MClassrooms-specific Kamal config, the environment-variable inventory, and the go-live cutover checklist
 keywords: deploy kamal production cutover ghcr okta um-api env inventory checklist miclassrooms ssl
 ---
 
-# MiClassrooms Production Deployment
+# MClassrooms Production Deployment
 
 The fork-specific companion to [Deployment](/docs/developer/deployment), which
 covers the template mechanics — the SQLite single-host constraint, SSL config,
 storage volumes, health checks, and the production-safety invariants. Everything
-here is what MiClassrooms layers on top.
+here is what MClassrooms layers on top.
 
 ## What's configured
 
-`config/deploy.yml` is set for MiClassrooms:
+`config/deploy.yml` is set for MClassrooms:
 
 - **service** `miclassrooms`, **image** `ghcr.io/lsa-mis/miclassrooms` (GitHub Container Registry).
 - **SSL** enabled via kamal-proxy — `production.rb` already carries the paired `assume_ssl`/`force_ssl` and the `/up` redirect exclusion, so no app change is needed.
