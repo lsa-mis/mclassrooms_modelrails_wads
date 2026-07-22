@@ -11,31 +11,7 @@ require "rails_helper"
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative AAA 7:1
 # audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
 RSpec.describe "Context menu component accessibility", type: :system do
-  before do
-    visit "/rails/view_components/ui/context_menu_component/basic"
-    wait_for_menu_controller
-  end
-
-  # The `menu` Stimulus controller can connect AFTER `visit` returns: importmap
-  # module fetches + Stimulus boot lag behind the load event, widest for the
-  # first spec to run under random ordering (cold module cache). A real key or
-  # right-click event dispatched before it connects never reaches its
-  # data-action listeners, so the menu never opens — an intermittent failure.
-  # Block until the controller is live (window.Stimulus is exposed in
-  # controllers/application.js; other specs use the same lookup).
-  def wait_for_menu_controller
-    connected = false
-    20.times do
-      connected = page.evaluate_script(
-        "!!window.Stimulus?.getControllerForElementAndIdentifier(" \
-        "document.querySelector(\"[data-controller~='menu']\"), 'menu')"
-      )
-      break if connected
-
-      sleep 0.1
-    end
-    expect(connected).to be(true), "menu Stimulus controller did not connect within the wait window"
-  end
+  before { visit "/rails/view_components/ui/context_menu_component/basic" }
 
   def host
     find("[data-menu-target='trigger']")
