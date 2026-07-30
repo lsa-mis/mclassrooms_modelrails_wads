@@ -480,6 +480,10 @@ RSpec.describe "GET /rooms/:id", type: :request do
     # key (no "(PDF)" suffix) must render instead whenever the attachment's
     # content_type isn't application/pdf.
     it "renders an image seating chart's alt without the PDF suffix" do
+      # This test exercises the derived backstop specifically (no authored
+      # seating_chart_alt) — the :room factory now defaults to an authored
+      # alt (Task 6 factory-hygiene ratchet), so nil it out here.
+      room.update!(seating_chart_alt: nil)
       room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
         filename: "seating.png",
