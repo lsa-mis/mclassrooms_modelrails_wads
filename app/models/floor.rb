@@ -1,5 +1,10 @@
 class Floor < ApplicationRecord
   include Tenanted
+  include Describable
+
+  describable :plan, derived_alt: ->(rec) {
+    I18n.t("media.derived_alt.floor_plan", floor: rec.label, building: rec.building.name)
+  }
 
   belongs_to :building
   has_many :rooms, dependent: :nullify
