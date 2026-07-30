@@ -147,6 +147,15 @@ en:
       stale_gallery: "One or more gallery rows are out of date; please reload and try again."
       media_admin_only_hint: "Photos, panorama, seating chart, and gallery images are managed by administrators. If you notice a media issue,"
       media_admin_only_hint_link: "add a note on the room page"
+    # Task 4 (image metadata, Brief §5.2): generic labels shared by every
+    # alt/description/derived_ok field across rooms/edit and buildings/edit
+    # (photo, panorama, seating chart, gallery images, building photo) —
+    # one UI vocabulary rather than a label per slot, since each field is
+    # already disambiguated by its enclosing card/row heading.
+    media:
+      alt_label: "Alt text (screen-reader description)"
+      description_label: "Description (optional)"
+      derived_ok_label: "The auto-generated alt text is fine here"
     hide:
       button: "Hide room"
       success: "Room hidden."

@@ -80,6 +80,14 @@
               label: t(".photo_heading"),
               help: t(".photo_hint"),
               accept: "image/png,image/jpeg,image/webp" %>
+
+        <%# Task 4 (image metadata, Brief §5.2): author alt/description, or
+            bless the derived alt via the checkbox — shares the generic
+            rooms.media.* labels with rooms/edit/_media_sections (same UI
+            vocabulary across both edit forms). %>
+        <%= form.text_field :photo_alt, label: t("rooms.media.alt_label") %>
+        <%= form.text_area :photo_description, rows: 2, label: t("rooms.media.description_label") %>
+        <%= form.check_box :photo_derived_ok, label: t("rooms.media.derived_ok_label") %>
       <% end %>
     <% end %>
 

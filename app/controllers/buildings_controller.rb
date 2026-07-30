@@ -279,9 +279,15 @@ class BuildingsController < ApplicationController
   # (hide/unhide) ships with phase 5's dedicated routes, not this form. Any
   # `address`/`city`/`state`/`zip`/`country`/`hidden_at`/`in_feed` param
   # submitted here is silently dropped by strong params, never assigned.
+  # Task 4 (image metadata): photo_alt/photo_description/photo_derived_ok
+  # permitted alongside :photo/:remove_photo — same admin-only boundary
+  # (BuildingsController's #update is admin-only end to end via
+  # BuildingPolicy, unlike RoomsController's curated/media split), so no
+  # separate gating is needed here.
   def building_params
     params.require(:building).permit(
       :nickname, :short_name, :photo, :remove_photo,
+      :photo_alt, :photo_description, :photo_derived_ok,
       floors_attributes: [ :id, :plan, :remove_plan ]
     )
   end

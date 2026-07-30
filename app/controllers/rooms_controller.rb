@@ -34,10 +34,25 @@ class RoomsController < ApplicationController
   # this app's Rails version; `permit` tolerates either shape, `expect` does
   # not). Getting this wrong would silently break every admin gallery
   # add/reorder/destroy while looking correct in a review of the params list.
+  # Task 4 (image metadata, Brief §5.2/§14.1 follow-on): alt/description/
+  # derived_ok are metadata ABOUT an attachment slot, not curated room data —
+  # kept in MEDIA_PARAMS (not CURATED_PARAMS) so authoring them stays behind
+  # the same `policy(@room).manage_media?` (admin-only) gate as the
+  # attachments themselves. This matches the existing render boundary:
+  # rooms/edit.html.erb never renders _media_sections (where these fields
+  # live) for a unit editor at all — RoomPolicy#manage_media? is admin-only
+  # even though #update?/#edit? admit an editor (see rooms_update_spec.rb's
+  # "renders the curated fields and the media-admin-only hint, but not the
+  # media inputs" spec) — so permitting these scalars only when manage_media?
+  # keeps the strong-params boundary and the rendered UI in agreement.
   MEDIA_PARAMS = [
     :photo, :panorama, :seating_chart,
     :remove_photo, :remove_panorama, :remove_seating_chart,
-    { gallery_images_attributes: [ [ :id, :image, :position, :_destroy ] ] }
+    :photo_alt, :photo_description, :photo_derived_ok,
+    :panorama_alt, :panorama_description, :panorama_derived_ok,
+    :seating_chart_alt, :seating_chart_description, :seating_chart_derived_ok,
+    { gallery_images_attributes: [ [ :id, :image, :position, :_destroy,
+                                     :image_alt, :image_description, :image_derived_ok ] ] }
   ].freeze
 
   # Task 7 (Brief §5.3) now defines #edit/#update below, so both actions join
@@ -341,6 +356,7 @@ class RoomsController < ApplicationController
   # change: a real file for one of the three attachment slots, a CHECKED
   # remove_* box (cast through ActiveModel::Type::Boolean, not `.present?` —
   # an unchecked checkbox still submits "0", which IS present as a string),
+  # a genuine alt/description/derived_ok edit (see media_metadata_changed?),
   # or a gallery row that isn't a no-op resubmission (see gallery_row_changed?).
   def media_change?(media_attrs)
     attrs = media_attrs.with_indifferent_access
@@ -348,8 +364,33 @@ class RoomsController < ApplicationController
     return true if %w[photo panorama seating_chart].any? { |key| attrs[key].present? }
     return true if %w[remove_photo remove_panorama remove_seating_chart]
                      .any? { |key| ActiveModel::Type::Boolean.new.cast(attrs[key]) }
+    return true if media_metadata_changed?(attrs)
 
     submitted_gallery_rows(attrs).any? { |row| gallery_row_changed?(row) }
+  end
+
+  # Task 4 (image metadata): unlike photo/panorama/seating_chart themselves,
+  # the *_alt/*_description/*_derived_ok fields are ordinary columns that
+  # rooms/edit/_media_sections renders and resubmits UNCONDITIONALLY on
+  # every request (not just when the slot has an attachment) — so a
+  # presence check alone would false-positive on every curated-only
+  # resubmission of a room that already has an authored alt/description
+  # (the text field redisplays the current value, which is "present" but
+  # unchanged). Each key is compared against @room's own CURRENT value
+  # instead, mirroring gallery_row_changed?'s position-diff reasoning.
+  # `.to_s` on both sides normalizes nil vs. "" (a never-authored column vs.
+  # an unfilled text field) so neither reads as a change against the other.
+  METADATA_TEXT_KEYS = %w[
+    photo_alt photo_description panorama_alt panorama_description
+    seating_chart_alt seating_chart_description
+  ].freeze
+  METADATA_BOOL_KEYS = %w[photo_derived_ok panorama_derived_ok seating_chart_derived_ok].freeze
+
+  def media_metadata_changed?(attrs)
+    METADATA_TEXT_KEYS.any? { |key| attrs.key?(key) && attrs[key].to_s != @room.public_send(key).to_s } ||
+      METADATA_BOOL_KEYS.any? { |key|
+        attrs.key?(key) && ActiveModel::Type::Boolean.new.cast(attrs[key]) != @room.public_send(key)
+      }
   end
 
   # A gallery row counts as changed when it's marked `_destroy`, is a brand
@@ -368,7 +409,19 @@ class RoomsController < ApplicationController
     return row[:image].present? if row[:id].blank?
 
     existing = @room.gallery_images.detect { |image| image.id.to_s == row[:id].to_s }
-    existing.present? && row[:position].present? && existing.position.to_s != row[:position].to_s
+    return false if existing.blank?
+
+    return true if row[:position].present? && existing.position.to_s != row[:position].to_s
+    # Task 4 (image metadata): same reasoning as media_metadata_changed?
+    # above — image_alt/image_description/image_derived_ok are resubmitted
+    # unconditionally by every persisted row, so each is compared against
+    # the row's OWN current value rather than checked for mere presence.
+    return true if row.key?(:image_alt) && row[:image_alt].to_s != existing.image_alt.to_s
+    return true if row.key?(:image_description) && row[:image_description].to_s != existing.image_description.to_s
+    return true if row.key?(:image_derived_ok) &&
+      ActiveModel::Type::Boolean.new.cast(row[:image_derived_ok]) != existing.image_derived_ok
+
+    false
   end
 
   # The view renders every persisted gallery image's `image.variant(...)`
