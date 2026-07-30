@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_30_062518) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -326,6 +326,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
 
   create_table "room_gallery_images", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "image_alt"
+    t.boolean "image_derived_ok", default: false, null: false
+    t.text "image_description"
     t.integer "position", default: 0, null: false
     t.integer "room_id", null: false
     t.datetime "updated_at", null: false
