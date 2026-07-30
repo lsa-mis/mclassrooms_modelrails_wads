@@ -57,7 +57,7 @@
             <%= ui :figure do %>
               <%= ui :image,
                     src: rails_representation_path(@building.photo.variant(:thumb)),
-                    alt: t("buildings.show.photo_alt", building: @building.display_name),
+                    alt: @building.alt_for(:photo),
                     width: 150, height: 150,
                     class: "size-[150px] rounded-md object-cover" %>
             <% end %>
@@ -111,7 +111,7 @@
                 <%= ui :figure do %>
                   <%= ui :image,
                         src: rails_representation_path(floor.plan.variant(resize_to_fill: [ 96, 96 ], format: :webp)),
-                        alt: t(".plan_alt", label: floor.label),
+                        alt: floor.alt_for(:plan),
                         width: 96, height: 96,
                         class: "size-24 rounded-md border border-border object-cover" %>
                 <% end %>

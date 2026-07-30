@@ -21,7 +21,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_representation_path(room.photo.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                alt: t("rooms.show.photo_alt", room: room.display_name),
+                alt: room.alt_for(:photo),
                 width: 150, height: 150,
                 class: "size-[150px] rounded-md object-cover" %>
         <% end %>
@@ -65,7 +65,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_representation_path(room.panorama.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                alt: t("rooms.show.panorama_label", room: room.display_name),
+                alt: room.alt_for(:panorama),
                 width: 150, height: 150,
                 class: "size-[150px] rounded-md object-cover" %>
         <% end %>
@@ -105,7 +105,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_representation_path(room.seating_chart.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                alt: t("rooms.show.seating_chart_alt", room: room.display_name),
+                alt: room.alt_for(:seating_chart),
                 width: 150, height: 150,
                 class: "size-[150px] rounded-md object-cover" %>
         <% end %>
@@ -143,7 +143,7 @@
           <%= ui :figure do %>
             <%= ui :image,
                   src: rails_representation_path(gallery_image.image.variant(resize_to_fill: [ 96, 96 ], format: :webp)),
-                  alt: t("rooms.show.gallery_alt", room: room.display_name, position: gf.index + 1),
+                  alt: gallery_image.alt_for(:image),
                   width: 96, height: 96,
                   class: "size-24 shrink-0 rounded-md object-cover" %>
           <% end %>

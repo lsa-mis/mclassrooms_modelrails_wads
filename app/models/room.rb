@@ -13,7 +13,7 @@ class Room < ApplicationRecord
   belongs_to :hidden_by, class_name: "User", optional: true
   has_many :room_characteristics, dependent: :destroy  # satellite tables land in
   has_one :room_contact, dependent: :destroy           # Tasks 6/8/9; associations are
-  has_many :gallery_images, class_name: "RoomGalleryImage", dependent: :destroy # lazy,
+  has_many :gallery_images, class_name: "RoomGalleryImage", dependent: :destroy, inverse_of: :room # lazy,
   has_many :availability_blocks, dependent: :destroy   # so the model loads before them
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
