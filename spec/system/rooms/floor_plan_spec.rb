@@ -54,8 +54,7 @@ RSpec.describe "Room floor plan", type: :system do
     expect(page).to have_content(I18n.t("rooms.floor_plan.current_room"))
 
     expect(page).to have_css("figure img")
-    plan_alt = I18n.t("rooms.floor_plan.plan_alt", building: building.display_name, floor: floor.label)
-    expect(page.find("figure img")["alt"]).to eq(plan_alt)
+    expect(page.find("figure img")["alt"]).to eq(floor.alt_for(:plan))
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"

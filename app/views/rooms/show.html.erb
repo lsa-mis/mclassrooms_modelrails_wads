@@ -69,7 +69,7 @@
                             class="block overflow-hidden rounded-md cursor-zoom-in focus-ring">
                       <%= ui :image,
                             src: rails_representation_path(@room.seating_chart.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                            alt: t("rooms.show.seating_chart_alt", room: @room.display_name),
+                            alt: @room.alt_for(:seating_chart),
                             width: 150, height: 150,
                             class: "size-[150px] object-cover" %>
                     </button>
@@ -77,7 +77,7 @@
                   <%= ui :figure do %>
                     <%= ui :image,
                           src: rails_blob_path(@room.seating_chart),
-                          alt: t("rooms.show.seating_chart_alt", room: @room.display_name),
+                          alt: @room.alt_for(:seating_chart),
                           loading: :eager,
                           class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
                   <% end %>
