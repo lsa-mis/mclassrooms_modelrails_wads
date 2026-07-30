@@ -1,0 +1,4 @@
+en:
+  media:
+    derived_alt:
+      gallery_image: "Photo of %{room}"
