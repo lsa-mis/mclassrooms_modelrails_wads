@@ -51,3 +51,27 @@ RSpec.describe Describable do
     expect(Describable.registry.values).to include(RoomGalleryImage)
   end
 end
+
+RSpec.describe "Describable slot declarations" do
+  it "declares building photo with a non-blank backstop" do
+    b = build(:building, name: "Mason Hall", photo_alt: nil)
+    expect(b.alt_for(:photo)).to be_present
+  end
+
+  it "declares floor plan with a non-blank backstop" do
+    f = build(:floor, plan_alt: nil)
+    expect(f.alt_for(:plan)).to be_present
+  end
+
+  it "declares all three room slots with non-blank backstops" do
+    r = build(:room, photo_alt: nil, panorama_alt: nil, seating_chart_alt: nil)
+    expect(r.alt_for(:photo)).to be_present
+    expect(r.alt_for(:panorama)).to be_present
+    expect(r.alt_for(:seating_chart)).to be_present
+  end
+
+  it "registers all four image-bearing models" do
+    Rails.application.eager_load!
+    expect(Describable.registry.values).to include(Building, Floor, Room, RoomGalleryImage)
+  end
+end
