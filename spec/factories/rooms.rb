@@ -17,5 +17,20 @@ FactoryBot.define do
       hidden_at { Time.current }
       hidden_by factory: :user
     end
+
+    # Minimal panorama attachment for specs exercising Room#panorama /
+    # alt_for(:panorama) rendering — reuses the shared room.jpg fixture
+    # (spec/system/rooms/show_spec.rb attaches the same fixture to
+    # room.panorama directly; this trait just gives factory-only specs the
+    # same attachment without a manual `after(:create)` in every spec).
+    trait :with_panorama do
+      after(:build) do |room|
+        room.panorama.attach(
+          io: Rails.root.join("spec/fixtures/files/room.jpg").open,
+          filename: "panorama.jpg",
+          content_type: "image/jpeg"
+        )
+      end
+    end
   end
 end

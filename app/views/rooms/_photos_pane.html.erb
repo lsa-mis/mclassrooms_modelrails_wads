@@ -10,14 +10,14 @@
                 class="block w-full overflow-hidden rounded-md cursor-zoom-in focus-ring">
           <%= ui :image,
                 src: rails_representation_path(room.photo.variant(resize_to_limit: [ 1600, 800 ], format: :webp)),
-                alt: t("rooms.show.photo_alt", room: room.display_name),
+                alt: room.alt_for(:photo),
                 class: "aspect-[2/1] w-full object-cover" %>
         </button>
       <% end %>
       <%= ui :figure do %>
         <%= ui :image,
               src: rails_blob_path(room.photo),
-              alt: t("rooms.show.photo_alt", room: room.display_name),
+              alt: room.alt_for(:photo),
               loading: :eager,
               class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
       <% end %>
@@ -26,9 +26,9 @@
 
   <% if gallery_images.any? %>
     <%= ui :gallery do |g| %>
-      <% gallery_images.each.with_index(1) do |gallery_image, position| %>
-        <% alt = t("rooms.show.gallery_alt", room: room.display_name, position: position) %>
-        <% g.with_image(src: rails_blob_path(gallery_image.image), alt: alt) %><%# herb:disable erb-no-unused-expressions %>
+      <% gallery_images.each do |gallery_image| %>
+        <% g.with_image(src: rails_blob_path(gallery_image.image), alt: gallery_image.alt_for(:image),
+              caption: gallery_image.description_for(:image)) %><%# herb:disable erb-no-unused-expressions %>
       <% end %>
     <% end %>
   <% end %>

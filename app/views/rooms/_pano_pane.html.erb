@@ -21,7 +21,7 @@
         panorama_preview_url_value: panorama_preview_path,
         panorama_label_value: t("rooms.show.panorama_label", room: room.display_name)
       } do %>
-  <%= image_tag panorama_preview_path, alt: "", loading: :eager,
+  <%= image_tag panorama_preview_path, alt: room.alt_for(:panorama), loading: :eager,
         class: "absolute inset-0 size-full object-cover" %>
   <%# Focus indicator comes from .pnlm-container:focus-visible in
       application.css (INSET — the stage's overflow-hidden clips the app's
