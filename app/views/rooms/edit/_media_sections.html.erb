@@ -21,7 +21,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_representation_path(room.photo.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                alt: t("rooms.show.photo_alt", room: room.display_name),
+                alt: room.alt_for(:photo),
                 width: 150, height: 150,
                 class: "size-[150px] rounded-md object-cover" %>
         <% end %>
@@ -44,6 +44,13 @@
           label: t("rooms.edit.photo_label"),
           help: t("rooms.edit.photo_hint"),
           accept: "image/png,image/jpeg,image/webp" %>
+
+    <%# Task 4 (image metadata, Brief §5.2): author alt/description, or bless
+        the derived alt via the checkbox — Describable#alt_status_for reads
+        these three columns to decide :authored/:derived_ok/:needs_review. %>
+    <%= form.text_field :photo_alt, label: t("rooms.media.alt_label") %>
+    <%= form.text_area :photo_description, rows: 2, label: t("rooms.media.description_label") %>
+    <%= form.check_box :photo_derived_ok, label: t("rooms.media.derived_ok_label") %>
   <% end %>
 <% end %>
 
@@ -58,7 +65,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_representation_path(room.panorama.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                alt: t("rooms.show.panorama_label", room: room.display_name),
+                alt: room.alt_for(:panorama),
                 width: 150, height: 150,
                 class: "size-[150px] rounded-md object-cover" %>
         <% end %>
@@ -76,6 +83,10 @@
           label: t("rooms.edit.panorama_label"),
           help: t("rooms.edit.panorama_hint"),
           accept: "image/png,image/jpeg,image/webp" %>
+
+    <%= form.text_field :panorama_alt, label: t("rooms.media.alt_label") %>
+    <%= form.text_area :panorama_description, rows: 2, label: t("rooms.media.description_label") %>
+    <%= form.check_box :panorama_derived_ok, label: t("rooms.media.derived_ok_label") %>
   <% end %>
 <% end %>
 
@@ -94,7 +105,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_representation_path(room.seating_chart.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
-                alt: t("rooms.show.seating_chart_alt", room: room.display_name),
+                alt: room.alt_for(:seating_chart),
                 width: 150, height: 150,
                 class: "size-[150px] rounded-md object-cover" %>
         <% end %>
@@ -112,6 +123,10 @@
           label: t("rooms.edit.seating_chart_label"),
           help: t("rooms.edit.seating_chart_hint"),
           accept: "image/png,image/jpeg,image/webp,application/pdf" %>
+
+    <%= form.text_field :seating_chart_alt, label: t("rooms.media.alt_label") %>
+    <%= form.text_area :seating_chart_description, rows: 2, label: t("rooms.media.description_label") %>
+    <%= form.check_box :seating_chart_derived_ok, label: t("rooms.media.derived_ok_label") %>
   <% end %>
 <% end %>
 
@@ -128,13 +143,18 @@
           <%= ui :figure do %>
             <%= ui :image,
                   src: rails_representation_path(gallery_image.image.variant(resize_to_fill: [ 96, 96 ], format: :webp)),
-                  alt: t("rooms.show.gallery_alt", room: room.display_name, position: gf.index + 1),
+                  alt: gallery_image.alt_for(:image),
                   width: 96, height: 96,
                   class: "size-24 shrink-0 rounded-md object-cover" %>
           <% end %>
           <div class="flex-1 space-y-3">
             <%= gf.number_field :position,
                   label: t("rooms.edit.position_label", position: gf.index + 1), min: 0, required: true %>
+
+            <%= gf.text_field :image_alt, label: t("rooms.media.alt_label") %>
+            <%= gf.text_area :image_description, rows: 2, label: t("rooms.media.description_label") %>
+            <%= gf.check_box :image_derived_ok, label: t("rooms.media.derived_ok_label") %>
+
             <%= gf.check_box :_destroy,
                   label: t("rooms.edit.gallery_destroy_label", position: gf.index + 1, room: room.display_name) %>
           </div>

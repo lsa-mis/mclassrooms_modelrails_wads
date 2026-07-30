@@ -57,7 +57,7 @@
             <%= ui :figure do %>
               <%= ui :image,
                     src: rails_representation_path(@building.photo.variant(:thumb)),
-                    alt: t("buildings.show.photo_alt", building: @building.display_name),
+                    alt: @building.alt_for(:photo),
                     width: 150, height: 150,
                     class: "size-[150px] rounded-md object-cover" %>
             <% end %>
@@ -80,6 +80,14 @@
               label: t(".photo_heading"),
               help: t(".photo_hint"),
               accept: "image/png,image/jpeg,image/webp" %>
+
+        <%# Task 4 (image metadata, Brief §5.2): author alt/description, or
+            bless the derived alt via the checkbox — shares the generic
+            rooms.media.* labels with rooms/edit/_media_sections (same UI
+            vocabulary across both edit forms). %>
+        <%= form.text_field :photo_alt, label: t("rooms.media.alt_label") %>
+        <%= form.text_area :photo_description, rows: 2, label: t("rooms.media.description_label") %>
+        <%= form.check_box :photo_derived_ok, label: t("rooms.media.derived_ok_label") %>
       <% end %>
     <% end %>
 
@@ -103,7 +111,7 @@
                 <%= ui :figure do %>
                   <%= ui :image,
                         src: rails_representation_path(floor.plan.variant(resize_to_fill: [ 96, 96 ], format: :webp)),
-                        alt: t(".plan_alt", label: floor.label),
+                        alt: floor.alt_for(:plan),
                         width: 96, height: 96,
                         class: "size-24 rounded-md border border-border object-cover" %>
                 <% end %>

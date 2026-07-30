@@ -1,0 +1,9 @@
+en:
+  media:
+    derived_alt:
+      gallery_image: "Photo of %{room}"
+      building_photo: "Exterior photo of %{building}"
+      floor_plan: "Floor %{floor} plan of %{building}"
+      room_photo: "Photo of %{room}"
+      panorama: "360-degree panorama of %{room}"
+      seating_chart: "Seating chart for %{room}"
