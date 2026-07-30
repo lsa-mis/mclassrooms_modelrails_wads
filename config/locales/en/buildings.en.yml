@@ -16,7 +16,6 @@ en:
         one: "1 classroom"
         other: "%{count} classrooms"
     show:
-      photo_alt: "Photo of %{building}"
       campus: "Campus"
       address: "Address"
       abbreviation: "Abbreviation"
@@ -43,7 +42,6 @@ en:
       floors_heading: "Floors"
       floor_row_label: "Floor %{label}"
       plan_pdf_link: "Floor plan for floor %{label} (PDF)"
-      plan_alt: "Floor plan for floor %{label}"
       no_plan: "No floor plan has been uploaded for floor %{label} yet."
       replace_plan_label: "Replace floor plan for floor %{label}"
       replace_plan_hint: "PNG, JPEG, WEBP, or PDF. Up to 10 MB."

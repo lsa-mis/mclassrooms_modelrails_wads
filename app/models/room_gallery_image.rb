@@ -2,7 +2,7 @@ class RoomGalleryImage < ApplicationRecord
   include Tenanted
   include Describable
 
-  belongs_to :room
+  belongs_to :room, inverse_of: :gallery_images
   has_one_attached :image
 
   validates :position, numericality: { greater_than_or_equal_to: 0 }
