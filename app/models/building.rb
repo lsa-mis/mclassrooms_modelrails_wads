@@ -1,5 +1,8 @@
 class Building < ApplicationRecord
   include Tenanted
+  include Describable
+
+  describable :photo, derived_alt: ->(rec) { I18n.t("media.derived_alt.building_photo", building: rec.name) }
 
   belongs_to :campus, optional: true
   belongs_to :hidden_by, class_name: "User", optional: true

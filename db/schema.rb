@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_30_062521) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -122,6 +122,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
     t.decimal "longitude", precision: 10, scale: 6
     t.string "name", null: false
     t.string "nickname"
+    t.string "photo_alt"
+    t.boolean "photo_derived_ok", default: false, null: false
+    t.text "photo_description"
     t.string "short_name"
     t.string "state"
     t.datetime "updated_at", null: false
@@ -174,6 +177,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
     t.integer "building_id", null: false
     t.datetime "created_at", null: false
     t.string "label", null: false
+    t.string "plan_alt"
+    t.boolean "plan_derived_ok", default: false, null: false
+    t.text "plan_description"
     t.datetime "updated_at", null: false
     t.integer "workspace_id", null: false
     t.index ["building_id", "label"], name: "index_floors_on_building_id_and_label", unique: true
@@ -326,6 +332,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
 
   create_table "room_gallery_images", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "image_alt"
+    t.boolean "image_derived_ok", default: false, null: false
+    t.text "image_description"
     t.integer "position", default: 0, null: false
     t.integer "room_id", null: false
     t.datetime "updated_at", null: false
@@ -353,9 +362,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_110735) do
     t.boolean "in_feed", default: false, null: false
     t.integer "instructional_seat_count"
     t.string "nickname"
+    t.string "panorama_alt"
+    t.boolean "panorama_derived_ok", default: false, null: false
+    t.text "panorama_description"
+    t.string "photo_alt"
+    t.boolean "photo_derived_ok", default: false, null: false
+    t.text "photo_description"
     t.string "rmrecnbr", null: false
     t.string "room_number"
     t.string "room_type"
+    t.string "seating_chart_alt"
+    t.boolean "seating_chart_derived_ok", default: false, null: false
+    t.text "seating_chart_description"
     t.integer "square_feet"
     t.integer "unit_id"
     t.datetime "updated_at", null: false

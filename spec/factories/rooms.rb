@@ -12,10 +12,37 @@ FactoryBot.define do
     instructional_seat_count { 40 }
     building_name { building.name }
     in_feed { true }
+    photo_alt { "Room photo" }
+    panorama_alt { "Room panorama" }
+    seating_chart_alt { "Seating chart" }
 
     trait :hidden do
       hidden_at { Time.current }
       hidden_by factory: :user
+    end
+
+    trait :needs_alt do
+      photo_alt { nil }
+      photo_derived_ok { false }
+      panorama_alt { nil }
+      panorama_derived_ok { false }
+      seating_chart_alt { nil }
+      seating_chart_derived_ok { false }
+    end
+
+    # Minimal panorama attachment for specs exercising Room#panorama /
+    # alt_for(:panorama) rendering — reuses the shared room.jpg fixture
+    # (spec/system/rooms/show_spec.rb attaches the same fixture to
+    # room.panorama directly; this trait just gives factory-only specs the
+    # same attachment without a manual `after(:create)` in every spec).
+    trait :with_panorama do
+      after(:build) do |room|
+        room.panorama.attach(
+          io: Rails.root.join("spec/fixtures/files/room.jpg").open,
+          filename: "panorama.jpg",
+          content_type: "image/jpeg"
+        )
+      end
     end
   end
 end

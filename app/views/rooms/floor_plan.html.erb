@@ -39,7 +39,7 @@
         <%= ui :figure do %>
           <%= ui :image,
                 src: rails_blob_path(@floor.plan),
-                alt: t(".plan_alt", building: @room.building.display_name, floor: @floor.label),
+                alt: @floor.alt_for(:plan),
                 loading: :eager,
                 class: "w-full rounded-md border border-border" %>
         <% end %>
