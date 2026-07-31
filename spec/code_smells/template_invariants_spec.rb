@@ -74,6 +74,53 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  # The lock protects this checkout; the Gemfile requirement protects a fork.
+  # A fork that resolves fresh takes the newest version the requirement admits,
+  # so a floor left below a security release lets it land back on a vulnerable
+  # gem with a green build. Written as requirement checks rather than equality
+  # so routine bumps keep passing.
+  describe "Security floors (the Gemfile must reject known-vulnerable versions)" do
+    let(:gemfile) { File.read(root.join("Gemfile")) }
+    let(:lockfile) { Bundler::LockfileParser.new(File.read(root.join("Gemfile.lock"))) }
+
+    def requirement_for(gem_name)
+      line = gemfile[/^gem "#{Regexp.escape(gem_name)}".*$/]
+      raise "no `gem \"#{gem_name}\"` line in Gemfile" if line.nil?
+
+      Gem::Requirement.new(line.scan(/"([~><=!\s\d.]+)"/).flatten)
+    end
+
+    def locked_version(gem_name)
+      spec = lockfile.specs.find { |s| s.name == gem_name }
+      raise "#{gem_name} is not in Gemfile.lock" if spec.nil?
+
+      spec.version
+    end
+
+    # GHSA-xr9x-r78c-5hrm / CVE-2026-66066 — Active Storage did not disable
+    # libvips's unfuzzed loaders, so a crafted upload could read arbitrary
+    # server files. Patched in 7.2.3.2 / 8.0.5.1 / 8.1.3.1.
+    it "excludes Rails versions vulnerable to CVE-2026-66066" do
+      requirement = requirement_for("rails")
+
+      expect(requirement).not_to be_satisfied_by(Gem::Version.new("8.1.3")),
+        "Gemfile `rails` requirement (#{requirement}) still admits 8.1.3, which is vulnerable " \
+        "to CVE-2026-66066; raise the floor to >= 8.1.3.1"
+      expect(requirement).not_to be_satisfied_by(Gem::Version.new("8.0.5"))
+      expect(requirement).to be_satisfied_by(Gem::Version.new("8.1.3.1"))
+    end
+
+    it "locks a Rails version at or above the CVE-2026-66066 fix" do
+      expect(locked_version("rails")).to be >= Gem::Version.new("8.1.3.1")
+    end
+
+    # Active Storage raises at boot below this — it cannot disable the unfuzzed
+    # operations through an older ruby-vips.
+    it "locks ruby-vips at or above the 2.2.1 floor Active Storage requires" do
+      expect(locked_version("ruby-vips")).to be >= Gem::Version.new("2.2.1")
+    end
+  end
+
   describe "Production Dockerfile hygiene" do
     let(:dockerfile) { File.read(root.join("Dockerfile")) }
     let(:dockerfile_lines) { dockerfile.lines.map(&:chomp) }

@@ -4,17 +4,29 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ## [Unreleased]
 
+### Breaking
+
+- **libvips 8.13+ and ruby-vips 2.2.1+ are now required** — Active Storage raises at boot below either. The production image, devcontainer and CI already satisfy this; custom images may not.
+- **BMP, ICO and PSD attachments no longer generate variants** — `config/initializers/active_storage.rb` drops them from `variable_content_types` so they render as a file chip, rather than an image whose representation URL raises `Vips::Error` when fetched. Forks that legitimately transform those formats can re-enable the specific libvips operation in an initializer.
+- **Forks that ran an affected Rails version with untrusted uploads should rotate their secrets** — see "Responding to a Secret Exposure" in `/docs/developer/security`.
+
 ### Added
 
 - Parallel test suite — `bin/parallel-rspec` runs RSpec across all cores with example-count and merged-coverage integrity gates; CI and the Lefthook pre-push gate use it, cutting CI's test job from ~14 to ~8.5 minutes (#485; further wins tracked in #486–#488).
 - Runtime-balanced parallel test split — spec files split across workers by recorded per-file runtime instead of file size, evening out the slowest worker; the timing log (`tmp/parallel_runtime_rspec.log`) is written each run and cached in CI, and falls back to file-size splitting when absent (#488).
 - Add opt-in encrypted form-draft recovery on invitation and project forms.
 - Cancel superseded CI runs on new pushes to the same branch/PR (#489).
+- `i18n-tasks` gate — `spec/i18n_spec.rb` fails the suite on missing keys and inconsistent interpolations, so CI and Lefthook both cover it with no separate step to keep in sync.
+- `/docs/developer/i18n` — where locale keys live, the two gates, the lazy-key rule for private controller methods, the `date.formats` seam, and how to add a language.
 
 ### Changed
 
+- **Security:** Raised the `rails` Gemfile floor to `>= 8.1.3.1` for CVE-2026-66066 — Active Storage did not disable libvips's unfuzzed image loaders, so a crafted upload could read arbitrary server files including `secret_key_base` (GHSA-xr9x-r78c-5hrm). #531 bumped the lock; the floor is what stops a fork's fresh resolve landing back on a vulnerable release, and a template invariant now fails if the requirement ever admits one.
 - Replaced Playwright/Node with Cuprite (pure-Ruby CDP) for system specs, and swapped npm-based linters for Ruby gems (`erb_lint`, `mdl`) — the template no longer requires Node at all (#497).
 - Bumped Ruby to 4.0.6 (#501).
+- Bumped SimpleCov to 1.0.2 (major). `SimpleCov.running` was removed; the coverage-config spec now asserts stdlib `Coverage.running?` instead. 1.0 also absorbs `simplecov-html`, `simplecov_json_formatter` and `docile`, so those drop out of the lockfile — HTML reports and `SimpleCov.collate`'s merged-resultset floor are unaffected. A fork with its own coverage spec will hit the same removal.
+- **Locale keys moved** — forks that overrode any of these need to move their override: `invitation_accepts.create.invalid_token` → `invitation_accepts.invalid_token`, `invitation_accepts.create.expired_or_used` → `invitation_accepts.expired_or_used`, `invitation_declines.create.invalid` → `invitation_declines.invalid`. They are emitted by a filter shared across two actions, so they now sit at controller scope. An override left at the old key silently reverts to upstream English.
+- `t(".key")` is now used only inside controller actions; private helpers use absolute keys, so `i18n-tasks` can verify them statically.
 
 ### Fixed
 
@@ -23,6 +35,9 @@ All notable changes to ModelRails are documented here, organized by phase.
 - Toast containers are named region landmarks — clears the app-wide aria-prohibited-attr axe violation and keeps toast content inside a landmark.
 - **Security:** CSP nonce generator returned blank on a visitor's first request (no session yet), emitting an invalid `'nonce-'` source that blocked every inline script — Stimulus never booted for first-time visitors (#499).
 - Cookie-consent banner (biscuit-rails): reject is now the emphasized default action (not accept), the banner no longer flashes visible before JS hides it, and reopening the preferences panel shows the visitor's actual saved choices instead of stale checkboxes (#500).
+- **Notification bell returned a 500 in production for any user whose saved locale was not `en`.** `I18n.available_locales` was derived from the load path, so `faker` (development/test only, ~350 locale files) made it ~60 entries under test and `[:en]` in production — the notifier specs passed while the same code raised `I18n::InvalidLocale` for real users. `config.i18n.available_locales` is now pinned in `config/application.rb`, `UserPreferences#locale` validates against it, and `recipient_locale` falls back to the default for rows written before the validation existed.
+- Six locale keys that silently rendered `translation missing` to users — the flash after saving notification preferences, the invalid/expired flashes on the invitation accept and decline pages, and an Invitation validation message. Enabling `config.i18n.raise_on_missing_translations` in test surfaced all of them; the invitation flashes were defined only under `create` while a shared filter also served `show`.
+- Digest email's per-notification link read from a `notifications.bell.see_all` key that never existed, falling back to an inline default.
 
 ## v2.0.0 — Passwordless Auth, Workspace Lifecycle & Navigation IA (2026-07-06)
 

@@ -107,7 +107,13 @@ module Admin
       end
       @report.unmatched.each { |unmatched| unmatched.blob.purge_later }
 
-      notice = failed.zero? ? t(".committed", count: attached) : t(".partial_failure", attached:, failed:)
+      # Absolute keys (not `t(".committed")`): this runs inside the private
+      # #commit helper but is dispatched from the #create action, so Rails'
+      # relative-key scope is `create` at runtime while i18n-tasks infers
+      # `commit` statically from the enclosing method — and it flags a false
+      # "missing" for the relative form. The absolute `create` key (matching
+      # the action, the locale, and the specs) resolves identically both ways.
+      notice = failed.zero? ? t("admin.bulk_uploads.create.committed", count: attached) : t("admin.bulk_uploads.create.partial_failure", attached:, failed:)
       redirect_to new_admin_bulk_upload_path, notice: notice
     end
   end

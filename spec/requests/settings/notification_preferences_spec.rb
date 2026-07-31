@@ -51,6 +51,16 @@ RSpec.describe "Account Notification Preferences", type: :request do
     end
 
     describe "PATCH /account/notification_preferences" do
+      # This flash was one of the six keys rendering "translation missing" to
+      # real users. Every patch example here asserted state or status and none
+      # asserted the message, which is exactly why it stayed invisible.
+      it "flashes a confirmation the user can actually read" do
+        patch settings_notification_preferences_path, params: {
+          notification_preferences: { quiet_hours: { enabled: "true" } }
+        }
+        expect(flash[:notice]).to eq("Notification preferences updated.")
+      end
+
       it "flips quiet_hours.enabled in the JSONB column" do
         expect(user.preferences.notification_preferences.dig("quiet_hours", "enabled")).to eq(false)
 

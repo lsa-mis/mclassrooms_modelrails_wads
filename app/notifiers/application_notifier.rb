@@ -52,7 +52,14 @@ class ApplicationNotifier < Noticed::Event
     end
 
     def recipient_locale
-      recipient.try(:preferences)&.locale.presence&.to_sym || I18n.default_locale
+      stored = recipient.try(:preferences)&.locale.presence&.to_sym
+      # Guard the availability check rather than trusting the column: rows
+      # written before UserPreferences validated this, or a fork retiring a
+      # language it once shipped, would otherwise hand an unsupported locale
+      # to I18n.t. That raises I18n::InvalidLocale, which
+      # render_safe_or_placeholder does not rescue — the bell 500s.
+      return I18n.default_locale unless stored && I18n.available_locales.include?(stored)
+      stored
     end
 
     def mark_seen!

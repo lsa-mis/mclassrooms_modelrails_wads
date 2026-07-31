@@ -71,7 +71,7 @@ module Workspaces
       )
 
       redirect_to workspace_members_path(@workspace),
-        notice: t(".sent", sent: result[:sent], skipped: result[:skipped])
+        notice: t("workspaces.invitations.create.sent", sent: result[:sent], skipped: result[:skipped])
     end
 
     def create_magic_link
@@ -83,7 +83,7 @@ module Workspaces
       )
 
       redirect_to workspace_members_path(@workspace),
-        notice: t(".magic_link_created"),
+        notice: t("workspaces.invitations.create.magic_link_created"),
         flash: { magic_link_url: accept_invitation_url(token: invitation.token) }
     end
 

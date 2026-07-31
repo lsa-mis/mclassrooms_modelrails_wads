@@ -34,7 +34,7 @@ module Settings
       new_email = profile_params[:email_address]
 
       if current_password.blank?
-        @user.errors.add(:current_password, t(".password_required"))
+        @user.errors.add(:current_password, t("settings.profiles.update.password_required"))
         render :edit, status: :unprocessable_entity
         return
       end
@@ -47,9 +47,9 @@ module Settings
         @user.save! if @user.changed?
         AuthenticationMailer.email_change_verification(@user).deliver_later
         AuthenticationMailer.email_change_notification(@user).deliver_later
-        redirect_to edit_settings_profile_path, notice: t(".verification_sent", email: @user.pending_email)
+        redirect_to edit_settings_profile_path, notice: t("settings.profiles.update.verification_sent", email: @user.pending_email)
       else
-        @user.errors.add(:current_password, t(".wrong_password")) unless @user.errors[:current_password].any?
+        @user.errors.add(:current_password, t("settings.profiles.update.wrong_password")) unless @user.errors[:current_password].any?
         render :edit, status: :unprocessable_entity
       end
     end
@@ -57,7 +57,7 @@ module Settings
     def handle_profile_update
       update_params = profile_params.except(:email_address, :current_password)
       if @user.update(update_params)
-        redirect_to edit_settings_profile_path, notice: t(".success")
+        redirect_to edit_settings_profile_path, notice: t("settings.profiles.update.success")
       else
         render :edit, status: :unprocessable_entity
       end
