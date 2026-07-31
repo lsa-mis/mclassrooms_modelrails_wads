@@ -78,6 +78,9 @@ en:
       update:
         success: "Theme updated."
         invalid_theme: "Invalid theme."
+    notification_preferences:
+      update:
+        success: "Notification preferences updated."
     passkeys:
       index:
         title: "Passkeys"

@@ -276,10 +276,31 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     let!(:prefs) { create(:user_preferences, user: user) }
 
     it "returns the recipient's locale from preferences" do
-      prefs.update!(locale: "fr")
+      with_available_locale(:fr) do
+        prefs.update!(locale: "fr")
+        StubAccountAccessNotifier.with(record: user).deliver(user)
+        notification = user.notifications.last
+        expect(notification.recipient_locale).to eq :fr
+      end
+    end
+
+    # Defence in depth for rows written before the inclusion validation existed
+    # (or by a fork that removes a locale it once shipped). Returning the stored
+    # value unchecked hands an unsupported locale to I18n.t, which raises
+    # I18n::InvalidLocale — and render_safe_or_placeholder does not rescue that,
+    # so the notification bell 500s.
+    it "falls back to the default locale when the stored locale is unsupported" do
+      prefs.update_columns(locale: "fr")
       StubAccountAccessNotifier.with(record: user).deliver(user)
       notification = user.notifications.last
-      expect(notification.recipient_locale).to eq :fr
+      expect(notification.recipient_locale).to eq I18n.default_locale
+    end
+
+    it "renders rather than raising when the stored locale is unsupported" do
+      prefs.update_columns(locale: "fr")
+      StubAccountAccessNotifier.with(record: user).deliver(user)
+      notification = user.notifications.last
+      expect { notification.message }.not_to raise_error
     end
 
     it "falls back to I18n.default_locale when locale is nil" do

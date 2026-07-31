@@ -98,8 +98,17 @@ Rails.application.configure do
   # Suppress logger output for asset requests.
   config.assets.quiet = true
 
-  # Raises error for missing translations.
+  # Raises error for missing translations. Left off deliberately: a missing key
+  # renders inline here, which is the more useful signal while a page is still
+  # being built. Test raises, and the Lefthook pre-push hook runs the suite, so
+  # it cannot reach a PR.
   # config.i18n.raise_on_missing_translations = true
+
+  # Match production's fallback chain. Without this, `config.i18n.fallbacks`
+  # stays an empty OrderedOptions, `validate_fallbacks` returns false, and the
+  # Fallbacks module is never included — leaving I18n.fallbacks with no :en
+  # terminator and development the least production-like of the three envs.
+  config.i18n.fallbacks = true
 
   # Annotate rendered view with file names.
   config.action_view.annotate_rendered_view_with_filenames = true

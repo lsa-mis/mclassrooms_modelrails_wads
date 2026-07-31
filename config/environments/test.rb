@@ -68,8 +68,21 @@ Rails.application.configure do
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 
-  # Raises error for missing translations.
-  # config.i18n.raise_on_missing_translations = true
+  # Two complementary gates, and it is worth being precise about which covers
+  # what — `config.i18n.available_locales` is pinned to [:en] in
+  # application.rb, so this raise only ever exercises the base locale.
+  #
+  #   raise_on_missing_translations — catches a missing :en key, but only on a
+  #     code path some spec actually walks, and only when the call site has no
+  #     inline `default:` to swallow it.
+  #   spec/i18n_spec.rb (i18n-tasks) — catches missing keys repo-wide without
+  #     executing anything, including cross-locale gaps once a fork adds one.
+  #
+  # `fallbacks` mirrors production.rb so a lookup that does reach a non-base
+  # locale terminates at :en rather than dying. A key missing from :en still
+  # raises, which is the point.
+  config.i18n.raise_on_missing_translations = true
+  config.i18n.fallbacks = true
 
   # Annotate rendered view with file names.
   # config.action_view.annotate_rendered_view_with_filenames = true

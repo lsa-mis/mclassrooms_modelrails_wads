@@ -3,7 +3,12 @@ source "https://rubygems.org"
 ruby file: ".tool-versions"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.1.2", ">= 8.1.2.1"
+# The `>= x.y.z` floor is a security floor, not decoration: it keeps a fork's
+# fresh resolve off a version patched for a known CVE (here 8.1.3.1 for
+# CVE-2026-66066). Dependabot rewrites this line on every Rails bump and will
+# drop the floor — spec/code_smells/template_invariants_spec.rb fails if the
+# requirement ever admits a vulnerable release again.
+gem "rails", "~> 8.1.3", ">= 8.1.3.1"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use sqlite3 as the database for Active Record
@@ -96,6 +101,11 @@ group :development, :test do
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
 
+  # Detects missing and unused locale keys. Driven from spec/i18n_spec.rb so it
+  # runs in the normal suite rather than as a separate CI step that Lefthook
+  # would have to mirror.
+  gem "i18n-tasks", "~> 1.0", require: false
+
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
 
@@ -141,7 +151,7 @@ gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
 
 gem "biscuit-rails", "~> 0.3.0"
 
-gem "lexxy", "~> 0.9.22"
+gem "lexxy", "~> 0.9.28"
 
 # Runtime dependency: the vendored app/components/ui/* are ViewComponents and are
 # loaded in production. This MUST stay a top-level gem — modelrails_ui (below) only
