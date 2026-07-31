@@ -214,11 +214,11 @@ class Workspace < ApplicationRecord
 
   def personal_workspaces_are_invite_only
     return unless personal? && !invite?
-    errors.add(:join_policy, :personal_must_be_invite, message: I18n.t("errors.messages.personal_must_be_invite", default: "must be 'invite' for personal workspaces"))
+    errors.add(:join_policy, :personal_must_be_invite)
   end
 
   def join_policy_must_be_permitted_by_instance
     return if SignupPolicy.permits_strategy?(join_policy)
-    errors.add(:join_policy, :not_permitted_by_instance, message: I18n.t("errors.messages.not_permitted_by_instance", default: "is not permitted by this instance"))
+    errors.add(:join_policy, :not_permitted_by_instance)
   end
 end

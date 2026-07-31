@@ -15,11 +15,31 @@ RSpec.describe "Invitation Accepts", type: :request do
       invitation.update!(expires_at: 1.day.ago)
       get accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_accepts.expired_or_used"))
     end
 
     it "shows error for invalid token" do
       get accept_invitation_path(token: "invalid")
       expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_accepts.invalid_token"))
+    end
+  end
+
+  # `find_valid_invitation` is shared by #show and #create, so the rejection
+  # flashes must resolve for both. Asserting the message (not just the
+  # redirect) is what catches a key that only exists under one action.
+  describe "POST /invitations/:token/accept (rejected tokens)" do
+    it "shows error for invalid token" do
+      post accept_invitation_path(token: "invalid")
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_accepts.invalid_token"))
+    end
+
+    it "shows error for expired invitation" do
+      invitation.update!(expires_at: 1.day.ago)
+      post accept_invitation_path(token: invitation.token)
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_accepts.expired_or_used"))
     end
   end
 

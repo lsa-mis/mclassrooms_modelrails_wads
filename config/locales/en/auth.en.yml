@@ -86,3 +86,13 @@ en:
               nested_reply_not_allowed: "replies can only be one level deep"
             notable:
               must_match_parent_notable: "must match the parent note's notable"
+        role:
+          attributes:
+            permissions:
+              not_a_hash: "must be a hash"
+              non_boolean_value: "values must be booleans"
+        workspace:
+          attributes:
+            join_policy:
+              personal_must_be_invite: "must be 'invite' for personal workspaces"
+              not_permitted_by_instance: "is not permitted by this instance"

@@ -38,6 +38,18 @@ module ModelrailsBase
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
 
+    # Pin the locale universe. Without this, `I18n.available_locales` is derived
+    # from the load path — and `faker` (a development/test gem shipping ~350
+    # locale files) makes that ~60 entries in test versus [:en] in production.
+    # Since `I18n.translate` calls `enforce_available_locales!` before reaching
+    # the backend, a user-supplied locale then resolves under test and raises
+    # `I18n::InvalidLocale` in production. Pinning makes every environment agree.
+    #
+    # FORK SEAM: adding a language means adding it here as well as adding the
+    # locale files. This is the one list that decides what the app will accept.
+    config.i18n.available_locales = [ :en ]
+    config.i18n.default_locale = :en
+
     # Don't generate system test files.
     config.generators.system_tests = nil
 

@@ -42,6 +42,10 @@ en:
         magic_link_refreshed: "Magic link refreshed."
         rate_limited: "Too many requests. Please try again later."
   invitation_accepts:
+    # Outside show:/create: on purpose — the shared `find_valid_invitation`
+    # filter emits these for both actions and looks them up absolutely.
+    invalid_token: "This invitation link is invalid."
+    expired_or_used: "This invitation has expired or has already been used."
     show:
       title: "You've been invited"
       body: "%{inviter} invited you to join %{workspace} as a %{role}."
@@ -51,15 +55,14 @@ en:
     create:
       success: "Welcome! You've joined the workspace."
       register_first: "Create an account to accept your invitation."
-      invalid_token: "This invitation link is invalid."
-      expired_or_used: "This invitation has expired or has already been used."
       acceptance_failed: "This invitation could not be accepted. The workspace may be at capacity or you may already be a member."
       email_mismatch: "This invitation was sent to a different email address than the one on your account. Ask your workspace administrator to invite this address."
   invitation_declines:
+    # Outside show:/create: — see the note under invitation_accepts above.
+    invalid: "This invitation link is invalid or has expired."
     show:
       title: "Decline invitation"
       body: "Are you sure you want to decline the invitation to %{workspace}?"
       confirm: "Decline invitation"
     create:
       success: "Invitation declined."
-      invalid: "This invitation link is invalid or has expired."

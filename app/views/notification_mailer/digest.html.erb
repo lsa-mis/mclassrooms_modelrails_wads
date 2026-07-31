@@ -40,7 +40,7 @@
             <% if destination.present? && destination != t("notifications.placeholder") %>
               <a href="<%= destination %>"
                  style="font-size: 13px; color: <%= MailerTheme::INTERACTIVE %>; text-decoration: underline;">
-                <%= t("notifications.bell.see_all", default: "View") %>
+                <%= t(".action") %>
               </a>
             <% end %>
           </li>
