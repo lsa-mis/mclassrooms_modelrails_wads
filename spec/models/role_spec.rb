@@ -35,15 +35,20 @@ RSpec.describe Role, type: :model do
         expect(role).to be_valid
       end
 
+      # `details` proves the symbol contract; the literal proves a human
+      # sentence actually reached the user. Asserting `I18n.t(same_key)` here
+      # would put the same lookup on both sides of the expectation.
       it "rejects non-hash permissions" do
         role = build(:role, permissions: "invalid")
         expect(role).not_to be_valid
+        expect(role.errors.details[:permissions]).to include(error: :not_a_hash)
         expect(role.errors[:permissions]).to include("must be a hash")
       end
 
       it "rejects non-boolean values" do
         role = build(:role, permissions: { "manage_workspace" => "yes" })
         expect(role).not_to be_valid
+        expect(role.errors.details[:permissions]).to include(error: :non_boolean_value)
         expect(role.errors[:permissions]).to include("values must be booleans")
       end
 

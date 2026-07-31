@@ -12,6 +12,7 @@ RSpec.describe "Invitation Declines", type: :request do
     it "shows error for invalid token" do
       get decline_invitation_path(token: "invalid")
       expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_declines.invalid"))
     end
   end
 
@@ -19,6 +20,13 @@ RSpec.describe "Invitation Declines", type: :request do
     it "declines the invitation" do
       post decline_invitation_path(token: invitation.token)
       expect(invitation.reload).to be_declined
+    end
+
+    # Shared filter, same rationale as the accepts spec.
+    it "shows error for invalid token" do
+      post decline_invitation_path(token: "invalid")
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_declines.invalid"))
     end
 
     it "redirects to root" do

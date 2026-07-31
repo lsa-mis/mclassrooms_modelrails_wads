@@ -103,6 +103,7 @@ find again.
 | Brand strings | `config/locales/en/brand.en.yml` | Product name, description, copyright — fork-owned, one file |
 | Brand colors | `config/locales/en/brand.en.yml`'s visual twin: `app/assets/tailwind/tokens/_brand.css` | Optional — swap the primary palette family here; re-prove AAA in CI ([Theming](theming)) |
 | Marketing copy | `config/locales/en/pages.en.yml` + `app/views/pages/` | Fork-owned — rewrite wholesale |
+| Languages | `config/application.rb` (`config.i18n.available_locales`) | Register a locale here *before* adding its files, or `I18n.t(locale:)` raises in production — see [Internationalization](i18n) |
 | PWA app name | `public/manifest.webmanifest` (`name` / `short_name`) | Shown on the home screen if users install the PWA |
 | CI image tags | `.github/workflows/ci.yml` + `image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
 | Devcontainer bundle-cache volume | `.devcontainer/devcontainer.json` | Optional; the invariant spec only checks the `bundle-cache` suffix |

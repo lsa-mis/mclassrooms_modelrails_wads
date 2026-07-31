@@ -3,7 +3,6 @@ class InvitationDeclinesController < ApplicationController
 
   def show
     @invitation = find_valid_invitation
-    nil unless @invitation
   end
 
   def create
@@ -19,8 +18,9 @@ class InvitationDeclinesController < ApplicationController
   def find_valid_invitation
     invitation = Invitation.find_by(token: params[:token])
 
+    # Absolute key: this filter serves both #show and #create.
     if invitation.nil? || !invitation.pending? || invitation.expired?
-      redirect_to root_path, alert: t(".invalid")
+      redirect_to root_path, alert: t("invitation_declines.invalid")
       return nil
     end
 

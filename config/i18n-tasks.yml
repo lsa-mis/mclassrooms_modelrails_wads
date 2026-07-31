@@ -1,0 +1,67 @@
+# i18n-tasks config — drives spec/i18n_spec.rb.
+# Reference: https://github.com/glebm/i18n-tasks
+
+base_locale: en
+
+data:
+  read:
+    - config/locales/%{locale}.yml
+    - config/locales/**/*.%{locale}.yml
+    # Rails loads config/locales/**/*.yml regardless of a `.en.` infix, so a
+    # fork naming a file config/locales/en/billing.yml gets a working app.
+    # Without this glob the gate would not see it and would report every key
+    # in it as missing.
+    - config/locales/%{locale}/**/*.yml
+  # Keys added by `i18n-tasks add-missing` land here; the domain-split files
+  # under config/locales/en/ are curated by hand.
+  write:
+    - config/locales/%{locale}.yml
+  yaml:
+    write:
+      line_width: -1
+
+search:
+  paths:
+    - app/
+  relative_roots:
+    - app/controllers
+    - app/helpers
+    - app/mailers
+    - app/views
+    - app/components
+    - app/notifiers
+  exclude:
+    - app/assets
+    # Markdown served at /docs. Contains illustrative `t(".key")` snippets that
+    # are documentation, not call sites.
+    - app/docs
+    # UI primitives mirrored from the modelrails_ui gem. Every t() in here
+    # passes an inline `default:`, so an absent app key is intentional — a fork
+    # adds one only to override the shipped wording.
+    #
+    # Excluded by PATH rather than by key namespace on purpose: `ui.*` is an
+    # ordinary English word, and a fork writing t("ui.dashboard.header") in its
+    # own view must still be gated.
+    - app/components/ui
+
+ignore_unused:
+  # Resolved dynamically at runtime, so no static call site exists.
+  - notification_mailer.digest.subject.*
+  # Consumed by Rails/Active Model rather than an explicit t() call. Caveat
+  # worth knowing: this also means a key left behind by a deleted validation
+  # will never be reported. Removing a validation means removing its key by
+  # hand — the tool cannot see that one go stale.
+  - activerecord.errors.*
+  - errors.*
+  - helpers.*
+  - date.*
+  - time.*
+  - number.*
+  - support.*
+  # Read by JS through the clientside translation bridge.
+  - clientside.*
+
+ignore_missing:
+  # Mounted engines own these; the app carries no keys for them.
+  - biscuit.*
+  - markdowndocs.*

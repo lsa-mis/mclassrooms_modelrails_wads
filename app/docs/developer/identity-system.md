@@ -47,6 +47,8 @@ When switching away from the upload source, both attachments are purged to save 
 
 PNG, JPEG, GIF, WebP. GIF uploads show a warning that the crop result will be a static frame.
 
+This allowlist is also what keeps avatars and logos clear of the libvips loaders Active Storage blocks as of Rails 8.1.3.1 — all four still transform normally. See [Security](security.md) for what changed and which formats no longer generate variants.
+
 ## Workspace Logos
 
 **Sources:** upload, initials

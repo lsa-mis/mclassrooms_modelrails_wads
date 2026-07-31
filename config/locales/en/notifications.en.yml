@@ -162,6 +162,7 @@ en:
       preheader: "%{count} updates from your workspaces."
       heading_daily: "Today's updates"
       heading_weekly: "This week's updates"
+      action: "View"
       footer: "You can change digest cadence or pause notifications in your preferences."
     workspace_role_changed:
       subject: "Your role in %{workspace} has changed"
