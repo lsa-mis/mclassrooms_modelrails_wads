@@ -274,4 +274,44 @@ RSpec.describe Room, type: :model do
       expect(room).to be_valid
     end
   end
+
+  describe "flat panorama lifecycle" do
+    include ActiveJob::TestHelper   # NOT globally included in this suite
+
+    let(:workspace) { create(:workspace, slug: "flat-purge-ws", personal: false) }
+    let(:room) do
+      create(:room, :with_equirect_panorama,
+             building: create(:building, workspace: workspace), workspace: workspace)
+    end
+
+    before { perform_enqueued_jobs { room } }
+
+    it "purges the flat render when the panorama is removed" do
+      expect(room.reload.flat_panorama).to be_attached
+
+      perform_enqueued_jobs { room.update!(remove_panorama: "1") }
+
+      room.reload
+      expect(room.panorama).not_to be_attached
+      expect(room.flat_panorama).not_to be_attached
+    end
+
+    it "leaves the render alone when the checkbox is unchecked" do
+      perform_enqueued_jobs { room.update!(remove_panorama: "0") }
+
+      expect(room.reload.flat_panorama).to be_attached
+    end
+
+    it "replaces the render when the panorama is replaced" do
+      original = room.reload.flat_panorama.blob.id
+
+      perform_enqueued_jobs do
+        room.panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
+                             filename: "replacement.png", content_type: "image/png")
+      end
+
+      expect(room.reload.flat_panorama.blob.id).not_to eq(original)
+      expect(room.flat_panorama.blob.metadata["source_blob_key"]).to eq(room.panorama.blob.key)
+    end
+  end
 end
