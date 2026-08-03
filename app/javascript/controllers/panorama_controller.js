@@ -12,7 +12,15 @@ import { Controller } from "@hotwired/stimulus"
 // to execute it — the viewer factory is read off the global afterward.
 export default class extends Controller {
   static targets = ["viewer", "overlay"]
-  static values = { url: String, previewUrl: String, label: String, hfov: Number }
+  // hfov defaults to 100 (Panorama::Rectilinear::HFOV_DEG) rather than
+  // relying on the data attribute always being present: this element carries
+  // data-turbo-permanent, so a stage rendered before a deploy can survive a
+  // Turbo morph into post-deploy JS with a stale or missing attribute. A bare
+  // `Number` value silently degrades to 0 when absent/blank, and Pannellum
+  // CLAMPS (not rejects) hfov to its minHfov of 50 rather than erroring — a
+  // viewer at double magnification against a 100°-framed pre-load image, with
+  // no console error to notice.
+  static values = { url: String, previewUrl: String, label: String, hfov: { type: Number, default: 100 } }
 
   async load() {
     try {
