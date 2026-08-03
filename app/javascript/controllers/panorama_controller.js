@@ -11,19 +11,11 @@ import { Controller } from "@hotwired/stimulus"
 // side effect and has no `export`s, so `import("pannellum")` is used purely
 // to execute it — the viewer factory is read off the global afterward.
 export default class extends Controller {
-  static targets = ["viewer", "overlay"]
-  // hfov MUST stay the bare constructor form `hfov: Number` — never an
-  // object descriptor (`hfov: { type: Number }` or similar), with or without
-  // a `default:` key. Verified against the vendored stimulus.min.js:
-  // `hasCustomDefaultValue()` is `void 0!==se(s)`, and `se` returns
-  // `"object"` for any plain object descriptor — so ANY object form forces
-  // `hasHfovValue` true unconditionally, default key present or not (see the
-  // longer explanation in load() below). A bare `Number` with no attribute
-  // present silently degrades to 0, and Pannellum CLAMPS (not rejects) hfov
-  // to its minHfov of 50 rather than erroring — a viewer at double
-  // magnification against a 100°-framed pre-load image, with no console
-  // error to notice. The fallback below still closes that hole; it's just
-  // not expressed here.
+  static targets = ["viewer", "overlay", "instructions"]
+  // hfov MUST stay the bare constructor form `hfov: Number`. Any object
+  // descriptor (`{ type: Number }`, with or without `default:`) makes
+  // `hasHfovValue` true unconditionally, which silently defeats the
+  // missing-attribute check in load().
   static values = { url: String, previewUrl: String, label: String, hfov: Number }
 
   async load() {
@@ -41,36 +33,24 @@ export default class extends Controller {
     this.overlayTarget.hidden = true
     this.viewerTarget.hidden = false
 
-    // hfov comes from Panorama::Rectilinear::HFOV_DEG, NOT from Pannellum's
-    // default. The static pre-load image is rendered at exactly this field of
-    // view, so a mismatch here makes the image jump on click — which looks like
-    // a UI glitch, not like a bug. Change it in Ruby, then re-render:
+    // hfov comes from Panorama::Rectilinear::HFOV_DEG (emitted by ERB as
+    // data-panorama-hfov-value), NOT from Pannellum's default. The pre-load
+    // image is rendered at exactly this field of view, so a mismatch makes the
+    // image jump on click — which reads as a UI glitch rather than as a bug.
+    // Change it in Ruby, then re-render:
     //   bin/rails panoramas:render_flat FORCE=1
     //
-    // The 100 fallback is applied HERE, manually, rather than as a Stimulus
-    // `default:` on the value descriptor above — and the value descriptor
-    // must stay the bare `hfov: Number`, never an object form. Tried an
-    // object descriptor with a `default:` key first; reverted it after
-    // finding Stimulus bakes `hasCustomDefaultValue` into `hasHfovValue`
-    // (`this.data.has(attr) || hasCustomDefaultValue` — stimulus.min.js,
-    // values blessing), where `hasCustomDefaultValue()` is
-    // `void 0!==se(s)` and `se` returns `"object"` for ANY plain object
-    // descriptor. So it isn't the `default:` key specifically — any object
-    // form at all, `default:` or not, makes `hasHfovValue` return true
-    // UNCONDITIONALLY, attribute present or not. That silently breaks the
-    // diagnostic two lines down, which is the only thing that can tell "ERB
-    // emitted the attribute and this controller read it" apart from "the
-    // attribute name this controller reads no longer matches what ERB
-    // emits, and the number came from thin air" — ERB's
-    // data-panorama-hfov-value, Panorama::Rectilinear::HFOV_DEG, and
-    // Pannellum's OWN internal default are all 100 today, so a severed
-    // binding is invisible on the number alone. Keeping `hfov: Number` as
-    // the bare constructor keeps hasHfovValue an honest raw-attribute check.
-    // hasHfovValue is only false when the attribute is absent; a blank
-    // attribute still makes it true (with hfovValue 0). ERB emits
-    // Panorama::Rectilinear::HFOV_DEG unconditionally, so that case is
-    // unreachable in practice — this fallback only ever fires on "attribute
-    // absent" (a severed ERB -> Stimulus binding).
+    // ERB emits the attribute unconditionally, so the fallback is only
+    // reachable when the ERB -> Stimulus binding has already been severed —
+    // hence the console.error. It is otherwise silent and invisible:
+    // HFOV_DEG, Pannellum's own internal default, and this fallback are all
+    // 100 today, so a severed binding still boots at the "right" number.
+    if (!this.hasHfovValue) {
+      console.error(
+        "[panorama] data-panorama-hfov-value is missing — the ERB -> Stimulus binding is severed. " +
+        "Falling back to 100; the pre-load image may not match the viewer."
+      )
+    }
     const hfov = this.hasHfovValue ? this.hfovValue : 100
 
     this.viewer = window.pannellum.viewer(this.viewerTarget, {
@@ -82,13 +62,6 @@ export default class extends Controller {
       compass: false
     })
 
-    // Diagnostic, and the only thing pinning the ERB -> Stimulus
-    // attribute-name binding (see the comment above): publishes whether the
-    // camera that just booted came from the DOM attribute or the fallback,
-    // so a renamed/severed value key surfaces as "default" in devtools
-    // instead of silently rendering the numerically-identical 100.
-    this.element.dataset.panoramaHfovSource = this.hasHfovValue ? "attribute" : "default"
-
     // The booted viewer container is the accessible control surface (it owns
     // its own keyboard/drag interaction model, which isn't native HTML
     // semantics) — role="application" + a descriptive label per the room.
@@ -97,6 +70,13 @@ export default class extends Controller {
     // while it has focus.
     this.viewerTarget.setAttribute("role", "application")
     this.viewerTarget.setAttribute("aria-label", this.labelValue)
+
+    // role="application" suppresses browse mode, and the overlay carrying the
+    // pre-load hint was hidden a few lines up — so without this the user is
+    // handed an arrow-key-driven canvas with no instructions and no stated
+    // exit. The instructions element is a visually-hidden sibling OUTSIDE the
+    // overlay (see _pano_pane.html.erb) precisely so it survives that hide.
+    this.viewerTarget.setAttribute("aria-describedby", this.instructionsTarget.id)
 
     // Hiding the Load button dropped focus to <body> (WCAG 2.4.3): hand it
     // to the viewer so keyboard users land where the interaction lives.

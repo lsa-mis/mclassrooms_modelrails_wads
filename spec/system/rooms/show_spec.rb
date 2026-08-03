@@ -106,30 +106,6 @@ RSpec.describe "Room show", type: :system do
     # the "Copy link" button + copied confirmation stay deterministic. The native
     # share sheet is exercised in its own example below.
     cdp_add_init_script("Object.defineProperty(navigator,'share',{value:undefined,configurable:true});")
-    # Captures the OPTIONS OBJECT panorama_controller.js actually passes to
-    # `window.pannellum.viewer(el, opts)`, so a spec assertion can tell "hfov
-    # was explicitly wired" apart from "hfov landed on the right number by
-    # coincidence" — see the comment at the assertion below for why the
-    # second one is a real trap here, not a hypothetical. pannellum.js sets
-    # `window.pannellum` as a side effect of the controller's dynamic
-    # `import("pannellum")` (see that file's header comment), so the wrap
-    # happens via a `pannellum` setter installed before navigation, armed by
-    # cdp_add_init_script, then swaps itself for a plain value on first set.
-    cdp_add_init_script(<<~JS)
-      Object.defineProperty(window, 'pannellum', {
-        configurable: true,
-        set(lib) {
-          if (lib && typeof lib.viewer === 'function') {
-            const original = lib.viewer;
-            lib.viewer = function(el, opts) {
-              window.__pannellumViewerOptions = opts;
-              return original.apply(this, arguments);
-            };
-          }
-          Object.defineProperty(window, 'pannellum', { value: lib, writable: true, configurable: true });
-        }
-      });
-    JS
     visit room_path(room)
 
     expect(page).to have_selector("h1", text: room.display_name)
@@ -173,54 +149,46 @@ RSpec.describe "Room show", type: :system do
     # (it renders its error message inside), so this is CI-safe.
     expect(page).to have_button(I18n.t("rooms.show.load_panorama"))
     # Audit the PRE-load stage state before clicking: the Load button + hint
-    # chip over the poster photo only exist now — the end-of-example sweep
+    # bubble over the poster photo only exist now — the end-of-example sweep
     # runs after the overlay is hidden and would never see them (this is the
     # state the mc-transparent-over-media / 44px checks exist to guard).
-    expect(axe_violations(axe_options, include: "#room_panorama_stage")).to be_empty
+    #
+    # IN BOTH THEMES, and that is the whole point of auditing here rather than
+    # only at the end. Everything contrast-sensitive on this stage lives in the
+    # PRE-load state — the Load button on bg-surface-overlay, the tooltip
+    # bubble, the focus ring — and bg-surface-overlay resolves to a different
+    # colour per theme, so a single-theme audit checks one of the two colours
+    # that can actually fail. The end-of-example both-themes sweep runs after
+    # the overlay is hidden, when there is almost nothing left on the stage to
+    # evaluate; the coverage was exactly inverted.
+    [ :light, :dark ].each do |theme|
+      theme == :light ? ensure_light_mode : ensure_dark_mode
+      expect(axe_violations(axe_options, include: "#room_panorama_stage")).to be_empty,
+        "Accessibility violations on the pre-load panorama stage in #{theme} mode"
+    end
+    # Back to light for the rest of the example: everything below assumes the
+    # default theme, and the closing sweep sets its own.
+    ensure_light_mode
+
     click_button I18n.t("rooms.show.load_panorama")
     expect(page).to have_css("#room_panorama_stage .pnlm-container")
     expect(page).to have_no_css("[data-panorama-target='overlay']", visible: :visible)
     expect(page.evaluate_script("document.activeElement.classList.contains('pnlm-container')")).to be(true)
 
-    # Closes the three-way camera contract for real: a request spec pins Ruby
-    # -> ERB (data-panorama-hfov-value), and Panorama::Rectilinear's own spec
-    # pins the constant, but neither executes panorama_controller.js. Reading
-    # the BOOTED viewer's actual hfov back via the Stimulus application
-    # (exposed as window.Stimulus in app/javascript/controllers/application.js)
-    # confirms the camera that's actually live matches the constant.
+    # The CLAMP guard, and only that. Pannellum clamps hfov into [minHfov 50,
+    # maxHfov 120] rather than rejecting it, so setting HFOV_DEG to 130 would
+    # have Panorama::Rectilinear render a 130-degree view while the viewer
+    # showed 120 — the image jumps on click and nothing anywhere errors. This
+    # reads the LIVE camera back and fails when the constant leaves the range
+    # the viewer will actually honour. It deliberately does NOT try to prove
+    # the ERB -> Stimulus -> Pannellum wiring is live (HFOV_DEG, Pannellum's
+    # own default, and the controller's fallback are all 100, so this number
+    # cannot distinguish those); that is the injected-value example below.
     booted_hfov = page.evaluate_script(<<~JS)
       window.Stimulus.getControllerForElementAndIdentifier(
         document.querySelector('#room_panorama_stage'), 'panorama').viewer.getHfov()
     JS
     expect(booted_hfov).to be_within(0.01).of(Panorama::Rectilinear::HFOV_DEG)
-
-    # The assertion above is NOT sufficient on its own to catch `hfov:
-    # this.hfovValue` being deleted from the viewer options (verified by
-    # actually deleting it): Pannellum's own hardcoded default is 100
-    # (vendor/javascript/pannellum.js, Va={hfov:100,...}), which is exactly
-    # Panorama::Rectilinear::HFOV_DEG today — so a silently-omitted hfov
-    # boots at the "right" number by coincidence, not by wiring, and
-    # getHfov() can't tell the two apart. This one reads the options object
-    # panorama_controller.js actually PASSED (captured above), so it fails
-    # the moment the key is missing regardless of what Pannellum would have
-    # defaulted to.
-    passed_hfov = page.evaluate_script("window.__pannellumViewerOptions && window.__pannellumViewerOptions.hfov")
-    expect(passed_hfov).to eq(Panorama::Rectilinear::HFOV_DEG)
-
-    # Neither assertion above catches the ERB->Stimulus ATTRIBUTE-NAME binding
-    # being severed (e.g. the `hfov` value key renamed elsewhere in
-    # static values, independent of the data-panorama-hfov-value attribute ERB
-    # still emits): the JS fallback is also 100, which happens to equal both
-    # Panorama::Rectilinear::HFOV_DEG and Pannellum's own internal default, so
-    # a severed binding still reads 100 everywhere above. This reads back what
-    # the controller published about WHERE its value came from
-    # (panorama_controller.js's `dataset.panoramaHfovSource`, set from
-    # `hasHfovValue` — deliberately NOT a Stimulus `default:`, since that
-    # would make `hasHfovValue` always true; see the comment in load()) rather
-    # than just the number, so a renamed/severed value key surfaces as
-    # "default" instead of "attribute" even though the number stays 100.
-    hfov_source = page.evaluate_script("document.querySelector('#room_panorama_stage').dataset.panoramaHfovSource")
-    expect(hfov_source).to eq("attribute")
 
     # Redesign v4: photos are the stage's second tab — switching panes hides
     # (never removes) the panorama panel, per the WebGL-survival rule.
@@ -240,6 +208,54 @@ RSpec.describe "Room show", type: :system do
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+  end
+
+  # ONE assertion in place of the three that used to sit in the example above
+  # (booted number, captured options object, and a `dataset.panoramaHfovSource`
+  # attribute that existed in PRODUCTION code purely so a spec could read it
+  # back — asserting a Stimulus framework internal rather than user-visible
+  # behaviour). All three existed because 100 is simultaneously
+  # Panorama::Rectilinear::HFOV_DEG, Pannellum's own hardcoded default
+  # (vendor/javascript/pannellum.js, Va={hfov:100,...}), and the controller's
+  # fallback — so the real number proves nothing about the wiring.
+  #
+  # Injecting a value the wiring cannot produce by accident removes that
+  # ambiguity in one step: 70 is not HFOV_DEG, not Pannellum's default, and not
+  # a clamp bound (minHfov 50 / maxHfov 120), so it can only reach getHfov() by
+  # travelling data-panorama-hfov-value -> Stimulus value -> viewer options.
+  # Severing any link in that chain lands on 100 and fails this.
+  it "boots the viewer with the camera the DOM attribute asks for" do
+    visit room_path(room)
+    expect(page).to have_button(I18n.t("rooms.show.load_panorama"))
+
+    page.execute_script(
+      "document.querySelector('#room_panorama_stage').dataset.panoramaHfovValue = '70'"
+    )
+    click_button I18n.t("rooms.show.load_panorama")
+    expect(page).to have_css("#room_panorama_stage .pnlm-container")
+
+    booted_hfov = page.evaluate_script(<<~JS)
+      window.Stimulus.getControllerForElementAndIdentifier(
+        document.querySelector('#room_panorama_stage'), 'panorama').viewer.getHfov()
+    JS
+    expect(booted_hfov).to be_within(0.01).of(70)
+  end
+
+  # role="application" suppresses browse mode, and the pre-load hint lives
+  # inside the overlay the controller hides one line before focusing the
+  # viewer. Without a surviving description, the keyboard user gives up arrow
+  # keys and virtual navigation with no instructions present and no stated exit
+  # (WCAG 3.3.2). Asserts the wiring AND that the text is actually reachable —
+  # a dangling aria-describedby id names nothing.
+  it "describes the booted viewer with keyboard instructions that survive the load" do
+    visit room_path(room)
+    click_button I18n.t("rooms.show.load_panorama")
+    expect(page).to have_css("#room_panorama_stage .pnlm-container")
+
+    described_by = page.find("[data-panorama-target='viewer']")["aria-describedby"]
+    expect(described_by).to be_present
+    expect(page).to have_css("##{described_by}", text: I18n.t("rooms.show.panorama_instructions"),
+                             visible: :all)
   end
 
   describe "hero identity placement (2026-07-15 panel, Option A)" do

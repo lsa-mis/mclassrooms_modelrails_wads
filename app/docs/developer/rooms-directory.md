@@ -97,11 +97,26 @@ is the operator surface on top of that:
   blob, so replacing the bad photo clears it automatically; `FORCE=1` clears
   it manually without a replacement.
 - On the room page, `#room_panorama_stage`'s `data-panorama-preview-source`
-  attribute tells you which picture you're looking at without opening
-  devtools: `"flat_render"` means the rectilinear render landed and matches
-  the booted viewer; `"poster_fallback"` means the render hasn't run yet (or
-  failed) and you're seeing the old squashed-equirect `:poster` — check
-  `room.panorama.blob.metadata["flat_render_error"]` next.
+  attribute tells you which picture you're looking at, and why, without
+  opening a console. Four values:
+  - `flat_render` — the rectilinear render landed and matches the booted
+    viewer. Nothing to do.
+  - `flat_render_stale` — a render exists but does not match the recipe in
+    force (someone changed `HFOV_DEG`/`ASPECT`/the default width without
+    re-running the backfill), or its file is gone. It is still served — a
+    stale frame beats a squashed strip — but the image **will** jump when the
+    visitor clicks Load. Fix with `bin/rails panoramas:render_flat`.
+  - `poster_fallback_failed` — no render, and the source carries a permanent
+    failure tombstone. Read
+    `room.panorama.blob.metadata["flat_render_error"]`; it is almost always a
+    non-2:1 photo uploaded into the panorama slot, fixed by replacing the
+    photo (which clears the tombstone by itself).
+  - `poster_fallback` — no render yet, no failure recorded. Normal between a
+    deploy and the backfill; `panoramas:flat_status` counts these.
+
+  The staleness and tombstone questions have exactly one implementation each,
+  `Room#flat_render_current?` and `Room#flat_render_failed?`, shared by this
+  view, `RenderFlatPanoramaJob`, and both rake tasks.
 
 `bin/rails building_photos:ingest DIR=/path/to/buildings` is the sibling
 for building photos (`BuildingPhotoIngest`), with one difference: the files

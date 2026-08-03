@@ -174,22 +174,49 @@ RSpec.describe "panoramas:render_flat" do
     expect(other_room.reload.flat_panorama).not_to be_attached
   end
 
-  describe "LIMIT validation" do
+  describe "LIMIT" do
+    # LIMIT's HAPPY path had no coverage at all — only its two abort cases did.
+    # Delete `candidates.first(limit)` and LIMIT=1 silently means "render
+    # everything", which is the opposite of what an operator cautiously slicing
+    # a first batch on production asked for.
+    # Asserted on the PRINTED slice rather than by counting rendered rooms,
+    # for the process-global reason spelled out at "enqueues rather than
+    # rendering when INLINE is absent" above: repeated `Rails.application.
+    # load_tasks` calls APPEND duplicate actions to this task, so one #invoke
+    # can run the body more than once — and a second pass renders the room the
+    # first pass's LIMIT held back, leaving both attached. The printed line is
+    # immune to that (each pass prints its own honest numerator/denominator)
+    # and is the direct evidence: delete `candidates.first(limit)` and the
+    # first pass prints "to render: 2 of 2".
+    it "renders only LIMIT of the outstanding rooms" do
+      2.times { create(:room, :with_equirect_panorama, building: building, workspace: workspace) }
+
+      output = run_capturing(WORKSPACE: workspace.slug, INLINE: "1", LIMIT: "1")
+
+      expect(output).to include("to render:     1 of 2 stale/missing")
+      expect(output).to include("rendered: 1")
+    end
+
     # A typo (LIMIT=abc) or LIMIT=0 would otherwise silently become
     # `candidates.first(0)` — the run prints a plausible "to render: 0 of N"
     # and "enqueued: 0"/"rendered: 0" and does nothing, with no error at all.
+    #
+    # The MESSAGE, not a bare SystemExit: `abort` raises SystemExit, and so
+    # does FlatPanoramaTasks.workspace!'s own abort — which runs FIRST, before
+    # LIMIT is ever parsed. A bare `raise_error(SystemExit)` therefore passes
+    # for a run that never reached the code under test at all.
     it "aborts on a non-numeric LIMIT rather than silently rendering nothing" do
       create(:room, :with_equirect_panorama, building: building, workspace: workspace)
 
       expect { run(WORKSPACE: workspace.slug, INLINE: "1", LIMIT: "abc") }
-        .to raise_error(SystemExit)
+        .to raise_error(SystemExit, /LIMIT must be a positive integer, got "abc"/)
     end
 
     it "aborts on LIMIT=0 rather than silently rendering nothing" do
       create(:room, :with_equirect_panorama, building: building, workspace: workspace)
 
       expect { run(WORKSPACE: workspace.slug, INLINE: "1", LIMIT: "0") }
-        .to raise_error(SystemExit)
+        .to raise_error(SystemExit, /LIMIT must be a positive integer, got "0"/)
     end
   end
 end

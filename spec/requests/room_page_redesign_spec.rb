@@ -139,22 +139,42 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
       end
     end
 
-    it "serves the flat render and says so in the DOM" do
+    # LITERAL alt strings, per path, deliberately not `room.alt_for(:panorama)`.
+    # The old assertion compared the rendered alt to whatever that method
+    # returned, so it could not fail for any semantic reason — which is exactly
+    # why the flat render shipped claiming to be a full 360-degree panorama
+    # when it is a ~100-degree rectilinear crop. Two different literals here
+    # means collapsing the two paths back into one is a test failure.
+    # The :room factory AUTHORS panorama_alt ("Room panorama"), so the derived
+    # path — the one every real room takes, and the one this branch changed —
+    # is only reachable with it cleared. The old assertion did not notice: it
+    # compared the rendered alt to room.alt_for(:panorama), which returned the
+    # authored string on both paths.
+    def clear_authored_alt! = room.update!(panorama_alt: nil)
+
+    it "serves the flat render, proxied, and describes it as the opening frame" do
+      clear_authored_alt!
       attach_equirect_panorama!
 
       get room_path(room)
 
       stage = page.find("#room_panorama_stage")
       expect(stage["data-panorama-preview-source"]).to eq("flat_render")
+      # rails_storage_proxy_path, not rails_blob_path: the redirect route costs
+      # a second round trip to the same Puma and re-expires every 5 minutes,
+      # while the proxy controller serves it with http_cache_forever.
       expect(stage["data-panorama-preview-url-value"])
-        .to eq(rails_blob_path(room.reload.flat_panorama, only_path: true))
-      expect(stage).to have_css("img[alt='#{room.alt_for(:panorama)}']")
+        .to eq(rails_storage_proxy_path(room.reload.flat_panorama, only_path: true))
+      expect(stage).to have_css(
+        "img[alt='Interior view of #{room.display_name}, the opening frame of an interactive 360-degree panorama']"
+      )
       # The <img> and Pannellum's own `preview:` must be the SAME picture —
       # this is the central claim of the flat-render pane.
       expect(stage.find("img")["src"]).to eq(stage["data-panorama-preview-url-value"])
     end
 
     it "falls back to the poster variant when the render has not landed" do
+      clear_authored_alt!
       room.panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
                            filename: "pano.png", content_type: "image/png")
       expect(room.reload.flat_panorama).not_to be_attached
@@ -164,9 +184,58 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
       expect(response).to have_http_status(:ok)
       stage = page.find("#room_panorama_stage")
       expect(stage["data-panorama-preview-source"]).to eq("poster_fallback")
+      # The :poster variant really IS the whole sweep (squashed), so the
+      # 360-degree claim is TRUE here and false on the flat path — the alt must
+      # differ between them. This example previously asserted no alt at all.
+      expect(stage).to have_css("img[alt='360-degree panorama of #{room.display_name}']")
       # Same pin as the flat-render example: the <img> and Pannellum's
       # `preview:` must agree even on the fallback path.
       expect(stage.find("img")["src"]).to eq(stage["data-panorama-preview-url-value"])
+    end
+
+    # An AUTHORED alt is a curator's description of what is actually in the
+    # room; that is more useful to a screen reader user than an accurate
+    # description of a 100-degree crop, so the flat path must NOT override it.
+    it "leaves an authored alt alone on the flat-render path" do
+      room.update!(panorama_alt: "Tiered lecture hall with a chalkboard wall")
+      attach_equirect_panorama!
+
+      get room_path(room)
+
+      expect(page.find("#room_panorama_stage"))
+        .to have_css("img[alt='Tiered lecture hall with a chalkboard wall']")
+    end
+
+    # A render made under an OLD recipe (someone changed HFOV_DEG and did not
+    # re-run the backfill) is still SERVED — a stale frame beats a squashed
+    # strip — but it will visibly jump on Load, so it must not report itself as
+    # "flat_render", which the docs define as "matches the viewer".
+    it "flags a render made under a different projection recipe as stale" do
+      attach_equirect_panorama!
+      allow(Panorama::Rectilinear).to receive(:signature).and_return("hfov90-aspect2-w1024")
+
+      get room_path(room)
+
+      stage = page.find("#room_panorama_stage")
+      expect(stage["data-panorama-preview-source"]).to eq("flat_render_stale")
+      expect(stage["data-panorama-preview-url-value"])
+        .to eq(rails_storage_proxy_path(room.reload.flat_panorama, only_path: true))
+    end
+
+    # "Never going to render" and "has not rendered yet" are the same picture
+    # but different operator actions, and conflating them made the doc's own
+    # next step "open a Rails console".
+    it "distinguishes a permanently failed render from one that has not run yet" do
+      perform_enqueued_jobs do
+        room.panorama.attach(io: Rails.root.join("spec/fixtures/files/room.jpg").open,
+                             filename: "not_equirect.jpg", content_type: "image/jpeg")
+      end
+      expect(room.reload.flat_render_failed?).to be(true)
+
+      get room_path(room)
+
+      stage = page.find("#room_panorama_stage")
+      expect(stage["data-panorama-preview-source"]).to eq("poster_fallback_failed")
     end
 
     # UI::AspectRatioComponent renders style="aspect-ratio: <ratio>". 2:1 is not

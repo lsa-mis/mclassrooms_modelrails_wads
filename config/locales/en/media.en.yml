@@ -6,4 +6,11 @@ en:
       floor_plan: "Floor %{floor} plan of %{building}"
       room_photo: "Photo of %{room}"
       panorama: "360-degree panorama of %{room}"
+      # The pano pane's FLAT render is a rectilinear crop covering roughly
+      # longitude -50..+50 — about 28% of the sweep, not the whole panorama.
+      # A screen reader user will essentially never drag a WebGL canvas, so
+      # this alt is not a preview caption, it IS the panorama for them; it must
+      # describe the picture actually on the page and name what the picture is
+      # the opening frame of.
+      panorama_flat: "Interior view of %{room}, the opening frame of an interactive 360-degree panorama"
       seating_chart: "Seating chart for %{room}"

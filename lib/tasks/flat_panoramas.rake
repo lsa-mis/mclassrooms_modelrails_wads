@@ -45,8 +45,9 @@ namespace :panoramas do
     # everything it can raise — discard_on(NotEquirectangular),
     # discard_on(ActiveStorage::FileNotFoundError), discard_on(RecordNotFound),
     # and retry_on(Vips::Error) with a give-up block all handle their own
-    # errors without re-raising, and its fresh?/permanently_failed? guards
-    # return silently too. So "perform_now did not raise" proves nothing —
+    # errors without re-raising, and its Room#flat_render_current? /
+    # Room#flat_render_failed? guards return silently too. So "perform_now did
+    # not raise" proves nothing —
     # `rendered`/`failed`/`skipped` are classified from the room's state
     # AFTER the call (FlatPanoramaTasks.render_outcome). `errored` stays a
     # `rescue StandardError` catch-all for what genuinely still escapes the
@@ -109,10 +110,9 @@ namespace :panoramas do
     stale  = FlatPanoramaTasks.candidates(rooms, force: false)
     # Same predicate `candidates` uses to EXCLUDE a tombstoned room (unless
     # force) — so `stale` and `failed` are disjoint by construction, not by
-    # coincidence. A looser check here (e.g. "flat_render_failed_at present?"
-    # without matching flat_render_source_key) would double-count a room
-    # whose tombstone predates a since-replaced photo.
-    failed = rooms.select { |r| FlatPanoramaTasks.tombstoned?(r) }
+    # coincidence. See Room#flat_render_failed? for why it is keyed to the
+    # source blob rather than being a bare "a failure was recorded" flag.
+    failed = rooms.select(&:flat_render_failed?)
     # A room with a render and NO panorama — the orphan the lifecycle exists to
     # prevent. Invisible to every other count here, because they all scope to
     # rooms that HAVE a panorama. .distinct for the same reason `scope` below
@@ -131,8 +131,11 @@ namespace :panoramas do
   end
 end
 
-# Shared helpers, so "stale" has exactly ONE definition — if render_flat and
-# flat_status disagreed, the status output would be a lie.
+# Shared helpers. "Stale" and "tombstoned" have exactly ONE definition each and
+# it does NOT live here — Room#flat_render_current? / Room#flat_render_failed?,
+# shared with RenderFlatPanoramaJob. They were hand-copied into three places
+# once and one copy drifted, which made `render_flat INLINE=1` and
+# `flat_status` give opposite answers about the same room seconds apart.
 module FlatPanoramaTasks
   module_function
 
@@ -175,66 +178,43 @@ module FlatPanoramaTasks
     room.present? ? scope.where(rmrecnbr: room) : scope
   end
 
-  # source_key is read UNCONDITIONALLY, even on the `next` branches that do
-  # not need it, so the eager-loaded panorama_attachment: :blob is always
-  # touched. Reading it only on the branch that needs it is correct-looking
-  # but wrong: on a fresh backfill (the common case — flat_panorama never
-  # attached) not one candidate ever reaches that branch, so Bullet flags the
-  # whole `includes(panorama_attachment: :blob)` as unused eager loading for
-  # the entire run.
+  # Staleness and tombstone are Room#flat_render_current? / #flat_render_failed?
+  # — ONE definition, shared with RenderFlatPanoramaJob and render_outcome
+  # below. They used to be hand-copied here and drifted; read those methods for
+  # why each condition exists.
+  #
+  # The panorama blob key is read UNCONDITIONALLY, even on the `force` branch
+  # that returns before needing it, so the eager-loaded
+  # panorama_attachment: :blob is always touched. Reading it only where it is
+  # needed is correct-looking but wrong: under FORCE not one candidate ever
+  # reaches a branch that reads it, so Bullet flags the whole
+  # `includes(panorama_attachment: :blob)` as unused eager loading for the
+  # entire run.
   #
   # Tombstoned rooms are EXCLUDED here (unless force), not just left for the
-  # job to skip. RenderFlatPanoramaJob#permanently_failed? guarantees the job
-  # never touches them, so counting them as renderable makes `to render` and
-  # `missing/stale` both lie — an operator watching a backfill fail to
-  # converge across repeated runs gets no signal that it's stuck on
-  # tombstones rather than still working through a real backlog.
-  #
-  # The staleness check's third condition mirrors RenderFlatPanoramaJob#fresh?
-  # exactly: a blob whose metadata stamps match but whose FILE is gone (a
-  # SIGKILL between the attachment commit and the upload) must count as
-  # stale, or it is permanently invisible — attached? lies true, :poster never
-  # engages, and the room serves a 404 image forever with nothing in this
-  # surface able to see it.
+  # job to skip. The job's own guard guarantees it never touches them, so
+  # counting them as renderable makes `to render` and `missing/stale` both lie
+  # — an operator watching a backfill fail to converge across repeated runs
+  # gets no signal that it's stuck on tombstones rather than still working
+  # through a real backlog.
   def candidates(scope, force: false)
     scope.select do |room|
-      source_key = room.panorama.blob.key
+      room.panorama.blob.key   # see above — keeps Bullet's eager-load counter honest
       next true if force
-      next false if tombstoned?(room, source_key)
-      next true unless room.flat_panorama.attached?
+      next false if room.flat_render_failed?
 
-      blob = room.flat_panorama.blob
-      blob.metadata["source_blob_key"] != source_key ||
-        blob.metadata["projection"] != Panorama::Rectilinear.signature ||
-        !blob.service.exist?(blob.key)
+      !room.flat_render_current?
     end
-  end
-
-  # Mirrors RenderFlatPanoramaJob#permanently_failed? exactly — the tombstone
-  # is keyed on the SOURCE blob so replacing the bad photo clears it (a stamp
-  # tied to an old, since-replaced source key does not count).
-  def tombstoned?(room, source_key = room.panorama.blob.key)
-    meta = room.panorama.blob.metadata
-    meta["flat_render_failed_at"].present? && meta["flat_render_source_key"] == source_key
   end
 
   # Post-condition classification for INLINE mode — see the long comment in
   # the render_flat task for why "perform_now did not raise" cannot be used
-  # instead. Mirrors RenderFlatPanoramaJob#fresh? (the RENDERED case) and
-  # #permanently_failed? (the FAILED case); anything else — including "source
-  # purged mid-render, output discarded" and "still fresh, guard skipped it"
-  # — is SKIPPED, not a failure.
+  # instead. Anything that is neither current nor tombstoned — including
+  # "source purged mid-render, output discarded" and "scheduled for a
+  # background retry" — is SKIPPED, not a failure.
   def render_outcome(room)
-    flat   = room.flat_panorama
-    source = room.panorama
-
-    if flat.attached? && source.attached? &&
-       flat.blob.metadata["source_blob_key"] == source.blob.key &&
-       flat.blob.metadata["projection"] == Panorama::Rectilinear.signature
-      return :rendered
-    end
-
-    return :failed if source.attached? && tombstoned?(room, source.blob.key)
+    return :rendered if room.flat_render_current?
+    return :failed   if room.flat_render_failed?
 
     :skipped
   end
@@ -245,24 +225,24 @@ module FlatPanoramaTasks
   # force` above); it does nothing about what the job itself does once
   # invoked:
   #
-  #   * #permanently_failed? — keyed on the SOURCE (panorama) blob's
+  #   * Room#flat_render_failed? — keyed on the SOURCE (panorama) blob's
   #     flat_render_failed_at/_source_key/_error stamps, set by the job's
   #     discard_on handler after a permanent failure (e.g. a non-equirect
   #     photo). Left in place, a broken room stays broken until its photo is
   #     replaced — the tombstone is otherwise unclearable.
-  #   * #fresh? — keyed on the flat_panorama blob's OWN source_blob_key/
-  #     projection stamps. Left in place, FORCE-ing an already-current render
-  #     is a no-op — which defeats FORCE for the single most common
-  #     diagnostic use (Panorama::Rectilinear.render.rb's own comment:
+  #   * Room#flat_render_current? — keyed on the flat_panorama blob's OWN
+  #     source_blob_key/projection stamps. Left in place, FORCE-ing an
+  #     already-current render is a no-op — which defeats FORCE for the single
+  #     most common diagnostic use (Panorama::Rectilinear's own comment:
   #     `ROOM=<rmrecnbr> INLINE=1 FORCE=1` to re-render after a code change,
   #     where the SOURCE hasn't changed at all).
   #
-  # Both guards belong in the JOB, not here — they are what keep repeated
-  # enqueues cheap. Every panorama attach or replace enqueues this job (see
-  # the header comment in config/initializers/flat_panorama_callbacks.rb),
+  # Both guards belong in the JOB's perform, not here — they are what keep
+  # repeated enqueues cheap. Every panorama attach or replace enqueues this job
+  # (see the header comment in config/initializers/flat_panorama_callbacks.rb),
   # and this task's own backfill re-enqueues every candidate on every run —
-  # without #permanently_failed?/#fresh? short-circuiting first, each of
-  # those would re-attempt a hopeless or already-current render. Only an
+  # without them short-circuiting first, each of those would re-attempt a
+  # hopeless or already-current render. Only an
   # operator explicitly passing FORCE to THIS task should be able to override
   # them, so the override happens here, immediately before the one
   # deliberate invocation FORCE asked for.

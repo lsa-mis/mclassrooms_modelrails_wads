@@ -109,6 +109,29 @@ RSpec.describe Panorama::Rectilinear do
       expect { described_class.project(path, width: 64) }
         .to raise_error(described_class::NotEquirectangular, /100x100.*ratio 1\.0/m)
     end
+
+    # The square case above is only 1.0 — a full 1.0 away from the 2.0 target,
+    # so it still fails with ASPECT_TOLERANCE widened all the way to 0.9. 3:2
+    # is the ratio the guard actually exists for: an ordinary phone photo
+    # dropped into the panorama slot, which projects to something PLAUSIBLE and
+    # wrong rather than to anything obviously broken.
+    it "rejects a 3:2 phone photo — the case the tolerance is sized for" do
+      path = File.join(@dir, "phone_photo.png")
+      Vips::Image.black(300, 200).pngsave(path)
+
+      expect { described_class.project(path, width: 64) }
+        .to raise_error(described_class::NotEquirectangular, /ratio 1\.5/)
+    end
+
+    # The other end of the same clamp: a real 4000x2000 export is not always
+    # EXACTLY 2:1, and ASPECT_TOLERANCE = 0 (or a strict `==`) would reject
+    # every one of them at ingest with a message blaming the photographer.
+    it "accepts a source within the aspect tolerance rather than demanding exactly 2:1" do
+      path = File.join(@dir, "nearly_equirect.png")
+      Vips::Image.black(2000, 1001).pngsave(path)
+
+      expect { described_class.project(path, width: 64) }.not_to raise_error
+    end
   end
 
   # Not a tautology: this value is a CONTRACT with Pannellum's documented
@@ -118,15 +141,32 @@ RSpec.describe Panorama::Rectilinear do
   end
 
   describe ".render" do
+    # vips-loader, not just "it decoded": Vips::Image.new_from_buffer sniffs the
+    # format and reads JPEG and PNG just as happily, so a size-only assertion
+    # passes with webpsave_buffer swapped for jpegsave_buffer. The job's own
+    # content_type assertion does not cover it either — the job HARD-CODES
+    # "image/webp" on the attach regardless of what bytes it was handed, so
+    # that swap would ship JPEGs labelled as WebP with nothing complaining.
     it "returns webp bytes readable back at the requested size" do
       io = described_class.render(source, width: 64)
       image = Vips::Image.new_from_buffer(io.string, "")
 
       expect([ image.width, image.height ]).to eq([ 64, 32 ])
+      expect(image.get("vips-loader")).to eq("webpload_buffer")
     end
   end
 
   describe ".signature" do
+    # Names every constant the signature must be derived from. Varying only the
+    # ARGUMENT (the old assertion) is satisfied by `"w#{width}"` — which would
+    # mean changing HFOV_DEG or ASPECT left every existing render stamped as
+    # current, so no backfill would ever pick them up and the whole staleness
+    # mechanism would quietly stop working.
+    it "names the projection constants, so changing any of them invalidates every render" do
+      expect(described_class.signature(width: 1024))
+        .to eq("hfov#{described_class::HFOV_DEG}-aspect#{described_class::ASPECT}-w1024")
+    end
+
     it "changes when the projection recipe changes" do
       expect(described_class.signature(width: 1024)).not_to eq(described_class.signature(width: 512))
     end

@@ -168,6 +168,49 @@ class Room < ApplicationRecord
 
   def hidden? = hidden_at.present?
 
+  # THE definition of "the flat render is up to date". RenderFlatPanoramaJob's
+  # perform guard, `panoramas:render_flat`'s candidate list, that task's INLINE
+  # outcome classification, and `panoramas:flat_status` all call THIS — they
+  # used to each carry a hand-copied version, and one of them drifted (the
+  # INLINE classifier omitted the service.exist? probe below), so a backfill
+  # printed "rendered: 1" for a room `flat_status` called missing/stale seconds
+  # later. Two operator surfaces, opposite answers.
+  #
+  # DIAGNOSTIC — `blob.service.exist?` is not paranoia, and is the one condition
+  # that costs an I/O call. A SIGKILL between the attachment's commit and the
+  # file upload (config/deploy.yml gives SOLID_QUEUE_IN_PUMA a 45s drain window,
+  # so in-flight renders are killed on every deploy) leaves a blob ROW with
+  # perfectly correct stamps and NO FILE. Every metadata-only check then lies
+  # the same way: `attached?` is true, so the :poster fallback never engages and
+  # the room serves a 404 image forever, invisible to every operator surface.
+  # One stat call closes it.
+  def flat_render_current?
+    return false unless panorama.attached? && flat_panorama.attached?
+
+    blob = flat_panorama.blob
+    blob.metadata["source_blob_key"] == panorama.blob.key &&
+      blob.metadata["projection"] == Panorama::Rectilinear.signature &&
+      blob.service.exist?(blob.key)
+  end
+
+  # THE definition of "this render failed permanently and must not be retried".
+  # Same three-copies story as above; RenderFlatPanoramaJob stamps the tombstone
+  # (see its `record_failure`), everything else reads it through here.
+  #
+  # DIAGNOSTIC — the tombstone is keyed to the SOURCE blob's key rather than
+  # being a bare "a failure was recorded once" flag, and that is what makes it
+  # self-clearing: replacing a bad photo mints a NEW blob key, the stamp stops
+  # matching, and the room becomes renderable again with no operator step. A
+  # looser check would keep counting a room as failed after its photo had
+  # already been fixed — and, because candidate selection EXCLUDES tombstoned
+  # rooms, would keep it out of every backfill at the same time.
+  def flat_render_failed?
+    return false unless panorama.attached?
+
+    meta = panorama.blob.metadata
+    meta["flat_render_failed_at"].present? && meta["flat_render_source_key"] == panorama.blob.key
+  end
+
   # Phase 5 Task 5 (Brief §14.1): the one-way editor hide / admin unhide
   # flow. Both mutations are real column changes (hidden_at/hidden_by), so
   # Curation::Apply's `before_after` diff captures them without any special
