@@ -18,12 +18,25 @@ class Room < ApplicationRecord
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
   has_one_attached :photo
-  # :poster is the pano pane's static preview AND the ingest task's eager
-  # pre-processing target (PanoramaIngest) — named here so one definition
-  # serves both and the first visitor never pays the vips transform.
+  # :poster is now a FALLBACK ONLY — the squashed-equirect strip the pano pane
+  # serves for rooms whose flat render has not landed yet (or failed). Generated
+  # on demand, not pre-processed: the render below is the primary image, and
+  # warming a variant we intend to delete would be waste. Removing this
+  # definition is a follow-up once backfill is verified in production; it must
+  # also cover app/docs/developer/rooms-directory.md.
   has_one_attached :panorama do |attachable|
     attachable.variant :poster, resize_to_limit: [ 1024, 512 ], format: :webp
   end
+  # The FLAT (rectilinear) render of :panorama — the view Pannellum's default
+  # camera shows, produced by Panorama::Rectilinear. Deliberately NOT a
+  # `describable` slot: it depicts the same subject as its source, so it inherits
+  # alt_for(:panorama). A fourth slot would mean a migration and an authoring UI
+  # for alt text describing the identical photograph.
+  #
+  # NOTE: nothing on Room triggers the render. The callback lives on
+  # ActiveStorage::Attachment (config/initializers/flat_panorama_callbacks.rb) —
+  # read that file's header before adding a callback here.
+  has_one_attached :flat_panorama
   has_one_attached :seating_chart
 
   # Phase 4 Task 7 (Brief §5.3): admin gallery add/remove/reorder flows through
