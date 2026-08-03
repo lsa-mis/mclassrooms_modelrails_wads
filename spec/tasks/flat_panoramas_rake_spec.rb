@@ -243,9 +243,9 @@ RSpec.describe "panoramas:flat_status" do
 
     output = run_status
 
-    expect(output).to include("with panorama: 3")
-    expect(output).to include("missing/stale: 1")
-    expect(output).to include("failed render: 1")
-    expect(output).to include("orphaned flat: 1")
+    expect(output).to match(/^with panorama: 3$/)
+    expect(output).to match(/^missing\/stale: 1$/)
+    expect(output).to match(/^failed render: 1$/)
+    expect(output).to match(/^orphaned flat: 1$/)
   end
 end

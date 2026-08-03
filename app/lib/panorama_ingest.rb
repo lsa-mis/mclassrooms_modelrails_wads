@@ -12,8 +12,9 @@
 #
 # Idempotent and re-runnable: rooms with a panorama already attached are
 # skipped (listed in the result) unless `replace: true`. Per-file failures
-# (unreadable file, oversize, validation reject) land in `errors` without
-# stopping the run. An undecodable panorama is no longer one of them — that
+# (an unreadable file, oversize, or a Room invalid for some unrelated reason)
+# land in `errors` without stopping the run. An undecodable panorama is no
+# longer one of them — that
 # used to surface here via the removed eager `.processed` call; now it's
 # caught later, by RenderFlatPanoramaJob, which stamps a
 # `flat_render_failed_at` tombstone visible via `panoramas:flat_status`.
@@ -87,7 +88,9 @@ class PanoramaIngest
       room.panorama.attach(io: io, filename: filename, content_type: "image/jpeg")
     end
     # attach saves via `save` (not save!) — a validation reject (e.g. the
-    # blob sniffs as non-image) fails silently unless surfaced here
+    # Room is invalid for some unrelated reason — content_type is hardcoded
+    # above and spoofing_protection is off, so nothing here sniffs the blob
+    # itself) fails silently unless surfaced here
     unless room.errors.empty? && room.panorama.attached?
       raise IngestFailed, room.errors.full_messages.join("; ").presence || "attachment did not persist"
     end

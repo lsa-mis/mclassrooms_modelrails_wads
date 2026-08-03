@@ -1,10 +1,11 @@
 <%# locals: (room:) %>
-<%# The click-to-load Pannellum stage, unchanged in behavior from the
-    original media suite: static poster (the preview variant doubles as
-    Pannellum's own `preview:`), explicit opt-in load button, lazy
-    `import("pannellum")`. `data-turbo-permanent` + id keep the booted WebGL
-    viewer alive across morphs (panel review, Wathan). pannellum.css loads
-    only here via content_for(:head). %>
+<%# The click-to-load Pannellum stage. The pre-load image is the flat
+    rectilinear render (Room#flat_panorama) — the old squashed-equirect
+    :poster variant only engages as a fallback (see the comment block below).
+    Explicit opt-in load button, lazy `import("pannellum")`.
+    `data-turbo-permanent` + id keep the booted WebGL viewer alive across
+    morphs (panel review, Wathan). pannellum.css loads only here via
+    content_for(:head). %>
 <% content_for(:head) do %>
   <%= stylesheet_link_tag "pannellum", "data-turbo-track": "reload" %>
 <% end %>

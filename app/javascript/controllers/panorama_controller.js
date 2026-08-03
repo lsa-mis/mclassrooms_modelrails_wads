@@ -12,13 +12,18 @@ import { Controller } from "@hotwired/stimulus"
 // to execute it — the viewer factory is read off the global afterward.
 export default class extends Controller {
   static targets = ["viewer", "overlay"]
-  // hfov has NO Stimulus `default:` on the value descriptor, deliberately —
-  // see the fallback in load() for why. A bare `Number` value with no
-  // default silently degrades to 0 when the attribute is absent/blank, and
-  // Pannellum CLAMPS (not rejects) hfov to its minHfov of 50 rather than
-  // erroring — a viewer at double magnification against a 100°-framed
-  // pre-load image, with no console error to notice. The fallback below
-  // still closes that hole; it's just not expressed here.
+  // hfov MUST stay the bare constructor form `hfov: Number` — never an
+  // object descriptor (`hfov: { type: Number }` or similar), with or without
+  // a `default:` key. Verified against the vendored stimulus.min.js:
+  // `hasCustomDefaultValue()` is `void 0!==se(s)`, and `se` returns
+  // `"object"` for any plain object descriptor — so ANY object form forces
+  // `hasHfovValue` true unconditionally, default key present or not (see the
+  // longer explanation in load() below). A bare `Number` with no attribute
+  // present silently degrades to 0, and Pannellum CLAMPS (not rejects) hfov
+  // to its minHfov of 50 rather than erroring — a viewer at double
+  // magnification against a 100°-framed pre-load image, with no console
+  // error to notice. The fallback below still closes that hole; it's just
+  // not expressed here.
   static values = { url: String, previewUrl: String, label: String, hfov: Number }
 
   async load() {
@@ -43,19 +48,29 @@ export default class extends Controller {
     //   bin/rails panoramas:render_flat FORCE=1
     //
     // The 100 fallback is applied HERE, manually, rather than as a Stimulus
-    // `default:` on the value descriptor above. Tried that first; reverted
-    // it after finding Stimulus bakes `hasCustomDefaultValue` into
-    // `hasHfovValue` (`this.data.has(attr) || hasCustomDefaultValue` —
-    // stimulus.min.js, values blessing), so ANY value with a declared
-    // default makes `hasHfovValue` return true UNCONDITIONALLY, attribute or
-    // not. That silently breaks the diagnostic two lines down, which is the
-    // only thing that can tell "ERB emitted the attribute and this
-    // controller read it" apart from "the attribute name this controller
-    // reads no longer matches what ERB emits, and the number came from thin
-    // air" — ERB's data-panorama-hfov-value, Panorama::Rectilinear::HFOV_DEG,
-    // and Pannellum's OWN internal default are all 100 today, so a severed
-    // binding is invisible on the number alone. Keeping `hfov: Number`
-    // default-free keeps hasHfovValue an honest raw-attribute check.
+    // `default:` on the value descriptor above — and the value descriptor
+    // must stay the bare `hfov: Number`, never an object form. Tried an
+    // object descriptor with a `default:` key first; reverted it after
+    // finding Stimulus bakes `hasCustomDefaultValue` into `hasHfovValue`
+    // (`this.data.has(attr) || hasCustomDefaultValue` — stimulus.min.js,
+    // values blessing), where `hasCustomDefaultValue()` is
+    // `void 0!==se(s)` and `se` returns `"object"` for ANY plain object
+    // descriptor. So it isn't the `default:` key specifically — any object
+    // form at all, `default:` or not, makes `hasHfovValue` return true
+    // UNCONDITIONALLY, attribute present or not. That silently breaks the
+    // diagnostic two lines down, which is the only thing that can tell "ERB
+    // emitted the attribute and this controller read it" apart from "the
+    // attribute name this controller reads no longer matches what ERB
+    // emits, and the number came from thin air" — ERB's
+    // data-panorama-hfov-value, Panorama::Rectilinear::HFOV_DEG, and
+    // Pannellum's OWN internal default are all 100 today, so a severed
+    // binding is invisible on the number alone. Keeping `hfov: Number` as
+    // the bare constructor keeps hasHfovValue an honest raw-attribute check.
+    // hasHfovValue is only false when the attribute is absent; a blank
+    // attribute still makes it true (with hfovValue 0). ERB emits
+    // Panorama::Rectilinear::HFOV_DEG unconditionally, so that case is
+    // unreachable in practice — this fallback only ever fires on "attribute
+    // absent" (a severed ERB -> Stimulus binding).
     const hfov = this.hasHfovValue ? this.hfovValue : 100
 
     this.viewer = window.pannellum.viewer(this.viewerTarget, {

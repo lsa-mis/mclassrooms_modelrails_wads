@@ -48,9 +48,10 @@ module Panorama
     HFOV_DEG = 100.0   # Pannellum's default horizontal field of view — a contract, not a taste
     HAOV_DEG = 360.0   # full-sphere source
     VAOV_DEG = 180.0
-    ASPECT   = 2       # output w:h. Pannellum derives vfov from its CONTAINER's aspect, so this
-    # same number must be the stage's aspect-ratio (_pano_pane.html.erb) or
-    # the vertical framing silently disagrees.
+    # ASPECT is output w:h. Pannellum derives vfov from its CONTAINER's aspect,
+    # so this same number must be the stage's aspect-ratio (_pano_pane.html.erb)
+    # or the vertical framing silently disagrees.
+    ASPECT   = 2
     DEFAULT_WIDTH = 1024
     # ~+/-20px of height slop on a 4000px-wide export. Nowhere near loose enough
     # to admit a 3:2 phone photo (1.5) or 16:9 (1.78).

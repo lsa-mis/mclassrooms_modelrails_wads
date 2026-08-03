@@ -149,6 +149,9 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
       expect(stage["data-panorama-preview-url-value"])
         .to eq(rails_blob_path(room.reload.flat_panorama, only_path: true))
       expect(stage).to have_css("img[alt='#{room.alt_for(:panorama)}']")
+      # The <img> and Pannellum's own `preview:` must be the SAME picture —
+      # this is the central claim of the flat-render pane.
+      expect(stage.find("img")["src"]).to eq(stage["data-panorama-preview-url-value"])
     end
 
     it "falls back to the poster variant when the render has not landed" do
@@ -159,7 +162,11 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
       get room_path(room)
 
       expect(response).to have_http_status(:ok)
-      expect(page.find("#room_panorama_stage")["data-panorama-preview-source"]).to eq("poster_fallback")
+      stage = page.find("#room_panorama_stage")
+      expect(stage["data-panorama-preview-source"]).to eq("poster_fallback")
+      # Same pin as the flat-render example: the <img> and Pannellum's
+      # `preview:` must agree even on the fallback path.
+      expect(stage.find("img")["src"]).to eq(stage["data-panorama-preview-url-value"])
     end
 
     # UI::AspectRatioComponent renders style="aspect-ratio: <ratio>". 2:1 is not
