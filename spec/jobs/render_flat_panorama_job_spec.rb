@@ -249,8 +249,10 @@ RSpec.describe RenderFlatPanoramaJob do
     # source vanishes there, the render DOES land, and the final reconcile must
     # purge it rather than leave an orphan no operator surface can see.
     #
-    # The latch matters: `signature` is called by `fresh?` too, and an
-    # unconditional purge here re-enters on every call. Purge exactly once, and
+    # The latch matters: `signature` is called by Room#flat_render_current? too
+    # (that is where the projection stamp is compared), so the job reaches this
+    # stub before the attach as well — an unconditional purge here would
+    # re-enter on every call. Purge exactly once, and
     # do NOT wrap this in perform_enqueued_jobs — the factory's own panorama
     # attach already enqueued a render, and performing it re-enters the stub.
     it "purges its own output if the panorama vanishes between the guard and the attach" do
