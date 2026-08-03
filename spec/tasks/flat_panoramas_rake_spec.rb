@@ -36,6 +36,20 @@ RSpec.describe "panoramas:render_flat" do
     Rake::Task["panoramas:render_flat"].invoke
   end
 
+  # Same capture pattern as panoramas:flat_status's run_status below — needed
+  # by the one example that asserts on the printed rendered/failed/skipped
+  # counts, not just on room state.
+  def run_capturing(**env)
+    env.each { |k, v| ENV[k.to_s] = v.to_s }
+    captured = StringIO.new
+    original = $stdout
+    $stdout = captured
+    Rake::Task["panoramas:render_flat"].invoke
+    captured.string
+  ensure
+    $stdout = original
+  end
+
   it "renders rooms whose flat render is missing" do
     room = create(:room, :with_equirect_panorama, building: building, workspace: workspace)
 
@@ -129,10 +143,19 @@ RSpec.describe "panoramas:render_flat" do
     # FORCE clears the tombstone before invoking the job, so the (still bad)
     # source is genuinely re-attempted and fails again with a FRESH stamp.
     Rake::Task["panoramas:render_flat"].reenable
-    travel 1.hour do
-      run(WORKSPACE: workspace.slug, INLINE: "1", FORCE: "1")
-    end
+    output = travel(1.hour) { run_capturing(WORKSPACE: workspace.slug, INLINE: "1", FORCE: "1") }
     expect(room.reload.panorama.blob.metadata["flat_render_failed_at"]).not_to eq(first_stamp)
+
+    # The printed counts are the ONLY operator-visible signal (Mission
+    # Control isn't mounted) — this is what the CRITICAL finding was about:
+    # RenderFlatPanoramaJob swallows this room's NotEquirectangular failure
+    # internally, so "perform_now did not raise" is not evidence of success.
+    # A regression back to exception-based classification (or any
+    # mis-bucketing) reports this as "rendered: 1 failed: 0", the exact
+    # defect that finding raised. Room-state assertions alone (above) don't
+    # catch that, since they were equally true under the old classification.
+    expect(output).to include("rendered: 0")
+    expect(output).to include("failed: 1")
   end
 
   # Every other example above builds rooms in exactly one workspace, so none
