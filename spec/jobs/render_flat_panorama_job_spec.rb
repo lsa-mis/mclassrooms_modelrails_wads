@@ -144,10 +144,10 @@ RSpec.describe RenderFlatPanoramaJob do
       expect { described_class.perform_now(id) }.not_to raise_error
     end
 
-    # The window between the guard and the attach is real: the render takes
-    # ~30ms outside any transaction. Reconcile rather than leaving an orphan
-    # that no operator surface can see.
-    it "purges its own output if the panorama vanished mid-render" do
+    # The panorama vanishing DURING the render (before the post-render reload
+    # guard runs) hits the supersession `return` — flat_panorama is never
+    # attached at all, so there's nothing to reconcile.
+    it "discards output when the panorama is superseded mid-render" do
       allow(Panorama::Rectilinear).to receive(:render).and_wrap_original do |original, *args, **opts|
         result = original.call(*args, **opts)
         room.panorama.purge
@@ -156,6 +156,52 @@ RSpec.describe RenderFlatPanoramaJob do
 
       expect { run }.not_to raise_error
       expect(room.reload.flat_panorama).not_to be_attached
+    end
+
+    # The window between the post-render guard and the attach is real: the
+    # metadata hash (which calls Panorama::Rectilinear.signature) is built and
+    # the attach's `record.save` runs after the guard has already passed. If the
+    # source vanishes there, the render DOES land, and the final reconcile must
+    # purge it rather than leave an orphan no operator surface can see.
+    #
+    # The latch matters: `signature` is called by `fresh?` too, and an
+    # unconditional purge here re-enters on every call. Purge exactly once, and
+    # do NOT wrap this in perform_enqueued_jobs — the factory's own panorama
+    # attach already enqueued a render, and performing it re-enters the stub.
+    it "purges its own output if the panorama vanishes between the guard and the attach" do
+      purged = false
+      allow(Panorama::Rectilinear).to receive(:signature).and_wrap_original do |original, *args, **opts|
+        unless purged
+          purged = true
+          room.panorama.purge
+        end
+        original.call(*args, **opts)
+      end
+      allow(Rails.logger).to receive(:info).and_call_original
+
+      expect { run }.not_to raise_error
+
+      expect(room.reload.flat_panorama).not_to be_attached
+      expect(Rails.logger).to have_received(:info)
+        .with(a_string_matching(/source purged mid-attach; output purged/))
+    end
+
+    # Attached::One#attach is `return if !record.save` — no bang — and
+    # `attached?` reflects the pending in-memory change even when `save` just
+    # returned false, so `attached?` alone can't detect a failed persist. A real
+    # validation failure (not a stub of Active Storage) must still raise.
+    it "raises when the room fails to save during attach, and leaves nothing attached" do
+      # update_column bypasses validations/callbacks to plant a genuinely
+      # invalid in-DB state (blank rmrecnbr) that only bites on the NEXT save —
+      # the one triggered by flat_panorama.attach inside the job. A blank
+      # string is a legal NOT NULL value at the DB layer (it isn't NULL), so
+      # this trips only the `presence: true` validation, not the DB's unique
+      # index on rmrecnbr the way reusing another room's value would.
+      room.update_column(:rmrecnbr, "")
+
+      expect { run }.to raise_error(/flat_panorama did not persist/)
+
+      expect(Room.find(room.id).flat_panorama).not_to be_attached
     end
   end
 end
