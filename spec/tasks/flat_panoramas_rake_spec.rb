@@ -102,17 +102,20 @@ RSpec.describe "panoramas:render_flat" do
     # already run its own before(:all) by the time this example executes
     # (order is random) adds one more duplicate action to THIS task, so a
     # single #invoke can legitimately run the body more than once in the
-    # same process. The task's own idempotence (fresh?/permanently_failed?
-    # guards, RenderFlatPanoramaJob's own dedup) is what makes repeated runs
-    # safe; asserting an exact enqueue count here would be asserting a
-    # process-global fact this spec does not control.
+    # same process. The task's own idempotence (candidate selection and the
+    # job's perform guard, both reading Room#flat_render_current? /
+    # Room#flat_render_failed?) is what makes repeated runs safe; asserting an
+    # exact enqueue count here would be asserting a process-global fact this
+    # spec does not control.
     expect { run(WORKSPACE: workspace.slug) }
       .to have_enqueued_job(RenderFlatPanoramaJob).with(room.id).at_least(1).times
   end
 
-  # ONE REQUIRED DEVIATION FROM THE BRIEF: RenderFlatPanoramaJob#permanently_failed?
-  # skips any room whose SOURCE (panorama) blob carries a flat_render_failed_at
-  # tombstone matching the current source key. Candidate selection alone (the
+  # ONE REQUIRED DEVIATION FROM THE BRIEF: RenderFlatPanoramaJob's perform guard
+  # calls Room#flat_render_failed?, which skips any room whose SOURCE (panorama)
+  # blob carries a flat_render_failed_at tombstone matching the CURRENT source
+  # key (that keying is what makes replacing the bad photo clear it by itself —
+  # see the method). Candidate selection alone (the
   # `next true if force` in FlatPanoramaTasks.candidates) is not enough to force
   # a re-render of such a room — the job would still see the tombstone and
   # silently skip. FORCE must also clear the tombstone before invoking the job;
