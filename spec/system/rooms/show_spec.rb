@@ -207,6 +207,21 @@ RSpec.describe "Room show", type: :system do
     passed_hfov = page.evaluate_script("window.__pannellumViewerOptions && window.__pannellumViewerOptions.hfov")
     expect(passed_hfov).to eq(Panorama::Rectilinear::HFOV_DEG)
 
+    # Neither assertion above catches the ERB->Stimulus ATTRIBUTE-NAME binding
+    # being severed (e.g. the `hfov` value key renamed elsewhere in
+    # static values, independent of the data-panorama-hfov-value attribute ERB
+    # still emits): the JS fallback is also 100, which happens to equal both
+    # Panorama::Rectilinear::HFOV_DEG and Pannellum's own internal default, so
+    # a severed binding still reads 100 everywhere above. This reads back what
+    # the controller published about WHERE its value came from
+    # (panorama_controller.js's `dataset.panoramaHfovSource`, set from
+    # `hasHfovValue` — deliberately NOT a Stimulus `default:`, since that
+    # would make `hasHfovValue` always true; see the comment in load()) rather
+    # than just the number, so a renamed/severed value key surfaces as
+    # "default" instead of "attribute" even though the number stays 100.
+    hfov_source = page.evaluate_script("document.querySelector('#room_panorama_stage').dataset.panoramaHfovSource")
+    expect(hfov_source).to eq("attribute")
+
     # Redesign v4: photos are the stage's second tab — switching panes hides
     # (never removes) the panorama panel, per the WebGL-survival rule.
     click_button I18n.t("rooms.show.media_tabs.photos")

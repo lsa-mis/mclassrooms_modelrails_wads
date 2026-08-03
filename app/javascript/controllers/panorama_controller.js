@@ -12,15 +12,14 @@ import { Controller } from "@hotwired/stimulus"
 // to execute it — the viewer factory is read off the global afterward.
 export default class extends Controller {
   static targets = ["viewer", "overlay"]
-  // hfov defaults to 100 (Panorama::Rectilinear::HFOV_DEG) rather than
-  // relying on the data attribute always being present: this element carries
-  // data-turbo-permanent, so a stage rendered before a deploy can survive a
-  // Turbo morph into post-deploy JS with a stale or missing attribute. A bare
-  // `Number` value silently degrades to 0 when absent/blank, and Pannellum
-  // CLAMPS (not rejects) hfov to its minHfov of 50 rather than erroring — a
-  // viewer at double magnification against a 100°-framed pre-load image, with
-  // no console error to notice.
-  static values = { url: String, previewUrl: String, label: String, hfov: { type: Number, default: 100 } }
+  // hfov has NO Stimulus `default:` on the value descriptor, deliberately —
+  // see the fallback in load() for why. A bare `Number` value with no
+  // default silently degrades to 0 when the attribute is absent/blank, and
+  // Pannellum CLAMPS (not rejects) hfov to its minHfov of 50 rather than
+  // erroring — a viewer at double magnification against a 100°-framed
+  // pre-load image, with no console error to notice. The fallback below
+  // still closes that hole; it's just not expressed here.
+  static values = { url: String, previewUrl: String, label: String, hfov: Number }
 
   async load() {
     try {
@@ -42,14 +41,38 @@ export default class extends Controller {
     // view, so a mismatch here makes the image jump on click — which looks like
     // a UI glitch, not like a bug. Change it in Ruby, then re-render:
     //   bin/rails panoramas:render_flat FORCE=1
+    //
+    // The 100 fallback is applied HERE, manually, rather than as a Stimulus
+    // `default:` on the value descriptor above. Tried that first; reverted
+    // it after finding Stimulus bakes `hasCustomDefaultValue` into
+    // `hasHfovValue` (`this.data.has(attr) || hasCustomDefaultValue` —
+    // stimulus.min.js, values blessing), so ANY value with a declared
+    // default makes `hasHfovValue` return true UNCONDITIONALLY, attribute or
+    // not. That silently breaks the diagnostic two lines down, which is the
+    // only thing that can tell "ERB emitted the attribute and this
+    // controller read it" apart from "the attribute name this controller
+    // reads no longer matches what ERB emits, and the number came from thin
+    // air" — ERB's data-panorama-hfov-value, Panorama::Rectilinear::HFOV_DEG,
+    // and Pannellum's OWN internal default are all 100 today, so a severed
+    // binding is invisible on the number alone. Keeping `hfov: Number`
+    // default-free keeps hasHfovValue an honest raw-attribute check.
+    const hfov = this.hasHfovValue ? this.hfovValue : 100
+
     this.viewer = window.pannellum.viewer(this.viewerTarget, {
       type: "equirectangular",
       panorama: this.urlValue,
       preview: this.previewUrlValue,
-      hfov: this.hfovValue,
+      hfov: hfov,
       autoLoad: true,
       compass: false
     })
+
+    // Diagnostic, and the only thing pinning the ERB -> Stimulus
+    // attribute-name binding (see the comment above): publishes whether the
+    // camera that just booted came from the DOM attribute or the fallback,
+    // so a renamed/severed value key surfaces as "default" in devtools
+    // instead of silently rendering the numerically-identical 100.
+    this.element.dataset.panoramaHfovSource = this.hasHfovValue ? "attribute" : "default"
 
     // The booted viewer container is the accessible control surface (it owns
     // its own keyboard/drag interaction model, which isn't native HTML
