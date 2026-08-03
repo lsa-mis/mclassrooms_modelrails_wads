@@ -12,7 +12,7 @@ import { Controller } from "@hotwired/stimulus"
 // to execute it — the viewer factory is read off the global afterward.
 export default class extends Controller {
   static targets = ["viewer", "overlay"]
-  static values = { url: String, previewUrl: String, label: String }
+  static values = { url: String, previewUrl: String, label: String, hfov: Number }
 
   async load() {
     try {
@@ -29,10 +29,16 @@ export default class extends Controller {
     this.overlayTarget.hidden = true
     this.viewerTarget.hidden = false
 
+    // hfov comes from Panorama::Rectilinear::HFOV_DEG, NOT from Pannellum's
+    // default. The static pre-load image is rendered at exactly this field of
+    // view, so a mismatch here makes the image jump on click — which looks like
+    // a UI glitch, not like a bug. Change it in Ruby, then re-render:
+    //   bin/rails panoramas:render_flat FORCE=1
     this.viewer = window.pannellum.viewer(this.viewerTarget, {
       type: "equirectangular",
       panorama: this.urlValue,
       preview: this.previewUrlValue,
+      hfov: this.hfovValue,
       autoLoad: true,
       compass: false
     })

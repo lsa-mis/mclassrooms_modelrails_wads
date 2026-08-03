@@ -128,4 +128,52 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
     expect(I18n.t("rooms.show.share.button")).to eq("Copy link")
     expect(page).to have_button(I18n.t("rooms.show.share.button"))
   end
+
+  describe "panorama pane image" do
+    include ActiveJob::TestHelper
+
+    def attach_equirect_panorama!
+      perform_enqueued_jobs do
+        room.panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
+                             filename: "pano.png", content_type: "image/png")
+      end
+    end
+
+    it "serves the flat render and says so in the DOM" do
+      attach_equirect_panorama!
+
+      get room_path(room)
+
+      stage = page.find("#room_panorama_stage")
+      expect(stage["data-panorama-preview-source"]).to eq("flat_render")
+      expect(stage["data-panorama-preview-url-value"])
+        .to eq(rails_blob_path(room.reload.flat_panorama, only_path: true))
+      expect(stage).to have_css("img[alt='#{room.alt_for(:panorama)}']")
+    end
+
+    it "falls back to the poster variant when the render has not landed" do
+      room.panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
+                           filename: "pano.png", content_type: "image/png")
+      expect(room.reload.flat_panorama).not_to be_attached
+
+      get room_path(room)
+
+      expect(response).to have_http_status(:ok)
+      expect(page.find("#room_panorama_stage")["data-panorama-preview-source"]).to eq("poster_fallback")
+    end
+
+    # UI::AspectRatioComponent renders style="aspect-ratio: <ratio>". 2:1 is not
+    # cosmetic: Panorama::Rectilinear renders width x width/2, and Pannellum
+    # derives vfov from its container's aspect. A stage of any other ratio
+    # object-covers the render and crops the framing the projection matched.
+    it "pins the stage aspect and the camera to the projection's constants" do
+      attach_equirect_panorama!
+
+      get room_path(room)
+
+      stage = page.find("#room_panorama_stage")
+      expect(stage["style"]).to eq("aspect-ratio: #{Panorama::Rectilinear::ASPECT}")
+      expect(stage["data-panorama-hfov-value"]).to eq(Panorama::Rectilinear::HFOV_DEG.to_s)
+    end
+  end
 end
