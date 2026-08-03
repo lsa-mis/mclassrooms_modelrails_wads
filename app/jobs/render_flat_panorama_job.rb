@@ -92,8 +92,15 @@ class RenderFlatPanoramaJob < ApplicationJob
     # Attached::One#attach is `return if !record.save` — no bang. A Room invalid
     # for any unrelated reason fails SILENTLY: no attachment, no exception, no
     # failed execution. PanoramaIngest#attach guards the same trap the same way.
+    #
+    # `room.flat_panorama.attached?` alone is NOT enough: Attached::One#attached?
+    # is `attachment.present?`, and `#attachment` returns the pending in-memory
+    # CreateOne change whenever one exists — `attachment_changes[name]` is only
+    # cleared on `after_commit` or `reload`. So after a failed `save`, the
+    # built-but-unsaved attachment is still `present?` and `attached?` lies true.
+    # `room.errors.empty?` is the half that actually detects the silent failure.
     raise "flat_panorama did not persist: #{room.errors.full_messages.join('; ').presence || 'unknown'}" unless
-      room.flat_panorama.attached?
+      room.errors.empty? && room.flat_panorama.attached?
 
     # Last reconcile: if the source vanished between the guard and here, purge our
     # own output rather than leaving an orphan no operator surface can see.
