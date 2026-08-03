@@ -142,7 +142,12 @@ module FlatPanoramaTasks
   def parse_limit!(raw)
     return nil if raw.blank?
 
-    limit = Integer(raw, exception: false)
+    # Explicit base 10 — bare `Integer(raw, exception: false)` applies Ruby's
+    # literal base-prefix rules, so "010" parses as 8 and "0x10" as 16. An
+    # operator zero-padding a cautious first slice would silently get a
+    # smaller batch than asked for, which is exactly the quiet-wrong-number
+    # failure this validation exists to rule out.
+    limit = Integer(raw, 10, exception: false)
     abort "LIMIT must be a positive integer, got #{raw.inspect}" if limit.nil? || limit < 1
     limit
   end
