@@ -23,11 +23,17 @@ ActiveSupport.on_load(:active_storage_attachment) do
   after_create_commit :enqueue_flat_panorama_render,
                       if: -> { record_type == "Room" && name == "panorama" }
 
-  # Replacing a panorama destroys the old attachment and creates a new one, so
-  # this fires on replace as well as removal — the stale render is purged and the
-  # new one enqueued, and the pane falls back to :poster for the ~30ms in between.
-  # This also covers `Room#remove_panorama=`, which calls purge_later and never
-  # saves the Room, so no Room callback could ever see it.
+  # Replacing a panorama reassigns the `has_one :panorama_attachment,
+  # dependent: :destroy` association, and Rails destroys the outgoing record —
+  # so THIS hook fires on replace, purging the stale render and enqueueing a
+  # fresh one (the pane falls back to :poster for the ~30ms in between).
+  #
+  # It does NOT cover explicit removal via `Room#remove_panorama=`. That path
+  # calls `Attached::One#purge_later`, which delegates to
+  # `Attachment#purge_later` — and that method deletes the attachment row with
+  # `delete` (raw SQL), not `destroy`, so no destroy callback ever fires for
+  # it. Explicit removal is handled directly in `Room#remove_panorama=`
+  # (app/models/room.rb) instead; look there for that half.
   after_destroy_commit :purge_flat_panorama,
                        if: -> { record_type == "Room" && name == "panorama" }
 
