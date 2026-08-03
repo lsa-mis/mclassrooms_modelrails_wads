@@ -52,9 +52,11 @@ pano pane and the ingest task share one definition.
 `<rmrecnbr>.jpg` files (the mi_locations export) onto matching rooms in the
 shared workspace (`WORKSPACE=` overrides; `DRY_RUN=1` reports without
 attaching; `REPLACE=1` re-attaches over existing panoramas — default is
-skip, so re-runs are idempotent). The `:poster` variant is **eagerly
-processed at ingest** so the first visitor never waits on a multi-MB vips
-transform. Two curation reports land in `tmp/panorama_ingest/`: files with
+skip, so re-runs are idempotent). Ingest pre-processes nothing itself — the
+Active Storage attachment callback
+(`config/initializers/flat_panorama_callbacks.rb`) enqueues
+`RenderFlatPanoramaJob`, which renders the flat view the pano pane serves.
+Two curation reports land in `tmp/panorama_ingest/`: files with
 no matching room, and listed classrooms still lacking a panorama. Logic
 lives in `PanoramaIngest` (`app/lib`); per-file failures collect into the
 result without stopping the run.

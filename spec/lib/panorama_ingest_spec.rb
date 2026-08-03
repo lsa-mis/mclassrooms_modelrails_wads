@@ -44,6 +44,21 @@ RSpec.describe PanoramaIngest do
     expect(result.attached).to contain_exactly("#{covered.rmrecnbr}.jpg")
   end
 
+  it "attaches a non-image file without error — content screening moved to the render job" do
+    # Characterizes a real behaviour change from removing the eager
+    # variant(:poster).processed call: ingest no longer reads file bytes, and
+    # content_type is hardcoded (not sniffed) at attach-time, so a "not a
+    # jpeg" file now attaches and validates cleanly. An undecodable panorama
+    # is still caught, just later — RenderFlatPanoramaJob stamps a
+    # flat_render_failed_at tombstone, visible via panoramas:flat_status.
+    File.write(File.join(@dir, "#{covered.rmrecnbr}.jpg"), "not a jpeg")
+
+    result = call
+
+    expect(result.errors).to be_empty
+    expect(result.attached).to contain_exactly("#{covered.rmrecnbr}.jpg")
+  end
+
   it "reports files with no matching room and listed rooms with no panorama" do
     add_pano(covered.rmrecnbr)
     add_pano("9999999") # no such room

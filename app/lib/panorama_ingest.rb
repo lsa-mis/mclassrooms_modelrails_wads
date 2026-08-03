@@ -12,8 +12,12 @@
 #
 # Idempotent and re-runnable: rooms with a panorama already attached are
 # skipped (listed in the result) unless `replace: true`. Per-file failures
-# (corrupt image, validation reject) land in `errors` without stopping the
-# run. `dry_run: true` attaches nothing but reports every list as-if — the
+# (unreadable file, oversize, validation reject) land in `errors` without
+# stopping the run. An undecodable panorama is no longer one of them — that
+# used to surface here via the removed eager `.processed` call; now it's
+# caught later, by RenderFlatPanoramaJob, which stamps a
+# `flat_render_failed_at` tombstone visible via `panoramas:flat_status`.
+# `dry_run: true` attaches nothing but reports every list as-if — the
 # rooms_without_panorama list treats would-be attaches as covered.
 #
 # Result lists (the curation report Dave asked for):
