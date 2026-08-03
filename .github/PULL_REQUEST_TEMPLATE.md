@@ -17,6 +17,7 @@
 - [ ] Controllers enforce Pundit authorization where the action is policy-scoped
 - [ ] RESTful routes only (no custom aliases, no single-action sub-resource controllers)
 - [ ] **Docs:** if you changed behavior, the relevant `app/docs/*` page is updated — and if you touched **auth, onboarding, invitations, or clientside** flows, re-check the Application Flows guide (`app/docs/user/application-flows.md`)
+- [ ] **Changelog:** user-visible or operational changes get an entry in `CHANGELOG.mclassrooms.md` under `[Unreleased]`, in this PR. (Root `CHANGELOG.md` is the upstream template's — it arrives via sync, so fork entries there become merge conflicts.)
 
 ## UI changes only
 
