@@ -14,9 +14,13 @@
     opens the room — the primary action is no longer a ~18px title link
     (2026-07-15 panel: fails the 44px coarse-pointer floor on mobile). The two
     genuinely-independent controls — Save and the "+N more" disclosure — sit
-    above the overlay (z-20). Chips stay under it, so a pointer tap navigates
-    (fixing card mis-taps into chip popovers) while keyboard users can still Tab
-    to each chip's tooltip. %>
+    above the overlay (z-20).
+    2026-08-03: the emphasized chip strip rides above the overlay too, but only
+    on hover-capable pointers (`pointer-fine:z-20`) — mouse users get every
+    chip's tooltip, matching the "+N more" chips, while on coarse pointers the
+    strip stays under the overlay so a tap still opens the room (the 2026-07-15
+    mis-tap fix). Keyboard Tab reaches every chip's tooltip either way — focus
+    order is independent of z-index. %>
 <li class="relative rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-32
            transition-colors has-[a:hover]:border-border-strong dark:has-[a:hover]:border-interactive">
   <div class="flex flex-wrap items-center gap-4">
@@ -57,7 +61,7 @@
 
   <% chips = room_card_chips(room) %>
   <% if chips.any? %>
-    <ul class="flex flex-wrap gap-1.5 pt-2">
+    <ul class="relative pointer-fine:z-20 flex flex-wrap gap-1.5 pt-2">
       <% chips.first(RoomsHelper::CARD_TAG_LIMIT).each do |chip| %>
         <li><%= render "rooms/characteristic_chip", chip: chip, emphasis: true %></li>
       <% end %>
