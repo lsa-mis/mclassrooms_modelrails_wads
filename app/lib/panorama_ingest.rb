@@ -4,11 +4,11 @@
 # directory of "<rmrecnbr>.jpg" files — the mi_locations export — attached
 # onto the matching rooms' `panorama` slot within ONE workspace.
 #
-# Perceived-speed rule: the pano pane's static poster (the :poster named
-# variant on Room#panorama) is eagerly processed here, at ingest, so the
-# first visitor to a room page gets a ready-made ~1024px webp instead of
-# waiting for vips to chew a multi-MB equirectangular JPEG on-request. The
-# full-size blob itself stays click-to-load behind Pannellum's opt-in button.
+# Rendering: attaching fires the Active Storage attachment callback
+# (config/initializers/flat_panorama_callbacks.rb), which enqueues
+# RenderFlatPanoramaJob — the flat rectilinear view the pano pane serves. Ingest
+# pre-processes nothing itself; there is one render path for bulk ingest, admin
+# replace, and backfill alike.
 #
 # Idempotent and re-runnable: rooms with a panorama already attached are
 # skipped (listed in the result) unless `replace: true`. Per-file failures
@@ -87,7 +87,5 @@ class PanoramaIngest
     unless room.errors.empty? && room.panorama.attached?
       raise IngestFailed, room.errors.full_messages.join("; ").presence || "attachment did not persist"
     end
-
-    room.panorama.variant(:poster).processed
   end
 end
