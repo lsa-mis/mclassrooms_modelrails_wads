@@ -302,6 +302,18 @@ RSpec.describe Room, type: :model do
       expect(room.reload.flat_panorama).to be_attached
     end
 
+    it "purges the photo but leaves the flat panorama render alone" do
+      room.photo.attach(io: Rails.root.join("spec/fixtures/files/room.jpg").open,
+                        filename: "room.jpg", content_type: "image/jpeg")
+      room.save!
+
+      perform_enqueued_jobs { room.update!(remove_photo: "1") }
+
+      room.reload
+      expect(room.photo).not_to be_attached
+      expect(room.flat_panorama).to be_attached
+    end
+
     it "replaces the render when the panorama is replaced" do
       original = room.reload.flat_panorama.blob.id
 

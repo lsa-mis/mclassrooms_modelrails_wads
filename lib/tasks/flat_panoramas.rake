@@ -6,9 +6,16 @@
 #   bin/rails panoramas:render_flat INLINE=1             # render in-process (~11s for 219)
 #   bin/rails panoramas:flat_status                      # read-only counts
 #
-# INLINE bypasses the queue entirely — it does NOT enqueue and wait. INLINE
-# outcomes are classified from the room's state AFTER each render, not from
-# whether perform_now raised — see FlatPanoramaTasks.render_outcome.
+# INLINE does not WAIT on the queue — it does not enqueue and block for a
+# background worker. It does not bypass the queue entirely, though: a
+# retryable error (Vips::Error, ActiveRecord::StatementTimeout) inside
+# perform_now still calls ActiveJob's own retry_job, which enqueues a
+# background retry same as it would under perform_later. Such a room is
+# classified :skipped below (see FlatPanoramaTasks.render_outcome), not
+# :failed. Re-run `panoramas:flat_status` after the queue drains to see
+# whether that retry ultimately landed. INLINE outcomes are classified from
+# the room's state AFTER each render, not from whether perform_now raised —
+# see FlatPanoramaTasks.render_outcome.
 #
 # Run the backfill AFTER a deploy settles: config/deploy.yml sets a 45s drain
 # window with SOLID_QUEUE_IN_PUMA, so in-flight jobs are SIGKILLed. Idempotence
@@ -130,8 +137,13 @@ module FlatPanoramaTasks
   module_function
 
   def workspace!
-    ws = ENV["WORKSPACE"].present? ? Workspace.find_by!(slug: ENV["WORKSPACE"]) : TenancyConfig.shared_workspace
-    abort "No shared workspace resolved — pass WORKSPACE=<slug>" if ws.nil?
+    if ENV["WORKSPACE"].present?
+      ws = Workspace.kept.find_by(slug: ENV["WORKSPACE"])
+      abort "No kept workspace found for WORKSPACE=#{ENV['WORKSPACE'].inspect}" if ws.nil?
+    else
+      ws = TenancyConfig.shared_workspace
+      abort "No shared workspace resolved — pass WORKSPACE=<slug>" if ws.nil?
+    end
     ws
   end
 
@@ -245,12 +257,15 @@ module FlatPanoramaTasks
   #     `ROOM=<rmrecnbr> INLINE=1 FORCE=1` to re-render after a code change,
   #     where the SOURCE hasn't changed at all).
   #
-  # Both guards belong in the JOB, not here — they are what stop an enqueue
-  # storm (every unrelated Room write re-enqueues via config/initializers/
-  # flat_panorama_callbacks.rb) from re-attempting a hopeless or redundant
-  # render on every commit. Only an operator explicitly passing FORCE to THIS
-  # task should be able to override them, so the override happens here,
-  # immediately before the one deliberate invocation FORCE asked for.
+  # Both guards belong in the JOB, not here — they are what keep repeated
+  # enqueues cheap. Every panorama attach or replace enqueues this job (see
+  # the header comment in config/initializers/flat_panorama_callbacks.rb),
+  # and this task's own backfill re-enqueues every candidate on every run —
+  # without #permanently_failed?/#fresh? short-circuiting first, each of
+  # those would re-attempt a hopeless or already-current render. Only an
+  # operator explicitly passing FORCE to THIS task should be able to override
+  # them, so the override happens here, immediately before the one
+  # deliberate invocation FORCE asked for.
   #
   # Deletes keys outright, not a merge with nils — `metadata.merge(key =>
   # nil)` would leave the key present with a nil value, a different (and
@@ -295,8 +310,10 @@ module FlatPanoramaTasks
       HEADER
 
       File.write(dir.join("flat_skipped.txt"), <<~HEADER + skipped.map(&:rmrecnbr).join("\n") + "\n")
-        # Flat panorama renders SKIPPED (already fresh, or superseded mid-render)
-        # in workspace "#{workspace.slug}"
+        # Flat panorama renders SKIPPED — already fresh, superseded mid-render,
+        # or scheduled for a background retry after a retryable error (see
+        # `INLINE does not WAIT` above; check `panoramas:flat_status` once the
+        # queue drains) — in workspace "#{workspace.slug}"
         # #{stamp} — #{skipped.size} rooms
       HEADER
     end

@@ -99,8 +99,11 @@ class RenderFlatPanoramaJob < ApplicationJob
     # cleared on `after_commit` or `reload`. So after a failed `save`, the
     # built-but-unsaved attachment is still `present?` and `attached?` lies true.
     # `room.errors.empty?` is the half that actually detects the silent failure.
-    raise "flat_panorama did not persist: #{room.errors.full_messages.join('; ').presence || 'unknown'}" unless
-      room.errors.empty? && room.flat_panorama.attached?
+    unless room.errors.empty? && room.flat_panorama.attached?
+      message = room.errors.full_messages.join("; ").presence || "unknown"
+      Rails.logger.error("[flat_panorama] room=#{room.rmrecnbr} flat_panorama did not persist: #{message}")
+      raise "flat_panorama did not persist: #{message}"
+    end
 
     # Last reconcile: if the source vanished between the guard and here, purge our
     # own output rather than leaving an orphan no operator surface can see.
