@@ -1,4 +1,5 @@
 require "rails_helper"
+require "vips"
 
 # Renders Room#panorama to the flat rectilinear view the pano pane serves.
 #
@@ -54,6 +55,29 @@ RSpec.describe RenderFlatPanoramaJob do
       expect(room.flat_panorama.blob.metadata["source_blob_key"]).to eq(room.panorama.blob.key)
       expect(room.flat_panorama.blob.metadata["projection"]).to eq(Panorama::Rectilinear.signature)
       expect(room.flat_panorama.blob.content_type).to eq("image/webp")
+    end
+
+    # The STORED bytes, not just the stamps. Nothing else in this suite reads a
+    # render back at all, so the resolution actually shipped to every room page
+    # was unasserted.
+    #
+    # LITERAL 1024x512, and then separately that the constants still derive it.
+    # Asserting only `[DEFAULT_WIDTH, DEFAULT_WIDTH / ASPECT]` is
+    # self-referential: quietly lowering DEFAULT_WIDTH to 256 moves the
+    # expectation with the code and ships quarter-resolution images with every
+    # test still green (the projection signature changes too, but it changes
+    # CONSISTENTLY, so it only agrees with itself). The literal is a contract
+    # about what a visitor sees on a wide stage at 2x; the second expectation
+    # is what fails if the job ever passes a width the recipe does not name.
+    it "stores a render at the projection's own dimensions" do
+      run
+
+      bytes = room.reload.flat_panorama.blob.download
+      image = Vips::Image.new_from_buffer(bytes, "")
+
+      expect([ image.width, image.height ]).to eq([ 1024, 512 ])
+      expect([ Panorama::Rectilinear::DEFAULT_WIDTH,
+               Panorama::Rectilinear::DEFAULT_WIDTH / Panorama::Rectilinear::ASPECT ]).to eq([ 1024, 512 ])
     end
 
     # Captured DURING the work, not after: asserting Current.workspace once the
@@ -147,15 +171,76 @@ RSpec.describe RenderFlatPanoramaJob do
     # The panorama vanishing DURING the render (before the post-render reload
     # guard runs) hits the supersession `return` — flat_panorama is never
     # attached at all, so there's nothing to reconcile.
-    it "discards output when the panorama is superseded mid-render" do
+    #
+    # The LOG LINE is the discriminating assertion, not the attachment state:
+    # with the supersession guard deleted this job still attaches nothing
+    # observable, because the final reconcile purges its own output when the
+    # source is gone and Attachment#purge_later deletes the row with raw SQL,
+    # synchronously. Same end state, different reason — only the log tells
+    # them apart, and only one of the two is the guard being tested.
+    it "discards output when the panorama is purged mid-render" do
       allow(Panorama::Rectilinear).to receive(:render).and_wrap_original do |original, *args, **opts|
         result = original.call(*args, **opts)
         room.panorama.purge
         result
       end
+      allow(Rails.logger).to receive(:info).and_call_original
 
       expect { run }.not_to raise_error
       expect(room.reload.flat_panorama).not_to be_attached
+      expect(Rails.logger).to have_received(:info)
+        .with(a_string_matching(/superseded mid-render; output discarded/))
+    end
+
+    # The case the guard actually prevents, which the purge case above cannot
+    # reach: the panorama is REPLACED rather than purged, so a source IS
+    # attached when the job finishes and the final reconcile never fires.
+    # Without the guard the job attaches a render of the OUTGOING photo stamped
+    # with the outgoing blob's key — and the replacement's own job has already
+    # been enqueued and will find nothing wrong to correct. A permanently stale
+    # render of a photo nobody can see any more.
+    it "discards output when the panorama is replaced mid-render" do
+      allow(Panorama::Rectilinear).to receive(:render).and_wrap_original do |original, *args, **opts|
+        result = original.call(*args, **opts)
+        room.panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
+                             filename: "replacement.png", content_type: "image/png")
+        result
+      end
+      allow(Rails.logger).to receive(:info).and_call_original
+
+      expect { run }.not_to raise_error
+
+      room.reload
+      expect(room.panorama).to be_attached
+      expect(room.flat_panorama).not_to be_attached
+      expect(Rails.logger).to have_received(:info)
+        .with(a_string_matching(/superseded mid-render; output discarded/))
+    end
+
+    # B1: record_failure must stamp the blob THIS run rendered from, never a
+    # re-read of whatever is attached when the handler happens to run. The
+    # interleaving is an ordinary admin workflow: a bad photo fails, the admin
+    # replaces it with a good one, and the outgoing render's failure handler
+    # lands afterwards. Stamping the current blob tombstones the NEW, VALID
+    # photo — its own job then skips on flat_render_failed?, every backfill
+    # excludes the room via `candidates`, and the failure report tells the
+    # operator to replace the photo they just replaced.
+    it "does not tombstone a panorama that was replaced before the failure was recorded" do
+      square = create(:room, :with_panorama, building: building, workspace: workspace)
+      allow(Rails.logger).to receive(:info).and_call_original
+      allow(Panorama::Rectilinear).to receive(:render).and_wrap_original do |_original, *_args, **_opts|
+        square.panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
+                               filename: "fixed.png", content_type: "image/png")
+        raise Panorama::Rectilinear::NotEquirectangular, "200x200 (ratio 1.0)"
+      end
+
+      expect { described_class.perform_now(square.id) }.not_to raise_error
+
+      square.reload
+      expect(square.panorama.blob.metadata["flat_render_failed_at"]).to be_nil
+      expect(square.flat_render_failed?).to be(false)
+      expect(Rails.logger).to have_received(:info)
+        .with(a_string_matching(/source moved since this render began.*failure NOT recorded/m))
     end
 
     # The window between the post-render guard and the attach is real: the

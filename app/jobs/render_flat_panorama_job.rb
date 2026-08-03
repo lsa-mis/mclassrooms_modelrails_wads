@@ -1,6 +1,7 @@
-require "vips"   # Vips::Error is named in the class body below, and ruby-vips is
-                 # `require: false` in the Gemfile. Production eager-loads jobs, so
-                 # without this the app fails to BOOT, not to render.
+# Vips::Error is named in the class body below, and ruby-vips is
+# `require: false` in the Gemfile. Production eager-loads jobs, so without this
+# the app fails to BOOT, not to render.
+require "vips"
 
 # Renders Room#panorama to Room#flat_panorama — the rectilinear view the pano
 # pane serves before a visitor opts into the 360 viewer.
@@ -19,12 +20,20 @@ require "vips"   # Vips::Error is named in the class body below, and ruby-vips i
 class RenderFlatPanoramaJob < ApplicationJob
   queue_as :low
 
-  # SQLite's busy timeout surfaces as StatementTimeout, NOT Vips::Error — 219
+  # SQLite's busy timeout surfaces as StatementTimeout and NOTHING else — 219
   # short write transactions against a single writer shared with Puma.
-  retry_on ActiveRecord::StatementTimeout, ActiveRecord::LockWaitTimeout,
-           wait: :polynomially_longer, attempts: 5
+  # ActiveRecord::LockWaitTimeout is deliberately absent: SQLite3Adapter's
+  # `translate_exception` maps ::SQLite3::BusyException to StatementTimeout
+  # only (activerecord/.../sqlite3_adapter.rb), so listing LockWaitTimeout here
+  # was dead code that misdescribed the failure mode to the next reader.
+  retry_on ActiveRecord::StatementTimeout, wait: :polynomially_longer, attempts: 5
 
-  retry_on Vips::Error, wait: :polynomially_longer, attempts: 3 do |job, error|
+  # attempts: 2, not more. A decode failure on a FIXED blob is deterministic —
+  # the same bytes decode the same way every time — so extra attempts only buy
+  # another full download + tempfile + MD5 + decode each. Two still covers the
+  # one non-deterministic case worth covering: a transient ENOMEM when several
+  # renders and Puma contend for the same host.
+  retry_on Vips::Error, wait: :polynomially_longer, attempts: 2 do |job, error|
     record_failure(job, error)
   end
 
@@ -39,6 +48,11 @@ class RenderFlatPanoramaJob < ApplicationJob
 
   discard_on(Panorama::Rectilinear::NotEquirectangular) { |job, error| record_failure(job, error) }
 
+  # The blob key this run actually rendered FROM. Captured on the instance in
+  # `perform` and read back by the class-level failure handlers, which run after
+  # the fact and must not re-derive it from the database — see `record_failure`.
+  attr_reader :source_key
+
   # Records a PERMANENT failure on the source blob so it is answerable from the
   # console and from `panoramas:flat_status`. Mission Control is not mounted, so
   # a job that dies into solid_queue_failed_executions is otherwise invisible.
@@ -46,16 +60,35 @@ class RenderFlatPanoramaJob < ApplicationJob
   # Writing blob metadata touches the Room (Blob#touch_attachments). That is safe
   # ONLY because the enqueue hangs off the attachment — under a Room callback this
   # method was an infinite loop. Do not move the enqueue.
+  #
+  # KEYED TO job.source_key, NEVER to a re-read of whatever is attached now.
+  # The interleaving this rules out is not exotic: a 4:3 photo fails with
+  # NotEquirectangular; an admin replaces it with the correct 2:1 equirect,
+  # which is a new attachment and enqueues its own job; THIS handler then runs
+  # and, re-reading, would stamp the brand-new VALID blob as permanently
+  # failed. The replacement's own job would see `flat_render_failed?` and skip,
+  # `candidates` would exclude the room from every backfill, and the failure
+  # report would tell the operator to replace the photo — which is exactly what
+  # they had just done. A valid panorama, tombstoned forever.
   def self.record_failure(job, error)
     room = Room.find_by(id: job.arguments.first)
     return unless room&.panorama&.attached?
 
-    Rails.logger.warn("[flat_panorama] room=#{room.rmrecnbr} blob=#{room.panorama.blob.key} " \
+    current_key = room.panorama.blob.key
+    if current_key != job.source_key
+      return Rails.logger.info(
+        "[flat_panorama] room=#{room.rmrecnbr} source moved since this render began " \
+        "(#{job.source_key.inspect} -> #{current_key}); failure NOT recorded — the " \
+        "replacement's own render owns the outcome"
+      )
+    end
+
+    Rails.logger.warn("[flat_panorama] room=#{room.rmrecnbr} blob=#{job.source_key} " \
                       "render permanently failed: #{error.class}: #{error.message}")
     room.panorama.blob.update!(
       metadata: room.panorama.blob.metadata.merge(
         "flat_render_failed_at"  => Time.current.iso8601,
-        "flat_render_source_key" => room.panorama.blob.key,
+        "flat_render_source_key" => job.source_key,
         "flat_render_error"      => "#{error.class}: #{error.message}"
       )
     )
@@ -63,13 +96,29 @@ class RenderFlatPanoramaJob < ApplicationJob
 
   def perform(room_id)
     room = Room.find(room_id)
-    Current.workspace = room.workspace
 
+    # `set`, not a bare assignment: an INLINE backfill runs every room in one
+    # process, and a plain `Current.workspace =` would leave the LAST room's
+    # workspace set for whatever runs after the task.
+    Current.set(workspace: room.workspace) { render_flat(room) }
+  end
+
+  private
+
+  def render_flat(room)
     return Rails.logger.info("[flat_panorama] room=#{room.rmrecnbr} no panorama; skipped") unless
       room.panorama.attached?
 
-    source_key = room.panorama.blob.key
-    return if fresh?(room, source_key) || permanently_failed?(room, source_key)
+    # Captured on the instance so the class-level failure handlers can stamp the
+    # blob this run rendered FROM rather than re-reading the association.
+    @source_key = room.panorama.blob.key
+
+    if room.flat_render_current?
+      return Rails.logger.info("[flat_panorama] room=#{room.rmrecnbr} fresh (#{source_key}); skipped")
+    end
+    # Without this a non-2:1 room re-downloads its full source on every enqueue,
+    # forever, to re-raise the same error.
+    return if room.flat_render_failed?
 
     bytes = room.panorama.blob.open { |file| Panorama::Rectilinear.render(file.path) }
 
@@ -113,30 +162,5 @@ class RenderFlatPanoramaJob < ApplicationJob
       room.flat_panorama.purge_later
       Rails.logger.info("[flat_panorama] room=#{room.rmrecnbr} source purged mid-attach; output purged")
     end
-  end
-
-  private
-
-  def fresh?(room, source_key)
-    flat = room.flat_panorama
-    return false unless flat.attached?
-    return false unless flat.blob.metadata["source_blob_key"] == source_key
-    return false unless flat.blob.metadata["projection"] == Panorama::Rectilinear.signature
-    # A SIGKILL between the attachment commit and the file upload leaves a blob row
-    # with a correct stamp and NO FILE, and every check downstream then lies the
-    # same way: attached? is true, so :poster never engages and the page serves a
-    # 404 image forever. One stat call closes it.
-    return false unless flat.blob.service.exist?(flat.blob.key)
-
-    Rails.logger.info("[flat_panorama] room=#{room.rmrecnbr} fresh (#{source_key}); skipped")
-    true
-  end
-
-  # Without this a non-2:1 room re-downloads its full source on every enqueue,
-  # forever, to re-raise the same error. Keyed on the source blob so replacing the
-  # bad photo with a good one clears the tombstone.
-  def permanently_failed?(room, source_key)
-    meta = room.panorama.blob.metadata
-    meta["flat_render_failed_at"].present? && meta["flat_render_source_key"] == source_key
   end
 end

@@ -325,5 +325,46 @@ RSpec.describe Room, type: :model do
       expect(room.reload.flat_panorama.blob.id).not_to eq(original)
       expect(room.flat_panorama.blob.metadata["source_blob_key"]).to eq(room.panorama.blob.key)
     end
+
+    # The `after_destroy_commit :purge_flat_panorama` half of
+    # config/initializers/flat_panorama_callbacks.rb had ZERO coverage: the
+    # example above passes with that hook deleted, because the replacement's
+    # own render overwrites the attachment regardless. The hook only matters
+    # when the replacement render FAILS — replace a good equirect with the
+    # non-2:1 room.jpg and, without the destroy hook, the room keeps serving a
+    # rectilinear view of a photo that is no longer attached to it, with
+    # data-panorama-preview-source cheerfully reporting "flat_render".
+    it "purges the stale render when the replacement panorama cannot be rendered" do
+      expect(room.reload.flat_panorama).to be_attached
+
+      perform_enqueued_jobs do
+        room.panorama.attach(io: Rails.root.join("spec/fixtures/files/room.jpg").open,
+                             filename: "not_equirect.jpg", content_type: "image/jpeg")
+      end
+
+      room.reload
+      expect(room.panorama).to be_attached
+      expect(room.flat_panorama).not_to be_attached
+      expect(room.flat_render_failed?).to be(true)
+    end
+
+    describe "#flat_render_current?" do
+      it "is false when the stamped blob's file is gone" do
+        expect(room.reload.flat_render_current?).to be(true)
+
+        blob = room.flat_panorama.blob
+        blob.service.delete(blob.key)
+
+        expect(room.flat_render_current?).to be(false)
+      end
+
+      it "is false when the render was made under a different projection recipe" do
+        expect(room.reload.flat_render_current?).to be(true)
+
+        allow(Panorama::Rectilinear).to receive(:signature).and_return("hfov90-aspect2-w1024")
+
+        expect(room.flat_render_current?).to be(false)
+      end
+    end
   end
 end
