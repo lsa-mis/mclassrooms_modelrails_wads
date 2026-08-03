@@ -88,7 +88,19 @@ class Room < ApplicationRecord
   # echoing back "checked" from a transient submitted value.
   %i[photo panorama seating_chart].each do |slot|
     define_method("remove_#{slot}=") do |value|
-      public_send(slot).purge_later if ActiveModel::Type::Boolean.new.cast(value)
+      next unless ActiveModel::Type::Boolean.new.cast(value)
+
+      public_send(slot).purge_later
+      # The flat render is derived from the panorama and meaningless without
+      # it. ActiveStorage::Attachment#purge_later calls `delete` (raw SQL) —
+      # NOT `destroy` — so the after_destroy_commit hook in
+      # config/initializers/flat_panorama_callbacks.rb cannot see this path.
+      # Replacement DOES go through destroy and is covered there; explicit
+      # removal is covered only here. Re-read the attachment rather than
+      # trusting the in-memory association: this instance may have loaded
+      # flat_panorama as nil before a render attached it, and purge_later on
+      # a stale association silently no-ops.
+      reload_flat_panorama_attachment&.purge_later if slot == :panorama
     end
     define_method("remove_#{slot}") { false }
   end
