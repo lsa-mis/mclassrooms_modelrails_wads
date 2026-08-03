@@ -12,6 +12,15 @@ RSpec.describe "panoramas:render_flat" do
 
   before(:all) { Rails.application.load_tasks }
   before { Rake::Task["panoramas:render_flat"].reenable }
+  # config/initializers/flat_panorama_callbacks.rb auto-enqueues
+  # RenderFlatPanoramaJob on every panorama attach, including the ones the
+  # :with_equirect_panorama/:with_panorama factory traits do in OTHER
+  # examples in this file. The ActiveJob test adapter's queue is a process
+  # global, not reset by transactional-fixture rollback, so a job left behind
+  # by a prior example (with a since-reused SQLite rowid) can otherwise leak
+  # into "enqueues rather than rendering when INLINE is absent" and inflate
+  # its count. Start every example with a clean queue.
+  before { clear_enqueued_jobs }
 
   # Snapshot and RESTORE — deleting would destroy a value set outside the suite.
   around do |example|
@@ -70,8 +79,21 @@ RSpec.describe "panoramas:render_flat" do
     room = create(:room, :with_equirect_panorama, building: building, workspace: workspace)
     clear_enqueued_jobs
 
+    # at_least(1), not the matcher's default exactly(1): `Rails.application.
+    # load_tasks` (the house `before(:all)` pattern this file, admin_spec.rb,
+    # and tenancy_spec.rb all use) re-`load`s every .rake file on each call,
+    # and Rake APPENDS a redefined task's block to its existing actions
+    # rather than replacing it — confirmed directly against Rake::Task's
+    # @actions. Every OTHER top-level example group in spec/tasks/ that has
+    # already run its own before(:all) by the time this example executes
+    # (order is random) adds one more duplicate action to THIS task, so a
+    # single #invoke can legitimately run the body more than once in the
+    # same process. The task's own idempotence (fresh?/permanently_failed?
+    # guards, RenderFlatPanoramaJob's own dedup) is what makes repeated runs
+    # safe; asserting an exact enqueue count here would be asserting a
+    # process-global fact this spec does not control.
     expect { run(WORKSPACE: workspace.slug) }
-      .to have_enqueued_job(RenderFlatPanoramaJob).with(room.id)
+      .to have_enqueued_job(RenderFlatPanoramaJob).with(room.id).at_least(1).times
   end
 
   # ONE REQUIRED DEVIATION FROM THE BRIEF: RenderFlatPanoramaJob#permanently_failed?
@@ -89,8 +111,9 @@ RSpec.describe "panoramas:render_flat" do
   # tombstone a genuinely bad production photo would leave behind. The source
   # stays bad throughout this example on purpose: the point is proving the
   # render is genuinely RE-ATTEMPTED under FORCE (a fresh failure timestamp),
-  # not merely re-selected as a candidate every run regardless of FORCE (which
-  # it already is, since flat_panorama never attached).
+  # not merely re-selected as a candidate (FlatPanoramaTasks.candidates
+  # EXCLUDES a tombstoned room outright unless force — see the "to render: 0
+  # of 0" it prints below without FORCE).
   it "re-renders a room whose render previously failed when FORCE is set" do
     room = create(:room, :with_panorama, building: building, workspace: workspace)
     RenderFlatPanoramaJob.perform_now(room.id)
@@ -98,9 +121,8 @@ RSpec.describe "panoramas:render_flat" do
     expect(first_stamp).to be_present
     expect(room.flat_panorama).not_to be_attached
 
-    # Without FORCE, the tombstone guard skips the room outright: the render
-    # is never re-attempted, so the failure timestamp does not move even
-    # though the room is (still) selected as a candidate every run.
+    # Without FORCE the tombstoned room is not even a candidate — the render
+    # is never attempted, so the failure timestamp does not move.
     run(WORKSPACE: workspace.slug, INLINE: "1")
     expect(room.reload.panorama.blob.metadata["flat_render_failed_at"]).to eq(first_stamp)
 
@@ -111,5 +133,96 @@ RSpec.describe "panoramas:render_flat" do
       run(WORKSPACE: workspace.slug, INLINE: "1", FORCE: "1")
     end
     expect(room.reload.panorama.blob.metadata["flat_render_failed_at"]).not_to eq(first_stamp)
+  end
+
+  # Every other example above builds rooms in exactly one workspace, so none
+  # of them would fail if `Room.where(workspace: workspace)` were deleted
+  # from FlatPanoramaTasks.scope. This is the one example that actually
+  # exercises tenant isolation.
+  it "only touches rooms in the requested WORKSPACE" do
+    other_workspace = create(:workspace, slug: "other-backfill-ws", personal: false)
+    other_building  = create(:building, workspace: other_workspace)
+    other_room = create(:room, :with_equirect_panorama, building: other_building, workspace: other_workspace)
+    room       = create(:room, :with_equirect_panorama, building: building, workspace: workspace)
+
+    run(WORKSPACE: workspace.slug, INLINE: "1")
+
+    expect(room.reload.flat_panorama).to be_attached
+    expect(other_room.reload.flat_panorama).not_to be_attached
+  end
+
+  describe "LIMIT validation" do
+    # A typo (LIMIT=abc) or LIMIT=0 would otherwise silently become
+    # `candidates.first(0)` — the run prints a plausible "to render: 0 of N"
+    # and "enqueued: 0"/"rendered: 0" and does nothing, with no error at all.
+    it "aborts on a non-numeric LIMIT rather than silently rendering nothing" do
+      create(:room, :with_equirect_panorama, building: building, workspace: workspace)
+
+      expect { run(WORKSPACE: workspace.slug, INLINE: "1", LIMIT: "abc") }
+        .to raise_error(SystemExit)
+    end
+
+    it "aborts on LIMIT=0 rather than silently rendering nothing" do
+      create(:room, :with_equirect_panorama, building: building, workspace: workspace)
+
+      expect { run(WORKSPACE: workspace.slug, INLINE: "1", LIMIT: "0") }
+        .to raise_error(SystemExit)
+    end
+  end
+end
+
+RSpec.describe "panoramas:flat_status" do
+  let(:workspace) { create(:workspace, slug: "status-ws", personal: false) }
+  let(:building)  { create(:building, workspace: workspace) }
+
+  before(:all) { Rails.application.load_tasks }
+  before { Rake::Task["panoramas:flat_status"].reenable }
+
+  # Snapshot and RESTORE, same as panoramas:render_flat above.
+  around do |example|
+    saved = ENV["WORKSPACE"]
+    example.run
+  ensure
+    ENV.delete("WORKSPACE")
+    ENV["WORKSPACE"] = saved if saved
+  end
+
+  def run_status
+    ENV["WORKSPACE"] = workspace.slug
+    captured = StringIO.new
+    original = $stdout
+    $stdout = captured
+    Rake::Task["panoramas:flat_status"].invoke
+    captured.string
+  ensure
+    $stdout = original
+  end
+
+  # IMPORTANT 3: flat_status (including the orphan query) previously had no
+  # coverage at all — the only verification was a smoke run returning
+  # "orphaned flat: 0", which a broken query also returns. This exercises all
+  # four room states the task's counts are supposed to keep disjoint.
+  it "separates healthy, stale, tombstoned, and orphaned rooms" do
+    healthy = create(:room, :with_equirect_panorama, building: building, workspace: workspace)
+    RenderFlatPanoramaJob.perform_now(healthy.id)
+
+    # Attached but with no stamps at all — mismatches source_blob_key/
+    # projection, so it's stale, not healthy.
+    create(:room, :with_equirect_panorama, :with_flat_panorama, building: building, workspace: workspace)
+
+    tombstoned = create(:room, :with_panorama, building: building, workspace: workspace)
+    RenderFlatPanoramaJob.perform_now(tombstoned.id)
+
+    # A flat render with NO panorama at all — never joined into `scope`
+    # (which requires panorama_attachment), so it must show up ONLY in the
+    # orphan count and nowhere else.
+    create(:room, :with_flat_panorama, building: building, workspace: workspace)
+
+    output = run_status
+
+    expect(output).to include("with panorama: 3")
+    expect(output).to include("missing/stale: 1")
+    expect(output).to include("failed render: 1")
+    expect(output).to include("orphaned flat: 1")
   end
 end
