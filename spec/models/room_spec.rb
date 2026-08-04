@@ -285,6 +285,26 @@ RSpec.describe Room, type: :model do
       room.seating_chart.attach(io: StringIO.new("%PDF-"), filename: "c.pdf", content_type: "application/pdf")
       expect(room).to be_valid
     end
+
+    it "accepts a HEIC panorama, since a phone is the likely source" do
+      room = build(:room)
+      room.panorama.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "pano.heic", content_type: "image/heic"
+      )
+
+      expect(room).to be_valid
+    end
+
+    it "accepts a HEIF seating chart" do
+      room = build(:room)
+      room.seating_chart.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "chart.heif", content_type: "image/heif"
+      )
+
+      expect(room).to be_valid
+    end
   end
 
   describe "flat panorama lifecycle" do
