@@ -1,0 +1,643 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# bin/fork — turn a fresh template clone into YOUR application.
+#
+# Fork once, setup often. This script makes the decisions that are migrations
+# if changed later: the identity rename, the remote surgery, and the tenancy
+# preset. Recurring environment bootstrap belongs to bin/setup — including
+# per-clone setup for teammates, which reads the provenance this script writes.
+# See /docs/developer/forking; this script executes that guide.
+#
+# State model: live state is DERIVED from the repository (the rename lives in a
+# commit; remotes are per-clone), so re-running repairs rather than corrupts.
+# The decisions are RECORDED in .fork.yml, committed so every clone inherits
+# them. Derived state gates; recorded state remembers.
+#
+#   bin/fork                                   # interactive Q&A
+#   bin/fork --name my_app --preset none --origin git@github.com:me/my_app.git --yes
+#   bin/fork --preset shared                   # on a forked repo: change the preset
+#   bin/fork --dry-run                         # print the plan, mutate nothing
+#
+# Plain Ruby, stdlib only (template doctrine: no new gems).
+
+require "optparse"
+require "yaml"
+
+class ForkFlow
+  VERSION = "1.0.0"
+
+  TEMPLATE_TOKEN  = "modelrails_base"
+  TEMPLATE_MODULE = "ModelrailsBase"
+  TEMPLATE_BRAND  = "ModelRails"
+  FORK_FILE       = ".fork.yml"
+
+  # Anchored on a path separator so a fork of your own named e.g.
+  # "my_modelrails_base" is never mistaken for the template and silently
+  # converted into a push-disabled upstream.
+  TEMPLATE_REMOTE = %r{[:/]modelrails_base(\.git)?\z}
+
+  # Single source of truth: which files carry template identity, and the exact
+  # token in each. Static so spec/code_smells can assert the tokens still exist
+  # upstream — a token that quietly disappears is indistinguishable from a
+  # completed rename, and the script would congratulate itself while shipping
+  # template branding.
+  SUBSTITUTIONS = {
+    "config/application.rb"            => [ [ "module #{TEMPLATE_MODULE}", :module_decl ] ],
+    "config/deploy.yml"                => [ [ TEMPLATE_TOKEN, :snake ] ],
+    "config/locales/en/brand.en.yml"   => [ [ %("#{TEMPLATE_BRAND}), :open_quoted_title ] ],
+    "config/locales/en/pages.en.yml"   => [
+      [ TEMPLATE_BRAND, :title ],
+      # RFC-reserved .example makes the placeholder unmistakable; shipping the
+      # template's real support address silently would be worse.
+      [ "support@modelrails.dev", :support_email ]
+    ],
+    "public/manifest.webmanifest"      => [ [ %("#{TEMPLATE_BRAND}"), :quoted_title ] ],
+    ".github/workflows/ci.yml"         => [ [ "#{TEMPLATE_TOKEN}:", :snake_colon ] ],
+    ".github/workflows/image_scan.yml" => [ [ "#{TEMPLATE_TOKEN}:", :snake_colon ] ]
+  }.freeze
+
+  RENAME_FILES = SUBSTITUTIONS.keys.freeze
+
+  # Kept in step with config/initializers/tenancy.rb, which raises at boot on
+  # anything else (pinned by a template invariant). Open SaaS is documented but
+  # not implemented — offering it here would write a .env the app won't boot on.
+  PRESETS = %w[personal shared none].freeze
+
+  # Object.const_defined? catches Ruby core (always loaded), but this script is
+  # stdlib-only by design — Rails and friends are NOT defined in its process, so
+  # `--name rails` would sail through and write `module Rails` into
+  # config/application.rb. Listed explicitly so the check behaves identically
+  # here and under a spec suite that HAS loaded Rails.
+  RESERVED_CONSTANTS = %w[
+    Rails ActiveRecord ActiveSupport ActiveModel ActiveJob ActiveStorage
+    ActionController ActionView ActionMailer ActionCable ActionText ActionDispatch
+    Rack Puma Turbo Stimulus Pundit Capybara RSpec Minitest Bundler Gem
+  ].freeze
+
+  PRESET_DESCRIPTIONS = {
+    "personal" => "Solo-default: every user gets a workspace on signup (shipped default)",
+    "shared"   => "Single-tenant: one shared workspace, users join it",
+    "none"     => "Workspace-optional: users sign up bare; workspaces created deliberately"
+  }.freeze
+
+  # Paths that reference the template by name forever, so the verify sweep must
+  # not report them.
+  TEMPLATE_OWNED_PATHS = [
+    %r{\Aapp/docs/}, %r{\Aspec/}, %r{\ACHANGELOG\.md\z}, %r{\AGemfile(\.lock)?\z},
+    %r{\Abin/}, %r{\A\.gitattributes\z}, %r{\Avendor/}, %r{\A\.fork\.yml\z}
+  ].freeze
+
+  YOURS_TO_REWRITE_PATHS = [
+    [ %r{\AREADME\.md\z},    "your product's README (fork-owned — rewrite wholesale)" ],
+    [ %r{\A\.devcontainer/}, "optional: devcontainer bundle-cache volume name (see the forking guide)" ]
+  ].freeze
+
+  UI_GEM_LINE  = /modelrails_ui|\.modelrails_ui/i
+  COMMENT_LINE = %r{\A\s*(\#|//|\*|/\*|<%\#|<!--)}
+  # The template documents its fork seams inside block comments — a /* */ in
+  # _brand.css, a multi-line <%# %> in _footer.html.erb. Tracking open/close
+  # lets the sweep see those instead of reporting correct prose as a rename
+  # miss, and replaces a hand-maintained allow-list of the affected files.
+  BLOCK_COMMENT_OPEN  = %r{/\*|<%\#|<!--}
+  BLOCK_COMMENT_CLOSE = %r{\*/|%>|-->}
+
+  attr_reader :todos
+
+  def initialize(options, root: Dir.pwd)
+    @opts = options
+    @root = File.expand_path(root)
+    @todos = []
+  end
+
+  def run
+    preflight!
+
+    if forked?
+      return update_preset! if @opts[:preset]
+
+      return report_already_forked!
+    end
+
+    collect_answers!
+    step_remotes!
+    step_rename!
+    step_preset!(@preset)
+    step_verify!
+    print_summary!
+    offer_setup!
+  end
+
+  # ------------------------------------------------------------------ naming
+
+  def snake = @snake
+  def camel = snake.split(/_+/).map(&:capitalize).join
+  def title = snake.split(/_+/).map(&:capitalize).join(" ")
+
+  def replacement_for(key)
+    {
+      module_decl:       "module #{camel}",
+      snake:             snake,
+      snake_colon:       "#{snake}:",
+      title:             title,
+      quoted_title:      %("#{title}"),
+      open_quoted_title: %("#{title}),
+      support_email:     "support@#{snake}.example"
+    }.fetch(key)
+  end
+
+  # ------------------------------------------------------------------- state
+
+  # Derived from HEAD, not the worktree. Reading the worktree would flip this
+  # true the instant the first file is written — so an interrupted rename would
+  # route every later run down the "already forked" path and never finish.
+  def identity_renamed?
+    content, status = capture("git", "-C", @root, "show", "HEAD:config/application.rb")
+    status.zero? && !content.include?("module #{TEMPLATE_MODULE}")
+  end
+
+  # Recorded provenance is the completion marker: renamed AND recorded.
+  def forked? = identity_renamed? && File.exist?(path_to(FORK_FILE))
+
+  def upstream_configured?
+    url, url_status = capture("git", "-C", @root, "remote", "get-url", "upstream")
+    push_url, = capture("git", "-C", @root, "remote", "get-url", "--push", "upstream")
+    url_status.zero? && url.match?(TEMPLATE_REMOTE) && push_url == "DISABLED"
+  end
+
+  def current_branch
+    branch, = capture("git", "-C", @root, "rev-parse", "--abbrev-ref", "HEAD")
+    branch.empty? ? "main" : branch
+  end
+
+  # ------------------------------------------------------------------- steps
+
+  def preflight!
+    abort("bin/fork: run from the application root (config/application.rb not found)") unless File.exist?(path_to("config/application.rb"))
+    abort("bin/fork: not a git repository") unless Dir.exist?(path_to(".git"))
+
+    # Checked before any remote surgery so a fork that deleted a rename target
+    # (plenty won't use Kamal) fails with a sentence, not an Errno backtrace
+    # halfway through.
+    missing = RENAME_FILES.reject { |f| File.exist?(path_to(f)) }
+    unless missing.empty? || forked?
+      abort("bin/fork: rename targets are missing, cannot proceed:\n  #{missing.join("\n  ")}")
+    end
+
+    return if dry_run? || forked?
+
+    # This script commits on your behalf, and a fresh laptop, container, or CI
+    # runner may have no identity configured. Say so now rather than dying on
+    # `fatal: empty ident name` after the remote surgery has already happened.
+    _, ident_status = capture("git", "-C", @root, "var", "GIT_COMMITTER_IDENT")
+    unless ident_status.zero?
+      abort(<<~MSG)
+        bin/fork: git has no identity configured, so the rename commit would fail
+        partway through. Set one first:
+          git config --global user.name "Your Name"
+          git config --global user.email "you@example.com"
+      MSG
+    end
+
+    dirty, = capture("git", "-C", @root, "status", "--porcelain")
+    return if dirty.empty?
+
+    # The likeliest interruption is "files written, commit never made" — a
+    # Ctrl-C, a machine with no git identity, a failing pre-commit hook. Those
+    # dirty paths are OUR work, and refusing them would tell the user to stash
+    # their own half-finished rename. Anything else is genuinely theirs.
+    # Parsed by pattern, not fixed columns: `capture` strips the whole output,
+    # so porcelain's leading status space is gone on the first line only.
+    # Anything unrecognized (a rename's "old -> new") falls through as theirs,
+    # which fails closed.
+    ours = RENAME_FILES + [ FORK_FILE ]
+    theirs = dirty.lines.map { |line| line.strip.sub(/\A\S{1,2}\s+/, "").delete('"') } - ours
+    return say("  · resuming an interrupted rename (working tree has only bin/fork's own edits)") if theirs.empty?
+
+    abort(<<~MSG)
+      bin/fork: working tree is not clean. The identity rename wants to be one
+      clean commit you can always find again — commit or stash first:
+        #{theirs.join("\n  ")}
+    MSG
+  end
+
+  def collect_answers!
+    @snake = normalize_name(@opts[:name] || ask("Project name?", File.basename(@root)))
+    @preset = @opts[:preset] || (ask_preset unless @opts[:yes] || !$stdin.tty?)
+    validate_preset!(@preset) if @preset
+
+    say("Project: #{snake}  (module #{camel} · product \"#{title}\" · preset #{@preset || 'undecided'})")
+  end
+
+  # A name reaches config/application.rb as a Ruby module declaration, so an
+  # unusable one produces a committed app that cannot boot. The directory name
+  # is the default, so `git clone … 5by5 && bin/fork` gets here with no flags.
+  def normalize_name(raw)
+    raw = raw.to_s
+    # Silent transliteration is how you discover months later that your module
+    # and Kamal service are named after a word you didn't choose.
+    unless raw.ascii_only?
+      abort("bin/fork: #{raw.inspect} contains non-ASCII characters, which would be " \
+            "dropped rather than transliterated — pass --name with an ASCII name")
+    end
+
+    name = raw.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
+
+    abort("bin/fork: could not derive a project name from #{raw.inspect} — pass --name") if name.empty?
+    abort("bin/fork: project name is still the template's — pass --name") if name == TEMPLATE_TOKEN
+    unless name.match?(/\A[a-z][a-z0-9_]*\z/)
+      abort("bin/fork: #{name.inspect} cannot become a Ruby module name (it must start " \
+            "with a letter) — pass --name with something like my_app")
+    end
+
+    constant = name.split(/_+/).map(&:capitalize).join
+    if RESERVED_CONSTANTS.include?(constant) || Object.const_defined?(constant, false)
+      abort("bin/fork: module #{constant} would collide with the existing constant " \
+            "::#{constant} — pass --name with something else")
+    end
+
+    name
+  end
+
+  def validate_preset!(preset)
+    return if PRESETS.include?(preset)
+
+    extra = preset == "open_saas" ? " Open SaaS is documented but not shipped yet (see /docs/developer/presets-open-saas) — start on personal." : ""
+    abort("bin/fork: unknown preset #{preset.inspect} (choose from #{PRESETS.join('/')}).#{extra}")
+  end
+
+  def ask_preset
+    say("  Workspace-on-signup preset (docs: /docs/developer/presets):")
+    PRESETS.each_with_index { |p, i| say("    #{i + 1}) #{p} — #{PRESET_DESCRIPTIONS[p]}") }
+    answer = ask("  Choose 1-#{PRESETS.size}, or blank to defer", "")
+    PRESETS[Integer(answer) - 1] if answer.match?(/\A[1-#{PRESETS.size}]\z/)
+  end
+
+  def step_remotes!
+    say("\n== Remotes ==")
+    origin_url, origin_status = capture("git", "-C", @root, "remote", "get-url", "origin")
+    origin_present = origin_status.zero?
+    @template_url = origin_url if origin_present && origin_url.match?(TEMPLATE_REMOTE)
+    @baseline_sha, = capture("git", "-C", @root, "rev-parse", "HEAD")
+
+    if upstream_configured?
+      skip("upstream remote configured, push DISABLED")
+      @template_url ||= capture("git", "-C", @root, "remote", "get-url", "upstream").first
+    elsif @template_url && upstream_taken?
+      # Diagnosed before the first mutation: `remote rename` would fail on the
+      # existing name, leaving origin's push URL already disabled and the user
+      # stranded halfway through the surgery.
+      abort(<<~MSG)
+        bin/fork: an `upstream` remote already exists but isn't the template with
+        push DISABLED, so the remote surgery can't proceed safely. Inspect it:
+          git remote -v
+        Then either fix it by hand (see /docs/developer/forking) or remove it:
+          git remote remove upstream
+      MSG
+    elsif @template_url
+      # Push URL first: if the rename succeeded and this failed, the fork would
+      # be left with a live, writable push URL aimed at the template.
+      sh("git", "-C", @root, "remote", "set-url", "--push", "origin", "DISABLED")
+      sh("git", "-C", @root, "remote", "rename", "origin", "upstream")
+      # `remote rename` repoints branch.<name>.remote, so until an origin
+      # exists `git pull` would merge the TEMPLATE into your work.
+      sh("git", "-C", @root, "branch", "--unset-upstream") if tracking_branch?
+      origin_present = false
+    else
+      say("  ! no template remote found to convert — verify by hand:")
+      say("    git remote -v   # upstream fetch = the template, upstream push = DISABLED")
+    end
+
+    if origin_present
+      skip("origin remote present (#{origin_url})")
+      say("  ! --origin ignored: an origin remote already exists") if @opts[:origin]
+    elsif @opts[:origin]
+      sh("git", "-C", @root, "remote", "add", "origin", @opts[:origin])
+      @todos << "Push when ready: git push -u origin #{current_branch}"
+    else
+      @todos << "Add your repository (create it EMPTY on GitHub first — no README/license):\n" \
+                "     git remote add origin git@github.com:YOU/#{snake}.git && git push -u origin #{current_branch}"
+    end
+
+    @todos << "Record the cut point, in your TEMPLATE checkout:\n" \
+              "     git tag forks/#{snake}-baseline main && git push origin forks/#{snake}-baseline"
+  end
+
+  def upstream_taken?
+    _, status = capture("git", "-C", @root, "remote", "get-url", "upstream")
+    status.zero?
+  end
+
+  def tracking_branch?
+    _, status = capture("git", "-C", @root, "rev-parse", "--abbrev-ref", "@{u}")
+    status.zero?
+  end
+
+  def step_rename!
+    say("\n== Identity rename ==")
+
+    # Every file is read and rewritten in memory BEFORE anything is written, so
+    # a surprise mid-way leaves the tree untouched rather than half-renamed.
+    planned = {}
+    SUBSTITUTIONS.each do |path, substitutions|
+      content = File.read(path_to(path))
+      applied = []
+      substitutions.each do |from, key|
+        next unless content.include?(from)
+
+        to = replacement_for(key)
+        content = content.gsub(from, to)
+        applied << [ from, to ]
+      end
+      planned[path] = [ content, applied ] unless applied.empty?
+    end
+
+    if planned.empty?
+      skip("identity rename")
+    else
+      planned.each do |path, (content, applied)|
+        applied.each { |from, to| act(%(#{path}: "#{from}" → "#{to}")) }
+        atomic_write(path_to(path), content) unless dry_run?
+      end
+    end
+    (RENAME_FILES - planned.keys).each { |path| skip(path) }
+
+    act("write #{FORK_FILE} (committed provenance — see the forking guide)")
+    write_fork_file(
+      "name"                => snake,
+      "product_name"        => title,
+      "preset"              => @preset,
+      "template_url"        => @template_url,
+      "template_baseline"   => @baseline_sha,
+      "forked_at"           => Time.now.strftime("%Y-%m-%d"),
+      "fork_script_version" => VERSION
+    )
+
+    @todos << "Rewrite the product description in config/locales/en/brand.en.yml " \
+              "(still the template's sentence — bin/fork renames, it doesn't write your copy)."
+    @todos << "Set a real support address in config/locales/en/pages.en.yml " \
+              "(now support@#{snake}.example — an unmistakable placeholder, not a mailbox)."
+    @todos << "Rewrite marketing copy: config/locales/en/pages.en.yml + app/views/pages/ (fork-owned)."
+
+    commit!("Rename identity: #{title}", FORK_FILE, *RENAME_FILES)
+  end
+
+  def step_preset!(preset)
+    say("\n== Tenancy preset ==")
+
+    if preset.nil?
+      say("  ! no preset chosen — skipped. This is a set-up-time decision (switching")
+      say("    later is a migration, not a config flip).")
+      @todos << "Choose the tenancy preset: bin/fork --preset #{PRESETS.join('|')} (docs: /docs/developer/presets)"
+      return
+    end
+
+    env = { "WORKSPACE_ON_SIGNUP" => preset }
+    # config/initializers/tenancy.rb raises at boot when :shared has no slug, so
+    # writing the preset alone would hand back a .env the app refuses to start on.
+    env["TENANCY_SHARED_WORKSPACE_SLUG"] = snake_for_slug if preset == "shared"
+    write_env(env)
+
+    say(<<~NOTE)
+
+      NOTE: these live in .env and the production env — do NOT `export` them in
+      your shell. The suite asserts the DEFAULT preset; an exported value leaks
+      into rspec and fails hundreds of specs by design.
+    NOTE
+
+    return unless preset == "none"
+
+    say(<<~NOTE)
+      :none extra: do NOT override authenticated_home_path until the route you
+      want exists — and when you do, delegate to `super` (see /docs/developer/presets-none).
+    NOTE
+  end
+
+  def snake_for_slug = @snake || fork_config["name"] || "main"
+
+  # Recording a preset change on an already-forked repo.
+  def update_preset!
+    preset = @opts[:preset]
+    validate_preset!(preset)
+
+    if fork_config["preset"] == preset
+      skip("preset already recorded as #{preset}")
+      return step_preset!(preset)
+    end
+
+    say("== Recording tenancy preset: #{preset} ==")
+    if fork_config["preset"]
+      say("  ! changing preset #{fork_config['preset']} → #{preset}. On a LIVE app this is")
+      say("    a migration, not a config flip (/docs/developer/presets) — existing data")
+      say("    keeps its old shape. Fine before launch; deliberate afterwards.")
+    end
+
+    write_fork_file(fork_config.merge("preset" => preset))
+    commit!("Record tenancy preset: #{preset}", FORK_FILE)
+    step_preset!(preset)
+    print_summary!
+  end
+
+  def report_already_forked!
+    say("== #{fork_config['product_name'] || 'This repo'} is already forked ==")
+    say("  Nothing renamed — the identity rename is committed (#{FORK_FILE} records it).")
+    say("  Per-clone setup (upstream remote, merge driver, .env preset) is bin/setup.")
+    say("\nNext: bin/setup")
+  end
+
+  def step_verify!
+    say("\n== Verify ==")
+    if dry_run?
+      say("  · skipped under --dry-run (nothing was written, so every rename target")
+      say("    would still report as a leftover)")
+      return {}
+    end
+
+    # git grep, not grep: it searches TRACKED files only. A plain working-tree
+    # grep reports thousands of hits from worktrees, graphify-out/, and other
+    # untracked artifacts, burying the handful that matter.
+    out, status = capture("git", "-C", @root, "grep", "-Ili", "modelrails")
+    # git grep: 0 = matches, 1 = clean, anything else = the check did not run.
+    abort("bin/fork: verify sweep failed to run (git grep exit #{status})") if status > 1
+
+    triage = out.split("\n").each_with_object(Hash.new { |h, k| h[k] = [] }) do |file, acc|
+      acc[classify(file)] << file
+    end
+
+    if triage[:live].empty?
+      say("  ✓ no live template tokens outside template-owned files")
+    else
+      say("  ✗ probable rename misses — live template tokens remain:")
+      triage[:live].each { |f| say("      #{f}   (git grep -n modelrails #{f})") }
+    end
+    say("  · comment-only mentions (harmless seam docs): #{triage[:comment].join(', ')}") if triage[:comment].any?
+    triage[:rewrite].each do |file|
+      @todos << "#{file} — #{YOURS_TO_REWRITE_PATHS.find { |p, _| file.match?(p) }.last}"
+    end
+
+    triage
+  end
+
+  def classify(file)
+    return :template_owned if TEMPLATE_OWNED_PATHS.any? { |p| file.match?(p) }
+    return :rewrite        if YOURS_TO_REWRITE_PATHS.any? { |p, _| file.match?(p) }
+
+    lines = File.read(path_to(file)).lines(chomp: true)
+    matching = lines.each_index.select { |i| lines[i].match?(/modelrails/i) }
+    # modelrails_ui is a gem this app names forever — not a leftover to report.
+    matching -= matching.select { |i| lines[i].match?(UI_GEM_LINE) }
+    return :gem_reference if matching.empty?
+
+    commentary = commentary_lines(lines)
+    matching.all? { |i| commentary.include?(i) } ? :comment : :live
+  end
+
+  # Indices of lines that are commentary, including those inside a block that
+  # opened on an earlier line.
+  def commentary_lines(lines)
+    inside = false
+    lines.each_with_index.with_object([]) do |(line, i), acc|
+      opens = line.match?(BLOCK_COMMENT_OPEN)
+      closes = line.match?(BLOCK_COMMENT_CLOSE)
+      acc << i if inside || opens || line.match?(COMMENT_LINE)
+      inside = true if opens && !closes
+      inside = false if closes
+    end
+  end
+
+  # The first developer always needs bin/setup next, and this is the moment they
+  # are least oriented — so offer it rather than making them find the command.
+  # Only ever offered: --yes and non-TTY runs (CI, orchestrators) stay fast and
+  # deterministic instead of silently carrying a full environment bootstrap.
+  def offer_setup!
+    return unless interactive?
+    return unless ask("\nRun bin/setup now? (installs dependencies, prepares the database)", "Y").match?(/\A[Yy]/)
+
+    say("\n== Running bin/setup ==")
+    # --skip-server: bin/setup ends with `exec bin/dev`, which would replace this
+    # process and start a server nobody asked for.
+    return if system("bin/setup", "--skip-server", chdir: @root)
+
+    say("\n  ! bin/setup failed — but the fork itself is already committed, so there")
+    say("    is nothing here to redo. Fix the setup problem and re-run bin/setup.")
+  end
+
+  def interactive? = !dry_run? && !@opts[:yes] && $stdin.tty?
+
+  def print_summary!
+    return if @todos.empty?
+
+    say("\n== Next steps ==")
+    @todos.each_with_index { |todo, i| say("  #{i + 1}. #{todo}") }
+    say("  #{@todos.size + 1}. Set up and prove green:  bin/setup --skip-server && bin/parallel-rspec")
+    say("  #{@todos.size + 2}. Deploy later: bin/deploy-guide (or /docs/developer/deployment by hand).")
+  end
+
+  private
+
+  # ----------------------------------------------------------------- helpers
+
+  def dry_run? = @opts[:dry_run]
+  def path_to(relative) = File.join(@root, relative)
+
+  def say(msg)  = puts(msg)
+  def act(msg)  = puts("#{dry_run? ? '[dry-run] would: ' : '  → '}#{msg}")
+  def skip(msg) = puts("  ✓ #{msg} (already done)")
+
+  def sh(*cmd)
+    say("  $ #{cmd.reject { |c| c == @root || c == '-C' }.join(' ')}")
+    return true if dry_run?
+
+    system(*cmd) || abort("bin/fork: command failed: #{cmd.join(' ')}")
+  end
+
+  def capture(*cmd)
+    out = IO.popen(cmd, err: File::NULL, &:read)
+    [ out.to_s.strip, $?.exitstatus ]
+  end
+
+  def ask(question, default)
+    return default if @opts[:yes] || !$stdin.tty?
+
+    print "#{question} [#{default}]: "
+    answer = $stdin.gets.to_s.strip
+    answer.empty? ? default : answer
+  end
+
+  # Pathspec-limited so a developer's unrelated staged work never lands in the
+  # identity commit — "one clean commit you can always find again" has to mean it.
+  def commit!(message, *paths)
+    return if dry_run?
+
+    sh("git", "-C", @root, "add", "--", *paths)
+    # `diff --cached --quiet` exits 0 when nothing is staged for these paths —
+    # committing then would abort on "nothing to commit", breaking re-runs.
+    _, status = capture("git", "-C", @root, "diff", "--cached", "--quiet", "--", *paths)
+    return skip("nothing to commit for: #{message}") if status.zero?
+
+    sh("git", "-C", @root, "commit", "-m", message, "--", *paths)
+  end
+
+  # .fork.yml is committed and hand-editable, so it will be hand-edited. A raw
+  # Psych backtrace names neither the file nor the fix.
+  def fork_config
+    return @fork_config if @fork_config
+    return @fork_config = {} unless File.exist?(path_to(FORK_FILE))
+
+    @fork_config = YAML.safe_load_file(path_to(FORK_FILE)) || {}
+  rescue Psych::Exception => e
+    abort("bin/fork: #{FORK_FILE} is not valid YAML (#{e.message.lines.first.to_s.strip}). " \
+          "Fix it by hand, or delete it and re-run — nothing gates on it.")
+  end
+
+  def write_fork_file(data)
+    return if dry_run?
+
+    header = <<~HEADER
+      # Fork provenance — written by bin/fork. Do not gate on this file; live
+      # state is derived from the repository. Committed so every clone inherits
+      # the decisions: bin/setup reads `preset` into a teammate's .env, and
+      # `template_baseline` answers "based on which template version?".
+    HEADER
+    atomic_write(path_to(FORK_FILE), header + YAML.dump(data.compact))
+    @fork_config = nil
+  end
+
+  def write_env(vars)
+    path = path_to(".env")
+    env = File.exist?(path) ? File.read(path) : ""
+
+    pending = vars.reject { |k, v| env.match?(/^#{Regexp.escape("#{k}=#{v}")}$/) }
+    return skip(".env already sets #{vars.keys.join(', ')}") if pending.empty?
+
+    pending.each { |k, v| act("write #{k}=#{v} to .env (gitignored; set the same var in the production env at deploy time)") }
+    return if dry_run?
+
+    pending.each_key { |k| env = env.gsub(/^#{Regexp.escape(k)}=.*\n?/, "") }
+    env += "\n" unless env.empty? || env.end_with?("\n")
+    atomic_write(path, env + pending.map { |k, v| "#{k}=#{v}\n" }.join, mode: 0o600)
+  end
+
+  # .env is gitignored — the only state here with no backup anywhere. A plain
+  # File.write truncates first, so an interrupt destroys it.
+  def atomic_write(path, content, mode: nil)
+    tmp = "#{path}.bin-fork-#{Process.pid}"
+    File.write(tmp, content)
+    File.chmod(mode, tmp) if mode
+    File.rename(tmp, path)
+  end
+end
+
+if $PROGRAM_NAME == __FILE__
+  options = {}
+  OptionParser.new do |o|
+    o.banner = "Usage: bin/fork [options]   (fork once, setup often)"
+    o.on("--name NAME", "Project name (default: directory name; snake_cased)") { |v| options[:name] = v }
+    o.on("--origin URL", "Your repository's git URL (becomes the origin remote)") { |v| options[:origin] = v }
+    o.on("--preset PRESET", "Tenancy preset: #{ForkFlow::PRESETS.join('/')}") { |v| options[:preset] = v }
+    o.on("--yes", "Non-interactive: accept defaults, never prompt") { options[:yes] = true }
+    o.on("--dry-run", "Print the plan without changing anything") { options[:dry_run] = true }
+  end.parse!
+
+  ForkFlow.new(options, root: File.expand_path("..", __dir__)).run
+end

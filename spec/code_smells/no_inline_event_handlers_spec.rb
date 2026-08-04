@@ -3,8 +3,10 @@ require "rails_helper"
 # Inline event handlers like onchange="..." or onclick="..." are blocked by
 # this project's strict CSP (script_src does not include unsafe_inline).
 # The browser silently drops them, producing dead UI in dev/prod even though
-# Capybara's :playwright driver dispatches events at the CDP level and so
-# functional system specs can pass — see PR #119's discovery.
+# the CDP-based driver (Cuprite since #497, Playwright before it) dispatches
+# events at the protocol level and so functional system specs can pass — see
+# PR #119's discovery. That is why this is a source scan and not a spec: no
+# amount of driving the UI reproduces it.
 #
 # This spec scans every committed .erb view for inline event handlers and
 # fails the suite if any exist. The fix is always the same: use a Stimulus

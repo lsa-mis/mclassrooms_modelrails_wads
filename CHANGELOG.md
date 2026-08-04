@@ -12,6 +12,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Added
 
+- **`bin/fork`** — one-command fork onboarding: remote surgery, identity rename, and tenancy preset in a single commit, with provenance recorded in `.fork.yml`. Run it once after cloning, before `bin/setup`. Teammates run only `bin/setup`, which now applies the fork's recorded preset and adds the upstream remote per clone. See [Forking](/docs/developer/forking).
 - Parallel test suite — `bin/parallel-rspec` runs RSpec across all cores with example-count and merged-coverage integrity gates; CI and the Lefthook pre-push gate use it, cutting CI's test job from ~14 to ~8.5 minutes (#485; further wins tracked in #486–#488).
 - Runtime-balanced parallel test split — spec files split across workers by recorded per-file runtime instead of file size, evening out the slowest worker; the timing log (`tmp/parallel_runtime_rspec.log`) is written each run and cached in CI, and falls back to file-size splitting when absent (#488).
 - Add opt-in encrypted form-draft recovery on invitation and project forms.
@@ -21,6 +22,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Changed
 
+- **The axe accessibility audit now runs everywhere and checks both themes.** It previously ran only under `ENV["CI"]` and audited whichever theme the example happened to leave behind, so the verdict depended on test choreography — the same command caught a violation on one run and missed it on the next, and a real dark-mode contrast bug reached `main` under a green CI. Both themes are now set explicitly, and the hook runs locally too (`SKIP_AXE=1` opts out for a focused loop). A fork may see AAA violations that previously surfaced only by luck (#541).
 - **Security:** Raised the `rails` Gemfile floor to `>= 8.1.3.1` for CVE-2026-66066 — Active Storage did not disable libvips's unfuzzed image loaders, so a crafted upload could read arbitrary server files including `secret_key_base` (GHSA-xr9x-r78c-5hrm). #531 bumped the lock; the floor is what stops a fork's fresh resolve landing back on a vulnerable release, and a template invariant now fails if the requirement ever admits one.
 - Replaced Playwright/Node with Cuprite (pure-Ruby CDP) for system specs, and swapped npm-based linters for Ruby gems (`erb_lint`, `mdl`) — the template no longer requires Node at all (#497).
 - Bumped Ruby to 4.0.6 (#501).

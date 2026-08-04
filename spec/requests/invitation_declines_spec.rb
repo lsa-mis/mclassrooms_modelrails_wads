@@ -29,9 +29,10 @@ RSpec.describe "Invitation Declines", type: :request do
       expect(flash[:alert]).to eq(I18n.t("invitation_declines.invalid"))
     end
 
-    it "redirects to root" do
+    it "redirects to root and confirms the decline" do
       post decline_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
+      expect(flash[:notice]).to eq(I18n.t("invitation_declines.create.success"))
     end
   end
 end

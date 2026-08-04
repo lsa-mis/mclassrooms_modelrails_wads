@@ -68,6 +68,11 @@
 # context-mode hook config (per-user tooling)
 /.github/hooks/
 
+# graphify knowledge-graph output — regenerable via `graphify update .`, so it
+# would only churn diffs in every fork. The .graphifyignore rules that scope it
+# ARE tracked, since they describe this repo's layout rather than local tooling.
+/graphify-out/
+
 # Scratch / reference working files (untracked — e.g. docs-reorg reference copy)
 /working_files/
 

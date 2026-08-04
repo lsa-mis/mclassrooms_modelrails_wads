@@ -39,10 +39,37 @@ must be truly empty). Then:
 ```bash
 git clone git@github.com:dschmura/modelrails_base.git myapp
 cd myapp
+bin/fork
+```
 
+`bin/fork` runs **before** `bin/setup`. It asks for your project name and tenancy
+preset, then does the remote surgery and the identity rename in one commit, and
+records your answers in `.fork.yml`. It prints every git command as it runs, so
+you can read what it did — and finish by hand if you ever need to.
+
+```bash
+bin/fork --name myapp --preset personal --origin git@github.com:YOU/myapp.git --yes
+bin/fork --dry-run    # print the plan, change nothing
+```
+
+It refuses to run on a dirty working tree: the identity rename wants to be one
+clean commit you can always find again. Re-running is safe — it detects what is
+already done, and completes a rename that was interrupted partway.
+
+When run interactively it finishes by offering to run `bin/setup` for you (the
+dev server is not started — that stays your call). Under `--yes`, or when stdin
+isn't a terminal, it never does: scripted and CI runs stay fast and predictable.
+
+### By hand (what bin/fork does)
+
+Use this if you'd rather drive it yourself, or to finish up after an interrupted
+run:
+
+```bash
 # The template becomes a read-only "upstream" remote
-git remote rename origin upstream
-git remote set-url --push upstream DISABLED   # a stray `git push upstream` now fails loudly
+git remote set-url --push origin DISABLED     # before the rename, so no window exists
+git remote rename origin upstream             # a stray `git push upstream` now fails loudly
+git branch --unset-upstream                   # or `git pull` would still pull the TEMPLATE
 
 # Your new repository becomes origin
 git remote add origin git@github.com:YOU/myapp.git
@@ -52,6 +79,8 @@ git push -u origin main
 # but doing it now means your very first merge is already covered)
 git config merge.ours.driver true
 ```
+
+Then work through the identity-rename table below.
 
 Two things you'll notice afterwards, both intentional:
 
@@ -76,14 +105,24 @@ git tag forks/myapp-baseline main && git push origin forks/myapp-baseline
 > the account that already owns it. Clone + re-pointed remotes gives you a
 > private repo **and** mergeable history.
 
-**Every teammate** who clones your new repository needs the upstream remote once
-(`bin/setup` then activates the merge driver automatically — it detects the
-remote):
+**Every teammate** who clones your new repository runs `bin/setup` — and only
+that. They must not run `bin/fork`; the identity rename is already committed, and
+`bin/fork` will tell them so and send them here.
 
 ```bash
-git remote add upstream git@github.com:dschmura/modelrails_base.git
+git clone git@github.com:YOU/myapp.git
+cd myapp
 bin/setup
 ```
+
+`bin/setup` reads `.fork.yml` and does the per-clone work: adds the upstream
+remote (push disabled), activates the merge driver, and writes the fork's
+recorded tenancy preset into their `.env`. Those three things are per-clone, not
+per-fork, which is why they live in setup rather than in the one-time script.
+
+> Teammates need **read access to the upstream template repository** for the
+> remote to be useful. If your template is private, grant it before they try to
+> merge upstream — the remote will be added either way, but fetching will fail.
 
 To verify the driver on any clone: `git config merge.ours.driver` should print
 `true`. If it prints nothing, fork-owned files will conflict like ordinary files
@@ -107,6 +146,7 @@ find again.
 | PWA app name | `public/manifest.webmanifest` (`name` / `short_name`) | Shown on the home screen if users install the PWA |
 | CI image tags | `.github/workflows/ci.yml` + `image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
 | Devcontainer bundle-cache volume | `.devcontainer/devcontainer.json` | Optional; the invariant spec only checks the `bundle-cache` suffix |
+| Fork provenance | `.fork.yml` | Written by `bin/fork`: your name, tenancy preset, and the template commit you forked from. Committed so every clone inherits the decisions — `bin/setup` reads the preset. Nothing gates on it; live state is derived from the repository |
 | Session cookie key | optional `config/initializers/session_store.rb` | Only if multiple forks will share a cookie domain |
 
 Then verify nothing was missed:

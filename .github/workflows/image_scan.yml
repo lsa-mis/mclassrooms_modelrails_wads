@@ -4,11 +4,16 @@ name: Image Scan
 # libvips in the ruby:slim base) — the layer brakeman (app code) and
 # bundler-audit (gem deps) cannot see.
 #
-# Policy: runs on Dockerfile-affecting PRs plus a weekly schedule, NOT on
+# Policy: runs on image-affecting PRs plus a weekly schedule, rather than on
 # every PR. New base-image CVEs appear without any code change; gating every
 # PR on them would red-flag unrelated green branches (the same drift mode as
 # the 2026-06-09 bundler-audit oauth2 CVE on a no-change branch). The weekly
 # run surfaces those independently of development activity.
+#
+# In practice the path filter is broader than it reads: Gemfile.lock is on it
+# and dependabot bumps it constantly, so this fires on roughly 70% of PRs
+# (51 of 72 over the two weeks to 2026-08-04). That is worth knowing before
+# adding per-run cost here.
 #
 # Exceptions: to accept a finding temporarily, add the CVE ID to a
 # .trivyignore file at the repo root with a comment explaining why and a
@@ -37,30 +42,41 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      # Reuses the GHA layer cache that ci.yml's docker_build job populates
-      # (mode=max), so this is normally a cache replay, not a cold build.
-      # load: true exports the image into the local Docker daemon — without
-      # it the image exists only in the build cache and Trivy has nothing
-      # to scan.
-      # no-cache on scheduled + manual (workflow_dispatch) runs: a cached apt
-      # layer answers "what did we build last time", not "what would we ship if
-      # we rebuilt today" — the first scan flagged OpenSSL/poppler packages
-      # Debian had already fixed, hidden behind a stale cached layer. The manual
-      # trigger refreshes the shared GHA cache on demand: when a cached PR scan
-      # flags an OS CVE Debian has since patched (apt-get upgrade -y in the
-      # Dockerfile), dispatching this workflow rebuilds the apt layer fresh and
-      # writes it back (cache-to mode=max), so later cached PR scans replay the
-      # patched layer instead of the stale one.
+      # ALWAYS a cold build — never the layer cache, on any trigger (#536).
+      #
+      # This was cached on PRs, with a documented remedy: dispatch the workflow
+      # on main to refresh the shared cache so later PR scans replay patched
+      # layers. That remedy does not work. GitHub Actions cache scoping makes a
+      # branch read its OWN scope before falling back to the default branch, and
+      # ci.yml's docker_build runs on every PR writing `mode=max` into exactly
+      # that scope. An affected PR therefore replays its own stale apt layer and
+      # main's refreshed one is never consulted.
+      #
+      # Observed 2026-07-30: four dependabot PRs reported 5 HIGH CVEs in
+      # libexpat1 that Debian had already fixed. Refreshing main changed
+      # nothing; each branch needed its own dispatch. The failure is
+      # indistinguishable from a real finding, which is the property a security
+      # gate can least afford.
+      #
+      # Keying the cache on the base-image digest would not have helped:
+      # ruby:slim rebuilds on Debian point releases, not interim security
+      # updates (see the Dockerfile's apt-get upgrade comment), so the digest is
+      # unchanged precisely when the packages inside it are not.
+      #
+      # Cost, measured over this workflow's own run history: ~3.8 min cold
+      # against ~3.1 min cached. About 45 seconds, because most of the job is
+      # Trivy rather than layer building.
+      #
+      # load: true exports the image into the local Docker daemon — without it
+      # the image exists only in the build cache and Trivy has nothing to scan.
       - name: Build production image
         uses: docker/build-push-action@v7
         with:
           context: .
           push: false
           load: true
-          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+          no-cache: true
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           tags: modelrails_base:scan-${{ github.sha }}
 
       # ignore-unfixed: Debian-stable bases always carry CVEs with no fixed

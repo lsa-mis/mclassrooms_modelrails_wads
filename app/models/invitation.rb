@@ -30,7 +30,13 @@ class Invitation < ApplicationRecord
   after_update_commit :notify_accepted, if: :just_accepted?
   after_update_commit :notify_declined, if: :just_declined?
 
-  scope :pending, -> { where(status: "pending").where("expires_at > ?", Time.current) }
+  # Named for the `acceptable?` predicate it mirrors, NOT `pending`. The enum
+  # generates both a `pending` scope and a `pending?` predicate; overriding only
+  # the scope to also require an unexpired `expires_at` made the pair disagree —
+  # an expired invitation was `pending?` yet absent from `Invitation.pending`,
+  # a trap for anyone reasoning "in the scope iff the predicate" (#452). The
+  # enum's `pending` is left alone; the extra constraint lives under its own name.
+  scope :acceptable, -> { where(status: "pending").where("expires_at > ?", Time.current) }
   scope :expired, -> { where(status: "pending").where("expires_at <= ?", Time.current) }
 
   # Composed scope used by Workspaces::MembersController#index. Pending
@@ -41,7 +47,7 @@ class Invitation < ApplicationRecord
   scope :for_members_index, ->(q:, role:, status:) {
     return none if %w[active deactivated].include?(status)
 
-    scope = pending.includes(:role)
+    scope = acceptable.includes(:role)
     # Escape LIKE wildcards (%, _) so they match literally, mirroring
     # Membership.search — otherwise a query like "a_b" matches "axb" too.
     if q.present?
@@ -59,7 +65,7 @@ class Invitation < ApplicationRecord
     # Preload existing members and pending invitations to avoid N+1 queries
     existing_members = workspace.memberships.kept.joins(:user)
       .pluck("LOWER(users.email_address)").to_set
-    existing_invites = workspace.invitations.pending
+    existing_invites = workspace.invitations.acceptable
       .where.not(email: nil).pluck(:email).map(&:downcase).to_set
 
     emails.each do |email|
