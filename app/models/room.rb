@@ -59,8 +59,18 @@ class Room < ApplicationRecord
   # CASE would re-query and defeat the eager load — the documented reason
   # lib/bullet_safelists.rb carries a gallery entry — and is meaningless across
   # owner types anyway. A gallery is ~6 rows; this is free.
+  #
+  # `a.id || Float::INFINITY`, not bare `a.id`: an unsaved row (new_record?,
+  # id nil) tying a PERSISTED row on [subject_rank, position] would put nil
+  # and an Integer in the same sort_by slot — Array#<=> returns nil for that
+  # pair and Enumerable#sort_by raises ArgumentError ("comparison of Array
+  # with Array failed"). `position` carries no uniqueness constraint, so that
+  # tie is ordinary, not exotic. Falling back to Infinity sorts unsaved rows
+  # after any persisted row at the same rank/position, matching how new rows
+  # are appended, and is a no-op for the all-persisted case this method was
+  # first written against.
   def gallery_ordered
-    gallery.sort_by { |a| [ self.class.subject_rank(a.subject), a.position, a.id ] }
+    gallery.sort_by { |a| [ self.class.subject_rank(a.subject), a.position, a.id || Float::INFINITY ] }
   end
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
