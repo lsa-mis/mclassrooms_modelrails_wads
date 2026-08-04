@@ -162,5 +162,19 @@ RSpec.describe MediaAsset do
 
       expect(other.alt_for(:image)).to eq("Authored two")
     end
+
+    # Regression: an unsaved asset is never in `owner.gallery` (an association
+    # loaded from the database cannot contain a not-yet-persisted row), so the
+    # collision set must include `self` explicitly rather than assume the
+    # association already does — the same hazard Room#gallery_ordered guards
+    # against for [subject, position] ties, one task earlier.
+    it "does not raise for an unsaved asset with persisted same-subject siblings, and numbers it last" do
+      create(:media_asset, :needs_alt, owner: room, workspace: workspace, subject: "rack", position: 1)
+      create(:media_asset, :needs_alt, owner: room, workspace: workspace, subject: "rack", position: 2)
+      unsaved = build(:media_asset, :needs_alt, owner: room, workspace: workspace, subject: "rack", position: 3)
+
+      expect { unsaved.alt_for(:image) }.not_to raise_error
+      expect(unsaved.alt_for(:image)).to end_with("(photo 3 of 3)")
+    end
   end
 end

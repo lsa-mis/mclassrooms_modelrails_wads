@@ -53,10 +53,18 @@ class MediaAsset < ApplicationRecord
   # so an authored image_alt is never suffixed and a lone match isn't either.
   def derived_alt
     base = base_derived_alt
-    siblings = owner.gallery.select { |a| a.image_alt.blank? && a.subject == subject }
-    return base if siblings.length < 2
+    # `owner.gallery` is an association loaded from the database, so it never
+    # contains a not-yet-persisted `self` — union it in explicitly rather than
+    # assume it is already there. `|` de-duplicates via AR's id-based `eql?`,
+    # so a persisted `self` already present in the collection is not counted
+    # twice.
+    candidates = owner.gallery.select { |a| a.image_alt.blank? && a.subject == subject } | [ self ]
+    return base if candidates.length < 2
 
-    ordered = siblings.sort_by { |a| [ a.position, a.id ] }
+    # `a.id || Float::INFINITY`: the same unsaved/persisted-tie hazard
+    # Room#gallery_ordered guards against — an unsaved sibling has a nil id,
+    # and `nil <=> Integer` breaks `sort_by`'s Array comparison.
+    ordered = candidates.sort_by { |a| [ a.position, a.id || Float::INFINITY ] }
     I18n.t("media.derived_alt.nth", alt: base, n: ordered.index(self) + 1, total: ordered.length)
   end
 
