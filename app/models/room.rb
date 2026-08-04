@@ -5,6 +5,45 @@ class Room < ApplicationRecord
   describable :panorama,      derived_alt: ->(rec) { I18n.t("media.derived_alt.panorama", room: rec.display_name) }
   describable :seating_chart, derived_alt: ->(rec) { I18n.t("media.derived_alt.seating_chart", room: rec.display_name) }
 
+  # Grace Johnson's capture protocol (2026-07-30), as a vocabulary. INSERTION
+  # ORDER IS THE DISPLAY RANK — see spec/models/room_subjects_spec.rb, which
+  # pins it, because reordering these lines would silently reorder every gallery
+  # in production with no migration and no other failing test.
+  #
+  # A subject is NEVER deleted. Grace expects to stop shooting inner doors once
+  # locking is streamlined; removing the key would invalidate every existing
+  # inner_door row and make it unsaveable through the editor. Mark it
+  # `retired: true` instead: excluded from the picker and from suggestions,
+  # still valid, still ordered, still deriving alt.
+  SUBJECTS = {
+    front:      { key: "media.derived_alt.room.front" },
+    back:       { key: "media.derived_alt.room.back" },
+    podium:     { key: "media.derived_alt.room.podium" },
+    rack:       { key: "media.derived_alt.room.rack" },
+    inner_door: { key: "media.derived_alt.room.inner_door" },
+    other:      { key: "media.derived_alt.room.other" }
+  }.freeze
+
+  def self.subject_rank(subject)
+    return Float::INFINITY if subject.blank?
+
+    index = SUBJECTS.keys.index(subject.to_sym)
+    index.nil? ? Float::INFINITY : index
+  end
+
+  def self.offerable_subjects
+    SUBJECTS.reject { |_, entry| entry[:retired] }.keys
+  end
+
+  # Position is the shot number in the capture protocol, so this mapping IS the
+  # protocol. Pure function, never stored — see the spec's D2.
+  def self.suggested_subject_for(position)
+    return nil if position.nil? || position.to_i < 1
+
+    offerable = offerable_subjects
+    offerable[[ position.to_i - 1, offerable.length - 1 ].min]
+  end
+
   belongs_to :building
   belongs_to :floor, optional: true
   belongs_to :campus, optional: true
