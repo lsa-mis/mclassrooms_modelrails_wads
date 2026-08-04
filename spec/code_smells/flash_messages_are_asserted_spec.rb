@@ -47,7 +47,6 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     "sessions.create.failure",
     "sessions.create.oauth_failure",
     "sessions.create.rate_limited",
-    "sessions.create.success",
     "sessions.destroy.success",
     "settings.avatars.destroy.success",
     "settings.avatars.source_unavailable",
@@ -85,7 +84,6 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     "workspaces.members.reactivate.reactivated",
     "workspaces.members.transfer_ownership.transferred",
     "workspaces.members.update.success",
-    "workspaces.not_found",
     "workspaces.projects.create.success",
     "workspaces.projects.invitations.create.success",
     "workspaces.projects.memberships.create.success",
@@ -100,7 +98,30 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     "workspaces.projects.resources.update.success",
     "workspaces.projects.update.success",
     "workspaces.settings.update.success",
-    "workspaces.update.success"
+    "workspaces.update.success",
+
+    # --- MClassrooms fork additions (keep last; upstream burns down above) ---
+    # Fork-only admin controllers, none of whose flashes are asserted today.
+    # Three of the five (characteristic_display_rules, sync_scope_rules,
+    # unit_display_names) have no request spec at all, so closing these means
+    # writing specs rather than adding a line to one — tracked as its own work,
+    # not folded into an upstream sync.
+    #
+    # This block is deliberately at the END of the array: upstream's own
+    # burn-down edits land alphabetically mid-array, so they keep merging
+    # cleanly instead of colliding with the fork's entries on every sync.
+    "admin.announcements.new.no_unfilled_slots",
+    "admin.characteristic_display_rules.create.success",
+    "admin.characteristic_display_rules.destroy.success",
+    "admin.characteristic_display_rules.update.success",
+    "admin.editor_assignments.create.success",
+    "admin.editor_assignments.destroy.success",
+    "admin.sync_scope_rules.create.success",
+    "admin.sync_scope_rules.destroy.success",
+    "admin.sync_scope_rules.update.success",
+    "admin.unit_display_names.create.success",
+    "admin.unit_display_names.destroy.success",
+    "admin.unit_display_names.update.success"
   ].freeze
 
   def locale_values

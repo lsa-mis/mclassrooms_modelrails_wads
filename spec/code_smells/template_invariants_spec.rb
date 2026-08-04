@@ -883,7 +883,21 @@ RSpec.describe "Template invariants" do
         "forks would abort in preflight"
     end
 
-    it "searches for tokens that are still present in each file" do
+    # FORK DEVIATION (MClassrooms): skipped here, not upstream.
+    #
+    # This example asserts the template still CONTAINS the tokens bin/fork
+    # rewrites ("ModelRails" in brand.en.yml, support@modelrails.dev in
+    # pages.en.yml). That is a true and useful invariant in the template — and
+    # structurally impossible in a repo that has already been forked. PR #61
+    # removed exactly those tokens on purpose; both files are merge=ours, so
+    # they will never come back. Keeping the example would mean a permanently
+    # red suite asserting something we deliberately made false.
+    #
+    # The block's other three examples are NOT skipped: preset parity with
+    # config/initializers/tenancy.rb and bin/setup still protects teammates
+    # running bin/setup on a fresh clone, and rename-target existence still
+    # catches a template file going missing.
+    it "searches for tokens that are still present in each file", skip: "template-only: #61 removed these tokens from this fork by design" do
       stale = ForkFlow::SUBSTITUTIONS.flat_map do |path, substitutions|
         content = File.read(root.join(path))
         substitutions.reject { |from, _| content.include?(from) }.map { |from, _| "#{path}: #{from.inspect}" }
