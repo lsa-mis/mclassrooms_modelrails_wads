@@ -54,6 +54,14 @@ class Room < ApplicationRecord
   has_many :gallery, -> { ordered }, as: :owner, class_name: "MediaAsset",
                      dependent: :destroy, inverse_of: :owner # lazy,
   has_many :availability_blocks, dependent: :destroy   # so the model loads before them
+
+  # Ranking happens HERE, in Ruby, over the already-preloaded collection. A SQL
+  # CASE would re-query and defeat the eager load — the documented reason
+  # lib/bullet_safelists.rb carries a gallery entry — and is meaningless across
+  # owner types anyway. A gallery is ~6 rows; this is free.
+  def gallery_ordered
+    gallery.sort_by { |a| [ self.class.subject_rank(a.subject), a.position, a.id ] }
+  end
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
   # :poster is now a FALLBACK ONLY — the squashed-equirect strip the pano pane

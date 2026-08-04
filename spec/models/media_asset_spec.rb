@@ -87,4 +87,30 @@ RSpec.describe MediaAsset do
 
     expect(room.gallery.count).to eq(6)
   end
+
+  describe "subject" do
+    it "accepts a subject in the owner's vocabulary and rejects one outside it" do
+      expect(build(:media_asset, owner: room, workspace: workspace, subject: "rack")).to be_valid
+      expect(build(:media_asset, owner: room, workspace: workspace, subject: "spaceship")).not_to be_valid
+      expect(build(:media_asset, owner: room, workspace: workspace, subject: nil)).to be_valid
+    end
+
+    it "reads back a retired subject that is already persisted" do
+      asset = create(:media_asset, owner: room, workspace: workspace, subject: "inner_door")
+      stub_const("Room::SUBJECTS", Room::SUBJECTS.merge(
+        inner_door: { key: "media.derived_alt.room.inner_door", retired: true }
+      ))
+
+      expect(asset.reload).to be_valid
+      expect { asset.alt_for(:image) }.not_to raise_error
+    end
+
+    it "ranks by subject, then position, with unclassified last" do
+      unclassified = create(:media_asset, owner: room, workspace: workspace, position: 1, subject: nil)
+      rack         = create(:media_asset, owner: room, workspace: workspace, position: 5, subject: "rack")
+      front        = create(:media_asset, owner: room, workspace: workspace, position: 9, subject: "front")
+
+      expect(room.gallery_ordered).to eq([ front, rack, unclassified ])
+    end
+  end
 end
