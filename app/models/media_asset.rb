@@ -29,6 +29,12 @@ class MediaAsset < ApplicationRecord
                     content_type: [ :png, :jpeg, :webp, "image/heic", "image/heif" ],
                     size: { less_than_or_equal_to: 10.megabytes }
   validate :owner_must_share_workspace
+  # App-level only, deliberately. A table CHECK would have to union every owner
+  # type's vocabulary (so a Building subject would validate on a Room row), and
+  # SQLite rebuilds the table to drop a constraint — while the vocabulary is
+  # designed to churn. Resolved from owner_type, not owner, so a missing owner
+  # row cannot raise inside a validation.
+  validate :subject_must_be_in_owner_vocabulary
 
   # Ranking by subject happens in Ruby over the preloaded collection — see
   # Room#gallery_ordered (Task 7). A SQL CASE would re-query and defeat the
@@ -57,5 +63,14 @@ class MediaAsset < ApplicationRecord
     return if owner.workspace_id == workspace_id
 
     errors.add(:owner, :workspace_mismatch)
+  end
+
+  def subject_must_be_in_owner_vocabulary
+    return if subject.blank? || owner_type.blank?
+
+    vocabulary = owner_type.constantize::SUBJECTS
+    return if vocabulary.key?(subject.to_sym)
+
+    errors.add(:subject, :inclusion)
   end
 end
