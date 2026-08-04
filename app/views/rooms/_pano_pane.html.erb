@@ -1,17 +1,90 @@
 <%# locals: (room:) %>
-<%# The click-to-load Pannellum stage, unchanged in behavior from the
-    original media suite: static poster (the preview variant doubles as
-    Pannellum's own `preview:`), explicit opt-in load button, lazy
-    `import("pannellum")`. `data-turbo-permanent` + id keep the booted WebGL
-    viewer alive across morphs (panel review, Wathan). pannellum.css loads
-    only here via content_for(:head). %>
+<%# The click-to-load Pannellum stage. The pre-load image is the flat
+    rectilinear render (Room#flat_panorama) — the old squashed-equirect
+    :poster variant only engages as a fallback (see the comment block below).
+    Explicit opt-in load button, lazy `import("pannellum")`.
+    `data-turbo-permanent` + id keep the booted WebGL viewer alive across
+    morphs (panel review, Wathan). pannellum.css loads only here via
+    content_for(:head). %>
 <% content_for(:head) do %>
   <%= stylesheet_link_tag "pannellum", "data-turbo-track": "reload" %>
 <% end %>
-<%# :poster is defined on the attachment (app/models/room.rb) so the ingest
-    task pre-processes the SAME variant this pane serves. %>
-<% panorama_preview_path = rails_representation_path(room.panorama.variant(:poster)) %>
-<%= ui :aspect_ratio, ratio: 2,
+<%# The flat rectilinear render (Panorama::Rectilinear) IS the initial viewer
+    frame — same camera, so clicking Load produces no visual jump. Rooms whose
+    render has not landed (or whose source is not equirectangular) fall back to
+    the old squashed-equirect :poster; without that fallback every room page
+    breaks between deploy and backfill. The fallback disappears as soon as
+    RenderFlatPanoramaJob finishes.
+
+    Pannellum's `preview:` gets the same URL deliberately: it is painted as a
+    flat `background-size: cover` layer (.pnlm-preview-img in pannellum.css),
+    NOT mapped onto the sphere, so a rectilinear image is correct there.
+
+    data-panorama-preview-source exists so "why does this room look wrong?" is a
+    right-click, not a console session. FOUR states, because the two obvious
+    ones each hide a distinct failure:
+
+      flat_render            correct, and matches the booted viewer exactly
+      flat_render_stale      a render exists but was made under a DIFFERENT
+                             recipe (someone changed HFOV_DEG/ASPECT/width and
+                             did not re-run the backfill) or its file is gone.
+                             Still served — a stale frame beats a squashed
+                             strip — but the image WILL jump on Load. Fix with
+                             `bin/rails panoramas:render_flat`.
+      poster_fallback_failed no render, and the source carries a permanent
+                             failure tombstone — read
+                             room.panorama.blob.metadata["flat_render_error"];
+                             almost always a non-2:1 photo in the panorama slot.
+      poster_fallback        no render yet. Normal between deploy and backfill.
+
+    Without the split, "renders under the old recipe" reported itself as
+    correct, and "will never render" was indistinguishable from "has not
+    rendered yet" — the doc's own next step for both was a Rails console.
+
+    Cost: Room#flat_render_current? ends in a blob.service.exist? probe, so this
+    is one File.exist? per room-page render against the :local disk service on
+    the same host. Cheap, and the thing it catches (a stamped blob whose file a
+    deploy-time SIGKILL never uploaded) is otherwise a 404 image served
+    forever. Revisit if this ever moves to a remote service, where the probe
+    becomes a network round trip. %>
+<% flat_render_attached = room.flat_panorama.attached? %>
+<% preview_source = if flat_render_attached
+                      room.flat_render_current? ? "flat_render" : "flat_render_stale"
+                    elsif room.flat_render_failed?
+                      "poster_fallback_failed"
+                    else
+                      "poster_fallback"
+                    end %>
+<%# rails_storage_proxy_path, not rails_blob_path: the redirect route sends the
+    browser to the DiskController on this same Puma (single host, :local
+    service, no CDN), so every pre-load image costs two round trips — and the
+    signed redirect URL expires in 5 minutes, so it recurs rather than being a
+    one-time cost. The proxy controller wraps send_blob_stream in
+    `http_cache_forever public: true`. Caching a room's panorama frame
+    IMMUTABLY is safe here precisely because a re-render never mutates a blob
+    in place: RenderFlatPanoramaJob attaches a NEW blob with a NEW key, so the
+    URL itself changes and no cached response can go stale.
+    The :poster fallback stays on rails_representation_path — a variant is
+    resolved through its own representation route, not this one. %>
+<% panorama_preview_path = if flat_render_attached
+                             rails_storage_proxy_path(room.flat_panorama)
+                           else
+                             rails_representation_path(room.panorama.variant(:poster))
+                           end %>
+<%# The derived alt claims a full 360-degree panorama. That is TRUE of the
+    squashed-equirect :poster (which really does show the whole sweep) and
+    FALSE of the flat render (roughly longitude -50..+50, about 28% of it), so
+    on this branch's PRIMARY path the old string overclaims. An AUTHORED alt
+    passes through untouched on purpose: a curator's description of what is in
+    the room is more useful to a screen reader user than a technically accurate
+    description of a 100-degree crop. %>
+<% panorama_alt = if flat_render_attached && room.alt_status_for(:panorama) != :authored
+                    t("media.derived_alt.panorama_flat", room: room.display_name)
+                  else
+                    room.alt_for(:panorama)
+                  end %>
+<% pano_instructions_id = "panorama_instructions_#{room.id}" %>
+<%= ui :aspect_ratio, ratio: Panorama::Rectilinear::ASPECT,
       id: "room_panorama_stage",
       class: "relative rounded-md bg-surface-sunken overflow-hidden",
       data: {
@@ -19,14 +92,29 @@
         controller: "panorama",
         panorama_url_value: rails_blob_path(room.panorama),
         panorama_preview_url_value: panorama_preview_path,
-        panorama_label_value: t("rooms.show.panorama_label", room: room.display_name)
+        panorama_label_value: t("rooms.show.panorama_label", room: room.display_name),
+        panorama_preview_source: preview_source,
+        panorama_hfov_value: Panorama::Rectilinear::HFOV_DEG,
       } do %>
-  <%= image_tag panorama_preview_path, alt: room.alt_for(:panorama), loading: :eager,
+  <%= image_tag panorama_preview_path, alt: panorama_alt, loading: :eager,
         class: "absolute inset-0 size-full object-cover" %>
   <%# Focus indicator comes from .pnlm-container:focus-visible in
       application.css (INSET — the stage's overflow-hidden clips the app's
       standard outward focus-ring). %>
   <div data-panorama-target="viewer" hidden class="absolute inset-0"></div>
+  <%# Keyboard instructions for the BOOTED viewer, and deliberately a sibling of
+      the overlay rather than a child of it: the controller hides the whole
+      overlay (with rooms.show.panorama_hint inside it) one line before handing
+      focus to the viewer, which carries role="application" and therefore
+      suppresses browse mode. Left in the overlay, the instructions are
+      destroyed at the exact moment they become relevant — the user gives up
+      arrow keys and virtual navigation with nothing on screen saying what they
+      bought or how to leave. The controller wires this id as the viewer's
+      aria-describedby on load. The Load button's own aria-describedby tooltip
+      is a different message for a different (pre-load) state; both exist. %>
+  <p id="<%= pano_instructions_id %>" data-panorama-target="instructions" class="sr-only">
+    <%= t("rooms.show.panorama_instructions") %>
+  </p>
   <%# The whole overlay is a target: it paints OVER the viewer, so the
       controller must hide ALL of it on load or it eats every drag/zoom. %>
   <div data-panorama-target="overlay" class="absolute inset-0 flex items-center justify-center">

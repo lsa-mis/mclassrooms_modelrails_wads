@@ -14,9 +14,23 @@ file has no upstream counterpart, so the two never collide. Format follows
 The initial MClassrooms build (phases 0–5), targeting the first production
 release — cutover to replace the legacy classroom directory. Availability
 (phase 6), analytics (phase 7), and the cutover/ops integrations (phase 8) are
-tracked separately and not yet included.
+tracked separately and not yet included. Work landing after that initial build
+accumulates here too, newest first.
 
 ### Added
+
+- **Flat panorama renders** — the room page's pre-load image is now a rectilinear
+  render of the panorama matching the 360° viewer's camera exactly, instead of the
+  raw equirectangular image squashed to 1024×512, so clicking **Load 360° view** no
+  longer produces a visible jump. Stored as a derived Active Storage attachment
+  (`Room#flat_panorama`) produced by a background job on panorama attach, with the
+  previous `:poster` variant retained as a fallback so no room page breaks before
+  the backfill runs. Ships with two operator tasks — `panoramas:render_flat`
+  (`DRY_RUN` / `ROOM` / `FORCE` / `INLINE` / `LIMIT` / `WORKSPACE`) and
+  `panoramas:flat_status` (missing / stale / failed / orphaned counts) — and a
+  `data-panorama-preview-source` attribute on the stage, so "why does this room look
+  wrong?" is answerable from devtools rather than a console. See
+  `app/docs/developer/rooms-directory.md`. (#66)
 
 - **Find a Room** — a live classroom directory: full-text search across building
   names and room numbers, five combinable filters (School/College, capacity

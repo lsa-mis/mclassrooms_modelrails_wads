@@ -2,11 +2,9 @@ require "rails_helper"
 
 # Bulk panorama loader: a directory of "<rmrecnbr>.jpg" files (the
 # mi_locations panorama library) attached onto matching rooms' `panorama`
-# slot, with the :poster variant eagerly processed so the first visitor
-# never pays the vips transform. Idempotent: already-attached rooms are
-# skipped unless replace:. The Result carries the two curation lists Dave
-# asked for — files with no room in our system, and listed classrooms with
-# no panorama.
+# slot. Idempotent: already-attached rooms are skipped unless replace:. The
+# Result carries the two curation lists Dave asked for — files with no room
+# in our system, and listed classrooms with no panorama.
 RSpec.describe PanoramaIngest do
   include ClassroomBuilders
 
@@ -30,16 +28,34 @@ RSpec.describe PanoramaIngest do
     described_class.call(directory: @dir, workspace: workspace, **opts)
   end
 
-  it "attaches matching files by rmrecnbr and eagerly processes the poster variant" do
+  it "attaches matching files by rmrecnbr without pre-processing a variant" do
     add_pano(covered.rmrecnbr)
 
     result = call
 
     expect(covered.reload.panorama).to be_attached
     expect(covered.panorama.filename.to_s).to eq("#{covered.rmrecnbr}.jpg")
-    # the poster (pano pane's static preview) is pre-processed at ingest —
-    # a VariantRecord for the blob proves vips already ran
-    expect(ActiveStorage::VariantRecord.where(blob_id: covered.panorama.blob.id)).to exist
+    # Ingest pre-processes nothing: RenderFlatPanoramaJob (enqueued by the
+    # attachment callback) supplies the pane's image. This INVERTED assertion is
+    # the one that fails if the old `variant(:poster).processed` line survives —
+    # asserting the job was enqueued would not, because the :test adapter's
+    # enqueued_jobs array is never cleared between examples in this suite.
+    expect(ActiveStorage::VariantRecord.where(blob_id: covered.panorama.blob.id)).not_to exist
+    expect(result.attached).to contain_exactly("#{covered.rmrecnbr}.jpg")
+  end
+
+  it "attaches a non-image file without error — content screening moved to the render job" do
+    # Characterizes a real behaviour change from removing the eager
+    # variant(:poster).processed call: ingest no longer reads file bytes, and
+    # content_type is hardcoded (not sniffed) at attach-time, so a "not a
+    # jpeg" file now attaches and validates cleanly. An undecodable panorama
+    # is still caught, just later — RenderFlatPanoramaJob stamps a
+    # flat_render_failed_at tombstone, visible via panoramas:flat_status.
+    File.write(File.join(@dir, "#{covered.rmrecnbr}.jpg"), "not a jpeg")
+
+    result = call
+
+    expect(result.errors).to be_empty
     expect(result.attached).to contain_exactly("#{covered.rmrecnbr}.jpg")
   end
 
@@ -83,8 +99,14 @@ RSpec.describe PanoramaIngest do
   it "isolates per-file failures into errors and keeps going" do
     add_pano(covered.rmrecnbr)
     add_pano(bare.rmrecnbr)
-    # corrupt one file so attach/variant processing raises for it alone
-    File.write(File.join(@dir, "#{covered.rmrecnbr}.jpg"), "not a jpeg")
+    # Force an I/O failure for one file alone. content_type is hardcoded at
+    # attach-time rather than sniffed, and nothing reads the bytes eagerly
+    # anymore (that was the removed variant(:poster).processed call), so
+    # writing non-image bytes no longer fails anything — swap the file for a
+    # directory of the same name so File.open raises for this room only.
+    covered_path = File.join(@dir, "#{covered.rmrecnbr}.jpg")
+    File.delete(covered_path)
+    Dir.mkdir(covered_path)
 
     result = call
 

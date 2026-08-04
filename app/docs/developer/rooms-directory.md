@@ -39,12 +39,18 @@ Panorama and photos are `UI::Tabs` panels — **hidden, never removed** — and
 the Pannellum container carries `data-turbo-permanent`. A DOM swap or morph
 over the booted WebGL viewer destroys the context and re-downloads the
 panorama (~MBs); keep pane switching as show/hide forever. The panorama is
-click-to-load by design (static poster first). Rooms without media render
-`_media_empty_band` — a short branded band, never a hero-height placeholder.
+click-to-load by design, and the pre-load image is the flat rectilinear
+render (`Room#flat_panorama`, see "Flat panorama renders" below) — the same
+camera Pannellum boots at, so clicking Load produces no visual jump. Rooms
+without media render `_media_empty_band` — a short branded band, never a
+hero-height placeholder.
 
-The poster is the `:poster` **named variant** on `Room#panorama`
-(`resize_to_limit: [1024, 512]`, webp) — defined on the attachment so the
-pano pane and the ingest task share one definition.
+A room whose flat render has not landed yet (or can never land — a
+non-equirectangular source) falls back to the old squashed-equirect `:poster`
+named variant on `Room#panorama`. That fallback path — and the `:poster`
+variant itself — is scheduled for deletion in a follow-up once the backfill
+is complete everywhere; the ingest task no longer references `:poster` at
+all.
 
 ### Bulk media ingest
 
@@ -52,12 +58,65 @@ pano pane and the ingest task share one definition.
 `<rmrecnbr>.jpg` files (the mi_locations export) onto matching rooms in the
 shared workspace (`WORKSPACE=` overrides; `DRY_RUN=1` reports without
 attaching; `REPLACE=1` re-attaches over existing panoramas — default is
-skip, so re-runs are idempotent). The `:poster` variant is **eagerly
-processed at ingest** so the first visitor never waits on a multi-MB vips
-transform. Two curation reports land in `tmp/panorama_ingest/`: files with
+skip, so re-runs are idempotent). Ingest pre-processes nothing itself — the
+Active Storage attachment callback
+(`config/initializers/flat_panorama_callbacks.rb`) enqueues
+`RenderFlatPanoramaJob`, which renders the flat view the pano pane serves.
+Two curation reports land in `tmp/panorama_ingest/`: files with
 no matching room, and listed classrooms still lacking a panorama. Logic
 lives in `PanoramaIngest` (`app/lib`); per-file failures collect into the
 result without stopping the run.
+
+### Flat panorama renders
+
+Every panorama attach or replace enqueues `RenderFlatPanoramaJob`
+(`config/initializers/flat_panorama_callbacks.rb` — read its header before
+touching this lifecycle; it explains why the callback lives on
+`ActiveStorage::Attachment` and not on `Room`). The job reprojects the
+equirectangular source to the rectilinear view at Pannellum's default camera
+and attaches it as `Room#flat_panorama`; the room page serves it as the
+pre-load image until a visitor clicks Load. `lib/tasks/flat_panoramas.rake`
+is the operator surface on top of that:
+
+- `bin/rails panoramas:render_flat` — backfill every room with a missing or
+  stale flat render. Flags: `DRY_RUN=1` reports without touching anything;
+  `ROOM=<rmrecnbr>` scopes to one room; `FORCE=1` clears any tombstone and
+  re-renders even an already-fresh room (the diagnostic loop after a
+  projection code change); `INLINE=1` renders in-process instead of
+  enqueueing — it does not wait on the queue, and a retryable error
+  (`Vips::Error`, a SQLite statement timeout) still schedules a background
+  retry rather than failing outright; `LIMIT=n` caps the batch;
+  `WORKSPACE=slug` overrides the shared workspace.
+- `bin/rails panoramas:flat_status` — read-only counts (with panorama,
+  missing/stale, failed render, orphaned flat) for a workspace, plus the
+  first ten failed rooms' stamped errors.
+- A `flat_render_failed_at` tombstone, stamped on the SOURCE panorama blob's
+  metadata, means the render failed permanently for that exact source (most
+  often a non-2:1 photo uploaded into the panorama slot — see
+  `Panorama::Rectilinear::NotEquirectangular`). It is keyed to the source
+  blob, so replacing the bad photo clears it automatically; `FORCE=1` clears
+  it manually without a replacement.
+- On the room page, `#room_panorama_stage`'s `data-panorama-preview-source`
+  attribute tells you which picture you're looking at, and why, without
+  opening a console. Four values:
+  - `flat_render` — the rectilinear render landed and matches the booted
+    viewer. Nothing to do.
+  - `flat_render_stale` — a render exists but does not match the recipe in
+    force (someone changed `HFOV_DEG`/`ASPECT`/the default width without
+    re-running the backfill), or its file is gone. It is still served — a
+    stale frame beats a squashed strip — but the image **will** jump when the
+    visitor clicks Load. Fix with `bin/rails panoramas:render_flat`.
+  - `poster_fallback_failed` — no render, and the source carries a permanent
+    failure tombstone. Read
+    `room.panorama.blob.metadata["flat_render_error"]`; it is almost always a
+    non-2:1 photo uploaded into the panorama slot, fixed by replacing the
+    photo (which clears the tombstone by itself).
+  - `poster_fallback` — no render yet, no failure recorded. Normal between a
+    deploy and the backfill; `panoramas:flat_status` counts these.
+
+  The staleness and tombstone questions have exactly one implementation each,
+  `Room#flat_render_current?` and `Room#flat_render_failed?`, shared by this
+  view, `RenderFlatPanoramaJob`, and both rake tasks.
 
 `bin/rails building_photos:ingest DIR=/path/to/buildings` is the sibling
 for building photos (`BuildingPhotoIngest`), with one difference: the files
