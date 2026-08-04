@@ -207,6 +207,22 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     expect(card).to have_text("Fixed data projector")
   end
 
+  # 2026-08-03: the card title's stretched overlay (after:z-10) swallowed hover
+  # over the emphasized strip, so only the "+N more" chips (z-20) ever showed a
+  # popover. The strip now rides above the overlay on hover-capable pointers
+  # ONLY — coarse pointers keep tapping through to the room page (the 2026-07-15
+  # mis-tap fix), and keyboard Tab reaches the tooltip either way.
+  it "raises the emphasized chip strip above the card's click overlay on hover-capable pointers" do
+    room.room_characteristics.find_by!(short_code: "intrscreen")
+        .update!(long_description: "Interactive touchscreen display")
+
+    get find_a_room_path
+    strip = page.find("turbo-frame#find_a_room_results li", match: :first).first("ul")
+
+    expect(strip[:class].split).to include("relative", "pointer-fine:z-20")
+    expect(strip).to have_css("[role='tooltip']", text: "Interactive touchscreen display", visible: :all)
+  end
+
   # Backlog #7: the applied-count badge lives in the form, OUTSIDE the results
   # frame — a frame-only re-render left it stale. The frame now carries a
   # hidden [data-panel-count] mirror of the same server-side count;
