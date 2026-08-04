@@ -34,6 +34,6 @@ RSpec.describe MediaAsset do
     c = create(:media_asset, owner: room, workspace: workspace, position: 2)
     a = create(:media_asset, owner: room, workspace: workspace, position: 1)
 
-    expect(room.gallery.ordered.to_a).to eq([ a, c ])
+    expect(MediaAsset.where(owner: room).ordered.to_a).to eq([ a, c ])
   end
 end

@@ -2,7 +2,6 @@ class Room < ApplicationRecord
   include Tenanted
   include Describable
 
-  describable :photo,         derived_alt: ->(rec) { I18n.t("media.derived_alt.room_photo", room: rec.display_name) }
   describable :panorama,      derived_alt: ->(rec) { I18n.t("media.derived_alt.panorama", room: rec.display_name) }
   describable :seating_chart, derived_alt: ->(rec) { I18n.t("media.derived_alt.seating_chart", room: rec.display_name) }
 
