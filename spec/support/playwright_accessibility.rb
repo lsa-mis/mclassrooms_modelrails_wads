@@ -524,8 +524,18 @@ end
 RSpec.configure do |config|
   config.include PlaywrightAccessibility, type: :system
 
-  # In CI, automatically run axe accessibility audit after every system spec
-  if ENV["CI"]
+  # Automatically audit every system spec, everywhere — not just CI.
+  #
+  # This was `if ENV["CI"]` until #541. Gating it meant a developer got no
+  # accessibility feedback at all until they pushed, so every finding cost a
+  # full CI cycle to discover and another to fix — and a real AAA violation
+  # (#540) sat on main precisely because nobody ran the audit locally.
+  # Accessibility is a project invariant at WCAG 2.2 AAA; an invariant you only
+  # check on someone else's machine isn't one.
+  #
+  # SKIP_AXE=1 opts out for a fast focused loop. It is deliberately opt-OUT:
+  # the default has to be the safe one, or this regresses to CI-only by habit.
+  unless ENV["SKIP_AXE"] == "1"
     config.after(:each, type: :system) do |example|
       # Deliberate-violation examples (component previews that DOCUMENT an
       # anti-pattern) opt out explicitly — tag with `skip_axe_hook: true`
@@ -575,11 +585,26 @@ RSpec.configure do |config|
       # handle 44px targets, focus indicators, and over-media transparency).
       # Fully qualified: this block's LEXICAL scope is outside the module, so
       # a bare constant NameErrors even though config.include provides the
-      # METHODS — and only CI runs this hook, so local runs never catch it.
-      results = run_axe_audit(PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup)
-      violations = results["violations"] || []
+      # METHODS.
+      #
+      # BOTH themes, each set EXPLICITLY. This hook used to audit whatever
+      # theme the page happened to be in when the example ended, which made the
+      # verdict a function of test choreography rather than of the UI: the same
+      # command on the same code would catch a violation on one run and miss it
+      # on the next (#541). It also meant a page's dark rendering was audited
+      # only if some example happened to leave it dark.
+      #
+      # Auditing both is what closes the real gap. Dedicated `*_in_both_themes`
+      # examples cover themes but only for the states THEY set up — the
+      # deactivated-member badge fixed in #540 was never rendered by one, so a
+      # dark-only contrast bug sat on main under a green CI.
+      violations = %w[light dark].flat_map do |theme|
+        set_theme(theme)
+        results = run_axe_audit(PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup)
+        (results["violations"] || []).map { |v| v.merge("themeContext" => theme) }
+      end
 
-      formatted = violations.map { |v| format_violation(v) }
+      formatted = violations.map { |v| "[#{v['themeContext'].upcase}] #{format_violation(v)}" }
 
       expect(violations).to be_empty,
         "Accessibility violations found:#{formatted.join("\n")}"

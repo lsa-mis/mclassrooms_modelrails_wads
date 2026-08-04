@@ -40,12 +40,36 @@ RSpec.describe Invitation, type: :model do
     it "returns pending invitations" do
       pending_inv = create(:invitation)
       create(:invitation, :accepted)
-      expect(Invitation.pending).to contain_exactly(pending_inv)
+      expect(Invitation.acceptable).to contain_exactly(pending_inv)
     end
 
-    it "excludes expired from pending" do
+    it "excludes expired from the acceptable scope" do
       create(:invitation, :expired)
-      expect(Invitation.pending).to be_empty
+      expect(Invitation.acceptable).to be_empty
+    end
+
+    # #452: the enum generates BOTH a `pending` scope and a `pending?`
+    # predicate, and overriding only the scope to also require an unexpired
+    # `expires_at` made the two disagree — an expired invitation was `pending?`
+    # but absent from `Invitation.pending`. Anyone reasoning "in the scope iff
+    # the predicate" wrote a subtle bug. The extra constraint now lives under
+    # its own name, which mirrors the `acceptable?` predicate exactly.
+    describe "class- and instance-level agreement" do
+      let!(:expired) { create(:invitation, :expired) }
+
+      it "keeps the enum-generated pending scope in step with pending?" do
+        expect(expired).to be_pending
+        expect(Invitation.pending).to include(expired)
+      end
+
+      it "mirrors acceptable? with the acceptable scope" do
+        expect(expired).not_to be_acceptable
+        expect(Invitation.acceptable).not_to include(expired)
+
+        open_invite = create(:invitation)
+        expect(open_invite).to be_acceptable
+        expect(Invitation.acceptable).to include(open_invite)
+      end
     end
 
     # Regression for #454: the members-index email search must treat LIKE

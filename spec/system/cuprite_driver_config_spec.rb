@@ -32,4 +32,26 @@ RSpec.describe "Cuprite driver configuration", type: :system do
   it "sizes the browser window for the desktop layout" do
     expect(page.driver.options[:window_size]).to eq([ 1400, 1400 ])
   end
+
+  # Chromium refuses to start as root without --no-sandbox ("Running as root
+  # without --no-sandbox is not supported", crbug.com/638180), and the
+  # devcontainer's remoteUser IS root — so every system spec there died with
+  # `Ferrum::ProcessTimeoutError: Browser did not produce websocket url`, a
+  # message that names neither root nor the sandbox. Found by #535's new
+  # devcontainer CI gate.
+  #
+  # Scoped to root rather than applied unconditionally: --no-sandbox disables a
+  # real security boundary, and on a developer's own machine (non-root) there is
+  # no reason to give it up.
+  describe "running as root, as in the devcontainer" do
+    it "passes the flags Chromium needs to start in a container" do
+      skip "only meaningful when running as root (containers)" unless Process.uid.zero?
+
+      flags = page.driver.options[:browser_options].to_h.keys.map(&:to_s)
+      expect(flags).to include("no-sandbox")
+      # Docker's default /dev/shm is 64MB; Chromium exhausts it and crashes
+      # mid-run, which surfaces as an unrelated-looking tab crash.
+      expect(flags).to include("disable-dev-shm-usage")
+    end
+  end
 end
