@@ -103,7 +103,7 @@ module RoomsHelper
   # slices .first(CARD_TAG_LIMIT) into the emphasized strip and .drop(CARD_TAG_LIMIT)
   # into the disclosure.
   def room_card_chips(room, active_codes: active_card_codes)
-    card_chip_presenter(room).chips.sort_by { |chip| card_chip_sort_key(chip, active_codes) }
+    room_card_presenter(room).chips.sort_by { |chip| card_chip_sort_key(chip, active_codes) }
   end
 
   # The vendor codes the user is actively filtering on — merged filter tokens
@@ -123,7 +123,7 @@ module RoomsHelper
     @card_display_rules ||= CharacteristicDisplayRule.all.index_by(&:short_code)
   end
 
-  def card_chip_presenter(room)
+  def room_card_presenter(room)
     RoomPresenter.new(room, rules: card_display_rules)
   end
 
@@ -280,18 +280,5 @@ module RoomsHelper
     @characteristic_labels ||= CharacteristicFilterGroups.labels.merge(
       I18n.t("rooms.characteristic_label_overrides", default: {}).stringify_keys.transform_values(&:to_s)
     )
-  end
-
-  # First gallery image, position-ordered. Deliberately sorts the ALREADY
-  # preloaded `gallery_images` array in Ruby rather than calling the `.ordered`
-  # scope on the association: `.ordered.first` re-queries per room (bypassing
-  # RoomSearch#results' preload), which Bullet's N+1 detector catches in test
-  # (`config/environments/test.rb` sets `Bullet.raise = true`) — the
-  # `unused_eager_loading` safelist entry for `Room`/`gallery_images` in
-  # `lib/bullet_safelists.rb` exists precisely so this row can dereference the
-  # preload without exercising `Room.gallery_images` from another code path
-  # (the RoomSearch unit spec) — using `.ordered` here would defeat it.
-  def room_thumbnail_image(room)
-    room.gallery_images.sort_by { |image| [ image.position, image.id ] }.first
   end
 end

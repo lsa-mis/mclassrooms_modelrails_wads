@@ -19,14 +19,14 @@ RSpec.describe BulkUpload::Matcher do
 
   def blob(filename) = UploadBlob.new(filename)
 
-  it "matches a bare image filename to :photo" do
+  it "matches a bare image filename to :gallery" do
     report = described_class.call([ blob("MLB1200.jpg") ])
 
     expect(report.unmatched).to be_empty
     match = report.matched.first
     expect(match.blob.filename).to eq("MLB1200.jpg")
     expect(match.room).to eq(room)
-    expect(match.slot).to eq(:photo)
+    expect(match.slot).to eq(:gallery)
   end
 
   it "matches a lowercase filename case-insensitively and resolves the room via normalized lookup" do
@@ -35,7 +35,7 @@ RSpec.describe BulkUpload::Matcher do
     expect(report.unmatched).to be_empty
     match = report.matched.first
     expect(match.room).to eq(room)
-    expect(match.slot).to eq(:photo)
+    expect(match.slot).to eq(:gallery)
   end
 
   it "matches a _pano suffix to :panorama" do
@@ -80,12 +80,12 @@ RSpec.describe BulkUpload::Matcher do
     expect(unmatched.reason).to eq(:room_not_found)
   end
 
-  it "lets the _pano suffix win over the bare-photo pattern (pattern precedence)" do
+  it "lets the _pano suffix win over the bare-image pattern (pattern precedence)" do
     report = described_class.call([ blob("MLB1200_pano.jpg") ])
 
     match = report.matched.first
     expect(match.slot).to eq(:panorama)
-    expect(match.slot).not_to eq(:photo)
+    expect(match.slot).not_to eq(:gallery)
   end
 
   it "sorts a mixed batch into matched and unmatched buckets" do
@@ -96,7 +96,7 @@ RSpec.describe BulkUpload::Matcher do
       blob("ZZZ9999.jpg")
     ])
 
-    expect(report.matched.map(&:slot)).to contain_exactly(:photo, :panorama)
+    expect(report.matched.map(&:slot)).to contain_exactly(:gallery, :panorama)
     expect(report.unmatched.map(&:reason)).to contain_exactly(:unrecognized_filename, :room_not_found)
   end
 end

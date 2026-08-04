@@ -84,9 +84,9 @@ module Admin
     # reports the real attached count, not the raw matched count.
     #
     # Unmatched blobs are purged (never left as orphaned storage) via
-    # purge_later — mirrors Room's own remove_photo/remove_panorama/
-    # remove_seating_chart writers (app/models/room.rb), which use the same
-    # async purge rather than a synchronous `purge`.
+    # purge_later — mirrors Room's own remove_panorama/remove_seating_chart
+    # writers (app/models/room.rb), which use the same async purge rather
+    # than a synchronous `purge`.
     def commit
       attached = 0
       failed = 0
@@ -94,7 +94,7 @@ module Admin
       @report.matched.each do |match|
         result = Curation::Apply.call(
           record: match.room, actor: Current.user,
-          attributes: { match.slot => match.blob },
+          attributes: attributes_for(match),
           action: "room.media_bulk_uploaded"
         )
 
@@ -107,6 +107,7 @@ module Admin
       end
       @report.unmatched.each { |unmatched| unmatched.blob.purge_later }
 
+
       # Absolute keys (not `t(".committed")`): this runs inside the private
       # #commit helper but is dispatched from the #create action, so Rails'
       # relative-key scope is `create` at runtime while i18n-tasks infers
@@ -115,6 +116,26 @@ module Admin
       # the action, the locale, and the specs) resolves identically both ways.
       notice = failed.zero? ? t("admin.bulk_uploads.create.committed", count: attached) : t("admin.bulk_uploads.create.partial_failure", attached:, failed:)
       redirect_to new_admin_bulk_upload_path, notice: notice
+    end
+
+    # Two shapes of slot, one Curation::Apply call site. `:panorama` and
+    # `:seating_chart` are has_one_attached names, so assigning the blob IS
+    # the change. `:gallery` is a has_many of MediaAsset — a bulk-dropped
+    # still APPENDS a row rather than replacing anything, which is the whole
+    # reason Room dropped its single "main photo" slot.
+    #
+    # Routed through `gallery_attributes` (not `room.gallery.create!`) so this
+    # stays inside Curation::Apply's transaction: a MediaAsset that fails its
+    # own content_type/size validation rolls the ActivityLog row back with it
+    # and lands in the `failed` count, exactly like a rejected panorama.
+    # `workspace_id` must be passed explicitly — Tenanted requires it and
+    # nested attributes do not inherit it from the owner.
+    def attributes_for(match)
+      return { match.slot => match.blob } unless match.slot == :gallery
+
+      next_position = (match.room.gallery.maximum(:position) || 0) + 1
+      { gallery_attributes: [ { image: match.blob, position: next_position,
+                                workspace_id: match.room.workspace_id } ] }
     end
   end
 end

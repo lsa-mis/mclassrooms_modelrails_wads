@@ -49,7 +49,7 @@ class Room < ApplicationRecord
   # right slot without extra JS. Without reject_if, `position` being non-blank
   # on an UNTOUCHED blank row defeats Rails' own `all_blank?` skip, so
   # `assign_nested_attributes_for_collection_association` would build a new
-  # RoomGalleryImage with no image attached — RoomGalleryImage's own
+  # MediaAsset with no image attached — MediaAsset's own
   # `validates :image, attached: true` would then fail EVERY curated-field-only
   # edit (e.g. a plain nickname change) with an unrelated gallery error.
   #
@@ -85,7 +85,7 @@ class Room < ApplicationRecord
   # The reader always returns false (never true) so the checkbox round-trips
   # unchecked on re-render (a validation failure re-renders :edit) rather than
   # echoing back "checked" from a transient submitted value.
-  %i[photo panorama seating_chart].each do |slot|
+  %i[panorama seating_chart].each do |slot|
     define_method("remove_#{slot}=") do |value|
       next unless ActiveModel::Type::Boolean.new.cast(value)
 

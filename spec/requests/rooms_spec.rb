@@ -365,7 +365,7 @@ RSpec.describe "GET /find-a-room", type: :request do
     # name themselves.)
     it "renders a gallery thumbnail, ADA badge, and characteristic icon chip" do
       listed_classroom.update!(ada_seat_count: 5)
-      create(:room_gallery_image, room: listed_classroom, workspace: workspace)
+      create(:media_asset, owner: listed_classroom, workspace: workspace)
       # Normalization-stable short_code: RoomCharacteristic stores the raw value
       # while CharacteristicDisplayRule normalizes via CodeNormalizer (strips
       # non-alphanumerics), so the row's icon-key join only hits when the code
@@ -611,7 +611,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       get room_path(room), as: :json
       etag = response.headers["ETag"]
 
-      create(:room_gallery_image, room: room, workspace: workspace)
+      create(:media_asset, owner: room, workspace: workspace)
 
       get room_path(room), headers: { "If-None-Match" => etag }, as: :json
 
@@ -619,11 +619,11 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.headers["ETag"]).not_to eq(etag)
     end
 
-    it "busts the ETag when a media attachment (photo) is added" do
+    it "busts the ETag when a media attachment (seating chart) is added" do
       get room_path(room), as: :json
       etag = response.headers["ETag"]
 
-      room.photo.attach(
+      room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
         filename: "room.png",
         content_type: "image/png"
@@ -635,8 +635,8 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.headers["ETag"]).not_to eq(etag)
     end
 
-    it "busts the ETag when a photo attachment is replaced" do
-      room.photo.attach(
+    it "busts the ETag when a seating-chart attachment is replaced" do
+      room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
         filename: "room.png",
         content_type: "image/png"
@@ -649,7 +649,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       # one (never an UPDATE-in-place), so the new row's created_at becomes
       # the new max — proving media_attachments.maximum(:created_at) tracks
       # replace, not just first-insert.
-      room.photo.attach(
+      room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
         filename: "room-replacement.png",
         content_type: "image/png"
@@ -661,8 +661,8 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.headers["ETag"]).not_to eq(etag)
     end
 
-    it "busts the ETag when a photo attachment is removed" do
-      room.photo.attach(
+    it "busts the ETag when a seating-chart attachment is removed" do
+      room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
         filename: "room.png",
         content_type: "image/png"
@@ -674,7 +674,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       # purge (not purge_later): the row must be gone before the very next
       # request. media_attachments.maximum(:created_at) drops to nil, which
       # show_last_modified's `.compact.max` already tolerates.
-      room.photo.purge
+      room.seating_chart.purge
 
       get room_path(room), headers: { "If-None-Match" => etag }, as: :json
 
@@ -755,7 +755,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(json["department"].keys).to match_array(%w[id description group group_description])
       expect(json["characteristics"]).to eq([ "projector" ])
       expect(json["media"].keys).to match_array(
-        %w[photo_url thumbnail_url panorama_url seating_chart_url gallery_urls]
+        %w[thumbnail_url panorama_url seating_chart_url gallery_urls]
       )
       expect(json["contacts"]).to be_present
       expect(json["url"]).to eq(room_url(full_room))
@@ -1002,26 +1002,26 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(room.reload.nickname).to eq("Old Name")
     end
 
-    # Room's own `content_type: [:png, :jpeg, :webp]` validation on :photo is
-    # the natural, already-existing validation reachable through this form —
-    # a PDF is allowed for seating_chart but not photo, so attaching one here
-    # is a genuine ActiveRecord::RecordInvalid, not a stub.
+    # Room's own `content_type: [:png, :jpeg, :webp]` validation on :panorama
+    # is the natural, already-existing validation reachable through this form —
+    # a PDF is allowed for seating_chart but not the panorama, so attaching one
+    # here is a genuine ActiveRecord::RecordInvalid, not a stub.
     it "re-renders :edit with 422 on a validation failure and writes no ActivityLog" do
       expect {
         patch room_path(room), params: {
-          room: { photo: fixture_file_upload("seating_chart.pdf", "application/pdf") }
+          room: { panorama: fixture_file_upload("seating_chart.pdf", "application/pdf") }
         }
       }.not_to change(ActivityLog, :count)
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(room.reload.photo).not_to be_attached
+      expect(room.reload.panorama).not_to be_attached
     end
 
     # Pins the documented trade-off in #update's comment: curated and media
     # changes are now TWO separate Curation::Apply calls (two transactions),
     # so a valid curated change can commit even though the accompanying media
     # change fails validation in the same request — the nickname save is not
-    # rolled back by the photo's content_type rejection. Exactly one
+    # rolled back by the panorama's content_type rejection. Exactly one
     # ActivityLog ("room.updated") is written; no "room.media_updated" row
     # exists for the failed media half.
     it "commits the curated change even when the accompanying media change fails validation" do
@@ -1029,14 +1029,14 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
         patch room_path(room), params: {
           room: {
             nickname: "New Name",
-            photo: fixture_file_upload("seating_chart.pdf", "application/pdf")
+            panorama: fixture_file_upload("seating_chart.pdf", "application/pdf")
           }
         }
       }.to change(ActivityLog, :count).by(1)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(room.reload.nickname).to eq("New Name")
-      expect(room.photo).not_to be_attached
+      expect(room.panorama).not_to be_attached
 
       log = ActivityLog.last
       expect(log.action).to eq("room.updated")
@@ -1044,29 +1044,29 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
     end
 
     it "persists a gallery reorder" do
-      first = create(:room_gallery_image, room: room, workspace: workspace, position: 0)
-      second = create(:room_gallery_image, room: room, workspace: workspace, position: 1)
+      first = create(:media_asset, owner: room, workspace: workspace, position: 1)
+      second = create(:media_asset, owner: room, workspace: workspace, position: 2)
 
       patch room_path(room), params: {
-        room: { gallery_images_attributes: {
-          "0" => { id: first.id, position: "1" },
-          "1" => { id: second.id, position: "0" }
+        room: { gallery_attributes: {
+          "0" => { id: first.id, position: "2" },
+          "1" => { id: second.id, position: "1" }
         } }
       }
 
       expect(response).to redirect_to(room_path(room))
-      expect(first.reload.position).to eq(1)
-      expect(second.reload.position).to eq(0)
+      expect(first.reload.position).to eq(2)
+      expect(second.reload.position).to eq(1)
     end
 
     it "removes a gallery image via _destroy" do
-      image = create(:room_gallery_image, room: room, workspace: workspace)
+      image = create(:media_asset, owner: room, workspace: workspace)
 
       expect {
         patch room_path(room), params: {
-          room: { gallery_images_attributes: { "0" => { id: image.id, _destroy: "1" } } }
+          room: { gallery_attributes: { "0" => { id: image.id, _destroy: "1" } } }
         }
-      }.to change(RoomGalleryImage, :count).by(-1)
+      }.to change(MediaAsset, :count).by(-1)
 
       expect(response).to redirect_to(room_path(room))
     end
@@ -1075,7 +1075,7 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
     # BuildingsController's floors_attributes guard
     # (spec/requests/buildings_spec.rb "422s and mutates nothing when
     # floors_attributes references another building's floor id") had no
-    # analogue here — a gallery_images_attributes row whose `:id` belongs to
+    # analogue here — a gallery_attributes row whose `:id` belongs to
     # ANOTHER room raises ActiveRecord::RecordNotFound from inside
     # `Room#assign_attributes` (via
     # `assign_nested_attributes_for_collection_association`), BEFORE
@@ -1087,25 +1087,25 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
     # Curation::Apply, surfaced as a redirect by the global rescue_from);
     # passes against the pre-Curation::Apply id guard (422, :edit
     # re-rendered, neither room's gallery touched).
-    it "422s and mutates nothing when gallery_images_attributes references another room's gallery image id" do
+    it "422s and mutates nothing when gallery_attributes references another room's gallery image id" do
       other_building = create(:building, workspace: workspace)
       other_room = create(:room, building: other_building, workspace: workspace)
-      foreign_image = create(:room_gallery_image, room: other_room, workspace: workspace, position: 3)
+      foreign_image = create(:media_asset, owner: other_room, workspace: workspace, position: 3)
 
       expect {
         patch room_path(room), params: {
           room: {
             nickname: "New Name",
-            gallery_images_attributes: { "0" => { id: foreign_image.id, position: "0" } }
+            gallery_attributes: { "0" => { id: foreign_image.id, position: "1" } }
           }
         }
       }.not_to raise_error
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(room.reload.nickname).to eq("Old Name")
-      expect(room.gallery_images.reload).to be_empty
+      expect(room.gallery.reload).to be_empty
       expect(foreign_image.reload.position).to eq(3)
-      expect(foreign_image.room_id).to eq(other_room.id)
+      expect(foreign_image.owner).to eq(other_room)
     end
   end
 

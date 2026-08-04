@@ -213,7 +213,7 @@ RSpec.describe RoomPresenter do
         )
         expect(json[:building]).to eq(id: building.id, name: building.name, abbreviation: building.abbreviation)
         expect(json[:media]).to eq(
-          photo_url: nil, thumbnail_url: nil, panorama_url: nil, seating_chart_url: nil, gallery_urls: []
+          thumbnail_url: nil, panorama_url: nil, seating_chart_url: nil, gallery_urls: []
         )
       end
     end
@@ -231,11 +231,7 @@ RSpec.describe RoomPresenter do
         room.update!(floor: floor, unit: unit)
         create(:room_characteristic, room: room, code: "c1", short_code: "wifi")
         create(:room_contact, room: room)
-        create(:room_gallery_image, room: room, position: 0)
-        room.photo.attach(
-          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-          filename: "photo.png", content_type: "image/png"
-        )
+        create(:media_asset, owner: room, position: 1)
       end
 
       it "populates floor_label, department, characteristics, contacts, and media URLs" do
@@ -260,10 +256,11 @@ RSpec.describe RoomPresenter do
           support_url: "https://example.edu/support"
         )
 
-        expect(json[:media][:photo_url]).to be_present
+        # thumbnail_url is a VARIANT of the first gallery asset, not the blob
+        # itself — the two must not collapse to the same URL.
         expect(json[:media][:thumbnail_url]).to be_present
-        expect(json[:media][:thumbnail_url]).not_to eq(json[:media][:photo_url])
         expect(json[:media][:gallery_urls].size).to eq(1)
+        expect(json[:media][:thumbnail_url]).not_to eq(json[:media][:gallery_urls].first)
         expect(json[:media][:panorama_url]).to be_nil
         expect(json[:media][:seating_chart_url]).to be_nil
       end

@@ -79,6 +79,24 @@ class RoomPresenter
     [ room.display_name, room.building.full_address, capacity_line, @url ].compact_blank.join(" — ")
   end
 
+  # THE one definition of "the image that stands in for this room" — results
+  # rows, the JSON payload's thumbnail_url, and anything added later all read
+  # it from here, so there is never a second, drifting implementation (the
+  # room_thumbnail_image helper this replaced was exactly that).
+  #
+  # Deliberately `room.gallery.first`, not `room.gallery.ordered.first`: the
+  # association already carries the `-> { ordered }` scope, and `.first` on an
+  # ALREADY-LOADED association reads the in-memory target. Re-scoping would
+  # re-query per row, bypassing RoomSearch#results' preload — an N+1 Bullet
+  # raises on in test (`config/environments/test.rb` sets `Bullet.raise`).
+  #
+  # Interim: a later task replaces this body with the full subject-ranked
+  # chain. Returns an ActiveStorage::Attached::One (or nil), so callers pick
+  # their own variant.
+  def thumbnail
+    room.gallery.first&.image
+  end
+
   # Room-show JSON (Brief §5.3), consumed verbatim by Task 3's JSON variant
   # (`render json: @presenter.as_json`).
   def as_json(*)
@@ -202,25 +220,22 @@ class RoomPresenter
 
   def media_json
     {
-      photo_url: blob_url(room.photo),
       thumbnail_url: thumbnail_url,
       panorama_url: blob_url(room.panorama),
       seating_chart_url: blob_url(room.seating_chart),
-      gallery_urls: room.gallery_images.ordered.filter_map { |image| blob_url(image.image) }
+      gallery_urls: room.gallery.filter_map { |asset| blob_url(asset.image) }
     }
   end
 
-  # 150×150 WebP variant of the room photo (D9). `rails_representation_url`
-  # is the ActiveStorage route helper for a *variant*, as opposed to
-  # `rails_blob_url` (used for the original blob elsewhere in this file) —
-  # mirrors how phase-1/phase-3 views build thumbnails
-  # (app/views/rooms/_room_row.html.erb, _building_card.html.erb:
-  # `url_for(attachment.variant(resize_to_fill: [w, h]))`), just called
-  # through the route helpers directly since this class has no view context.
+  # `rails_representation_url` is the ActiveStorage route helper for a
+  # *variant*, as opposed to `rails_blob_url` (used for the original blob
+  # elsewhere in this file) — called through the route helpers directly since
+  # this class has no view context.
   def thumbnail_url
-    return nil unless room.photo.attached?
+    image = thumbnail
+    return nil unless image&.attached?
 
-    url_helpers.rails_representation_url(room.photo.variant(resize_to_fill: [ 150, 150 ], format: :webp))
+    url_helpers.rails_representation_url(image.variant(:thumb))
   end
 
   def blob_url(attachment)

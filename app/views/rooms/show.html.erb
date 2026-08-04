@@ -7,9 +7,9 @@
     says what it does: Copy link. %>
 <% content_for(:title) { @room.display_name } %>
 
-<% gallery_images = @room.gallery_images.ordered.includes(image_attachment: :blob).first(5) %>
+<% gallery = @room.gallery.includes(image_attachment: :blob).first(5) %>
 <% has_pano = @room.panorama.attached? %>
-<% has_photos = @room.photo.attached? || gallery_images.any? %>
+<% has_photos = gallery.any? %>
 
 <div class="max-w-5xl mx-auto px-4 py-8">
   <div class="flex flex-wrap items-start justify-between gap-3">
@@ -39,7 +39,7 @@
 
   <% if has_pano || has_photos %>
     <%= render "rooms/media_stage", room: @room, presenter: @presenter,
-          gallery_images: gallery_images, has_pano: has_pano, has_photos: has_photos %>
+          gallery: gallery, has_pano: has_pano, has_photos: has_photos %>
   <% else %>
     <%= render "rooms/media_empty_band", room: @room, presenter: @presenter %>
   <% end %>

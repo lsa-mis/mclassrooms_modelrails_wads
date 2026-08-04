@@ -9,7 +9,7 @@ require "rails_helper"
 # spec/system/find_a_room_spec.rb's admin re-role pattern
 # (Membership.find_by!(...).update!(role: Role.system_default!("admin"))).
 #
-# Every media slot + two gallery images are pre-attached before visiting, so
+# Both media slots + two gallery photos are pre-attached before visiting, so
 # the page renders its richer "already attached" branches (current-attachment
 # figure + remove_* checkbox per slot, both gallery rows editable) for the
 # axe sweep below — the same full-branch-coverage reasoning show_spec.rb
@@ -35,13 +35,12 @@ RSpec.describe "Room edit", type: :system do
   end
 
   before do
-    room.photo.attach(io: file_fixture("room.jpg").open, filename: "MAS1200.jpg", content_type: "image/jpeg")
     room.panorama.attach(io: file_fixture("room.jpg").open, filename: "MAS1200-360.jpg", content_type: "image/jpeg")
     room.seating_chart.attach(io: file_fixture("seating_chart.pdf").open,
                                filename: "MAS1200-seating.pdf", content_type: "application/pdf")
   end
-  let!(:first_image) { create(:room_gallery_image, room: room, workspace: workspace, position: 0) }
-  let!(:second_image) { create(:room_gallery_image, room: room, workspace: workspace, position: 1) }
+  let!(:first_image) { create(:media_asset, owner: room, workspace: workspace, position: 1) }
+  let!(:second_image) { create(:media_asset, owner: room, workspace: workspace, position: 2) }
 
   # Re-role via Membership rather than a factory trait (no :admin trait on
   # :user — see find_a_room_spec.rb's CORRECTION B comment for why).
@@ -53,7 +52,7 @@ RSpec.describe "Room edit", type: :system do
 
   before { sign_in_via_form(admin) }
 
-  it "edits the nickname, uploads a new photo, and reorders the gallery, accessibly in both themes" do
+  it "edits the nickname, uploads a new panorama, and reorders the gallery, accessibly in both themes" do
     visit edit_room_path(room)
 
     expect(page).to have_selector("h1", text: I18n.t("rooms.edit.title", room: room.display_name))
@@ -63,14 +62,14 @@ RSpec.describe "Room edit", type: :system do
     # Cuprite, uploading a file handed to `attach_file` straight from the
     # fixtures dir hangs the submit with a browser-side `NotReadableError`. A
     # private per-example copy reads reliably. See the helper for the full note.
-    attach_file I18n.t("rooms.edit.photo_label"), browser_upload_fixture("room.jpg")
+    attach_file I18n.t("rooms.edit.panorama_label"), browser_upload_fixture("room.jpg")
 
     # Swap the two gallery images' positions (first ↔ second).
-    fill_in I18n.t("rooms.edit.position_label", position: 1), with: "1"
-    fill_in I18n.t("rooms.edit.position_label", position: 2), with: "0"
+    fill_in I18n.t("rooms.edit.position_label", position: 1), with: "2"
+    fill_in I18n.t("rooms.edit.position_label", position: 2), with: "1"
 
     # Audit the edit page itself in its "filled out, ready to submit" state —
-    # every card (curated fields, all three media slots with their
+    # every card (curated fields, both media slots with their
     # current-attachment previews + remove checkboxes, and the gallery with
     # both existing rows plus a blank add row) is on the page at this point.
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
@@ -83,7 +82,7 @@ RSpec.describe "Room edit", type: :system do
     expect(page).to have_selector("h1", text: "New Name")
 
     expect(room.reload.nickname).to eq("New Name")
-    expect(first_image.reload.position).to eq(1)
-    expect(second_image.reload.position).to eq(0)
+    expect(first_image.reload.position).to eq(2)
+    expect(second_image.reload.position).to eq(1)
   end
 end

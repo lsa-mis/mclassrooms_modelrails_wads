@@ -210,7 +210,7 @@ RSpec.describe Room, type: :model do
       # overriding :workspace alone leaves auto-built parents in another tenant).
       room = create(:room, facility_code: "MLB1200")
       create(:room_contact, room: room)
-      create(:room_gallery_image, room: room)
+      create(:media_asset, owner: room)
       create(:availability_block, room: room)
       create(:room_characteristic, room: room)
       create(:note, notable: room, workspace: room.workspace)
@@ -219,7 +219,7 @@ RSpec.describe Room, type: :model do
         expect { room.destroy! }
           .to change(Room, :count).by(-1)
           .and change(RoomContact, :count).by(-1)
-          .and change(RoomGalleryImage, :count).by(-1)
+          .and change(MediaAsset, :count).by(-1)
           .and change(AvailabilityBlock, :count).by(-1)
           .and change(RoomCharacteristic, :count).by(-1)
           .and change(Note, :count).by(-1)
@@ -277,9 +277,9 @@ RSpec.describe Room, type: :model do
   end
 
   describe "attachments" do
-    it "allows PDF for the seating chart but not the photo; caps size at 10MB" do
+    it "allows PDF for the seating chart but not the panorama; caps size at 10MB" do
       room = build(:room)
-      room.photo.attach(io: StringIO.new("%PDF-"), filename: "a.pdf", content_type: "application/pdf")
+      room.panorama.attach(io: StringIO.new("%PDF-"), filename: "a.pdf", content_type: "application/pdf")
       expect(room).not_to be_valid
       room = build(:room)
       room.seating_chart.attach(io: StringIO.new("%PDF-"), filename: "c.pdf", content_type: "application/pdf")
@@ -314,15 +314,17 @@ RSpec.describe Room, type: :model do
       expect(room.reload.flat_panorama).to be_attached
     end
 
-    it "purges the photo but leaves the flat panorama render alone" do
-      room.photo.attach(io: Rails.root.join("spec/fixtures/files/room.jpg").open,
-                        filename: "room.jpg", content_type: "image/jpeg")
+    # The cascade is scoped to the PANORAMA slot: removing a different
+    # attachment must not take the flat render down with it.
+    it "purges the seating chart but leaves the flat panorama render alone" do
+      room.seating_chart.attach(io: Rails.root.join("spec/fixtures/files/room.jpg").open,
+                                filename: "room.jpg", content_type: "image/jpeg")
       room.save!
 
-      perform_enqueued_jobs { room.update!(remove_photo: "1") }
+      perform_enqueued_jobs { room.update!(remove_seating_chart: "1") }
 
       room.reload
-      expect(room.photo).not_to be_attached
+      expect(room.seating_chart).not_to be_attached
       expect(room.flat_panorama).to be_attached
     end
 

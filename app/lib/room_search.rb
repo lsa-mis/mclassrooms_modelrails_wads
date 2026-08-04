@@ -62,7 +62,7 @@ class RoomSearch
   def results
     scope = @base.joins(:building).left_outer_joins(:floor)
                  .preload(:building, :floor, :unit, :room_characteristics,
-                          gallery_images: { image_attachment: :blob })
+                          gallery: { image_attachment: :blob })
     scope = filter_saved(scope)
     scope = filter_query(scope)
     scope = filter_building(scope)

@@ -64,7 +64,7 @@ module BulletSafelists
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :floor)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :unit)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :room_characteristics)
-    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :gallery_images)
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :gallery)
   end
 
   # --- N+1 query ------------------------------------------------------------
