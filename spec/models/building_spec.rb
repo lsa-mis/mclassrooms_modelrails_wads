@@ -206,6 +206,16 @@ RSpec.describe Building, type: :model do
       expect(building).to be_valid
     end
 
+    it "accepts a HEIC photo, since a phone is the likely source" do
+      building = build(:building)
+      building.photo.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "photo.heic",
+        content_type: "image/heic"
+      )
+      expect(building).to be_valid
+    end
+
     it "rejects a PDF" do
       building = build(:building)
       building.photo.attach(

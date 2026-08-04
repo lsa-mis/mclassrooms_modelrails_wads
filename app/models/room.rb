@@ -124,9 +124,9 @@ class Room < ApplicationRecord
     }
 
   validates :rmrecnbr, presence: true, uniqueness: true
-  validates :panorama, content_type: [ :png, :jpeg, :webp ],
+  validates :panorama, content_type: [ :png, :jpeg, :webp, "image/heic", "image/heif" ],
                        size: { less_than_or_equal_to: 10.megabytes }
-  validates :seating_chart, content_type: [ :png, :jpeg, :webp, :pdf ],
+  validates :seating_chart, content_type: [ :png, :jpeg, :webp, :pdf, "image/heic", "image/heif" ],
                     size: { less_than_or_equal_to: 10.megabytes }
 
   before_save :normalize_facility_code
