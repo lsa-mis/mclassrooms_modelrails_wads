@@ -62,6 +62,10 @@ Native development (no devcontainer) continues to work the same way as before �
 
 modelrails_base supports several distinct product shapes — solo prosumer, internal single-tenant, multi-tenant SaaS — all built on the same multi-tenant data layer underneath. Before you start customizing, read [App Presets](/docs/developer/presets) to identify which shape matches what you're building. The defaults you just installed are the **Solo-default** preset; additional presets ship as they're built.
 
+If you are forking the template, `bin/fork --preset personal|shared|none` records the
+choice and writes it to `.env` — see [Forking](/docs/developer/forking). Switching
+later is a migration, not a config flip, so it is worth deciding up front.
+
 ## Running Tests
 
 ```bash

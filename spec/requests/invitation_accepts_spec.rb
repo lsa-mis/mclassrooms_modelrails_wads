@@ -55,15 +55,21 @@ RSpec.describe "Invitation Accepts", type: :request do
       }.to change(Membership, :count).by(1)
     end
 
-    it "redirects to the workspace" do
+    it "redirects to the workspace and confirms acceptance" do
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(workspace_path(workspace))
+      expect(flash[:notice]).to eq(I18n.t("invitation_accepts.create.success"))
     end
 
     it "rejects an already-accepted invitation" do
       invitation.accept!(create(:user))
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
+      # Caught by find_valid_invitation, NOT the NotAcceptable rescue — the
+      # redirect is identical either way, so only the message distinguishes
+      # them. acceptance_failed covers a different path (capacity / already a
+      # member) and is tracked separately.
+      expect(flash[:alert]).to eq(I18n.t("invitation_accepts.expired_or_used"))
     end
 
     it "refuses an invitation addressed to a different email" do
@@ -79,9 +85,13 @@ RSpec.describe "Invitation Accepts", type: :request do
   end
 
   describe "POST /invitations/:token/accept (unauthenticated)" do
+    # The highest-traffic branch in this controller: most invitees arrive
+    # signed out. A redirect-only assertion here proved nothing about what the
+    # visitor actually reads on the sign-in page.
     it "stores token in session and redirects to new_session_path" do
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(new_session_path)
+      expect(flash[:notice]).to eq(I18n.t("invitation_accepts.create.register_first"))
     end
   end
 

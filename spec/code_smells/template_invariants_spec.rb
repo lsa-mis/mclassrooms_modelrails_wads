@@ -233,6 +233,48 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  # Every assertion in the blocks below is a STATIC TEXT CHECK. They catch
+  # config drift and nothing else — they cannot catch a build or provisioning
+  # failure, and three of those shipped past them (#129/#132, #385/#386, #502)
+  # because the only real verification was a human remembering to build locally.
+  # #535 added a CI job that actually provisions the container; this asserts the
+  # job still exists, so the static checks can never quietly become the only
+  # line of defence again.
+  describe "the devcontainer has a CI gate that actually builds it" do
+    let(:workflow_path) { root.join(".github/workflows/devcontainer.yml") }
+
+    it "ships a workflow that provisions the devcontainer" do
+      expect(File.exist?(workflow_path)).to be(true),
+        "expected .github/workflows/devcontainer.yml — without it the devcontainer's " \
+        "only protection is the static assertions in this file, which cannot catch a " \
+        "build failure (#535)"
+    end
+
+    it "runs a command INSIDE the container, not just a build" do
+      workflow = YAML.safe_load(File.read(workflow_path), aliases: true)
+      step = workflow.dig("jobs", "devcontainer", "steps").to_a
+        .find { |s| s["uses"].to_s.start_with?("devcontainers/ci") }
+
+      expect(step).not_to be_nil,
+        "expected the devcontainers/ci action — `devcontainer build` alone never runs " \
+        "postCreateCommand, and everything risky (apt installs, libvips, chromium, " \
+        "bin/setup) lives in .devcontainer/setup.sh"
+      expect(step.dig("with", "runCmd")).to be_present,
+        "expected a runCmd: building the image proves nothing about whether the " \
+        "container provisions and can drive a browser"
+    end
+
+    it "exercises the browser rather than only asserting it is installed" do
+      run_cmd = YAML.safe_load(File.read(workflow_path), aliases: true)
+        .dig("jobs", "devcontainer", "steps").to_a
+        .filter_map { |s| s.dig("with", "runCmd") }.join("\n")
+
+      expect(run_cmd).to match(%r{rspec .*spec/system/}m),
+        "expected the gate to run a real system spec inside the container — #502 " \
+        "removed the browser install and a presence check alone would still have passed"
+    end
+  end
+
   describe "Devcontainer matches production runtime (Option C: shared base image)" do
     let(:devcontainer_path) { root.join(".devcontainer/devcontainer.json") }
     let(:devcontainer) do
@@ -518,30 +560,46 @@ RSpec.describe "Template invariants" do
         "are scanned pre-merge"
     end
 
-    it "builds with the shared GHA layer cache and loads the image for the scanner" do
+    it "loads the built image so the scanner has something to scan" do
       build_step = scan_steps.find { |s| s["uses"].to_s.include?("docker/build-push-action") }
       expect(build_step).not_to be_nil, "expected a docker/build-push-action build step"
 
-      expect(build_step.dig("with", "cache-from").to_s).to include("type=gha"),
-        "expected cache-from: type=gha so the scan reuses docker_build's layers " \
-        "instead of paying a cold build"
       expect(build_step.dig("with", "load")).to be(true),
         "expected load: true — without it the image exists only in the build cache " \
         "and the scanner has nothing to scan"
     end
 
-    it "scheduled runs bypass the layer cache (a cached apt layer hides current package state)" do
-      # The first real scan proved this: the GHA-cached apt layer carried
-      # OpenSSL/poppler packages that Debian had already fixed. A weekly scan
-      # against cached layers answers "what did we build last time", not
-      # "what would we ship if we rebuilt today".
+    # This scan NEVER uses the layer cache, on any trigger (#536).
+    #
+    # It was conditional (schedule + workflow_dispatch only), on the theory that
+    # a PR could reuse main's refreshed layers. It cannot: GitHub Actions cache
+    # scoping makes a branch read its OWN scope first, and ci.yml's docker_build
+    # runs on every PR and writes `mode=max` into exactly that scope. So an
+    # affected PR replays its own stale apt layer and main's fix is never
+    # consulted — observed 2026-07-30, when four dependabot PRs kept reporting 5
+    # HIGH CVEs in libexpat1 that Debian had already fixed, and clearing them
+    # took a per-branch dispatch.
+    #
+    # Keying the cache on the base-image digest does NOT fix this: ruby:slim
+    # rebuilds on Debian point releases, not interim security updates (see the
+    # Dockerfile's apt-get upgrade comment), so the digest is unchanged exactly
+    # when the packages inside it are not. The staleness lives in the apt layer,
+    # not in the base reference.
+    #
+    # Measured cost of always rebuilding: ~3.8 min vs ~3.1 min cached — about 45
+    # seconds, because most of the job is Trivy rather than layer building. That
+    # is a cheap price for a red that always means what it says.
+    it "never reuses the layer cache — a cached apt layer hides current package state" do
       build_step = scan_steps.find { |s| s["uses"].to_s.include?("docker/build-push-action") }
       next if build_step.nil?
 
-      no_cache = build_step.dig("with", "no-cache").to_s
-      expect(no_cache).to include("schedule"),
-        "expected no-cache to be conditional on the schedule event " \
-        "(e.g. no-cache: ${{ github.event_name == 'schedule' }})"
+      expect(build_step.dig("with", "no-cache")).to be(true),
+        "expected `no-cache: true` unconditionally. Anything conditional reintroduces " \
+        "#536: a PR replays its own cached apt layer, and a stale-package failure is " \
+        "indistinguishable from a real finding."
+      expect(build_step.dig("with", "cache-from")).to be_nil,
+        "expected no cache-from: it is dead config alongside no-cache: true, and reads " \
+        "as though the scan still reuses layers"
     end
 
     it ".trivyignore entries each carry a rationale and a Revisit marker" do
@@ -760,6 +818,189 @@ RSpec.describe "Template invariants" do
       expect(File.exist?(root.join("CHANGELOG.md"))).to be(true),
         "expected CHANGELOG.md at the repo root so forkers can see what's changed " \
         "between fork points. Use Keep a Changelog format (https://keepachangelog.com)."
+    end
+  end
+
+  # bin/fork hardcodes the paths and tokens it rewrites. The fork spec runs
+  # against a generated skeleton, so it stays green even if the template moves a
+  # file or drops a token — and bin/fork would then silently stop renaming it.
+  # A vanished token is indistinguishable from a completed rename (both mean
+  # "not found"), so the script would report success while shipping template
+  # branding to every fork. These pin the template side.
+  # The coverage floor is enforced from two processes that never share a
+  # runtime — spec/rails_helper.rb for a single-process run, bin/parallel-rspec's
+  # collate for the merged parallel result. They used to be literals in both,
+  # each carrying a "keep in sync" comment: an admission DRY had failed, in the
+  # files whose whole job is preventing that class of drift (#496).
+  describe "coverage thresholds have a single source of truth" do
+    it "declares the floor and merge timeout in exactly one place" do
+      sources = { "bin/parallel-rspec" => nil, "spec/rails_helper.rb" => nil }
+        .keys.to_h { |f| [ f, File.read(root.join(f)) ] }
+
+      sources.each do |file, content|
+        expect(content).not_to match(/keep in sync/i),
+          "#{file} still carries a 'keep in sync' comment — the thresholds belong " \
+          "in spec/coverage_config.rb, which both processes read"
+        expect(content).to include("CoverageConfig::"),
+          "expected #{file} to read the threshold from CoverageConfig rather than " \
+          "restating the literal"
+      end
+    end
+  end
+
+  describe "bin/fork's rename targets still exist upstream" do
+    before { load Rails.root.join("bin/fork").to_s unless defined?(ForkFlow) }
+
+    it "offers only presets the app will boot with" do
+      accepted = File.read(root.join("config/initializers/tenancy.rb"))[/valid_onboarding = \[(.*?)\]/m, 1]
+                     .to_s.scan(/:(\w+)/).flatten
+
+      expect(accepted).not_to be_empty, "could not parse valid_onboarding from config/initializers/tenancy.rb"
+      expect(ForkFlow::PRESETS).to match_array(accepted),
+        "bin/fork offers presets #{ForkFlow::PRESETS.inspect} but config/initializers/tenancy.rb " \
+        "accepts #{accepted.inspect} and raises at boot on anything else — a forker choosing an " \
+        "unaccepted preset gets a .env the app refuses to start on"
+    end
+
+    # bin/setup validates the preset it reads from .fork.yml independently of
+    # bin/fork, so it carries its own copy of the list and can drift.
+    it "keeps bin/setup's preset validation in step with the initializer" do
+      accepted = File.read(root.join("config/initializers/tenancy.rb"))[/valid_onboarding = \[(.*?)\]/m, 1]
+                     .to_s.scan(/:(\w+)/).flatten
+      declared = File.read(root.join("bin/setup"))[/valid_presets = %w\[(.*?)\]/m, 1].to_s.split
+
+      expect(declared).to match_array(accepted),
+        "bin/setup validates presets as #{declared.inspect} but the app accepts " \
+        "#{accepted.inspect} — a drift here either rejects a valid fork or lets a " \
+        "typo through into every teammate's .env"
+    end
+
+    it "names only files the template actually has" do
+      missing = ForkFlow::RENAME_FILES.reject { |path| File.exist?(root.join(path)) }
+
+      expect(missing).to be_empty,
+        "bin/fork expects to rename #{missing.join(', ')}, which no longer exist — " \
+        "forks would abort in preflight"
+    end
+
+    it "searches for tokens that are still present in each file" do
+      stale = ForkFlow::SUBSTITUTIONS.flat_map do |path, substitutions|
+        content = File.read(root.join(path))
+        substitutions.reject { |from, _| content.include?(from) }.map { |from, _| "#{path}: #{from.inspect}" }
+      end
+
+      expect(stale).to be_empty,
+        "bin/fork looks for tokens that are gone: #{stale.join(', ')}. A missing token is " \
+        "indistinguishable from an already-completed rename, so bin/fork would report success " \
+        "while leaving template identity in every fork."
+    end
+  end
+
+  # bin scripts in this repo are spec'd by `load`ing them (see
+  # spec/bin/parallel_rspec_spec.rb), which only works because the top-level
+  # invocation is guarded. Without the guard, loading a script in a spec RUNS
+  # it against the developer's own checkout — for bin/fork that means
+  # `git remote rename` and a commit. Asserted on source because the safe way
+  # to test "loading is safe" cannot itself be to load it.
+  describe "bin scripts are safe to load in a spec" do
+    %w[bin/fork bin/parallel-rspec].each do |script|
+      it "#{script} guards top-level execution behind $PROGRAM_NAME" do
+        source = File.read(root.join(script))
+
+        expect(source).to match(/\$PROGRAM_NAME == __FILE__/),
+          "expected #{script} to guard its top-level run with " \
+          "`if $PROGRAM_NAME == __FILE__` so specs can `load` it without executing it " \
+          "against the developer's checkout"
+      end
+    end
+
+    # OptionParser#parse! mutates ARGV in place. Left at top level it runs on
+    # load too, so `rspec --format doc` would raise InvalidOption before any
+    # example ran, and parallel_tests (which reads ARGV) would see it emptied.
+    it "bin/fork parses options inside the guard, not at load time" do
+      source = File.read(root.join("bin/fork"))
+      guard_at = source.index("$PROGRAM_NAME == __FILE__")
+      parse_at = source.index("OptionParser")
+
+      expect(guard_at).not_to be_nil, "expected bin/fork to have a $PROGRAM_NAME guard"
+      expect(parse_at).to be > guard_at,
+        "expected bin/fork's OptionParser block to sit INSIDE the $PROGRAM_NAME guard — " \
+        "parse! mutates ARGV, so at load time it corrupts the spec runner's own arguments"
+    end
+  end
+
+  describe "bin/setup leaves a checkout whose specs can pass" do
+    # tailwindcss-rails enhances `assets:clobber` with `tailwindcss:clobber`,
+    # so the Propshaft heal below also deletes app/assets/builds/tailwind.css.
+    # bin/setup used to rebuild it only as a side effect of `exec bin/dev`,
+    # which --skip-server never reaches — leaving a fork's very first
+    # `bundle exec rspec` failing every system spec at once.
+    let(:setup_sh) { File.read(root.join("bin/setup")) }
+
+    # bin/fork records the tenancy preset in .fork.yml; bin/setup is what
+    # applies it per clone. That split is deliberate — a teammate cloning an
+    # already-forked repo runs bin/setup, never bin/fork, so if bin/setup
+    # doesn't read the provenance the second developer silently runs on the
+    # wrong tenancy mode.
+    it "applies the fork's recorded tenancy preset to .env" do
+      expect(setup_sh).to include(".fork.yml"),
+        "expected bin/setup to read .fork.yml — it is the only thing a teammate runs, " \
+        "so it must apply the fork's recorded preset to their .env"
+      expect(setup_sh).to match(/WORKSPACE_ON_SIGNUP/),
+        "expected bin/setup to write WORKSPACE_ON_SIGNUP from the recorded preset"
+    end
+
+    it "rebuilds the Tailwind stylesheet after clobbering assets" do
+      clobber = setup_sh.index("assets:clobber")
+      rebuild = setup_sh.index("tailwindcss:build")
+
+      expect(clobber).not_to be_nil, "expected bin/setup to clobber precompiled assets"
+      expect(rebuild).not_to be_nil,
+        "expected bin/setup to run tailwindcss:build — assets:clobber removes the " \
+        "compiled stylesheet, and without it every system spec fails on contrast/layout"
+      expect(rebuild).to be > clobber,
+        "tailwindcss:build must run AFTER assets:clobber, or the clobber deletes " \
+        "the stylesheet the rebuild just produced"
+    end
+  end
+
+  describe ".graphifyignore carries only graph-scoping deltas" do
+    # graphify merges .gitignore and .graphifyignore (gitignore first, this file
+    # second), so any rule copied from .gitignore is dead weight that goes stale
+    # silently — the copy this replaced still described node_modules as the
+    # "Playwright browser driver" months after Playwright was removed in #497.
+    # The tracked file lists only paths git DOES track but that add noise rather
+    # than architecture to the graph.
+    let(:graphifyignore_path) { root.join(".graphifyignore") }
+
+    # Mirrors graphify's own parser: full-line comments and blanks drop out,
+    # inline comments count only when preceded by whitespace (so a literal
+    # path#with#hash survives).
+    def substantive_rules(path)
+      File.readlines(path).filter_map do |raw|
+        line = raw.rstrip.lstrip
+        next if line.empty? || line.start_with?("#")
+
+        line.sub(/\s+#.*\z/, "").rstrip.presence
+      end
+    end
+
+    it "is tracked in git so forks inherit the graph-scoping rules" do
+      tracked = `git -C #{root} ls-files .graphifyignore`.strip
+      expect(tracked).to eq(".graphifyignore"),
+        "expected .graphifyignore tracked in git — the rules describe this repo's " \
+        "directory layout, so every fork should inherit them rather than rediscover " \
+        "which directories bloat the graph."
+    end
+
+    it "duplicates no rule already present in .gitignore" do
+      duplicated = substantive_rules(graphifyignore_path) &
+        substantive_rules(root.join(".gitignore"))
+
+      expect(duplicated).to be_empty,
+        "expected .graphifyignore to hold only rules .gitignore does NOT already " \
+        "cover, found duplicates: #{duplicated.join(', ')}. graphify reads .gitignore " \
+        "first, so copying it here adds nothing and rots out of sync."
     end
   end
 

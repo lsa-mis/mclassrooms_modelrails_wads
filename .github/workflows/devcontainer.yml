@@ -1,0 +1,86 @@
+name: Devcontainer
+
+# Builds AND provisions the devcontainer, then runs a real command inside it.
+#
+# Why a whole job: the devcontainer is a fork-facing onboarding surface — a
+# forker's first experience is often "Reopen in Container", so when it breaks it
+# breaks for them, not for us. Until this existed its only protection was static
+# text assertions in spec/code_smells/template_invariants_spec.rb, which catch
+# config drift but cannot catch a build or provisioning failure. Three
+# regressions shipped past them (#129/#132, #385/#386, #502), each caught only
+# because a human remembered to build locally — a habit that requires the
+# `devcontainer` CLI, which is not part of this project's toolchain (Node was
+# deliberately removed in #497).
+#
+# Why not `devcontainer build`: it builds the base image plus features and stops.
+# It never runs postCreateCommand, and everything risky lives in
+# .devcontainer/setup.sh — the apt installs (libvips, which Active Storage now
+# requires at >= 8.13 or it raises at boot), the chromium install for Cuprite,
+# and bin/setup. The devcontainers/ci action creates the container and runs
+# postCreateCommand, which is the only way to exercise that.
+#
+# Policy: devcontainer-affecting PRs plus a weekly schedule, NOT every PR — a
+# full container provision is expensive, and the drift this catches (upstream
+# feature and base-image changes) arrives without any commit of ours. Same
+# shape as image_scan.yml.
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC, an hour after image_scan
+  pull_request:
+    paths:
+      - ".devcontainer/**"
+      - "Dockerfile"
+      - "Gemfile.lock"
+      - ".tool-versions"
+      - "bin/setup"
+      - ".github/workflows/devcontainer.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: devcontainer-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  devcontainer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build, provision, and verify the devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          # SKIP_AXE: this gate answers "did the container provision and can it
+          # drive a browser", not "is the UI accessible" — the suite covers that
+          # on every PR. Skipping the audit keeps the smoke spec focused and fast.
+          #
+          # SKIP_COVERAGE: rails_helper enforces a 40% floor on a single-process
+          # run. Two spec files cover ~5%, so without this the command exits 2 on
+          # a coverage error even though every example passed — which is exactly
+          # how this job first failed in CI while looking green locally.
+          env: |
+            SKIP_AXE=1
+            SKIP_COVERAGE=1
+          runCmd: |
+            set -e
+
+            # Checked separately from the specs below only because a missing
+            # browser otherwise surfaces as a spec timeout rather than a sentence.
+            echo "=== chromium present for Cuprite (#502 removed it with no replacement) ==="
+            command -v chromium || command -v chromium-browser || {
+              echo "no chromium on PATH — every system spec would fail in this container"
+              exit 1
+            }
+
+            # Deliberately the repo's OWN specs rather than assertions restated
+            # in YAML: the libvips floor already has a tested home, and a real
+            # system spec is the smallest thing that proves the browser actually
+            # drives — which is precisely what #502 broke while `which chromium`
+            # would still have passed.
+            echo "=== the container can boot Rails and drive a browser ==="
+            bundle exec rspec \
+              spec/config/active_storage_variant_safety_spec.rb \
+              spec/system/ui/kbd_component_spec.rb

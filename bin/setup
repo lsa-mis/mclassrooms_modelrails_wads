@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 require "fileutils"
+require "yaml"
+require "shellwords"
 
 APP_ROOT = File.expand_path("..", __dir__)
 
@@ -15,13 +17,57 @@ FileUtils.chdir APP_ROOT do
   puts "== Installing dependencies =="
   system("bundle check") || system!("bundle install")
 
-  # Fork seam: downstream forks have an `upstream` remote (see /docs/developer/forking).
-  # Activate the merge=ours driver for fork-owned paths there. Deliberately
-  # NOT set in the template repo itself — it would silently mis-resolve the
-  # template's own PR merges that touch fork-owned paths.
-  if system("git remote get-url upstream", out: File::NULL, err: File::NULL)
+  # Fork seam: per-clone setup for downstream forks (see /docs/developer/forking).
+  # bin/fork records the decisions once in .fork.yml; this applies them in every
+  # clone. A teammate cloning an already-forked repo runs only bin/setup — they
+  # have no upstream remote and no .env yet — so this is where they get both.
+  #
+  # The merge=ours driver is deliberately NOT set in the template repo itself:
+  # it would silently mis-resolve the template's own PR merges that touch
+  # fork-owned paths.
+  # Committed and hand-editable, so read defensively: a bad file must not take
+  # down every teammate's setup with a Psych backtrace.
+  fork_config =
+    begin
+      File.exist?(".fork.yml") ? (YAML.safe_load_file(".fork.yml") || {}) : {}
+    rescue Psych::Exception => e
+      abort "bin/setup: .fork.yml is not valid YAML (#{e.message.lines.first.to_s.strip})"
+    end
+
+  if fork_config.any? || system("git remote get-url upstream", out: File::NULL, err: File::NULL)
+    puts "\n== Fork detected — applying per-clone setup =="
+
+    template_url = fork_config["template_url"]
+    unless template_url.nil? || system("git remote get-url upstream", out: File::NULL, err: File::NULL)
+      system! "git remote add upstream #{template_url.shellescape}"
+      system! "git remote set-url --push upstream DISABLED"
+      puts "   upstream remote added (push disabled)"
+    end
+
     system! "git config merge.ours.driver true"
-    puts "\n== Fork detected (upstream remote) — merge=ours driver activated =="
+
+    # Validated here, not just where it was written: .fork.yml is committed and
+    # hand-editable, so an unchecked value would propagate a typo into every
+    # teammate's .env and surface as an initializer raise at boot with nothing
+    # pointing back to this file. Kept in step with config/initializers/tenancy.rb.
+    valid_presets = %w[personal shared none]
+    preset = fork_config["preset"]
+    if preset && !valid_presets.include?(preset)
+      abort "bin/setup: .fork.yml records an unknown preset #{preset.inspect} " \
+            "(expected #{valid_presets.join('/')}). The app would refuse to boot."
+    end
+
+    # Only when unset: a developer's local override of the tenancy mode must
+    # survive re-running setup.
+    env = File.exist?(".env") ? File.read(".env") : ""
+    if preset && !env.match?(/^WORKSPACE_ON_SIGNUP=/)
+      lines = [ "WORKSPACE_ON_SIGNUP=#{preset}" ]
+      # config/initializers/tenancy.rb raises at boot without the slug.
+      lines << "TENANCY_SHARED_WORKSPACE_SLUG=#{fork_config['name']}" if preset == "shared"
+      env += "\n" unless env.empty? || env.end_with?("\n")
+      File.write(".env", env + lines.join("\n") + "\n")
+      puts "   .env ← #{lines.join(', ')} (from .fork.yml)"
+    end
   end
 
   # puts "\n== Copying sample files =="
@@ -42,6 +88,14 @@ FileUtils.chdir APP_ROOT do
   # Clobber here so a fresh `bin/setup` always heals that state.
   puts "\n== Clearing precompiled assets =="
   system! "bin/rails assets:clobber"
+
+  # assets:clobber is enhanced by tailwindcss-rails to also run
+  # tailwindcss:clobber, so the step above deletes app/assets/builds/
+  # tailwind.css. `bin/dev` would rebuild it, but --skip-server never gets
+  # there — and system specs render unstyled without it, failing every
+  # axe-contrast and layout-dependent example at once.
+  puts "\n== Building Tailwind CSS =="
+  system! "bin/rails tailwindcss:build"
 
   unless ARGV.include?("--skip-server")
     puts "\n== Starting development server =="

@@ -22,10 +22,8 @@ end
 
 RSpec.configure do |config|
   unless ENV["TEST_ENV_NUMBER"].nil?
-    # add_formatter replaces RSpec's implicit default formatter, so restore
-    # progress output first (parallel_tests reads worker summaries from it)
-    # unless the CLI already chose a formatter.
-    config.add_formatter :progress if config.formatters.empty?
+    # bin/parallel-rspec passes `-f progress` explicitly, so this only adds
+    # its own non-default formatter (#496).
     config.add_formatter ParallelExampleCountFormatter
   end
 end

@@ -23,7 +23,15 @@ config/routes/app.rb merge=ours
 config/markdowndocs_categories.local.yml merge=ours
 app/assets/tailwind/tokens/_brand.css merge=ours
 README.md merge=ours
-# User docs the fork rewrote for the MiClassrooms product (SSO-first auth, the
+# Fork provenance (bin/fork). Upstream ships no .fork.yml today, so merges are
+# clean — this is insurance for the day it ships an example and every fork would
+# otherwise conflict on its own provenance. bin/fork itself stays template-owned:
+# forks shouldn't edit it, and freezing it would pin them to the version they
+# forked at, bugs included.
+.fork.yml merge=ours
+
+# --- MClassrooms fork additions (keep last; upstream appends above this) ---
+# User docs the fork rewrote for the MClassrooms product (SSO-first auth, the
 # single shared directory, admin-only dashboard). They describe fork behavior,
 # not the template's multi-tenant/passwordless model, so the fork owns them.
 # (Documented in app/docs/developer/forking.md, enforced by template_invariants_spec.)

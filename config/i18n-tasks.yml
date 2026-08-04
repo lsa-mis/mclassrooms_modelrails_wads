@@ -47,6 +47,12 @@ search:
 ignore_unused:
   # Resolved dynamically at runtime, so no static call site exists.
   - notification_mailer.digest.subject.*
+  # activity_logs/_activity_log.html.erb builds the key from the record:
+  #   t("activity.actions.#{activity_log.action}", default: action.humanize)
+  # The `default:` is what makes this dangerous rather than merely invisible —
+  # delete these and every feed entry silently degrades to a humanized column
+  # value with nothing raising and the suite still green (#522).
+  - activity.actions.*
   # Consumed by Rails/Active Model rather than an explicit t() call. Caveat
   # worth knowing: this also means a key left behind by a deleted validation
   # will never be reported. Removing a validation means removing its key by

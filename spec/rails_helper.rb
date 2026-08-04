@@ -1,4 +1,5 @@
 require "simplecov"
+require_relative "coverage_config"
 # SKIP_COVERAGE: bin/parallel-rspec's dry-run enumeration executes nothing, so
 # coverage instrumentation would only add boot time and a bogus sub-minimum
 # result.
@@ -11,12 +12,12 @@ unless ENV["SKIP_COVERAGE"]
       # single-process runs below. SimpleFormatter: workers skip HTML output so
       # concurrent report writes can't race; collate produces the final HTML.
       command_name "rspec#{ENV['TEST_ENV_NUMBER']}"
-      merge_timeout 3600
+      merge_timeout CoverageConfig::MERGE_TIMEOUT
       formatter SimpleCov::Formatter::SimpleFormatter
       minimum_coverage 0
     else
       command_name "rspec"
-      minimum_coverage 40 # keep in sync with bin/parallel-rspec MINIMUM_COVERAGE
+      minimum_coverage CoverageConfig::MINIMUM
     end
   end
 end

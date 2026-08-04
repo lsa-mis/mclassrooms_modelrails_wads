@@ -12,11 +12,8 @@ require "parallel_tests/rspec/runtime_logger"
 
 RSpec.configure do |config|
   unless ENV["TEST_ENV_NUMBER"].nil?
-    # add_formatter replaces RSpec's implicit default formatter, so ensure the
-    # progress formatter survives (parallel_tests parses worker progress output)
-    # before adding the non-default runtime logger. Independent of support-file
-    # load order — harmless if progress was already restored elsewhere.
-    config.add_formatter :progress if config.formatters.empty?
+    # bin/parallel-rspec passes `-f progress` explicitly, so this only adds
+    # its own non-default formatter (#496).
     config.add_formatter ParallelTests::RSpec::RuntimeLogger,
                          Rails.root.join("tmp/parallel_runtime_rspec.log").to_s
   end
