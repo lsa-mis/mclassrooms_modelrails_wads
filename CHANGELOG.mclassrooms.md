@@ -176,6 +176,17 @@ accumulates here too, newest first.
   assumed `valid?` was false but never forced it, so a developer with real `TDX_*` values
   set locally had dotenv leak them into the test env and the suite attempted a real HTTP
   call. Both paths now stub explicitly and are deterministic either way. (#57)
+- **Two fork deviations recorded against the template's new gates**, both arriving with the
+  upstream sync. `flash_messages_are_asserted_spec` requires every controller flash to be
+  asserted by a spec, not merely redirected past; twelve fork-only admin flashes
+  (`characteristic_display_rules`, `sync_scope_rules`, `unit_display_names`,
+  `editor_assignments`, announcements) sit on its burn-down list because three of those
+  controllers have no request spec at all — tracked as its own work. And
+  `template_invariants_spec`'s "bin/fork's rename targets still exist" example is skipped
+  here: it asserts the template still contains the `ModelRails` /
+  `support@modelrails.dev` tokens that #61 deliberately removed from two `merge=ours`
+  files, so it is a true invariant upstream and an impossible one downstream. The block's
+  preset-parity examples stay active. (#69)
 
 ### Accessibility
 
