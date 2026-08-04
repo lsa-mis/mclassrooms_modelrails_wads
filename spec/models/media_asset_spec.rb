@@ -112,5 +112,24 @@ RSpec.describe MediaAsset do
 
       expect(room.gallery_ordered).to eq([ front, rack, unclassified ])
     end
+
+    # Regression for a hazard the reviewer caught: an unsaved row (id: nil)
+    # tying a PERSISTED row on [subject_rank, position] used to blow up
+    # sort_by with ArgumentError ("comparison of Array with Array failed"),
+    # because `nil <=> Integer` is nil. `position` has no uniqueness
+    # constraint, so this tie is ordinary, not exotic — Room#gallery_ordered
+    # must fall back the unsaved row's id to Infinity so it sorts last
+    # instead of raising.
+    it "does not raise when an unsaved asset ties a persisted one on [subject, position]" do
+      persisted = create(:media_asset, owner: room, workspace: workspace, position: 3, subject: "rack")
+      unsaved   = build(:media_asset, owner: room, workspace: workspace, position: 3, subject: "rack")
+      # Stub rather than `room.gallery << unsaved`: appending to a has_many
+      # collection on a persisted owner autosaves the child, which would
+      # give `unsaved` an id and defeat the point of this test.
+      allow(room).to receive(:gallery).and_return([ persisted, unsaved ])
+
+      expect { room.gallery_ordered }.not_to raise_error
+      expect(room.gallery_ordered).to eq([ persisted, unsaved ])
+    end
   end
 end
