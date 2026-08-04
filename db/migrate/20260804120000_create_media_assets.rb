@@ -10,7 +10,7 @@ class CreateMediaAssets < ActiveRecord::Migration[8.1]
 
     orphans = select_value(<<~SQL).to_i
       SELECT COUNT(*) FROM active_storage_attachments
-      WHERE record_type IN ('RoomGalleryImage') OR (record_type = 'Room' AND name = 'photo')
+      WHERE record_type = 'RoomGalleryImage' OR (record_type = 'Room' AND name = 'photo')
     SQL
     raise "#{orphans} attachment rows would be orphaned; purge them first" unless orphans.zero?
 
@@ -58,8 +58,10 @@ class CreateMediaAssets < ActiveRecord::Migration[8.1]
       t.timestamps
     end
     add_index :room_gallery_images, [ :room_id, :position ]
+    add_index :room_gallery_images, :room_id
     add_index :room_gallery_images, :workspace_id
     add_foreign_key :room_gallery_images, :rooms
+    add_foreign_key :room_gallery_images, :workspaces
 
     drop_table :media_assets
   end
