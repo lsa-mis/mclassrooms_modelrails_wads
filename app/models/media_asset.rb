@@ -31,8 +31,8 @@ class MediaAsset < ApplicationRecord
   validate :owner_must_share_workspace
 
   # Ranking by subject happens in Ruby over the preloaded collection — see
-  # Room#gallery_ordered. A SQL CASE would re-query and defeat the eager load
-  # (the reason lib/bullet_safelists.rb carries a gallery entry at all).
+  # Room#gallery_ordered (Task 7). A SQL CASE would re-query and defeat the
+  # eager load (the reason lib/bullet_safelists.rb carries a gallery entry at all).
   scope :ordered, -> { order(:position, :id) }
 
   describable :image, derived_alt: ->(rec) { rec.derived_alt }

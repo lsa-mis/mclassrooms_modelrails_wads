@@ -44,6 +44,18 @@ RSpec.describe Room, type: :model do
     it "does not require a floor, campus, or unit" do
       expect(build(:room, floor: nil, campus: nil, unit: nil)).to be_valid
     end
+
+    it "owns its stills through #gallery" do
+      room = create(:room)
+      asset = create(:media_asset, owner: room, workspace: room.workspace)
+
+      expect(room.gallery).to include(asset)
+    end
+
+    it "no longer has a photo slot" do
+      expect(Room.new).not_to respond_to(:photo)
+      expect(Room.describable_slots.keys).to match_array(%i[panorama seating_chart])
+    end
   end
 
   describe ".classroom (D8)" do
