@@ -98,30 +98,13 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     "workspaces.projects.resources.update.success",
     "workspaces.projects.update.success",
     "workspaces.settings.update.success",
-    "workspaces.update.success",
+    "workspaces.update.success"
 
-    # --- MClassrooms fork additions (keep last; upstream burns down above) ---
-    # Fork-only admin controllers, none of whose flashes are asserted today.
-    # Three of the five (characteristic_display_rules, sync_scope_rules,
-    # unit_display_names) have no request spec at all, so closing these means
-    # writing specs rather than adding a line to one — tracked as its own work,
-    # not folded into an upstream sync.
-    #
-    # This block is deliberately at the END of the array: upstream's own
-    # burn-down edits land alphabetically mid-array, so they keep merging
-    # cleanly instead of colliding with the fork's entries on every sync.
-    "admin.announcements.new.no_unfilled_slots",
-    "admin.characteristic_display_rules.create.success",
-    "admin.characteristic_display_rules.destroy.success",
-    "admin.characteristic_display_rules.update.success",
-    "admin.editor_assignments.create.success",
-    "admin.editor_assignments.destroy.success",
-    "admin.sync_scope_rules.create.success",
-    "admin.sync_scope_rules.destroy.success",
-    "admin.sync_scope_rules.update.success",
-    "admin.unit_display_names.create.success",
-    "admin.unit_display_names.destroy.success",
-    "admin.unit_display_names.update.success"
+    # No MClassrooms fork entries. The twelve admin flashes parked here when
+    # this gate arrived are all asserted now — see spec/requests/admin/. If a
+    # fork block is ever needed again, put it at the END of the array:
+    # upstream's own burn-down edits land alphabetically mid-array, so a
+    # trailing block keeps merging cleanly instead of colliding every sync.
   ].freeze
 
   def locale_values
