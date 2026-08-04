@@ -2,7 +2,7 @@ require "rails_helper"
 
 # MiClassrooms Phase 4 Task 5 (Brief §5.3): full system-spec coverage for the
 # room detail page — header, characteristic chips, contact fallback, notes,
-# the media suite (photo lightbox, gallery, panorama, seating chart, floor
+# the media suite (gallery lightbox, panorama, seating chart, floor
 # plan), the share confirmation, and the axe-AAA both-themes sweep (the
 # definitive a11y gate for the whole page, media included). Mirrors
 # spec/system/find_a_room_spec.rb's tenancy setup: shared-posture stub +
@@ -72,15 +72,13 @@ RSpec.describe "Room show", type: :system do
   # just the "nothing attached" fallback). `room.jpg`/`seating_chart.pdf` are
   # dedicated fixtures (marcel-identified as image/jpeg and application/pdf
   # respectively); the gallery reuses the shared avatar.png fixture via the
-  # :room_gallery_image factory.
+  # :media_asset factory.
   before do
-    room.photo.attach(io: file_fixture("room.jpg").open,
-                       filename: "MAS1200.jpg", content_type: "image/jpeg")
     room.panorama.attach(io: file_fixture("room.jpg").open,
                           filename: "MAS1200-360.jpg", content_type: "image/jpeg")
     room.seating_chart.attach(io: file_fixture("seating_chart.pdf").open,
                                filename: "MAS1200-seating.pdf", content_type: "application/pdf")
-    create_list(:room_gallery_image, 2, room: room, workspace: workspace)
+    create_list(:media_asset, 2, owner: room, workspace: workspace)
   end
 
   before { sign_in_via_form(user) }
@@ -191,13 +189,20 @@ RSpec.describe "Room show", type: :system do
     expect(booted_hfov).to be_within(0.01).of(Panorama::Rectilinear::HFOV_DEG)
 
     # Redesign v4: photos are the stage's second tab — switching panes hides
-    # (never removes) the panorama panel, per the WebGL-survival rule.
+    # (never removes) the panorama panel, per the WebGL-survival rule. The
+    # pane is now UI::Gallery end to end (no separate "main photo" hero), so
+    # the lightbox proof goes through a gallery trigger.
     click_button I18n.t("rooms.show.media_tabs.photos")
-    find("[data-testid='room-photo-thumb']").click
-    expect(page).to have_css("dialog[role='dialog'] img")
-    send_keys(:escape)
-    expect(page).to have_no_css("dialog[role='dialog']")
-    expect(page.evaluate_script("document.activeElement.dataset.testid")).to eq("room-photo-thumb")
+    # `data-test='gallery'` is a LOOKBOOK-PREVIEW hook, not something
+    # UI::GalleryComponent emits — on a real page the grid is identified by
+    # the Stimulus controllers it mounts.
+    gallery_trigger = find("[data-controller~='gallery'] button", match: :first)
+    gallery_trigger.click
+    expect(page).to have_css("dialog[open] img")
+    cdp_press("Escape")
+    expect(page).to have_no_css("dialog[open]")
+    restored_label = page.evaluate_script("document.activeElement.getAttribute('aria-label')")
+    expect(restored_label).to eq(gallery_trigger["aria-label"])
 
     # Floor-plan link renders (the room has a floor) but is NOT clicked —
     # RoomsController#floor_plan ships in Task 6, so the route 500s until then.

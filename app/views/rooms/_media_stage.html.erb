@@ -1,4 +1,4 @@
-<%# locals: (room:, presenter:, gallery_images:, has_pano:, has_photos:) %>
+<%# locals: (room:, presenter:, gallery:, has_pano:, has_photos:) %>
 <%# Redesign v4 (2026-07 sprint): ONE media stage. When both a panorama and
     photos exist, UI::Tabs switches them — its panels are `hidden`, never
     removed, which is exactly the WebGL survival rule from the panel review
@@ -15,13 +15,13 @@
         <%= render "rooms/pano_pane", room: room %>
       <% end %>
       <% tabs.with_tab(title: t("rooms.show.media_tabs.photos")) do %>
-        <%= render "rooms/photos_pane", room: room, gallery_images: gallery_images %>
+        <%= render "rooms/photos_pane", room: room, gallery: gallery %>
       <% end %>
     <% end %>
   <% elsif has_pano %>
     <%= render "rooms/pano_pane", room: room %>
   <% else %>
-    <%= render "rooms/photos_pane", room: room, gallery_images: gallery_images %>
+    <%= render "rooms/photos_pane", room: room, gallery: gallery %>
   <% end %>
 
   <%# Identity + capacity. On a phone the translucent overlay swallowed ~2/3 of

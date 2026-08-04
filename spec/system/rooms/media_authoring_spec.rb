@@ -82,10 +82,9 @@ RSpec.describe "Authoring room media metadata", type: :system do
   it "has no accessibility violations on the media edit form, in both themes" do
     axe_options = { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } }
     room = create(:room, :with_panorama, building: building, workspace: workspace)
-    room.photo.attach(io: file_fixture("room.jpg").open, filename: "photo.jpg", content_type: "image/jpeg")
     room.seating_chart.attach(io: file_fixture("seating_chart.pdf").open,
                                filename: "seating.pdf", content_type: "application/pdf")
-    create(:room_gallery_image, room: room, workspace: workspace, position: 0)
+    create(:media_asset, owner: room, workspace: workspace, position: 1)
 
     visit edit_room_path(room)
 

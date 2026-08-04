@@ -13,7 +13,7 @@ class RoomsController < ApplicationController
   # merely a hidden-UI convenience — RoomPolicy#update? now admits a unit
   # editor (Task 3), but RoomPolicy#manage_media? stays admin-only, so strong
   # params themselves must branch. Without this, a unit editor crafting
-  # `PATCH /rooms/:id` with a `photo` (or `gallery_images_attributes`, or any
+  # `PATCH /rooms/:id` with a `panorama` (or `gallery_attributes`, or any
   # `remove_*` purge writer) directly in the request body — bypassing the
   # edit view entirely — would have it silently assigned and saved, since
   # `authorize @room` alone only gates REACHING #update, not which attributes
@@ -26,11 +26,11 @@ class RoomsController < ApplicationController
 
   # Kept as its own constant (not folded into `room_params` directly) so the
   # curated/media split reads as a deliberate security boundary, not an
-  # incidental grouping. `gallery_images_attributes` uses the DOUBLE-array
+  # incidental grouping. `gallery_attributes` uses the DOUBLE-array
   # `[[ ... ]]` shape `params.expect` requires for a Hash-of-hashes nested
   # collection (what `fields_for`'s index-keyed submission actually is) — the
   # single-array `permit`-style shape silently returns an EMPTY
-  # gallery_images_attributes under `expect` (verified empirically against
+  # gallery_attributes under `expect` (verified empirically against
   # this app's Rails version; `permit` tolerates either shape, `expect` does
   # not). Getting this wrong would silently break every admin gallery
   # add/reorder/destroy while looking correct in a review of the params list.
@@ -46,12 +46,11 @@ class RoomsController < ApplicationController
   # media inputs" spec) — so permitting these scalars only when manage_media?
   # keeps the strong-params boundary and the rendered UI in agreement.
   MEDIA_PARAMS = [
-    :photo, :panorama, :seating_chart,
-    :remove_photo, :remove_panorama, :remove_seating_chart,
-    :photo_alt, :photo_description, :photo_derived_ok,
+    :panorama, :seating_chart,
+    :remove_panorama, :remove_seating_chart,
     :panorama_alt, :panorama_description, :panorama_derived_ok,
     :seating_chart_alt, :seating_chart_description, :seating_chart_derived_ok,
-    { gallery_images_attributes: [ [ :id, :image, :position, :_destroy,
+    { gallery_attributes: [ [ :id, :image, :position, :_destroy,
                                      :image_alt, :image_description, :image_derived_ok ] ] }
   ].freeze
 
@@ -157,7 +156,7 @@ class RoomsController < ApplicationController
   # the audit trail.
   def edit
     authorize @room
-    build_blank_gallery_images
+    build_blank_gallery
   end
 
   # Phase 5 Task 6 (Brief §14.1) retrofit: routes curated-field changes and
@@ -168,11 +167,11 @@ class RoomsController < ApplicationController
   # operation happened even though attachment ops still produce an empty
   # diff (unchanged from phase 4). ACHIEVED GRANULARITY: curated-vs-media
   # split, the brief's documented "acceptable floor" — NOT full per-slot
-  # (room.photo_attached / room.gallery_image_added / etc.). Per-slot would
+  # (room.panorama_attached / room.gallery_asset_added / etc.). Per-slot would
   # need each attach/purge/gallery-row change to become its OWN
   # Curation::Apply block-form call, which conflicts with how gallery rows
-  # are assigned here: `gallery_images_attributes=` mutates several
-  # RoomGalleryImage rows (add/reorder/destroy) in one
+  # are assigned here: `gallery_attributes=` mutates several
+  # MediaAsset rows (add/reorder/destroy) in one
   # `accepts_nested_attributes_for` cascade that only resolves — including
   # its own validations — inside the PARENT Room's single `save!`. Splitting
   # that cascade into independent per-row saves would mean either
@@ -206,7 +205,7 @@ class RoomsController < ApplicationController
     # Guard BEFORE either Curation::Apply call ever sees `attrs`: Rails' own
     # `assign_nested_attributes_for_collection_association` resolves each
     # row's `:id` against `association.scope.where(id: ...)` (i.e.
-    # `@room.gallery_images` scoped to THIS room) — a row whose `:id`
+    # `@room.gallery` scoped to THIS room) — a row whose `:id`
     # belongs to another room's gallery image, or one destroyed between
     # this page's load and this submit, finds nothing there and calls
     # `raise_nested_attributes_record_not_found!`, raising
@@ -219,11 +218,11 @@ class RoomsController < ApplicationController
     # `request.referer || root_path` with a generic "not found" alert —
     # bouncing an otherwise-valid admin edit off the edit page entirely,
     # not the documented graceful 422 re-render. Checking every submitted id
-    # against `@room.gallery_image_ids` up front means a bad id never
+    # against `@room.gallery_ids` up front means a bad id never
     # reaches `assign_attributes` at all. Mirrors BuildingsController#update's
     # identical `stale_floor_ids?` guard for floors_attributes.
     if stale_gallery_ids?(attrs)
-      build_blank_gallery_images
+      build_blank_gallery
       flash.now[:alert] = t("rooms.edit.stale_gallery")
       render :edit, status: :unprocessable_entity
       return
@@ -231,17 +230,17 @@ class RoomsController < ApplicationController
 
     # Preloaded BEFORE either Curation::Apply call, not just before a failure
     # re-render: a gallery reorder/destroy re-validates every SURVIVING
-    # RoomGalleryImage's `attached: true` during the autosave cascade inside
+    # MediaAsset's `attached: true` during the autosave cascade inside
     # the media Curation::Apply's `@record.save!` below, and @room came from
-    # set_room's plain `find` (no gallery_images preload) — Bullet raises on
+    # set_room's plain `find` (no gallery preload) — Bullet raises on
     # that N+1 regardless of whether the request ever reaches a render. Rows
     # being `_destroy`d are excluded from the preload (Rails skips
     # validations on records marked for destruction, so preloading their
     # attachment would itself be an UNUSED eager load — the destroy-only
-    # spec below caught exactly that). Also loads @room.gallery_images into
+    # spec below caught exactly that). Also loads @room.gallery into
     # memory, which media_change? below relies on to detect a genuine
     # position change per row.
-    preload_gallery_image_attachments(skip_ids: destroyed_gallery_image_ids(attrs))
+    preload_gallery_image_attachments(skip_ids: destroyed_gallery_ids(attrs))
 
     curated_keys  = CURATED_PARAMS.map(&:to_s)
     curated_attrs = attrs.slice(*curated_keys)
@@ -262,7 +261,7 @@ class RoomsController < ApplicationController
       # (result.payload[:record] is the same in-memory @room Curation::Apply
       # attempted to save!, so re-rendering :edit shows exactly what failed).
       @room = failed_result.payload[:record] || @room
-      build_blank_gallery_images
+      build_blank_gallery
       render :edit, status: :unprocessable_entity
     else
       redirect_to room_path(@room), notice: t("rooms.edit.success")
@@ -299,20 +298,22 @@ class RoomsController < ApplicationController
   private
 
   # Blank "add a photo" rows for the gallery card, up to the D9 five-image
-  # cap (app/models/room_gallery_image.rb) — `.build` appends to the
+  # cap (app/models/media_asset.rb) — `.build` appends to the
   # association's in-memory target, so the view's single `fields_for
-  # :gallery_images` loop picks up both persisted rows and these unsaved ones
+  # :gallery` loop picks up both persisted rows and these unsaved ones
   # (branching per-row on `persisted?`) without a second query. `.size` and
   # `.map` below read that same target, counting any rows a failed #update
   # already re-built via nested attributes (so a re-render never double-adds
   # blanks past the cap). Preloading runs AFTER build (harmless either order —
   # it only touches already-persisted rows) so both #edit's first render and
   # a failed #update's re-render get it.
-  def build_blank_gallery_images
-    remaining = 5 - @room.gallery_images.size
+  def build_blank_gallery
+    remaining = 5 - @room.gallery.size
     if remaining.positive?
-      next_position = (@room.gallery_images.map(&:position).compact.max || -1) + 1
-      remaining.times { |i| @room.gallery_images.build(position: next_position + i) }
+      # `|| 0` (not `|| -1`): MediaAsset validates `position >= 1`, so an
+      # empty gallery's first blank row has to start at 1, not 0.
+      next_position = (@room.gallery.map(&:position).compact.max || 0) + 1
+      remaining.times { |i| @room.gallery.build(position: next_position + i) }
     end
 
     preload_gallery_image_attachments
@@ -361,15 +362,15 @@ class RoomsController < ApplicationController
   def media_change?(media_attrs)
     attrs = media_attrs.with_indifferent_access
 
-    return true if %w[photo panorama seating_chart].any? { |key| attrs[key].present? }
-    return true if %w[remove_photo remove_panorama remove_seating_chart]
+    return true if %w[panorama seating_chart].any? { |key| attrs[key].present? }
+    return true if %w[remove_panorama remove_seating_chart]
                      .any? { |key| ActiveModel::Type::Boolean.new.cast(attrs[key]) }
     return true if media_metadata_changed?(attrs)
 
     submitted_gallery_rows(attrs).any? { |row| gallery_row_changed?(row) }
   end
 
-  # Task 4 (image metadata): unlike photo/panorama/seating_chart themselves,
+  # Task 4 (image metadata): unlike panorama/seating_chart themselves,
   # the *_alt/*_description/*_derived_ok fields are ordinary columns that
   # rooms/edit/_media_sections renders and resubmits UNCONDITIONALLY on
   # every request (not just when the slot has an attachment) — so a
@@ -381,10 +382,10 @@ class RoomsController < ApplicationController
   # `.to_s` on both sides normalizes nil vs. "" (a never-authored column vs.
   # an unfilled text field) so neither reads as a change against the other.
   METADATA_TEXT_KEYS = %w[
-    photo_alt photo_description panorama_alt panorama_description
+    panorama_alt panorama_description
     seating_chart_alt seating_chart_description
   ].freeze
-  METADATA_BOOL_KEYS = %w[photo_derived_ok panorama_derived_ok seating_chart_derived_ok].freeze
+  METADATA_BOOL_KEYS = %w[panorama_derived_ok seating_chart_derived_ok].freeze
 
   def media_metadata_changed?(attrs)
     METADATA_TEXT_KEYS.any? { |key| attrs.key?(key) && attrs[key].to_s != @room.public_send(key).to_s } ||
@@ -401,14 +402,14 @@ class RoomsController < ApplicationController
   # differs from its current one (the position field is always resubmitted
   # by the form for every persisted row, even an untouched one, so presence
   # alone would false-positive on every request that merely renders the
-  # gallery card). Relies on @room.gallery_images already being loaded
+  # gallery card). Relies on @room.gallery already being loaded
   # in-memory (preload_gallery_image_attachments, called before this in
   # #update) so this never issues its own query.
   def gallery_row_changed?(row)
     return true if ActiveModel::Type::Boolean.new.cast(row[:_destroy])
     return row[:image].present? if row[:id].blank?
 
-    existing = @room.gallery_images.detect { |image| image.id.to_s == row[:id].to_s }
+    existing = @room.gallery.detect { |image| image.id.to_s == row[:id].to_s }
     return false if existing.blank?
 
     return true if row[:position].present? && existing.position.to_s != row[:position].to_s
@@ -425,12 +426,12 @@ class RoomsController < ApplicationController
   end
 
   # The view renders every persisted gallery image's `image.variant(...)`
-  # (thumbnail) and RoomGalleryImage's own `validates :image, attached: true`
+  # (thumbnail) and MediaAsset's own `validates :image, attached: true`
   # re-checks `image.attached?` per row on save — both N+1 without this.
   # `ActiveRecord::Associations::Preloader` (not `.includes`) is the one API
   # that can preload ONTO already-loaded, in-memory records: `@room` was
-  # fetched via a plain `find` in `set_room`, and `build_blank_gallery_images`
-  # may have already appended unsaved rows to `@room.gallery_images`' target —
+  # fetched via a plain `find` in `set_room`, and `build_blank_gallery`
+  # may have already appended unsaved rows to `@room.gallery`'s target —
   # re-querying via `.includes` would return a SEPARATE set of instances,
   # losing those unsaved rows. `select(&:persisted?)` skips new/blank rows
   # (they have no attachment to preload). Mirrors rooms/_media.html.erb's
@@ -445,7 +446,7 @@ class RoomsController < ApplicationController
   # destroy-only spec). Not used before a render (#edit, or #update's failure
   # re-render still wants every row's thumbnail, destroy-marked or not).
   def preload_gallery_image_attachments(skip_ids: [])
-    persisted = @room.gallery_images.select { |image| image.persisted? && skip_ids.exclude?(image.id.to_s) }
+    persisted = @room.gallery.select { |image| image.persisted? && skip_ids.exclude?(image.id.to_s) }
     return if persisted.empty?
 
     ActiveRecord::Associations::Preloader.new(
@@ -455,29 +456,29 @@ class RoomsController < ApplicationController
 
   # Ids of gallery images the submitted params mark for destruction this
   # request — see preload_gallery_image_attachments' `skip_ids:` above.
-  def destroyed_gallery_image_ids(attrs)
+  def destroyed_gallery_ids(attrs)
     submitted_gallery_rows(attrs)
       .select { |row| ActiveModel::Type::Boolean.new.cast(row[:_destroy]) }
       .map { |row| row[:id].to_s }
       .compact
   end
 
-  # True when `gallery_images_attributes` names an `:id` that is NOT one of
+  # True when `gallery_attributes` names an `:id` that is NOT one of
   # `@room`'s own gallery images — a foreign room's gallery image id, or one
   # destroyed between this page's load and this submit. Compared as strings
-  # (`gallery_image_ids` are Integers, submitted ids are form strings) so
+  # (`gallery_ids` are Integers, submitted ids are form strings) so
   # `"7" == 7` doesn't silently fail the `include?` check. Mirrors
   # BuildingsController#stale_floor_ids?.
   def stale_gallery_ids?(attrs)
     submitted_ids = submitted_gallery_rows(attrs).map { |row| row[:id].to_s }.compact_blank
     return false if submitted_ids.empty?
 
-    known_ids = @room.gallery_image_ids.map(&:to_s)
+    known_ids = @room.gallery_ids.map(&:to_s)
     submitted_ids.any? { |id| known_ids.exclude?(id) }
   end
 
-  # Shared row-extraction for destroyed_gallery_image_ids and
-  # stale_gallery_ids? — `room_params.to_h`'s nested gallery_images_attributes
+  # Shared row-extraction for destroyed_gallery_ids and
+  # stale_gallery_ids? — `room_params.to_h`'s nested gallery_attributes
   # hash and its per-row hashes are both plain Hash by the time they reach
   # here, and Rails' own `fields_for` always submits this as a hash keyed by
   # index (never a bare array), but the defensive `Array(...)`/`.is_a?(Hash)`
@@ -485,7 +486,7 @@ class RoomsController < ApplicationController
   # either shape. Each returned row is already `.with_indifferent_access`'d
   # so callers can read `row[:id]`/`row[:_destroy]` directly.
   def submitted_gallery_rows(attrs)
-    rows = attrs.with_indifferent_access[:gallery_images_attributes]
+    rows = attrs.with_indifferent_access[:gallery_attributes]
     return [] if rows.blank?
 
     rows = rows.is_a?(Hash) ? rows.values : Array(rows)
@@ -529,14 +530,14 @@ class RoomsController < ApplicationController
   # CURATED_PARAMS/MEDIA_PARAMS above) — CURATED_PARAMS is always permitted
   # (RoomPolicy#update? admits both an admin and the room's unit editor),
   # MEDIA_PARAMS only when `policy(@room).manage_media?` (admin-only). An
-  # editor's submitted photo/panorama/seating_chart/remove_*/
-  # gallery_images_attributes are dropped HERE, before Curation::Apply (or
+  # editor's submitted panorama/seating_chart/remove_*/
+  # gallery_attributes are dropped HERE, before Curation::Apply (or
   # anything else) ever sees them — not merely hidden from the edit view.
   # `params.expect` (Rails 8) over `params.require(...).permit(...)`: same
   # require-then-permit contract (raises ActionController::ParameterMissing
   # if `:room` is absent, silently drops any unlisted key), but its
   # shape-checked nested syntax is what MEDIA_PARAMS' double-array
-  # gallery_images_attributes entry above is written for.
+  # gallery_attributes entry above is written for.
   def room_params
     permitted = CURATED_PARAMS.dup
     permitted.concat(MEDIA_PARAMS) if policy(@room).manage_media?
@@ -556,7 +557,7 @@ class RoomsController < ApplicationController
   # `active_storage_attachments` (db/schema.rb) has only `created_at`, not
   # `updated_at`; attachment rows are immutable (attach/detach creates or
   # destroys a row rather than updating one in place), so `created_at` is not
-  # just the fix but the semantically correct column: a newly-attached photo
+  # just the fix but the semantically correct column: a newly-attached panorama
   # or gallery image is a brand-new row whose `created_at` bumps the max.
   def show_cache_key
     # @saved_id is per-user save state rendered on the page — it must bust
@@ -573,11 +574,15 @@ class RoomsController < ApplicationController
   end
 
   # Every attachment the show page can render: the room's own has_one_attached
-  # trio (photo/panorama/seating_chart — all `record_type: "Room"`) plus each
-  # gallery image's attached `image` (`record_type: "RoomGalleryImage"`).
+  # slots (panorama/flat_panorama/seating_chart — all `record_type: "Room"`)
+  # plus each gallery asset's attached `image`. The gallery half is keyed off
+  # `MediaAsset.name` rather than a string literal deliberately: this query
+  # fails SILENTLY (an empty `.or` branch, a stale ETag, a page that never
+  # revalidates) rather than raising, so a future rename must break the
+  # constant, not quietly stop matching.
   def media_attachments
     ActiveStorage::Attachment.where(record_type: "Room", record_id: @room.id)
-      .or(ActiveStorage::Attachment.where(record_type: "RoomGalleryImage", record_id: @room.gallery_image_ids))
+      .or(ActiveStorage::Attachment.where(record_type: MediaAsset.name, record_id: @room.gallery_ids))
   end
 
   def set_room

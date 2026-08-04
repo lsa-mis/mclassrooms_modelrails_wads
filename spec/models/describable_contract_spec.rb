@@ -16,7 +16,7 @@ RSpec.describe "Describable contract (CI ratchet)" do
   end
 
   it "image-bearing factories default to authored (no new needs_review content)" do
-    %i[building floor room room_gallery_image].each do |fac|
+    %i[building floor room media_asset].each do |fac|
       rec = build(fac)
       model = rec.class
       model.describable_slots.each_key do |slot|

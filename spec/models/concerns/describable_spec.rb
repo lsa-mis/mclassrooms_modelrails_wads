@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Describable do
-  # RoomGalleryImage is the first real consumer (slot :image).
-  subject(:record) { build(:room_gallery_image, image_alt: nil, image_derived_ok: false) }
+  # MediaAsset is the first real consumer (slot :image).
+  subject(:record) { build(:media_asset, image_alt: nil, image_derived_ok: false) }
 
   describe "#alt_for" do
     it "returns the derived backstop when stored alt is blank" do
@@ -47,8 +47,8 @@ RSpec.describe Describable do
     # descending into nested `describe` blocks, so this top-level example
     # can't rely on the `record` subject in a sibling block having already
     # triggered autoload (and the resulting `describable` registration).
-    RoomGalleryImage
-    expect(Describable.registry.values).to include(RoomGalleryImage)
+    MediaAsset
+    expect(Describable.registry.values).to include(MediaAsset)
   end
 end
 
@@ -63,15 +63,16 @@ RSpec.describe "Describable slot declarations" do
     expect(f.alt_for(:plan)).to be_present
   end
 
-  it "declares all three room slots with non-blank backstops" do
-    r = build(:room, photo_alt: nil, panorama_alt: nil, seating_chart_alt: nil)
-    expect(r.alt_for(:photo)).to be_present
+  # Two, not three: Room's stills moved to Room#gallery (MediaAsset), which
+  # declares its own :image slot — Room has no :photo slot to describe.
+  it "declares both room slots with non-blank backstops" do
+    r = build(:room, panorama_alt: nil, seating_chart_alt: nil)
     expect(r.alt_for(:panorama)).to be_present
     expect(r.alt_for(:seating_chart)).to be_present
   end
 
   it "registers all four image-bearing models" do
     Rails.application.eager_load!
-    expect(Describable.registry.values).to include(Building, Floor, Room, RoomGalleryImage)
+    expect(Describable.registry.values).to include(Building, Floor, Room, MediaAsset)
   end
 end

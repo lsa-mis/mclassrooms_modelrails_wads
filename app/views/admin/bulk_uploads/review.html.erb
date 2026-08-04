@@ -64,7 +64,14 @@
                     <%= ui :badge, t(".slot.#{match.slot}"), variant: :soft, tone: :info %>
                   </td>
                   <td class="px-4 py-3 align-middle">
-                    <% if match.room.public_send(match.slot).attached? %>
+                    <%# `:gallery` is a has_many, not a has_one_attached slot —
+                        `public_send(:gallery)` returns a CollectionProxy with no
+                        #attached?, and nothing is overwritten either way, so it
+                        gets the reassuring "appended" line rather than the
+                        replace warning. %>
+                    <% if match.slot == :gallery %>
+                      <span class="text-sm text-text-muted"><%= t(".will_append") %></span>
+                    <% elsif match.room.public_send(match.slot).attached? %>
                       <div class="flex items-center gap-2">
                         <%= ui :indicator, variant: :warning do %>
                           <%= icon(:exclamation_triangle, size: :sm, class: "text-warning-icon") %>

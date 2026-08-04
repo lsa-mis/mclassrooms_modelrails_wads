@@ -24,9 +24,9 @@
 <li class="relative rounded-lg border border-border dark:border-border-strong p-4 scroll-mt-32
            transition-colors has-[a:hover]:border-border-strong dark:has-[a:hover]:border-interactive">
   <div class="flex flex-wrap items-center gap-4">
-    <% if (thumbnail = room_thumbnail_image(room)) %>
+    <% if (thumbnail = room_card_presenter(room).thumbnail) %>
       <%= ui :image,
-            src: url_for(thumbnail.image.variant(resize_to_fill: [ 96, 96 ])),
+            src: url_for(thumbnail.variant(:card)),
             alt: "",
             class: "size-16 rounded-md object-cover shrink-0" %>
     <% end %>

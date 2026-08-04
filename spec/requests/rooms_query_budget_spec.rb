@@ -98,7 +98,7 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     # queries apiece). Pre-fix, 10 rooms x 5 characteristics drove this into the hundreds.
     expect(aggregate_query_count).to be <= 8
 
-    # Guards the `rules: card_display_rules` memo in RoomsHelper#card_chip_presenter —
+    # Guards the `rules: card_display_rules` memo in RoomsHelper#room_card_presenter —
     # observed at 3 (CharacteristicFilterGroups.filters' own rules build,
     # CharacteristicFilterGroups.labels/glossary's, and ONE request-wide
     # RoomsHelper#card_display_rules resolution shared by all 10 rows). A
