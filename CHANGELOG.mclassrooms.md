@@ -1,10 +1,11 @@
 # MClassrooms Changelog
 
 All notable changes to **MClassrooms** — the University of Michigan classroom
-directory built on the [ModelRails](../CHANGELOG.md) template.
+directory built on the
+[ModelRails](https://github.com/dschmura/modelrails_base) template.
 
 This file tracks the **fork's** product work. Template (ModelRails) changes that
-arrive via upstream sync are recorded in [`CHANGELOG.md`](../CHANGELOG.md); this
+arrive via upstream sync are recorded in [`CHANGELOG.md`](CHANGELOG.md); this
 file has no upstream counterpart, so the two never collide. Format follows
 [Keep a Changelog](https://keepachangelog.com/); PR numbers are this repo
 (`lsa-mis/mclassrooms_modelrails_wads`).
