@@ -12,11 +12,11 @@ class Room < ApplicationRecord
   belongs_to :hidden_by, class_name: "User", optional: true
   has_many :room_characteristics, dependent: :destroy  # satellite tables land in
   has_one :room_contact, dependent: :destroy           # Tasks 6/8/9; associations are
-  has_many :gallery_images, class_name: "RoomGalleryImage", dependent: :destroy, inverse_of: :room # lazy,
+  has_many :gallery, -> { ordered }, as: :owner, class_name: "MediaAsset",
+                     dependent: :destroy, inverse_of: :owner # lazy,
   has_many :availability_blocks, dependent: :destroy   # so the model loads before them
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
-  has_one_attached :photo
   # :poster is now a FALLBACK ONLY — the squashed-equirect strip the pano pane
   # serves for rooms whose flat render has not landed yet (or failed). Generated
   # on demand, not pre-processed: the render below is the primary image, and
@@ -60,15 +60,15 @@ class Room < ApplicationRecord
   # check alone would silently no-op every position/`_destroy` edit on an
   # existing gallery image. `with_indifferent_access` tolerates either string
   # keys (real form submissions) or symbol keys (specs/console calls).
-  accepts_nested_attributes_for :gallery_images, allow_destroy: true,
+  accepts_nested_attributes_for :gallery, allow_destroy: true,
     reject_if: proc { |attributes|
       attrs = attributes.with_indifferent_access
       attrs[:id].blank? && attrs[:image].blank?
     }
 
   validates :rmrecnbr, presence: true, uniqueness: true
-  validates :photo, :panorama, content_type: [ :png, :jpeg, :webp ],
-                    size: { less_than_or_equal_to: 10.megabytes }
+  validates :panorama, content_type: [ :png, :jpeg, :webp ],
+                       size: { less_than_or_equal_to: 10.megabytes }
   validates :seating_chart, content_type: [ :png, :jpeg, :webp, :pdf ],
                     size: { less_than_or_equal_to: 10.megabytes }
 
