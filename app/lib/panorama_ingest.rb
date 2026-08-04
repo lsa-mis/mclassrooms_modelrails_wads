@@ -4,16 +4,21 @@
 # directory of "<rmrecnbr>.jpg" files — the mi_locations export — attached
 # onto the matching rooms' `panorama` slot within ONE workspace.
 #
-# Perceived-speed rule: the pano pane's static poster (the :poster named
-# variant on Room#panorama) is eagerly processed here, at ingest, so the
-# first visitor to a room page gets a ready-made ~1024px webp instead of
-# waiting for vips to chew a multi-MB equirectangular JPEG on-request. The
-# full-size blob itself stays click-to-load behind Pannellum's opt-in button.
+# Rendering: attaching fires the Active Storage attachment callback
+# (config/initializers/flat_panorama_callbacks.rb), which enqueues
+# RenderFlatPanoramaJob — the flat rectilinear view the pano pane serves. Ingest
+# pre-processes nothing itself; there is one render path for bulk ingest, admin
+# replace, and backfill alike.
 #
 # Idempotent and re-runnable: rooms with a panorama already attached are
 # skipped (listed in the result) unless `replace: true`. Per-file failures
-# (corrupt image, validation reject) land in `errors` without stopping the
-# run. `dry_run: true` attaches nothing but reports every list as-if — the
+# (an unreadable file, oversize, or a Room invalid for some unrelated reason)
+# land in `errors` without stopping the run. An undecodable panorama is no
+# longer one of them — that
+# used to surface here via the removed eager `.processed` call; now it's
+# caught later, by RenderFlatPanoramaJob, which stamps a
+# `flat_render_failed_at` tombstone visible via `panoramas:flat_status`.
+# `dry_run: true` attaches nothing but reports every list as-if — the
 # rooms_without_panorama list treats would-be attaches as covered.
 #
 # Result lists (the curation report Dave asked for):
@@ -83,11 +88,11 @@ class PanoramaIngest
       room.panorama.attach(io: io, filename: filename, content_type: "image/jpeg")
     end
     # attach saves via `save` (not save!) — a validation reject (e.g. the
-    # blob sniffs as non-image) fails silently unless surfaced here
+    # Room is invalid for some unrelated reason — content_type is hardcoded
+    # above and spoofing_protection is off, so nothing here sniffs the blob
+    # itself) fails silently unless surfaced here
     unless room.errors.empty? && room.panorama.attached?
       raise IngestFailed, room.errors.full_messages.join("; ").presence || "attachment did not persist"
     end
-
-    room.panorama.variant(:poster).processed
   end
 end

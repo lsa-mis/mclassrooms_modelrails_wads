@@ -44,5 +44,25 @@ FactoryBot.define do
         )
       end
     end
+
+    # A GENUINELY 2:1 source. :with_panorama attaches room.jpg (200x200) — fine
+    # for alt-text specs, geometrically meaningless for the projection, which
+    # rejects anything not equirectangular. Never wrap a :with_panorama room in
+    # perform_enqueued_jobs: the render job will raise NotEquirectangular.
+    trait :with_equirect_panorama do
+      after(:build) do |room|
+        room.panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
+                             filename: "panorama.png", content_type: "image/png")
+      end
+    end
+
+    # The DERIVED attachment, without running vips — for view specs that only
+    # need `flat_panorama.attached?` to be true.
+    trait :with_flat_panorama do
+      after(:build) do |room|
+        room.flat_panorama.attach(io: Rails.root.join("spec/fixtures/files/equirect.png").open,
+                                  filename: "flat.png", content_type: "image/png")
+      end
+    end
   end
 end

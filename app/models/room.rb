@@ -18,12 +18,25 @@ class Room < ApplicationRecord
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
   has_one_attached :photo
-  # :poster is the pano pane's static preview AND the ingest task's eager
-  # pre-processing target (PanoramaIngest) — named here so one definition
-  # serves both and the first visitor never pays the vips transform.
+  # :poster is now a FALLBACK ONLY — the squashed-equirect strip the pano pane
+  # serves for rooms whose flat render has not landed yet (or failed). Generated
+  # on demand, not pre-processed: the render below is the primary image, and
+  # warming a variant we intend to delete would be waste. Removing this
+  # definition is a follow-up once backfill is verified in production; it must
+  # also cover app/docs/developer/rooms-directory.md.
   has_one_attached :panorama do |attachable|
     attachable.variant :poster, resize_to_limit: [ 1024, 512 ], format: :webp
   end
+  # The FLAT (rectilinear) render of :panorama — the view Pannellum's default
+  # camera shows, produced by Panorama::Rectilinear. Deliberately NOT a
+  # `describable` slot: it depicts the same subject as its source, so it inherits
+  # alt_for(:panorama). A fourth slot would mean a migration and an authoring UI
+  # for alt text describing the identical photograph.
+  #
+  # NOTE: nothing on Room triggers the render. The callback lives on
+  # ActiveStorage::Attachment (config/initializers/flat_panorama_callbacks.rb) —
+  # read that file's header before adding a callback here.
+  has_one_attached :flat_panorama
   has_one_attached :seating_chart
 
   # Phase 4 Task 7 (Brief §5.3): admin gallery add/remove/reorder flows through
@@ -75,7 +88,19 @@ class Room < ApplicationRecord
   # echoing back "checked" from a transient submitted value.
   %i[photo panorama seating_chart].each do |slot|
     define_method("remove_#{slot}=") do |value|
-      public_send(slot).purge_later if ActiveModel::Type::Boolean.new.cast(value)
+      next unless ActiveModel::Type::Boolean.new.cast(value)
+
+      public_send(slot).purge_later
+      # The flat render is derived from the panorama and meaningless without
+      # it. ActiveStorage::Attachment#purge_later calls `delete` (raw SQL) —
+      # NOT `destroy` — so the after_destroy_commit hook in
+      # config/initializers/flat_panorama_callbacks.rb cannot see this path.
+      # Replacement DOES go through destroy and is covered there; explicit
+      # removal is covered only here. Re-read the attachment rather than
+      # trusting the in-memory association: this instance may have loaded
+      # flat_panorama as nil before a render attached it, and purge_later on
+      # a stale association silently no-ops.
+      reload_flat_panorama_attachment&.purge_later if slot == :panorama
     end
     define_method("remove_#{slot}") { false }
   end
@@ -142,6 +167,49 @@ class Room < ApplicationRecord
   end
 
   def hidden? = hidden_at.present?
+
+  # THE definition of "the flat render is up to date". RenderFlatPanoramaJob's
+  # perform guard, `panoramas:render_flat`'s candidate list, that task's INLINE
+  # outcome classification, and `panoramas:flat_status` all call THIS — they
+  # used to each carry a hand-copied version, and one of them drifted (the
+  # INLINE classifier omitted the service.exist? probe below), so a backfill
+  # printed "rendered: 1" for a room `flat_status` called missing/stale seconds
+  # later. Two operator surfaces, opposite answers.
+  #
+  # DIAGNOSTIC — `blob.service.exist?` is not paranoia, and is the one condition
+  # that costs an I/O call. A SIGKILL between the attachment's commit and the
+  # file upload (config/deploy.yml gives SOLID_QUEUE_IN_PUMA a 45s drain window,
+  # so in-flight renders are killed on every deploy) leaves a blob ROW with
+  # perfectly correct stamps and NO FILE. Every metadata-only check then lies
+  # the same way: `attached?` is true, so the :poster fallback never engages and
+  # the room serves a 404 image forever, invisible to every operator surface.
+  # One stat call closes it.
+  def flat_render_current?
+    return false unless panorama.attached? && flat_panorama.attached?
+
+    blob = flat_panorama.blob
+    blob.metadata["source_blob_key"] == panorama.blob.key &&
+      blob.metadata["projection"] == Panorama::Rectilinear.signature &&
+      blob.service.exist?(blob.key)
+  end
+
+  # THE definition of "this render failed permanently and must not be retried".
+  # Same three-copies story as above; RenderFlatPanoramaJob stamps the tombstone
+  # (see its `record_failure`), everything else reads it through here.
+  #
+  # DIAGNOSTIC — the tombstone is keyed to the SOURCE blob's key rather than
+  # being a bare "a failure was recorded once" flag, and that is what makes it
+  # self-clearing: replacing a bad photo mints a NEW blob key, the stamp stops
+  # matching, and the room becomes renderable again with no operator step. A
+  # looser check would keep counting a room as failed after its photo had
+  # already been fixed — and, because candidate selection EXCLUDES tombstoned
+  # rooms, would keep it out of every backfill at the same time.
+  def flat_render_failed?
+    return false unless panorama.attached?
+
+    meta = panorama.blob.metadata
+    meta["flat_render_failed_at"].present? && meta["flat_render_source_key"] == panorama.blob.key
+  end
 
   # Phase 5 Task 5 (Brief §14.1): the one-way editor hide / admin unhide
   # flow. Both mutations are real column changes (hidden_at/hidden_by), so
