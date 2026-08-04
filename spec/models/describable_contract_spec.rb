@@ -8,6 +8,8 @@ RSpec.describe "Describable contract (CI ratchet)" do
       model.describable_slots.each_key do |slot|
         rec = build(model.model_name.singular.to_sym, "#{slot}_alt": nil)
         expect(rec.alt_for(slot)).to be_present, "#{model}##{slot} backstop was blank"
+        expect(rec.alt_for(slot)).not_to match(/\s\z|\sin \z|\sof \z/),
+          "#{model}##{slot} interpolated an empty value"
 
         rec.write_attribute("#{slot}_alt", "stored wins")
         expect(rec.alt_for(slot)).to eq("stored wins")

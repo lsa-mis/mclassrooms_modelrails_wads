@@ -12,6 +12,14 @@ class MediaAsset < ApplicationRecord
   include Tenanted
   include Describable
 
+  # Raised from base_derived_alt rather than emitted: a blank media_owner_name
+  # interpolated into an alt string still reads as `be_present` (a trailing
+  # preposition and nothing after it), which is invisible to the shipped
+  # ratchet but incoherent to a screen-reader user. Failing loudly routes the
+  # problem to a developer instead of shipping it to the one person who can
+  # least route around it.
+  class BlankOwnerName < StandardError; end
+
   belongs_to :owner, polymorphic: true
 
   # Every variant is webp so a HEIC upload renders anywhere. Declared HERE, once
@@ -71,10 +79,13 @@ class MediaAsset < ApplicationRecord
   private
 
   def base_derived_alt
-    entry = owner_type.constantize::SUBJECTS[subject&.to_sym] if subject.present?
-    return I18n.t("media.derived_alt.gallery_image", room: owner.media_owner_name) if entry.nil?
+    name = owner.media_owner_name
+    raise BlankOwnerName, "#{owner_type}##{owner_id} has a blank media_owner_name" if name.blank?
 
-    I18n.t(entry.fetch(:key), owner: owner.media_owner_name)
+    entry = owner_type.constantize::SUBJECTS[subject&.to_sym] if subject.present?
+    return I18n.t("media.derived_alt.gallery_image", room: name) if entry.nil?
+
+    I18n.t(entry.fetch(:key), owner: name)
   end
 
   # The polymorphic move drops the room FK, and Tenanted only requires a

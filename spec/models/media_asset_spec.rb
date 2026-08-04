@@ -176,5 +176,12 @@ RSpec.describe MediaAsset do
       expect { unsaved.alt_for(:image) }.not_to raise_error
       expect(unsaved.alt_for(:image)).to end_with("(photo 3 of 3)")
     end
+
+    it "refuses to interpolate a blank owner name into alt text" do
+      asset = build(:media_asset, :needs_alt, owner: room, workspace: workspace, subject: "rack")
+      allow(room).to receive(:media_owner_name).and_return("")
+
+      expect { asset.alt_for(:image) }.to raise_error(MediaAsset::BlankOwnerName)
+    end
   end
 end
