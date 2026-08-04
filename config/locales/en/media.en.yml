@@ -1,4 +1,11 @@
 en:
+  activerecord:
+    errors:
+      models:
+        media_asset:
+          attributes:
+            owner:
+              workspace_mismatch: "must belong to the same workspace as this asset"
   media:
     derived_alt:
       gallery_image: "Photo of %{room}"

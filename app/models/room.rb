@@ -166,6 +166,8 @@ class Room < ApplicationRecord
     nickname.present? ? "#{base} – #{nickname}" : base
   end
 
+  def media_owner_name = display_name
+
   def hidden? = hidden_at.present?
 
   # THE definition of "the flat render is up to date". RenderFlatPanoramaJob's
