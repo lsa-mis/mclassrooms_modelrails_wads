@@ -8,7 +8,14 @@ RSpec.describe "Describable contract (CI ratchet)" do
       model.describable_slots.each_key do |slot|
         rec = build(model.model_name.singular.to_sym, "#{slot}_alt": nil)
         expect(rec.alt_for(slot)).to be_present, "#{model}##{slot} backstop was blank"
-        expect(rec.alt_for(slot)).not_to match(/\s\z|\sin \z|\sof \z/),
+        # A blank interpolation doesn't only strand a trailing preposition
+        # ("...rack in "); mid-sentence templates (room.front/back/inner_door)
+        # collapse the surrounding space into a double space or a
+        # space-then-comma instead ("...front of  from..." / "...door of ,
+        # photographed..."). Catch all three shapes, not just the tail case —
+        # verified against all real media.en.yml interpolation sites with both
+        # a blank and a populated owner (see task-9-report.md).
+        expect(rec.alt_for(slot)).not_to match(/\s{2,}|\s,|\s\z/),
           "#{model}##{slot} interpolated an empty value"
 
         rec.write_attribute("#{slot}_alt", "stored wins")
