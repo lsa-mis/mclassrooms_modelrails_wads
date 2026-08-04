@@ -83,6 +83,22 @@ RSpec.describe "Admin announcements", type: :request do
         "value=\"home_page\"" # the already-filled slot is never an option in the picker
       )
     end
+
+    # With nothing left to pick, the form would render an empty slot picker
+    # and any submission would fail validation — so `new` turns around at the
+    # door and says why. Asserting the message, not just the redirect: the
+    # redirect target is the same one a successful create uses, so only the
+    # flash distinguishes "created" from "there was nothing to create".
+    it "redirects an admin away with an explanation when all three slots are already filled" do
+      create(:announcement, workspace: workspace, slot: "find_a_room_page", body: "Find")
+      create(:announcement, workspace: workspace, slot: "about_page", body: "About")
+      sign_in(membership_with("admin"))
+
+      get new_admin_announcement_path
+
+      expect(response).to redirect_to(admin_announcements_path)
+      expect(flash[:alert]).to eq(I18n.t("admin.announcements.new.no_unfilled_slots"))
+    end
   end
 
   describe "POST /admin/announcements" do

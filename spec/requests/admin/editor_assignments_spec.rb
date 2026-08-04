@@ -125,6 +125,7 @@ RSpec.describe "Admin editor assignments", type: :request do
           .and change(ActivityLog, :count).by(1)
 
         expect(response).to redirect_to(admin_editor_assignments_path)
+        expect(flash[:notice]).to eq(I18n.t("admin.editor_assignments.create.success"))
 
         created = EditorAssignment.last
         expect(created.user).to eq(member)
@@ -206,6 +207,7 @@ RSpec.describe "Admin editor assignments", type: :request do
           .and change(ActivityLog, :count).by(1)
 
         expect(response).to redirect_to(admin_editor_assignments_path)
+        expect(flash[:notice]).to eq(I18n.t("admin.editor_assignments.destroy.success"))
 
         log = ActivityLog.last
         expect(log.action).to eq("editor_assignment.revoked")
