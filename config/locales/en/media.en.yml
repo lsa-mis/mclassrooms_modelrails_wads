@@ -8,10 +8,12 @@ en:
               workspace_mismatch: "must belong to the same workspace as this asset"
   media:
     derived_alt:
+      # NULL-subject fallback — an unclassified asset (e.g. one of the ~1,362
+      # unclassified imports) must keep rendering exactly this, so it stays
+      # under its own name rather than folding into the room: block below.
       gallery_image: "Photo of %{room}"
       building_photo: "Exterior photo of %{building}"
       floor_plan: "Floor %{floor} plan of %{building}"
-      room_photo: "Photo of %{room}"
       panorama: "360-degree panorama of %{room}"
       # The pano pane's FLAT render is a rectilinear crop covering roughly
       # longitude -50..+50 — about 28% of the sweep, not the whole panorama.
@@ -21,3 +23,21 @@ en:
       # the opening frame of.
       panorama_flat: "Interior view of %{room}, the opening frame of an interactive 360-degree panorama"
       seating_chart: "Seating chart for %{room}"
+      room:
+        # These are the words a blind user actually hears. They lead with the
+        # DIRECTION OF VIEW, because that is what a photograph of a room is; an
+        # earlier draft ("The front of X, seen from the back of the room")
+        # carried two frames of reference in eleven words and "the room" parsed
+        # as possibly a different room. "audiovisual" on the rack string is the
+        # entire information payload — "equipment rack" alone means nothing to
+        # anyone who has not seen one.
+        front:      "Looking toward the front of %{owner} from the back of the room"
+        back:       "Looking toward the back of %{owner} from the front of the room"
+        podium:     "The top of the instructor podium in %{owner}"
+        rack:       "The audiovisual equipment rack in %{owner}"
+        inner_door: "The entrance door of %{owner}, photographed from inside the room"
+        other:      "Another photo of %{owner}"
+      # Subjects are repeatable, so two racks would otherwise render byte-
+      # identical alt: a sighted user sees two pictures, a screen-reader user
+      # hears one sentence twice with no way to tell the gallery is not broken.
+      nth: "%{alt} (photo %{n} of %{total})"

@@ -132,4 +132,35 @@ RSpec.describe MediaAsset do
       expect(room.gallery_ordered).to eq([ persisted, unsaved ])
     end
   end
+
+  describe "derived alt" do
+    it "derives alt from the subject, describing the picture on the page" do
+      room = create(:room, workspace: workspace, building: create(:building, name: "North Quad"), room_number: "1185")
+      asset = create(:media_asset, :needs_alt, owner: room, workspace: workspace, subject: "rack")
+
+      expect(asset.alt_for(:image))
+        .to eq("The audiovisual equipment rack in #{room.display_name}")
+    end
+
+    it "falls back to today's generic string when unclassified" do
+      asset = create(:media_asset, :imported, owner: room, workspace: workspace)
+
+      expect(asset.alt_for(:image)).to eq(I18n.t("media.derived_alt.gallery_image", room: room.display_name))
+    end
+
+    it "suffixes positionally when two assets derive the same alt" do
+      a = create(:media_asset, :needs_alt, owner: room, workspace: workspace, subject: "rack", position: 4)
+      b = create(:media_asset, :needs_alt, owner: room, workspace: workspace, subject: "rack", position: 5)
+
+      expect(a.alt_for(:image)).to end_with("(photo 1 of 2)")
+      expect(b.alt_for(:image)).to end_with("(photo 2 of 2)")
+    end
+
+    it "never suffixes authored alt" do
+      create(:media_asset, owner: room, workspace: workspace, subject: "rack", image_alt: "Authored one")
+      other = create(:media_asset, owner: room, workspace: workspace, subject: "rack", image_alt: "Authored two")
+
+      expect(other.alt_for(:image)).to eq("Authored two")
+    end
+  end
 end

@@ -46,14 +46,28 @@ class MediaAsset < ApplicationRecord
   # Resolved through the OWNER's vocabulary. An unrecognised or retired subject
   # degrades to the generic string rather than raising: this is alt text, and a
   # KeyError here is a 500 on a screen-reader user's page.
+  #
+  # Subjects are repeatable (a room can have two racks), so two assets in one
+  # gallery can derive byte-identical strings. Suffix positionally in that
+  # case — only among UNAUTHORED siblings, and only when there are 2+ of them,
+  # so an authored image_alt is never suffixed and a lone match isn't either.
   def derived_alt
+    base = base_derived_alt
+    siblings = owner.gallery.select { |a| a.image_alt.blank? && a.subject == subject }
+    return base if siblings.length < 2
+
+    ordered = siblings.sort_by { |a| [ a.position, a.id ] }
+    I18n.t("media.derived_alt.nth", alt: base, n: ordered.index(self) + 1, total: ordered.length)
+  end
+
+  private
+
+  def base_derived_alt
     entry = owner_type.constantize::SUBJECTS[subject&.to_sym] if subject.present?
     return I18n.t("media.derived_alt.gallery_image", room: owner.media_owner_name) if entry.nil?
 
     I18n.t(entry.fetch(:key), owner: owner.media_owner_name)
   end
-
-  private
 
   # The polymorphic move drops the room FK, and Tenanted only requires a
   # workspace to be present — nothing otherwise stops an asset in workspace A
