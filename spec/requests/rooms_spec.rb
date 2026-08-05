@@ -1020,6 +1020,21 @@ RSpec.describe "GET /rooms/:id/edit", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(room.display_name)
     end
+
+    # Final fix round: the editor's gallery thumb must spend MediaAsset's
+    # DECLARED :card variant, not restate its transformations inline — the
+    # declaration in media_asset.rb is the single source of truth the warm
+    # job processes by name. (The anonymous call happened to compile to the
+    # same variation digest, so this pins the contract going forward rather
+    # than distinguishing the two.)
+    it "renders each persisted gallery thumb via the declared :card variant" do
+      asset = create(:media_asset, owner: room, workspace: workspace)
+      sign_in(admin)
+
+      get edit_room_path(room)
+
+      expect(response.body).to include(rails_representation_path(asset.image.variant(:card)))
+    end
   end
 end
 
