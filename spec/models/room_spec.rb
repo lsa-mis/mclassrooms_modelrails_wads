@@ -44,6 +44,18 @@ RSpec.describe Room, type: :model do
     it "does not require a floor, campus, or unit" do
       expect(build(:room, floor: nil, campus: nil, unit: nil)).to be_valid
     end
+
+    it "owns its stills through #gallery" do
+      room = create(:room)
+      asset = create(:media_asset, owner: room, workspace: room.workspace)
+
+      expect(room.gallery).to include(asset)
+    end
+
+    it "no longer has a photo slot" do
+      expect(Room.new).not_to respond_to(:photo)
+      expect(Room.describable_slots.keys).to match_array(%i[panorama seating_chart])
+    end
   end
 
   describe ".classroom (D8)" do
@@ -198,7 +210,7 @@ RSpec.describe Room, type: :model do
       # overriding :workspace alone leaves auto-built parents in another tenant).
       room = create(:room, facility_code: "MLB1200")
       create(:room_contact, room: room)
-      create(:room_gallery_image, room: room)
+      create(:media_asset, owner: room)
       create(:availability_block, room: room)
       create(:room_characteristic, room: room)
       create(:note, notable: room, workspace: room.workspace)
@@ -207,7 +219,7 @@ RSpec.describe Room, type: :model do
         expect { room.destroy! }
           .to change(Room, :count).by(-1)
           .and change(RoomContact, :count).by(-1)
-          .and change(RoomGalleryImage, :count).by(-1)
+          .and change(MediaAsset, :count).by(-1)
           .and change(AvailabilityBlock, :count).by(-1)
           .and change(RoomCharacteristic, :count).by(-1)
           .and change(Note, :count).by(-1)
@@ -265,12 +277,30 @@ RSpec.describe Room, type: :model do
   end
 
   describe "attachments" do
-    it "allows PDF for the seating chart but not the photo; caps size at 10MB" do
+    it "allows PDF for the seating chart but not the panorama; caps size at 10MB" do
       room = build(:room)
-      room.photo.attach(io: StringIO.new("%PDF-"), filename: "a.pdf", content_type: "application/pdf")
+      room.panorama.attach(io: StringIO.new("%PDF-"), filename: "a.pdf", content_type: "application/pdf")
       expect(room).not_to be_valid
       room = build(:room)
       room.seating_chart.attach(io: StringIO.new("%PDF-"), filename: "c.pdf", content_type: "application/pdf")
+      expect(room).to be_valid
+    end
+
+    it "accepts a HEIC panorama, since a phone is the likely source" do
+      room = build(:room)
+      room.panorama.attach(io: heic_io, filename: "pano.heic", content_type: "image/heic")
+
+      # Assert the sniffed type, not the declared one: Marcel overrides the
+      # caller's declaration, so without this the example would pass on a PNG.
+      expect(room.panorama.blob.content_type).to eq("image/heic")
+      expect(room).to be_valid
+    end
+
+    it "accepts a HEIF seating chart" do
+      room = build(:room)
+      room.seating_chart.attach(io: heif_io, filename: "chart.heif", content_type: "image/heif")
+
+      expect(room.seating_chart.blob.content_type).to eq("image/heif")
       expect(room).to be_valid
     end
   end
@@ -302,15 +332,17 @@ RSpec.describe Room, type: :model do
       expect(room.reload.flat_panorama).to be_attached
     end
 
-    it "purges the photo but leaves the flat panorama render alone" do
-      room.photo.attach(io: Rails.root.join("spec/fixtures/files/room.jpg").open,
-                        filename: "room.jpg", content_type: "image/jpeg")
+    # The cascade is scoped to the PANORAMA slot: removing a different
+    # attachment must not take the flat render down with it.
+    it "purges the seating chart but leaves the flat panorama render alone" do
+      room.seating_chart.attach(io: Rails.root.join("spec/fixtures/files/room.jpg").open,
+                                filename: "room.jpg", content_type: "image/jpeg")
       room.save!
 
-      perform_enqueued_jobs { room.update!(remove_photo: "1") }
+      perform_enqueued_jobs { room.update!(remove_seating_chart: "1") }
 
       room.reload
-      expect(room.photo).not_to be_attached
+      expect(room.seating_chart).not_to be_attached
       expect(room.flat_panorama).to be_attached
     end
 

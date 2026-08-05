@@ -8,10 +8,16 @@ class Floor < ApplicationRecord
 
   belongs_to :building
   has_many :rooms, dependent: :nullify
-  has_one_attached :plan
+  # :display backs the floor-plan page's image render. HEIC/HEIF uploads are
+  # model-sanctioned and browsers cannot decode them, so the page serves this
+  # webp variant, never the original blob. Image renders only — a PDF plan
+  # renders as a link to the original (`.variant` on a PDF raises).
+  has_one_attached :plan do |attachable|
+    attachable.variant :display, resize_to_limit: [ 2048, 2048 ], format: :webp
+  end
 
   validates :label, presence: true, uniqueness: { scope: :building_id }
-  validates :plan, content_type: [ :png, :jpeg, :webp, :pdf ],
+  validates :plan, content_type: ImageContentTypes::ACCEPTED_WITH_PDF,
                    size: { less_than_or_equal_to: 10.megabytes }
 
   # Phase 4 Task 9 (Brief §5.3): attribute-shaped remover, same species as

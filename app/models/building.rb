@@ -50,7 +50,7 @@ class Building < ApplicationRecord
 
   validates :bldrecnbr, presence: true, uniqueness: true
   validates :name, presence: true
-  validates :photo, content_type: [ :png, :jpeg, :webp ],
+  validates :photo, content_type: ImageContentTypes::ACCEPTED,
                     size: { less_than_or_equal_to: 10.megabytes }
 
   SEARCH_INDEX_TABLE = "building_search_index"

@@ -43,7 +43,7 @@ RSpec.describe "Admin bulk uploads", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
 
-    # MLB1200.jpg -> :photo, MLB1200_chairs.pdf -> :seating_chart (both match
+    # MLB1200.jpg -> :gallery, MLB1200_chairs.pdf -> :seating_chart (both match
     # `room`, its facility code), stray.txt matches no BulkUpload::Matcher
     # pattern. attach_file with an array on a `multiple` input drops all
     # three at once, the way a real admin would.
@@ -70,7 +70,7 @@ RSpec.describe "Admin bulk uploads", type: :system do
     expect(page).to have_content("MLB1200_chairs.pdf")
     expect(page).to have_content("stray.txt")
     expect(page).to have_content(I18n.t("admin.bulk_uploads.review.reason.unrecognized_filename"))
-    expect(page).to have_content(I18n.t("admin.bulk_uploads.review.slot.photo"))
+    expect(page).to have_content(I18n.t("admin.bulk_uploads.review.slot.gallery"))
     expect(page).to have_content(I18n.t("admin.bulk_uploads.review.slot.seating_chart"))
     expect(page).to have_link(room.display_name, href: room_path(room))
 
@@ -83,7 +83,7 @@ RSpec.describe "Admin bulk uploads", type: :system do
     expect(page).to have_content(I18n.t("admin.bulk_uploads.create.committed", count: 2))
 
     room.reload
-    expect(room.photo).to be_attached
+    expect(room.gallery.count).to eq(1)
     expect(room.seating_chart).to be_attached
   end
 end

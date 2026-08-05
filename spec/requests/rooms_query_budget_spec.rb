@@ -98,7 +98,7 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     # queries apiece). Pre-fix, 10 rooms x 5 characteristics drove this into the hundreds.
     expect(aggregate_query_count).to be <= 8
 
-    # Guards the `rules: card_display_rules` memo in RoomsHelper#card_chip_presenter —
+    # Guards the `rules: card_display_rules` memo in RoomsHelper#room_card_presenter —
     # observed at 3 (CharacteristicFilterGroups.filters' own rules build,
     # CharacteristicFilterGroups.labels/glossary's, and ONE request-wide
     # RoomsHelper#card_display_rules resolution shared by all 10 rows). A
@@ -106,5 +106,46 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     # this to 12 (2 + 10, one extra per room) — the <= 3 bound would catch
     # that regression.
     expect(rules_row_fetch_count).to be <= 3
+  end
+
+  # Task 13 guard: RoomPresenter's thumbnail chain probes flat_panorama,
+  # panorama, and the gallery on EVERY row, so unless RoomSearch#results
+  # preloads all three legs the index fires extra per-row queries (~180 at
+  # the default per=30). The bound holds only while the chain resolves over
+  # the preloaded collections.
+  it "keeps find-a-room within budget with the thumbnail chain wired" do
+    building = create(:building, workspace: workspace)
+    # A MIXED page, so every chain leg renders at least once: real media on an
+    # index row is what exposes an attachment/blob preload gap — a page of
+    # bare rooms exercises only the nil leg and hides it.
+    create_list(:room, 27, building: building, workspace: workspace)
+    # The flat-panorama room ALSO carries a gallery asset: the chain
+    # short-circuits before ever touching it, so its preloaded
+    # image_attachment row goes UNUSED on this page — the shape that needs
+    # the MediaAsset/:image_attachment safelist beside the Room-level
+    # short-circuit entries. NOTE Bullet's unused-preload raise for this
+    # nested association only surfaces out-of-channel (system specs — see
+    # spec/system/rooms/show_spec.rb, which pins it); in a request spec this
+    # example pins the QUERY BUDGET for the same maximal shape instead.
+    flat_room = create(:room, :with_flat_panorama, building: building, workspace: workspace)
+    create(:media_asset, owner: flat_room, workspace: workspace, position: 1, subject: "front")
+    create(:room, :with_panorama, building: building, workspace: workspace)
+    gallery_room = create(:room, building: building, workspace: workspace)
+    create(:media_asset, owner: gallery_room, workspace: workspace, position: 1, subject: "front")
+    create(:media_asset, owner: gallery_room, workspace: workspace, position: 2, subject: "back")
+
+    sign_in(membership_with("viewer"))
+
+    count = 0
+    # CACHE/SCHEMA per this file's convention above; TRANSACTION additionally,
+    # because BEGIN/COMMIT events are bookkeeping, not page work.
+    counter = ->(*, payload) { count += 1 unless payload[:name].in?(%w[CACHE SCHEMA TRANSACTION]) }
+
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      get find_a_room_path
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(count).to be <= 45
   end
 end

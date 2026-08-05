@@ -328,10 +328,10 @@ class BuildingsController < ApplicationController
       zip: @building.zip,
       country: @building.country,
       full_address: @building.full_address,
-      photo_url: blob_url(@building.photo),
+      photo_url: variant_url(@building.photo, :hero),
       # @floors: the SAME preloaded (plan_attachment: :blob) collection the
-      # #show action built — not a re-query — so floor_json's blob_url
-      # (floor.plan.attached?, then rails_blob_url) never fires per-floor SQL.
+      # #show action built — not a re-query — so plan_url's reads
+      # (floor.plan.attached?, content_type, variant) never fire per-floor SQL.
       floors: @floors.map { |floor| floor_json(floor) }
     }
   end
@@ -340,18 +340,30 @@ class BuildingsController < ApplicationController
     {
       id: floor.id,
       label: floor.label,
-      plan_url: blob_url(floor.plan),
+      plan_url: plan_url(floor.plan),
       classroom_count: @floor_classroom_counts.fetch(floor.id, 0)
     }
   end
 
-  # Mirrors RoomPresenter#blob_url (app/lib/room_presenter.rb): nil for an
-  # unattached has_one_attached, a full rails_blob_url otherwise. Called from
-  # a controller (not a view/presenter), so `rails_blob_url` resolves via
+  # Mirrors RoomPresenter#variant_url/#blob_url (app/lib/room_presenter.rb):
+  # nil for an unattached has_one_attached, a full URL otherwise — but a
+  # declared webp REPRESENTATION for images, never the original blob (these
+  # slots accept HEIC, which browsers can't decode). Called from a controller
+  # (not a view/presenter), so the rails_*_url helpers resolve via
   # ActionController's own routes.url_helpers inclusion.
-  def blob_url(attachment)
+  def variant_url(attachment, name)
     return nil unless attachment.attached?
 
-    rails_blob_url(attachment)
+    rails_representation_url(attachment.variant(name))
+  end
+
+  # A PDF plan keeps the original blob URL: `.variant` on a PDF raises, and
+  # the PDF itself is the deliverable (floor.rb's contract — same branch
+  # RoomPresenter takes for a PDF seating chart).
+  def plan_url(attachment)
+    return nil unless attachment.attached?
+    return rails_blob_url(attachment) if attachment.content_type == "application/pdf"
+
+    variant_url(attachment, :display)
   end
 end

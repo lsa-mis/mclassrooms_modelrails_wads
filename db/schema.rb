@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_31_191742) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_04_120000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -222,6 +222,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_191742) do
     t.index ["token"], name: "index_magic_link_tokens_on_token", unique: true
   end
 
+  create_table "media_assets", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "image_alt"
+    t.boolean "image_derived_ok", default: false, null: false
+    t.text "image_description"
+    t.integer "owner_id", null: false
+    t.string "owner_type", null: false
+    t.integer "position", default: 1, null: false
+    t.string "subject"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id", null: false
+    t.index ["owner_type", "owner_id", "position"], name: "index_media_assets_on_owner_type_and_owner_id_and_position"
+    t.index ["workspace_id", "subject"], name: "index_media_assets_on_workspace_id_and_subject"
+    t.check_constraint "owner_type = 'Room'", name: "media_assets_owner_type_v1"
+  end
+
   create_table "memberships", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "discarded_at"
@@ -330,20 +346,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_191742) do
     t.index ["workspace_id"], name: "index_room_contacts_on_workspace_id"
   end
 
-  create_table "room_gallery_images", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.string "image_alt"
-    t.boolean "image_derived_ok", default: false, null: false
-    t.text "image_description"
-    t.integer "position", default: 0, null: false
-    t.integer "room_id", null: false
-    t.datetime "updated_at", null: false
-    t.integer "workspace_id", null: false
-    t.index ["room_id", "position"], name: "index_room_gallery_images_on_room_id_and_position"
-    t.index ["room_id"], name: "index_room_gallery_images_on_room_id"
-    t.index ["workspace_id"], name: "index_room_gallery_images_on_workspace_id"
-  end
-
   create_table "rooms", force: :cascade do |t|
     t.integer "ada_seat_count"
     t.integer "building_id", null: false
@@ -365,9 +367,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_191742) do
     t.string "panorama_alt"
     t.boolean "panorama_derived_ok", default: false, null: false
     t.text "panorama_description"
-    t.string "photo_alt"
-    t.boolean "photo_derived_ok", default: false, null: false
-    t.text "photo_description"
     t.string "rmrecnbr", null: false
     t.string "room_number"
     t.string "room_type"
@@ -602,6 +601,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_191742) do
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
+  add_foreign_key "media_assets", "workspaces"
   add_foreign_key "memberships", "roles"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
@@ -614,8 +614,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_191742) do
   add_foreign_key "room_characteristics", "workspaces"
   add_foreign_key "room_contacts", "rooms"
   add_foreign_key "room_contacts", "workspaces"
-  add_foreign_key "room_gallery_images", "rooms"
-  add_foreign_key "room_gallery_images", "workspaces"
   add_foreign_key "rooms", "buildings"
   add_foreign_key "rooms", "campuses"
   add_foreign_key "rooms", "floors"

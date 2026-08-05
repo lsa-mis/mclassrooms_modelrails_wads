@@ -41,10 +41,12 @@ of exactly what changed.
 
 ### Adding media
 
-Rooms without a photo show an **Add photos** prompt. Admins attach a photo, a 360°
-panorama, a seating chart (image or PDF), or gallery images. Attachments are
-capped at 10 MB; images are PNG / JPEG / WebP, and PDFs are allowed only for
-seating charts and floor plans. For batches, use **Bulk uploads** below.
+Rooms without photos show an **Add photos** prompt. Admins attach a 360°
+panorama, a seating chart (image or PDF), and an ordered gallery of photos,
+each tagged with what it shows (front, back, podium, rack, inner door, or
+other). Attachments are capped at 10 MB; images are PNG / JPEG / WebP / HEIC,
+and PDFs are allowed only for seating charts and floor plans. For batches, use
+**Bulk uploads** below.
 
 ## Visibility (hide / unhide)
 
