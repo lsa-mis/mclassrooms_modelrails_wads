@@ -104,7 +104,7 @@
         <div class="flex flex-col gap-4 border-b border-border pb-6 last:border-b-0 last:pb-0 sm:flex-row sm:items-start">
           <%= ui :figure do %>
             <%= ui :image,
-                  src: rails_representation_path(gallery_image.image.variant(resize_to_fill: [ 96, 96 ], format: :webp)),
+                  src: rails_representation_path(gallery_image.image.variant(:card)),
                   alt: gallery_image.alt_for(:image),
                   width: 96, height: 96,
                   class: "size-24 shrink-0 rounded-md object-cover" %>
