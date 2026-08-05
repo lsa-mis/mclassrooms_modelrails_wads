@@ -41,7 +41,7 @@
     <%= form.file_field :panorama,
           label: t("rooms.edit.panorama_label"),
           help: t("rooms.edit.panorama_hint"),
-          accept: "image/png,image/jpeg,image/webp" %>
+          accept: "image/png,image/jpeg,image/webp,image/heic,image/heif" %>
 
     <%# Task 4 (image metadata, Brief §5.2): author alt/description, or bless
         the derived alt via the checkbox — Describable#alt_status_for reads
@@ -84,7 +84,7 @@
     <%= form.file_field :seating_chart,
           label: t("rooms.edit.seating_chart_label"),
           help: t("rooms.edit.seating_chart_hint"),
-          accept: "image/png,image/jpeg,image/webp,application/pdf" %>
+          accept: "image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" %>
 
     <%= form.text_field :seating_chart_alt, label: t("rooms.media.alt_label") %>
     <%= form.text_area :seating_chart_description, rows: 2, label: t("rooms.media.description_label") %>
@@ -127,7 +127,7 @@
           <%= gf.file_field :image,
                 label: t("rooms.edit.gallery_add_label", position: gf.index + 1),
                 help: t("rooms.edit.gallery_add_hint"),
-                accept: "image/png,image/jpeg,image/webp" %>
+                accept: "image/png,image/jpeg,image/webp,image/heic,image/heif" %>
         </div>
       <% end %>
     <% end %>

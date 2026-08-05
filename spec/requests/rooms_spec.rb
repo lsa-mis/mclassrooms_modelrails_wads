@@ -1035,6 +1035,19 @@ RSpec.describe "GET /rooms/:id/edit", type: :request do
 
       expect(response.body).to include(rails_representation_path(asset.image.variant(:card)))
     end
+
+    # Task 10 widened the validators to accept HEIC/HEIF on every image slot;
+    # the pickers must OFFER what the server accepts, or iPhone users get
+    # their camera rolls greyed out. One accept attr pins the whole round.
+    it "offers HEIC/HEIF in the image pickers' accept lists" do
+      sign_in(admin)
+
+      get edit_room_path(room)
+
+      expect(response.body).to include(
+        %(accept="image/png,image/jpeg,image/webp,image/heic,image/heif")
+      )
+    end
   end
 end
 

@@ -79,7 +79,7 @@
         <%= form.file_field :photo,
               label: t(".photo_heading"),
               help: t(".photo_hint"),
-              accept: "image/png,image/jpeg,image/webp" %>
+              accept: "image/png,image/jpeg,image/webp,image/heic,image/heif" %>
 
         <%# Task 4 (image metadata, Brief §5.2): author alt/description, or
             bless the derived alt via the checkbox — shares the generic
@@ -132,7 +132,7 @@
             <%= ff.file_field :plan,
                   label: t(".replace_plan_label", label: floor.label),
                   help: t(".replace_plan_hint"),
-                  accept: "image/png,image/jpeg,image/webp,application/pdf" %>
+                  accept: "image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" %>
           </div>
         <% end %>
       <% end %>
