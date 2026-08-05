@@ -1,34 +1,14 @@
-<%# locals: (room:, gallery_images:) %>
-<%# The photo side of the media stage: the main photo renders stage-sized
-    with its existing lightbox (UI::Dialog wrapper gives focus trap/restore
-    for free); the gallery keeps UI::Gallery's own thumbnails + lightbox. %>
+<%# locals: (room:, gallery:) %>
+<%# One home for room stills: the panorama is the hero, so there is no separate
+    "main photo" treatment. UI::Gallery brings its own thumbnails + lightbox. %>
 <div class="space-y-3">
-  <% if room.photo.attached? %>
-    <%= ui :dialog, title: room.display_name do |dialog| %>
-      <% dialog.with_trigger do %>
-        <button type="button" data-testid="room-photo-thumb"
-                class="block w-full overflow-hidden rounded-md cursor-zoom-in focus-ring">
-          <%= ui :image,
-                src: rails_representation_path(room.photo.variant(resize_to_limit: [ 1600, 800 ], format: :webp)),
-                alt: room.alt_for(:photo),
-                class: "aspect-[2/1] w-full object-cover" %>
-        </button>
-      <% end %>
-      <%= ui :figure do %>
-        <%= ui :image,
-              src: rails_blob_path(room.photo),
-              alt: room.alt_for(:photo),
-              loading: :eager,
-              class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
-      <% end %>
-    <% end %>
-  <% end %>
-
-  <% if gallery_images.any? %>
+  <% if gallery.any? %>
     <%= ui :gallery do |g| %>
-      <% gallery_images.each do |gallery_image| %>
-        <% g.with_image(src: rails_blob_path(gallery_image.image), alt: gallery_image.alt_for(:image),
-              caption: gallery_image.description_for(:image)) %><%# herb:disable erb-no-unused-expressions %>
+      <% gallery.each do |asset| %>
+        <% g.with_image(src: rails_representation_path(asset.image.variant(:thumb)),
+              full_src: rails_representation_path(asset.image.variant(:full)),
+              alt: asset.alt_for(:image),
+              caption: asset.description_for(:image)) %><%# herb:disable erb-no-unused-expressions %>
       <% end %>
     <% end %>
   <% end %>

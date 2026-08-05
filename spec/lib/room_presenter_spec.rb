@@ -177,6 +177,75 @@ RSpec.describe RoomPresenter do
     end
   end
 
+  describe "#thumbnail" do
+    it "prefers the flat panorama render over the bare panorama and the gallery" do
+      room = create(:room, :with_flat_panorama, :with_panorama, building: building)
+      create(:media_asset, owner: room, workspace: room.workspace)
+
+      expect(described_class.new(room).thumbnail).to eq(room.flat_panorama)
+    end
+
+    it "falls back to the panorama's :poster variant when no flat render has landed" do
+      room = create(:room, :with_panorama, building: building)
+      create(:media_asset, owner: room, workspace: room.workspace)
+
+      thumbnail = described_class.new(room).thumbnail
+      poster = room.panorama.variant(:poster)
+
+      expect(thumbnail.blob).to eq(poster.blob)
+      expect(thumbnail.variation.digest).to eq(poster.variation.digest)
+    end
+
+    it "falls back to the subject-ranked first gallery image when no panorama is attached" do
+      # Same tie construction as the gallery_ordered spec: subject rank must
+      # beat position, so the LOWER-positioned rack shot still loses to front.
+      create(:media_asset, owner: room, workspace: room.workspace, position: 5, subject: "rack")
+      front = create(:media_asset, owner: room, workspace: room.workspace, position: 9, subject: "front")
+
+      expect(described_class.new(room).thumbnail.attachment).to eq(front.image.attachment)
+    end
+
+    it "is nil when the room has no media at all" do
+      expect(described_class.new(room).thumbnail).to be_nil
+    end
+  end
+
+  describe "#thumbnail_variant" do
+    it "resolves the requested named variant off the flat panorama render" do
+      room = create(:room, :with_flat_panorama, building: building)
+
+      card  = described_class.new(room).thumbnail_variant(:card)
+      thumb = described_class.new(room).thumbnail_variant(:thumb)
+
+      expect(card.blob).to eq(room.flat_panorama.blob)
+      expect(card.variation.digest).to eq(room.flat_panorama.variant(:card).variation.digest)
+      expect(thumb.variation.digest).to eq(room.flat_panorama.variant(:thumb).variation.digest)
+    end
+
+    it "serves the panorama's :poster variant regardless of the requested name when only the bare equirect exists" do
+      room = create(:room, :with_panorama, building: building)
+
+      variant = described_class.new(room).thumbnail_variant(:card)
+      poster = room.panorama.variant(:poster)
+
+      expect(variant.blob).to eq(poster.blob)
+      expect(variant.variation.digest).to eq(poster.variation.digest)
+    end
+
+    it "resolves the requested variant off the subject-ranked first gallery image otherwise" do
+      front = create(:media_asset, owner: room, workspace: room.workspace, subject: "front")
+
+      variant = described_class.new(room).thumbnail_variant(:card)
+
+      expect(variant.blob).to eq(front.image.blob)
+      expect(variant.variation.digest).to eq(front.image.variant(:card).variation.digest)
+    end
+
+    it "is nil when the room has no media at all" do
+      expect(described_class.new(room).thumbnail_variant(:card)).to be_nil
+    end
+  end
+
   describe "#as_json" do
     # rails_blob_url/rails_representation_url need a host — this isn't a
     # request spec, so Rails.application.routes.default_url_options has none
@@ -213,7 +282,7 @@ RSpec.describe RoomPresenter do
         )
         expect(json[:building]).to eq(id: building.id, name: building.name, abbreviation: building.abbreviation)
         expect(json[:media]).to eq(
-          photo_url: nil, thumbnail_url: nil, panorama_url: nil, seating_chart_url: nil, gallery_urls: []
+          thumbnail_url: nil, panorama_url: nil, seating_chart_url: nil, gallery_urls: []
         )
       end
     end
@@ -231,11 +300,7 @@ RSpec.describe RoomPresenter do
         room.update!(floor: floor, unit: unit)
         create(:room_characteristic, room: room, code: "c1", short_code: "wifi")
         create(:room_contact, room: room)
-        create(:room_gallery_image, room: room, position: 0)
-        room.photo.attach(
-          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-          filename: "photo.png", content_type: "image/png"
-        )
+        create(:media_asset, owner: room, position: 1)
       end
 
       it "populates floor_label, department, characteristics, contacts, and media URLs" do
@@ -260,13 +325,85 @@ RSpec.describe RoomPresenter do
           support_url: "https://example.edu/support"
         )
 
-        expect(json[:media][:photo_url]).to be_present
+        # thumbnail_url is a VARIANT of the first gallery asset, not the blob
+        # itself — the two must not collapse to the same URL.
         expect(json[:media][:thumbnail_url]).to be_present
-        expect(json[:media][:thumbnail_url]).not_to eq(json[:media][:photo_url])
         expect(json[:media][:gallery_urls].size).to eq(1)
+        expect(json[:media][:thumbnail_url]).not_to eq(json[:media][:gallery_urls].first)
+        # Task 11: gallery_urls are :gallery (800px webp) representations, not
+        # original blobs — a HEIC original would be undecodable in a browser.
+        expect(json[:media][:gallery_urls]).to eq(
+          [ url_helpers.rails_representation_url(room.gallery.first.image.variant(:gallery)) ]
+        )
         expect(json[:media][:panorama_url]).to be_nil
         expect(json[:media][:seating_chart_url]).to be_nil
       end
+    end
+
+    # Task 11 scope addition: panorama_url and seating_chart_url served
+    # original blobs too — same HEIC hazard as gallery_urls. The one survivor
+    # is a PDF seating chart: `.variant` on a PDF raises, and the PDF itself
+    # is the deliverable, so it keeps the original-blob URL.
+    context "media attachments (representations, not blobs)" do
+      it "serves the panorama as a :texture representation" do
+        room.panorama.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
+          filename: "pano.png",
+          content_type: "image/png"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:panorama_url]).to eq(
+          url_helpers.rails_representation_url(room.panorama.variant(:texture))
+        )
+      end
+
+      it "serves an image seating chart as a :lightbox representation" do
+        room.seating_chart.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "seating.png",
+          content_type: "image/png"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:seating_chart_url]).to eq(
+          url_helpers.rails_representation_url(room.seating_chart.variant(:lightbox))
+        )
+      end
+
+      it "serves a flat-panorama room's thumbnail_url as a :thumb representation" do
+        room.flat_panorama.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
+          filename: "flat.png",
+          content_type: "image/png"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:thumbnail_url]).to eq(
+          url_helpers.rails_representation_url(room.flat_panorama.variant(:thumb))
+        )
+      end
+
+      it "keeps a PDF seating chart on its original blob URL" do
+        room.seating_chart.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/seating_chart.pdf")),
+          filename: "seating.pdf",
+          content_type: "application/pdf"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:seating_chart_url]).to eq(
+          url_helpers.rails_blob_url(room.seating_chart)
+        )
+      end
+    end
+
+    def url_helpers
+      Rails.application.routes.url_helpers
     end
   end
 end

@@ -18,8 +18,9 @@ en:
         column_notice: "Notice"
         column_reason: "Reason"
         will_replace: "This will replace the existing file in this slot."
+        will_append: "This will be added to the room gallery."
         slot:
-          photo: "Photo"
+          gallery: "Gallery photo"
           panorama: "Panorama"
           seating_chart: "Seating chart"
         reason:

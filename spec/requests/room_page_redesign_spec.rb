@@ -85,7 +85,7 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
 
   it "tabs the stage only when both panorama and photos exist, panes hidden not removed" do
     attach_panorama!
-    create(:room_gallery_image, room: room, workspace: workspace)
+    create(:media_asset, owner: room, workspace: workspace)
     get room_path(room)
 
     expect(page).to have_css("[role='tablist'] [role='tab']", count: 2)

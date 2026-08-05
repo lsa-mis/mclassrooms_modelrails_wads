@@ -15,10 +15,17 @@ module BulkUpload
     Report = Data.define(:matched, :unmatched)
 
     # Order matters: suffixed patterns must win before the bare-photo pattern.
+    #
+    # The bare pattern resolves to `:gallery`, NOT a `:photo` attachment slot:
+    # Room no longer has a single "main photo" — its stills live in
+    # `Room#gallery` (MediaAsset). `:panorama`/`:seating_chart` are still
+    # has_one_attached slot names, so the two kinds of slot are NOT
+    # interchangeable; Admin::BulkUploadsController#commit branches on
+    # `:gallery` precisely because it needs a row, not an assignment.
     PATTERNS = [
       [ /\A(?<code>[A-Za-z0-9]+)_pano\.(jpe?g|png|webp)\z/i,        :panorama ],
       [ /\A(?<code>[A-Za-z0-9]+)_chairs\.(pdf|jpe?g|png|webp)\z/i,  :seating_chart ],
-      [ /\A(?<code>[A-Za-z0-9]+)\.(jpe?g|png|webp)\z/i,             :photo ]
+      [ /\A(?<code>[A-Za-z0-9]+)\.(jpe?g|png|webp)\z/i,             :gallery ]
     ].freeze
 
     def self.call(blobs) = new(blobs).call

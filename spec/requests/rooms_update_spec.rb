@@ -5,7 +5,7 @@ require "rails_helper"
 # RoomPolicy#manage_media? stays admin-only. This is the authorization
 # BOUNDARY proof: RoomsController#room_params strong-params branch must strip
 # every media key server-side for an editor's request, not merely hide the
-# controls in the view — an editor crafting `{ room: { photo: <file> } }`
+# controls in the view — an editor crafting `{ room: { seating_chart: <file> } }`
 # directly must never attach anything. Mirrors
 # spec/requests/room_visibility_spec.rb's tenancy setup (shared-posture stub
 # + workspace-scoped fixtures + sign_in) and its `editor_for` helper (a plain
@@ -54,9 +54,9 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
     before { sign_in(editor) }
 
     # The crux security proof: nickname (permitted for an editor) updates,
-    # photo (stripped by room_params' strong-params branch, since
+    # seating_chart (stripped by room_params’ strong-params branch, since
     # RoomPolicy#manage_media? is admin-only) never reaches
-    # Room#photo=/Curation::Apply at all — not merely unattached because the
+    # Room#seating_chart=/Curation::Apply at all — not merely unattached because
     # editor never SAW a file input, but because the server dropped the
     # param regardless of what the client sent. Exactly one ActivityLog,
     # scoped to the curated half of the split (room.updated), whose
@@ -64,13 +64,13 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
     it "updates the curated field, silently drops the media param, and audits only the curated change" do
       expect {
         patch room_path(room_in_unit), params: {
-          room: { nickname: "Aud 3", photo: fixture_file_upload("avatar.png", "image/png") }
+          room: { nickname: "Aud 3", seating_chart: fixture_file_upload("avatar.png", "image/png") }
         }
       }.to change(ActivityLog, :count).by(1)
 
       expect(response).to redirect_to(room_path(room_in_unit))
       expect(room_in_unit.reload.nickname).to eq("Aud 3")
-      expect(room_in_unit.photo).not_to be_attached
+      expect(room_in_unit.seating_chart).not_to be_attached
 
       log = ActivityLog.last
       expect(log.action).to eq("room.updated")
@@ -90,7 +90,7 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
     end
 
     # View-level companion to the strong-params proof above: the media
-    # sections partial (photo/panorama/seating_chart/gallery inputs) must not
+    # sections partial (panorama/seating_chart/gallery inputs) must not
     # even RENDER for an editor — RoomPolicy#manage_media? gates it in
     # rooms/edit.html.erb — replaced by the admin-only-media hint (§14.1:
     # editors flag media issues via notes, not by managing media directly).
@@ -103,7 +103,7 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
       expect(response.body).to include(I18n.t("rooms.edit.ada_seat_count_label"))
       expect(response.body).to include(I18n.t("rooms.edit.media_admin_only_hint"))
       expect(response.body).to include(I18n.t("rooms.edit.media_admin_only_hint_link"))
-      expect(response.body).not_to include(I18n.t("rooms.edit.photo_hint"))
+      expect(response.body).not_to include(I18n.t("rooms.edit.seating_chart_hint"))
       expect(response.body).not_to include(I18n.t("rooms.edit.gallery_heading"))
     end
   end
@@ -114,19 +114,19 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
     before { sign_in(admin) }
 
     # Same request the editor spec above sends — an admin gets BOTH: the
-    # curated field updates AND the photo attaches, each audited separately
+    # curated field updates AND the file attaches, each audited separately
     # (the curated/media Curation::Apply split, Phase 5 Task 6 deliverable
     # 3) — "appropriate ActivityLog(s)" per the task brief, plural allowed.
     it "updates the curated field AND attaches the submitted media, auditing both halves" do
       expect {
         patch room_path(room_in_unit), params: {
-          room: { nickname: "Aud 3", photo: fixture_file_upload("avatar.png", "image/png") }
+          room: { nickname: "Aud 3", seating_chart: fixture_file_upload("avatar.png", "image/png") }
         }
       }.to change(ActivityLog, :count).by(2)
 
       expect(response).to redirect_to(room_path(room_in_unit))
       expect(room_in_unit.reload.nickname).to eq("Aud 3")
-      expect(room_in_unit.photo).to be_attached
+      expect(room_in_unit.seating_chart).to be_attached
 
       expect(ActivityLog.where(action: "room.updated", trackable: room_in_unit).count).to eq(1)
       expect(ActivityLog.where(action: "room.media_updated", trackable: room_in_unit).count).to eq(1)
@@ -137,7 +137,7 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("rooms.edit.nickname_label"))
-      expect(response.body).to include(I18n.t("rooms.edit.photo_hint"))
+      expect(response.body).to include(I18n.t("rooms.edit.seating_chart_hint"))
       expect(response.body).to include(I18n.t("rooms.edit.gallery_heading"))
       expect(response.body).not_to include(I18n.t("rooms.edit.media_admin_only_hint"))
     end

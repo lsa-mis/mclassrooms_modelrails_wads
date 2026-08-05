@@ -79,6 +79,48 @@ class RoomPresenter
     [ room.display_name, room.building.full_address, capacity_line, @url ].compact_blank.join(" — ")
   end
 
+  # THE one definition of "the image that stands in for this room" — results
+  # rows, the JSON payload's thumbnail_url, and anything added later all read
+  # it from here, so there is never a second, drifting implementation (the
+  # room_thumbnail_image helper this replaced was exactly that).
+  #
+  # Identity/presence only — the chain, most-specific first:
+  #   1. the flat panorama render (Attached::One),
+  #   2. the bare panorama's :poster variant (already an ActiveStorage
+  #      variant),
+  #   3. the subject-ranked first gallery image (Attached::One),
+  #   4. nil — no media; the row renders its branded empty band.
+  # The legs return INCOMPATIBLE types, so the old "callers pick their own
+  # variant off the return value" contract cannot survive the chain — callers
+  # that need a display resolution go through #thumbnail_variant instead and
+  # use this method only as a presence/identity check.
+  #
+  # Every leg resolves over the ALREADY-PRELOADED collections (RoomSearch#results
+  # preloads all three): `attached?` reads the loaded attachment and
+  # `gallery_ordered` sorts the loaded gallery in Ruby. Re-scoping with
+  # `.where(...)` would re-query per row, bypassing the preload — an N+1
+  # Bullet raises on in test (`config/environments/test.rb` sets `Bullet.raise`).
+  def thumbnail
+    return room.flat_panorama if room.flat_panorama.attached?
+    return room.panorama.variant(:poster) if room.panorama.attached?
+
+    room.gallery_ordered.first&.image
+  end
+
+  # Display-resolution API for the chain: the same legs as #thumbnail,
+  # resolved to a servable representation at the requested size (:card for
+  # the find-a-room row, :thumb for the JSON thumbnail_url).
+  def thumbnail_variant(name)
+    return room.flat_panorama.variant(name) if room.flat_panorama.attached?
+    # A bare equirect has ONE sensible small rendition: the :poster squashed
+    # sweep. A :card center-crop of a raw 2:1 pano would be a distorted
+    # smear, so the poster is served whatever `name` asks — the browser
+    # downscales the 1024×512.
+    return room.panorama.variant(:poster) if room.panorama.attached?
+
+    room.gallery_ordered.first&.image&.variant(name)
+  end
+
   # Room-show JSON (Brief §5.3), consumed verbatim by Task 3's JSON variant
   # (`render json: @presenter.as_json`).
   def as_json(*)
@@ -202,25 +244,38 @@ class RoomPresenter
 
   def media_json
     {
-      photo_url: blob_url(room.photo),
       thumbnail_url: thumbnail_url,
-      panorama_url: blob_url(room.panorama),
-      seating_chart_url: blob_url(room.seating_chart),
-      gallery_urls: room.gallery_images.ordered.filter_map { |image| blob_url(image.image) }
+      panorama_url: variant_url(room.panorama, :texture),
+      seating_chart_url: seating_chart_url,
+      gallery_urls: room.gallery.filter_map { |asset| variant_url(asset.image, :gallery) }
     }
   end
 
-  # 150×150 WebP variant of the room photo (D9). `rails_representation_url`
-  # is the ActiveStorage route helper for a *variant*, as opposed to
-  # `rails_blob_url` (used for the original blob elsewhere in this file) —
-  # mirrors how phase-1/phase-3 views build thumbnails
-  # (app/views/rooms/_room_row.html.erb, _building_card.html.erb:
-  # `url_for(attachment.variant(resize_to_fill: [w, h]))`), just called
-  # through the route helpers directly since this class has no view context.
-  def thumbnail_url
-    return nil unless room.photo.attached?
+  # A PDF seating chart has no browser-renderable variant (`.variant` on a PDF
+  # raises) and the PDF itself is the deliverable, so it keeps the
+  # original-blob URL; an image one serves the :lightbox representation.
+  def seating_chart_url
+    chart = room.seating_chart
+    return blob_url(chart) if chart.attached? && chart.content_type == "application/pdf"
 
-    url_helpers.rails_representation_url(room.photo.variant(resize_to_fill: [ 150, 150 ], format: :webp))
+    variant_url(chart, :lightbox)
+  end
+
+  # `rails_representation_url` is the ActiveStorage route helper for a
+  # *variant*, as opposed to `rails_blob_url` (used for the original blob
+  # elsewhere in this file) — called through the route helpers directly since
+  # this class has no view context.
+  def thumbnail_url
+    representation = thumbnail_variant(:thumb)
+    return nil unless representation
+
+    url_helpers.rails_representation_url(representation)
+  end
+
+  def variant_url(attachment, name)
+    return nil unless attachment.attached?
+
+    url_helpers.rails_representation_url(attachment.variant(name))
   end
 
   def blob_url(attachment)

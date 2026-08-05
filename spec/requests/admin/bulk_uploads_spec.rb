@@ -81,17 +81,30 @@ RSpec.describe "Admin bulk uploads", type: :request do
         expect(response.body).to include("stray.txt")
         expect(response.body).to include(I18n.t("admin.bulk_uploads.review.reason.unrecognized_filename"))
         # Unconfirmed: nothing attached or purged yet.
-        expect(room.reload.photo).not_to be_attached
+        expect(room.reload.gallery).to be_empty
       end
 
-      it "shows a replace warning in the review step when the matched slot is already attached" do
-        room.photo.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-                           filename: "old.png", content_type: "image/png")
+      it "shows a replace warning in the review step when the matched has_one slot is already attached" do
+        room.panorama.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+                             filename: "old.png", content_type: "image/png")
+        pano_id = signed_blob(filename: "MLB1200_pano.jpg", content_type: "image/jpeg")
+
+        post admin_bulk_uploads_path, params: { signed_blob_ids: [ pano_id ] }
+
+        expect(response.body).to include(I18n.t("admin.bulk_uploads.review.will_replace"))
+      end
+
+      # A bare image resolves to :gallery, a has_many — nothing is overwritten,
+      # so the review step must promise an APPEND, never a replace, even when
+      # the room already has gallery photos.
+      it "promises an append (never a replace) in the review step for a gallery match" do
+        create(:media_asset, owner: room, workspace: workspace)
         photo_id = signed_blob(filename: "MLB1200.jpg", content_type: "image/jpeg")
 
         post admin_bulk_uploads_path, params: { signed_blob_ids: [ photo_id ] }
 
-        expect(response.body).to include(I18n.t("admin.bulk_uploads.review.will_replace"))
+        expect(response.body).to include(I18n.t("admin.bulk_uploads.review.will_append"))
+        expect(response.body).not_to include(I18n.t("admin.bulk_uploads.review.will_replace"))
       end
 
       it "attaches every matched slot and writes one ActivityLog per match, and purges unmatched blobs, on confirm" do
@@ -111,7 +124,7 @@ RSpec.describe "Admin bulk uploads", type: :request do
         expect(response.body).to include(I18n.t("admin.bulk_uploads.create.committed", count: 2))
 
         room.reload
-        expect(room.photo).to be_attached
+        expect(room.gallery.count).to eq(1)
         expect(room.seating_chart).to be_attached
 
         logs = ActivityLog.where(action: "room.media_bulk_uploaded", trackable: room)
@@ -119,10 +132,11 @@ RSpec.describe "Admin bulk uploads", type: :request do
       end
 
       it "purges a matched blob that fails Room's own validation instead of leaving it orphaned, and reports the honest attached count" do
-        # MLB1200.jpg matches `room`'s facility code for :photo (Matcher only
-        # reads the filename), but its byte_size trips Room's own
+        # MLB1200.jpg matches `room`'s facility code for :gallery (Matcher only
+        # reads the filename), but its byte_size trips MediaAsset's own
         # `size: { less_than_or_equal_to: 10.megabytes }` validation
-        # (app/models/room.rb) — so Curation::Apply's `save!` raises
+        # (app/models/media_asset.rb), which the nested-attributes cascade
+        # surfaces on the parent — so Curation::Apply's `save!` raises
         # RecordInvalid, which it rescues into Result.failure and rolls back.
         # Real (allowed) PNG bytes padded past the 10MB cap, rather than a
         # bogus declared content_type: `ActiveStorage::Blob.create_and_upload!`
@@ -157,19 +171,36 @@ RSpec.describe "Admin bulk uploads", type: :request do
         )
 
         room.reload
-        expect(room.photo).not_to be_attached
+        expect(room.gallery).to be_empty
         expect(room.seating_chart).to be_attached
       end
 
-      it "replaces an already-attached slot instead of erroring" do
-        room.photo.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-                           filename: "old.png", content_type: "image/png")
+      it "replaces an already-attached has_one slot instead of erroring" do
+        room.panorama.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+                             filename: "old.png", content_type: "image/png")
+        pano_id = signed_blob(filename: "MLB1200_pano.jpg", content_type: "image/jpeg")
+
+        post admin_bulk_uploads_path, params: { signed_blob_ids: [ pano_id ], confirmed: "1" }
+
+        expect(response).to redirect_to(new_admin_bulk_upload_path)
+        expect(room.reload.panorama.filename.to_s).to eq("MLB1200_pano.jpg")
+      end
+
+      # The gallery counterpart of the replace test above: a second bare image
+      # for the same room ADDS a row at the next free position rather than
+      # displacing the one already there.
+      it "appends a gallery match after the room's existing assets" do
+        existing = create(:media_asset, owner: room, workspace: workspace, position: 1)
         photo_id = signed_blob(filename: "MLB1200.jpg", content_type: "image/jpeg")
 
         post admin_bulk_uploads_path, params: { signed_blob_ids: [ photo_id ], confirmed: "1" }
 
         expect(response).to redirect_to(new_admin_bulk_upload_path)
-        expect(room.reload.photo.filename.to_s).to eq("MLB1200.jpg")
+        room.reload
+        expect(room.gallery.count).to eq(2)
+        expect(room.gallery.last.position).to eq(2)
+        expect(room.gallery.last.image.filename.to_s).to eq("MLB1200.jpg")
+        expect(existing.reload.image).to be_attached
       end
 
       it "attaches nothing and writes no ActivityLog when every dropped file is unmatched" do

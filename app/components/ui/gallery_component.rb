@@ -79,7 +79,7 @@ module UI
         class: cn(TRIGGER_CLS, @aspect),
         "aria-label": t("ui.gallery.enlarge", alt: img.alt, default: "Enlarge %{alt}"),
         data: { action: "gallery#open modal#open",
-                gallery_src_param: img.src, gallery_alt_param: img.alt }) do
+                gallery_src_param: img.full_src || img.src, gallery_alt_param: img.alt }) do
         caption_wrap(img)
       end
     end
@@ -120,12 +120,15 @@ module UI
     end
 
     class ImageComponent < ApplicationComponent
-      attr_reader :src, :alt, :caption
+      attr_reader :src, :alt, :caption, :full_src
 
-      def initialize(src:, alt: "", caption: nil, **html_attrs)
-        @src     = src
-        @alt     = alt
-        @caption = caption
+      # full_src: optional larger rendition for the lightbox swap — the cell
+      # <img> keeps `src`, so a small grid thumb is never upscaled full-screen.
+      def initialize(src:, alt: "", caption: nil, full_src: nil, **html_attrs)
+        @src      = src
+        @alt      = alt
+        @caption  = caption
+        @full_src = full_src
         @html_attrs = html_attrs
       end
 

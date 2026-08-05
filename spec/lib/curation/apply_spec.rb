@@ -90,11 +90,11 @@ RSpec.describe Curation::Apply do
       io: File.open(fixture), filename: "avatar.png", content_type: "image/png"
     )
 
-    result = described_class.call(record: room, actor: actor, action: "room.photo_attached",
-                                  attributes: { photo: blob })
+    result = described_class.call(record: room, actor: actor, action: "room.seating_chart_attached",
+                                  attributes: { seating_chart: blob })
 
     expect(result).to be_success
-    expect(room.photo).to be_attached
+    expect(room.seating_chart).to be_attached
     before_after = result.payload[:activity_log].before_after
     expect(before_after).to eq("before" => {}, "after" => {})
 
@@ -107,7 +107,7 @@ RSpec.describe Curation::Apply do
   # Curation::Apply is the sole audit writer for these models — none of them
   # may also include Trackable, or every mutation would double-log.
   it "keeps every curation model free of Trackable (Apply is their sole audit writer)" do
-    curation_models = [ Room, Building, Note, Announcement, EditorAssignment, Floor, RoomGalleryImage ]
+    curation_models = [ Room, Building, Note, Announcement, EditorAssignment, Floor, MediaAsset ]
     tracked = curation_models.select { |klass| klass.include?(Trackable) }
     expect(tracked).to be_empty
   end

@@ -94,6 +94,29 @@ accumulates here too, newest first.
 
 ### Changed
 
+- **Room stills graduated to a first-class media model.** The single `Room#photo`
+  slot and the `RoomGalleryImage` join are gone; rooms (and, by design, buildings
+  and floors later) own an ordered gallery of polymorphic `MediaAsset` records —
+  workspace-tenanted, positioned, and carrying the full authored-or-derived
+  alt/description contract. Each asset can be tagged with **what it shows**
+  (front, back, podium, rack, inner door, other), encoding the capture protocol:
+  insertion order is the display rank, subjects retire rather than delete, and
+  the shot number suggests the subject. Derived alt text is per-subject with
+  positional disambiguation, fails loudly rather than interpolating a blank
+  owner name, and is ratcheted by a spec that renders every consumer's real
+  template against a blank. HEIC/HEIF — the phone camera default — is accepted
+  on every room, building, and floor image slot, and **no display path serves
+  an original blob**: the 360° viewer texture, seating-chart lightbox,
+  floor-plan page, gallery lightbox (now truly full-size instead of an
+  upscaled thumbnail), and the room and building JSON payloads all serve
+  declared webp variants — the gallery's warmed off the request path on
+  upload, the rest rendered on first request. The
+  find-a-room thumbnail resolves through one presenter chain (flat render →
+  poster → first ranked still) with the whole page preloaded to a pinned query
+  budget. Bulk-dropped bare `CODE.jpg` files append gallery assets (duplicates
+  visible and deletable in the coming editor) rather than silently replacing a
+  photo. (#72)
+
 - **Public wordmark standardized on MClassrooms** (no "i") everywhere user-facing —
   brand copy, home/about, `/docs` content and its category heading, the shared-workspace
   display name, and this changelog. Historical `# Phase N Task M` code comments are

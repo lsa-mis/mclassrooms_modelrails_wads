@@ -2,9 +2,47 @@ class Room < ApplicationRecord
   include Tenanted
   include Describable
 
-  describable :photo,         derived_alt: ->(rec) { I18n.t("media.derived_alt.room_photo", room: rec.display_name) }
   describable :panorama,      derived_alt: ->(rec) { I18n.t("media.derived_alt.panorama", room: rec.display_name) }
   describable :seating_chart, derived_alt: ->(rec) { I18n.t("media.derived_alt.seating_chart", room: rec.display_name) }
+
+  # Grace Johnson's capture protocol (2026-07-30), as a vocabulary. INSERTION
+  # ORDER IS THE DISPLAY RANK — see spec/models/room_subjects_spec.rb, which
+  # pins it, because reordering these lines would silently reorder every gallery
+  # in production with no migration and no other failing test.
+  #
+  # A subject is NEVER deleted. Grace expects to stop shooting inner doors once
+  # locking is streamlined; removing the key would invalidate every existing
+  # inner_door row and make it unsaveable through the editor. Mark it
+  # `retired: true` instead: excluded from the picker and from suggestions,
+  # still valid, still ordered, still deriving alt.
+  SUBJECTS = {
+    front:      { key: "media.derived_alt.room.front" },
+    back:       { key: "media.derived_alt.room.back" },
+    podium:     { key: "media.derived_alt.room.podium" },
+    rack:       { key: "media.derived_alt.room.rack" },
+    inner_door: { key: "media.derived_alt.room.inner_door" },
+    other:      { key: "media.derived_alt.room.other" }
+  }.freeze
+
+  def self.subject_rank(subject)
+    return Float::INFINITY if subject.blank?
+
+    index = SUBJECTS.keys.index(subject.to_sym)
+    index.nil? ? Float::INFINITY : index
+  end
+
+  def self.offerable_subjects
+    SUBJECTS.reject { |_, entry| entry[:retired] }.keys
+  end
+
+  # Position is the shot number in the capture protocol, so this mapping IS the
+  # protocol. Pure function, never stored — see the spec's D2.
+  def self.suggested_subject_for(position)
+    return nil if position.nil? || position.to_i < 1
+
+    offerable = offerable_subjects
+    offerable[[ position.to_i - 1, offerable.length - 1 ].min]
+  end
 
   belongs_to :building
   belongs_to :floor, optional: true
@@ -13,11 +51,29 @@ class Room < ApplicationRecord
   belongs_to :hidden_by, class_name: "User", optional: true
   has_many :room_characteristics, dependent: :destroy  # satellite tables land in
   has_one :room_contact, dependent: :destroy           # Tasks 6/8/9; associations are
-  has_many :gallery_images, class_name: "RoomGalleryImage", dependent: :destroy, inverse_of: :room # lazy,
+  has_many :gallery, -> { ordered }, as: :owner, class_name: "MediaAsset",
+                     dependent: :destroy, inverse_of: :owner # lazy,
   has_many :availability_blocks, dependent: :destroy   # so the model loads before them
+
+  # Ranking happens HERE, in Ruby, over the already-preloaded collection. A SQL
+  # CASE would re-query and defeat the eager load — the documented reason
+  # lib/bullet_safelists.rb carries a gallery entry — and is meaningless across
+  # owner types anyway. A gallery is ~6 rows; this is free.
+  #
+  # `a.id || Float::INFINITY`, not bare `a.id`: an unsaved row (new_record?,
+  # id nil) tying a PERSISTED row on [subject_rank, position] would put nil
+  # and an Integer in the same sort_by slot — Array#<=> returns nil for that
+  # pair and Enumerable#sort_by raises ArgumentError ("comparison of Array
+  # with Array failed"). `position` carries no uniqueness constraint, so that
+  # tie is ordinary, not exotic. Falling back to Infinity sorts unsaved rows
+  # after any persisted row at the same rank/position, matching how new rows
+  # are appended, and is a no-op for the all-persisted case this method was
+  # first written against.
+  def gallery_ordered
+    gallery.sort_by { |a| [ self.class.subject_rank(a.subject), a.position, a.id || Float::INFINITY ] }
+  end
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
-  has_one_attached :photo
   # :poster is now a FALLBACK ONLY — the squashed-equirect strip the pano pane
   # serves for rooms whose flat render has not landed yet (or failed). Generated
   # on demand, not pre-processed: the render below is the primary image, and
@@ -26,6 +82,12 @@ class Room < ApplicationRecord
   # also cover app/docs/developer/rooms-directory.md.
   has_one_attached :panorama do |attachable|
     attachable.variant :poster, resize_to_limit: [ 1024, 512 ], format: :webp
+    # :texture is the live-load Pannellum/WebGL sphere texture. HEIC/HEIF are
+    # accepted uploads and browsers cannot decode them, so the viewer must
+    # never receive the original blob — this is effectively a webp transcode
+    # (8192×4096 is a WebGL-safe bound; a no-op resize for a typical
+    # 4000×2000 equirect).
+    attachable.variant :texture, resize_to_limit: [ 8192, 4096 ], format: :webp
   end
   # The FLAT (rectilinear) render of :panorama — the view Pannellum's default
   # camera shows, produced by Panorama::Rectilinear. Deliberately NOT a
@@ -36,8 +98,21 @@ class Room < ApplicationRecord
   # NOTE: nothing on Room triggers the render. The callback lives on
   # ActiveStorage::Attachment (config/initializers/flat_panorama_callbacks.rb) —
   # read that file's header before adding a callback here.
-  has_one_attached :flat_panorama
-  has_one_attached :seating_chart
+  has_one_attached :flat_panorama do |attachable|
+    # RoomPresenter's thumbnail chain serves THIS attachment first: :card backs
+    # the find-a-room row image, :thumb the JSON thumbnail_url. Dimensions match
+    # MediaAsset#image's :card/:thumb exactly — one visual size system across
+    # every thumbnail source — and the render is app-generated webp, so
+    # variants of it are safe (no HEIC-decode hazard).
+    attachable.variant :card,  resize_to_fill:  [ 96, 96 ],   format: :webp
+    attachable.variant :thumb, resize_to_limit: [ 200, 200 ], format: :webp
+  end
+  # :lightbox backs the full-size dialog image on the room page (max-h-[70vh];
+  # 2048 is ample). Image renders only — the PDF-guarded branch links the
+  # original blob, and `.variant` on a PDF raises.
+  has_one_attached :seating_chart do |attachable|
+    attachable.variant :lightbox, resize_to_limit: [ 2048, 2048 ], format: :webp
+  end
 
   # Phase 4 Task 7 (Brief §5.3): admin gallery add/remove/reorder flows through
   # nested attributes so the whole edit form — curated fields AND gallery
@@ -50,7 +125,7 @@ class Room < ApplicationRecord
   # right slot without extra JS. Without reject_if, `position` being non-blank
   # on an UNTOUCHED blank row defeats Rails' own `all_blank?` skip, so
   # `assign_nested_attributes_for_collection_association` would build a new
-  # RoomGalleryImage with no image attached — RoomGalleryImage's own
+  # MediaAsset with no image attached — MediaAsset's own
   # `validates :image, attached: true` would then fail EVERY curated-field-only
   # edit (e.g. a plain nickname change) with an unrelated gallery error.
   #
@@ -61,16 +136,16 @@ class Room < ApplicationRecord
   # check alone would silently no-op every position/`_destroy` edit on an
   # existing gallery image. `with_indifferent_access` tolerates either string
   # keys (real form submissions) or symbol keys (specs/console calls).
-  accepts_nested_attributes_for :gallery_images, allow_destroy: true,
+  accepts_nested_attributes_for :gallery, allow_destroy: true,
     reject_if: proc { |attributes|
       attrs = attributes.with_indifferent_access
       attrs[:id].blank? && attrs[:image].blank?
     }
 
   validates :rmrecnbr, presence: true, uniqueness: true
-  validates :photo, :panorama, content_type: [ :png, :jpeg, :webp ],
-                    size: { less_than_or_equal_to: 10.megabytes }
-  validates :seating_chart, content_type: [ :png, :jpeg, :webp, :pdf ],
+  validates :panorama, content_type: ImageContentTypes::ACCEPTED,
+                       size: { less_than_or_equal_to: 10.megabytes }
+  validates :seating_chart, content_type: ImageContentTypes::ACCEPTED_WITH_PDF,
                     size: { less_than_or_equal_to: 10.megabytes }
 
   before_save :normalize_facility_code
@@ -86,7 +161,7 @@ class Room < ApplicationRecord
   # The reader always returns false (never true) so the checkbox round-trips
   # unchecked on re-render (a validation failure re-renders :edit) rather than
   # echoing back "checked" from a transient submitted value.
-  %i[photo panorama seating_chart].each do |slot|
+  %i[panorama seating_chart].each do |slot|
     define_method("remove_#{slot}=") do |value|
       next unless ActiveModel::Type::Boolean.new.cast(value)
 
@@ -165,6 +240,8 @@ class Room < ApplicationRecord
     base = facility_code.presence || [ building_name, room_number ].compact_blank.join(" ")
     nickname.present? ? "#{base} – #{nickname}" : base
   end
+
+  def media_owner_name = display_name
 
   def hidden? = hidden_at.present?
 
