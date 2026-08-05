@@ -45,7 +45,7 @@ RSpec.describe ForkFlow do
       "config/application.rb" => "module ModelrailsBase\n  class Application < Rails::Application\n  end\nend\n",
       "config/deploy.yml" => "service: modelrails_base\nimage: you/modelrails_base\n",
       "config/locales/en/brand.en.yml" => %(en:\n  application:\n    name: "ModelRails"\n),
-      "config/locales/en/pages.en.yml" => %(en:\n  pages:\n    brand: "ModelRails"\n    address: "support@modelrails.dev"\n),
+      "config/locales/en/pages.en.yml" => %(en:\n  pages:\n    brand: "ModelRails"\n    address: "support@example.com"\n),
       "public/manifest.webmanifest" => %({"name": "ModelRails"}\n),
       ".github/workflows/ci.yml" => "jobs:\n  build:\n    image: modelrails_base:latest\n",
       ".github/workflows/image_scan.yml" => "jobs:\n  scan:\n    image: modelrails_base:latest\n"
@@ -234,7 +234,7 @@ RSpec.describe ForkFlow do
       run_fork(name: "my_app", yes: true)
 
       pages = repo.join("config/locales/en/pages.en.yml").read
-      expect(pages).not_to include("support@modelrails.dev")
+      expect(pages).not_to include("support@example.com")
       expect(pages).to include("support@my_app.example")
     end
 

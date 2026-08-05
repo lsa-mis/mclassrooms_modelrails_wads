@@ -159,8 +159,13 @@ RSpec.describe Workspace, type: :model do
   describe "logo attachment" do
     let(:workspace) { create(:workspace) }
 
+    # HEIC/HEIF included: it is the iPhone camera default, so rejecting it
+    # bounces the most common source of a logo upload. Safe to accept — the
+    # active_storage initializer records that both load and transform under
+    # Vips.block_untrusted(true) after CVE-2026-66066, and Rails converts the
+    # variant to PNG automatically because they are not web_image_content_types.
     it "accepts valid image content types" do
-      %w[image/png image/jpeg image/gif image/webp].each do |content_type|
+      %w[image/png image/jpeg image/gif image/webp image/heic image/heif].each do |content_type|
         workspace.logo.attach(io: StringIO.new("fake"), filename: "test.png", content_type: content_type)
         workspace.valid?
         expect(workspace.errors[:logo]).to be_empty, "Expected #{content_type} to be valid"

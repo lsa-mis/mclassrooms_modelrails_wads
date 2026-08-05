@@ -401,9 +401,14 @@ RSpec.describe User, type: :model do
   end
 
   describe "avatar Active Storage validations" do
+    # HEIC/HEIF included: it is the iPhone camera default, so rejecting it
+    # bounces the most common source of an avatar upload. Safe to accept — the
+    # active_storage initializer records that both load and transform under
+    # Vips.block_untrusted(true) after CVE-2026-66066, and Rails converts the
+    # variant to PNG automatically because they are not web_image_content_types.
     it "accepts valid image content types" do
       user = create(:user)
-      %w[image/png image/jpeg image/gif image/webp].each do |content_type|
+      %w[image/png image/jpeg image/gif image/webp image/heic image/heif].each do |content_type|
         user.avatar.attach(io: StringIO.new("fake"), filename: "test.png", content_type: content_type)
         user.valid?
         expect(user.errors[:avatar]).to be_empty, "Expected #{content_type} to be valid"
