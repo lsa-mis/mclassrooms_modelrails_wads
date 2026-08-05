@@ -35,10 +35,10 @@ class Workspace < ApplicationRecord
 
   validates :name, presence: true, length: { maximum: 255 }
   validates :logo,
-    content_type: %w[image/png image/jpeg image/gif image/webp],
+    content_type: IMAGE_CONTENT_TYPES,
     size: { less_than: 5.megabytes }
   validates :logo_original,
-    content_type: %w[image/png image/jpeg image/gif image/webp],
+    content_type: IMAGE_CONTENT_TYPES,
     size: { less_than: 10.megabytes }
   validates :slug, presence: true, uniqueness: true
   validates :max_members, numericality: { greater_than: 0 }
