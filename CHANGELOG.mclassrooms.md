@@ -105,10 +105,12 @@ accumulates here too, newest first.
   positional disambiguation, fails loudly rather than interpolating a blank
   owner name, and is ratcheted by a spec that renders every consumer's real
   template against a blank. HEIC/HEIF — the phone camera default — is accepted
-  on every image slot, and **no display path serves an original blob**: the 360°
-  viewer texture, seating-chart lightbox, floor-plan page, gallery lightbox
-  (now truly full-size instead of an upscaled thumbnail), and the room JSON all
-  serve declared webp variants, warmed off the request path on upload. The
+  on every room, building, and floor image slot, and **no display path serves
+  an original blob**: the 360° viewer texture, seating-chart lightbox,
+  floor-plan page, gallery lightbox (now truly full-size instead of an
+  upscaled thumbnail), and the room and building JSON payloads all serve
+  declared webp variants — the gallery's warmed off the request path on
+  upload, the rest rendered on first request. The
   find-a-room thumbnail resolves through one presenter chain (flat render →
   poster → first ranked still) with the whole page preloaded to a pinned query
   budget. Bulk-dropped bare `CODE.jpg` files append gallery assets (duplicates
