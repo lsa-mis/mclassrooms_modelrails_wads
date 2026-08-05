@@ -544,6 +544,20 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).to include(%(href="#{rails_blob_path(room.seating_chart, disposition: :inline)}"))
     end
 
+    # Task 11: the photos-pane grid stays at :thumb (200px), but the lightbox
+    # must open the :full rendition (1600px) instead of upscaling that same
+    # thumb to max-h-[90vh] — and the original gallery blob (possibly HEIC,
+    # which browsers can't decode) must never reach the page.
+    it "serves the gallery grid at :thumb and its lightbox at :full, never the original blob" do
+      asset = create(:media_asset, owner: room, workspace: workspace)
+
+      get room_path(room)
+
+      expect(response.body).to include(rails_representation_path(asset.image.variant(:thumb)))
+      expect(response.body).to include(rails_representation_path(asset.image.variant(:full)))
+      expect(response.body).not_to include(rails_blob_path(asset.image))
+    end
+
     # Phase 5 realty-model retrofit (supersedes the original Task 8 admin-only
     # gate — see git history for the superseded RoleResolver predicate):
     # BuildingPolicy#show? opens a non-hidden building's detail page to any
