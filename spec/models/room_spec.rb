@@ -288,21 +288,19 @@ RSpec.describe Room, type: :model do
 
     it "accepts a HEIC panorama, since a phone is the likely source" do
       room = build(:room)
-      room.panorama.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "pano.heic", content_type: "image/heic"
-      )
+      room.panorama.attach(io: heic_io, filename: "pano.heic", content_type: "image/heic")
 
+      # Assert the sniffed type, not the declared one: Marcel overrides the
+      # caller's declaration, so without this the example would pass on a PNG.
+      expect(room.panorama.blob.content_type).to eq("image/heic")
       expect(room).to be_valid
     end
 
     it "accepts a HEIF seating chart" do
       room = build(:room)
-      room.seating_chart.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "chart.heif", content_type: "image/heif"
-      )
+      room.seating_chart.attach(io: heif_io, filename: "chart.heif", content_type: "image/heif")
 
+      expect(room.seating_chart.blob.content_type).to eq("image/heif")
       expect(room).to be_valid
     end
   end

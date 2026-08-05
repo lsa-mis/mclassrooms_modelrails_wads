@@ -41,11 +41,9 @@ RSpec.describe Floor, type: :model do
 
     it "accepts a HEIF plan, since a phone is the likely source" do
       floor = build(:floor)
-      floor.plan.attach(
-        io: StringIO.new("fake heif content"),
-        filename: "plan.heif",
-        content_type: "image/heif"
-      )
+      floor.plan.attach(io: heif_io, filename: "plan.heif", content_type: "image/heif")
+
+      expect(floor.plan.blob.content_type).to eq("image/heif")
       expect(floor).to be_valid
     end
 
