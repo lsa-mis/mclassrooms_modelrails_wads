@@ -261,9 +261,66 @@ RSpec.describe RoomPresenter do
         expect(json[:media][:thumbnail_url]).to be_present
         expect(json[:media][:gallery_urls].size).to eq(1)
         expect(json[:media][:thumbnail_url]).not_to eq(json[:media][:gallery_urls].first)
+        # Task 11: gallery_urls are :gallery (800px webp) representations, not
+        # original blobs — a HEIC original would be undecodable in a browser.
+        expect(json[:media][:gallery_urls]).to eq(
+          [ url_helpers.rails_representation_url(room.gallery.first.image.variant(:gallery)) ]
+        )
         expect(json[:media][:panorama_url]).to be_nil
         expect(json[:media][:seating_chart_url]).to be_nil
       end
+    end
+
+    # Task 11 scope addition: panorama_url and seating_chart_url served
+    # original blobs too — same HEIC hazard as gallery_urls. The one survivor
+    # is a PDF seating chart: `.variant` on a PDF raises, and the PDF itself
+    # is the deliverable, so it keeps the original-blob URL.
+    context "media attachments (representations, not blobs)" do
+      it "serves the panorama as a :texture representation" do
+        room.panorama.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
+          filename: "pano.png",
+          content_type: "image/png"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:panorama_url]).to eq(
+          url_helpers.rails_representation_url(room.panorama.variant(:texture))
+        )
+      end
+
+      it "serves an image seating chart as a :lightbox representation" do
+        room.seating_chart.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "seating.png",
+          content_type: "image/png"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:seating_chart_url]).to eq(
+          url_helpers.rails_representation_url(room.seating_chart.variant(:lightbox))
+        )
+      end
+
+      it "keeps a PDF seating chart on its original blob URL" do
+        room.seating_chart.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/seating_chart.pdf")),
+          filename: "seating.pdf",
+          content_type: "application/pdf"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:seating_chart_url]).to eq(
+          url_helpers.rails_blob_url(room.seating_chart)
+        )
+      end
+    end
+
+    def url_helpers
+      Rails.application.routes.url_helpers
     end
   end
 end

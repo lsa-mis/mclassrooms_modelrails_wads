@@ -221,10 +221,20 @@ class RoomPresenter
   def media_json
     {
       thumbnail_url: thumbnail_url,
-      panorama_url: blob_url(room.panorama),
-      seating_chart_url: blob_url(room.seating_chart),
-      gallery_urls: room.gallery.filter_map { |asset| blob_url(asset.image) }
+      panorama_url: variant_url(room.panorama, :texture),
+      seating_chart_url: seating_chart_url,
+      gallery_urls: room.gallery.filter_map { |asset| variant_url(asset.image, :gallery) }
     }
+  end
+
+  # A PDF seating chart has no browser-renderable variant (`.variant` on a PDF
+  # raises) and the PDF itself is the deliverable, so it keeps the
+  # original-blob URL; an image one serves the :lightbox representation.
+  def seating_chart_url
+    chart = room.seating_chart
+    return blob_url(chart) if chart.attached? && chart.content_type == "application/pdf"
+
+    variant_url(chart, :lightbox)
   end
 
   # `rails_representation_url` is the ActiveStorage route helper for a
@@ -236,6 +246,12 @@ class RoomPresenter
     return nil unless image&.attached?
 
     url_helpers.rails_representation_url(image.variant(:thumb))
+  end
+
+  def variant_url(attachment, name)
+    return nil unless attachment.attached?
+
+    url_helpers.rails_representation_url(attachment.variant(name))
   end
 
   def blob_url(attachment)
