@@ -50,7 +50,7 @@ class ForkFlow
       [ TEMPLATE_BRAND, :title ],
       # RFC-reserved .example makes the placeholder unmistakable; shipping the
       # template's real support address silently would be worse.
-      [ "support@modelrails.dev", :support_email ]
+      [ "support@example.com", :support_email ]
     ],
     "public/manifest.webmanifest"      => [ [ %("#{TEMPLATE_BRAND}"), :quoted_title ] ],
     ".github/workflows/ci.yml"         => [ [ "#{TEMPLATE_TOKEN}:", :snake_colon ] ],
