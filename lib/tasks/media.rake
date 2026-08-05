@@ -30,4 +30,18 @@ namespace :media do
     puts "-" * 62
     puts "#{total} image(s) still need authored alt text (on the derived backstop)."
   end
+
+  desc "Process every declared variant for every media asset (WORKSPACE=slug)"
+  task warm_variants: :environment do
+    slug = ENV.fetch("WORKSPACE") { abort "WORKSPACE=<slug> is required" }
+    workspace = Workspace.kept.find_by!(slug: slug)
+
+    scope = MediaAsset.where(workspace: workspace)
+    total = scope.count
+    scope.find_each.with_index(1) do |asset, i|
+      WarmMediaVariantsJob.perform_now(asset)
+      puts "warmed #{i}/#{total}" if (i % 50).zero?
+    end
+    puts "done: #{total} assets"
+  end
 end
