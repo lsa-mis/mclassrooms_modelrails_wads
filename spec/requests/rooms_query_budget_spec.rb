@@ -115,12 +115,22 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
   # the preloaded collections.
   it "keeps find-a-room within budget with the thumbnail chain wired" do
     building = create(:building, workspace: workspace)
-    create_list(:room, 30, building: building, workspace: workspace)
+    # A MIXED page, so every chain leg renders at least once: real media on an
+    # index row is what exposes an attachment/blob preload gap — a page of
+    # bare rooms exercises only the nil leg and hides it.
+    create_list(:room, 27, building: building, workspace: workspace)
+    create(:room, :with_flat_panorama, building: building, workspace: workspace)
+    create(:room, :with_panorama, building: building, workspace: workspace)
+    gallery_room = create(:room, building: building, workspace: workspace)
+    create(:media_asset, owner: gallery_room, workspace: workspace, position: 1, subject: "front")
+    create(:media_asset, owner: gallery_room, workspace: workspace, position: 2, subject: "back")
 
     sign_in(membership_with("viewer"))
 
     count = 0
-    counter = ->(*, payload) { count += 1 unless payload[:name].in?(%w[SCHEMA TRANSACTION]) }
+    # CACHE/SCHEMA per this file's convention above; TRANSACTION additionally,
+    # because BEGIN/COMMIT events are bookkeeping, not page work.
+    counter = ->(*, payload) { count += 1 unless payload[:name].in?(%w[CACHE SCHEMA TRANSACTION]) }
 
     ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
       get find_a_room_path

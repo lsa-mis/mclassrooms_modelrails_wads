@@ -68,8 +68,11 @@ module BulletSafelists
 
     # The thumbnail chain (RoomPresenter#thumbnail / #thumbnail_variant)
     # short-circuits — flat render, then bare panorama, then gallery — so the
-    # later legs WILL be unused on any row that resolves early. Safelisted for
-    # the same intentionally-pessimistic reason as the Membership legs above.
+    # later legs WILL be unused on any row that resolves early, and the
+    # RoomSearch unit spec never renders at all (the rationale above).
+    # Verified needed under the explicit `attachment: :blob` preloads:
+    # removing them raises `Room => [:flat_panorama_attachment,
+    # :panorama_attachment]` in the unit spec and on short-circuiting pages.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :flat_panorama_attachment)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :panorama_attachment)
   end
