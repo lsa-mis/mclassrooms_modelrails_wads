@@ -17,7 +17,7 @@ class Floor < ApplicationRecord
   end
 
   validates :label, presence: true, uniqueness: { scope: :building_id }
-  validates :plan, content_type: [ :png, :jpeg, :webp, :pdf, "image/heic", "image/heif" ],
+  validates :plan, content_type: ImageContentTypes::ACCEPTED_WITH_PDF,
                    size: { less_than_or_equal_to: 10.megabytes }
 
   # Phase 4 Task 9 (Brief §5.3): attribute-shaped remover, same species as

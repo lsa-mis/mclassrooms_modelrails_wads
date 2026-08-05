@@ -34,7 +34,7 @@ class MediaAsset < ApplicationRecord
 
   validates :position, numericality: { greater_than_or_equal_to: 1 }
   validates :image, attached: true,
-                    content_type: [ :png, :jpeg, :webp, "image/heic", "image/heif" ],
+                    content_type: ImageContentTypes::ACCEPTED,
                     size: { less_than_or_equal_to: 10.megabytes }
   validate :owner_must_share_workspace
   # App-level only, deliberately. A table CHECK would have to union every owner
