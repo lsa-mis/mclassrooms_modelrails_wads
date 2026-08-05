@@ -117,7 +117,15 @@ class RoomsController < ApplicationController
     if stale?(etag: show_cache_key, last_modified: show_last_modified)
       respond_to do |format|
         format.html
-        format.json { render json: @presenter.as_json }
+        format.json do
+          # media_json walks asset.image per gallery row and @room came from
+          # set_room's plain find — with 2+ assets that's an image_attachment
+          # N+1 (Bullet raises). Same in-memory Preloader helper #edit/#update
+          # use; scoped to the JSON branch so a 304 never carries an unused
+          # eager load.
+          preload_gallery_image_attachments
+          render json: @presenter.as_json
+        end
       end
     end
   end

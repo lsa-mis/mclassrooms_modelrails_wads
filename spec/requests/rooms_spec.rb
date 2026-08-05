@@ -558,6 +558,21 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).not_to include(rails_blob_path(asset.image))
     end
 
+    # Task 11 fix round 1: RoomPresenter#media_json walks asset.image per
+    # gallery row, and set_room loads @room via a plain find (no preload) — so
+    # the JSON path N+1s on image_attachment as soon as a room has 2+ assets
+    # (Bullet raises; a single-asset room can't trip it, which is how it hid).
+    it "serves the JSON gallery for multiple assets without an attachment N+1" do
+      create(:media_asset, owner: room, workspace: workspace, position: 1)
+      create(:media_asset, owner: room, workspace: workspace, position: 2)
+
+      get room_path(room), as: :json
+
+      json = response.parsed_body
+      expect(json["media"]["gallery_urls"].length).to eq(2)
+      expect(json["media"]["gallery_urls"]).to all(include("/rails/active_storage/representations/"))
+    end
+
     # Phase 5 realty-model retrofit (supersedes the original Task 8 admin-only
     # gate — see git history for the superseded RoleResolver predicate):
     # BuildingPolicy#show? opens a non-hidden building's detail page to any
