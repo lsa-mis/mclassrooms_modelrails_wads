@@ -90,7 +90,7 @@
       data: {
         turbo_permanent: "",
         controller: "panorama",
-        panorama_url_value: rails_blob_path(room.panorama),
+        panorama_url_value: rails_representation_path(room.panorama.variant(:texture)),
         panorama_preview_url_value: panorama_preview_path,
         panorama_label_value: t("rooms.show.panorama_label", room: room.display_name),
         panorama_preview_source: preview_source,

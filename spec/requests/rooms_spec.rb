@@ -496,6 +496,54 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).not_to include("(PDF)")
     end
 
+    # Task 10 fix round 2: no display path may serve an original image blob.
+    # HEIC/HEIF are now accepted uploads and browsers cannot decode HEIC, so a
+    # raw blob URL in a viewer/img slot renders a broken image for exactly the
+    # phone-photo uploads the widened allowlist exists for. Every display
+    # render must resolve through a declared webp variant instead.
+    it "serves the panorama viewer texture as a variant, never the original blob" do
+      room.panorama.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
+        filename: "pano.png",
+        content_type: "image/png"
+      )
+
+      get room_path(room)
+
+      expect(response.body).not_to include(rails_blob_path(room.panorama))
+      expect(response.body).to include(
+        %(data-panorama-url-value="#{rails_representation_path(room.panorama.variant(:texture))}")
+      )
+    end
+
+    it "serves the seating-chart lightbox image as a variant, never the original blob" do
+      room.seating_chart.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "seating.png",
+        content_type: "image/png"
+      )
+
+      get room_path(room)
+
+      expect(response.body).not_to include(rails_blob_path(room.seating_chart))
+      expect(response.body).to include(rails_representation_path(room.seating_chart.variant(:lightbox)))
+    end
+
+    # Guard the guard: a PDF seating chart has no browser-renderable variant
+    # (`.variant` on a PDF raises) — the PDF-guarded branch must keep linking
+    # to the original blob, inline.
+    it "still links a PDF seating chart to its original blob" do
+      room.seating_chart.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/seating_chart.pdf")),
+        filename: "seating.pdf",
+        content_type: "application/pdf"
+      )
+
+      get room_path(room)
+
+      expect(response.body).to include(%(href="#{rails_blob_path(room.seating_chart, disposition: :inline)}"))
+    end
+
     # Phase 5 realty-model retrofit (supersedes the original Task 8 admin-only
     # gate — see git history for the superseded RoleResolver predicate):
     # BuildingPolicy#show? opens a non-hidden building's detail page to any
@@ -840,6 +888,24 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
       )
       expect(response.body).to include(%(href="#{rails_blob_path(floor.plan, disposition: :inline)}"))
       expect(response.body).not_to include("<img")
+    end
+
+    # Task 10 fix round 2 (same rule as the room page's media slots): an IMAGE
+    # floor plan must render through a declared webp variant — HEIC/HEIF are
+    # now model-sanctioned uploads and a raw blob URL hands the browser an
+    # image it cannot decode. The PDF branch above keeps its original-blob
+    # link (a PDF has no variant).
+    it "serves an image floor plan as a variant, never the original blob" do
+      floor.plan.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "floor-2.png",
+        content_type: "image/png"
+      )
+
+      get floor_plan_room_path(room)
+
+      expect(response.body).not_to include(rails_blob_path(floor.plan))
+      expect(response.body).to include(rails_representation_path(floor.plan.variant(:display)))
     end
 
     # "B100" CASTs to 0 (SQLite CAST stops at the first non-digit character)

@@ -76,7 +76,7 @@
                   <% end %>
                   <%= ui :figure do %>
                     <%= ui :image,
-                          src: rails_blob_path(@room.seating_chart),
+                          src: rails_representation_path(@room.seating_chart.variant(:lightbox)),
                           alt: @room.alt_for(:seating_chart),
                           loading: :eager,
                           class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
