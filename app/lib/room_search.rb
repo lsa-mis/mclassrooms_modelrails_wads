@@ -60,11 +60,17 @@ class RoomSearch
   end
 
   def results
+    # Attachment legs preload `attachment: :blob` EXPLICITLY, never via the
+    # with_attached_* scopes: those also eager-load
+    # `blob: [:variant_records, :preview_image_attachment]`, which Bullet
+    # flags as unused on ActiveStorage::Blob the moment a row carries real
+    # media (same footgun RoomsController#preload_gallery_image_attachments
+    # documents for the gallery leg).
     scope = @base.joins(:building).left_outer_joins(:floor)
                  .preload(:building, :floor, :unit, :room_characteristics,
-                          gallery: { image_attachment: :blob })
-                 .with_attached_flat_panorama
-                 .with_attached_panorama
+                          gallery: { image_attachment: :blob },
+                          flat_panorama_attachment: :blob,
+                          panorama_attachment: :blob)
     scope = filter_saved(scope)
     scope = filter_query(scope)
     scope = filter_building(scope)
