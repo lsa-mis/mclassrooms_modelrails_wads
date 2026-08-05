@@ -12,7 +12,9 @@
 # Enqueued from ActiveStorage::Attachment, not MediaAsset — see
 # config/initializers/warm_media_variants.rb.
 class WarmMediaVariantsJob < ApplicationJob
-  queue_as :default
+  # :low, same as RenderFlatPanoramaJob: CPU-bound vips work sharing a host
+  # with Puma, best-effort by definition (a cold variant still renders lazily).
+  queue_as :low
 
   def perform(asset)
     return unless asset&.image&.attached?

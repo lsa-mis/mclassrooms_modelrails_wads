@@ -47,4 +47,12 @@ RSpec.describe "media:warm_variants" do
 
     expect { Rake::Task["media:warm_variants"].invoke }.to raise_error(SystemExit)
   end
+
+  # abort, not a raw RecordNotFound crash — the flat_panoramas.rake house
+  # pattern for an operator typo.
+  it "aborts on a slug that matches no kept workspace" do
+    ENV["WORKSPACE"] = "no-such-workspace"
+
+    expect { Rake::Task["media:warm_variants"].invoke }.to raise_error(SystemExit)
+  end
 end
