@@ -32,6 +32,8 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Fixed
 
+- Avatars and workspace logos accept **HEIC/HEIF** — the iPhone camera default, previously rejected, which bounced the most common source of a phone upload. The allowlist had been set to `web_image_content_types` (what a browser renders) rather than what the app can safely process; Rails already converts the variant to PNG. Safe under the post-CVE-2026-66066 posture: both formats load and transform under `Vips.block_untrusted(true)` and remain in `variable_content_types`. Forks that narrowed this list should widen it too.
+
 - Devcontainer installs Chromium for Cuprite system specs — #502 removed the old `npx playwright install` browser step without a replacement, leaving the `ruby:slim`-based devcontainer with no browser to drive, so every system spec failed there; ferrum now auto-detects the apt-installed `chromium`. A template-invariant spec guards that a browser is installed and that Node stays out of `.devcontainer/`.
 - Align `@playwright/test` to 1.61.1 (chromium-1228) to match the `playwright-ruby-client` gem's compatible version — fixes an `add_init_script` protocol skew that flaked the form-draft system specs.
 - Toast containers are named region landmarks — clears the app-wide aria-prohibited-attr axe violation and keeps toast content inside a landmark.
