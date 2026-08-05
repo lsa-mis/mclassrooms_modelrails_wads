@@ -115,7 +115,7 @@ accumulates here too, newest first.
   poster → first ranked still) with the whole page preloaded to a pinned query
   budget. Bulk-dropped bare `CODE.jpg` files append gallery assets (duplicates
   visible and deletable in the coming editor) rather than silently replacing a
-  photo.
+  photo. (#72)
 
 - **Public wordmark standardized on MClassrooms** (no "i") everywhere user-facing —
   brand copy, home/about, `/docs` content and its category heading, the shared-workspace
