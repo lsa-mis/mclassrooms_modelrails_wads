@@ -119,7 +119,16 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     # index row is what exposes an attachment/blob preload gap — a page of
     # bare rooms exercises only the nil leg and hides it.
     create_list(:room, 27, building: building, workspace: workspace)
-    create(:room, :with_flat_panorama, building: building, workspace: workspace)
+    # The flat-panorama room ALSO carries a gallery asset: the chain
+    # short-circuits before ever touching it, so its preloaded
+    # image_attachment row goes UNUSED on this page — the shape that needs
+    # the MediaAsset/:image_attachment safelist beside the Room-level
+    # short-circuit entries. NOTE Bullet's unused-preload raise for this
+    # nested association only surfaces out-of-channel (system specs — see
+    # spec/system/rooms/show_spec.rb, which pins it); in a request spec this
+    # example pins the QUERY BUDGET for the same maximal shape instead.
+    flat_room = create(:room, :with_flat_panorama, building: building, workspace: workspace)
+    create(:media_asset, owner: flat_room, workspace: workspace, position: 1, subject: "front")
     create(:room, :with_panorama, building: building, workspace: workspace)
     gallery_room = create(:room, building: building, workspace: workspace)
     create(:media_asset, owner: gallery_room, workspace: workspace, position: 1, subject: "front")

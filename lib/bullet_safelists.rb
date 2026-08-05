@@ -75,6 +75,23 @@ module BulletSafelists
     # :panorama_attachment]` in the unit spec and on short-circuiting pages.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :flat_panorama_attachment)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :panorama_attachment)
+    # The NESTED legs of the same short-circuit: a room with a flat panorama
+    # AND gallery assets preloads `gallery: { image_attachment: :blob }` on
+    # the index, but the chain resolves before touching any of it — so the
+    # MediaAsset rows' image_attachment AND those attachments' blob both
+    # read as unused. Missing these entries failed five rooms/show system
+    # specs: sign-in lands on /find-a-room, and the raise surfaces
+    # OUT-OF-CHANNEL via Bullet::Rack in the Capybara server. Request specs
+    # can NOT catch this pair — the RSpec-hook example window is already
+    # open, so Bullet::Rack skips its per-request window — the system suite
+    # is the guard (spec/system/rooms/show_spec.rb).
+    #
+    # Breadth caveat: the Attachment→blob entry is app-wide (Bullet safelists
+    # cannot scope to an owner), so it also masks any FUTURE genuinely-unused
+    # `attachment: :blob` preload. The "never with_attached_X" rule above is
+    # what keeps that risk small.
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "MediaAsset", association: :image_attachment)
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "ActiveStorage::Attachment", association: :blob)
   end
 
   # --- N+1 query ------------------------------------------------------------
