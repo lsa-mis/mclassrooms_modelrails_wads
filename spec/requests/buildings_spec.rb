@@ -317,14 +317,21 @@ RSpec.describe "GET /buildings/:id", type: :request do
       expect(json["address"]).to eq("419 S State St")
       expect(json["city"]).to eq("Ann Arbor")
       expect(json["full_address"]).to eq(building.full_address)
-      expect(json["photo_url"]).to be_present
+      # Final fix round: the JSON payload serves declared webp REPRESENTATIONS
+      # for image attachments, never the original blob — this branch made these
+      # two slots HEIC-accepting, and an original HEIC blob is undecodable in
+      # most browsers. Mirrors RoomPresenter's representations-not-blobs
+      # contract (spec/lib/room_presenter_spec.rb).
+      expect(json["photo_url"]).to include(rails_representation_path(building.photo.variant(:hero)))
+      expect(json["photo_url"]).not_to include("/rails/active_storage/blobs/")
 
       floors = json["floors"]
       expect(floors.size).to eq(2)
 
       with_plan = floors.find { |f| f["id"] == floor_with_plan.id }
       expect(with_plan["label"]).to eq("1")
-      expect(with_plan["plan_url"]).to be_present
+      expect(with_plan["plan_url"]).to include(rails_representation_path(floor_with_plan.plan.variant(:display)))
+      expect(with_plan["plan_url"]).not_to include("/rails/active_storage/blobs/")
       expect(with_plan["classroom_count"]).to eq(1)
 
       without_plan = floors.find { |f| f["id"] == floor_without_plan.id }
@@ -336,6 +343,22 @@ RSpec.describe "GET /buildings/:id", type: :request do
       get building_path(building), as: :json
 
       expect(response.parsed_body["photo_url"]).to be_nil
+    end
+
+    # A PDF floor plan keeps the ORIGINAL blob URL: `.variant` on a PDF
+    # raises, and the PDF itself is the deliverable (floor.rb's contract —
+    # same branch RoomPresenter takes for a PDF seating chart).
+    it "keeps the original blob URL for a PDF floor plan" do
+      floor = create(:floor, building: building, workspace: workspace, label: "B")
+      floor.plan.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/seating_chart.pdf")),
+        filename: "plan-b.pdf", content_type: "application/pdf"
+      )
+
+      get building_path(building), as: :json
+
+      plan_url = response.parsed_body["floors"].find { |f| f["id"] == floor.id }["plan_url"]
+      expect(plan_url).to include(rails_blob_path(floor.plan))
     end
 
     it "renders the floors list with a link to a representative classroom's floor plan" do
