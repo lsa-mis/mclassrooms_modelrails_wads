@@ -98,7 +98,15 @@ class Room < ApplicationRecord
   # NOTE: nothing on Room triggers the render. The callback lives on
   # ActiveStorage::Attachment (config/initializers/flat_panorama_callbacks.rb) —
   # read that file's header before adding a callback here.
-  has_one_attached :flat_panorama
+  has_one_attached :flat_panorama do |attachable|
+    # RoomPresenter's thumbnail chain serves THIS attachment first: :card backs
+    # the find-a-room row image, :thumb the JSON thumbnail_url. Dimensions match
+    # MediaAsset#image's :card/:thumb exactly — one visual size system across
+    # every thumbnail source — and the render is app-generated webp, so
+    # variants of it are safe (no HEIC-decode hazard).
+    attachable.variant :card,  resize_to_fill:  [ 96, 96 ],   format: :webp
+    attachable.variant :thumb, resize_to_limit: [ 200, 200 ], format: :webp
+  end
   # :lightbox backs the full-size dialog image on the room page (max-h-[70vh];
   # 2048 is ample). Image renders only — the PDF-guarded branch links the
   # original blob, and `.variant` on a PDF raises.

@@ -177,6 +177,75 @@ RSpec.describe RoomPresenter do
     end
   end
 
+  describe "#thumbnail" do
+    it "prefers the flat panorama render over the bare panorama and the gallery" do
+      room = create(:room, :with_flat_panorama, :with_panorama, building: building)
+      create(:media_asset, owner: room, workspace: room.workspace)
+
+      expect(described_class.new(room).thumbnail).to eq(room.flat_panorama)
+    end
+
+    it "falls back to the panorama's :poster variant when no flat render has landed" do
+      room = create(:room, :with_panorama, building: building)
+      create(:media_asset, owner: room, workspace: room.workspace)
+
+      thumbnail = described_class.new(room).thumbnail
+      poster = room.panorama.variant(:poster)
+
+      expect(thumbnail.blob).to eq(poster.blob)
+      expect(thumbnail.variation.digest).to eq(poster.variation.digest)
+    end
+
+    it "falls back to the subject-ranked first gallery image when no panorama is attached" do
+      # Same tie construction as the gallery_ordered spec: subject rank must
+      # beat position, so the LOWER-positioned rack shot still loses to front.
+      create(:media_asset, owner: room, workspace: room.workspace, position: 5, subject: "rack")
+      front = create(:media_asset, owner: room, workspace: room.workspace, position: 9, subject: "front")
+
+      expect(described_class.new(room).thumbnail.attachment).to eq(front.image.attachment)
+    end
+
+    it "is nil when the room has no media at all" do
+      expect(described_class.new(room).thumbnail).to be_nil
+    end
+  end
+
+  describe "#thumbnail_variant" do
+    it "resolves the requested named variant off the flat panorama render" do
+      room = create(:room, :with_flat_panorama, building: building)
+
+      card  = described_class.new(room).thumbnail_variant(:card)
+      thumb = described_class.new(room).thumbnail_variant(:thumb)
+
+      expect(card.blob).to eq(room.flat_panorama.blob)
+      expect(card.variation.digest).to eq(room.flat_panorama.variant(:card).variation.digest)
+      expect(thumb.variation.digest).to eq(room.flat_panorama.variant(:thumb).variation.digest)
+    end
+
+    it "serves the panorama's :poster variant regardless of the requested name when only the bare equirect exists" do
+      room = create(:room, :with_panorama, building: building)
+
+      variant = described_class.new(room).thumbnail_variant(:card)
+      poster = room.panorama.variant(:poster)
+
+      expect(variant.blob).to eq(poster.blob)
+      expect(variant.variation.digest).to eq(poster.variation.digest)
+    end
+
+    it "resolves the requested variant off the subject-ranked first gallery image otherwise" do
+      front = create(:media_asset, owner: room, workspace: room.workspace, subject: "front")
+
+      variant = described_class.new(room).thumbnail_variant(:card)
+
+      expect(variant.blob).to eq(front.image.blob)
+      expect(variant.variation.digest).to eq(front.image.variant(:card).variation.digest)
+    end
+
+    it "is nil when the room has no media at all" do
+      expect(described_class.new(room).thumbnail_variant(:card)).to be_nil
+    end
+  end
+
   describe "#as_json" do
     # rails_blob_url/rails_representation_url need a host — this isn't a
     # request spec, so Rails.application.routes.default_url_options has none
@@ -301,6 +370,20 @@ RSpec.describe RoomPresenter do
 
         expect(json[:media][:seating_chart_url]).to eq(
           url_helpers.rails_representation_url(room.seating_chart.variant(:lightbox))
+        )
+      end
+
+      it "serves a flat-panorama room's thumbnail_url as a :thumb representation" do
+        room.flat_panorama.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
+          filename: "flat.png",
+          content_type: "image/png"
+        )
+
+        json = described_class.new(room).as_json
+
+        expect(json[:media][:thumbnail_url]).to eq(
+          url_helpers.rails_representation_url(room.flat_panorama.variant(:thumb))
         )
       end
 

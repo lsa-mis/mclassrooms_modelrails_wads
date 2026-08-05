@@ -84,17 +84,41 @@ class RoomPresenter
   # it from here, so there is never a second, drifting implementation (the
   # room_thumbnail_image helper this replaced was exactly that).
   #
-  # Deliberately `room.gallery.first`, not `room.gallery.ordered.first`: the
-  # association already carries the `-> { ordered }` scope, and `.first` on an
-  # ALREADY-LOADED association reads the in-memory target. Re-scoping would
-  # re-query per row, bypassing RoomSearch#results' preload — an N+1 Bullet
-  # raises on in test (`config/environments/test.rb` sets `Bullet.raise`).
+  # Identity/presence only — the chain, most-specific first:
+  #   1. the flat panorama render (Attached::One),
+  #   2. the bare panorama's :poster variant (already an ActiveStorage
+  #      variant),
+  #   3. the subject-ranked first gallery image (Attached::One),
+  #   4. nil — no media; the row renders its branded empty band.
+  # The legs return INCOMPATIBLE types, so the old "callers pick their own
+  # variant off the return value" contract cannot survive the chain — callers
+  # that need a display resolution go through #thumbnail_variant instead and
+  # use this method only as a presence/identity check.
   #
-  # Interim: a later task replaces this body with the full subject-ranked
-  # chain. Returns an ActiveStorage::Attached::One (or nil), so callers pick
-  # their own variant.
+  # Every leg resolves over the ALREADY-PRELOADED collections (RoomSearch#results
+  # preloads all three): `attached?` reads the loaded attachment and
+  # `gallery_ordered` sorts the loaded gallery in Ruby. Re-scoping with
+  # `.where(...)` would re-query per row, bypassing the preload — an N+1
+  # Bullet raises on in test (`config/environments/test.rb` sets `Bullet.raise`).
   def thumbnail
-    room.gallery.first&.image
+    return room.flat_panorama if room.flat_panorama.attached?
+    return room.panorama.variant(:poster) if room.panorama.attached?
+
+    room.gallery_ordered.first&.image
+  end
+
+  # Display-resolution API for the chain: the same legs as #thumbnail,
+  # resolved to a servable representation at the requested size (:card for
+  # the find-a-room row, :thumb for the JSON thumbnail_url).
+  def thumbnail_variant(name)
+    return room.flat_panorama.variant(name) if room.flat_panorama.attached?
+    # A bare equirect has ONE sensible small rendition: the :poster squashed
+    # sweep. A :card center-crop of a raw 2:1 pano would be a distorted
+    # smear, so the poster is served whatever `name` asks — the browser
+    # downscales the 1024×512.
+    return room.panorama.variant(:poster) if room.panorama.attached?
+
+    room.gallery_ordered.first&.image&.variant(name)
   end
 
   # Room-show JSON (Brief §5.3), consumed verbatim by Task 3's JSON variant
@@ -242,10 +266,10 @@ class RoomPresenter
   # elsewhere in this file) — called through the route helpers directly since
   # this class has no view context.
   def thumbnail_url
-    image = thumbnail
-    return nil unless image&.attached?
+    representation = thumbnail_variant(:thumb)
+    return nil unless representation
 
-    url_helpers.rails_representation_url(image.variant(:thumb))
+    url_helpers.rails_representation_url(representation)
   end
 
   def variant_url(attachment, name)
