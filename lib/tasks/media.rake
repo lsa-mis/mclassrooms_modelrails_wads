@@ -34,7 +34,8 @@ namespace :media do
   desc "Process every declared variant for every media asset (WORKSPACE=slug)"
   task warm_variants: :environment do
     slug = ENV.fetch("WORKSPACE") { abort "WORKSPACE=<slug> is required" }
-    workspace = Workspace.kept.find_by!(slug: slug)
+    workspace = Workspace.kept.find_by(slug: slug)
+    abort "No kept workspace found for WORKSPACE=#{slug.inspect}" if workspace.nil?
 
     scope = MediaAsset.where(workspace: workspace)
     total = scope.count

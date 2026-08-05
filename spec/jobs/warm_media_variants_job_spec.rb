@@ -62,6 +62,21 @@ RSpec.describe WarmMediaVariantsJob do
       expect(warms.map { |j| j[:args].first["_aj_globalid"] }).to eq([ asset.to_global_id.to_s ])
     end
 
+    # The gate's record_type conjunct is load-bearing on its own: the four
+    # VariantRecord rows the warm creates each attach a blob under their own
+    # `has_one_attached :image`, and those attachments are ALSO named "image".
+    # Gating on the name alone re-enqueues once per variant — a second loop
+    # vector. The Building example below cannot catch that (it is excluded by
+    # name, not record_type); this one can.
+    it "does not re-enqueue off the variant records the warm itself attaches" do
+      asset = create(:media_asset, owner: room, workspace: workspace)
+      clear_enqueued_jobs
+
+      described_class.perform_now(asset)
+
+      expect(enqueued_jobs.select { |j| j[:job] == described_class }).to be_empty
+    end
+
     it "does not enqueue for a non-MediaAsset image slot" do
       building = create(:building, workspace: workspace)
 
