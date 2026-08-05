@@ -65,6 +65,13 @@ module BulletSafelists
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :unit)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :room_characteristics)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :gallery)
+
+    # The thumbnail chain (RoomPresenter#thumbnail / #thumbnail_variant)
+    # short-circuits — flat render, then bare panorama, then gallery — so the
+    # later legs WILL be unused on any row that resolves early. Safelisted for
+    # the same intentionally-pessimistic reason as the Membership legs above.
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :flat_panorama_attachment)
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Room", association: :panorama_attachment)
   end
 
   # --- N+1 query ------------------------------------------------------------

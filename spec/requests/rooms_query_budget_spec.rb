@@ -107,4 +107,26 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     # that regression.
     expect(rules_row_fetch_count).to be <= 3
   end
+
+  # Task 13 guard: RoomPresenter's thumbnail chain probes flat_panorama,
+  # panorama, and the gallery on EVERY row, so unless RoomSearch#results
+  # preloads all three legs the index fires extra per-row queries (~180 at
+  # the default per=30). The bound holds only while the chain resolves over
+  # the preloaded collections.
+  it "keeps find-a-room within budget with the thumbnail chain wired" do
+    building = create(:building, workspace: workspace)
+    create_list(:room, 30, building: building, workspace: workspace)
+
+    sign_in(membership_with("viewer"))
+
+    count = 0
+    counter = ->(*, payload) { count += 1 unless payload[:name].in?(%w[SCHEMA TRANSACTION]) }
+
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      get find_a_room_path
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(count).to be <= 45
+  end
 end
