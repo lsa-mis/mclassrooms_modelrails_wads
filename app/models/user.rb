@@ -39,10 +39,10 @@ class User < ApplicationRecord
   validate :pending_email_not_taken, if: -> { pending_email.present? }
   validates :avatar_source, inclusion: { in: %w[upload gravatar initials] }
   validates :avatar,
-    content_type: %w[image/png image/jpeg image/gif image/webp],
+    content_type: IMAGE_CONTENT_TYPES,
     size: { less_than: 5.megabytes }
   validates :avatar_original,
-    content_type: %w[image/png image/jpeg image/gif image/webp],
+    content_type: IMAGE_CONTENT_TYPES,
     size: { less_than: 10.megabytes }
   validates :primary_color, inclusion: { in: 0..360 }, allow_nil: true
 
