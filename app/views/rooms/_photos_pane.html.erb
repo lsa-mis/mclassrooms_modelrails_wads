@@ -6,6 +6,7 @@
     <%= ui :gallery do |g| %>
       <% gallery.each do |asset| %>
         <% g.with_image(src: rails_representation_path(asset.image.variant(:thumb)),
+              full_src: rails_representation_path(asset.image.variant(:full)),
               alt: asset.alt_for(:image),
               caption: asset.description_for(:image)) %><%# herb:disable erb-no-unused-expressions %>
       <% end %>
