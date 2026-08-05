@@ -38,7 +38,7 @@
       <% else %>
         <%= ui :figure do %>
           <%= ui :image,
-                src: rails_blob_path(@floor.plan),
+                src: rails_representation_path(@floor.plan.variant(:display)),
                 alt: @floor.alt_for(:plan),
                 loading: :eager,
                 class: "w-full rounded-md border border-border" %>

@@ -82,6 +82,12 @@ class Room < ApplicationRecord
   # also cover app/docs/developer/rooms-directory.md.
   has_one_attached :panorama do |attachable|
     attachable.variant :poster, resize_to_limit: [ 1024, 512 ], format: :webp
+    # :texture is the live-load Pannellum/WebGL sphere texture. HEIC/HEIF are
+    # accepted uploads and browsers cannot decode them, so the viewer must
+    # never receive the original blob — this is effectively a webp transcode
+    # (8192×4096 is a WebGL-safe bound; a no-op resize for a typical
+    # 4000×2000 equirect).
+    attachable.variant :texture, resize_to_limit: [ 8192, 4096 ], format: :webp
   end
   # The FLAT (rectilinear) render of :panorama — the view Pannellum's default
   # camera shows, produced by Panorama::Rectilinear. Deliberately NOT a
@@ -93,7 +99,12 @@ class Room < ApplicationRecord
   # ActiveStorage::Attachment (config/initializers/flat_panorama_callbacks.rb) —
   # read that file's header before adding a callback here.
   has_one_attached :flat_panorama
-  has_one_attached :seating_chart
+  # :lightbox backs the full-size dialog image on the room page (max-h-[70vh];
+  # 2048 is ample). Image renders only — the PDF-guarded branch links the
+  # original blob, and `.variant` on a PDF raises.
+  has_one_attached :seating_chart do |attachable|
+    attachable.variant :lightbox, resize_to_limit: [ 2048, 2048 ], format: :webp
+  end
 
   # Phase 4 Task 7 (Brief §5.3): admin gallery add/remove/reorder flows through
   # nested attributes so the whole edit form — curated fields AND gallery
