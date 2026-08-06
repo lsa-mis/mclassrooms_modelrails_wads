@@ -82,6 +82,31 @@ meet the 40% floor. Each run records per-file timings to
 runtime instead of file size (it falls back to file size when the log is
 absent). Coverage report is generated at `coverage/index.html`.
 
+### One runner at a time
+
+Each test database is a single SQLite file, and `config/database.yml` installs a
+5-second busy handler. Two spec runs against the same file therefore **do not
+fail fast — they poison each other slowly**: every contended statement waits out
+the handler, so a 12-minute suite can take over an hour and shed failures across
+unrelated spec files that have nothing wrong with them.
+
+A guard in the spec boot path refuses to start into that, naming the process
+holding the database. It covers plain runs, parallel workers, and anything an
+editor or agent launches, so there is no separate command to remember.
+
+Two things worth knowing when it fires:
+
+- **`TEST_ENV_NUMBER` is `""` for worker 1**, so `bin/parallel-rspec` and a plain
+  `bundle exec rspec` share `storage/test.sqlite3`. A parallel run and a focused
+  run *do* collide.
+- **Stop a run by process group, not by name.** `pkill -f "bundle exec rspec"`
+  matches the shell wrapper and orphans the `bin/rspec` child, which keeps the
+  WAL lock — after which every later run fails in its first `create(...)`. Use
+  `kill -- -<pgid>`, then confirm with `lsof storage/test.sqlite3*`.
+
+When a run fails with `SQLite3::BusyException` or `ActiveRecord::StatementTimeout`,
+reach for `lsof storage/test.sqlite3*` before suspecting the code.
+
 ## Development Tools
 
 These affordances only render in `Rails.env.development?` and are invisible in production.
