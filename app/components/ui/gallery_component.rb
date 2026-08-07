@@ -31,7 +31,20 @@ module UI
     DIALOG_CLS  = "m-auto bg-transparent backdrop:bg-black/80 p-4"
     # No `scale-95` rest class — see UI::DialogComponent::PANEL (TW4 scale:
     # composes with the controller's inline transform; panels rested at 95%).
-    PANEL_CLS   = "relative opacity-0"
+    # min-h-32 guarantees the close button (top-right) and the vertically-
+    # centered prev/next nav ring never overlap, regardless of the framed
+    # image's rendered height: a very short/wide image, or the instant right
+    # after `modal#open` before the swapped `src` has decoded (naturalHeight
+    # briefly 0), would otherwise collapse the panel below the ~116px the two
+    # 44px button rows need to clear each other. Defensive, not test-enforced:
+    # axe's target-size rule (and the mc-target-size-44 custom check) grade
+    # each control's own footprint, not overlap between siblings, so this
+    # isn't caught by `spec/system/rooms/media_stage_spec.rb`'s axe pass —
+    # confirmed by removing the class and re-running it (still green). Kept
+    # anyway because the geometry is real: with local test fixtures the swap
+    # decodes before axe ever runs, but a slow network image load hits the
+    # naturalHeight-0 instant for real.
+    PANEL_CLS   = "relative min-h-32 opacity-0"
     LIGHTBOX_IMG_CLS = "max-h-[90vh] max-w-[90vw] rounded-md object-contain"
 
     renders_many :images, "UI::GalleryComponent::ImageComponent"

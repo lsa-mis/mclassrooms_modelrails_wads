@@ -1,0 +1,12 @@
+en:
+  # Fork-owned overrides for the vendored `UI::*` components (see
+  # `config/i18n-tasks.yml`: `app/components/ui` is excluded from the missing-key
+  # scan because every `t()` there carries an inline `default:` — but a fork
+  # view that calls the same key directly (not through the component) is NOT
+  # excluded, so it needs a real definition here. `ui.gallery.enlarge` is
+  # reused verbatim by `app/views/rooms/_photo_frame.html.erb`'s in-frame photo
+  # buttons, which share the gallery lightbox's aria-label wording rather than
+  # inventing a second string for the same action.
+  ui:
+    gallery:
+      enlarge: "Enlarge %{alt}"
