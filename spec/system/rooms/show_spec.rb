@@ -188,14 +188,16 @@ RSpec.describe "Room show", type: :system do
     JS
     expect(booted_hfov).to be_within(0.01).of(Panorama::Rectilinear::HFOV_DEG)
 
-    # Redesign v4: photos are the stage's second tab — switching panes hides
-    # (never removes) the panorama panel, per the WebGL-survival rule. The
-    # pane is now UI::Gallery end to end (no separate "main photo" hero), so
-    # the lightbox proof goes through a gallery trigger.
-    click_button I18n.t("rooms.show.media_tabs.photos")
+    # Two-mode media stage (2026-08-07): the chip is the ONLY mode control —
+    # clicking it switches from pano to photo mode, hiding (never removing)
+    # the panorama pane, per the WebGL-survival rule. The photo pane is now
+    # UI::Gallery end to end (no separate "main photo" hero), so the lightbox
+    # proof goes through a frame slide, not a grid cell.
+    click_button I18n.t("rooms.show.view_photos", count: 2)
     # `data-test='gallery'` is a LOOKBOOK-PREVIEW hook, not something
-    # UI::GalleryComponent emits — on a real page the grid is identified by
-    # the Stimulus controllers it mounts.
+    # UI::GalleryComponent emits — on a real page the trigger is identified by
+    # the Stimulus controllers it mounts (here, the frame's first visible
+    # slide, which carries `gallery#open`).
     gallery_trigger = find("[data-controller~='gallery'] button", match: :first)
     gallery_trigger.click
     expect(page).to have_css("dialog[open] img")
