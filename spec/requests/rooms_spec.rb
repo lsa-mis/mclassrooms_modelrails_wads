@@ -550,7 +550,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
     # popout trigger points at that same rendition — so the frame serves
     # :full end to end, never upscaling a smaller thumb. (The chip swatch,
     # which only exists when a room has both a panorama and photos, serves
-    # :card instead — covered in spec/system/rooms/media_stage_spec.rb.) The
+    # :card instead — see "renders the chip swatch at :card" below.) The
     # original gallery blob (possibly HEIC, which browsers can't decode) must
     # never reach the page.
     it "serves the photo frame at :full, never the original blob" do
@@ -560,6 +560,24 @@ RSpec.describe "GET /rooms/:id", type: :request do
 
       expect(response.body).to include(rails_representation_path(asset.image.variant(:full)))
       expect(response.body).not_to include(rails_blob_path(asset.image))
+    end
+
+    # Final fix round (F7): the chip only renders when a room has both a
+    # panorama and photos, and its swatch is a distinct render call from the
+    # frame's :full slides — pin it separately so a future edit can't widen
+    # the chip to :full (a much larger download for a 44x32 swatch) without
+    # this failing.
+    it "renders the chip swatch at :card" do
+      room.panorama.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
+        filename: "pano.png",
+        content_type: "image/png"
+      )
+      asset = create(:media_asset, owner: room, workspace: workspace)
+
+      get room_path(room)
+
+      expect(response.body).to include(rails_representation_path(asset.image.variant(:card)))
     end
 
     # Task 11 fix round 1: RoomPresenter#media_json walks asset.image per

@@ -22,7 +22,7 @@
               data-gallery-alt-param="<%= asset.alt_for(:image) %>"
               data-gallery-caption-param="<%= asset.description_for(:image) %>">
         <%= image_tag rails_representation_path(asset.image.variant(:full)),
-              alt: asset.alt_for(:image), loading: (i.zero? ? :eager : :lazy),
+              alt: asset.alt_for(:image), loading: (i.zero? && !start_hidden ? :eager : :lazy),
               class: "size-full object-cover" %>
       </button>
     <% end %>
