@@ -67,6 +67,48 @@ RSpec.describe "Room media stage", type: :system do
     expect(controllers).not_to include("gallery")
   end
 
+  # F2a (final whole-branch review): showPhotos()/showPano() hide the very
+  # button the user just activated. A keyboard user pressing Enter on the
+  # chip was losing focus to <body> instead of landing on its replacement.
+  it "moves focus to the replacement button when the chip toggles mode" do
+    room = create(:room, :with_panorama, building: building, workspace: workspace)
+    create_media_assets(room, 2)
+    sign_in_via_form(user)
+    visit room_path(room)
+
+    click_button I18n.t("rooms.show.view_photos", count: 2)
+
+    expect(page.evaluate_script("document.activeElement.textContent.trim()"))
+      .to eq(I18n.t("rooms.show.back_to_panorama"))
+
+    click_button I18n.t("rooms.show.back_to_panorama")
+
+    expect(page.evaluate_script("document.activeElement.textContent.trim()"))
+      .to include(I18n.t("rooms.show.view_photos", count: 2))
+  end
+
+  # F2c (final whole-branch review): the modal controller restores focus to
+  # whatever opened the dialog, but if in-popout prev/next moved the shared
+  # index, media-stage's syncFromPopout has hidden that original slide by the
+  # time the dialog closes — `.focus()` on a hidden element silently no-ops
+  # and focus fell through to <body>.
+  it "restores focus to the now-current slide, not <body>, after closing the popout following in-popout navigation" do
+    room = create(:room, building: building, workspace: workspace)
+    create_media_assets(room, 3)
+    sign_in_via_form(user)
+    visit room_path(room)
+
+    find("[data-media-stage-target='slide']:not([hidden])").click # opens at index 0
+    dialog = find("dialog[open]")
+    dialog.find("[data-action='click->gallery#next']").click # popout navigates to index 1
+
+    cdp_press("Escape")
+    expect(page).to have_no_css("dialog[open]")
+
+    expect(page.evaluate_script("document.activeElement.tagName")).not_to eq("BODY")
+    expect(page.evaluate_script("document.activeElement.dataset.galleryIndexParam")).to eq("1")
+  end
+
   it "chip toggles to photo mode and back, and the pano element is never re-created" do
     room = create(:room, :with_panorama, building: building, workspace: workspace)
     create_media_assets(room, 2)

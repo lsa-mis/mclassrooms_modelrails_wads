@@ -61,8 +61,7 @@ export default class extends Controller {
       if (this.dialogTarget.open) {
         this.dialogTarget.close()
       }
-      this.previouslyFocused?.focus()
-      this.previouslyFocused = null
+      this.restoreFocus()
     })
   }
 
@@ -76,6 +75,28 @@ export default class extends Controller {
   }
 
   // Private
+
+  // Normally we restore focus to whatever opened the dialog. But a host that
+  // hides its trigger elements as part of in-dialog navigation (the room
+  // media stage hides the outgoing photo slide when the popout's own
+  // prev/next moves the shared index) can leave `previouslyFocused` pointing
+  // at an element that's now `hidden` — WCAG 2.4.3 / 2.1.1: `.focus()` on a
+  // hidden element silently no-ops and focus falls through to <body>. Fall
+  // back to whichever trigger in this controller's scope is currently
+  // visible instead of losing focus outright. Scoped to `this.element` (the
+  // shared `gallery modal` ancestor) so a page with more than one gallery
+  // never reaches across into an unrelated one.
+  restoreFocus() {
+    const target = this.isFocusable(this.previouslyFocused)
+      ? this.previouslyFocused
+      : [ ...this.element.querySelectorAll("[data-gallery-index-param]") ].find((el) => !el.hidden)
+    target?.focus()
+    this.previouslyFocused = null
+  }
+
+  isFocusable(el) {
+    return !!el && el.isConnected && !el.hidden
+  }
 
   handleCancel(event) {
     event.preventDefault()
