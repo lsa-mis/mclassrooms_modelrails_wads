@@ -26,4 +26,39 @@ RSpec.describe UI::GalleryComponent, type: :component do
 
     expect(page).to have_css(%(button[data-gallery-src-param="/thumb-b.webp"]))
   end
+
+  # modelrails_ui v0.8.0 sync: with 2+ images the lightbox gains prev/next nav
+  # and a counter bar (caption + count targets) so viewers can page through
+  # the set without closing and reopening the dialog.
+  it "renders lightbox nav buttons and the caption/count targets with 2+ images" do
+    render_inline(described_class.new) do |g|
+      g.with_image(src: "/a.webp", alt: "Photo A")
+      g.with_image(src: "/b.webp", alt: "Photo B")
+    end
+
+    expect(page).to have_css(%(button[data-action="click->gallery#prev"]))
+    expect(page).to have_css(%(button[data-action="click->gallery#next"]))
+    expect(page).to have_css(%(dialog [data-gallery-target="caption"]))
+    expect(page).to have_css(%(dialog [data-gallery-target="count"]))
+  end
+
+  # With a single image there is nothing to page through, so no nav renders.
+  it "renders no lightbox nav with a single image" do
+    render_inline(described_class.new) do |g|
+      g.with_image(src: "/a.webp", alt: "Photo A")
+    end
+
+    expect(page).not_to have_css(%(button[data-action="click->gallery#prev"]))
+    expect(page).not_to have_css(%(button[data-action="click->gallery#next"]))
+    expect(page).not_to have_css(%(dialog [data-gallery-target="count"]))
+  end
+
+  # LightboxComponent is standalone-renderable so bespoke consumers (e.g. a
+  # media stage) can place it next to their own triggers.
+  it "renders LightboxComponent standalone as a dialog with nav when count > 1" do
+    render_inline(described_class::LightboxComponent.new(count: 3))
+
+    expect(page).to have_css("dialog")
+    expect(page).to have_css(%(button[data-action="click->gallery#next"]))
+  end
 end
