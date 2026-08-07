@@ -106,7 +106,7 @@ accumulates here too, newest first.
   lightbox itself gained prev/next navigation and a caption/counter bar
   (`modelrails_ui` sync), kept in sync with the in-frame position via a
   `gallery:navigated` event so popout and frame never disagree about which
-  photo is showing. (#74)
+  photo is showing.
 - **Room stills graduated to a first-class media model.** The single `Room#photo`
   slot and the `RoomGalleryImage` join are gone; rooms (and, by design, buildings
   and floors later) own an ordered gallery of polymorphic `MediaAsset` records —
