@@ -8,7 +8,7 @@ import { Controller } from "@hotwired/stimulus"
 // Mode resets to the server-rendered default on a morph; the old tabs did too.
 export default class extends Controller {
   static targets = ["pano", "photosLayer", "slide", "badge", "chipToPhotos", "chipToPano"]
-  static values = { index: { type: Number, default: 0 } }
+  static values = { index: { type: Number, default: 0 }, badgeFormat: { type: String, default: "" } }
 
   // Both toggles hide the very button the user just activated to trigger
   // them (WCAG 2.4.3 / 2.1.1) — a keyboard user pressing Enter on the chip
@@ -72,7 +72,12 @@ export default class extends Controller {
 
     const caption = current.dataset.mediaStageCaption
     const position = current.dataset.mediaStagePosition
-    this.badgeTarget.textContent = caption ? `${caption} · ${position}` : position
+    // Single source of truth for the "caption · position" format: the
+    // rooms.show.photo_badge YAML key, passed down via the badgeFormat value
+    // (see _media_stage.html.erb's comment on how it's extracted intact).
+    this.badgeTarget.textContent = caption
+      ? this.badgeFormatValue.replace("%{caption}", caption).replace("%{position}", position)
+      : position
   }
 
   get dialogOpen() {

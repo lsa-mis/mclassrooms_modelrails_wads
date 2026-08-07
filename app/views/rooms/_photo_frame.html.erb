@@ -46,7 +46,12 @@
     <div data-media-stage-target="badge" data-testid="photo-badge" aria-live="polite"
          class="absolute bottom-3 rounded-md bg-surface-overlay border border-border px-2.5 py-1.5 text-xs text-text-body max-w-[60%] truncate
                 left-1/2 -translate-x-1/2 md:left-3 md:translate-x-0 md:bottom-[4.5rem]">
-      <%= gallery.first.description_for(:image).presence.then { |c| c ? "#{c} · " : "" } %><%= t("rooms.show.photo_badge_position", n: 1, total: gallery.size) %>
+      <%# Same rooms.show.photo_badge template media_stage_controller.js uses for
+          every later navigation — see _media_stage.html.erb's comment for why
+          the format string lives in one YAML key. %>
+      <% position = t("rooms.show.photo_badge_position", n: 1, total: gallery.size) %>
+      <% caption = gallery.first.description_for(:image).presence %>
+      <%= caption ? t("rooms.show.photo_badge", caption: caption, position: position) : position %>
     </div>
   <% end %>
 
