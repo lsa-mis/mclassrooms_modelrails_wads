@@ -118,6 +118,7 @@ en:
         one: "View 1 photo"
         other: "View %{count} photos"
       back_to_panorama: "Back to 360° view"
+      photo_badge: "%{caption} · %{position}"
       photo_badge_position: "%{n} of %{total}"
       prev_photo: "Previous photo"
       next_photo: "Next photo"
