@@ -94,6 +94,19 @@ accumulates here too, newest first.
 
 ### Changed
 
+- **Room media stage: a chip toggle replaces tabs.** The panorama/gallery tab
+  list is gone. The 360° view is the default stage when a room has one; a
+  single toggle chip — showing a swatch of the mode it switches *to*, never a
+  mode indicator — is one click away from browsing photos in the same frame.
+  Photos advance in place with chevrons or arrow keys, a polite live-region
+  badge announces caption and position on every change, and clicking a photo
+  pops out to the shared lightbox, uncropped. The panorama pane keeps
+  `data-turbo-permanent` and is only ever hidden, never removed, so a booted
+  WebGL viewer survives a mode switch, same as the tabs it replaced. The
+  lightbox itself gained prev/next navigation and a caption/counter bar
+  (`modelrails_ui` sync), kept in sync with the in-frame position via a
+  `gallery:navigated` event so popout and frame never disagree about which
+  photo is showing. (#74)
 - **Room stills graduated to a first-class media model.** The single `Room#photo`
   slot and the `RoomGalleryImage` join are gone; rooms (and, by design, buildings
   and floors later) own an ordered gallery of polymorphic `MediaAsset` records —
