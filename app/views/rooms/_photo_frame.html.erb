@@ -1,0 +1,55 @@
+<%# locals: (room:, gallery:, start_hidden:) %>
+<%# In-frame photo browsing (spec §2). Same aspect as the pano stage so the
+    two modes are the same height. Every slide is a full-frame button that
+    opens the shared lightbox at its own index (uncropped there); the frame
+    crops with object-cover by design. The badge is the polite live region
+    that announces caption + position on every change. %>
+<div data-media-stage-target="photosLayer" data-testid="photo-frame"
+     <%= "hidden" if start_hidden %>>
+  <%= ui :aspect_ratio, ratio: Panorama::Rectilinear::ASPECT,
+        class: "relative rounded-md bg-surface-sunken overflow-hidden",
+        data: { action: "keydown.left->media-stage#prev keydown.right->media-stage#next" } do %>
+    <% gallery.each_with_index do |asset, i| %>
+      <button type="button" <%= "hidden" if i.positive? %>
+              class="absolute inset-0 block w-full cursor-zoom-in focus-ring"
+              aria-label="<%= t("ui.gallery.enlarge", alt: asset.alt_for(:image), default: "Enlarge %{alt}") %>"
+              data-media-stage-target="slide"
+              data-media-stage-caption="<%= asset.description_for(:image) %>"
+              data-media-stage-position="<%= t("rooms.show.photo_badge_position", n: i + 1, total: gallery.size) %>"
+              data-action="gallery#open modal#open"
+              data-gallery-index-param="<%= i %>"
+              data-gallery-src-param="<%= rails_representation_path(asset.image.variant(:full)) %>"
+              data-gallery-alt-param="<%= asset.alt_for(:image) %>"
+              data-gallery-caption-param="<%= asset.description_for(:image) %>">
+        <%= image_tag rails_representation_path(asset.image.variant(:full)),
+              alt: asset.alt_for(:image), loading: (i.zero? ? :eager : :lazy),
+              class: "size-full object-cover" %>
+      </button>
+    <% end %>
+
+    <% if gallery.size > 1 %>
+      <button type="button" aria-label="<%= t("rooms.show.prev_photo") %>"
+              class="absolute left-3 top-1/2 -translate-y-1/2 inline-flex size-11 items-center justify-center rounded-full bg-surface-overlay border border-border shadow-sm focus-ring"
+              data-action="media-stage#prev">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <button type="button" aria-label="<%= t("rooms.show.next_photo") %>"
+              class="absolute right-3 top-1/2 -translate-y-1/2 inline-flex size-11 items-center justify-center rounded-full bg-surface-overlay border border-border shadow-sm focus-ring"
+              data-action="media-stage#next">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    <% end %>
+
+    <%# Lower-left, above the identity plate on md+ (plate is 58-64px tall);
+        centered between the arrows on mobile where the plate sits below the
+        stage (Dave, 2026-08-07). aria-live announces navigation. %>
+    <div data-media-stage-target="badge" data-testid="photo-badge" aria-live="polite"
+         class="absolute bottom-3 rounded-md bg-surface-overlay border border-border px-2.5 py-1.5 text-xs text-text-body max-w-[60%] truncate
+                left-1/2 -translate-x-1/2 md:left-3 md:translate-x-0 md:bottom-[4.5rem]">
+      <%= gallery.first.description_for(:image).presence.then { |c| c ? "#{c} · " : "" } %><%= t("rooms.show.photo_badge_position", n: 1, total: gallery.size) %>
+    </div>
+  <% end %>
+
+  <%= render UI::GalleryComponent::LightboxComponent.new(count: gallery.size,
+        label: t("rooms.show.photo_popout_label", room: room.display_name)) %>
+</div>
