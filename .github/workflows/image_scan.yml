@@ -18,6 +18,26 @@ name: Image Scan
 # Exceptions: to accept a finding temporarily, add the CVE ID to a
 # .trivyignore file at the repo root with a comment explaining why and a
 # revisit date. Trivy picks the file up automatically.
+#
+# Secret scanning: trivy-action runs Trivy's default scanners, which is both
+# `vuln` and `secret` — this workflow was written with CVEs in mind (see
+# above) but has always had secret scanning on too. That was silent until
+# 2026-08-07, when Trivy's secret-scanner rules changed on the v0.70 upgrade
+# and started flagging a HIGH `private-key` finding at
+# .../gems/openid_connect-2.5.0/spec/mock_response/public_keys/private_key.pem
+# — a mock RSA key shipped in the openid_connect gem's own test fixtures,
+# published on RubyGems and identical for every install of that gem version.
+# It reached the image because the Dockerfile copies the whole vendored
+# bundle (COPY /usr/local/bundle /usr/local/bundle) rather than pruning gem
+# spec/test directories. The gem itself predates this: it landed 2026-07-07
+# for Okta OIDC, and main scanned green with it present as recently as
+# 2026-08-06 — this is a scanner-version false positive, not a regression.
+# trivy-secret.yaml (repo root, wired below via TRIVY_SECRET_CONFIG) allow-
+# lists secrets found under a gem's own spec/ or test/ directory inside
+# /usr/local/bundle specifically, so this class of noise from any vendored
+# gem is covered going forward. It does not disable the `private-key` rule
+# globally: a real key or credential anywhere else in the image — including
+# the app's own code — still fails the build.
 
 on:
   schedule:
@@ -82,6 +102,16 @@ jobs:
       # ignore-unfixed: Debian-stable bases always carry CVEs with no fixed
       # package yet; gating on them would make this permanently red and
       # trained-away. The gate is "a fix exists and we haven't taken it".
+      # TRIVY_SECRET_CONFIG rather than the action's `trivy-config` input:
+      # `trivy-config` maps to Trivy's general `--config` (trivy.yaml), which
+      # has no dedicated field for the secret scanner's allow-rules — those
+      # live in their own file (`--secret-config`, default trivy-secret.yaml)
+      # per Trivy's docs. trivy-action does not expose a `secret-config`
+      # input, but it passes arbitrary `env:` entries straight through to the
+      # `trivy` invocation (its own README examples this with TRIVY_USERNAME,
+      # TRIVY_PASSWORD, TRIVY_SKIP_DB_UPDATE), and every Trivy flag has a
+      # matching TRIVY_<FLAG_NAME> env var by convention. TRIVY_SECRET_CONFIG
+      # is that well-established route, not a guess.
       - name: Scan for HIGH/CRITICAL CVEs with a fix available
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -89,3 +119,5 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: "1"
           ignore-unfixed: true
+        env:
+          TRIVY_SECRET_CONFIG: trivy-secret.yaml
