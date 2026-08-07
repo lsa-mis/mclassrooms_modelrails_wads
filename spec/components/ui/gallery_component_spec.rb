@@ -61,4 +61,18 @@ RSpec.describe UI::GalleryComponent, type: :component do
     expect(page).to have_css("dialog")
     expect(page).to have_css(%(button[data-action="click->gallery#next"]))
   end
+
+  # PANEL_CLS carries min-h-32 as a defensive geometric floor: the close
+  # button (top-right) and the vertically-centered prev/next nav ring are
+  # each 44px, and need ~116px of panel height to clear each other. No axe
+  # rule can catch a regression here — target-size rules grade each
+  # control's own footprint, not overlap between siblings — so this
+  # assertion is the only guard against min-h-32 silently disappearing,
+  # including via a `rails g modelrails_ui:add gallery` regen from the gem
+  # template (which has the same unpatched geometry as of this writing).
+  it "reserves a minimum panel height so the close and nav buttons can't overlap" do
+    render_inline(described_class::LightboxComponent.new(count: 2))
+
+    expect(page).to have_css(%([data-modal-target="panel"].min-h-32))
+  end
 end
