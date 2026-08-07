@@ -46,6 +46,27 @@ RSpec.describe "Room media stage", type: :system do
     expect(page).to have_css("#room_panorama_stage img", visible: :visible)
   end
 
+  # F1 (final whole-branch review): `modal` requires a `[data-modal-target=
+  # "dialog"]` descendant, which only _photo_frame.html.erb renders. Mounting
+  # it unconditionally made every pano-only room log a Stimulus
+  # missing-target error on connect and on every Turbo nav — asserting the
+  # rendered data-controller attribute directly (rather than exercising the
+  # popout, which pano-only rooms have no trigger for) pins the regression at
+  # its source so it can't come back silently.
+  it "does not mount the gallery/modal controllers on a pano-only room" do
+    room = create(:room, :with_panorama, building: building, workspace: workspace)
+    sign_in_via_form(user)
+    visit room_path(room)
+
+    controllers = page.evaluate_script(
+      "document.querySelector('[data-testid=\"media-stage\"]').dataset.controller"
+    ).split
+
+    expect(controllers).to include("media-stage")
+    expect(controllers).not_to include("modal")
+    expect(controllers).not_to include("gallery")
+  end
+
   it "chip toggles to photo mode and back, and the pano element is never re-created" do
     room = create(:room, :with_panorama, building: building, workspace: workspace)
     create_media_assets(room, 2)

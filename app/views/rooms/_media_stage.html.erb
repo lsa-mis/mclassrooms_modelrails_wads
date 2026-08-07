@@ -3,10 +3,23 @@
     chip-click away — progressive disclosure, not tabs. The pano pane keeps
     data-turbo-permanent and is only ever `hidden`, never removed (WebGL
     survival). The chip is the ONLY mode control and does nothing else. %>
-<div data-testid="media-stage" class="mt-6 relative"
+<%# gallery/modal only mount when there are photos to browse — mounting
+    `modal` with no `[data-modal-target="dialog"]` in scope (pano-only rooms
+    never render _photo_frame, the dialog's only source) makes Stimulus log
+    a missing-target error on connect and on every Turbo navigation. %>
+<section data-testid="media-stage" class="mt-6 relative"
      aria-label="<%= t("rooms.show.media_label") %>"
-     data-controller="media-stage gallery modal"
-     data-action="gallery:navigated->media-stage#syncFromPopout">
+     data-controller="media-stage<%= " gallery modal" if has_photos %>"
+     data-action="gallery:navigated->media-stage#syncFromPopout"
+     <%# The badge format lives in one YAML key (rooms.show.photo_badge) so the
+         server-rendered first badge and the JS-rendered updates on prev/next
+         can never drift apart. We fetch the raw "%{caption} · %{position}"
+         template by round-tripping each placeholder's name through itself —
+         I18n#interpolate only replaces the %{...} tokens it's given values
+         for, so passing the placeholder's own name back yields the literal
+         template string. media_stage_controller.js then does the same
+         %{caption}/%{position} substitution client-side. %>
+     <% if has_photos %>data-media-stage-badge-format-value="<%= t("rooms.show.photo_badge", caption: "%{caption}", position: "%{position}") %>"<% end %>>
   <% if has_pano %>
     <div data-media-stage-target="pano">
       <%= render "rooms/pano_pane", room: room %>
@@ -42,4 +55,4 @@
       </span>
     </div>
   </div>
-</div>
+</section>
