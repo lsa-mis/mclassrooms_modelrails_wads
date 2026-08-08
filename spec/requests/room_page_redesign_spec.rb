@@ -83,14 +83,19 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
     expect(overlay).to have_no_css("span.min-w-11.bg-surface-overlay")
   end
 
-  it "tabs the stage only when both panorama and photos exist, panes hidden not removed" do
+  it "renders the photos chip only when both panorama and photos exist, panes hidden not removed" do
     attach_panorama!
     create(:media_asset, owner: room, workspace: workspace)
     get room_path(room)
 
-    expect(page).to have_css("[role='tablist'] [role='tab']", count: 2)
-    # both panels are in the DOM (WebGL survival rule) — one hidden
-    expect(page).to have_css("[role='tabpanel']", count: 2, visible: :all)
+    stage = page.find("[data-testid='media-stage']")
+    # The chip is the ONLY mode control (tabs are gone) — it only renders
+    # when both media exist.
+    expect(stage).to have_css("[data-testid='media-chip']")
+    # Both panes are in the DOM (WebGL survival rule) — the photo frame
+    # starts hidden behind the pano default.
+    expect(stage).to have_css("[data-media-stage-target='pano']", visible: :all)
+    expect(stage).to have_css("[data-testid='photo-frame'][hidden]", visible: :all)
   end
 
   # Audit (Fried, Dave-approved): a card of "Not available" rows answers no

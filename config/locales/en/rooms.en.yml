@@ -114,9 +114,15 @@ en:
         native_button: "Share"
         copied: "Link copied to clipboard"
       media_label: "Room media"
-      media_tabs:
-        pano: "360° view"
-        photos: "Photos"
+      view_photos:
+        one: "View 1 photo"
+        other: "View %{count} photos"
+      back_to_panorama: "Back to 360° view"
+      photo_badge: "%{caption} · %{position}"
+      photo_badge_position: "%{n} of %{total}"
+      prev_photo: "Previous photo"
+      next_photo: "Next photo"
+      photo_popout_label: "Photos of %{room}"
       add_photos: "Add photos"
       documents_heading: "Plans & documents"
       features_heading: "What this room supports"
