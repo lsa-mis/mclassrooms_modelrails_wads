@@ -4,25 +4,29 @@
     <%= t("workspaces.invitations.new.title") %>
   </h1>
 
-  <%= form_with model: @invitation, url: workspace_invitations_path(@workspace),
-        id: "new_invitation",
-        class: "mt-8 space-y-6",
-        data: {
-          controller: "form-draft",
-          action: "input->form-draft#save change->form-draft#save turbo:submit-end->form-draft#submitEnd"
-        } do |form| %>
-    <%= render "shared/form_draft_notice" %>
+  <% if @roles.present? %>
+    <%= form_with model: @invitation, url: workspace_invitations_path(@workspace),
+          id: "new_invitation",
+          class: "mt-8 space-y-6",
+          data: {
+            controller: "form-draft",
+            action: "input->form-draft#save change->form-draft#save turbo:submit-end->form-draft#submitEnd"
+          } do |form| %>
+      <%= render "shared/form_draft_notice" %>
 
-    <%= form.text_area :emails,
-          label: t("workspaces.invitations.new.emails_label"),
-          help: t("workspaces.invitations.new.emails_hint"),
-          rows: 4 %>
+      <%= form.text_area :emails,
+            label: t("workspaces.invitations.new.emails_label"),
+            help: t("workspaces.invitations.new.emails_hint"),
+            rows: 4 %>
 
-    <%= form.select :role_id,
-          @roles.map { |r| [r.name, r.id] },
-          { label: t("workspaces.invitations.new.role_label") },
-          {} %>
+      <%= form.select :role_id,
+            @roles.map { |r| [r.name, r.id] },
+            { label: t("workspaces.invitations.new.role_label") },
+            {} %>
 
-    <%= form.submit t("workspaces.invitations.new.submit"), class: "btn-primary" %>
+      <%= form.submit t("workspaces.invitations.new.submit"), class: "btn-primary" %>
+    <% end %>
+  <% else %>
+    <p class="mt-8 text-text-body"><%= t("workspaces.invitations.new.no_assignable_roles") %></p>
   <% end %>
 </div>

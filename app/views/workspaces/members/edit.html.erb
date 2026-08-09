@@ -21,7 +21,7 @@
               (not the "unexpected focus jump" the a11y-no-autofocus rule
               guards against). %>
           <%= form.select :role_id,
-                @roles.map { |r| [r.name, r.id] },
+                @assignable_roles.map { |r| [r.name, r.id] },
                 { label: t("workspaces.members.edit.role_label"), selected: @membership.role_id },
                 { autofocus: true } %>
         </div>

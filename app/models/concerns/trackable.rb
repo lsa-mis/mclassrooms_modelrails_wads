@@ -27,7 +27,17 @@ module Trackable
     changes = previous_changes.except("updated_at", "created_at")
     changes = changes.except(*SENSITIVE_ATTRIBUTES)
     return if changes.empty?
-    create_activity("#{model_name.param_key}.updated", changes: changes)
+    create_activity("#{model_name.param_key}.updated", changes: enrich_tracked_changes(changes))
+  end
+
+  # Overridable so a model can make a specific event human-readable or
+  # admin-only. Defaults preserve existing behavior for every other model.
+  def enrich_tracked_changes(changes)
+    changes
+  end
+
+  def activity_visibility(_action)
+    "workspace"
   end
 
   def create_activity(action, metadata = {})
@@ -36,6 +46,7 @@ module Trackable
       action: action,
       trackable: self,
       workspace: resolve_workspace_for_activity,
+      visibility: activity_visibility(action),
       metadata: metadata
     )
   rescue StandardError => e

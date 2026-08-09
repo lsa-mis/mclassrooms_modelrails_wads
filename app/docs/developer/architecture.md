@@ -35,6 +35,8 @@ drop in without touching template code.
 
 Pundit policies check permissions at the workspace level: `ApplicationPolicy#can?("permission_name")` reads from `role.permissions` JSON. A fork's own tenant-scoped models add their own policies alongside this pattern.
 
+**Granting roles** is gated separately by `ApplicationPolicy#may_grant?(role)`: an actor can grant a role only if they already hold every permission it confers (a superset check, not a rank). This blocks privilege escalation — e.g. an Admin promoting anyone to Owner — and `MembershipPolicy#update?`/`#reactivate?` additionally refuse to manage a membership whose role the actor couldn't grant. `Workspace#admit` (invitation-accept / open-link self-join) deliberately does **not** re-check this: the role is authorized when the invitation or link is *created* (`authorize_role_grant!`), not when redeemed. If you add a new membership-grant entry point, gate the role where it is minted, not where it is consumed.
+
 ## Activity Tracking
 
 The `Trackable` concern auto-creates `ActivityLog` records via `after_commit` callbacks. Models opt in with `include Trackable`. Sensitive attributes (tokens, passwords) are stripped from metadata.

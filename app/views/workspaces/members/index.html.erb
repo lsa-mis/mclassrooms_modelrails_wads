@@ -117,7 +117,7 @@
 
   <%# Magic-link generation — separate surface from the email invite button
       above (Jason Fried: kill the "one form pretending to be two" pattern). %>
-  <% if policy(Invitation).create? && @roles.present? %>
+  <% if policy(Invitation).create? && @assignable_roles.present? %>
     <%# data-turbo-frame="_top" targets the whole page rather than the
         members_results frame the form sits next to. Without this, Turbo
         would frame the POST response into members_results and silently
@@ -135,7 +135,7 @@
       <div class="mt-3 flex items-end gap-3">
         <div class="flex-1">
           <%= form.select :role_id,
-                @roles.map { |r| [r.name, r.id] },
+                @assignable_roles.map { |r| [r.name, r.id] },
                 { label: t("workspaces.invitations.index.magic_link_role_label") },
                 {} %>
         </div>

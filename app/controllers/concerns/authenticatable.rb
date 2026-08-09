@@ -38,11 +38,27 @@ module Authenticatable
     end
 
     def find_session_by_cookie
-      Session.find_by(id: cookies.signed[:session_id]) if cookies.signed[:session_id]
+      token = cookies.signed[:session_id]
+      return unless token
+
+      session = Session.find_by(id: token)
+      if session && !session.expired?
+        session.touch_last_active!
+        return session
+      end
+
+      # A cookie was presented but no live session backs it — expired, swept, or
+      # revoked. Drop the stale cookie and remember it so request_authentication
+      # can tell the user why they landed on sign-in (an announced flash), rather
+      # than silently dumping them on a login form.
+      cookies.delete(:session_id)
+      @stale_session_cookie = true
+      nil
     end
 
     def request_authentication
-      session[:return_to_after_authenticating] = request.url
+      session[:return_to_after_authenticating] = request.fullpath
+      flash[:alert] = t("authentication.session_expired") if @stale_session_cookie
       redirect_to new_session_path
     end
 
@@ -63,9 +79,14 @@ module Authenticatable
     end
 
     def start_new_session_for(user)
-      user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
+      user.sessions.create!(
+        user_agent: request.user_agent, ip_address: request.remote_ip, last_active_at: Time.current
+      ).tap do |session|
         Current.session = session
-        cookies.signed.permanent[:session_id] = { value: session.id, httponly: true, same_site: :lax }
+        cookies.signed[:session_id] = {
+          value: session.id, httponly: true, same_site: :lax,
+          expires: Session.absolute_timeout.from_now
+        }
         sync_theme_cookie_to_preferences(user)
         detect_and_record_new_device(user)
       end

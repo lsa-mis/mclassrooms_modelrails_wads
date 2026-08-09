@@ -187,5 +187,39 @@ RSpec.describe "Workspace Invitations", type: :request do
         expect(response).to have_http_status(:not_found).or have_http_status(:redirect)
       end
     end
+
+    # SEC-1: an Admin must not be able to invite (or magic-link) an Owner.
+    describe "privilege escalation via invitation role" do
+      let(:owner_role)  { Role.system_default!("owner") }
+      let(:admin_user)  { create(:user) }
+      let!(:admin_membership) { create(:membership, :admin, user: admin_user, workspace: workspace) }
+
+      before { sign_in(admin_user) }
+
+      it "refuses an email invitation carrying the owner role" do
+        expect {
+          post workspace_invitations_path(workspace), params: {
+            invitation: { emails: "escalate@example.com", role_id: owner_role.id }
+          }
+        }.not_to change(Invitation, :count)
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to be_present
+      end
+
+      it "refuses a magic-link invitation carrying the owner role" do
+        expect {
+          post workspace_invitations_path(workspace), params: {
+            invitation: { magic_link: "1", role_id: owner_role.id }
+          }
+        }.not_to change(Invitation, :count)
+        expect(response).to have_http_status(:redirect)
+      end
+
+      it "does not offer the Owner option in an admin's invitation form" do
+        get new_workspace_invitation_path(workspace)
+        select = Nokogiri::HTML(response.body).at_css("select[name='invitation[role_id]']")
+        expect(select.to_s).not_to include("Owner")
+      end
+    end
   end
 end
