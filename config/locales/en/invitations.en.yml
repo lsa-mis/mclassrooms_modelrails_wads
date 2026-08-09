@@ -31,6 +31,7 @@ en:
         emails_hint: "One email per line, or comma-separated."
         role_label: "Role"
         submit: "Send invitations"
+        no_assignable_roles: "You don't have permission to assign any of this workspace's roles, so you can't send invitations."
       create:
         sent: "%{sent} invitation(s) sent. %{skipped} skipped."
         magic_link_created: "Magic link created."

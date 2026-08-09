@@ -9,7 +9,7 @@ module Workspaces
     def new
       authorize Invitation
       @invitation = Invitation.new
-      @roles = @workspace.effective_roles
+      @roles = assignable_roles_for(Invitation)
     end
 
     def create
@@ -62,6 +62,7 @@ module Workspaces
     def create_email_invitations
       emails = invitation_params[:emails].to_s.split(/[\n,]/).map(&:strip).reject(&:blank?)
       role = @workspace.effective_roles.find(invitation_params[:role_id])
+      authorize_role_grant!(Invitation, role)
 
       result = Invitation.bulk_invite!(
         workspace: @workspace,
@@ -76,6 +77,7 @@ module Workspaces
 
     def create_magic_link
       role = @workspace.effective_roles.find(invitation_params[:role_id])
+      authorize_role_grant!(Invitation, role)
       invitation = @workspace.invitations.create!(
         role: role,
         invited_by: Current.user,

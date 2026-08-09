@@ -97,6 +97,29 @@ en:
         empty_state: "You haven't added any passkeys yet. Add one above to sign in with your device."
       destroy:
         success: "Passkey removed."
+    sessions:
+      index:
+        title: "Active devices"
+        description: "Devices where you're currently signed in. Sign out any you don't recognize."
+        current_device: "This device"
+        current_device_note: "You're using this device now. Sign out from the account menu."
+        last_active: "Last active %{time} ago"
+        signed_in: "Signed in %{time} ago"
+        revoke_button: "Sign out"
+        revoke_aria_label: "Sign out %{device}, last active %{time} ago"
+        revoke_title: "Sign out this device?"
+        revoke_message: "That device will be signed out and will need to sign in again."
+        sign_out_others_button: "Sign out all other devices"
+        sign_out_others_title: "Sign out all other devices?"
+        sign_out_others_message: "Every device except this one will be signed out and will need to sign in again."
+      destroy:
+        signed_out: "Signed out %{device}."
+        signed_out_current: "You've been signed out."
+    other_sessions:
+      destroy:
+        signed_out:
+          one: "Signed out 1 other device."
+          other: "Signed out %{count} other devices."
     connected_accounts:
       index:
         cancel_action: "Cancel link"

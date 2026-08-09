@@ -223,6 +223,98 @@ RSpec.describe "Workspace Members", type: :request do
       end
     end
 
+    # SEC-1: an Admin (manage_members, not manage_workspace) must not be able
+    # to grant the Owner role — to anyone, including themselves — nor demote an
+    # Owner. The persisted role staying unchanged is the load-bearing assertion.
+    describe "PATCH .../members/:id — privilege escalation" do
+      let(:owner_role)  { Role.system_default!("owner") }
+      let(:admin_role)  { Role.system_default!("admin") }
+      let(:member_role) { Role.system_default!("member") }
+      let(:admin_user)  { create(:user) }
+      let!(:admin_membership) { create(:membership, :admin, user: admin_user, workspace: workspace) }
+
+      before { sign_in(admin_user) }
+
+      it "refuses an admin promoting another member to owner and leaves the role unchanged" do
+        target = create(:membership, user: create(:user), workspace: workspace)
+        patch workspace_member_path(workspace, target), params: { membership: { role_id: owner_role.id } }
+        expect(target.reload.role).to eq(member_role)
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to be_present
+      end
+
+      it "refuses an admin promoting their OWN membership to owner" do
+        patch workspace_member_path(workspace, admin_membership), params: { membership: { role_id: owner_role.id } }
+        expect(admin_membership.reload.role).to eq(admin_role)
+        expect(response).to have_http_status(:redirect)
+      end
+
+      it "refuses an admin editing an owner's membership at all" do
+        patch workspace_member_path(workspace, membership), params: { membership: { role_id: admin_role.id } }
+        expect(membership.reload.role).to eq(owner_role)
+        expect(response).to have_http_status(:redirect)
+      end
+
+      it "does not offer the Owner option in an admin's edit dropdown" do
+        target = create(:membership, user: create(:user), workspace: workspace)
+        get edit_workspace_member_path(workspace, target)
+        select = Nokogiri::HTML(response.body).at_css("select[name='membership[role_id]']")
+        expect(select.to_s).not_to include("Owner")
+      end
+
+      it "still lets an admin assign a non-privileged role" do
+        target = create(:membership, user: create(:user), workspace: workspace)
+        patch workspace_member_path(workspace, target), params: { membership: { role_id: admin_role.id } }
+        expect(target.reload.role).to eq(admin_role)
+      end
+
+      it "refuses an admin reactivating a deactivated owner and leaves it discarded" do
+        deactivated_owner = create(:membership, :owner, user: create(:user), workspace: workspace)
+        deactivated_owner.discard!
+        patch reactivate_workspace_member_path(workspace, deactivated_owner)
+        expect(deactivated_owner.reload).to be_discarded
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    describe "PATCH .../members/:id — viewer actor" do
+      let(:member_role) { Role.system_default!("member") }
+      let(:viewer_user) { create(:user) }
+      let!(:viewer_membership) do
+        create(:membership, user: viewer_user, workspace: workspace, role: Role.system_default!("viewer"))
+      end
+
+      before { sign_in(viewer_user) }
+
+      it "denies a viewer changing anyone's role and leaves it unchanged" do
+        target = create(:membership, user: create(:user), workspace: workspace)
+        original = target.role
+        patch workspace_member_path(workspace, target), params: { membership: { role_id: member_role.id } }
+        expect(target.reload.role).to eq(original)
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    # SEC-1 (adjacent): a workspace must always retain at least one owner.
+    describe "PATCH .../members/:id — owner floor" do
+      let(:admin_role) { Role.system_default!("admin") }
+      let(:owner_role) { Role.system_default!("owner") }
+
+      it "refuses to demote the sole owner and leaves them owner" do
+        # `user`/`membership` (outer let) is the only owner; signed in as them.
+        patch workspace_member_path(workspace, membership), params: { membership: { role_id: admin_role.id } }
+        expect(membership.reload.role).to eq(owner_role)
+        expect(response).to redirect_to(workspace_members_path(workspace))
+        expect(flash[:alert]).to eq(I18n.t("workspaces.members.update.cannot_demote_last_owner"))
+      end
+
+      it "allows demoting an owner when another owner remains" do
+        second_owner = create(:membership, :owner, user: create(:user), workspace: workspace)
+        patch workspace_member_path(workspace, second_owner), params: { membership: { role_id: admin_role.id } }
+        expect(second_owner.reload.role).to eq(admin_role)
+      end
+    end
+
     describe "DELETE /workspaces/:workspace_slug/members/:id" do
       let(:target) { create(:user) }
       let!(:target_membership) { create(:membership, user: target, workspace: workspace) }

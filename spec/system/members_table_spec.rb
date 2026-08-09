@@ -116,6 +116,22 @@ RSpec.describe "Members table", type: :system do
     end
   end
 
+  describe "demoting the last owner via inline edit (SEC-1)" do
+    before { %w[admin member viewer].each { |slug| Role.system_default!(slug) } }
+
+    it "announces the refusal in a toast and leaves the role unchanged" do
+      visit workspace_members_path(workspace)
+      within "##{ActionView::RecordIdentifier.dom_id(owner_membership)}" do
+        click_link I18n.t("workspaces.members.index.edit_role")
+        select "Admin", from: I18n.t("workspaces.members.edit.role_label")
+        click_button I18n.t("workspaces.members.edit.submit")
+      end
+
+      expect(page).to have_text(I18n.t("workspaces.members.update.cannot_demote_last_owner"))
+      expect(owner_membership.reload.role.slug).to eq("owner")
+    end
+  end
+
   describe "table structure" do
     let!(:member) { create(:user, first_name: "Test", last_name: "Member") }
     let!(:member_membership) { create(:membership, user: member, workspace: workspace) }

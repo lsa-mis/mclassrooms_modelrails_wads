@@ -40,6 +40,14 @@ production:
     # mailer work is observable separately from DB sweeps on `default`.
     schedule: every 15 minutes
 
+  expired_sessions_sweep:
+    class: ExpiredSessionsSweepJob
+    queue: default
+    # Housekeeping for the sessions table — expiry is enforced at read time, so
+    # cadence isn't security-critical. Daily is plenty; batched delete releases
+    # the SQLite writer lock between rounds.
+    schedule: every day at 4am
+
   notification_cleanup:
     class: NotificationCleanupJob
     queue: default
