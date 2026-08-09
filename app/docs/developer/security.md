@@ -28,6 +28,22 @@ rails users:verify[email@example.com]     # Manually verify an email
 rails users:suspend[email@example.com]    # Suspend an account (destroys sessions, deactivates memberships)
 ```
 
+### Session Lifetime
+
+Sessions expire — a signed-in session is not valid forever. `Session#expired?`
+enforces two limits, both tunable in `config/initializers/sessions.rb`:
+
+- **idle timeout** (default 30 days) — no activity for this long signs you out
+- **absolute timeout** (default 90 days) — this long after sign-in regardless of activity
+
+Expiry is enforced fail-closed in `Authenticatable#find_session_by_cookie`
+(an expired session resolves to `nil`, so the sweeper is housekeeping, not a
+security control), and the signed cookie carries a matching `expires:`.
+`last_active_at` is refreshed through an in-memory throttle so the write stays
+off the SQLite single-writer hot path. Changing or removing a password signs
+out every *other* session; users can review and revoke devices at
+`/settings/sessions`. `ExpiredSessionsSweepJob` deletes expired rows daily.
+
 ### Security Headers
 
 Configured in `config/initializers/security_headers.rb`:

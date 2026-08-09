@@ -40,6 +40,16 @@ class ApplicationController < ActionController::Base
     Current.user
   end
 
+  # SEC-1: refuse to grant a role the actor doesn't outrank. The server is the
+  # real gate; role selects render assignable_roles_for as defence + UX.
+  def authorize_role_grant!(policy_record, role)
+    raise Pundit::NotAuthorizedError unless policy(policy_record).may_grant?(role)
+  end
+
+  def assignable_roles_for(policy_record)
+    Current.workspace.effective_roles.select { |role| policy(policy_record).may_grant?(role) }
+  end
+
   # Fork override of the template's authenticated-landing seam
   # (Authenticatable#authenticated_home_path): signing in drops a non-admin
   # straight into the product — Find a Room — ONCE, at authentication time.

@@ -1,0 +1,70 @@
+<% content_for(:title) { t("settings.sessions.index.title") } %>
+<div class="page-container">
+  <%= render "shared/settings_page_header",
+        title: t("settings.sessions.index.title"),
+        description: t("settings.sessions.index.description") %>
+
+  <ul role="list" class="mt-8 space-y-4">
+    <% @sessions.each do |session| %>
+      <% current = session.id == Current.session.id %>
+      <li class="flex items-center justify-between p-4 border border-border rounded-lg">
+        <div>
+          <p class="font-medium text-text-heading">
+            <%= session.device_label %>
+            <% if current %>
+              <span class="sr-only"><%= t("settings.sessions.index.current_device") %>. </span>
+              <span class="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-success-surface text-success" aria-hidden="true">
+                <%= t("settings.sessions.index.current_device") %>
+              </span>
+            <% end %>
+          </p>
+          <p class="text-sm text-text-muted">
+            <%= session.ip_address %> &middot;
+            <%= t("settings.sessions.index.last_active", time: time_ago_in_words(session.last_active_at || session.created_at)) %>
+          </p>
+        </div>
+
+        <div class="action-group">
+          <% if current %>
+            <p id="session-<%= session.id %>-current" class="text-sm text-text-muted">
+              <%= t("settings.sessions.index.current_device_note") %>
+            </p>
+          <% else %>
+            <div data-controller="modal" class="inline">
+              <button type="button"
+                      class="btn-touch-target btn-text btn-text-danger text-sm focus-ring"
+                      aria-label="<%= t("settings.sessions.index.revoke_aria_label", device: session.device_label, time: time_ago_in_words(session.last_active_at || session.created_at)) %>"
+                      data-action="click->modal#open">
+                <%= t("settings.sessions.index.revoke_button") %>
+              </button>
+              <%= render "shared/confirm_dialog",
+                        title: t("settings.sessions.index.revoke_title"),
+                        message: t("settings.sessions.index.revoke_message"),
+                        confirm_text: t("settings.sessions.index.revoke_button"),
+                        confirm_url: settings_session_path(session),
+                        confirm_method: :delete,
+                        variant: :danger %>
+            </div>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+
+  <% if @sessions.count { |s| s.id != Current.session.id }.positive? %>
+    <div class="mt-6" data-controller="modal">
+      <button type="button"
+              class="btn-secondary btn-touch-target"
+              data-action="click->modal#open">
+        <%= t("settings.sessions.index.sign_out_others_button") %>
+      </button>
+      <%= render "shared/confirm_dialog",
+                title: t("settings.sessions.index.sign_out_others_title"),
+                message: t("settings.sessions.index.sign_out_others_message"),
+                confirm_text: t("settings.sessions.index.sign_out_others_button"),
+                confirm_url: settings_other_sessions_path,
+                confirm_method: :delete,
+                variant: :danger %>
+    </div>
+  <% end %>
+</div>

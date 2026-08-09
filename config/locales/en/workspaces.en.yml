@@ -153,6 +153,7 @@ en:
         submit: "Save"
       update:
         success: "Role updated."
+        cannot_demote_last_owner: "You can't demote the last owner. Transfer ownership or promote another owner first."
       destroy:
         deactivated: "Member deactivated."
         cannot_deactivate_last_owner: "Cannot deactivate the last owner."

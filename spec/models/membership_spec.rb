@@ -1,6 +1,36 @@
 require "rails_helper"
 
 RSpec.describe Membership, type: :model do
+  # SEC-1: a role change is a privilege event — audit it readably (role slugs,
+  # not the mutable role_id FK) and in the admin-only feed.
+  describe "role-change audit trail" do
+    def with_session(user)
+      session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+      Current.session = session
+      Current.workspace = @workspace
+      yield
+    ensure
+      Current.session = nil
+      Current.workspace = nil
+    end
+
+    it "records the role slugs by value and routes the event to the admin feed" do
+      @workspace = create(:workspace)
+      actor = create(:user)
+      create(:membership, :owner, user: actor, workspace: @workspace)
+      target = create(:membership, user: create(:user), workspace: @workspace)
+
+      with_session(actor) do
+        target.change_role!(Role.system_default!("admin"))
+      end
+
+      log = ActivityLog.where(trackable: target, action: "membership.updated").order(:id).last
+      expect(log.metadata["changes"]["role"]).to eq([ "member", "admin" ])
+      expect(log.visibility).to eq("admin")
+      expect(log.actor).to eq(actor)
+    end
+  end
+
   describe "schema" do
     it "has a last_accessed_at datetime column" do
       expect(Membership.columns_hash["last_accessed_at"].sql_type_metadata.type).to eq(:datetime)

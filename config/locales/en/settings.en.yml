@@ -15,6 +15,7 @@ en:
         notifications: "Notifications"
         security: "Security"
         passkeys: "Passkeys"
+        sessions: "Active devices"
         appearance: "Appearance"
         members: "Members"
         invitations: "Invitations"
