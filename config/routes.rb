@@ -43,6 +43,8 @@ Rails.application.routes.draw do
     namespace :preferences do
       resource :timezone, only: [ :update ]
     end
+    resources :sessions, only: [ :index, :destroy ]
+    resource :other_sessions, only: [ :destroy ]
     resources :passkeys, only: [ :index, :destroy ]
     resources :connected_accounts, only: [ :index, :destroy ] do
       member do

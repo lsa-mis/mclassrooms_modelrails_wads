@@ -4,7 +4,7 @@ class MembershipPolicy < ApplicationPolicy
   end
 
   def update?
-    can?("manage_members")
+    can?("manage_members") && may_grant?(record.role)
   end
 
   def destroy?
@@ -22,7 +22,7 @@ class MembershipPolicy < ApplicationPolicy
   end
 
   def reactivate?
-    can?("manage_members")
+    can?("manage_members") && may_grant?(record.role)
   end
 
   def transfer_ownership?

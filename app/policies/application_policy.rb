@@ -34,6 +34,17 @@ class ApplicationPolicy
     false
   end
 
+  # You may grant a role only if you already hold every permission it confers.
+  # Guards privilege elevation (e.g. Admin→Owner, or any custom role granting a
+  # permission the actor lacks). Fork invariant: the top role must stay a
+  # permission superset, or actors lose the ability to assign roles that use
+  # newly-added permissions. See docs/reviews security sprint (SEC-1).
+  def may_grant?(role)
+    return false unless membership
+
+    role.permissions.to_h.all? { |permission, enabled| !enabled || can?(permission) }
+  end
+
   private
 
   def membership

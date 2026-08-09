@@ -79,7 +79,12 @@ class Membership < ApplicationRecord
   }
 
   def change_role!(new_role)
-    update!(role: new_role)
+    demoting_owner = role.slug == "owner" && new_role.slug != "owner"
+    transaction do
+      workspace.lock!
+      update!(role: new_role)
+      enforce_owner_floor! if demoting_owner
+    end
   end
 
   def deactivate!
@@ -174,6 +179,34 @@ class Membership < ApplicationRecord
     return if remaining > 0
     errors.add(:base, :last_owner)
     raise ActiveRecord::RecordInvalid, self
+  end
+
+  # Owner-floor net for change_role! demotions. Runs after the role UPDATE
+  # inside the same transaction, so — like enforce_owner_invariant! — SQLite's
+  # writer lock means this EXISTS reflects committed state (self is already the
+  # new, non-owner role here, so it counts only the OTHER owners). Zero kept
+  # owners left → raise to roll back the demotion.
+  def enforce_owner_floor!
+    return if Membership.kept
+                        .joins(:role)
+                        .where(workspace_id: workspace_id)
+                        .where(roles: { slug: "owner" })
+                        .exists?
+    errors.add(:base, :last_owner)
+    raise ActiveRecord::RecordInvalid, self
+  end
+
+  # SEC-1 audit: a role change is a privilege event. Record the role slugs by
+  # value (not the mutable role_id FK) and route it to the admin-only feed.
+  def enrich_tracked_changes(changes)
+    return changes unless changes.key?("role_id")
+    from_id, to_id = changes["role_id"]
+    slugs = Role.where(id: [ from_id, to_id ].compact).pluck(:id, :slug).to_h
+    changes.merge("role" => [ slugs[from_id], slugs[to_id] ])
+  end
+
+  def activity_visibility(action)
+    (action == "membership.updated" && saved_change_to_role_id?) ? "admin" : "workspace"
   end
 
   def notify_role_changed

@@ -33,6 +33,7 @@ module Settings
       end
 
       if Current.user.update(password_params)
+        revoke_other_sessions
         redirect_to settings_connected_accounts_path, notice: t(".success")
       else
         render :edit, status: :unprocessable_entity
@@ -42,10 +43,17 @@ module Settings
     def destroy
       Current.user.authentications.email.destroy_all
       Current.user.update_columns(password_digest: nil)
+      revoke_other_sessions
       redirect_to settings_connected_accounts_path, notice: t(".success")
     end
 
     private
+
+    # Changing or removing a credential signs out every other device — a
+    # stolen session shouldn't survive the owner rotating their password.
+    def revoke_other_sessions
+      Current.user.sessions.where.not(id: Current.session.id).delete_all
+    end
 
     def password_params
       params.require(:user).permit(:password, :password_confirmation)
