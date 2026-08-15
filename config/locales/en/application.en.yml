@@ -26,23 +26,13 @@ en:
       one: "1 unread notification"
       other: "%{count} unread notifications"
     notification_preferences: "Notification preferences"
-    connected_accounts: "Accounts"
     all_workspaces: "All workspaces"
-    toggle_menu: "Toggle navigation menu"
     toggle_theme: "Toggle theme"
     user_menu_label: "User menu for %{name}"
     user_menu_label_simple: "Open user menu for %{name}"
     user_menu_label_with_unread:
       one: "User menu for %{name}. 1 unread notification, including %{phrase}."
       other: "User menu for %{name}. %{count} unread notifications, including %{phrase}."
-    bell:
-      label: "Notifications"
-      label_with_unread_count_only:
-        one: "Notifications, 1 unread"
-        other: "Notifications, %{count} unread"
-      label_with_unread:
-        one: "Notifications, 1 unread including %{phrase}"
-        other: "Notifications, %{count} unread including %{phrase}"
     mobile_menu:
       open: "Open menu"
       close: "Close menu"

@@ -2,14 +2,11 @@ en:
   settings:
     sidebar:
       aria_label: "Settings navigation"
-      switcher_aria_label: "Switch workspace"
       section_label:
         identity: "You"
       strip_heading:
         identity: "Account settings"
         workspace: "Workspace settings"
-      workspace_link_aria_label:
-        personal: "%{name}, your workspace"
       items:
         profile: "Profile"
         notifications: "Notifications"
@@ -24,11 +21,7 @@ en:
         profile_personal: "Your profile"
         profile_org: "Profile, %{workspace_name}"
         members: "Members of %{workspace_name}"
-        invitations: "Invitations for %{workspace_name}"
         limits_and_plan: "Limits and plan for %{workspace_name}"
-      switcher:
-        switch_workspace: "Switch workspace"
-        create_workspace: "Create workspace"
     pages:
       profile_personal:
         h1: "Your profile"
@@ -42,9 +35,6 @@ en:
       appearance:
         h1: "Appearance"
         description: "Theme and visual preferences for this device."
-      workspace_settings:
-        h1_html: "<span class='text-text-muted font-normal'>%{name}</span> settings"
-        description: "Workspace identity, capacity, and plan."
       workspace_profile:
         h1_html: "Profile"
         description: "Workspace identity — name, logo, and primary color."
