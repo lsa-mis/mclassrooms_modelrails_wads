@@ -24,7 +24,7 @@
   <ul class="max-w-2xl mx-auto space-y-3">
     <% t("pages.about.features.items").each do |item| %>
       <li class="flex items-start gap-3">
-        <span class="mt-1 text-interactive" aria-hidden="true">&#10003;</span>
+        <span class="mt-1 text-interactive" aria-hidden="true">&#10003;</span> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
         <span class="text-text-body"><%= item %></span>
       </li>
     <% end %>

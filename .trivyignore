@@ -17,12 +17,21 @@ CVE-2026-42258
 CVE-2026-42245
 CVE-2026-42246
 
-# Go stdlib v1.26.4 baked into thruster 0.1.22's precompiled binary
-# (os.Root symlink following → directory traversal). Potentially reachable —
-# thruster serves static assets in production HTTP — but 0.1.22 is the newest
-# release; the fix needs thruster to rebuild with Go >= 1.26.5. No action
-# available to us. (The 0.1.21-era Go stdlib + x/crypto + x/net entries that
-# previously lived here were cleared by the 0.1.22 rebuild — their Revisit
-# trigger — and removed.)
-# Revisit: on the next thruster release (> 0.1.22), or 2026-09-01.
-CVE-2026-39822
+# Go stdlib v1.26.5 baked into thruster 0.1.25's precompiled binary
+# (verified: `strings exe/x86_64-linux/thrust | grep go1.` → go1.26.5).
+# Eight HIGH findings, mostly DoS-class (asn1/xml/url/http2/tls recursion or
+# resource exhaustion) plus x/net idna punycode handling and html/template
+# XSS — thruster is the production HTTP front, so partially reachable, but
+# 0.1.25 is the newest release and the fix needs thruster to rebuild with
+# Go >= 1.26.6. No action available to us. (The 0.1.22-era os.Root entry
+# CVE-2026-39822 that previously lived here was cleared by the 0.1.23+
+# rebuild — its Revisit trigger — and removed.)
+# Revisit: on the next thruster release (> 0.1.25), or 2026-09-15.
+CVE-2026-33818
+CVE-2026-39821
+CVE-2026-46600
+CVE-2026-56853
+CVE-2026-56858
+CVE-2026-56859
+CVE-2026-56860
+CVE-2026-56862
