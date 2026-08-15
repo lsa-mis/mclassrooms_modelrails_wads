@@ -26,7 +26,10 @@ class DirectUploadsController < ApplicationController
   ALLOWED_CONTENT_TYPES = (ApplicationRecord::IMAGE_CONTENT_TYPES + %w[application/pdf]).freeze
   MAX_BYTE_SIZE = 10.megabytes
 
-  rate_limit to: 20, within: 3.minutes,
+  # Fork: 200, not the template's 20 — admin bulk upload (media pipeline)
+  # legitimately drops a building's worth of room photos in one go, and each
+  # file is a separate blob POST. Still a hard cap per authenticated user.
+  rate_limit to: 200, within: 3.minutes,
     by: -> { Current.user&.id || request.remote_ip },
     with: -> { render json: { error: t("direct_uploads.rate_limited") }, status: :too_many_requests }
 

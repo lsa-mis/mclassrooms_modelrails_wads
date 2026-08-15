@@ -44,9 +44,12 @@ RSpec.describe "Admin bulk uploads", type: :system do
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
 
     # MLB1200.jpg -> :gallery, MLB1200_chairs.pdf -> :seating_chart (both match
-    # `room`, its facility code), stray.txt matches no BulkUpload::Matcher
+    # `room`, its facility code), stray-notes.jpg matches no BulkUpload::Matcher
     # pattern. attach_file with an array on a `multiple` input drops all
-    # three at once, the way a real admin would.
+    # three at once, the way a real admin would. The stray is an IMAGE, not a
+    # .txt: SEC-7's shadowed direct-upload endpoint rejects non-image/pdf
+    # types at blob creation, so a .txt never uploads at all now — "unmatched"
+    # is a filename-matching concept and needs an allowed content type.
     # `browser_upload_fixture` (spec/support/browser_upload_helpers.rb): under
     # Cuprite, direct-uploading files handed to `attach_file` straight from the
     # fixtures dir fails to read them (`NotReadableError`) and hangs the flow. A
@@ -56,7 +59,7 @@ RSpec.describe "Admin bulk uploads", type: :system do
       [
         browser_upload_fixture("MLB1200.jpg"),
         browser_upload_fixture("MLB1200_chairs.pdf"),
-        browser_upload_fixture("stray.txt")
+        browser_upload_fixture("stray-notes.jpg")
       ]
 
     click_button I18n.t("admin.bulk_uploads.new.submit")
@@ -68,7 +71,7 @@ RSpec.describe "Admin bulk uploads", type: :system do
     expect(page).to have_selector("h1", text: I18n.t("admin.bulk_uploads.review.title"))
     expect(page).to have_content("MLB1200.jpg")
     expect(page).to have_content("MLB1200_chairs.pdf")
-    expect(page).to have_content("stray.txt")
+    expect(page).to have_content("stray-notes.jpg")
     expect(page).to have_content(I18n.t("admin.bulk_uploads.review.reason.unrecognized_filename"))
     expect(page).to have_content(I18n.t("admin.bulk_uploads.review.slot.gallery"))
     expect(page).to have_content(I18n.t("admin.bulk_uploads.review.slot.seating_chart"))

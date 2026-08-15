@@ -11,14 +11,14 @@ RSpec.describe "Describable contract (CI ratchet)" do
   # the first asserts real output never matches it, the second proves a
   # deliberately blanked rendering DOES — so narrowing this back to a
   # trailing-only check turns the second example red.
-  BLANK_INTERPOLATION = /\s{2,}|\s,|\s\z/
+  blank_interpolation = /\s{2,}|\s,|\s\z/
 
   it "every registered slot has a non-blank derived backstop and stored-wins" do
     Describable.registry.values.uniq.each do |model|
       model.describable_slots.each_key do |slot|
         rec = build(model.model_name.singular.to_sym, "#{slot}_alt": nil)
         expect(rec.alt_for(slot)).to be_present, "#{model}##{slot} backstop was blank"
-        expect(rec.alt_for(slot)).not_to match(BLANK_INTERPOLATION),
+        expect(rec.alt_for(slot)).not_to match(blank_interpolation),
           "#{model}##{slot} interpolated an empty value"
 
         rec.write_attribute("#{slot}_alt", "stored wins")
@@ -27,13 +27,13 @@ RSpec.describe "Describable contract (CI ratchet)" do
     end
   end
 
-  # Self-test for the assertion above: proves BLANK_INTERPOLATION actually
+  # Self-test for the assertion above: proves blank_interpolation actually
   # catches what it exists to catch, rather than resting on a manual check
   # that has since left no trace in the suite. Without this, the example
   # above passes for the wrong reason — none of the four factories ever
   # produce a blank name, so the pattern is never actually exercised, and a
   # future edit narrowing it back to trailing-only would not be caught here.
-  it "BLANK_INTERPOLATION matches a deliberately blank rendering, for every consumer" do
+  it "blank_interpolation matches a deliberately blank rendering, for every consumer" do
     # Building, Floor, and Room derive their alt straight from an owned name
     # via I18n.t inside the registered lambda, with no guard in front of it
     # (the latent hole task-9-report.md documents and this plan deliberately
@@ -43,17 +43,17 @@ RSpec.describe "Describable contract (CI ratchet)" do
     # the pattern would catch the hole if it were ever exercised.
     blank_building = build(:building, name: "")
     expect(Building.describable_slots.fetch(:photo).call(blank_building))
-      .to match(BLANK_INTERPOLATION)
+      .to match(blank_interpolation)
 
     blank_floor = build(:floor, building: blank_building)
     expect(Floor.describable_slots.fetch(:plan).call(blank_floor))
-      .to match(BLANK_INTERPOLATION)
+      .to match(blank_interpolation)
 
     blank_room = build(:room, facility_code: nil, building_name: nil, room_number: nil, nickname: nil)
     expect(Room.describable_slots.fetch(:panorama).call(blank_room))
-      .to match(BLANK_INTERPOLATION)
+      .to match(blank_interpolation)
     expect(Room.describable_slots.fetch(:seating_chart).call(blank_room))
-      .to match(BLANK_INTERPOLATION)
+      .to match(blank_interpolation)
 
     # MediaAsset's own derived_alt raises BlankOwnerName before a blank name
     # ever reaches I18n.t (see MediaAsset#base_derived_alt) — that guard IS
@@ -64,9 +64,9 @@ RSpec.describe "Describable contract (CI ratchet)" do
     # shape a trailing-only pattern used to miss — plus the NULL-subject
     # gallery_image fallback MediaAsset keeps under its own key.
     Room::SUBJECTS.each_value do |entry|
-      expect(I18n.t(entry.fetch(:key), owner: "")).to match(BLANK_INTERPOLATION)
+      expect(I18n.t(entry.fetch(:key), owner: "")).to match(blank_interpolation)
     end
-    expect(I18n.t("media.derived_alt.gallery_image", room: "")).to match(BLANK_INTERPOLATION)
+    expect(I18n.t("media.derived_alt.gallery_image", room: "")).to match(blank_interpolation)
   end
 
   it "image-bearing factories default to authored (no new needs_review content)" do

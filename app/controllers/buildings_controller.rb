@@ -262,7 +262,7 @@ class BuildingsController < ApplicationController
   def set_building
     # Look up by bldrecnbr — the URL param (see Building#to_param) — scoped
     # through for_current_workspace (CLAUDE.md deviation #1): tenant-scoped, never
-    # a bare Building.find — mirrors RoomsController#set_room. Not `.listed`-
+    # a bare class-level find — mirrors RoomsController#set_room. Not `.listed`-
     # filtered: this is the admin page, so a hidden building must still be
     # reachable. find_by! raises RecordNotFound (like find did).
     @building = Building.for_current_workspace.find_by!(bldrecnbr: params[:id])

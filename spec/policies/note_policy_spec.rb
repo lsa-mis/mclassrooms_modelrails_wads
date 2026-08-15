@@ -19,7 +19,7 @@ RSpec.describe NotePolicy do
 
   # Brief §14.1 (Task 4 table). Columns: admin, editor-in-unit,
   # editor-other-unit, viewer.
-  NOTE_MATRIX = [
+  note_matrix = [
     [ :create?,  :note_on_room_in_unit,        true, true,  false, false ],
     [ :update?,  :note_on_room_in_unit,        true, true,  false, false ],
     [ :destroy?, :note_on_room_in_unit,        true, true,  false, false ],
@@ -39,12 +39,12 @@ RSpec.describe NotePolicy do
     [ :create?,  :note_on_building,            true, false, false, false ],
     [ :update?,  :note_on_building,            true, false, false, false ],
     [ :destroy?, :note_on_building,            true, false, false, false ]
-  ].freeze
+  ]
 
-  NOTE_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
+  note_users = %i[admin_user editor_user other_editor_user viewer_user]
 
-  NOTE_MATRIX.each do |action, record_name, *expected|
-    NOTE_USERS.each_with_index do |user_name, i|
+  note_matrix.each do |action, record_name, *expected|
+    note_users.each_with_index do |user_name, i|
       it "#{action} on #{record_name} is #{expected[i]} for #{user_name}" do
         policy = described_class.new(send(user_name), send(record_name))
         expect(policy.public_send(action)).to be expected[i]

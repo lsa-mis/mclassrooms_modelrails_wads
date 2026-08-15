@@ -86,7 +86,13 @@ module Authenticatable
     # its own pre-auth key registers it here.
     SESSION_KEYS_SURVIVING_LOGIN = %i[
       return_to_after_authenticating pending_invitation_token pending_join_token
+      okta_id_token
     ].freeze
+    # okta_id_token (fork, RP-initiated logout D4): stashed at OAuth callback
+    # time — BEFORE start_new_session_for in the same request, and in the
+    # deferred-verification flow an entire session earlier — so the reset here
+    # would otherwise wipe it and sign-out would silently skip Okta's
+    # end_session_endpoint. See OmniauthCallbacksController#stash_okta_logout_state.
 
     def start_new_session_for(user)
       # Clear leftover pre-auth session state at the privilege boundary, keeping

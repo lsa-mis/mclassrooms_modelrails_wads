@@ -63,7 +63,8 @@ RSpec.describe "Direct uploads gate (SEC-7)", type: :request do
     end
 
     it "rate limits uploads per user" do
-      allow(Rails.cache).to receive(:increment).and_return(21)
+      # Fork cap is 200 (bulk media pipeline), not the template's 20.
+      allow(Rails.cache).to receive(:increment).and_return(201)
 
       post rails_direct_uploads_path, params: { blob: png_args }
 
