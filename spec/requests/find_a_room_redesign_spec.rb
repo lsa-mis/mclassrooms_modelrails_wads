@@ -141,7 +141,9 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     # nav); clear-all lives in the results toolbar; and the standalone glossary
     # link was dropped — the per-filter popovers are the inline glossary.
     expect(form).to have_text(I18n.t("rooms.filters.card_title"))
-    expect(form).to have_no_link(I18n.t("rooms.filters.glossary_link"))
+    # Literal string: the rooms.filters.glossary_link key was deleted with the
+    # standalone link (#522 unused-key gate); the guard against its return stays.
+    expect(form).to have_no_link("What do these filters mean?")
     expect(form).to have_no_link(I18n.t("rooms.filters.reset"))
     expect(page).to have_text(I18n.t("rooms.index.subtitle"))
   end

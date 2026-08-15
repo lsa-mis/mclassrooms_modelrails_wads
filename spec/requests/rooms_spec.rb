@@ -380,7 +380,10 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("rooms.row.ada", count: 5))
-      expect(response.body).not_to include(I18n.t("rooms.index.buildings_heading"))
+      # The pre-redesign "Buildings" section heading must stay gone. Element-
+      # shaped match, not a bare substring — "Buildings" can appear in names.
+      # (The old rooms.index.buildings_heading key was deleted with the layout.)
+      expect(response.body).not_to match(%r{>\s*Buildings\s*<})
     end
 
     # Teeth for the nested-interactive a11y posture: card chips are plain,
@@ -492,7 +495,9 @@ RSpec.describe "GET /rooms/:id", type: :request do
 
       get room_path(room)
 
-      expect(response.body).to include(I18n.t("rooms.show.seating_chart_alt", room: room.display_name))
+      # The image path's alt comes from the Describable resolver
+      # (Room.describable :seating_chart), not a view-local key.
+      expect(response.body).to include(I18n.t("media.derived_alt.seating_chart", room: room.display_name))
       expect(response.body).not_to include("(PDF)")
     end
 
