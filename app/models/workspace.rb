@@ -16,6 +16,11 @@ class Workspace < ApplicationRecord
   # rescue can map to GENERIC, non-disclosing copy — an outsider following a
   # join link/invitation must not learn which lifecycle state blocked them.
   NotAdmittableError = Class.new(StandardError)
+  # Typed outcomes of #admit — callers rescue these instead of matching the
+  # humanized validation string (which breaks on any locale edit). Sibling of
+  # the passkeys typed-error hierarchy.
+  AlreadyMember = Class.new(StandardError)
+  AtCapacity = Class.new(StandardError)
 
   has_one_attached :logo
   has_one_attached :logo_original
@@ -163,6 +168,10 @@ class Workspace < ApplicationRecord
     %w[upload initials]
   end
 
+  def identity
+    WorkspaceIdentity.new(self)
+  end
+
   def effective_roles
     Role.where(workspace_id: [ nil, id ])
   end
@@ -172,6 +181,15 @@ class Workspace < ApplicationRecord
   # :open_link. Composes the three layers so callers don't have to.
   def open_join?
     open_link? && !personal? && SignupPolicy.permits_strategy?(:open_link)
+  end
+
+  # Whether an active open-link join can be admitted right now: the join policy
+  # is open AND the workspace is in an admittable state (not archived/suspended/
+  # deleted). The single home for the "open_join? && admittable?" rule the join
+  # claim/resolution sites share. (SignupPolicy's gate deliberately checks only
+  # open_join? — admittable? is re-checked here at claim time.)
+  def accepting_open_joins?
+    open_join? && admittable?
   end
 
   # Role granted to users self-joining via an open-link. Pinned to the
@@ -186,7 +204,9 @@ class Workspace < ApplicationRecord
   # capacity check, discarded-reactivation, and :shared-posture role
   # reconciliation in one place. Wrapped in a transaction so direct callers
   # are safe; nested calls join the surrounding transaction.
-  def admit(user, role:)
+  # granted_by: audit provenance only (G) — the inviter, when an invitation
+  # acceptance is what created the membership. Never affects admission logic.
+  def admit(user, role:, granted_by: nil)
     transaction do
       lock!
       raise NotAdmittableError unless admittable?
@@ -201,11 +221,11 @@ class Workspace < ApplicationRecord
           # (:personal) semantics are preserved exactly.
           existing.update!(role: role) unless existing.role_id == role.id
         else
-          raise ActiveRecord::RecordInvalid.new(self), "User is already a member"
+          raise AlreadyMember
         end
       else
-        raise ActiveRecord::RecordInvalid.new(self), "Workspace is at capacity" if memberships.kept.count >= max_members
-        memberships.create!(user: user, role: role)
+        raise AtCapacity if memberships.kept.count >= max_members
+        memberships.create!(user: user, role: role, granted_by: granted_by)
       end
     end
   end

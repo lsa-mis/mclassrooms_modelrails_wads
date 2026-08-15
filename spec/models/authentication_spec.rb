@@ -281,7 +281,7 @@ RSpec.describe Authentication, type: :model do
 
   describe "#claim_pending_join_link!" do
     let(:user) { create(:user) }
-    let(:authentication) { create(:authentication, user: user, pending_join_link_token: nil) }
+    let(:authentication) { create(:authentication, user: user, pending_join_link_digest: nil) }
     let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
     let!(:member_role) {
       Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
@@ -302,54 +302,54 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "clears the token and returns nil when the token matches no link" do
-      authentication.update!(pending_join_link_token: "no-such-token")
+      authentication.update!(pending_join_link_digest: "no-such-token")
       authentication.claim_pending_join_link!(user)
-      expect(authentication.reload.pending_join_link_token).to be_nil
+      expect(authentication.reload.pending_join_link_digest).to be_nil
     end
 
     it "admits the user as Member and clears the token on success" do
-      authentication.update!(pending_join_link_token: link.token)
+      authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
 
       authentication.claim_pending_join_link!(user)
 
       expect(user.workspaces).to include(workspace)
       expect(workspace.memberships.find_by!(user: user).role.slug).to eq("member")
-      expect(authentication.reload.pending_join_link_token).to be_nil
+      expect(authentication.reload.pending_join_link_digest).to be_nil
     end
 
     it "silently clears the token when the link has been revoked" do
       link.revoke!
-      authentication.update!(pending_join_link_token: link.token)
+      authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
 
       expect {
         authentication.claim_pending_join_link!(user)
       }.not_to change(user.workspaces, :count)
-      expect(authentication.reload.pending_join_link_token).to be_nil
+      expect(authentication.reload.pending_join_link_digest).to be_nil
     end
 
     it "silently clears the token when the workspace's policy is no longer open_link" do
-      authentication.update!(pending_join_link_token: link.token)
+      authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
       workspace.update!(join_policy: "invite")
 
       expect {
         authentication.claim_pending_join_link!(user)
       }.not_to change(user.workspaces, :count)
-      expect(authentication.reload.pending_join_link_token).to be_nil
+      expect(authentication.reload.pending_join_link_digest).to be_nil
     end
 
     it "clears the spent token even when admission fails because the workspace is at capacity" do
       workspace.update!(max_members: 1)
       create(:membership, workspace: workspace, user: create(:user), role: member_role)
-      authentication.update!(pending_join_link_token: link.token)
+      authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
 
       expect {
         authentication.claim_pending_join_link!(user)
-      }.to raise_error(ActiveRecord::RecordInvalid, /at capacity/i)
+      }.to raise_error(Workspace::AtCapacity)
 
       # The token represents a one-shot claim. A capacity failure is terminal
       # for this attempt (verify never retries), so the token must not survive
       # the rollback and linger as orphaned state.
-      expect(authentication.reload.pending_join_link_token).to be_nil
+      expect(authentication.reload.pending_join_link_digest).to be_nil
     end
   end
 

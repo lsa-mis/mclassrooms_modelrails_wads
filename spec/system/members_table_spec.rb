@@ -10,8 +10,9 @@ RSpec.describe "Members table", type: :system do
     fill_in I18n.t("sessions.new.email_label"), with: user.email_address
     click_button I18n.t("sessions.new.continue")
     expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.where(email: user.email_address).order(:created_at).last.token
+    token = MagicLinkToken.create_for_email(user.email_address)
     visit magic_link_callback_path(token: token)
+    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
     expect(page).to have_css("#user-menu-button")
   end
 
@@ -176,8 +177,9 @@ RSpec.describe "Members table", type: :system do
       fill_in I18n.t("sessions.new.email_label"), with: regular.email_address
       click_button I18n.t("sessions.new.continue")
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
-      regular_token = MagicLinkToken.where(email: regular.email_address).order(:created_at).last.token
+      regular_token = MagicLinkToken.create_for_email(regular.email_address)
       visit magic_link_callback_path(token: regular_token)
+      click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
       expect(page).to have_css("#user-menu-button")
       visit workspace_members_path(workspace)
       expect(page).not_to have_link(I18n.t("workspaces.members.index.invite_member"))

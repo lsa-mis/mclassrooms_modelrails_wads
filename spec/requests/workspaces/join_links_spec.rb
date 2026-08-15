@@ -34,13 +34,40 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
 
       it "atomically rotates — revokes any existing active link and creates a new one" do
         existing = create(:workspace_join_link, workspace: workspace, created_by: owner)
-        original_token = existing.token
+        original_digest = existing.token_digest
 
         post workspace_join_links_path(workspace)
 
         expect(existing.reload).to be_revoked
         expect(workspace.join_links.active.count).to eq(1)
-        expect(workspace.join_links.active.first.token).not_to eq(original_token)
+        expect(workspace.join_links.active.first.token_digest).not_to eq(original_digest)
+      end
+
+      describe "show-once reveal (the token is hashed at rest)" do
+        before do
+          allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
+          workspace.update!(join_policy: "open_link")
+        end
+
+        it "reveals the full join URL exactly once after generating, then masks it" do
+          post workspace_join_links_path(workspace)
+          follow_redirect!
+
+          link = workspace.join_links.active.first
+          expect(response.body).to include(I18n.t("workspaces.settings.join_policy.show_once_warning_lead"))
+
+          # The revealed plaintext exists only in this one response; prove it
+          # matches the digest stored at rest (never re-derivable from the DB).
+          revealed = response.body[%r{/workspaces/#{workspace.slug}/joins/([A-Za-z0-9_-]+)}, 1]
+          expect(revealed).to be_present
+          expect(WorkspaceJoinLink.digest(revealed)).to eq(link.token_digest)
+
+          # A fresh visit no longer exposes the URL — masked steady state only.
+          get edit_workspace_settings_path(workspace)
+          expect(response.body).not_to include(I18n.t("workspaces.settings.join_policy.show_once_warning_lead"))
+          expect(response.body).to include(I18n.t("workspaces.settings.join_policy.masked_help"))
+          expect(response.body).to include(link.masked_token)
+        end
       end
     end
 

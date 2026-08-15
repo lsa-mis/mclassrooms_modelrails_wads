@@ -256,9 +256,14 @@ RSpec.describe "Account profile — identity picker", type: :system do
         dialog.dispatchEvent(new Event("cancel", { bubbles: false, cancelable: true }))
       JS
 
-      # Wait longer than the modal animation; if the fix regressed, the dialog
-      # would have finished closing by now.
-      sleep 0.2
+      # Condition-wait, not wall-clock (#453): a regressed cancel handler
+      # closes the dialog via its close animation, so wait until the dialog
+      # has NO running animations (settled state), then assert it stayed open.
+      # On a loaded runner a fixed 0.2s could return mid-animation and
+      # false-pass.
+      settle_deadline = Time.current + 2
+      sleep 0.05 until Time.current > settle_deadline ||
+                       page.evaluate_script("(document.querySelector('dialog')?.getAnimations() || []).length").zero?
 
       # Modal remains open, hub view still visible
       expect(page).to have_css("dialog[open]")
@@ -294,10 +299,15 @@ RSpec.describe "Account profile — identity picker", type: :system do
       # happen within the in-flight window.
       patch_count = 0
 
+      # Hold in-flight PATCHes until the double-click below has happened,
+      # rather than a fixed 1s (#453): the hold releases the moment the second
+      # click lands, and a slow runner can no longer outlive the window.
+      double_click_done = false
       cdp_intercept(%r{/settings/avatar}) do |request|
         if request.method == "PATCH"
           patch_count += 1
-          sleep 1 # keeps the first request in flight long enough for a second click
+          hold_deadline = Time.current + 5
+          sleep 0.05 until double_click_done || Time.current > hold_deadline
         end
         request.continue
       end
@@ -306,6 +316,7 @@ RSpec.describe "Account profile — identity picker", type: :system do
       save_button = find_button(I18n.t("identity_picker.save_crop"))
       save_button.click
       save_button.click
+      double_click_done = true # release the held PATCH — the window has served its purpose
 
       # Wait for the first response to land (modal returns to hub)
       wait_for_hub_view

@@ -23,6 +23,23 @@ RSpec.describe ActivityLog, type: :model do
     end
   end
 
+  describe "immutability" do
+    it "allows creation (the audit trail must keep accepting writes)" do
+      expect { create(:activity_log) }.not_to raise_error
+    end
+
+    it "raises on update of a persisted row" do
+      log = create(:activity_log)
+      expect { log.update!(action: "rewritten") }
+        .to raise_error(ActiveRecord::ReadOnlyRecord)
+    end
+
+    it "raises on destroy of a persisted row" do
+      log = create(:activity_log)
+      expect { log.destroy! }.to raise_error(ActiveRecord::ReadOnlyRecord)
+    end
+  end
+
   describe "visibility enum" do
     it "defaults to workspace" do
       expect(ActivityLog.new.visibility).to eq("workspace")

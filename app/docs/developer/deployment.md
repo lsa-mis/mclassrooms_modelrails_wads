@@ -111,11 +111,11 @@ You can now scale `web` horizontally too. Remove `max-replicas: 1` once `web` is
 
 ## SSL configuration: paired changes required
 
-When you enable TLS via the Kamal proxy, you **must also** enable the matching settings in `config/environments/production.rb`. These are a package deal — enabling one without the other silently breaks sessions or causes redirect loops.
+TLS has two halves: the Rails settings in `config/environments/production.rb` and the `proxy:` block in `config/deploy.yml`. They are a package deal — running one without the other silently breaks sessions or takes the site down.
 
-### The three Rails settings
+### The three Rails settings (already enabled — leave them)
 
-Uncomment all three in `config/environments/production.rb`:
+The template ships all three **live** in `config/environments/production.rb`. There is nothing to uncomment on the Rails side:
 
 ```ruby
 # Trust the SSL-terminating proxy's X-Forwarded-Proto header.
@@ -135,9 +135,9 @@ config.force_ssl = true
 config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
 ```
 
-### The Kamal proxy setting
+### The Kamal proxy setting (your job — this is the half that ships disabled)
 
-At the same time, uncomment in `config/deploy.yml`:
+The `proxy:` block in `config/deploy.yml` ships commented out because it needs your real domain. Enabling it is the actual SSL task on first deploy:
 
 ```yaml
 proxy:
@@ -145,27 +145,40 @@ proxy:
   host: yourdomain.com
 ```
 
+> **The trap: deploying with the proxy block still commented out looks healthy and is completely down.** Because `force_ssl` is already live, every browser request gets 301-redirected to an HTTPS port nothing is serving. But kamal-proxy health-checks `/up` over plain HTTP inside the container, and `ssl_options` deliberately excludes `/up` from the redirect — so the health check passes, Kamal reports the deploy green, and no human can reach the site. If your first deploy "succeeded" but the browser can't connect, this is why.
+
 ### Why they can't be enabled independently
 
 Valid combinations:
 
-- ✅ All enabled together (proxy + `assume_ssl` + `force_ssl`) → correct production behavior
-- ✅ All disabled together → correct for local dev/test (no SSL)
+- ✅ Proxy enabled + the three shipped Rails settings → correct production behavior
+- ✅ TLS terminated at your own load balancer (multi-server setups) + the three shipped Rails settings → correct, provided the balancer forwards `X-Forwarded-Proto`
 
 Broken combinations:
 
-- ❌ `assume_ssl` on, no proxy → sessions break (cookies get `Secure` flag but travel over HTTP)
-- ❌ `force_ssl` on, no proxy → redirect loop (app redirects to HTTPS, proxy passes requests back as HTTP)
+- ❌ Proxy commented out with the shipped Rails settings (the as-shipped state, deployed unchanged) → green health check, dead app (the trap above)
 - ❌ `force_ssl` on, `assume_ssl` off, proxy on → redirect loop (app can't detect proxy's HTTPS signal, redirects every request)
+- ❌ Rails settings disabled, proxy on → works, but no HSTS and cookies aren't `Secure` — don't ship that
 
 ### SSL deployment checklist
 
-When preparing the first SSL-enabled deploy, change all of these in the **same commit**:
+Before the first deploy:
 
-- [ ] Uncomment `proxy:` block in `config/deploy.yml` with your real domain
-- [ ] Uncomment `config.assume_ssl = true` in `config/environments/production.rb`
-- [ ] Uncomment `config.force_ssl = true` in `config/environments/production.rb`
-- [ ] Uncomment `config.ssl_options = ...` in `config/environments/production.rb`
+- [ ] Uncomment the `proxy:` block in `config/deploy.yml` and set `host:` to your real domain
+- [ ] Point your domain's DNS at the server first — kamal-proxy obtains the Let's Encrypt certificate on demand, which fails if the name doesn't resolve to the host yet
+- [ ] Leave `assume_ssl` / `force_ssl` / `ssl_options` in `config/environments/production.rb` as shipped — they are already enabled; there is nothing to uncomment
+
+## Production preflight
+
+`config/initializers/required_production_config.rb` refuses to boot a production process when `RAILS_HOST` is unset or still a placeholder (`example.com`, anything ending in `.example`). The reason it refuses rather than warns: every mailer link — magic links, password resets, invitations — is generated from `RAILS_HOST`, and DNS-rebinding protection (`config.hosts`) is derived from it. With a placeholder value the app boots, `/up` reports healthy, and nobody can sign in. A failed boot is the only version of this failure you can see.
+
+Rules the guard follows:
+
+- **Deterministic checks only** — unset, or a value that can never have been a working deployment. A configuration that served traffic yesterday can never fail a restart today.
+- **Build-time boots are exempt.** The Dockerfile's `assets:precompile` runs with `SECRET_KEY_BASE_DUMMY=1` and legitimately has no deployment ENV; the guard skips those boots.
+- **Set the value, never silence the check.** There is no bypass variable by design. To opt out permanently: `git rm config/initializers/required_production_config.rb` — the file is self-contained, so deleting it is one command and (since it is not on the `merge=ours` list) it stays deleted until upstream deliberately reintroduces it, which the changelog would note.
+
+Set `RAILS_HOST` under `env.clear` in `config/deploy.yml` (Kamal) or as a plain environment variable elsewhere.
 
 ## Health check
 

@@ -85,7 +85,7 @@ RSpec.describe SignupPolicy do
     end
 
     it "returns true for an active link of an open-join workspace" do
-      expect(SignupPolicy.workspace_join_acceptable?(link.token)).to be true
+      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be true
     end
 
     it "returns false for a blank or unknown token" do
@@ -96,18 +96,18 @@ RSpec.describe SignupPolicy do
 
     it "returns false for a revoked link" do
       link.revoke!
-      expect(SignupPolicy.workspace_join_acceptable?(link.token)).to be false
+      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be false
     end
 
     it "returns false when the workspace's policy isn't open_link" do
       workspace.update!(join_policy: "invite")
-      expect(SignupPolicy.workspace_join_acceptable?(link.token)).to be false
+      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be false
     end
 
     it "returns false when the instance allowlist excludes :open_link" do
       link  # materialize while permissive allowlist is in effect
       allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite])
-      expect(SignupPolicy.workspace_join_acceptable?(link.token)).to be false
+      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be false
     end
   end
 
@@ -121,7 +121,7 @@ RSpec.describe SignupPolicy do
     end
 
     it "opens the gate when a valid open-link join_token is supplied" do
-      expect(SignupPolicy.allows_signup?(join_token: link.token)).to be true
+      expect(SignupPolicy.allows_signup?(join_token: link.plaintext_token)).to be true
     end
 
     it "keeps the gate closed for an unknown join_token" do
@@ -136,7 +136,7 @@ RSpec.describe SignupPolicy do
     it "either kwarg opens the gate (composable)" do
       invitation = create(:invitation)
       expect(SignupPolicy.allows_signup?(invitation_token: invitation.token, join_token: nil)).to be true
-      expect(SignupPolicy.allows_signup?(invitation_token: nil, join_token: link.token)).to be true
+      expect(SignupPolicy.allows_signup?(invitation_token: nil, join_token: link.plaintext_token)).to be true
     end
   end
 end

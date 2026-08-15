@@ -1,4 +1,11 @@
 en:
+  reauthentication_mailer:
+    code:
+      subject: "Your confirmation code"
+      greeting: "Hi %{name},"
+      body: "Use this code to confirm a change to your account:"
+      expiry: "This code expires in %{minutes} minutes."
+      ignore: "If you didn't request this, you can ignore this email — no change was made."
   authentication_mailer:
     verification_email:
       subject: "Verify your email address"

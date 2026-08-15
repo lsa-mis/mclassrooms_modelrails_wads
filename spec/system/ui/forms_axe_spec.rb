@@ -18,7 +18,7 @@ require "rails_helper"
 # (search_input, number_input, floating_label) are audited too, so the
 # aria-invalid error border/ring tokens are proven at AAA as well.
 RSpec.describe "Wave-2 form controls accessibility", type: :system do
-  FORMS_PREVIEW_ROOT = "/rails/view_components/ui"
+  forms_preview_root = "/rails/view_components/ui"
 
   # component => { url: representative scenario path, selector: the real element }
   # The selector both proves the control rendered AND scopes the axe audit.
@@ -45,7 +45,7 @@ RSpec.describe "Wave-2 form controls accessibility", type: :system do
     }
   }.each do |component, spec|
     it "#{component} renders and passes AAA in both themes" do
-      visit "#{FORMS_PREVIEW_ROOT}/#{spec[:url]}"
+      visit "#{forms_preview_root}/#{spec[:url]}"
 
       expect(page).to have_css(spec[:selector])
 
@@ -65,7 +65,7 @@ RSpec.describe "Wave-2 form controls accessibility", type: :system do
     "floating_label" => "input.peer"
   }.each do |component, selector|
     it "#{component} invalid scenario passes AAA in both themes" do
-      visit "#{FORMS_PREVIEW_ROOT}/#{component}_component/invalid"
+      visit "#{forms_preview_root}/#{component}_component/invalid"
 
       expect(page).to have_css("#{selector}[aria-invalid='true']")
 

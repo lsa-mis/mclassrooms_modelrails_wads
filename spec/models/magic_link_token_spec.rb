@@ -5,7 +5,7 @@ RSpec.describe MagicLinkToken, type: :model do
     it "creates a token record" do
       token = MagicLinkToken.create_for_email("test@example.com")
       expect(token).to be_present
-      expect(MagicLinkToken.find_by(token: token).email).to eq("test@example.com")
+      expect(MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).email).to eq("test@example.com")
     end
 
     it "supersedes prior unconsumed tokens for the same email" do
@@ -37,12 +37,12 @@ RSpec.describe MagicLinkToken, type: :model do
   describe ".create_for_email with intent" do
     it "persists a server-side intent on the issued token" do
       token = MagicLinkToken.create_for_email("a@example.com", intent: "set_password")
-      expect(MagicLinkToken.find_by(token: token).intent).to eq("set_password")
+      expect(MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).intent).to eq("set_password")
     end
 
     it "defaults intent to nil for ordinary sign-in/registration links" do
       token = MagicLinkToken.create_for_email("b@example.com")
-      expect(MagicLinkToken.find_by(token: token).intent).to be_nil
+      expect(MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).intent).to be_nil
     end
   end
 
@@ -56,13 +56,13 @@ RSpec.describe MagicLinkToken, type: :model do
 
     it "returns nil for expired tokens" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
-      MagicLinkToken.find_by(token: token_value).update!(expires_at: 1.hour.ago)
+      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value)).update!(expires_at: 1.hour.ago)
       expect(MagicLinkToken.find_valid(token_value)).to be_nil
     end
 
     it "returns nil for consumed tokens" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
-      MagicLinkToken.find_by(token: token_value).consume!
+      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value)).consume!
       expect(MagicLinkToken.find_valid(token_value)).to be_nil
     end
   end
@@ -70,7 +70,7 @@ RSpec.describe MagicLinkToken, type: :model do
   describe "#consume! (instance)" do
     it "returns true on first call and false on subsequent calls" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
-      record = MagicLinkToken.find_by(token: token_value)
+      record = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
 
       expect(record.consume!).to be true
       expect(record.consume!).to be false
@@ -81,8 +81,8 @@ RSpec.describe MagicLinkToken, type: :model do
     # update!s succeed (no WHERE clause) and the token is double-spent.
     it "atomically detects double-consume across stale references" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
-      ref_a = MagicLinkToken.find_by(token: token_value)
-      ref_b = MagicLinkToken.find_by(token: token_value)
+      ref_a = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
+      ref_b = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
 
       expect(ref_a.consume!).to be true
       expect(ref_b.consume!).to be false
@@ -90,7 +90,7 @@ RSpec.describe MagicLinkToken, type: :model do
 
     it "reloads the record so consumed_at reflects the database after success" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
-      record = MagicLinkToken.find_by(token: token_value)
+      record = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
 
       record.consume!
 
@@ -120,7 +120,7 @@ RSpec.describe MagicLinkToken, type: :model do
 
     it "returns nil for expired tokens" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
-      MagicLinkToken.find_by(token: token_value).update!(expires_at: 1.hour.ago)
+      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value)).update!(expires_at: 1.hour.ago)
 
       expect(MagicLinkToken.consume!(token_value)).to be_nil
     end

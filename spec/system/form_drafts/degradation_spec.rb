@@ -87,24 +87,19 @@ RSpec.describe "Form draft degradation", type: :system do
   # recover call degrades to a no-op — reviewable by inspection, and indirectly
   # covered by the fact that no draft-enabled page is ever reachable signed-out
   # (the meta tags only render `if Current.user`, shared/_layout_head.html.erb).
-  # Re-enable this example once the driver/browser pin resolves the protocol skew.
-  it "no-ops entirely without the key meta (fork-invariant)", skip: "add_init_script now works on playwright 1.61.1/chromium-1228, but this never-run example's assertion needs validating (evaluate_script of a removed node returns {} not nil) — separate follow-up" do
-    cdp_add_init_script(<<~JS)
-      document.addEventListener('DOMContentLoaded', () => {
-        document.querySelector('meta[name="form-draft-key"]')?.remove()
-      })
-    JS
+  it "no-ops entirely without the key meta (fork-invariant)" do
+    # Server-side no-key render (#480): the harness suppresses the metas
+    # itself, so there is no race against the controller's connect — the page
+    # the browser receives simply never had a key.
+    visit "/draft_harness?no_key=1"
+    expect(page).to have_no_css('meta[name="form-draft-key"]', visible: :all)
 
-    win = open_new_window
-    within_window(win) do
-      expect(page.evaluate_script("typeof window.formDraftHarness")).to eq("undefined")
-
-      visit "/draft_harness"
-      expect(page.evaluate_script("document.querySelector('meta[name=\"form-draft-key\"]')")).to be_nil
-      fill_in "Title", with: "dark feature"
-      sleep 0.5
-      expect(page.evaluate_script("Object.keys(localStorage).filter(k => k.startsWith('draft:')).length")).to eq(0)
-      expect(find_field("Title").value).to eq("dark feature") # form untouched
-    end
+    fill_in "Title", with: "dark feature"
+    # Negative assertion: proving NO write happened has no condition to wait
+    # on, so wait out the controller's 300ms autosave debounce plus margin,
+    # then assert silence.
+    sleep 0.5
+    expect(page.evaluate_script("Object.keys(localStorage).filter(k => k.startsWith('draft:')).length")).to eq(0)
+    expect(find_field("Title").value).to eq("dark feature") # form untouched
   end
 end

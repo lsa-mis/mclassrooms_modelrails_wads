@@ -248,6 +248,29 @@ you've customized (say `pages_controller.rb`), your next sync keeps your version
 and the fix never arrives — with no warning. The update recipe below includes a
 one-command check for exactly this.
 
+This has already happened once, so here is the worked example. Until 2026-08-04
+the template shipped its maintainer's **real support address** in
+`config/locales/en/pages.en.yml`; PR #549 (`7fe2fa87`) replaced it with a
+placeholder. That file is fork-owned — the forking guide tells you to rewrite it
+wholesale — so every fork created before that date keeps the old address on
+every sync, silently, indefinitely. Two ways to catch this class of miss:
+
+- **At sync time** — the fork-owned-paths check in the update recipe below
+  (`git log --oneline main..upstream/main -- config/locales/en/pages.en.yml …`)
+  lists upstream commits that will *not* flow in. It only works before you
+  merge: afterward the commit is in your history even though its content never
+  reached your file.
+- **Any time after** — grep for the concrete leftover. For this instance:
+
+  ```bash
+  git grep -n "modelrails.dev" config/locales
+  ```
+
+  A hit means you are still shipping the template's address; replace it with
+  your own. Forks created (or re-synced) after the fix also get a durable
+  guard — a fork-gated template invariant fails the suite while any
+  placeholder support address survives.
+
 **The driver must be active.** `bin/setup` activates it on any clone that has an
 `upstream` remote. Without it, these paths conflict like ordinary files — verify
 with `git config merge.ours.driver` → `true`.

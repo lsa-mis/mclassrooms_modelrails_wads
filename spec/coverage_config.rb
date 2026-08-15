@@ -14,7 +14,12 @@
 # too late for the SimpleCov.start block at the top of that file.
 module CoverageConfig
   # Enforced on a single-process run, and on the merged result of a parallel run.
-  MINIMUM = 40
+  # Set a few points below the coverage the suite actually earns (~95% line) so a
+  # single legitimately-uncovered branch doesn't fail CI, while locking in the
+  # achievement — coverage can no longer silently rot back toward the old 40 (the
+  # order-of-magnitude gap the audit flagged as TEST-1). Raise this as the suite
+  # climbs; never lower it to make a red build pass.
+  MINIMUM = 90
 
   # Parallel workers each write a resultset; the collate step merges them. The
   # default 10-minute window is shorter than a full suite, which would silently

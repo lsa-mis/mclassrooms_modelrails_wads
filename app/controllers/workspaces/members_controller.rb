@@ -12,14 +12,25 @@ module Workspaces
         sort: params[:sort], direction: params[:direction]
       )
       invitations = @workspace.invitations.for_members_index(
-        q: params[:q], role: params[:role], status: params[:status]
+        q: params[:q], role: params[:role], status: params[:status],
+        sort: params[:sort], direction: params[:direction]
       )
 
-      # Invitations first — they're actionable (pending), members are settled.
-      # Pagy's offset paginator accepts arrays so the combined list paginates
-      # together; long lists of either kind don't blow the page open.
+      # Invitations first — they're actionable (pending), members are settled;
+      # each group honors the active sort within itself (#124). Pagy's offset
+      # paginator accepts arrays so the combined list paginates together.
+      # Trade-off, stated honestly: BOTH relations fully materialize into Ruby
+      # here — acceptable at template scale (tens of rows), and the memory
+      # cost grows with the workspace. Revisit as a UNION query when a
+      # workspace approaches ~500 combined rows (#124's deferred half).
       combined = invitations.to_a + memberships.to_a
-      @pagy, @rows = pagy(:offset, combined)
+      # Clamp beyond-range pages (stale bookmark, a filter narrowing the set
+      # under someone's feet) to the last real page — Pagy 43 hands the view
+      # nil rows for an out-of-range request, which 500s the render (found by
+      # the #125 filter-on-page-2 spec).
+      last_page = [ (combined.size - 1).div(Pagy::OPTIONS[:limit]) + 1, 1 ].max
+      page = params[:page].to_i.clamp(1, last_page)
+      @pagy, @rows = pagy(:offset, combined, page: page)
     end
 
     def edit

@@ -57,6 +57,28 @@ RSpec.describe Session, type: :model do
     end
   end
 
+  describe "#reauthenticated? / #confirm_reauthentication!" do
+    let(:session) { create(:user).sessions.create!(user_agent: "t", ip_address: "127.0.0.1") }
+
+    it "is false with no reauthenticated_at" do
+      expect(session.reauthenticated?).to be(false)
+    end
+
+    it "is true within the reauth window and false after" do
+      session.confirm_reauthentication!
+      expect(session.reload.reauthenticated?).to be(true)
+      session.update_columns(reauthenticated_at: (Session.reauth_window + 1.minute).ago)
+      expect(session.reload.reauthenticated?).to be(false)
+    end
+
+    it "is per-session — one session's reauth does not grant another's" do
+      user = session.user
+      other = user.sessions.create!(user_agent: "t2", ip_address: "127.0.0.2")
+      session.confirm_reauthentication!
+      expect(other.reload.reauthenticated?).to be(false)
+    end
+  end
+
   describe "scopes" do
     it "partitions active and expired" do
       freeze_time do

@@ -14,8 +14,8 @@
       available_modes: @available_modes %>
     <!-- Hero Section -->
     <div class="text-center mb-12">
-      <h1 class="text-4xl font-bold text-text-heading mb-4">Documentation</h1>
-      <p class="text-xl text-text-body">Browse our comprehensive documentation and guides</p>
+      <h1 class="text-4xl font-bold text-text-heading mb-4"><%= t(".title") %></h1>
+      <p class="text-xl text-text-body"><%= t(".subtitle") %></p>
 
       <% if @search_enabled %>
         <!-- Search input -->
@@ -77,8 +77,8 @@
             <svg class="mx-auto h-12 w-12 text-text-body" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-text-heading">No documentation available</h3>
-            <p class="mt-1 text-sm text-text-body">Documentation will appear here once markdown files are added.</p>
+            <h3 class="mt-2 text-sm font-medium text-text-heading"><%= t(".empty_title") %></h3>
+            <p class="mt-1 text-sm text-text-body"><%= t(".empty_body") %></p>
           </div>
         </div>
       </div>

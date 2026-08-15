@@ -20,7 +20,20 @@ Auth endpoints are rate-limited via Rails 8 `rate_limit` DSL:
 
 ### Account Locking
 
-After 5 failed login attempts, accounts are locked for 1 hour. Auto-unlock occurs after the lockout period. Admin rake tasks:
+After 5 failed login attempts, accounts are locked for 1 hour. Auto-unlock occurs after the lockout period.
+
+**Scope — password sign-in only, by design.** The failed-attempt counter and
+the `locked?` gate live in the password path (`sessions#create`). Passkey and
+magic-link sign-in do **not** check the lock: neither factor is brute-forceable
+the way a password is (a passkey is a cryptographic assertion; a magic link
+requires control of the inbox), so locking them out would punish exactly the
+factors a locked-out user needs to get back in. Consequence to be aware of:
+a locked account is locked out of *passwords*, not out of the account — the
+owner can still sign in with a passkey or magic link. If your fork wants a
+lock to mean "no sign-in at all", add the `locked?` check to
+`magic_link_callbacks#sign_in` and `Passkeys::AuthenticateCeremony` as well.
+
+Admin rake tasks:
 
 ```bash
 rails users:unlock[email@example.com]     # Unlock a locked account
@@ -43,6 +56,45 @@ security control), and the signed cookie carries a matching `expires:`.
 off the SQLite single-writer hot path. Changing or removing a password signs
 out every *other* session; users can review and revoke devices at
 `/settings/sessions`. `ExpiredSessionsSweepJob` deletes expired rows daily.
+
+### Re-Authentication (Sensitive Changes)
+
+Actions that add, remove, or change an authentication factor require a recent
+proof of identity, so a borrowed session can't be turned into a takeover.
+`Reauthenticatable#require_reauthentication!` gates: password change/removal,
+passkey enrollment and deletion, email change, and OAuth unlink. It checks
+`Session#reauthenticated?` (a 15-minute window on `reauthenticated_at`, set at
+sign-in and refreshed by the interstitial) and, if stale, sends the user to
+`/settings/reauthentication`.
+
+The interstitial offers only the factors the user has (`User#available_reauth_factors`):
+password, a passkey (verified through `AuthenticateCeremony` **bound to the
+current user** — another account's passkey is rejected), or a one-time
+`ReauthenticationChallenge` code emailed and entered in-page (never a link, so
+it can't be replayed into a sign-in). All of it is tunable in
+`config/initializers/sessions.rb`; `reauth_enabled = false` makes the gate a
+no-op — except passkey enrollment, which stays gated regardless: enrollment
+mints a durable, phishing-resistant credential and revokes nothing, so it is
+hard-wired (`require_reauthentication!(force: true)`) and additionally fires
+`PasskeyAddedNotifier`. Email changes are gated here rather than on a
+password, so passwordless users can change their email.
+
+Sign-ins from an unrecognized browser/OS additionally trigger a security
+notification (`SignInFromNewDeviceNotifier`). The alert is gated by
+`new_device_notification` in the same initializer; device fingerprints are
+recorded regardless, so turning the alert back on later keeps full history.
+
+### Magic-Link Tokens
+
+The bearer token is stored only as a SHA256 digest (`MagicLinkToken.token_digest`);
+the plaintext lives solely in the emailed URL, so a leaked table can't be used
+to sign in. 256 bits of entropy means a plain unsalted digest is sufficient —
+contrast the 6-digit `ReauthenticationChallenge`, which needs a pepper + rate
+limit. Clicking a magic link is a two-step GET→POST: the GET renders a
+"Sign in as x@y?" confirmation and never consumes the token or starts a session,
+so a mail scanner or prefetcher doing a bare GET can't burn the link; the POST
+(the visible button) runs the atomic consume and signs in. Mirrors the join-link
+confirmation flow.
 
 ### Security Headers
 
@@ -81,7 +133,9 @@ Two consequences to know about:
 - **libvips 8.13+ and ruby-vips 2.2.1+ are required.** Below either, Active Storage raises at boot rather than run unsecured. The production image, the devcontainer and CI all satisfy this; check your own if you build a custom image.
 - **BMP, ICO and PSD variants raise `Vips::Error`.** `config/initializers/active_storage.rb` removes those three from `variable_content_types`, so attachments of those types render as a file chip. Without it they render an `<img>` whose representation URL 500s when the browser fetches it — processing is lazy, so the page still returns 200 and the failure shows up as a broken image plus a logged 500 on every view. PNG, JPEG, GIF, WebP, TIFF, AVIF, HEIC and HEIF are unaffected.
 
-Uploads backing user avatars and workspace logos are additionally restricted to `image/png`, `image/jpeg`, `image/gif` and `image/webp` by model validations. Action Text attachments are not restricted — if your fork needs an allowlist there, add one rather than relying on the variant layer to refuse the file.
+Uploads backing user avatars, workspace logos and project logos are restricted by model validations to `ApplicationRecord::IMAGE_CONTENT_TYPES` (PNG, JPEG, GIF, WebP, TIFF, AVIF, HEIC, HEIF) with size caps.
+
+Rich-text (Action Text) attachments upload through `DirectUploadsController`, which shadows the Active Storage engine's endpoint — the engine's own controller is **unauthenticated** and gates nothing. The shadow requires a signed-in session, rate-limits per user, and enforces an allowlist (`IMAGE_CONTENT_TYPES` + PDF) and a 10 MB cap; both knobs are constants on that controller. Two honesty notes: the declared byte size is a *hard* ceiling (it's baked into the signed token and the disk service re-verifies length + checksum on receipt), while the declared content type filters honest clients only — Active Storage re-identifies the real type from the stored bytes at attach time, where model validations judge it. And attachment happens by signed GID embedded in the submitted body, so any *new* blob-creation path a fork adds must carry its own gate — a blob's `attachable_sgid` is sufficient to attach it.
 
 The `>= x.y.z` floor on the `rails` gem in the Gemfile is a security floor: it stops a fresh `bundle install` in a fork from resolving back onto a version patched for a known CVE. Dependabot rewrites that line on every Rails bump and will drop the floor, so `spec/code_smells/template_invariants_spec.rb` fails if the requirement ever admits a vulnerable release again.
 

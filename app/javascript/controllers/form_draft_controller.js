@@ -183,7 +183,28 @@ export default class extends Controller {
         })
     }
 
-    this.announce(this.statusText("restored").replace("%{count}", String(touched)))
+    // Honest announcement (#479): a draft key whose ONLY matching fields are
+    // hidden (a Lexxy-style editor's backing input) can never be written
+    // back — the content sits in localStorage, unreachable. Routine hidden
+    // skips (the Rails checkbox hidden-"0" pair) have a visible sibling and
+    // are NOT unrecoverable. A screen-reader user must never hear a clean
+    // "restored" while the document body stayed empty.
+    const unrecoverableKeys = Object.keys(draft.data).filter((name) => {
+      const fields = this.element.querySelectorAll(`[name="${CSS.escape(name)}"]`)
+      return fields.length > 0 &&
+        Array.from(fields).every((field) => field.type === "hidden")
+    })
+
+    let message
+    if (touched === 0) {
+      message = this.statusText("restoredNone")
+    } else if (unrecoverableKeys.length > 0) {
+      message = this.statusText("restoredPartial").replace("%{count}", String(touched))
+    } else {
+      message = this.statusText(touched === 1 ? "restoredOne" : "restoredOther")
+        .replace("%{count}", String(touched))
+    }
+    this.announce(message)
     this.hideNotice()
     this.focusFirstField()
   }

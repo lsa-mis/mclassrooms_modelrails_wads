@@ -32,7 +32,7 @@ RSpec.describe "Workspace admission (not_admittable rescue)", type: :request do
   end
 
   it "redirects to root_path with the generic invalid_or_revoked flash, never disclosing lifecycle state" do
-    post workspace_join_path(workspace, token: link.token)
+    post workspace_join_path(workspace, token: link.plaintext_token)
 
     expect(response).to redirect_to(root_path)
     expect(flash[:alert]).to eq(I18n.t("workspaces.joins.invalid_or_revoked"))
@@ -76,7 +76,7 @@ RSpec.describe "Admission into non-active workspaces", type: :request do
 
       it "rejects an open-join-link GET with the generic invalid-or-revoked message, no disclosure" do
         sign_in(newcomer)
-        get workspace_join_path(workspace, token: link.token)
+        get workspace_join_path(workspace, token: link.plaintext_token)
 
         expect(response).to redirect_to(root_path)
         expect(flash[:alert]).to eq(I18n.t("workspaces.joins.invalid_or_revoked"))
@@ -87,7 +87,7 @@ RSpec.describe "Admission into non-active workspaces", type: :request do
         sign_in(newcomer)
 
         expect {
-          post workspace_join_path(workspace, token: link.token)
+          post workspace_join_path(workspace, token: link.plaintext_token)
         }.not_to change(Membership, :count)
 
         expect(response).to redirect_to(root_path)

@@ -44,15 +44,15 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
   # characteristic_display_rules. Ordinary row-fetch queries against those
   # tables (e.g. the room_characteristics preload) don't carry COUNT/MAX, so
   # they don't match.
-  DATA_VERSION_AGGREGATE = /\b(COUNT|MAX)\s*\(.*(room_characteristics|characteristic_display_rules)|(room_characteristics|characteristic_display_rules).*\b(COUNT|MAX)\s*\(/i
+  data_version_aggregate = /\b(COUNT|MAX)\s*\(.*(room_characteristics|characteristic_display_rules)|(room_characteristics|characteristic_display_rules).*\b(COUNT|MAX)\s*\(/i
 
   # A plain row-fetch against characteristic_display_rules (CharacteristicDisplayRule.all,
   # observed as `SELECT "characteristic_display_rules".* FROM "characteristic_display_rules"`)
-  # — deliberately NOT a COUNT/MAX, so this never double-counts a DATA_VERSION_AGGREGATE hit.
+  # — deliberately NOT a COUNT/MAX, so this never double-counts a data_version_aggregate hit.
   # Guards RoomsHelper#card_display_rules: without that request memo, each row's
   # RoomPresenter.new(room) would run its own default `.all.index_by`, and this
   # count would scale with the room count instead of staying flat.
-  CHARACTERISTIC_DISPLAY_RULES_ROW_FETCH = /FROM\s+["`]?characteristic_display_rules\b/i
+  characteristic_display_rules_row_fetch = /FROM\s+["`]?characteristic_display_rules\b/i
 
   it "does not scale the data_version aggregate query count with rows x characteristics" do
     building = create(:building, workspace: workspace)
@@ -81,9 +81,9 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     rules_row_fetch_count = 0
     subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
       next if %w[CACHE SCHEMA].include?(payload[:name])
-      aggregate_query_count += 1 if payload[:sql].match?(DATA_VERSION_AGGREGATE)
+      aggregate_query_count += 1 if payload[:sql].match?(data_version_aggregate)
       rules_row_fetch_count += 1 if !payload[:sql].match?(/\b(COUNT|MAX)\s*\(/i) &&
-                                     payload[:sql].match?(CHARACTERISTIC_DISPLAY_RULES_ROW_FETCH)
+                                     payload[:sql].match?(characteristic_display_rules_row_fetch)
     end
 
     begin

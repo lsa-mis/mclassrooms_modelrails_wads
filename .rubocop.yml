@@ -1,8 +1,39 @@
 # Omakase Ruby styling for Rails
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
+# Existing size violations are grandfathered here (DES-15); the two Metrics cops
+# below then hold NEW code to the limit. Shrink the todo as files are refactored.
+inherit_from: .rubocop_todo.yml
+
+# So the policy Excludes below (migrations, specs) merge with the todo's
+# grandfather Excludes instead of one clobbering the other.
+inherit_mode:
+  merge:
+    - Exclude
+
 # Overwrite or add rules to create your own house style
 #
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
 # Layout/SpaceInsideArrayLiteralBrackets:
 #   Enabled: false
+
+# DES-15 — omakase disables the Metrics department; re-enable the two cops that
+# catch the size problems the audit found (81-line actions, 300+-line god
+# objects) so the next one fails the PR, not a future audit. Thresholds are
+# deliberately lenient — the point is a ceiling on runaway growth, not omakase's
+# stricter defaults. Current app violators are grandfathered in .rubocop_todo.yml.
+# Migrations and specs are exempt by policy — their length norms differ, and a
+# forker writing a long data-migration `def` shouldn't fight the linter.
+Metrics/MethodLength:
+  Enabled: true
+  Max: 25
+  Exclude:
+    - "db/migrate/**/*"
+    - "spec/**/*"
+
+Metrics/ClassLength:
+  Enabled: true
+  Max: 250
+  Exclude:
+    - "db/migrate/**/*"
+    - "spec/**/*"

@@ -12,7 +12,7 @@ RSpec.describe AnnouncementPolicy do
   # Brief §14.1 (Task 4 table): "all CRUD actions" collapse to one row —
   # every action here is the same `grant.admin?` one-liner, so the matrix
   # spans every action name §14.1 asks for.
-  ANNOUNCEMENT_MATRIX = [
+  announcement_matrix = [
     [ :index?,   :announcement, true, false, false, false ],
     [ :show?,    :announcement, true, false, false, false ],
     [ :new?,     :announcement, true, false, false, false ],
@@ -20,12 +20,12 @@ RSpec.describe AnnouncementPolicy do
     [ :edit?,    :announcement, true, false, false, false ],
     [ :update?,  :announcement, true, false, false, false ],
     [ :destroy?, :announcement, true, false, false, false ]
-  ].freeze
+  ]
 
-  ANNOUNCEMENT_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
+  announcement_users = %i[admin_user editor_user other_editor_user viewer_user]
 
-  ANNOUNCEMENT_MATRIX.each do |action, record_name, *expected|
-    ANNOUNCEMENT_USERS.each_with_index do |user_name, i|
+  announcement_matrix.each do |action, record_name, *expected|
+    announcement_users.each_with_index do |user_name, i|
       it "#{action} on #{record_name} is #{expected[i]} for #{user_name}" do
         policy = described_class.new(send(user_name), send(record_name))
         expect(policy.public_send(action)).to be expected[i]

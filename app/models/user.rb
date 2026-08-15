@@ -1,6 +1,5 @@
 class User < ApplicationRecord
   has_secure_password validations: false
-  attr_accessor :current_password
 
   has_many :sessions, dependent: :destroy
   has_many :authentications, dependent: :destroy
@@ -17,6 +16,9 @@ class User < ApplicationRecord
   after_create :onboard_workspace
   after_create :check_gravatar_later
   after_update_commit :check_gravatar_later, if: :saved_change_to_email_address?
+  # Model-level so every digest-touching path notifies (settings change, reset,
+  # removal) — the behavior app/docs/developer/notifications.md documents.
+  after_update_commit :notify_password_changed, if: :saved_change_to_password_digest?
 
   # Canonical email storage and lookup: NFC + downcase + strip via EmailNormalizer.
   # Rails 7.1+ also applies these normalizers to `find_by(email_address:)` and
@@ -48,14 +50,18 @@ class User < ApplicationRecord
 
   MAX_FAILED_ATTEMPTS = 5
   LOCK_DURATION = 1.hour
+  MAX_KNOWN_BROWSERS = 20
 
   # Single source of truth for the (user_agent, os) -> digest formula used by
   # the new-device sign-in detector. Public so SignInFromNewDeviceNotifier's
   # `populate_idempotency_key` override can reuse the same formula — keeping
   # the User-side fingerprint and the Notifier-side dedup key in lockstep.
-  # Intentionally coarse (no salt, no normalization) — see #seen_browser?.
+  # Version segments are stripped before hashing so routine browser updates
+  # (Chrome/126 -> 127, iOS 17_5 -> 17_5_1) don't re-fire the detector — the
+  # goal is "alert on an unfamiliar device", and a device that auto-updated
+  # its browser is not unfamiliar. See #seen_browser?.
   def self.browser_digest(user_agent, os)
-    Digest::SHA256.hexdigest("#{user_agent} #{os}")
+    Digest::SHA256.hexdigest("#{user_agent.to_s.gsub(/[\d_.]+/, "")} #{os}")
   end
 
   def full_name
@@ -120,55 +126,29 @@ class User < ApplicationRecord
     sources
   end
 
-  def initiate_email_change!(new_email, password)
-    return false unless has_password?
-    return false unless authenticate(password)
-
-    normalized = EmailNormalizer.normalize(new_email)
-    return false if EmailNormalizer.equivalent?(normalized, email_address)
-
-    self.pending_email = new_email
-    self.pending_email_token = SecureRandom.urlsafe_base64(32)
-    self.pending_email_sent_at = Time.current
-
-    save
+  def identity
+    UserIdentity.new(self)
   end
 
-  def confirm_email_change!(token)
-    return false if token.blank?
-
-    transaction do
-      reload
-      return false if pending_email_token != token
-      return false unless pending_email_token_valid?
-
-      self.email_address = pending_email
-      clear_pending_email_fields
-      save!
-
-      authentications.email.update_all(uid: email_address)
-    end
-
-    true
-  rescue ActiveRecord::RecordInvalid
-    false
+  # Factors this user can prove for re-authentication. The interstitial view
+  # and the reauthentication controller both read this so they can't diverge on
+  # which factors are on offer. Email is always available as the fallback.
+  def available_reauth_factors
+    factors = []
+    factors << :password if has_password?
+    factors << :passkey if webauthn_credentials.kept.any?
+    factors << :email
+    factors
   end
 
-  def cancel_email_change!
-    clear_pending_email_fields
-    save!
-  end
-
-  def pending_email_token_valid?
-    pending_email_token.present? &&
-      pending_email_sent_at.present? &&
-      pending_email_sent_at > 24.hours.ago
-  end
+  # The email-change state machine (initiate/confirm/cancel) lives in
+  # Users::EmailChange. The pending_email* columns and their validations stay
+  # here; the transitions moved out (DES-1).
 
   # Browser-fingerprint heuristic for the new-device sign-in detector.
-  # Digest is intentionally coarse — `SHA256("#{user_agent} #{os}")` — so the
-  # same browser/OS combo across minor UA bumps still matches "seen". The goal
-  # is "alert on unfamiliar device", not forensic device tracking.
+  # Digest is intentionally coarse (version-stripped — see .browser_digest) so
+  # the same browser/OS combo across UA version bumps still matches "seen".
+  # The goal is "alert on unfamiliar device", not forensic device tracking.
   def seen_browser?(user_agent, os)
     digest = self.class.browser_digest(user_agent, os)
     last_known_browsers.any? { |entry| entry["digest"] == digest }
@@ -191,6 +171,11 @@ class User < ApplicationRecord
         "first_seen_at" => now.iso8601,
         "last_seen_at" => now.iso8601
       }
+      # Bounded: this JSON column is read and rewritten on the sign-in hot
+      # path (SQLite single writer), so it must not grow with UA churn.
+      if browsers.size > MAX_KNOWN_BROWSERS
+        browsers = browsers.sort_by { |e| e["last_seen_at"] }.last(MAX_KNOWN_BROWSERS)
+      end
     end
     update_column(:last_known_browsers, browsers)
   end
@@ -234,6 +219,14 @@ class User < ApplicationRecord
 
   def check_gravatar_later
     CheckGravatarJob.perform_later(self)
+  end
+
+  # Best-effort: the security alert must never fail the credential write
+  # itself (same contract as the new-device hook in Authenticatable).
+  def notify_password_changed
+    PasswordChangedNotifier.with(record: self).deliver(self)
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.warn("[password-changed] swallowed error for user=#{id}: #{e.class}: #{e.message}")
   end
 
   # Dispatches to the right onboarding strategy based on the tenancy preset.
@@ -290,11 +283,5 @@ class User < ApplicationRecord
     if User.where.not(id: id).exists?(email_address: pending_email)
       errors.add(:pending_email, :taken)
     end
-  end
-
-  def clear_pending_email_fields
-    self.pending_email = nil
-    self.pending_email_token = nil
-    self.pending_email_sent_at = nil
   end
 end

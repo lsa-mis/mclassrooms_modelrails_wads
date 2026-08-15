@@ -12,15 +12,15 @@ require "rails_helper"
 # TEST_LOGIN_TOKEN is unset in the ambient test/CI environment) state so it
 # doesn't leak into other spec files.
 RSpec.describe "GET /test_login", type: :request do
-  TEST_TOKEN = "spec-test-login-token".freeze
-  TEST_LOGIN_EMAIL = "test-login@umich.edu".freeze
+  test_token = "spec-test-login-token"
+  test_login_email = "test-login@umich.edu"
 
   around do |example|
     original_token = ENV["TEST_LOGIN_TOKEN"]
     original_admin = ENV["TEST_LOGIN_ADMIN"]
 
     begin
-      ENV["TEST_LOGIN_TOKEN"] = TEST_TOKEN
+      ENV["TEST_LOGIN_TOKEN"] = test_token
       Rails.application.reload_routes!
 
       example.run
@@ -48,12 +48,12 @@ RSpec.describe "GET /test_login", type: :request do
   describe "with the correct token" do
     it "creates the test user, establishes a session, and redirects to root" do
       expect {
-        get "/test_login", params: { token: TEST_TOKEN }
+        get "/test_login", params: { token: test_token }
       }.to change(User, :count).by(1)
 
       expect(response).to redirect_to(root_path)
 
-      user = User.find_by!(email_address: TEST_LOGIN_EMAIL)
+      user = User.find_by!(email_address: test_login_email)
       expect(user.first_name).to be_present
       expect(user.last_name).to be_present
       expect(user.sessions.count).to eq(1)
@@ -61,22 +61,22 @@ RSpec.describe "GET /test_login", type: :request do
     end
 
     it "joins the shared workspace as Viewer by default" do
-      get "/test_login", params: { token: TEST_TOKEN }
+      get "/test_login", params: { token: test_token }
 
-      user = User.find_by!(email_address: TEST_LOGIN_EMAIL)
+      user = User.find_by!(email_address: test_login_email)
       membership = user.memberships.find_by!(workspace: shared_workspace)
       expect(membership.role.slug).to eq("viewer")
     end
 
     it "is idempotent: a repeated login reuses the same user and membership" do
-      get "/test_login", params: { token: TEST_TOKEN }
-      first_user_id = User.find_by!(email_address: TEST_LOGIN_EMAIL).id
+      get "/test_login", params: { token: test_token }
+      first_user_id = User.find_by!(email_address: test_login_email).id
 
       expect {
-        get "/test_login", params: { token: TEST_TOKEN }
+        get "/test_login", params: { token: test_token }
       }.not_to change(User, :count)
 
-      expect(User.find_by!(email_address: TEST_LOGIN_EMAIL).id).to eq(first_user_id)
+      expect(User.find_by!(email_address: test_login_email).id).to eq(first_user_id)
       expect(response).to redirect_to(root_path)
     end
 
@@ -96,41 +96,41 @@ RSpec.describe "GET /test_login", type: :request do
       end
 
       expect {
-        get "/test_login", params: { token: TEST_TOKEN }
+        get "/test_login", params: { token: test_token }
       }.to change(User, :count).by(1)
 
       expect(response).to redirect_to(root_path)
-      expect(User.find_by!(email_address: TEST_LOGIN_EMAIL)).to be_present
+      expect(User.find_by!(email_address: test_login_email)).to be_present
     end
 
     context "when TEST_LOGIN_ADMIN=true" do
       before { ENV["TEST_LOGIN_ADMIN"] = "true" }
 
       it "grants Admin membership" do
-        get "/test_login", params: { token: TEST_TOKEN }
+        get "/test_login", params: { token: test_token }
 
-        user = User.find_by!(email_address: TEST_LOGIN_EMAIL)
+        user = User.find_by!(email_address: test_login_email)
         membership = user.memberships.find_by!(workspace: shared_workspace)
         expect(membership.role.slug).to eq("admin")
       end
 
       it "stays Admin across a repeated login (idempotent upgrade)" do
-        get "/test_login", params: { token: TEST_TOKEN }
-        get "/test_login", params: { token: TEST_TOKEN }
+        get "/test_login", params: { token: test_token }
+        get "/test_login", params: { token: test_token }
 
-        user = User.find_by!(email_address: TEST_LOGIN_EMAIL)
+        user = User.find_by!(email_address: test_login_email)
         expect(user.memberships.find_by!(workspace: shared_workspace).role.slug).to eq("admin")
       end
     end
 
     it "downgrades back to Viewer once TEST_LOGIN_ADMIN is unset" do
       ENV["TEST_LOGIN_ADMIN"] = "true"
-      get "/test_login", params: { token: TEST_TOKEN }
-      user = User.find_by!(email_address: TEST_LOGIN_EMAIL)
+      get "/test_login", params: { token: test_token }
+      user = User.find_by!(email_address: test_login_email)
       expect(user.memberships.find_by!(workspace: shared_workspace).role.slug).to eq("admin")
 
       ENV.delete("TEST_LOGIN_ADMIN")
-      get "/test_login", params: { token: TEST_TOKEN }
+      get "/test_login", params: { token: test_token }
       expect(user.memberships.find_by!(workspace: shared_workspace).role.slug).to eq("viewer")
     end
   end
@@ -161,7 +161,7 @@ RSpec.describe "GET /test_login", type: :request do
       ENV.delete("TEST_LOGIN_TOKEN")
 
       expect {
-        get "/test_login", params: { token: TEST_TOKEN }
+        get "/test_login", params: { token: test_token }
       }.not_to change(User, :count)
 
       expect(response).to have_http_status(:not_found)

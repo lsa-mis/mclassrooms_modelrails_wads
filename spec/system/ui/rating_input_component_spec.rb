@@ -33,16 +33,19 @@ require "rails_helper"
 # These are the component's own load-bearing a11y/behavior hooks (role, the
 # Stimulus targets), not selectors invented for the test — no data-* was added.
 RSpec.describe "Rating input component accessibility and behavior", type: :system do
-  RATING_PREVIEW         = "/rails/view_components/ui/rating_input_component"
-  RATING_STAR_SELECTOR   = "button[data-rating-target='star']"
-  RATING_HIDDEN_SELECTOR = "input[type='hidden'][data-rating-target='input']"
+  # `let`, not constants: the selectors are read inside helper defs, and bare
+  # constants in a describe block land on Object, colliding across parallel
+  # workers (#607/#608).
+  let(:rating_preview)         { "/rails/view_components/ui/rating_input_component" }
+  let(:rating_star_selector)   { "button[data-rating-target='star']" }
+  let(:rating_hidden_selector) { "input[type='hidden'][data-rating-target='input']" }
 
   # Read each star <button>'s filled-state off the live Playwright page by
   # inspecting its class list (the controller toggles `text-warning-icon` on the
   # button itself). Returns an array of booleans in DISPLAY order: true = filled.
   def filled_stars
     raw = cdp_evaluate(<<~JS)
-      Array.from(document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json}))
+      Array.from(document.querySelectorAll(#{rating_star_selector.to_json}))
            .map(btn => btn.classList.contains("text-warning-icon"))
     JS
     Array(raw)
@@ -58,7 +61,7 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
   def hover_star(display_index)
     cdp_execute(<<~JS)
       (() => {
-        const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
+        const stars = document.querySelectorAll(#{rating_star_selector.to_json});
         stars[#{display_index - 1}].dispatchEvent(
           new MouseEvent("mouseenter", { bubbles: true })
         );
@@ -70,7 +73,7 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
   def leave_star(display_index)
     cdp_execute(<<~JS)
       (() => {
-        const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
+        const stars = document.querySelectorAll(#{rating_star_selector.to_json});
         stars[#{display_index - 1}].dispatchEvent(
           new MouseEvent("mouseleave", { bubbles: true })
         );
@@ -81,7 +84,7 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
   def hidden_value
     cdp_evaluate(<<~JS)
       (() => {
-        const el = document.querySelector(#{RATING_HIDDEN_SELECTOR.to_json});
+        const el = document.querySelector(#{rating_hidden_selector.to_json});
         return el ? el.value : null;
       })()
     JS
@@ -92,7 +95,7 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
     # token failed 1.4.11 (3:1 graphic) in either theme, axe (run at AAA) would
     # flag it here — there is NO color-contrast exclude. Scope to the star group.
     it "with_value (filled stars) passes AAA in both themes" do
-      visit "#{RATING_PREVIEW}/with_value"
+      visit "#{rating_preview}/with_value"
 
       expect(page).to have_css("[role='group'][data-controller='rating']")
       expect(filled_count).to eq(3), "expected 3 server-rendered filled stars"
@@ -110,8 +113,8 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
     # and leaving must reset to the committed 3. Proves the live class cascade
     # that the render harness can't see.
     it "previews up to the hovered star, then resets to the committed value" do
-      visit "#{RATING_PREVIEW}/with_value"
-      expect(page).to have_css(RATING_STAR_SELECTOR, minimum: 5)
+      visit "#{rating_preview}/with_value"
+      expect(page).to have_css(rating_star_selector, minimum: 5)
       expect(filled_count).to eq(3)
 
       hover_star(5)
@@ -133,12 +136,12 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
     # in_a_form has name: → a hidden input, committed value 4. Clicking star 2
     # must set the hidden value to 2 AND leave exactly stars 1..2 filled.
     it "sets the hidden input value and fills 1..N on click" do
-      visit "#{RATING_PREVIEW}/in_a_form"
-      expect(page).to have_css(RATING_HIDDEN_SELECTOR, visible: :all)
+      visit "#{rating_preview}/in_a_form"
+      expect(page).to have_css(rating_hidden_selector, visible: :all)
       expect(hidden_value).to eq("4"), "server-rendered hidden value should be 4"
       expect(filled_count).to eq(4)
 
-      all(RATING_STAR_SELECTOR)[1].click # display star 2 (0-based index 1)
+      all(rating_star_selector)[1].click # display star 2 (0-based index 1)
 
       expect(hidden_value).to eq("2"), "clicking star 2 should set hidden value to 2"
       after_click = filled_stars
@@ -161,12 +164,12 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
     # button is genuinely focusable (document.activeElement === the star) so the
     # keyboard contract is proven, then assert activation selects the star.
     it "stars are focusable and activation selects the focused star" do
-      visit "#{RATING_PREVIEW}/in_a_form"
-      expect(page).to have_css(RATING_STAR_SELECTOR, minimum: 3)
+      visit "#{rating_preview}/in_a_form"
+      expect(page).to have_css(rating_star_selector, minimum: 3)
 
       focused_tag = cdp_evaluate(<<~JS)
         (() => {
-          const stars = document.querySelectorAll(#{RATING_STAR_SELECTOR.to_json});
+          const stars = document.querySelectorAll(#{rating_star_selector.to_json});
           const target = stars[2]; // display star 3 (0-based index 2)
           target.focus();
           return {
@@ -182,7 +185,7 @@ RSpec.describe "Rating input component accessibility and behavior", type: :syste
 
       # Native-button activation (Enter/Space => click). Capybara click on the
       # already-focused star drives the same activation code path rating#select.
-      all(RATING_STAR_SELECTOR)[2].click
+      all(rating_star_selector)[2].click
 
       expect(hidden_value).to eq("3"),
         "activating focused star 3 should commit value 3"

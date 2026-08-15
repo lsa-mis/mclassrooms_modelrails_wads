@@ -1,5 +1,6 @@
 module Settings
   class ConnectedAccountsController < ApplicationController
+    before_action :require_reauthentication!, only: :destroy
     layout "settings"
 
     allow_unauthenticated_access only: :verify
@@ -59,17 +60,13 @@ module Settings
       # them as a flash without blocking sign-in.
       begin
         auth.claim_pending_join_link!(Current.user)
-      rescue ActiveRecord::RecordInvalid => e
-        # "Already a member" is benign here — a pending invitation and a pending
-        # join link can both resolve to the same workspace, so the second claim
-        # is a harmless duplicate the success notice already covers. Only a real
-        # blocker (capacity) warrants an alert, and it gets a localized message
-        # rather than the raw model string. Mirrors Workspaces::JoinsController.
-        # NOTE: this string-match coupling to Workspace#admit's messages is the
-        # second call site; a third should trigger typed errors on #admit.
-        unless e.message.match?(/already a member/i)
-          flash[:alert] = t(".join_link_at_capacity")
-        end
+      rescue Workspace::AlreadyMember
+        # Benign here — a pending invitation and a pending join link can both
+        # resolve to the same workspace, so the second claim is a harmless
+        # duplicate the success notice already covers.
+      rescue Workspace::AtCapacity
+        # The one real blocker — a localized message, never the raw model string.
+        flash[:alert] = t(".join_link_at_capacity")
       end
 
       if was_authenticated

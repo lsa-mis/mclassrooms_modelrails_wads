@@ -77,7 +77,7 @@
             class="min-h-[44px] flex items-center gap-2 px-3 rounded-lg text-text-body
                    hover:bg-surface-sunken focus-ring">
       <%= t("navigation.admin.label") %>
-      <span aria-hidden="true">&#9662;</span>
+      <span aria-hidden="true">&#9662;</span> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
     </button>
 
     <div data-dropdown-target="menu" id="admin-nav-panel"

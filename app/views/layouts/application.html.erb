@@ -15,6 +15,7 @@
     <%= render "shared/header" %>
     <%= render "shared/email_verification_banner" %>
     <%= render "shared/passkey_enrollment_banner" %>
+    <%= render "shared/pending_join_banner" %>
     <%= render "shared/toasts" %>
 
     <%# @hide_workspace_chrome (PublicDirectoryChrome): viewer-facing directory
@@ -36,7 +37,7 @@
              if Current.workspace.personal?
                { data: { workspace_kind: "personal" } }
              else
-               ws_hue = Current.workspace.primary_color || 210
+               ws_hue = Current.workspace.identity.hue
                { data: { workspace_branded: "" },
                  style: "--ws-primary-light: oklch(0.40 0.15 #{ws_hue}); --ws-primary-dark: oklch(0.78 0.10 #{ws_hue});" }
              end %>

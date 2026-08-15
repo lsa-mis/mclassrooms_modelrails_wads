@@ -50,15 +50,23 @@
         <%= t("workspaces.settings.join_policy.active_link_heading") %>
       </h3>
 
-      <% if active_link %>
-        <% join_url = workspace_join_url(workspace, token: active_link.token) %>
+      <% if flash[:join_link_url].present? %>
+        <%# Show-once reveal: the full URL is shown exactly once, right after
+            generate/rotate. The token is hashed at rest, so it can never be
+            re-displayed — copy it now or rotate for a new one. %>
+        <p id="join_link_show_once_warning" class="mt-2 rounded-md border border-warning-border bg-warning-surface px-3 py-2 text-sm text-warning">
+          <span class="font-semibold"><%= t("workspaces.settings.join_policy.show_once_warning_lead") %></span>
+          <%= t("workspaces.settings.join_policy.show_once_warning") %>
+        </p>
         <div class="mt-2 flex items-center gap-2">
           <input type="text"
                  readonly
-                 value="<%= join_url %>"
+                 autofocus
+                 value="<%= flash[:join_link_url] %>"
                  autocomplete="off"
                  data-clipboard-target="source"
-                 class="flex-1 min-w-0 text-sm font-mono px-3 py-2 rounded-md border border-border bg-surface-sunken text-text"
+                 aria-describedby="join_link_show_once_warning"
+                 class="flex-1 min-w-0 min-h-11 text-sm font-mono px-3 py-2 rounded-md border border-border bg-surface-sunken text-text"
                  aria-label="<%= t('workspaces.settings.join_policy.link_aria') %>">
           <button type="button"
                   data-action="clipboard#copy"
@@ -68,8 +76,28 @@
             <span data-clipboard-target="label"><%= t("workspaces.settings.join_policy.copy") %></span>
           </button>
         </div>
-
         <p role="status" aria-live="polite" data-clipboard-target="status" class="mt-1 text-xs text-text-muted h-4"></p>
+
+        <div class="mt-4 flex items-center gap-3">
+          <%= button_to t("workspaces.settings.join_policy.revoke"),
+                workspace_join_link_path(workspace, active_link),
+                method: :delete,
+                form: { data: { turbo_confirm: t("workspaces.settings.join_policy.revoke_confirm") } },
+                class: "btn-touch-target inline-flex items-center px-3 py-2 rounded-md text-sm
+                        text-danger border border-danger-border hover:bg-danger-surface
+                        focus-ring" %>
+        </div>
+
+      <% elsif active_link %>
+        <%# Steady state: no live URL. The plaintext is gone; show a non-secret
+            stub and offer rotate (which reveals a fresh link once). %>
+        <div class="mt-2 font-mono text-sm text-text-muted">
+          <span class="sr-only"><%= t("workspaces.settings.join_policy.masked_aria") %></span>
+          <span aria-hidden="true"><%= active_link.masked_token %></span>
+        </div>
+        <p class="mt-1 text-xs text-text-muted">
+          <%= t("workspaces.settings.join_policy.masked_help") %>
+        </p>
 
         <div class="mt-4 flex items-center gap-3">
           <%= button_to t("workspaces.settings.join_policy.rotate"),
@@ -88,6 +116,7 @@
                         text-danger border border-danger-border hover:bg-danger-surface
                         focus-ring" %>
         </div>
+
       <% else %>
         <p class="mt-2 text-sm text-text-muted">
           <%= t("workspaces.settings.join_policy.no_active_link") %>

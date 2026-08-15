@@ -132,6 +132,10 @@ class RenderFlatPanoramaJob < ApplicationJob
       return
     end
 
+    attach_and_verify!(room, bytes)
+  end
+
+  def attach_and_verify!(room, bytes)
     room.flat_panorama.attach(
       io: bytes, filename: "#{room.rmrecnbr}-flat.webp", content_type: "image/webp",
       metadata: { "source_blob_key" => source_key,

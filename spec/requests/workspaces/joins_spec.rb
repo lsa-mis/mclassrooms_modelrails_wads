@@ -31,7 +31,7 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
   describe "POST /workspaces/:slug/joins/:token" do
     it "admits the user as a Member and redirects to the workspace" do
       expect {
-        post workspace_join_path(workspace, token: link.token)
+        post workspace_join_path(workspace, token: link.plaintext_token)
       }.to change(workspace.memberships, :count).by(1)
 
       membership = workspace.memberships.find_by!(user: newcomer)
@@ -42,7 +42,7 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
     it "rejects a revoked link" do
       link.revoke!
       expect {
-        post workspace_join_path(workspace, token: link.token)
+        post workspace_join_path(workspace, token: link.plaintext_token)
       }.not_to change(workspace.memberships, :count)
       expect(response).to redirect_to(root_path)
     end
@@ -50,7 +50,7 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
     it "rejects when the workspace's join_policy is not open_link" do
       workspace.update!(join_policy: "invite")
       expect {
-        post workspace_join_path(workspace, token: link.token)
+        post workspace_join_path(workspace, token: link.plaintext_token)
       }.not_to change(workspace.memberships, :count)
       expect(response).to redirect_to(root_path)
     end
@@ -58,14 +58,14 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
     it "rejects when the instance allowlist excludes :open_link" do
       allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite])
       expect {
-        post workspace_join_path(workspace, token: link.token)
+        post workspace_join_path(workspace, token: link.plaintext_token)
       }.not_to change(workspace.memberships, :count)
       expect(response).to redirect_to(root_path)
     end
 
     it "surfaces a clean message when the workspace is at capacity" do
       workspace.update!(max_members: 1)  # owner already fills capacity
-      post workspace_join_path(workspace, token: link.token)
+      post workspace_join_path(workspace, token: link.plaintext_token)
       expect(workspace.memberships.find_by(user: newcomer)).to be_nil
       # A generic i18n message, never the raw model validation string.
       expect(flash[:alert]).to eq(I18n.t("workspaces.joins.create.could_not_join", workspace: workspace.name))
@@ -74,7 +74,7 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
 
     it "redirects gracefully when the user is already a member" do
       workspace.memberships.create!(user: newcomer, role: member_role)
-      post workspace_join_path(workspace, token: link.token)
+      post workspace_join_path(workspace, token: link.plaintext_token)
       expect(response).to redirect_to(workspace_path(workspace))
     end
 
@@ -82,7 +82,7 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
       # Confirms that "link doesn't exist" and "policy isn't open_link" surface
       # the same alert — don't reveal whether a specific workspace allows joins.
       workspace.update!(join_policy: "invite")
-      post workspace_join_path(workspace, token: link.token)
+      post workspace_join_path(workspace, token: link.plaintext_token)
       no_policy_alert = flash[:alert]
 
       post workspace_join_path(workspace, token: "totally-fake-token")
@@ -95,14 +95,14 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
 
   describe "GET /workspaces/:slug/joins/:token" do
     it "renders a confirmation page for a valid active link" do
-      get workspace_join_path(workspace, token: link.token)
+      get workspace_join_path(workspace, token: link.plaintext_token)
       expect(response).to have_http_status(:ok)
       expect(Capybara.string(response.body)).to have_text(workspace.name)
     end
 
     it "redirects with an error for a revoked link" do
       link.revoke!
-      get workspace_join_path(workspace, token: link.token)
+      get workspace_join_path(workspace, token: link.plaintext_token)
       expect(response).to redirect_to(root_path)
     end
   end
@@ -130,15 +130,15 @@ RSpec.describe "Workspaces::Joins (Flow B: unauthenticated user via link)", type
   end
 
   it "POST stashes the join token in the session and redirects to sign-in" do
-    post workspace_join_path(workspace, token: link.token)
+    post workspace_join_path(workspace, token: link.plaintext_token)
 
-    expect(session[:pending_join_token]).to eq(link.token)
+    expect(session[:pending_join_token]).to eq(link.plaintext_token)
     expect(response).to redirect_to(new_session_path)
   end
 
   it "POST with a revoked link uses the neutral error (no session stash, no info leak)" do
     link.revoke!
-    post workspace_join_path(workspace, token: link.token)
+    post workspace_join_path(workspace, token: link.plaintext_token)
 
     expect(session[:pending_join_token]).to be_nil
     expect(response).to redirect_to(root_path)
@@ -146,7 +146,7 @@ RSpec.describe "Workspaces::Joins (Flow B: unauthenticated user via link)", type
   end
 
   it "GET renders the confirmation page without requiring auth" do
-    get workspace_join_path(workspace, token: link.token)
+    get workspace_join_path(workspace, token: link.plaintext_token)
     expect(response).to have_http_status(:ok)
     expect(Capybara.string(response.body)).to have_text(workspace.name)
   end

@@ -21,6 +21,16 @@ RSpec.describe EmailRecipientThrottle do
       expect(results.last).to be false
     end
 
+    it "applies the per-kind policy for :magic_link (5 sends per 15 minutes)" do
+      email = "alice@example.com"
+      policy = described_class::KIND_POLICIES.fetch(:magic_link)
+      expect(policy).to eq(cap: 5, window: 15.minutes)
+
+      results = (policy[:cap] + 1).times.map { described_class.allow!(email, kind: :magic_link) }
+      expect(results.first(policy[:cap])).to all(be true)
+      expect(results.last).to be false
+    end
+
     it "tracks separate buckets per kind for the same recipient" do
       email = "alice@example.com"
       described_class::CAP.times { described_class.allow!(email, kind: :verification) }

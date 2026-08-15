@@ -20,10 +20,13 @@ require "rails_helper"
 # state most likely to surface an AAA contrast regression (the `.text-danger`
 # token on `bg-surface-raised` in dark mode). Auditing it proves invalid-state AAA.
 RSpec.describe "Form control accessibility", type: :system do
-  PREVIEW_HOST = "/rails/view_components"
+  # `let` (read inside the audit def) / locals (drive class-level example
+  # generation) — bare constants land on Object and collide across parallel
+  # workers (#607/#608).
+  let(:preview_host) { "/rails/view_components" }
 
   # component => { scenario => selector that proves the control/role rendered }
-  REPRESENTATIVE = {
+  representative = {
     "checkbox_component"    => { "default" => "input[type='checkbox']" },
     "select_component"      => { "default" => "select" },
     "radio_group_component" => { "default" => "[role='radiogroup']" },
@@ -32,14 +35,14 @@ RSpec.describe "Form control accessibility", type: :system do
 
   # The invalid state for the input-bearing controls: proves the aria-invalid +
   # danger error-message combination clears AAA in both themes.
-  INVALID_SCENARIOS = {
+  invalid_scenarios = {
     "checkbox_component"    => "input[type='checkbox'][aria-invalid='true']",
     "select_component"      => "select[aria-invalid='true']",
     "radio_group_component" => "[role='radiogroup'][aria-invalid='true']"
   }.freeze
 
   def audit(component, scenario, selector)
-    visit "#{PREVIEW_HOST}/ui/#{component}/#{scenario}"
+    visit "#{preview_host}/ui/#{component}/#{scenario}"
     expect(page).to have_css(selector)
 
     # Scope the audit to the control's subtree, NOT the host chrome. No
@@ -51,7 +54,7 @@ RSpec.describe "Form control accessibility", type: :system do
     )
   end
 
-  REPRESENTATIVE.each do |component, scenarios|
+  representative.each do |component, scenarios|
     scenarios.each do |scenario, selector|
       it "#{component} #{scenario} renders #{selector} and passes AAA in both themes" do
         audit(component, scenario, selector)
@@ -59,7 +62,7 @@ RSpec.describe "Form control accessibility", type: :system do
     end
   end
 
-  INVALID_SCENARIOS.each do |component, selector|
+  invalid_scenarios.each do |component, selector|
     it "#{component} invalid renders #{selector} and passes AAA in both themes" do
       audit(component, "invalid", selector)
     end
@@ -69,7 +72,7 @@ RSpec.describe "Form control accessibility", type: :system do
   # a real browser (false -> true on click). The render harness only checks the
   # initial attribute; this proves the click->toggle#toggle wiring works.
   it "toggle flips aria-pressed false -> true on click" do
-    visit "#{PREVIEW_HOST}/ui/toggle_component/default"
+    visit "#{preview_host}/ui/toggle_component/default"
 
     button = find("button[aria-pressed]")
     expect(button["aria-pressed"]).to eq("false")

@@ -62,7 +62,7 @@
     <%# One metadata line (was three) — plan · role · members · recency. %>
     <p class="mt-1 ml-11 text-sm text-text-muted truncate">
       <%= t("workspaces.plans.#{workspace.plan}", default: workspace.plan.titleize) %>
-      &middot; <%= t("workspaces.index.row.role.#{user_role.slug}", default: user_role.name) %>
+      &middot; <%= t("workspaces.index.row.role.#{user_role.slug}", default: user_role.name) %> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
       &middot; <%= t("workspaces.index.row.member", count: member_count) %>
       &middot;
       <% if membership.last_accessed_at.present? %>
