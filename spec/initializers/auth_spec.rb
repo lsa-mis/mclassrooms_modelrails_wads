@@ -7,10 +7,8 @@ require "rails_helper"
 # fail-fast precedent as spec/initializers/tenancy_spec.rb and
 # webauthn_config_spec.rb.
 RSpec.describe "config/initializers/auth.rb" do
-  INITIALIZER_PATH = Rails.root.join("config/initializers/auth.rb")
-
   def run_initializer
-    load INITIALIZER_PATH
+    load Rails.root.join("config/initializers/auth.rb")
   end
 
   before do

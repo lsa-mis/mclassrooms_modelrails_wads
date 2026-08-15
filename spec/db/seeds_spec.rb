@@ -61,7 +61,11 @@ RSpec.describe "db/seeds.rb :shared bootstrap", type: :request do
       owner = User.find_by!(email_address: "owner@acme.test")
       token = MagicLinkToken.where(email: owner.email_address, intent: "set_password").order(:created_at).last
       expect(token).to be_present
-      expect(mail.body.encoded).to include(token.token)
+      # SEC-5: only the digest is stored — the plaintext exists solely in the
+      # emailed URL. Extract it from the body and verify it digests to the row.
+      plaintext = mail.body.encoded[%r{magic_link_callback/([A-Za-z0-9_-]+)}, 1]
+      expect(plaintext).to be_present
+      expect(MagicLinkToken.digest(plaintext)).to eq(token.token_digest)
     end
   end
 end

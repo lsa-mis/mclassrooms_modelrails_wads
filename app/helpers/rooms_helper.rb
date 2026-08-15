@@ -246,7 +246,7 @@ module RoomsHelper
     add.call(t("rooms.index.summary.query", value: base[:q].strip), base.except(:q)) if base[:q].present?
     add.call(t("rooms.index.summary.building", value: base[:building]), base.except(:building)) if base[:building].present?
     add.call(t("rooms.index.summary.room", value: base[:room]), base.except(:room)) if base[:room].present?
-    if base[:unit_id].present? && (unit = Unit.find_by(id: base[:unit_id]))
+    if base[:unit_id].present? && (unit = Unit.for_current_workspace.find_by(id: base[:unit_id]))
       add.call(t("rooms.index.summary.unit", value: unit.display_name), base.except(:unit_id))
     end
     if base[:capacity_min].to_i.positive?

@@ -1,7 +1,7 @@
 require "rails_helper"
 
 # MiClassrooms Phase 5 Task 3 (Brief §14.1): RoomPolicy is now
-# RoleResolver-driven — a single ROOM_MATRIX table (admin / editor-in-unit /
+# RoleResolver-driven — a single room_matrix table (admin / editor-in-unit /
 # editor-in-another-unit / plain viewer) drives every action-method example,
 # replacing the phase-3/4 viewer-only assumptions (index?/show? used to be
 # "any signed-in user" — see git history for the superseded examples). The
@@ -12,7 +12,7 @@ RSpec.describe RoomPolicy do
   include_context "role matrix"
 
   # Brief §14.1 verbatim. Columns: admin, editor-in-unit, editor-other-unit, viewer.
-  ROOM_MATRIX = [
+  room_matrix = [
     [ :show?,               :room_in_unit,        true,  true,  true,  true  ],
     [ :show?,               :hidden_room_in_unit, true,  false, false, false ],
     [ :update?,             :room_in_unit,        true,  true,  false, false ],
@@ -26,12 +26,12 @@ RSpec.describe RoomPolicy do
     [ :destroy_attachment?, :room_in_unit,        true,  false, false, false ],
     [ :create?,             :room_in_unit,        false, false, false, false ],
     [ :destroy?,            :room_in_unit,        false, false, false, false ]
-  ].freeze
+  ]
 
-  ROOM_USERS = %i[admin_user editor_user other_editor_user viewer_user].freeze
+  room_users = %i[admin_user editor_user other_editor_user viewer_user]
 
-  ROOM_MATRIX.each do |action, record_name, *expected|
-    ROOM_USERS.each_with_index do |user_name, i|
+  room_matrix.each do |action, record_name, *expected|
+    room_users.each_with_index do |user_name, i|
       it "#{action} on #{record_name} is #{expected[i]} for #{user_name}" do
         policy = described_class.new(send(user_name), send(record_name))
         expect(policy.public_send(action)).to be expected[i]
@@ -57,14 +57,14 @@ RSpec.describe RoomPolicy do
   # but pinned here so the aliasing doesn't silently drift from its target.
   describe "#edit? / #floor_plan? aliasing" do
     it "edit? mirrors update? for every actor" do
-      ROOM_USERS.each do |user_name|
+      room_users.each do |user_name|
         policy = described_class.new(send(user_name), room_in_unit)
         expect(policy.edit?).to eq(policy.update?)
       end
     end
 
     it "floor_plan? mirrors show? for every actor" do
-      ROOM_USERS.each do |user_name|
+      room_users.each do |user_name|
         policy = described_class.new(send(user_name), room_in_unit)
         expect(policy.floor_plan?).to eq(policy.show?)
       end
