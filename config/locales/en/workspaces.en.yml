@@ -8,7 +8,6 @@ en:
       heading: "This workspace is locked."
       body: "Access to “%{name}” has been paused. Get in touch and we'll help you sort it out."
       contact: "Contact support"
-    unauthorized: "You don't have permission to do that."
     creation_disabled: "Workspace creation is disabled on this instance."
     archived_banner: "This workspace is archived."
     pending_join_banner:
@@ -80,12 +79,6 @@ en:
       submit: "Create workspace"
     create:
       success: "Workspace created."
-    show:
-      title: "Dashboard"
-      members: "Members"
-      invitations: "Invitations"
-      settings: "Settings"
-      branding: "Branding"
     overview:
       customize:
         open: "Customize"
@@ -96,7 +89,6 @@ en:
     edit:
       title: "%{workspace} — Profile"
       name_label: "Workspace name"
-      submit: "Save changes"
     update:
       success: "Workspace profile updated."
       rate_limited: "Too many requests. Please try again later."
@@ -135,18 +127,12 @@ en:
         reactivate: "Reactivate"
         transfer_ownership: "Transfer ownership"
         empty: "No members found."
-        showing: "Showing %{from}-%{to} of %{count} members"
         invite_member: "Invite member"
         table_label: "Workspace members"
         results_summary:
           one: "Showing 1 result"
           other: "Showing %{count} results"
         pending_invitations:
-          title: "Pending invitations"
-          invitee: "Invitee"
-          role: "Role"
-          status: "Status"
-          actions: "Actions"
           pending: "Pending"
           magic_link: "Magic link"
           no_name_yet: "Pending invitation, no name yet"
@@ -164,7 +150,6 @@ en:
         cannot_deactivate_last_owner: "Cannot deactivate the last owner."
         left: "You left %{workspace}."
         cannot_leave_last_owner: "You can't leave — you're the last owner. Transfer ownership first."
-        cannot_leave_personal: "You can't leave your workspace."
       reactivate:
         reactivated: "Member reactivated."
       transfer_ownership:
@@ -208,15 +193,8 @@ en:
     brandings:
       source_unavailable: "That identity source is not available."
       edit:
-        title: "Workspace branding"
         logo_label: "Logo"
         change_logo: "Change logo"
-        remove_logo: "Remove logo"
-        submit: "Save branding"
-      update:
-        success: "Branding updated."
-      destroy:
-        success: "Logo removed."
   pending_joins:
     create:
       joined: "Welcome to %{workspace}."

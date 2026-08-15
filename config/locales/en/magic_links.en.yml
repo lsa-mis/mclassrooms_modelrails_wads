@@ -34,26 +34,8 @@ en:
       first_name_label: "First name"
       last_name_label: "Last name"
       submit: "Create account"
-  magic_link_sessions:
-    show:
-      success: "Signed in successfully."
-      invalid_or_expired: "This sign-in link is invalid or has expired."
-  magic_link_registrations:
-    new:
-      title: "Complete your account"
-      subtitle: "Creating an account for %{email}"
-      first_name_label: "First name"
-      last_name_label: "Last name"
-      submit: "Create account"
-    show:
-      invalid_or_expired: "This registration link is invalid or has expired."
-    create:
-      success: "Welcome! Your account has been created."
   sessions:
-    lookup:
-      password_prompt: "Enter your password to sign in."
     password_form:
-      title: "Sign in"
       password_label: "Password"
       submit: "Sign in"
       use_magic_link: "Send me a sign-in link instead"

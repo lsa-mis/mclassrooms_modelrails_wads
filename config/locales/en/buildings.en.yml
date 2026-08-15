@@ -12,9 +12,6 @@ en:
       column_classroom_count: "Classrooms"
       column_hidden: "Status"
       hidden_badge: "Hidden"
-      classroom_count:
-        one: "1 classroom"
-        other: "%{count} classrooms"
     show:
       campus: "Campus"
       address: "Address"

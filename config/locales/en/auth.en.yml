@@ -5,12 +5,8 @@ en:
     new:
       title: "Sign in"
       email_label: "Email address"
-      password_label: "Password"
-      submit: "Sign in"
       continue: "Continue"
       forgot_password: "Forgot your password?"
-      no_account: "Don't have an account?"
-      sign_up: "Sign up"
       passkey_button: "Sign in with a passkey"
     create:
       success: "Signed in successfully."
@@ -18,7 +14,6 @@ en:
       locked: "Your account has been locked due to too many failed attempts. Please try again later."
       rate_limited: "Too many attempts. Please try again later."
       oauth_failure: "Authentication failed. Please try again."
-      oauth_account_exists: "An account with that email already exists. Please sign in first, then link your account."
     lookup:
       invalid_email: "Please enter a valid email address."
       password_prompt: "Enter your password to sign in."
@@ -32,20 +27,7 @@ en:
     destroy:
       success: "Signed out successfully."
   registrations:
-    new:
-      title: "Create your account"
-      email_label: "Email address"
-      first_name_label: "First name"
-      last_name_label: "Last name"
-      password_label: "Password"
-      password_confirmation_label: "Confirm password"
-      password_hint: "Must be at least 12 characters."
-      submit: "Create account"
-      already_have_account: "Already have an account?"
-      sign_in: "Sign in"
     create:
-      success: "Welcome! Your account has been created."
-      rate_limited: "Too many attempts. Please try again later."
       invitation_consumed: "That invitation is no longer valid. Please ask your workspace administrator for a new one."
       invitation_email_mismatch: "You're signed in, but that invitation was sent to a different email address. Ask your workspace administrator to invite this one."
     closed:

@@ -61,11 +61,6 @@ en:
     show:
       capacity: "%{students} students · %{ada} ADA-accessible seats"
       address: "Address"
-      floor: "Floor"
-      room_number: "Room number"
-      square_feet: "Square feet"
-      department: "Department"
-      room_type: "Room type"
       inactive_banner: "This room is hidden from Find a Room results."
       features:
         seats_layout: "Layout"
@@ -91,7 +86,6 @@ en:
         support_link: "Visit support page"
         heading: "Contacts"
         none: "No scheduling or support contacts are listed for this room."
-      not_available: "Not available"
       panorama_label: "360° panorama of %{room}"
       load_panorama: "Load 360° view"
       panorama_hint: "Opens an interactive 360° view. Drag or use the arrow keys to look around once it loads."
@@ -104,7 +98,6 @@ en:
       # Tab; 3.3.2 wants it said).
       panorama_instructions: "Use the arrow keys to look around, plus and minus to zoom. Press Tab to leave the viewer."
       seating_chart_link: "Seating chart for %{room} (PDF)"
-      seating_chart_alt: "Seating chart for %{room}"
       floor_plan_link: "View floor plan"
       notes_heading: "Notes"
       building_notes_heading: "Building notes"
@@ -175,7 +168,6 @@ en:
       success: "Room unhidden."
     floor_plan:
       title: "%{building}, floor %{floor}"
-      plan_alt: "Floor plan of %{building}, floor %{floor}"
       plan_pdf_link: "Floor plan for %{building}, floor %{floor} (PDF)"
       no_plan: "A floor plan hasn't been uploaded for this floor yet."
       no_floor: "This room isn't assigned to a floor."
@@ -192,7 +184,6 @@ en:
       no_results_hint: "Remove a filter to widen the search — the count above updates as you do."
       chips:
         remove: "Remove filter:"
-      buildings_heading: "Buildings"
       views_nav_label: "Visibility"
       views:
         active: "Listed"
@@ -244,7 +235,6 @@ en:
         capacity_desc: "Capacity (high to low)"
       submit: "Apply filters"
       reset: "Clear filters"
-      glossary_link: "What do these filters mean?"
       # Tooltip copy for merged tokens — no vendor long_description exists.
       merged_descriptions:
         movableseating: "Tablet armchairs or tables with chairs you can rearrange."
@@ -279,6 +269,3 @@ en:
         one: "+1 ADA"
         other: "+%{count} ADA"
       floor_label: "Floor %{label}"
-      room_number: "Room number"
-      unit: "School/College"
-      characteristics_heading: "Characteristics"

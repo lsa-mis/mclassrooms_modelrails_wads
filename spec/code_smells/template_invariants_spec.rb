@@ -492,11 +492,27 @@ RSpec.describe "Template invariants" do
     let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
     let(:lefthook_config) { YAML.safe_load(File.read(root.join("lefthook.yml")), aliases: true) }
 
-    it "CI's test job runs bin/parallel-rspec" do
-      run_steps = Array(ci_workflow.dig("jobs", "test", "steps")).map { |s| s["run"].to_s }
+    it "CI's test shards run bin/parallel-rspec" do
+      run_steps = Array(ci_workflow.dig("jobs", "test_shard", "steps")).map { |s| s["run"].to_s }
       expect(run_steps).to include(match(%r{bin/parallel-rspec})),
-        "expected CI's test job to run bin/parallel-rspec (parallel suite + integrity gates); " \
-        "a raw rspec invocation loses the example-count parity and merged-coverage gates"
+        "expected CI's test_shard job to run bin/parallel-rspec (shard slice + parallel " \
+        "suite + per-shard parity); a raw rspec invocation loses those gates"
+    end
+
+    it "the merged coverage floor and shard-union parity run in coverage_merge" do
+      run_steps = Array(ci_workflow.dig("jobs", "coverage_merge", "steps")).map { |s| s["run"].to_s }
+      expect(run_steps).to include(match(%r{bin/ci-coverage-merge})),
+        "expected coverage_merge to run bin/ci-coverage-merge — shards skip the merged " \
+        "floor (each sees ~1/N of the suite), so without this job coverage is unenforced " \
+        "and a shard-splitter bug that drops files is invisible"
+    end
+
+    it "keeps a summary job named `test` gating on shards AND the merge (ruleset context)" do
+      test_job = ci_workflow.dig("jobs", "test") || {}
+      expect(Array(test_job["needs"])).to include("test_shard", "coverage_merge"),
+        "the branch ruleset requires the status context `test` BY NAME; the summary job " \
+        "must need both test_shard and coverage_merge or a shard/merge failure leaves a " \
+        "mergeable-looking PR (or, if the job vanishes, every PR blocks forever)"
     end
 
     it "Lefthook's pre-push rspec command runs bin/parallel-rspec" do
@@ -647,26 +663,44 @@ RSpec.describe "Template invariants" do
     # if the log survives between runs — so the test job must cache it. Without
     # the cache the log is cold every run and the split silently falls back to
     # file size (still correct, just unbalanced — the #488 regression).
+    # Since #495's sharding, the cache lifecycle spans three jobs: test_shard
+    # RESTORES the log (in-shard worker balancing), coverage_merge reassembles
+    # every shard's partial log and SAVES it, and split_seed snapshots one
+    # frozen copy so all shards compute the SAME cross-shard split.
     let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
-    let(:test_steps) { Array(ci_workflow.dig("jobs", "test", "steps")) }
 
-    it "caches tmp/parallel_runtime_rspec.log across runs" do
-      runtime_cache = test_steps.find do |step|
-        step["uses"].to_s.include?("actions/cache") &&
+    def job_steps(name) = Array(ci_workflow.dig("jobs", name, "steps"))
+
+    it "test shards restore the runtime log; the merge job saves the reassembled one" do
+      restore = job_steps("test_shard").find do |step|
+        step["uses"].to_s.include?("actions/cache/restore") &&
           step.dig("with", "path").to_s.include?("parallel_runtime_rspec.log")
       end
-      expect(runtime_cache).not_to be_nil,
-        "expected an actions/cache step in the test job persisting " \
-        "tmp/parallel_runtime_rspec.log so runtime-based worker balancing has a seed"
+      save = job_steps("coverage_merge").find do |step|
+        step["uses"].to_s.include?("actions/cache/save") &&
+          step.dig("with", "path").to_s.include?("parallel_runtime_rspec.log")
+      end
+      expect(restore).not_to be_nil,
+        "expected test_shard to restore tmp/parallel_runtime_rspec.log so in-shard " \
+        "worker balancing has a seed"
+      expect(save).not_to be_nil,
+        "expected coverage_merge to save the reassembled runtime log — each shard's " \
+        "log holds only its own files' timings, so without the merged save the next " \
+        "run's split degrades to file size (#488)"
+      expect(restore.dig("with", "restore-keys").to_s).to be_present,
+        "expected restore-keys on the runtime-log restore so a PR (whose exact key " \
+        "misses) still restores the newest log from the base branch"
     end
 
-    it "keys the cache so PRs restore the most recent recorded log" do
-      runtime_cache = test_steps.find { |s| s.dig("with", "path").to_s.include?("parallel_runtime_rspec.log") }
-      next if runtime_cache.nil?
+    it "every shard computes its split from the frozen split_seed artifact, not the live log" do
+      seed_upload = job_steps("split_seed").find { |s| s["uses"].to_s.include?("upload-artifact") }
+      shard_env = ci_workflow.dig("jobs", "test_shard", "env") || {}
 
-      expect(runtime_cache.dig("with", "restore-keys").to_s).to be_present,
-        "expected restore-keys on the runtime-log cache so a PR (whose exact key misses) " \
-        "still restores the newest log from the base branch"
+      expect(seed_upload).not_to be_nil, "expected split_seed to publish the frozen runtime-log snapshot"
+      expect(shard_env["SHARD_RUNTIME_SOURCE"].to_s).to be_present,
+        "expected test_shard to point SHARD_RUNTIME_SOURCE at the frozen seed — shards " \
+        "reading the LIVE log compute different partitions (overlap + holes; caught " \
+        "while building #495)"
     end
   end
 
