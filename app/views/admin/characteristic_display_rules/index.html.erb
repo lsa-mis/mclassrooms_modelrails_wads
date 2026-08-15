@@ -21,7 +21,7 @@
             <p class="mt-1 text-sm text-text-muted">
               <%= t(".icon_key", icon_key: rule.icon_key.presence || t(".none")) %>
               <% if rule.category_override.present? %>
-                &middot; <%= t(".category_override", category: rule.category_override) %>
+                &middot; <%= t(".category_override", category: rule.category_override) %> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
               <% end %>
             </p>
           </div>
