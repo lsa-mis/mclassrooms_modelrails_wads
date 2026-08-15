@@ -4,10 +4,14 @@ RSpec.describe "Content Security Policy" do
   let(:policy) { Rails.application.config.content_security_policy }
   let(:form_action) { policy.directives["form-action"] || [] }
 
-  # When you add a new OAuth provider to OauthHelper::PROVIDER_CONFIG,
-  # add the provider's consent-screen host to the hash below AND to
-  # config/initializers/content_security_policy.rb's form_action directive.
-  EXPECTED_OAUTH_HOSTS_BY_PROVIDER = {
+  # DOUBLE-ENTRY cross-check (#312): form_action is DERIVED from the provider
+  # registry (config/initializers/0_oauth_provider_registry.rb), so the wiring
+  # can't be forgotten — this literal hash independently pins the VALUES, so a
+  # wrong host in the registry can't ship either. When you add or swap a
+  # provider, update the registry and this hash; the failure below is the
+  # reminder, and it fires at spec time instead of as a silent browser-side
+  # CSP block on the consent redirect (undebuggable from the symptom).
+  expected_oauth_hosts_by_provider = {
     google_oauth2: "https://accounts.google.com",
     github:        "https://github.com",
     okta:          "https://*.okta.com"
@@ -15,18 +19,29 @@ RSpec.describe "Content Security Policy" do
 
   it "allows form-action to every configured OAuth provider host" do
     OauthHelper::PROVIDER_CONFIG.each_key do |provider|
-      expected_host = EXPECTED_OAUTH_HOSTS_BY_PROVIDER.fetch(provider) do
+      expected_host = expected_oauth_hosts_by_provider.fetch(provider) do
         raise <<~MSG.strip
-          Missing CSP form-action host for OAuth provider :#{provider}.
-          Add it to EXPECTED_OAUTH_HOSTS_BY_PROVIDER in this spec file:
+          Missing CSP form-action cross-check for OAuth provider :#{provider}.
+          The registry (config/initializers/0_oauth_provider_registry.rb)
+          already feeds form_action; add the expected host to
+          expected_oauth_hosts_by_provider in this spec file so the VALUE is
+          independently pinned:
             #{__FILE__}
-          AND to config/initializers/content_security_policy.rb's
-          policy.form_action call.
         MSG
       end
       expect(form_action).to include(expected_host),
         "CSP form-action must include #{expected_host} for OAuth provider #{provider}"
     end
+  end
+
+  it "derives form-action from the registry — exactly :self plus every registered host, nothing hand-added" do
+    registry_hosts = Rails.application.config.x.oauth_providers.values.map { |p| p.fetch(:form_action_host) }
+
+    expect(form_action).to match_array([ "'self'", *registry_hosts ]),
+      "form_action must be exactly 'self' + the registry's form_action_hosts. " \
+      "A host present here but not in the registry was hand-added to the " \
+      "initializer (put it in the registry); a registry host missing here " \
+      "means the derivation broke."
   end
 
   it "always includes :self in form-action" do
@@ -72,6 +87,21 @@ RSpec.describe "Content Security Policy" do
       nonce = nonce_generator.call(request_with_session)
 
       expect(nonce).to eq("abc123")
+    end
+  end
+
+  # SEC-6 invariant: outside development, script-src carries NO remote host.
+  # The test env evaluates the same non-development branch production does
+  # (the jsdelivr allowance is gated on Rails.env.development? — mirroring
+  # the dev-only chart.js importmap pin), so this assertion holds the
+  # production posture: a CDN script pin can't silently reopen the door.
+  describe "script-src (SEC-6)" do
+    it "contains no remote host outside development" do
+      script_src = policy.directives["script-src"] || []
+      remote = script_src.grep(%r{\Ahttps?://})
+      expect(remote).to be_empty,
+        "script-src must stay 'self' outside development; found: #{remote.inspect}. " \
+        "Vendor the package (see config/importmap.rb's cropperjs comment) instead of allowlisting a CDN."
     end
   end
 end

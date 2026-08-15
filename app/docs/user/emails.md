@@ -51,8 +51,8 @@ Tokens are single-use: accepting an invitation, verifying an email, or resetting
 
 1. User enters their email on the sign-in/sign-up page (`sessions#new`) and submits.
 2. `SessionsController#lookup` issues a `MagicLinkToken` and sends `MagicLinkMailer.registration_link` (new email) or `MagicLinkMailer.sign_in_link` (existing account).
-3. User clicks the link → `MagicLinkCallbacksController#show` checks for an existing account.
-   - Existing user: signs them in immediately.
+3. User clicks the link (GET) → `MagicLinkCallbacksController#show` checks for an existing account. The GET never consumes the token or starts a session (a mail scanner or prefetcher can't burn the link):
+   - Existing user: renders a "Sign in as x@y?" confirmation page; the button POSTs to `#sign_in`, which consumes the token and starts the session.
    - New user: renders `magic_link_callbacks/new_registration` (name fields) for first-time signup.
 4. New user submits their name → `MagicLinkCallbacksController#create` creates the User and a **verified** `Authentication` (email ownership proved by the link). No separate verification email is sent.
 5. User is redirected to `after_authentication_url` (onboarding or home).
@@ -65,8 +65,8 @@ Verification can be resent from the "check your email" screen or via the banner 
 1. User enters their email on the sign-in page.
 2. If the email exists: `MagicLinkMailer.sign_in_link` sent (15-minute expiry).
 3. If the email is new: `MagicLinkMailer.registration_link` sent instead.
-4. User clicks link → signed in (existing) or shown registration form (new).
-5. The `MagicLinkCallbacksController` handles token validation and routing at click time.
+4. User clicks link (GET) → confirmation page ("Sign in as x@y?") whose button POSTs to sign in (existing), or the registration form (new). The GET never signs anyone in.
+5. The `MagicLinkCallbacksController` handles token validation and routing; the token is consumed only on the POST.
 
 ### Forgot password / account recovery
 
@@ -78,10 +78,10 @@ sign-in options and [Application Flows](/docs/developer/application-flows) for t
 
 ### Email Change
 
-1. User enters new email + current password in profile form.
-2. `User#initiate_email_change!` generates a `pending_email_token`.
+1. User enters a new email in the profile form. Requesting the change requires recent **re-authentication** (a 15-minute window), not a password — so passwordless accounts can change their email too.
+2. `Users::EmailChange#initiate!(new_email)` generates a `pending_email_token`.
 3. Verification sent to new email, notification sent to old email.
-4. User clicks verification link → `User#confirm_email_change!` atomically swaps the address.
+4. User clicks verification link → `Users::EmailChange#confirm!` atomically swaps the address.
 5. All linked OAuth authentication UIDs are updated to the new email.
 
 ### Invitation Acceptance

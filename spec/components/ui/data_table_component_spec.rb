@@ -19,12 +19,15 @@ RSpec.describe UI::DataTableComponent, type: :component do
     { name: "Babbage", email: "chuck@example.com", role: "Member" }
   ].freeze
 
-  def render_default(**overrides)
-    render_inline(described_class.new(columns: DATA_TABLE_COLUMNS, rows: DATA_TABLE_ROWS, **overrides))
-  end
+  # `let` bridges the describe-body locals into render_default (a def cannot
+  # see locals, and the old constant bridge landed on Object, colliding across
+  # parallel workers — #607/#608).
+  let(:data_table_columns) { columns }
+  let(:data_table_rows)    { rows }
 
-  DATA_TABLE_COLUMNS = columns
-  DATA_TABLE_ROWS = rows
+  def render_default(**overrides)
+    render_inline(described_class.new(columns: data_table_columns, rows: data_table_rows, **overrides))
+  end
 
   # --- Keyboard-operable sort header + aria-sort -----------------------------
 

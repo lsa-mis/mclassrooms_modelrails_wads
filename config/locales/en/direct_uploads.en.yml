@@ -1,0 +1,5 @@
+en:
+  direct_uploads:
+    type_not_allowed: "This file type can't be attached."
+    too_large: "Files must be smaller than %{max}."
+    rate_limited: "Too many uploads. Please try again later."

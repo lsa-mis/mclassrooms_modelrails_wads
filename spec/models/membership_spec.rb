@@ -318,6 +318,18 @@ RSpec.describe Membership, type: :model do
     end
   end
 
+  # G (SEC-1 follow-up): membership.created previously carried empty metadata —
+  # no role, no granter. The grant itself is the privilege event.
+  describe "creation audit metadata" do
+    it "records the granted role slug" do
+      membership = create(:membership, :owner)
+
+      entry = ActivityLog.where(action: "membership.created", trackable: membership).last
+      expect(entry).to be_present
+      expect(entry.metadata["role"]).to eq("owner")
+    end
+  end
+
   describe "ownership transfer" do
     let(:workspace) { create(:workspace) }
     let(:owner_membership) { create(:membership, :owner, workspace: workspace) }
@@ -333,6 +345,18 @@ RSpec.describe Membership, type: :model do
       admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
       owner_membership.transfer_ownership_to!(target_membership)
       expect(owner_membership.reload.role).to eq(admin_role)
+    end
+
+    # G (SEC-1 follow-up): the demote is a callback-skipping CAS update_all
+    # (race-safety, by design) — which also skipped Trackable. A privilege
+    # demotion must still reach the audit trail, explicitly.
+    it "audits the demotion at admin visibility despite the callback-skipping CAS" do
+      owner_membership.transfer_ownership_to!(target_membership)
+
+      entry = ActivityLog.where(action: "membership.updated", trackable: owner_membership).last
+      expect(entry).to be_present
+      expect(entry.visibility).to eq("admin")
+      expect(entry.metadata.dig("changes", "role")).to eq([ "owner", "admin" ])
     end
 
     # Race-safety: panel review flagged that two concurrent transfers from

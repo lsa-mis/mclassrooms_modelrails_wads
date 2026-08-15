@@ -62,6 +62,8 @@ Everyone shares **one** workspace. Each person (with how they **sign in**) is a 
 | `tenancy.onboarding` | `:shared` | `User#onboard_workspace` dispatches to `join_shared_workspace` |
 | `tenancy.workspace_creation` | `:disabled` | `WorkspacesController` `before_action` redirects `:new`/`:create` |
 | `permitted_join_strategies` | `[:invite]` *(implicit — only mechanism built)* | `Invitation.consume!` is the single membership-grant path |
+| `session.reauth_enabled` | `false` *(optional — your call)* | `config/initializers/sessions.rb`; internal tools often skip the "confirm it's you" interstitial |
+| `session.new_device_notification` | `false` *(optional — your call)* | same file; skips "new sign-in" alerts when every teammate's laptop would fire one |
 
 The workspace switcher auto-hides under this preset because every user has exactly one membership (the existing #145 "hide personal from switcher" logic plus the single-membership-no-switcher rule combine naturally — no extra suppression needed).
 

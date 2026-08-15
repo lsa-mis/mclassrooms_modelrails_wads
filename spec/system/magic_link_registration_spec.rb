@@ -15,9 +15,8 @@ RSpec.describe "Magic link registration", type: :system do
 
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
 
-      # Extract the registration token from the database
-      token_record = MagicLinkToken.find_by(email: "brand-new@example.com")
-      visit magic_link_callback_path(token: token_record.token)
+      # Visit the registration link (equivalent to the emailed one).
+      visit magic_link_callback_path(token: MagicLinkToken.create_for_email("brand-new@example.com"))
 
       expect(page).to have_text(I18n.t("magic_link_callbacks.new_registration.title"))
       expect(page).to have_text("brand-new@example.com")
@@ -34,7 +33,7 @@ RSpec.describe "Magic link registration", type: :system do
   describe "registration with expired token" do
     it "rejects and redirects to sign in" do
       token = MagicLinkToken.create_for_email("expired-reg@example.com")
-      MagicLinkToken.find_by(token: token).update!(expires_at: 1.hour.ago)
+      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).update!(expires_at: 1.hour.ago)
 
       visit magic_link_callback_path(token: token)
 
@@ -45,7 +44,7 @@ RSpec.describe "Magic link registration", type: :system do
   describe "registration with consumed token" do
     it "rejects and redirects to sign in" do
       token = MagicLinkToken.create_for_email("consumed-reg@example.com")
-      MagicLinkToken.find_by(token: token).consume!
+      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consume!
 
       visit magic_link_callback_path(token: token)
 

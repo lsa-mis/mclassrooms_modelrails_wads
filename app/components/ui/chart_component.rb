@@ -8,7 +8,7 @@ module UI
   # itself is NOT bundled; add it to your importmap before use:
   #
   #   # config/importmap.rb
-  #   pin "chart.js", to: "https://cdn.jsdelivr.net/npm/chart.js@4/+esm"
+  #   bin/importmap pin chart.js   (downloads to vendor/javascript — production CSP allows no CDN)
   #
   # ## Usage
   #   ui :chart, type: :bar, label: "Quarterly revenue vs. costs",

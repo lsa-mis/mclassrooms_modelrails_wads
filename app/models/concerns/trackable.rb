@@ -1,8 +1,15 @@
 # Best-effort audit trail, by design: create_activity rescues and logs rather
 # than ever failing the business write, and the after_commit placement means a
 # crash between commit and callback loses the activity row, not the write.
-# The Current.user/Current.workspace reads here are a documented deliberate
-# deviation — see .claude-on-rails/context.md (#4).
+# The Current.user/Current.workspace reads here are a deliberate deviation:
+# the activity log is a cross-cutting concern where ambient request context
+# beats threading an actor argument through every tracked write.
+#
+# Retention matches the guarantee: best-effort to write, immutable after
+# (ActivityLog#readonly?), and BOUNDED — ActivityLogRetentionSweepJob deletes
+# rows past 12 months (#438). If a fork promotes this trail to
+# compliance-grade, the write moves inside the business transaction AND the
+# retention window becomes a compliance decision, together.
 module Trackable
   extend ActiveSupport::Concern
 

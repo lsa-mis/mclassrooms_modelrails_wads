@@ -1110,7 +1110,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       OmniAuth.config.test_mode = true
       OmniAuth.config.mock_auth[:google_oauth2] = join_oauth_hash
       # POST to the join route — sets session[:pending_join_token].
-      post workspace_join_path(workspace_slug: join_workspace.slug, token: join_link.token)
+      post workspace_join_path(workspace_slug: join_workspace.slug, token: join_link.plaintext_token)
     end
 
     after do
@@ -1126,6 +1126,25 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       new_user = User.find_by(email_address: "joinoauth@example.com")
       expect(new_user).to be_present
       expect(new_user.memberships.kept.where(workspace: join_workspace)).to exist
+    end
+
+    context "when the verified email belongs to a PRE-EXISTING user (drive-by join, FU-1)" do
+      let!(:existing_user) do
+        create(:user, email_address: "joinoauth@example.com").tap do |u|
+          u.authentications.create!(provider: "email", uid: u.email_address, verified_at: Time.current)
+        end
+      end
+
+      it "signs them in but does NOT force-join them; the token stays parked for re-consent" do
+        expect {
+          get "/auth/google_oauth2/callback"
+        }.not_to change(User, :count)
+
+        expect(existing_user.memberships.kept.where(workspace: join_workspace)).not_to exist
+        # Token survives login (SESSION_KEYS_SURVIVING_LOGIN) so the pending-join
+        # banner can offer an explicit Join/Dismiss.
+        expect(session[:pending_join_token]).to eq(join_link.plaintext_token)
+      end
     end
   end
 end

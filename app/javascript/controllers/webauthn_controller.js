@@ -95,7 +95,15 @@ export default class extends Controller {
       ...(body !== null && { body: JSON.stringify(body) })
     })
     const data = await res.json()
-    if (!res.ok) throw { body: data }
+    if (!res.ok) {
+      // A gated factor endpoint asks us to re-authenticate first — navigate to
+      // the interstitial rather than surfacing an error.
+      if (res.status === 403 && data.reauth_required) {
+        window.location = data.redirect_to
+        return new Promise(() => {})
+      }
+      throw { body: data }
+    }
     return data
   }
 

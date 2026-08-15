@@ -1,0 +1,9 @@
+<p><%= t("reauthentication_mailer.code.greeting", name: @user.first_name.presence || @user.email_address) %></p>
+
+<p><%= t("reauthentication_mailer.code.body") %></p>
+
+<p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;"><%= @code %></p>
+
+<p><%= t("reauthentication_mailer.code.expiry", minutes: @expiry_minutes) %></p>
+
+<p><%= t("reauthentication_mailer.code.ignore") %></p>

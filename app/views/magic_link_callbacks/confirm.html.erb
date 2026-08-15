@@ -1,0 +1,23 @@
+<% content_for(:title) { t("magic_link_callbacks.confirm.title") } %>
+
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-bold text-text-heading">
+    <%= t("magic_link_callbacks.confirm.title") %>
+  </h1>
+
+  <p class="mt-4 text-text-body">
+    <%= t("magic_link_callbacks.confirm.prompt", email: @email) %>
+  </p>
+
+  <div class="mt-8 flex items-center gap-3">
+    <%= button_to t("magic_link_callbacks.confirm.sign_in_button"),
+          magic_link_callback_sign_in_path(token: @token),
+          method: :post,
+          class: "btn-primary" %>
+
+    <%= link_to t("magic_link_callbacks.confirm.cancel"), new_session_path,
+          class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
+                  text-sm font-medium text-text-muted hover:bg-surface-sunken
+                  focus-ring" %>
+  </div>
+</div>

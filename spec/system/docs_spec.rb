@@ -21,21 +21,22 @@ RSpec.describe "Docs (markdowndocs gem)", type: :system do
     #
     # All foreground syntax tokens are tuned to clear WCAG 2.2 AAA (7:1) against
     # the surface background — L* ≤ 38% on light mode, L* ≥ 85% on dark mode.
-    # The two specs below re-enable .highlight (Rouge syntax tokens) by passing
-    # a narrowed `exclude:` that only filters out the biscuit GDPR banner —
-    # itself separately deferred. They lock in the AAA token contract.
+    # The two specs below run the RAW audit (`exclude: []`) so .highlight
+    # (Rouge syntax tokens) is in scope despite the default deferral — and the
+    # consent banner is audited alongside, since #462 lifted its exclusion.
+    # They lock in the AAA token contract.
     it "passes axe-core at WCAG 2.2 AAA in light mode (Rouge syntax tokens)" do
       visit "/docs/developer/getting-started"
       ensure_light_mode
-      expect(axe_clean?(axe_options, exclude: [ ".biscuit-banner" ])).to be(true),
-        "Light-mode AAA violations:\n#{axe_violations(axe_options, exclude: [ ".biscuit-banner" ]).join("\n")}"
+      expect(axe_clean?(axe_options, exclude: [])).to be(true),
+        "Light-mode AAA violations:\n#{axe_violations(axe_options, exclude: []).join("\n")}"
     end
 
     it "passes axe-core at WCAG 2.2 AAA in dark mode (Rouge syntax tokens)" do
       visit "/docs/developer/getting-started"
       ensure_dark_mode
-      expect(axe_clean?(axe_options, exclude: [ ".biscuit-banner" ])).to be(true),
-        "Dark-mode AAA violations:\n#{axe_violations(axe_options, exclude: [ ".biscuit-banner" ]).join("\n")}"
+      expect(axe_clean?(axe_options, exclude: [])).to be(true),
+        "Dark-mode AAA violations:\n#{axe_violations(axe_options, exclude: []).join("\n")}"
     end
 
     # The mobile sidebar uses a Stimulus action instead of inline onclick so it

@@ -16,7 +16,7 @@ The public-SaaS / multi-workspace shape: per-workspace control over how new memb
 |---|---|
 | Per-workspace `join_policy` (invite / open_link) | ✅ |
 | `WorkspaceJoinLink` model + atomic rotate + revoke | ✅ |
-| Workspace settings UI (radio + active link + copy/rotate/revoke) | ✅ |
+| Workspace settings UI (radio + show-once link reveal + rotate/revoke) | ✅ |
 | Instance allowlist (`SIGNUP_PERMITTED_JOIN_STRATEGIES`) | ✅ |
 | Flow A — *existing* authenticated user joins via link | ✅ |
 | Flow B — *new* user via link (link opens the signup gate) | ✅ |
@@ -107,7 +107,7 @@ If `permits_strategy?(:open_link)` is `false`, the env var isn't set — links w
 
 1. Set `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` (default is `invite` alone — preserves Solo-default).
 2. Owner/Admin opens their workspace's `/workspaces/:slug/settings/edit` and selects "Shareable join link" under Join policy.
-3. The settings page shows the active link with **Copy / Rotate / Revoke** controls. The link follows the form `/workspaces/:slug/joins/:token`.
+3. The full link (form `/workspaces/:slug/joins/:token`) is shown **once**, right after you generate or rotate it — copy it then. The token is hashed at rest, so the settings page can't re-display it later: it shows a masked stub with **Rotate / Revoke**, and Rotate mints a fresh link to copy.
 4. Share the link with anyone who has an account on this instance — clicking lands them on a confirmation page; the Join button admits them as a Member.
 
 **Key behaviors (Reshape 2a):**
@@ -128,6 +128,8 @@ If `permits_strategy?(:open_link)` is `false`, the env var isn't set — links w
 5. User lands signed in and is immediately a workspace Member.
 
 Stale conditions at claim time (link revoked, workspace policy reverted to `:invite`, instance allowlist no longer permits `:open_link`) are silently no-op'd — email verification proceeds and the user lands signed in but without the workspace membership. Capacity errors at claim time surface as a flash without blocking sign-in.
+
+**Pre-existing users are never auto-joined.** Only a brand-new account created in the signup flow auto-joins — its signup is its consent. If the person who authenticates with a parked token turns out to be an *existing* user (e.g. they followed the link logged out, then signed in, or linked a new verified OAuth provider), they are **not** silently added. Instead they see a dismissible "You followed a link to join **X** — Join / Dismiss" banner (`PendingJoinsController`) and re-consent explicitly. This closes a drive-by-join where a lured-in token would otherwise force-join a victim.
 
 **Tightening the allowlist on a live app.** Removing `open_link` from `SIGNUP_PERMITTED_JOIN_STRATEGIES` (e.g. reverting to `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite`) takes effect **immediately at runtime** — there is no data migration. `Workspace#open_join?` re-checks the allowlist on every call, so all existing shareable links stop working at once and both Flow A and Flow B silently no-op. Workspaces keep their stored `join_policy: "open_link"` value, but it is now inert.
 

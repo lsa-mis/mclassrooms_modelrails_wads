@@ -1,7 +1,7 @@
 module Settings
   class EmailConfirmationsController < ApplicationController
     def show
-      if Current.user.confirm_email_change!(params[:token])
+      if Users::EmailChange.new(Current.user).confirm!(params[:token])
         redirect_to edit_settings_profile_path, notice: t(".success")
       else
         redirect_to edit_settings_profile_path, alert: t(".invalid_or_expired")
@@ -9,7 +9,7 @@ module Settings
     end
 
     def destroy
-      Current.user.cancel_email_change!
+      Users::EmailChange.new(Current.user).cancel!
       redirect_to edit_settings_profile_path, notice: t(".cancelled")
     end
   end

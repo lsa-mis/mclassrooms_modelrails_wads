@@ -1,8 +1,21 @@
 class WorkspacesController < ApplicationController
   include WorkspaceScoped
-  include CropCoordinatable
   skip_before_action :set_workspace, only: [ :index, :new, :create ]
   before_action :ensure_workspace_creation_enabled, only: [ :new, :create ]
+
+  # Mirrors settings/avatars_controller: #update purges attachments and writes
+  # blobs, so it gets the same per-user budget (2026-08-12 reauth panel fold-in).
+  rate_limit to: 20, within: 3.minutes, only: :update,
+    by: -> { Current.user&.id || request.remote_ip },
+    with: -> {
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: error_toast(t("workspaces.update.rate_limited")),
+                 status: :too_many_requests
+        end
+        format.html { redirect_to workspaces_path, alert: t("workspaces.update.rate_limited") }
+      end
+    }
 
   def index
     authorize Workspace
@@ -62,75 +75,24 @@ class WorkspacesController < ApplicationController
   def update
     authorize @workspace, policy_class: Workspaces::ProfilePolicy
 
-    # JS saveCrop sends "avatar"/"avatar_original" to match User flow —
-    # accept those as aliases for logo/logo_original.
-    cropped_image = params[:avatar] || params[:logo]
-    original_image = params[:avatar_original] || params[:logo_original]
+    result = @workspace.identity.apply(**identity_update_params)
+    # Crop save (file present) keeps the modal open; hub save closes it.
+    @close_modal = identity_update_params[:image].blank?
 
-    if params[:avatar_source].present? && !@workspace.available_logo_sources.include?(params[:avatar_source])
-      respond_to do |format|
-        format.turbo_stream do
-          render turbo_stream: turbo_stream.append("toast-cards",
-            partial: "shared/toast_card",
-            locals: { type: :error, message: t("workspaces.brandings.source_unavailable") }),
-                 status: :forbidden
-        end
-        format.html { redirect_to edit_workspace_path(@workspace), alert: t("workspaces.brandings.source_unavailable") }
-      end
-      return
-    end
-
-    if cropped_image.present?
-      @workspace.logo.attach(cropped_image)
-      @workspace.logo_source = "upload"
-    end
-
-    if original_image.present?
-      @workspace.logo_original.attach(original_image)
-    end
-
-    if params[:crop_coordinates].present? && @workspace.logo_original.attached?
-      coords = safe_parse_coordinates(params[:crop_coordinates])
-      if coords
-        blob = @workspace.logo_original.blob
-        blob.update!(metadata: blob.metadata.merge("crop" => coords))
-      end
-    end
-
-    if params[:avatar_source].present? && cropped_image.blank?
-      source = params[:avatar_source]
-      @workspace.logo_source = source
-      if source != "upload"
-        @workspace.logo.purge if @workspace.logo.attached?
-        @workspace.logo_original.purge if @workspace.logo_original.attached?
-      end
-    end
-
-    if params[:primary_color].present?
-      @workspace.primary_color = params[:primary_color].to_i
-    end
-
-    # Crop save (logo file present) keeps modal open; hub save (no logo) closes it.
-    @close_modal = cropped_image.blank?
-
-    if @workspace.update(profile_params)
+    if result.success?
       respond_to do |format|
         format.turbo_stream
         format.html { redirect_to edit_workspace_path(@workspace), notice: t(".success") }
       end
-    else
-      @workspace.logo.purge if cropped_image.present?
-      @workspace.logo_original.purge if original_image.present?
-
-      error_message = @workspace.errors.full_messages.to_sentence
-
+    elsif result.error == :source_unavailable
+      message = t("workspaces.brandings.source_unavailable")
       respond_to do |format|
-        format.turbo_stream do
-          render turbo_stream: turbo_stream.append("toast-cards",
-            partial: "shared/toast_card",
-            locals: { type: :error, message: error_message }),
-                 status: :unprocessable_content
-        end
+        format.turbo_stream { render turbo_stream: error_toast(message), status: :forbidden }
+        format.html { redirect_to edit_workspace_path(@workspace), alert: message }
+      end
+    else
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: error_toast(result.error_message), status: :unprocessable_content }
         format.html { render :edit, status: :unprocessable_content }
       end
     end
@@ -139,33 +101,14 @@ class WorkspacesController < ApplicationController
   # Lazy-loaded identity picker hub partial for the Profile page.
   def identity_picker_hub
     authorize @workspace, policy_class: Workspaces::ProfilePolicy
-
-    @source = if params[:source].present? && @workspace.available_logo_sources.include?(params[:source])
-                params[:source]
-    else
-                @workspace.logo_source
-    end
-
-    is_user = false
-    has_image = @workspace.logo.attached?
-    current_hue = @workspace.primary_color || 210
-    display_url = has_image ? url_for(@workspace.logo) : nil
+    identity = @workspace.identity
 
     render partial: "shared/identity_picker_hub",
       locals: {
-        model: @workspace,
+        identity: identity,
         form_url: workspace_path(@workspace),
         hub_url: identity_picker_hub_workspace_path(@workspace),
-        current_source: @source,
-        has_color_picker: true,
-        available_sources: @workspace.available_logo_sources,
-        is_user: is_user,
-        has_image: has_image,
-        current_hue: current_hue,
-        display_url: display_url,
-        gravatar_url: nil,
-        initials: @workspace.initials,
-        hub_title: t("identity_picker.choose_workspace_logo")
+        current_source: identity.resolve_source(params[:source])
       },
       layout: false
   end
@@ -202,7 +145,26 @@ class WorkspacesController < ApplicationController
     params.require(:workspace).permit(:name)
   end
 
-  def profile_params
-    params.fetch(:workspace, {}).permit(:name, :primary_color)
+  # The identity-picker JS posts avatar-named params for BOTH models (frozen
+  # wire protocol); logo-named params serve non-JS callers. name arrives under
+  # workspace[name] from the profile/customize forms — key-presence (not
+  # blankness) decides whether it participates, so a blank rename still fails
+  # validation inside apply's single save.
+  def identity_update_params
+    @identity_update_params ||= {
+      image: params[:avatar] || params[:logo],
+      image_original: params[:avatar_original] || params[:logo_original],
+      crop_coordinates: params[:crop_coordinates],
+      source: params[:avatar_source],
+      color: params[:primary_color],
+      name: workspace_attrs.key?(:name) ? workspace_attrs[:name] : nil
+    }
+  end
+
+  # Strong-params extraction for the workspace-only `name` field: a non-scalar
+  # value (e.g. workspace[name][foo]=bar) is dropped by permit, so it never
+  # reaches Identity#apply as anything but absent (nil).
+  def workspace_attrs
+    params.fetch(:workspace, {}).permit(:name)
   end
 end

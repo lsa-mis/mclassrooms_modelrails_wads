@@ -148,6 +148,159 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
+    describe "PATCH /workspaces/:slug — identity (logo/color) params" do
+      let(:workspace) { create(:workspace) }
+      let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
+      let(:file) { fixture_file_upload("avatar.png", "image/png") }
+      let(:turbo_headers) { { "Accept" => "text/vnd.turbo-stream.html" } }
+
+      it "attaches a logo sent under the avatar alias (identity-picker wire protocol)" do
+        patch workspace_path(workspace), params: { avatar: file }
+        workspace.reload
+        expect(workspace.logo).to be_attached
+        expect(workspace.logo_source).to eq("upload")
+      end
+
+      it "attaches a logo sent under the logo key" do
+        patch workspace_path(workspace), params: { logo: file }
+        expect(workspace.reload.logo).to be_attached
+      end
+
+      it "attaches the original under the avatar_original alias and stores crop coordinates" do
+        patch workspace_path(workspace), params: {
+          avatar: file,
+          avatar_original: fixture_file_upload("avatar.png", "image/png"),
+          crop_coordinates: '{"x":10,"y":20,"w":100,"h":100}'
+        }
+        workspace.reload
+        expect(workspace.logo_original).to be_attached
+        expect(workspace.logo_original.blob.metadata["crop"]).to eq("x" => 10, "y" => 20, "w" => 100, "h" => 100)
+      end
+
+      it "updates primary_color and logo_source from top-level params" do
+        patch workspace_path(workspace), params: { avatar_source: "initials", primary_color: "270" }
+        workspace.reload
+        expect(workspace.primary_color).to eq(270)
+        expect(workspace.logo_source).to eq("initials")
+      end
+
+      context "with a logo attached" do
+        let(:workspace) { create(:workspace, :with_logo) }
+
+        it "purges logo and original when the source switches away from upload" do
+          patch workspace_path(workspace), params: { avatar_source: "initials" }
+          workspace.reload
+          expect(workspace.logo).not_to be_attached
+          expect(workspace.logo_original).not_to be_attached
+          expect(workspace.logo_source).to eq("initials")
+        end
+      end
+
+      it "rejects an unavailable source with a 403 turbo-stream toast" do
+        patch workspace_path(workspace), params: { avatar_source: "gravatar" }, headers: turbo_headers
+        expect(response).to have_http_status(:forbidden)
+        expect(response.body).to include(I18n.t("workspaces.brandings.source_unavailable"))
+      end
+
+      it "rejects an unavailable source with a redirect and alert for HTML" do
+        patch workspace_path(workspace), params: { avatar_source: "gravatar" }
+        expect(response).to redirect_to(edit_workspace_path(workspace))
+        expect(flash[:alert]).to eq(I18n.t("workspaces.brandings.source_unavailable"))
+      end
+
+      it "lets a file upload win over a stale unavailable source param (unified with user side)" do
+        patch workspace_path(workspace), params: { avatar: file, avatar_source: "gravatar" }, headers: turbo_headers
+        expect(response.status).to be < 400
+        workspace.reload
+        expect(workspace.logo).to be_attached
+        expect(workspace.logo_source).to eq("upload")
+      end
+
+      it "keeps the modal open on a crop save (file present)" do
+        patch workspace_path(workspace), params: { avatar: file }, headers: turbo_headers
+        expect(response.body).not_to include("modal-closer")
+      end
+
+      it "closes the modal on a hub save (no file)" do
+        patch workspace_path(workspace), params: { avatar_source: "initials" }, headers: turbo_headers
+        expect(response.body).to include("modal-closer")
+      end
+
+      context "when save fails during an identity update" do
+        # primary_color inclusion is 0..360 on Workspace, so 999 always fails.
+        it "returns 422 turbo stream and purges the newly attached logo" do
+          patch workspace_path(workspace), params: {
+            avatar: file,
+            avatar_original: fixture_file_upload("avatar.png", "image/png"),
+            primary_color: "999"
+          }, headers: turbo_headers
+          expect(response).to have_http_status(:unprocessable_content)
+          workspace.reload
+          expect(workspace.logo).not_to be_attached
+          expect(workspace.logo_original).not_to be_attached
+          expect(workspace.primary_color).not_to eq(999)
+        end
+
+        it "fails and purges the new logo when the name is blank" do
+          patch workspace_path(workspace), params: { avatar: file, workspace: { name: "" } }, headers: turbo_headers
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(workspace.reload.logo).not_to be_attached
+        end
+      end
+
+      it "ignores a non-scalar name (strong params drop it)" do
+        original_name = workspace.name
+        patch workspace_path(workspace), params: { workspace: { name: { foo: "bar" } } }
+        expect(workspace.reload.name).to eq(original_name)
+      end
+    end
+
+    describe "PATCH /workspaces/:slug rate limiting" do
+      let(:workspace) { create(:workspace) }
+      let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
+
+      before do
+        # rate_limit counts via Rails.cache.increment; return an over-limit
+        # count so the limiter fires without a persistent cache (house pattern,
+        # see passkeys/authentications_spec).
+        allow(Rails.cache).to receive(:increment).and_return(21)
+      end
+
+      it "returns a 429 turbo-stream toast once the limit is exceeded" do
+        patch workspace_path(workspace), params: { workspace: { name: "Renamed" } },
+              headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(response.body).to include(I18n.t("workspaces.update.rate_limited"))
+        expect(workspace.reload.name).not_to eq("Renamed")
+      end
+
+      it "redirects with an alert for HTML requests" do
+        patch workspace_path(workspace), params: { workspace: { name: "Renamed" } }
+
+        expect(response).to redirect_to(workspaces_path)
+        expect(flash[:alert]).to eq(I18n.t("workspaces.update.rate_limited"))
+      end
+    end
+
+    describe "GET /workspaces/:slug/identity_picker_hub" do
+      let(:workspace) { create(:workspace) }
+      let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
+
+      it "renders the hub partial" do
+        get identity_picker_hub_workspace_path(workspace, source: "initials"),
+            headers: { "Turbo-Frame" => "identity-picker-hub" }
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("identity-picker-hub")
+      end
+
+      it "falls back to the current logo source for an invalid source param" do
+        get identity_picker_hub_workspace_path(workspace, source: "gravatar"),
+            headers: { "Turbo-Frame" => "identity-picker-hub" }
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
     describe "DELETE /workspaces/:slug" do
       let(:workspace) { create(:workspace) }
       let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }

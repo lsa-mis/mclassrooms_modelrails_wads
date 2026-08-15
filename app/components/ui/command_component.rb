@@ -43,9 +43,11 @@ module UI
     DIALOG  = "fixed left-[50%] top-[50%] z-50 w-full translate-x-[-50%] translate-y-[-50%] " \
               "overflow-hidden rounded-lg border border-border bg-surface-overlay shadow-lg"
     SEARCH  = "flex h-10 w-full items-center gap-2 border-b border-border px-3"
-    # The input keeps DOM focus (combobox pattern); the offset AAA focus-ring sits
-    # on the search row so the whole control reads as focused.
-    INPUT   = "flex-1 bg-transparent text-sm text-text-body outline-none placeholder:text-text-muted"
+    # The input keeps DOM focus (combobox pattern) and carries the AAA offset
+    # focus-ring itself; min-h-11 holds the 44px target floor (WCAG 2.5.5 AAA).
+    # Both were regressions caught by the open-state audit (#463): the old
+    # comment claimed a row-level ring no CSS actually painted.
+    INPUT   = "flex-1 min-h-11 bg-transparent text-sm text-text-body outline-none focus-ring placeholder:text-text-muted"
     LIST    = "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto p-1"
     EMPTY   = "py-6 text-center text-sm text-text-muted"
 
@@ -71,7 +73,11 @@ module UI
                     "[&_svg:not([class*='text-'])]:text-text-muted"
     # Place inside an ITEM as the last child to show a keyboard shortcut on the right.
     SHORTCUT      = "ml-auto text-xs tracking-widest text-text-muted"
-    # Horizontal rule between groups (use a plain <hr> tag).
+    # Horizontal rule between groups. An <hr>'s implicit role="separator" is an
+    # ILLEGAL child of role="listbox" (axe aria-required-children, critical) —
+    # the controller neutralizes any hr inside the list to role="presentation"
+    # at open, so caller markup can't break the listbox contract; give your hr
+    # role="presentation" anyway so the static render is honest too.
     SEPARATOR     = "-mx-1 h-px bg-border"
 
     def initialize(size: :md, **html_attrs)
@@ -105,7 +111,12 @@ module UI
           role: "dialog",
           "aria-modal": "true",
           "aria-label": I18n.t("modelrails_ui.command.dialog_label", default: "Command palette"),
-          data: { action: "keydown.escape@window->command#close" }) {
+          # `esc`, not `escape` — Stimulus's KeyboardEvent filter vocabulary
+          # (every other floating component here uses keydown.esc). The
+          # `escape` spelling is an unknown filter that never matches, which
+          # left the documented Escape-closes behavior dead until the
+          # keyboard-driven spec caught it (#463).
+          data: { action: "keydown.esc@window->command#close" }) {
           concat search_bar
           concat content_tag(:div,
             class: LIST,

@@ -1,24 +1,8 @@
 <%# locals: (model:, form_url:, hub_url:, hub_title:, crop_title:) -%>
 <%
-  is_user = model.is_a?(User)
-  has_image = is_user ? model.avatar.attached? : model.logo.attached?
-
-  # URL for re-crop — use original so quality isn't progressively degraded.
-  # Falls back to display_url if no original is stored (shouldn't normally happen,
-  # but defensive for older records).
-  display_url = if is_user && model.avatar.attached?
-                  url_for(model.avatar)
-                elsif !is_user && model.logo.attached?
-                  url_for(model.logo)
-                end
-
-  original_url = if is_user && model.avatar_original.attached?
-                   url_for(model.avatar_original)
-                 elsif !is_user && model.logo_original.attached?
-                   url_for(model.logo_original)
-                 else
-                   display_url
-                 end
+  identity = model.identity
+  has_image = identity.image?
+  original_url = url_for(identity.croppable_image) if has_image
 %>
 
 <div data-controller="identity-picker"
@@ -154,7 +138,7 @@
             </span>
             <span class="text-sm font-medium text-interactive"
                   data-image-cropper-target="zoomPercent">
-              100%
+              100% <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
             </span>
           </div>
           <input type="range" min="0" max="100" value="0"

@@ -28,8 +28,7 @@ RSpec.describe "Passwordless-first auth", type: :system do
 
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
 
-      token_record = MagicLinkToken.where(email: email).order(:created_at).last
-      visit magic_link_callback_path(token: token_record.token)
+      visit magic_link_callback_path(token: MagicLinkToken.create_for_email(email))
 
       fill_in I18n.t("magic_link_callbacks.new_registration.first_name_label"), with: "New"
       fill_in I18n.t("magic_link_callbacks.new_registration.last_name_label"),  with: "Bie"
@@ -114,12 +113,9 @@ RSpec.describe "Passwordless-first auth", type: :system do
       # Wait for that heading to confirm the server rendered it.
       expect(page).to have_text(I18n.t("sessions.check_email.title"), wait: 10)
 
-      # Extract the set_password token (created by PasswordResetsController).
-      token_record = MagicLinkToken.where(email: user.email_address, intent: "set_password")
-                                   .order(:created_at).last
-      expect(token_record).to be_present
-
-      visit magic_link_callback_path(token: token_record.token)
+      # Visit the set_password link and confirm sign-in on the interstitial.
+      visit magic_link_callback_path(token: MagicLinkToken.create_for_email(user.email_address, intent: "set_password"))
+      click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
 
       expect(page).to have_current_path(edit_settings_password_path)
     end

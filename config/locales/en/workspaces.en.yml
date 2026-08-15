@@ -11,6 +11,10 @@ en:
     unauthorized: "You don't have permission to do that."
     creation_disabled: "Workspace creation is disabled on this instance."
     archived_banner: "This workspace is archived."
+    pending_join_banner:
+      message: "You followed a link to join %{workspace}."
+      join: "Join %{workspace}"
+      dismiss: "Dismiss"
     join_links:
       create:
         rotated: "Shareable join link rotated. Previous link no longer works."
@@ -95,6 +99,7 @@ en:
       submit: "Save changes"
     update:
       success: "Workspace profile updated."
+      rate_limited: "Too many requests. Please try again later."
     destroy:
       success: "Workspace deleted."
       trigger: "Delete permanently"
@@ -194,6 +199,10 @@ en:
         revoke_confirm: "Revoking will disable the current link. Continue?"
         copy: "Copy"
         link_aria: "Workspace join link"
+        show_once_warning_lead: "Copy this link now."
+        show_once_warning: "For security it is shown only once — you won't be able to see the full link again. Rotate the link anytime to generate a new one."
+        masked_aria: "Join link (hidden for security)"
+        masked_help: "For security, the full link is shown only once, when you generate or rotate it. Rotate to get a new link you can copy."
       update:
         success: "Settings updated."
     brandings:
@@ -208,3 +217,10 @@ en:
         success: "Branding updated."
       destroy:
         success: "Logo removed."
+  pending_joins:
+    create:
+      joined: "Welcome to %{workspace}."
+      unavailable: "That join link is no longer available."
+      could_not_join: "You couldn't be added to %{workspace} right now."
+    destroy:
+      dismissed: "Dismissed."

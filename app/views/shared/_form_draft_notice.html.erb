@@ -33,5 +33,8 @@
 <div data-form-draft-target="status"
      role="status" aria-live="polite" aria-atomic="true" class="sr-only"
      data-found-text="<%= t("form_draft.found", default: "Recoverable draft found. Recover and Discard buttons are before the form fields.") %>"
-     data-restored-text="<%= t("form_draft.restored", default: "Draft restored. %{count} fields updated.") %>"
+     data-restored-one-text="<%= t("form_draft.restored_one", default: "Draft restored. 1 field updated.") %>"
+     data-restored-other-text="<%= t("form_draft.restored_other", default: "Draft restored. %{count} fields updated.") %>"
+     data-restored-partial-text="<%= t("form_draft.restored_partial", default: "Draft restored. %{count} fields updated. Rich text content was not restored and remains saved.") %>"
+     data-restored-none-text="<%= t("form_draft.restored_none", default: "Draft not restored — its content needs the rich text editor, which does not support draft recovery yet.") %>"
      data-discarded-text="<%= t("form_draft.discarded", default: "Draft discarded.") %>"></div>

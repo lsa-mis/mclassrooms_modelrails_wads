@@ -16,7 +16,9 @@ RSpec.describe "shared/_form_draft_notice" do
     status = doc.find('[data-form-draft-target="status"]', visible: :all)
     expect(status[:role]).to eq("status")
     expect(status["aria-live"]).to eq("polite")
-    expect(status["data-restored-text"]).to include("%{count}")
+    expect(status["data-restored-other-text"]).to include("%{count}")
+    expect(status["data-restored-partial-text"]).to include("%{count}")
+    expect(status["data-restored-none-text"]).to be_present
     expect(status.text).to eq("") # empty at render; controller writes into it
   end
 

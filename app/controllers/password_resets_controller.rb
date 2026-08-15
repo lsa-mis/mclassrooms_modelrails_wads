@@ -9,9 +9,11 @@ class PasswordResetsController < ApplicationController
 
     # Always show the same confirmation — never reveal whether the address
     # exists or has a password. Only a real password-holder gets a link.
-    if user&.has_password?
+    # Recipient throttle (SEC-9): shared :magic_link bucket — reset tokens live
+    # in the same intent-blind supersede pool as sign-in links.
+    if user&.has_password? && EmailRecipientThrottle.allow!(user.email_address, kind: :magic_link)
       token = MagicLinkToken.create_for_email(user.email_address, intent: "set_password")
-      MagicLinkMailer.sign_in_link(user.email_address, token).deliver_later
+      MagicLinkMailer.sign_in_link(user.email_address, token).deliver_later if token
     end
 
     @email_address = email

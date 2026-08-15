@@ -11,6 +11,21 @@ RSpec.describe Current, type: :model do
     end
   end
 
+  describe ".workspace!" do
+    it "returns the workspace when context is established" do
+      workspace = create(:workspace)
+      Current.workspace = workspace
+      expect(Current.workspace!).to eq(workspace)
+    end
+
+    it "raises NoWorkspaceError when context was never established" do
+      Current.workspace = nil
+      expect { Current.workspace! }.to raise_error(
+        Current::NoWorkspaceError, /establish workspace context/
+      )
+    end
+  end
+
   describe "delegation" do
     it "delegates user to session" do
       user = create(:user)

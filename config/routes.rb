@@ -4,6 +4,11 @@ Rails.application.routes.draw do
   mount Lookbook::Engine, at: "/lookbook" if Rails.env.development?
   mount Biscuit::Engine, at: "/biscuit"
 
+  # Shadows the Active Storage engine's UNAUTHENTICATED direct-upload endpoint
+  # (SEC-7). Engine/railtie routes load after this file, so this declaration
+  # wins; the engine's rails_direct_uploads_url helper still points here.
+  post "/rails/active_storage/direct_uploads" => "direct_uploads#create"
+
   # Test-only harness exercising every form-draft field archetype (the real
   # adoption forms are text-only). Controller lives in spec/support/harness.
   resource :draft_harness, only: %i[show create], controller: "draft_harness" if Rails.env.test?
@@ -16,6 +21,8 @@ Rails.application.routes.draw do
     post "registration/verify",    to: "registrations#verify",    as: :registration_verify
     post "authentication/options", to: "authentications#options", as: :authentication_options
     post "authentication/verify",  to: "authentications#verify",  as: :authentication_verify
+    post "reauthentication/options", to: "reauthentications#options", as: :reauthentication_options
+    post "reauthentication/verify",  to: "reauthentications#verify",  as: :reauthentication_verify
   end
 
   resource :email_verification_resend, only: [ :create ]
@@ -24,6 +31,9 @@ Rails.application.routes.draw do
   resource :password_reset, only: [ :create ]
   get "magic_link_callback/:token", to: "magic_link_callbacks#show", as: :magic_link_callback
   post "magic_link_callback/:token", to: "magic_link_callbacks#create"
+  # Existing-user sign-in is a POST so a GET (mail scanner / prefetch) can't
+  # burn the token or establish a session — the GET only renders a confirmation.
+  post "magic_link_callback/:token/sign_in", to: "magic_link_callbacks#sign_in", as: :magic_link_callback_sign_in
   post "session/lookup", to: "sessions#lookup", as: :session_lookup
   get  "session/password", to: "sessions#password_form", as: :session_password_form
 
@@ -31,6 +41,10 @@ Rails.application.routes.draw do
   get "/auth/failure", to: "omniauth_callbacks#failure"
 
   resource :passkey_prompt, only: [ :update ]
+
+  # A pre-existing user's parked open-link join (Flow B): accept it (create) or
+  # dismiss it (destroy). Both act only on the signed-in user's own session.
+  resource :pending_join, only: [ :create, :destroy ]
 
   namespace :settings do
     resource :profile, only: [ :edit, :update ]
@@ -45,6 +59,8 @@ Rails.application.routes.draw do
     end
     resources :sessions, only: [ :index, :destroy ]
     resource :other_sessions, only: [ :destroy ]
+    resource :reauthentication, only: [ :new, :create ]
+    resource :reauthentication_code, only: [ :create ]
     resources :passkeys, only: [ :index, :destroy ]
     resources :connected_accounts, only: [ :index, :destroy ] do
       member do

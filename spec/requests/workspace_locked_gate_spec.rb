@@ -63,14 +63,14 @@ RSpec.describe "Locked workspace gate", type: :request do
     end
 
     it "redirects the GET join page with the invalid_or_revoked flash (no locked disclosure)" do
-      get workspace_join_path(locked_workspace, token: link.token)
+      get workspace_join_path(locked_workspace, token: link.plaintext_token)
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq(I18n.t("workspaces.joins.invalid_or_revoked"))
     end
 
     it "does not admit a new member on POST, and redirects with the invalid_or_revoked flash" do
       expect {
-        post workspace_join_path(locked_workspace, token: link.token)
+        post workspace_join_path(locked_workspace, token: link.plaintext_token)
       }.not_to change(locked_workspace.memberships, :count)
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq(I18n.t("workspaces.joins.invalid_or_revoked"))

@@ -20,6 +20,11 @@ en:
     show:
       invalid: "This magic link is invalid or has expired."
       signed_in: "You're now signed in."
+    confirm:
+      title: "Confirm sign-in"
+      prompt: "You're about to sign in as %{email}."
+      sign_in_button: "Sign in"
+      cancel: "Not you? Cancel"
     create:
       invalid: "This magic link is invalid or has expired."
       registered: "Welcome! Your account has been created."

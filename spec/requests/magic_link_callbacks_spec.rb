@@ -2,24 +2,22 @@ require "rails_helper"
 
 RSpec.describe "Magic Link Callbacks", type: :request do
   describe "GET /magic_link_callback/:token" do
-    context "valid token for existing user" do
+    context "valid token for existing user (SEC-5: GET only confirms)" do
       let(:user) { create(:user) }
       let(:token) { MagicLinkToken.create_for_email(user.email_address) }
 
-      it "signs in the user and redirects to root" do
+      it "renders a confirmation page without consuming the token" do
         get magic_link_callback_path(token: token)
-        expect(response).to redirect_to(root_path)
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include(I18n.t("magic_link_callbacks.confirm.title"))
+        expect(MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consumed_at).to be_nil
       end
 
-      it "consumes the token" do
+      it "does not establish a session on the GET" do
         get magic_link_callback_path(token: token)
-        token_record = MagicLinkToken.find_by(token: token)
-        expect(token_record.consumed_at).to be_present
-      end
-
-      it "sets a signed-in notice" do
-        get magic_link_callback_path(token: token)
-        expect(flash[:notice]).to be_present
+        expect(response.cookies["session_id"]).to be_nil
+        get edit_settings_profile_path
+        expect(response).to redirect_to(new_session_path)
       end
     end
 
@@ -34,7 +32,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
       it "does not consume the token" do
         get magic_link_callback_path(token: token)
-        token_record = MagicLinkToken.find_by(token: token)
+        token_record = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token))
         expect(token_record.consumed_at).to be_nil
       end
     end
@@ -52,20 +50,10 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
       it "redirects to sign in" do
         token = MagicLinkToken.create_for_email(user.email_address)
-        MagicLinkToken.find_by(token: token).consume!
+        MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consume!
         get magic_link_callback_path(token: token)
         expect(response).to redirect_to(new_session_path)
         expect(flash[:alert]).to be_present
-      end
-    end
-
-    context "valid token with set_password intent" do
-      let(:user) { create(:user) }
-      let(:token) { MagicLinkToken.create_for_email(user.email_address, intent: "set_password") }
-
-      it "signs in and lands on the change-password form" do
-        get magic_link_callback_path(token: token)
-        expect(response).to redirect_to(edit_settings_password_path)
       end
     end
 
@@ -74,11 +62,43 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
       it "redirects to sign in" do
         token = MagicLinkToken.create_for_email(user.email_address)
-        MagicLinkToken.find_by(token: token).update!(expires_at: 1.hour.ago)
+        MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).update!(expires_at: 1.hour.ago)
         get magic_link_callback_path(token: token)
         expect(response).to redirect_to(new_session_path)
         expect(flash[:alert]).to be_present
       end
+    end
+  end
+
+  describe "POST /magic_link_callback/:token/sign_in (SEC-5: the state-changing half)" do
+    let(:user) { create(:user) }
+
+    it "consumes the token and signs the existing user in" do
+      token = MagicLinkToken.create_for_email(user.email_address)
+      post magic_link_callback_sign_in_path(token: token)
+      expect(MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consumed_at).to be_present
+      expect(response).to redirect_to(root_path)
+      get root_path
+      expect(response).to have_http_status(:ok) # session established
+    end
+
+    it "honors the set_password intent's return path" do
+      token = MagicLinkToken.create_for_email(user.email_address, intent: "set_password")
+      post magic_link_callback_sign_in_path(token: token)
+      expect(response).to redirect_to(edit_settings_password_path)
+    end
+
+    it "rejects an already-consumed token" do
+      token = MagicLinkToken.create_for_email(user.email_address)
+      MagicLinkToken.consume!(token)
+      post magic_link_callback_sign_in_path(token: token)
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to be_present
+    end
+
+    it "rejects a bogus token" do
+      post magic_link_callback_sign_in_path(token: "nope")
+      expect(response).to redirect_to(new_session_path)
     end
   end
 
@@ -109,7 +129,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         post magic_link_callback_path(token: token), params: {
           user: { first_name: "Jane", last_name: "Doe" }
         }
-        token_record = MagicLinkToken.find_by(token: token)
+        token_record = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token))
         expect(token_record.consumed_at).to be_present
       end
 
@@ -143,7 +163,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         post magic_link_callback_path(token: token), params: {
           user: { first_name: "", last_name: "Doe" }
         }
-        token_record = MagicLinkToken.find_by(token: token)
+        token_record = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token))
         expect(token_record.consumed_at).to be_nil
       end
     end
@@ -161,7 +181,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
     context "already-consumed token" do
       it "redirects to sign in" do
         token = MagicLinkToken.create_for_email("consumed-reg@example.com")
-        MagicLinkToken.find_by(token: token).consume!
+        MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consume!
         post magic_link_callback_path(token: token), params: {
           user: { first_name: "Test", last_name: "User" }
         }
@@ -173,7 +193,10 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
   describe "POST /magic_link_callback/:token (new-user signup)" do
     let(:workspace) { create(:workspace) }
-    let(:token_record) { create(:magic_link_token, email: "newml@example.com") }
+    let(:plaintext_token) { SecureRandom.urlsafe_base64(32) }
+    let(:token_record) do
+      create(:magic_link_token, email: "newml@example.com", token_digest: MagicLinkToken.digest(plaintext_token))
+    end
     let(:params) { { user: { first_name: "Magic", last_name: "Link" } } }
 
     context "in invite_only mode without an invitation token in session" do
@@ -181,7 +204,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
       it "redirects to new_session_path with 303 and creates no User" do
         expect {
-          post magic_link_callback_path(token: token_record.token), params: params
+          token_record; post magic_link_callback_path(token: plaintext_token), params: params
         }.not_to change(User, :count)
 
         expect(response).to redirect_to(new_session_path)
@@ -190,7 +213,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
       end
 
       it "does NOT consume the magic-link token" do
-        post magic_link_callback_path(token: token_record.token), params: params
+        token_record; post magic_link_callback_path(token: plaintext_token), params: params
         expect(token_record.reload.consumed_at).to be_nil
       end
     end
@@ -206,7 +229,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
       it "creates the user, consumes the token, accepts the invitation" do
         expect {
-          post magic_link_callback_path(token: token_record.token), params: params
+          token_record; post magic_link_callback_path(token: plaintext_token), params: params
         }.to change(User, :count).by(1)
 
         expect(token_record.reload.consumed_at).to be_present
@@ -230,7 +253,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
       it "rolls back user creation when token consume returns nil" do
         expect {
-          post magic_link_callback_path(token: token_record.token), params: params
+          token_record; post magic_link_callback_path(token: plaintext_token), params: params
         }.not_to change(User, :count)
 
         expect(invitation.reload).to be_pending
@@ -251,7 +274,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         # default_self_join_role calls Role.find_by!(slug: "member") — ensure it exists.
         Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
         # POST to the join route — sets session[:pending_join_token].
-        post workspace_join_path(workspace_slug: join_workspace.slug, token: join_link.token)
+        post workspace_join_path(workspace_slug: join_workspace.slug, token: join_link.plaintext_token)
       end
 
       it "admits the brand-new magic-link user as a member" do

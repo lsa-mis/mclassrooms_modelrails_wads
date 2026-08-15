@@ -13,15 +13,18 @@ require "rails_helper"
 # Dragging a native range thumb is unreliable, so we drive the input value + event
 # via Playwright's evaluate instead.
 RSpec.describe "Range component live value readout", type: :system do
-  RANGE_PREVIEW = "/rails/view_components/ui/range_component"
-  RANGE_DISPLAY_SCENARIO = "#{RANGE_PREVIEW}/with_value_display"
+  range_display_scenario = "/rails/view_components/ui/range_component/with_value_display"
 
-  RANGE_INPUT_SELECTOR = "input[type='range'][data-range-target='input']"
-  RANGE_OUTPUT_SELECTOR = "output[data-range-target='output']"
+  # `let`, not locals: both selectors are read inside helper defs
+  # (output_text, set_range_value), which a describe-body local cannot reach.
+  # Bare constants are banned — they land on Object and collide across
+  # parallel workers (#607/#608).
+  let(:range_input_selector) { "input[type='range'][data-range-target='input']" }
+  let(:range_output_selector) { "output[data-range-target='output']" }
 
   # Reads the live <output> text off the page.
   def output_text
-    find(RANGE_OUTPUT_SELECTOR).text
+    find(range_output_selector).text
   end
 
   # Sets the slider's value and dispatches an `input` event (what the user's drag
@@ -29,7 +32,7 @@ RSpec.describe "Range component live value readout", type: :system do
   def set_range_value(new_value)
     cdp_execute(<<~JS)
       (() => {
-        const input = document.querySelector(#{RANGE_INPUT_SELECTOR.to_json});
+        const input = document.querySelector(#{range_input_selector.to_json});
         input.value = #{new_value.to_json};
         input.dispatchEvent(new Event("input", { bubbles: true }));
       })()
@@ -37,9 +40,9 @@ RSpec.describe "Range component live value readout", type: :system do
   end
 
   it "syncs the <output> to the slider value on connect" do
-    visit RANGE_DISPLAY_SCENARIO
+    visit range_display_scenario
 
-    expect(page).to have_css(RANGE_INPUT_SELECTOR)
+    expect(page).to have_css(range_input_selector)
     expect(page).to have_css("div[data-controller='range']")
 
     # connect() resyncs from the input value (60). If the controller never
@@ -49,20 +52,20 @@ RSpec.describe "Range component live value readout", type: :system do
   end
 
   it "updates the <output> live when the slider value changes" do
-    visit RANGE_DISPLAY_SCENARIO
-    expect(page).to have_css(RANGE_INPUT_SELECTOR)
+    visit range_display_scenario
+    expect(page).to have_css(range_input_selector)
     expect(output_text).to eq("60")
 
     set_range_value(25)
 
     # If the live sync is dead, this stays "60" and the spec fails (do NOT fudge).
-    expect(page).to have_css(RANGE_OUTPUT_SELECTOR, text: "25")
+    expect(page).to have_css(range_output_selector, text: "25")
     expect(output_text).to eq("25")
   end
 
   it "passes AAA in both themes (output live region + text-text-body token)" do
-    visit RANGE_DISPLAY_SCENARIO
-    expect(page).to have_css(RANGE_OUTPUT_SELECTOR)
+    visit range_display_scenario
+    expect(page).to have_css(range_output_selector)
 
     # Scope to the component (its external label + the controller-wrapped
     # slider/output) so the minimal preview host's non-WCAG best-practice

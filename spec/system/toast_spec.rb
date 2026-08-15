@@ -8,8 +8,9 @@ RSpec.describe "Toast notification system", type: :system do
     fill_in I18n.t("sessions.new.email_label"), with: user.email_address
     click_button I18n.t("sessions.new.continue")
     expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.where(email: user.email_address).order(:created_at).last.token
+    token = MagicLinkToken.create_for_email(user.email_address)
     visit magic_link_callback_path(token: token)
+    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
     expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
   end
 
@@ -81,10 +82,25 @@ RSpec.describe "Toast notification system", type: :system do
     end
 
     it "persists until manually dismissed" do
+      # Negative assertion (no auto-dismiss), made structural instead of
+      # temporal: the old version slept 6 wall-clock seconds to outwait a
+      # hypothetical ~5s dismiss timer (#453). A reintroduced auto-dismiss
+      # must schedule its long setTimeout when the toast connects, so record
+      # every long timer scheduled from page load and assert none exist while
+      # the card is up — same regression caught, zero seconds spent.
+      cdp_add_init_script(<<~JS)
+        window.__longTimers = [];
+        const realSetTimeout = window.setTimeout;
+        window.setTimeout = function(fn, delay, ...args) {
+          if (delay >= 1000) window.__longTimers.push(delay);
+          return realSetTimeout(fn, delay, ...args);
+        };
+      JS
       trigger_login_failure
       expect(page).to have_css("[data-controller='toast-card']")
-      # Wait 6 seconds — should still be visible (no auto-dismiss)
-      sleep 6
+      expect(page.evaluate_script("window.__longTimers")).to eq([]),
+        "a long timer was scheduled while the persistent toast was mounting — " \
+        "auto-dismiss must not come back (toasts persist until dismissed)"
       expect(page).to have_css("[data-controller='toast-card']")
     end
 

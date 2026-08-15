@@ -41,4 +41,27 @@ RSpec.describe "Workspace settings section — AAA", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "AAA violations on invite screen: #{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
+
+  describe "open-link join link (hashed at rest → show-once)" do
+    before do
+      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
+      workspace.update!(join_policy: "open_link")
+    end
+
+    it "show-once reveal state is axe-clean at AAA (both themes)" do
+      visit edit_workspace_settings_path(workspace)
+      click_button I18n.t("workspaces.settings.join_policy.generate")
+      expect(page).to have_text(I18n.t("workspaces.settings.join_policy.show_once_warning_lead"))
+      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+        "AAA violations on join-link reveal: #{axe_violations_in_both_themes(axe_options).join("\n")}"
+    end
+
+    it "masked steady state is axe-clean at AAA (both themes)" do
+      create(:workspace_join_link, workspace: workspace, created_by: user)
+      visit edit_workspace_settings_path(workspace)
+      expect(page).to have_text(I18n.t("workspaces.settings.join_policy.masked_help"))
+      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+        "AAA violations on join-link masked state: #{axe_violations_in_both_themes(axe_options).join("\n")}"
+    end
+  end
 end

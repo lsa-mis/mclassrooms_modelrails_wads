@@ -8,7 +8,7 @@ RSpec.describe "Account Email Confirmations", type: :request do
   describe "GET /account/email_confirmation" do
     context "with valid token" do
       before do
-        user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+        Users::EmailChange.new(user).initiate!("new@example.com")
         user.reload
       end
 
@@ -32,7 +32,7 @@ RSpec.describe "Account Email Confirmations", type: :request do
 
     context "with expired token" do
       before do
-        user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+        Users::EmailChange.new(user).initiate!("new@example.com")
         user.update!(pending_email_sent_at: 25.hours.ago)
         user.reload
       end
@@ -61,7 +61,7 @@ RSpec.describe "Account Email Confirmations", type: :request do
 
   describe "DELETE /account/email_confirmation" do
     before do
-      user.initiate_email_change!("new@example.com", "SecureP@ssw0rd123!")
+      Users::EmailChange.new(user).initiate!("new@example.com")
     end
 
     it "clears pending email" do

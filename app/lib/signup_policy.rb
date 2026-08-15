@@ -27,7 +27,7 @@ class SignupPolicy
   def self.workspace_join_acceptable?(token)
     return false if token.blank?
 
-    link = WorkspaceJoinLink.active.find_by(token: token)
+    link = WorkspaceJoinLink.find_active(token)
     return false if link.nil?
     link.workspace.open_join?
   end

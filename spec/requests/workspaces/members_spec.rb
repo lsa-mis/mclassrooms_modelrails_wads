@@ -15,6 +15,16 @@ RSpec.describe "Workspace Members", type: :request do
 
     before { sign_in(user) }
 
+    # Test-data builder (let-diet worked example, #440): the target-member
+    # pair below used to be declared as paired let!s in six separate contexts
+    # — duplication masquerading as shared state, and the file grew 38→48
+    # lets in a month. One named builder keeps each example's cast visible at
+    # its call site; a context keeps a `let` only when several of its own
+    # examples share the record. Convention: /docs/developer/getting-started ("Spec conventions").
+    def add_member(role: nil, user: create(:user), to: workspace)
+      create(:membership, *[ role ].compact, user: user, workspace: to)
+    end
+
     describe "GET /workspaces/:workspace_slug/members" do
       it "lists workspace members" do
         get workspace_members_path(workspace)
@@ -28,8 +38,7 @@ RSpec.describe "Workspace Members", type: :request do
       end
 
       context "with search" do
-        let!(:alice) { create(:user, first_name: "Alice", last_name: "Anderson") }
-        let!(:alice_membership) { create(:membership, user: alice, workspace: workspace) }
+        let!(:alice_membership) { add_member(user: create(:user, first_name: "Alice", last_name: "Anderson")) }
 
         it "filters by search query" do
           get workspace_members_path(workspace, q: "Alice")
@@ -48,8 +57,7 @@ RSpec.describe "Workspace Members", type: :request do
       end
 
       context "with role filter" do
-        let!(:admin_user) { create(:user, first_name: "AdminUser", last_name: "Test") }
-        let!(:admin_membership) { create(:membership, :admin, user: admin_user, workspace: workspace) }
+        let!(:admin_membership) { add_member(role: :admin, user: create(:user, first_name: "AdminUser", last_name: "Test")) }
 
         it "filters by role" do
           get workspace_members_path(workspace, role: "admin")
@@ -62,7 +70,7 @@ RSpec.describe "Workspace Members", type: :request do
 
       context "with status filter" do
         let!(:deactivated_user) { create(:user, first_name: "Deactivated", last_name: "User") }
-        let!(:deactivated_membership) { create(:membership, user: deactivated_user, workspace: workspace) }
+        let!(:deactivated_membership) { add_member(user: deactivated_user) }
 
         before { deactivated_membership.discard! }
 
@@ -88,6 +96,24 @@ RSpec.describe "Workspace Members", type: :request do
           get workspace_members_path(workspace, sort: "role", direction: "desc")
           expect(response).to have_http_status(:ok)
         end
+
+        # #124: the sort headers render over the COMBINED table, so invitation
+        # rows must honor them too — previously the invitation scope accepted
+        # no sort at all and a user clicking "Email ↑" got half a sorted list
+        # with no signal.
+        it "applies the email sort to invitation rows, not just memberships" do
+          create(:invitation, invitable: workspace, email: "zzz@example.com")
+          create(:invitation, invitable: workspace, email: "aaa@example.com")
+
+          get workspace_members_path(workspace, sort: "email", direction: "asc")
+
+          doc = Nokogiri::HTML(response.body)
+          emails = doc.css("tr").map(&:text).select { |t| t.match?(/@example\.com/) }
+          aaa = emails.index { |t| t.include?("aaa@example.com") }
+          zzz = emails.index { |t| t.include?("zzz@example.com") }
+          expect(aaa).to be < zzz,
+            "invitation rows must order by the active email sort (asc): got aaa at #{aaa}, zzz at #{zzz}"
+        end
       end
 
       context "with pagination" do
@@ -104,6 +130,38 @@ RSpec.describe "Workspace Members", type: :request do
         it "respects page parameter" do
           get workspace_members_path(workspace, page: 2)
           expect(response).to have_http_status(:ok)
+        end
+
+        # #125: mixed-row boundary — invitations render before memberships, so
+        # with 3 invitations + 23 members (26 rows, 25-per-page), page 2 must
+        # hold exactly the overflow membership row, and the pagy count must be
+        # the combined total.
+        it "paginates the combined invitation+membership list across the boundary" do
+          3.times { |i| create(:invitation, invitable: workspace, email: "invite-#{i}@example.com") }
+
+          get workspace_members_path(workspace)
+          first_page = Nokogiri::HTML(response.body)
+          expect(first_page.css("tr").map(&:text).join).to include("invite-0@example.com")
+
+          get workspace_members_path(workspace, page: 2)
+          expect(response).to have_http_status(:ok)
+          second_page = Nokogiri::HTML(response.body)
+          expect(second_page.css("tr").map(&:text).join).not_to include("invite-0@example.com"),
+            "invitations sort to the front of the combined list; page 2 should hold only overflow membership rows"
+        end
+
+        # #125: filters must compose with pagination. A beyond-range page
+        # (stale bookmark, or a filter narrowing the set) serves the LAST
+        # real page of the filtered results — this spec originally asserted
+        # "no 500" and promptly caught one: Pagy 43 hands the view nil rows
+        # for an out-of-range request, so the controller clamps.
+        it "clamps a beyond-range page to the last page of the filtered set" do
+          create(:invitation, invitable: workspace, email: "filtered-target@example.com")
+
+          get workspace_members_path(workspace, q: "filtered-target", page: 7)
+          expect(response).to have_http_status(:ok)
+          expect(Nokogiri::HTML(response.body).css("tr").map(&:text).join).to include("filtered-target@example.com"),
+            "a beyond-range page must clamp to the last real page, not 500 or render a phantom empty page"
         end
       end
 
@@ -198,19 +256,16 @@ RSpec.describe "Workspace Members", type: :request do
     end
 
     describe "GET /workspaces/:workspace_slug/members/:id/edit" do
-      let(:target) { create(:user) }
-      let!(:target_membership) { create(:membership, user: target, workspace: workspace) }
-
       it "renders the role change form" do
+        target_membership = add_member
         get edit_workspace_member_path(workspace, target_membership)
         expect(response).to have_http_status(:ok)
       end
     end
 
     describe "PATCH /workspaces/:workspace_slug/members/:id" do
-      let(:target) { create(:user) }
-      let!(:target_membership) { create(:membership, user: target, workspace: workspace) }
-      let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
+      let!(:target_membership) { add_member }
+      let(:admin_role) { Role.system_default!("admin") }
 
       it "changes the member's role" do
         patch workspace_member_path(workspace, target_membership), params: { membership: { role_id: admin_role.id } }
@@ -247,6 +302,19 @@ RSpec.describe "Workspace Members", type: :request do
         patch workspace_member_path(workspace, admin_membership), params: { membership: { role_id: owner_role.id } }
         expect(admin_membership.reload.role).to eq(admin_role)
         expect(response).to have_http_status(:redirect)
+      end
+
+      # G (SEC-1 follow-up): a blocked escalation attempt is itself a security
+      # event. The refusal must reach the admin activity feed, not just 403.
+      it "logs the blocked escalation to the admin activity feed" do
+        expect {
+          patch workspace_member_path(workspace, admin_membership), params: { membership: { role_id: owner_role.id } }
+        }.to change { ActivityLog.where(action: "membership.role_grant_blocked").count }.by(1)
+
+        entry = ActivityLog.where(action: "membership.role_grant_blocked").last
+        expect(entry.visibility).to eq("admin")
+        expect(entry.actor).to eq(admin_user)
+        expect(entry.metadata["attempted_role"]).to eq("owner")
       end
 
       it "refuses an admin editing an owner's membership at all" do
@@ -316,8 +384,7 @@ RSpec.describe "Workspace Members", type: :request do
     end
 
     describe "DELETE /workspaces/:workspace_slug/members/:id" do
-      let(:target) { create(:user) }
-      let!(:target_membership) { create(:membership, user: target, workspace: workspace) }
+      let!(:target_membership) { add_member }
 
       it "deactivates the member" do
         delete workspace_member_path(workspace, target_membership)
@@ -331,8 +398,7 @@ RSpec.describe "Workspace Members", type: :request do
     end
 
     describe "PATCH /workspaces/:workspace_slug/members/:id/reactivate" do
-      let(:target) { create(:user) }
-      let!(:target_membership) { create(:membership, user: target, workspace: workspace) }
+      let!(:target_membership) { add_member }
 
       before { target_membership.discard! }
 
@@ -343,12 +409,10 @@ RSpec.describe "Workspace Members", type: :request do
     end
 
     describe "PATCH /workspaces/:workspace_slug/members/:id/transfer_ownership" do
-      let(:target) { create(:user) }
-      let!(:target_membership) { create(:membership, user: target, workspace: workspace) }
-
       it "transfers ownership" do
-        owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
-        admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
+        target_membership = add_member
+        owner_role = Role.system_default!("owner")
+        admin_role = Role.system_default!("admin")
         patch transfer_ownership_workspace_member_path(workspace, target_membership)
         expect(target_membership.reload.role).to eq(owner_role)
         expect(membership.reload.role).to eq(admin_role)
@@ -382,11 +446,12 @@ RSpec.describe "Workspace Members", type: :request do
 
     describe "member authorization" do
       let(:regular_member) { create(:user) }
-      let!(:regular_membership) { create(:membership, user: regular_member, workspace: workspace) }
-      let(:target) { create(:user) }
-      let!(:target_membership) { create(:membership, user: target, workspace: workspace) }
+      let!(:target_membership) { add_member }
 
-      before { sign_in(regular_member) }
+      before do
+        add_member(user: regular_member)
+        sign_in(regular_member)
+      end
 
       it "denies edit" do
         get edit_workspace_member_path(workspace, target_membership)

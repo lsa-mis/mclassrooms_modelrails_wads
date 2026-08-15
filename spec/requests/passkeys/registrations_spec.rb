@@ -26,7 +26,62 @@ RSpec.describe "Passkeys::Registrations", type: :request do
       end
     end
 
+    describe "reauthentication gate is hard-wired" do
+      # Enrollment mints a durable, phishing-resistant credential and (unlike a
+      # password change) revokes nothing — so it stays gated even when a fork
+      # turns reauth off. Decision: 2026-08-12 reauth-defaults panel.
+      around do |example|
+        original = Rails.configuration.x.session.reauth_enabled
+        Rails.configuration.x.session.reauth_enabled = false
+        example.run
+      ensure
+        Rails.configuration.x.session.reauth_enabled = original
+      end
+
+      it "still requires a fresh factor for enrollment when reauth_enabled is false" do
+        user.sessions.last.update!(reauthenticated_at: 20.minutes.ago)
+
+        post passkeys_registration_options_path, headers: { "ACCEPT" => "application/json" }
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body["reauth_required"]).to be(true)
+      end
+
+      it "allows enrollment within the reauth window even with the flag off" do
+        post passkeys_registration_options_path
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
     describe "POST /passkeys/registration/verify" do
+      it "notifies the account that a passkey was added" do
+        post passkeys_registration_options_path
+        challenge = WebauthnChallenge.where(purpose: "registration").last.challenge
+        credential = client.create(challenge: challenge)
+
+        expect {
+          post passkeys_registration_verify_path,
+               params: credential.merge(nickname: "My Key").to_json,
+               headers: { "CONTENT_TYPE" => "application/json" }
+        }.to change { Noticed::Event.where(type: "PasskeyAddedNotifier").count }.by(1)
+      end
+
+      it "does not notify when verification fails (replayed credential)" do
+        post passkeys_registration_options_path
+        challenge = WebauthnChallenge.where(purpose: "registration").last.challenge
+        credential = client.create(challenge: challenge)
+        post passkeys_registration_verify_path,
+             params: credential.merge(nickname: "My Key").to_json,
+             headers: { "CONTENT_TYPE" => "application/json" }
+
+        expect {
+          post passkeys_registration_verify_path,
+               params: credential.merge(nickname: "My Key").to_json,
+               headers: { "CONTENT_TYPE" => "application/json" }
+        }.not_to change { Noticed::Event.where(type: "PasskeyAddedNotifier").count }
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+
       it "creates a passkey and returns 201" do
         post passkeys_registration_options_path
         challenge = WebauthnChallenge.where(purpose: "registration").last.challenge

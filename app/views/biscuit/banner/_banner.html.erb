@@ -92,10 +92,13 @@
           <% end %>
 
           <div class="biscuit-preference-row__label">
-            <label for="<%= checkbox_id %>" class="biscuit-preference-row__name">
+            <%# min-h-11: the checkbox+label union must clear WCAG 2.5.5's
+                44px floor — the manage panel was never audited until #462
+                lifted the banner exclusion, and the rows measured 21px. %>
+            <label for="<%= checkbox_id %>" class="biscuit-preference-row__name min-h-11 flex items-center">
               <%= t("biscuit.categories.#{key}.name") %>
               <% if opts[:required] %>
-                <span aria-hidden="true"> (required)</span>
+                <span aria-hidden="true"> (<%= t("cookie_consent.required_marker") %>)</span>
               <% end %>
             </label>
             <span id="<%= checkbox_id %>-desc" class="biscuit-preference-row__description">

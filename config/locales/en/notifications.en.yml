@@ -119,6 +119,8 @@ en:
       message: "%{added_user_name} joined %{workspace}"
     workspace_capacity_approaching:
       message: "%{workspace} is approaching its %{metric} limit (%{current} of %{limit})"
+    passkey_added:
+      message: "A new passkey was added to your account, %{user_name}. If this wasn't you, review your passkeys now."
     password_changed:
       message: "Your password was changed for your account, %{user_name}."
     sign_in_from_new_device:

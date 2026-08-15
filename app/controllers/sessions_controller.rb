@@ -37,8 +37,7 @@ class SessionsController < ApplicationController
     user = User.find_by(email_address: email)
 
     if user
-      token = MagicLinkToken.create_for_email(user.email_address)
-      MagicLinkMailer.sign_in_link(user.email_address, token).deliver_later
+      deliver_magic_link(user.email_address)
       @email_address = email
       @has_password = user.has_password?
       render :check_email
@@ -47,8 +46,7 @@ class SessionsController < ApplicationController
         render :closed, status: :unprocessable_entity
         return
       end
-      token = MagicLinkToken.create_for_email(email)
-      MagicLinkMailer.registration_link(email, token).deliver_later
+      deliver_magic_link(email, registration: true)
       @email_address = email
       render :check_email
     end
@@ -90,5 +88,24 @@ class SessionsController < ApplicationController
   def okta_end_session_url(id_token)
     query = { id_token_hint: id_token, post_logout_redirect_uri: new_session_url }.to_query
     "#{AuthConfig.okta_issuer.to_s.chomp('/')}/v1/logout?#{query}"
+  end
+
+  private
+
+  # Recipient throttle (SEC-9): a throttled request renders the exact same
+  # response WITHOUT touching the token table — skipping create_for_email is
+  # what keeps an attacker from superseding the link the real user is
+  # mid-click on. No leakage either way.
+  def deliver_magic_link(email, registration: false)
+    return unless EmailRecipientThrottle.allow!(email, kind: :magic_link)
+
+    token = MagicLinkToken.create_for_email(email)
+    return unless token
+
+    if registration
+      MagicLinkMailer.registration_link(email, token).deliver_later
+    else
+      MagicLinkMailer.sign_in_link(email, token).deliver_later
+    end
   end
 end

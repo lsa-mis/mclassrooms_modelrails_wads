@@ -12,11 +12,16 @@ module Workspaces
     def create
       authorize WorkspaceJoinLink
 
+      link = nil
       Workspace.transaction do
         @workspace.join_links.active.find_each(&:revoke!)
-        @workspace.join_links.create!(created_by: Current.user)
+        link = @workspace.join_links.create!(created_by: Current.user)
       end
 
+      # Show-once: the plaintext token exists only on this freshly-built record
+      # (the column stores a digest). Carry the full URL in the encrypted,
+      # unlogged flash for a single render, then it's gone for good.
+      flash[:join_link_url] = workspace_join_url(@workspace, token: link.plaintext_token)
       redirect_to edit_workspace_settings_path(@workspace), notice: t(".rotated")
     end
 

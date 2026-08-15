@@ -12,18 +12,14 @@ en:
         first_name_label: "First name"
         last_name_label: "Last name"
         email_label: "Email address"
+        email_help: "Changing this asks you to confirm your identity first."
         submit: "Save changes"
-        current_password_label: "Current password"
-        current_password_help: "Required when changing your email address"
         pending_email_notice: "Verification email sent to %{email}. Check your inbox."
         cancel_email_change: "Cancel email change"
-        email_readonly_notice: "Set a password to change your email address."
-        set_password: "Set password"
       update:
         success: "Profile updated."
         verification_sent: "Verification email sent to %{email}. Check your inbox."
-        wrong_password: "Current password is incorrect."
-        password_required: "Current password is required to change your email."
+        email_unchanged: "That's already your email address."
     email_confirmations:
       show:
         success: "Email address updated successfully."
@@ -120,6 +116,26 @@ en:
         signed_out:
           one: "Signed out 1 other device."
           other: "Signed out %{count} other devices."
+    reauthentications:
+      rate_limited: "Too many attempts. Please wait a moment and try again."
+      new:
+        title: "Confirm it's you"
+        explanation: "For your security, confirm your identity before making this change."
+        choose_heading: "Choose how to confirm"
+        password_label: "Password"
+        password_submit: "Confirm"
+        passkey_button: "Use a passkey"
+        passkey_error: "Passkey verification failed. Try another method."
+        email_button: "Email me a confirmation code"
+        code_label: "Enter the 6-digit code we emailed you"
+        code_submit: "Confirm"
+      create:
+        no_factor: "Choose a way to confirm your identity."
+        wrong_password: "That password is incorrect."
+        wrong_code: "That code is incorrect or has expired."
+    reauthentication_codes:
+      create:
+        sent: "We emailed you a confirmation code. Enter it below."
     connected_accounts:
       index:
         cancel_action: "Cancel link"
