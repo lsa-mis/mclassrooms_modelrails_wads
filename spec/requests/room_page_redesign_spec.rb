@@ -106,7 +106,9 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
       get room_path(room)
 
       expect(page).to have_text(I18n.t("rooms.show.contacts.none"))
-      expect(response.body).not_to include(I18n.t("rooms.show.not_available"))
+      # Literal: rooms.show.not_available was deleted with the placeholder
+      # rows (#522); the redesign renders nothing for empty fields.
+      expect(response.body).not_to include("Not available")
     end
 
     it "renders only the fields that are present" do
@@ -114,7 +116,7 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
       get room_path(room)
 
       expect(page).to have_link("lsa-scheduling@umich.edu")
-      expect(response.body).not_to include(I18n.t("rooms.show.not_available"))
+      expect(response.body).not_to include("Not available")
       # empty support section renders no card at all
       expect(page).to have_no_text(I18n.t("rooms.show.contacts.support_heading"))
       expect(page).to have_no_text(I18n.t("rooms.show.contacts.scheduling_phone"))
