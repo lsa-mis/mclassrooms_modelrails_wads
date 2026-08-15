@@ -23,17 +23,22 @@ RSpec.describe I18n do
     expect(inconsistent).to be_empty, error_message
   end
 
-  # Two further i18n-tasks checks are deliberately not gating the suite yet.
-  #
-  # `unused` (#522) reports ~140 keys orphaned by past refactors — the whole
-  # workspaces.invitations.index.* block, for instance, outlived the route and
-  # view it belonged to. Clearing those is its own change with its own review.
-  #
-  # `normalize` (#523) rewrites every locale file, and the dotted
-  # activity.actions keys ("workspace.updated") read as nested paths to its
-  # router — so normalizing relocates them out of activity.en.yml into the
-  # catch-all, fragmenting the domain-split layout this project curates by
-  # hand. Needs per-namespace write rules first.
-  #
-  # Run `bundle exec i18n-tasks unused` / `normalize` to see either.
+  it "has no unused keys (#522 — 120 orphans were cleared when this gate landed)" do
+    unused = i18n.unused_keys
+    expect(unused).to be_empty,
+      "#{unused.leaves.count} unused i18n keys — delete them (`bundle exec " \
+      "i18n-tasks unused` to list), or add to ignore_unused in " \
+      "config/i18n-tasks.yml with a reason if the consumer is dynamic or " \
+      "lives in a scanner-excluded path (see the modals.* entry — deleting " \
+      "those 'unused' keys broke 32 system specs)."
+  end
+
+  # `check-normalized` deliberately does NOT gate (#523, decided 2026-08-15
+  # after trying it): i18n-tasks' writer strips hand-written comments —
+  # including brand.en.yml's fork-seam header — and rewrites the YAML quoting
+  # that two of bin/fork's byte-exact substitution tokens ("ModelRails and
+  # support@example.com) match on; the rename-targets invariant caught the
+  # breakage. There is no per-file opt-out. The per-namespace write router in
+  # config/i18n-tasks.yml stays: it places `add-missing` keys in the correct
+  # domain file, which was the half of normalize this layout actually needed.
 end

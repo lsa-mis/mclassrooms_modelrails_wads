@@ -22,6 +22,40 @@ RSpec.describe ParallelRspecRunner do
     dry_run_json.write({ summary: { example_count: example_count } }.to_json)
   end
 
+  describe ".shard_files (#495 CI sharding)" do
+    let(:files) { %w[spec/a_spec.rb spec/b_spec.rb spec/c_spec.rb spec/d_spec.rb] }
+
+    it "partitions files into disjoint shards whose union is the input" do
+      shards = (0..1).map { |i| described_class.shard_files(files, runtimes: {}, count: 2, index: i) }
+
+      expect(shards.flatten.sort).to eq(files.sort)
+      expect(shards[0] & shards[1]).to be_empty
+    end
+
+    it "balances by recorded runtime, not file count" do
+      runtimes = { "spec/a_spec.rb" => 100.0, "spec/b_spec.rb" => 5.0,
+                   "spec/c_spec.rb" => 5.0, "spec/d_spec.rb" => 5.0 }
+      shard_with_a = (0..1).map { |i| described_class.shard_files(files, runtimes: runtimes, count: 2, index: i) }
+                           .find { |s| s.include?("spec/a_spec.rb") }
+
+      expect(shard_with_a).to eq(%w[spec/a_spec.rb]),
+        "the 100s file should sit alone while the three 5s files share the other shard"
+    end
+
+    it "is deterministic across calls (same input, same shards)" do
+      first  = described_class.shard_files(files, runtimes: {}, count: 2, index: 0)
+      second = described_class.shard_files(files, runtimes: {}, count: 2, index: 0)
+
+      expect(first).to eq(second)
+    end
+
+    it "falls back to file size when a file has no recorded runtime" do
+      expect {
+        described_class.shard_files(files, runtimes: {}, count: 2, index: 0)
+      }.not_to raise_error
+    end
+  end
+
   describe "#expected_count" do
     it "reads the example count from the dry-run JSON" do
       write_dry_run(3502)

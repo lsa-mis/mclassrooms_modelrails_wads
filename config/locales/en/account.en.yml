@@ -34,7 +34,6 @@ en:
         password_confirmation_label: "Confirm password"
         password_hint: "Must be at least 12 characters."
         submit: "Set password"
-        already_has_password: "You already have email and password sign-in."
       create:
         success: "Email and password sign-in has been added to your account."
         already_has_password: "You already have email and password sign-in."
@@ -51,25 +50,13 @@ en:
         success: "Password removed. You'll sign in with a link from now on."
     avatars:
       edit:
-        title: "Change avatar"
         change: "Change avatar"
       update:
         success: "Avatar updated."
         rate_limited: "Too many requests. Please try again later."
       destroy:
         success: "Avatar removed."
-      source_label: "Avatar source"
-      source_updated: "Avatar source updated."
       source_unavailable: "That avatar source is not available for your account."
-      sources:
-        upload: "Uploaded photo"
-        gravatar: "Gravatar"
-        initials: "Initials"
-      crop:
-        title: "Crop avatar"
-        link: "Crop"
-      save_crop:
-        success: "Avatar cropped."
     theme_preferences:
       update:
         success: "Theme updated."
@@ -100,7 +87,6 @@ en:
         current_device: "This device"
         current_device_note: "You're using this device now. Sign out from the account menu."
         last_active: "Last active %{time} ago"
-        signed_in: "Signed in %{time} ago"
         revoke_button: "Sign out"
         revoke_aria_label: "Sign out %{device}, last active %{time} ago"
         revoke_title: "Sign out this device?"
@@ -161,7 +147,6 @@ en:
         cannot_remove_last_verified: "You can't remove your last verified sign-in method."
       verify:
         success: "%{provider} linked. You can sign in with it."
-        success_signed_out: "%{provider} linked. Sign in to continue."
         invalid_or_expired: "This confirmation link is invalid or expired. Sign in and request a new one from your connected accounts."
         email_mismatch: "Your email is verified, but that invitation was sent to a different address. Ask your workspace administrator to invite this email."
         join_link_at_capacity: "Your email is verified, but that workspace is full right now. Ask a workspace administrator to make room or send you an invitation."

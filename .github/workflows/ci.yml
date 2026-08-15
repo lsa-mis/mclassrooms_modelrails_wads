@@ -101,13 +101,63 @@ jobs:
       - name: Check ERB templates
         run: bundle exec rake erb:check
 
-  test:
+  # Eight-shard test matrix (#495): the Run tests step alone was ~11:40 of a
+  # ~13 min job, and standard runners are free on a public repo (8 shards +
+  # 6 other jobs = 14 of the 20-concurrent allowance). Wall-clock model:
+  # ~95s fixed per shard + ~660s of spec work / N + ~70s merge tail — N=2
+  # measured 6:53/shard; N=8 targets ~4 min total, near the ~3 min floor set
+  # by fixed overhead, so more shards buy little beyond this. Each shard
+  # takes a runtime-balanced half of the spec files (split computed by
+  # bin/parallel-rspec from the split_seed snapshot, so every shard sees
+  # IDENTICAL input — a live log diverges), keeps 4 in-job workers, and runs
+  # its own example-count parity. The cross-shard checks (shard-union parity,
+  # merged 90% coverage floor, runtime-log reassembly) happen once in
+  # coverage_merge, and the `test` summary job below keeps the branch
+  # ruleset's required status context stable.
+  split_seed:
     runs-on: ubuntu-latest
+    steps:
+      - name: Restore recorded spec runtimes
+        # The unique per-sha key always misses on a fresh commit, so
+        # restore-keys pulls the newest prior log — on a PR that resolves to
+        # the base branch's latest. A miss is harmless: shards fall back to a
+        # file-size split.
+        uses: actions/cache/restore@v6
+        with:
+          path: tmp/parallel_runtime_rspec.log
+          key: parallel-runtime-${{ github.sha }}
+          restore-keys: |
+            parallel-runtime-
+
+      - name: Ensure a seed file exists (cache miss = empty seed)
+        run: mkdir -p tmp && touch tmp/parallel_runtime_rspec.log
+
+      - name: Publish the frozen split seed
+        # One snapshot, downloaded by every shard: the shard split MUST be
+        # computed from identical input or shards overlap and leave holes
+        # (caught locally while building this — see bin/parallel-rspec).
+        uses: actions/upload-artifact@v7
+        with:
+          name: split-seed
+          path: tmp/parallel_runtime_rspec.log
+          retention-days: 1
+          if-no-files-found: error
+
+  test_shard:
+    needs: split_seed
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     env:
       RAILS_ENV: test
       CI: true
       # Pin workers to the runner's 4 vCPUs (deterministic split + DB count).
       PARALLEL_TEST_PROCESSORS: "4"
+      CI_SHARD_INDEX: ${{ matrix.shard }}
+      CI_SHARD_TOTAL: "8"
+      SHARD_RUNTIME_SOURCE: tmp/runtime_seed.log
 
     steps:
       - name: Checkout code
@@ -142,40 +192,117 @@ jobs:
       - name: Compile assets
         run: bin/rails assets:precompile
 
-      - name: Restore recorded spec runtimes (seeds balanced parallel split)
-        # parallel_tests reads this log to split by measured time instead of
-        # file size, evening out the slowest worker (#488). The unique per-sha
-        # key always misses on a fresh commit, so restore-keys pulls the newest
-        # prior log — on a PR that resolves to the base branch's latest, since
-        # GitHub scopes a run's cache reads to its own ref + the base + default
-        # branch. A miss is harmless: the split falls back to file size.
-        uses: actions/cache@v6
+      - name: Download the frozen split seed
+        uses: actions/download-artifact@v7
+        with:
+          name: split-seed
+          path: tmp/seed/
+
+      - name: Place the seed where SHARD_RUNTIME_SOURCE points
+        run: cp tmp/seed/parallel_runtime_rspec.log tmp/runtime_seed.log
+
+      - name: Restore recorded spec runtimes (seeds the IN-shard worker split)
+        # Separate from the shard seed on purpose: parallel_tests reads the
+        # live log to balance this shard's 4 workers; the frozen seed balances
+        # files ACROSS shards. Restore-only — the reassembled log is saved by
+        # coverage_merge.
+        uses: actions/cache/restore@v6
         with:
           path: tmp/parallel_runtime_rspec.log
           key: parallel-runtime-${{ github.sha }}
           restore-keys: |
             parallel-runtime-
 
-      - name: Run tests
-        # Parallel suite + integrity gates (example-count parity, merged
-        # 40% coverage floor) — see bin/parallel-rspec.
+      - name: Run tests (shard ${{ matrix.shard }} of 8)
+        # Shard slice + in-shard parallel suite + per-shard example-count
+        # parity. The merged 90% coverage floor is enforced once, across all
+        # shards, in coverage_merge — see bin/parallel-rspec.
         run: bin/parallel-rspec
 
       - name: Upload test screenshots on failure
         uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: system-test-screenshots
+          name: system-test-screenshots-shard-${{ matrix.shard }}
           path: tmp/capybara/
           retention-days: 7
 
-      - name: Upload coverage report
+      - name: Package shard results for the merge job
+        # The resultset is RENAMED on the way out: upload-artifact excludes
+        # hidden files by default, so `.resultset.json` silently vanished
+        # from the artifact on this PR's first run while its visible
+        # siblings uploaded fine (coverage_merge caught it: found 0/2).
+        if: always()
+        run: |
+          mkdir -p tmp/shard_out
+          cp coverage/.resultset.json tmp/shard_out/resultset.json 2>/dev/null || true
+          cp tmp/shard_files.txt tmp/shard_out/ 2>/dev/null || true
+          cp tmp/parallel_runtime_rspec.log tmp/shard_out/ 2>/dev/null || true
+
+      - name: Upload shard results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-shard-${{ matrix.shard }}
+          path: tmp/shard_out/
+          retention-days: 7
+
+  coverage_merge:
+    needs: test_shard
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Download every shard's results
+        uses: actions/download-artifact@v7
+        with:
+          pattern: test-shard-*
+          path: tmp/shards/
+
+      - name: Merge shards — union parity, 90% coverage floor, runtime log
+        # bundle exec: CI's gems live in vendor/bundle (bundler-cache), so a
+        # bare ruby script can't require simplecov (run 2's LoadError).
+        run: bundle exec bin/ci-coverage-merge tmp/shards
+
+      - name: Upload merged coverage report
         uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-report
           path: coverage/
           retention-days: 7
+
+      - name: Save the reassembled runtime log for future splits
+        uses: actions/cache/save@v6
+        with:
+          path: tmp/parallel_runtime_rspec.log
+          key: parallel-runtime-${{ github.sha }}
+
+  test:
+    # Summary gate: the branch ruleset requires the status context "test" by
+    # NAME, and a matrix reports as "test_shard (0)"/"(1)" — without this job
+    # every PR would wait forever on a context that never arrives. It exists
+    # only to give the ruleset a stable name that means "both shards AND the
+    # cross-shard merge passed".
+    needs: [test_shard, coverage_merge]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All shards and the merge succeeded
+        run: |
+          if [ "${{ needs.test_shard.result }}" != "success" ] || [ "${{ needs.coverage_merge.result }}" != "success" ]; then
+            echo "test_shard: ${{ needs.test_shard.result }}, coverage_merge: ${{ needs.coverage_merge.result }}"
+            exit 1
+          fi
 
   docker_build:
     # Verify the production Dockerfile actually builds. Structural integration

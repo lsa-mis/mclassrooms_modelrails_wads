@@ -10,21 +10,11 @@ en:
   workspaces:
     invitations:
       index:
-        title: "Invitations"
-        new_invitation: "Invite members"
-        invitee: "Invitee"
-        role: "Role"
-        status: "Status"
-        actions: "Actions"
-        magic_link: "Magic link"
         magic_link_label: "Share this link to invite members:"
         magic_link_section_title: "Generate a shareable magic link"
         magic_link_section_hint: "Anyone with the link can join with the role you select."
         magic_link_role_label: "Role"
         generate_magic_link: "Generate link"
-        resend: "Resend"
-        revoke: "Revoke"
-        table_label: "Workspace invitations"
       new:
         title: "Invite members"
         emails_label: "Email addresses"

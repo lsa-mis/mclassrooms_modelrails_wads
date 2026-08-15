@@ -1,10 +1,4 @@
 en:
-  roles:
-    owner: "Owner"
-    admin: "Admin"
-    member: "Member"
-    editor: "Editor"
-    viewer: "Viewer"
   project_roles:
     editor: "Editor"
     viewer: "Viewer"

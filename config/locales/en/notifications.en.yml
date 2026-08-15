@@ -2,25 +2,16 @@ en:
   notifications:
     placeholder: "This notification refers to something that no longer exists."
     bell:
-      label: "Notifications"
-      empty: "You're all caught up."
       arrival_announcement: "New notification"
       read_state_announcement: "Notifications updated"
-      unread_sr_label: "Unread"
-      unread_count:
-        zero:  "No new notifications"
-        one:   "1 unread"
-        other: "%{count} unread"
     severity_phrase:
       danger: "a security alert"
       warning: "an important update"
       info: "an account update"
       success: "a workspace update"
     preferences:
-      heading: "Notification preferences"
       timezone:
         heading: "Your timezone"
-        detected: "Detected: %{timezone}"
         change: "Change"
         cancel: "Cancel"
         picker_label: "Timezone"
@@ -101,7 +92,6 @@ en:
           "365": "1 year"
           never: "Never"
       update:
-        success: "Saved."
         saved_announcement: "Preferences saved"
     workspace_invitation_received:
       message: "%{inviter} invited you to %{workspace}"
@@ -136,7 +126,6 @@ en:
         workspace_activity: "Workspace"
         billing: "Billing"
       empty_all: "You're all caught up."
-      empty_filter: "Nothing matches this filter."
       item:
         mark_read: "Mark as read"
         mark_unread: "Mark as unread"
