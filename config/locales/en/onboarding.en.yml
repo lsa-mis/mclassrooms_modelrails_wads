@@ -1,7 +1,5 @@
 en:
   onboarding:
-    steps:
-      workspace: "Workspace"
     workspaces:
       new:
         title: "Name your workspace"
