@@ -170,6 +170,15 @@ ignore_unused:
   # failures).
   - modals.close
   - modals.confirm
+  # Loaded as a WHOLE HASH — I18n.t("rooms.characteristic_label_overrides",
+  # default: {}) in RoomSearch — and keyed at runtime by each characteristic's
+  # vendor short_code, so no per-key t() call ever appears in source. Locale
+  # is the rename mechanism for vendor labels (docs/developer/rooms-directory).
+  - "rooms.characteristic_label_overrides.*"
+  # Looked up through Room::SUBJECTS' key registry (I18n.t(entry.fetch(:key))
+  # in MediaAsset#base_derived_alt) — the per-subject derived alt text for
+  # unauthored room media. No static t() call exists for any of them.
+  - "media.derived_alt.room.*"
   - modals.delete
   - modals.save
   # Read at broadcast/announce time by ApplicationNotifier and the
