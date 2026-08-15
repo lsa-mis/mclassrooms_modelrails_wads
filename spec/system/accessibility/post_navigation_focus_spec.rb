@@ -33,6 +33,10 @@ RSpec.describe "Post-navigation focus management", type: :system do
     # them is a Turbo Drive visit, so the first is fine.
     click_link I18n.t("navigation.sign_in"), match: :first
 
+    # Capybara-wait until the visit settles and the field or landmark owns
+    # focus — sampling activeElement immediately races the Turbo visit on
+    # slow CI runners and reads the still-focused clicked link ("A").
+    expect(page).to have_css("input:focus, main:focus")
     focused_tag = page.evaluate_script("document.activeElement && document.activeElement.tagName")
     expect(%w[INPUT MAIN]).to include(focused_tag),
       "expected focus on the landmark or an autofocused field, got #{focused_tag.inspect}"
