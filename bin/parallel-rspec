@@ -18,6 +18,17 @@
 #
 # Worker count: PARALLEL_TEST_PROCESSORS or the machine's core count.
 # Plain `bundle exec rspec` remains the single-process reference path.
+#
+# CI sharding (#495): with CI_SHARD_INDEX + CI_SHARD_TOTAL set, this runner
+# takes only its shard's slice of the spec files — greedy-packed by the same
+# recorded runtimes the in-shard worker split uses (file size as fallback) —
+# and SKIPS the merged-coverage floor (each shard sees ~1/N of the suite;
+# the coverage_merge CI job collates every shard's resultset and enforces
+# the floor there). Example-count parity still runs PER SHARD against the
+# shard's own enumeration, and each shard records its file list to
+# tmp/shard_files.txt so CI can assert the union of shards equals the full
+# spec set — the shard splitter gets the same distrust as the worker
+# splitter. Locally (no shard env) behavior is unchanged.
 
 require_relative "../config/boot"
 require_relative "../spec/coverage_config"
@@ -28,6 +39,25 @@ require "pathname"
 class ParallelRspecRunner
   COUNTS_DIR = "tmp/parallel_example_counts"
   DRY_RUN_JSON = "tmp/parallel_rspec_dry_run.json"
+  RUNTIME_LOG = "tmp/parallel_runtime_rspec.log"
+  SHARD_FILES_LIST = "tmp/shard_files.txt"
+
+  # Deterministic greedy bin-pack: heaviest file first into the lightest
+  # shard. Weight = recorded runtime when present, file size otherwise (the
+  # same fallback the worker split uses). Ties broken by path so the split
+  # is stable across machines and runs.
+  def self.shard_files(files, runtimes:, count:, index:)
+    weight = lambda do |f|
+      runtimes[f] || (File.exist?(f) ? File.size(f) / 10_000.0 : 0.0)
+    end
+    bins = Array.new(count) { { files: [], total: 0.0 } }
+    files.sort.sort_by { |f| [ -weight.call(f), f ] }.each do |f|
+      bin = bins.min_by.with_index { |b, i| [ b[:total], i ] }
+      bin[:files] << f
+      bin[:total] += weight.call(f)
+    end
+    bins.fetch(index)[:files].sort
+  end
 
   def initialize(counts_dir: COUNTS_DIR, dry_run_json: DRY_RUN_JSON)
     @counts_dir = Pathname.new(counts_dir)
@@ -36,14 +66,26 @@ class ParallelRspecRunner
 
   def run
     reset_artifacts
+    select_shard!
     enumerate!
-    puts "==> Expecting #{expected_count} examples"
+    puts "==> Expecting #{expected_count} examples#{shard? ? " (shard #{shard_index + 1}/#{shard_total})" : ''}"
     build_assets!
     run_suite!
     verify_count!
     puts "==> Example-count parity verified (#{executed_count}/#{expected_count})"
-    enforce_coverage!
+    if shard?
+      puts "==> Shard #{shard_index + 1}/#{shard_total}: coverage floor deferred to the coverage_merge job"
+    else
+      enforce_coverage!
+    end
   end
+
+  def shard?
+    !ENV["CI_SHARD_TOTAL"].to_s.empty?
+  end
+
+  def shard_index = Integer(ENV.fetch("CI_SHARD_INDEX"))
+  def shard_total = Integer(ENV.fetch("CI_SHARD_TOTAL"))
 
   def expected_count
     JSON.parse(@dry_run_json.read).fetch("summary").fetch("example_count")
@@ -85,13 +127,57 @@ class ParallelRspecRunner
     FileUtils.rm_f(@dry_run_json)
   end
 
+  # nil = the whole suite (local path); an array = this shard's file slice.
+  def shard_file_list
+    @shard_file_list
+  end
+
+  def select_shard!
+    return unless shard?
+
+    all_files = Dir["spec/**/*_spec.rb"].sort
+    runtimes = read_runtimes
+    @shard_file_list = self.class.shard_files(
+      all_files, runtimes: runtimes, count: shard_total, index: shard_index
+    )
+    # Recorded so CI's coverage_merge job can assert the union of every
+    # shard's list equals the full spec set — a shard splitter that drops a
+    # file must fail as loudly as a worker splitter that does (#495).
+    File.write(SHARD_FILES_LIST, @shard_file_list.join("\n") + "\n")
+    puts "==> Shard #{shard_index + 1}/#{shard_total}: #{@shard_file_list.size} of #{all_files.size} spec files " \
+         "(#{runtimes.empty? ? 'file-size split (no runtime log)' : 'runtime-balanced split'})"
+  end
+
+  # The shard split MUST be computed from an input identical on every shard:
+  # the suite rewrites RUNTIME_LOG with only its own files' timings, so a
+  # shard that reads the live log after another shard ran (or a cache restore
+  # that raced a concurrent run) computes a DIFFERENT partition — overlapping
+  # shards and silent holes (caught locally building this: shards overlapped
+  # on 108 files). CI's split_seed job snapshots one log and every shard
+  # reads that frozen copy via SHARD_RUNTIME_SOURCE.
+  def runtime_source
+    ENV["SHARD_RUNTIME_SOURCE"].to_s.empty? ? RUNTIME_LOG : ENV["SHARD_RUNTIME_SOURCE"]
+  end
+
+  def read_runtimes
+    return {} unless File.exist?(runtime_source)
+
+    File.readlines(runtime_source).filter_map do |line|
+      path, seconds = line.strip.split(":", 2)
+      [ path, Float(seconds) ] if path && seconds
+    rescue ArgumentError
+      nil
+    end.to_h
+  end
+
   def enumerate!
     puts "==> Enumerating expected example count (rspec --dry-run)"
     FileUtils.mkdir_p(@dry_run_json.dirname)
     system(
       { "SKIP_COVERAGE" => "1" },
       "bundle", "exec", "rspec", "--dry-run",
-      "--format", "json", "--out", @dry_run_json.to_s
+      "--format", "json", "--out", @dry_run_json.to_s,
+      *Array(shard_file_list)
     ) || abort("parallel-rspec: dry-run enumeration failed")
   end
 
@@ -101,7 +187,8 @@ class ParallelRspecRunner
     # each have to restore the implicit default the other suppressed via a
     # `config.formatters.empty?` side-effect (#496). parallel_tests reads its
     # worker summaries from this formatter, so it must stay present.
-    system("bundle", "exec", "parallel_rspec", "spec", "--test-options", "-f progress") ||
+    targets = shard_file_list || [ "spec" ]
+    system("bundle", "exec", "parallel_rspec", *targets, "--test-options", "-f progress") ||
       abort("parallel-rspec: spec failures (see output above)")
   end
 

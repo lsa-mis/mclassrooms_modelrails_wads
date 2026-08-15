@@ -12,9 +12,126 @@ data:
     # Without this glob the gate would not see it and would report every key
     # in it as missing.
     - config/locales/%{locale}/**/*.yml
-  # Keys added by `i18n-tasks add-missing` land here; the domain-split files
-  # under config/locales/en/ are curated by hand.
+  # Per-namespace router (#523): every key prefix maps to its domain-split
+  # file at the minimal unique depth, so `i18n-tasks add-missing` lands new
+  # keys in the right file instead of the catch-all. NOTE `normalize` itself
+  # is deliberately NOT run or gated: its writer strips hand-written comments
+  # (brand.en.yml's fork-seam header) and rewrites the quoting bin/fork's
+  # byte-exact substitution tokens depend on — see spec/i18n_spec.rb. Three
+  # hand-written specials lead (clientside share toggle, client_access model
+  # errors, resources-over-projects precedence); the rest were generated from
+  # the layout on 2026-08-15. A new ROOT namespace needs a rule here.
   write:
+    - ['workspaces.projects.resources.edit.share_with_client', 'config/locales/%{locale}/clientside.%{locale}.yml']
+    - ['workspaces.projects.resources.*', 'config/locales/%{locale}/resources.%{locale}.yml']
+    - ['activerecord.errors.models.client_access.*', 'config/locales/%{locale}/clientside.%{locale}.yml']
+    - ['a11y_sim.*', 'config/locales/%{locale}/a11y_sim.%{locale}.yml']
+    - ['activerecord.errors.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['activity.*', 'config/locales/%{locale}/activity.%{locale}.yml']
+    - ['application.skip_to_content', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['application.description', 'config/locales/%{locale}/brand.%{locale}.yml']
+    - ['application.name', 'config/locales/%{locale}/brand.%{locale}.yml']
+    - ['authentication.already_signed_in', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['authentication.providers.*', 'config/locales/%{locale}/authentication.%{locale}.yml']
+    - ['authentication.session_expired', 'config/locales/%{locale}/authentication.%{locale}.yml']
+    - ['authentication_mailer.*', 'config/locales/%{locale}/mailers.%{locale}.yml']
+    - ['clientside.*', 'config/locales/%{locale}/clientside.%{locale}.yml']
+    - ['cookie_consent.*', 'config/locales/%{locale}/cookie_consent.%{locale}.yml']
+    - ['direct_uploads.*', 'config/locales/%{locale}/direct_uploads.%{locale}.yml']
+    - ['email_verification_resends.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['email_verifications.show.*', 'config/locales/%{locale}/email_verifications.%{locale}.yml']
+    - ['email_verifications.banner.*', 'config/locales/%{locale}/onboarding.%{locale}.yml']
+    - ['email_verifications.new.*', 'config/locales/%{locale}/onboarding.%{locale}.yml']
+    - ['errors.not_authorized', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['errors.not_found', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['errors.form_errors.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['footer.about', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['footer.aria.*', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['footer.contact', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['footer.cookie_settings', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['footer.docs', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['footer.privacy', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['footer.copyright', 'config/locales/%{locale}/brand.%{locale}.yml']
+    - ['form_draft.*', 'config/locales/%{locale}/form_drafts.%{locale}.yml']
+    - ['identity_picker.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['invitation_accepts.*', 'config/locales/%{locale}/invitations.%{locale}.yml']
+    - ['invitation_declines.*', 'config/locales/%{locale}/invitations.%{locale}.yml']
+    - ['invitation_mailer.invite_client.*', 'config/locales/%{locale}/clientside.%{locale}.yml']
+    - ['invitation_mailer.invite.*', 'config/locales/%{locale}/invitations.%{locale}.yml']
+    - ['lifecycle.*', 'config/locales/%{locale}/lifecycle.%{locale}.yml']
+    - ['lifecycle_status.*', 'config/locales/%{locale}/lifecycle.%{locale}.yml']
+    - ['magic_link_callbacks.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
+    - ['magic_link_mailer.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
+    - ['magic_links.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
+    - ['markdowndocs.default_title', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['markdowndocs.modes.*', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['markdowndocs.docs.*', 'config/locales/%{locale}/markdowndocs.%{locale}.yml']
+    - ['modals.*', 'config/locales/%{locale}/modals.%{locale}.yml']
+    - ['navigation.*', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['notification_mailer.*', 'config/locales/%{locale}/notifications.%{locale}.yml']
+    - ['notifications.*', 'config/locales/%{locale}/notifications.%{locale}.yml']
+    - ['oauth.*', 'config/locales/%{locale}/oauth.%{locale}.yml']
+    - ['omniauth_callbacks.*', 'config/locales/%{locale}/oauth.%{locale}.yml']
+    - ['onboarding.*', 'config/locales/%{locale}/onboarding.%{locale}.yml']
+    - ['onboardings.*', 'config/locales/%{locale}/onboarding.%{locale}.yml']
+    - ['pages.*', 'config/locales/%{locale}/pages.%{locale}.yml']
+    - ['pagination.*', 'config/locales/%{locale}/pagination.%{locale}.yml']
+    - ['passkeys.*', 'config/locales/%{locale}/passkeys.%{locale}.yml']
+    - ['pending_joins.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['project_roles.*', 'config/locales/%{locale}/roles.%{locale}.yml']
+    - ['project_tools.*', 'config/locales/%{locale}/project_tools.%{locale}.yml']
+    - ['reauthentication_mailer.*', 'config/locales/%{locale}/mailers.%{locale}.yml']
+    - ['registrations.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['sessions.check_email.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['sessions.create.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['sessions.destroy.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['sessions.lookup.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['sessions.new.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['sessions.password_form.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
+    - ['settings.appearance.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.avatars.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.connected_accounts.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.email_confirmations.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.notification_preferences.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.other_sessions.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.passkeys.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.passwords.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.profiles.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.reauthentication_codes.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.reauthentications.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.sessions.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.theme_preferences.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.pages.*', 'config/locales/%{locale}/settings.%{locale}.yml']
+    - ['settings.sidebar.*', 'config/locales/%{locale}/settings.%{locale}.yml']
+    - ['theme.*', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['toasts.*', 'config/locales/%{locale}/toasts.%{locale}.yml']
+    - ['workspaces.invitations.*', 'config/locales/%{locale}/invitations.%{locale}.yml']
+    - ['workspaces.archive.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.archived_banner', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.brandings.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.context_banner.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.create.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.creation_disabled', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.destroy.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.edit.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.identity_bar.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.index.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.join_links.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.joins.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.locked_notice', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.locked_row.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.members.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.new.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.not_found', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.overview.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.pending_join_banner.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.plans.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.settings.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.sidebar.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.switcher.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.unarchive.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.update.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
+    - ['workspaces.projects.*', 'config/locales/%{locale}/projects.%{locale}.yml']
     - config/locales/%{locale}.yml
   yaml:
     write:
@@ -45,6 +162,29 @@ search:
     - app/components/ui
 
 ignore_unused:
+  # Consumed by the UI primitives under app/components/ui — that path is
+  # excluded from the scanner ON PURPOSE (every t() there carries an inline
+  # default; an app-level key IS the override), and the Lookbook preview
+  # templates that exercise them live under spec/. Deleting these silently
+  # reverts dialogs to the shipped English (#522 nearly did — 32 system
+  # failures).
+  - modals.close
+  - modals.confirm
+  - modals.delete
+  - modals.save
+  # Read at broadcast/announce time by ApplicationNotifier and the
+  # notifications controller in call forms the static scanner misses;
+  # deleting them turns the aria-live announcements into
+  # MissingTranslationData at runtime.
+  - notifications.bell.arrival_announcement
+  - notifications.bell.read_state_announcement
+  # Rendered via lazy/dynamic scopes the scanner cannot resolve; the system
+  # and request specs assert the rendered labels/flashes, so the suite is
+  # the working proof of use.
+  - navigation.profile
+  - settings.sidebar.items.invitations
+  - workspaces.invitations.resend.recently_sent
+  - workspaces.invitations.resend.resent
   # Resolved dynamically at runtime, so no static call site exists.
   - notification_mailer.digest.subject.*
   # activity_logs/_activity_log.html.erb builds the key from the record:

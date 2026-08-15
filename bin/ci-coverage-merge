@@ -1,0 +1,76 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# CI-only companion to bin/parallel-rspec's sharded mode (#495).
+#
+# Each test shard skips the merged-coverage floor (it sees ~1/N of the
+# suite) and uploads its coverage resultset plus its shard file list. This
+# script, run by the coverage_merge job, does the three cross-shard checks
+# exactly once:
+#
+#   1. Shard-union parity — the union of every shard's file list must equal
+#      the full spec set, disjointly. A shard splitter that drops or
+#      double-runs a file gets the same distrust as a worker splitter
+#      (bin/parallel-rspec's in-shard parity cannot see ACROSS shards).
+#   2. Merged coverage floor — SimpleCov.collate over every shard's
+#      resultset, enforcing CoverageConfig::MINIMUM on the whole suite.
+#   3. Runtime-log reassembly — each shard's log holds timings for its files
+#      only; the concatenation is the complete log the cache carries forward
+#      for the next run's balanced splits.
+#
+# Usage: bin/ci-coverage-merge <shards_dir>
+#   <shards_dir> holds one subdirectory per shard artifact, each containing
+#   resultset.json (renamed from coverage/.resultset.json at packaging time
+#   — upload-artifact silently excludes dotfiles by default, which this
+#   PR's first CI run proved the hard way), shard_files.txt and
+#   parallel_runtime_rspec.log.
+
+require_relative "../spec/coverage_config"
+require "fileutils"
+
+shards_dir = ARGV.fetch(0) { abort("usage: bin/ci-coverage-merge <shards_dir>") }
+shard_dirs = Dir[File.join(shards_dir, "*")].select { |d| File.directory?(d) }.sort
+abort("ci-coverage-merge: no shard artifacts found under #{shards_dir}") if shard_dirs.empty?
+
+puts "==> Merging #{shard_dirs.size} shard(s): #{shard_dirs.map { |d| File.basename(d) }.join(', ')}"
+
+# --- 1. shard-union parity ---------------------------------------------------
+all_files = Dir["spec/**/*_spec.rb"].sort
+shard_lists = shard_dirs.map { |d| File.readlines(File.join(d, "shard_files.txt")).map(&:strip).reject(&:empty?) }
+union = shard_lists.flatten.sort
+duplicates = union.tally.select { |_, n| n > 1 }.keys
+missing = all_files - union
+extra = union.uniq - all_files
+
+unless duplicates.empty? && missing.empty? && extra.empty?
+  abort(<<~MSG)
+    ci-coverage-merge: shard-union parity FAILED — the shard splitter dropped or duplicated spec files.
+    duplicated across shards: #{duplicates.take(5).inspect} (#{duplicates.size})
+    missing from every shard: #{missing.take(5).inspect} (#{missing.size})
+    not in the checkout:      #{extra.take(5).inspect} (#{extra.size})
+    Most likely cause: shards computed their split from DIFFERENT runtime logs
+    (the split must come from the split_seed artifact — see bin/parallel-rspec).
+  MSG
+end
+puts "==> Shard-union parity verified (#{union.size} spec files, disjoint)"
+
+# --- 2. merged coverage floor ------------------------------------------------
+resultsets = shard_dirs.map { |d| File.join(d, "resultset.json") }.select { |f| File.exist?(f) }
+abort("ci-coverage-merge: expected a resultset.json per shard, found #{resultsets.size}/#{shard_dirs.size}") unless resultsets.size == shard_dirs.size
+
+require "simplecov"
+SimpleCov.collate resultsets, "rails" do
+  enable_coverage :branch
+  merge_timeout CoverageConfig::MERGE_TIMEOUT
+  minimum_coverage CoverageConfig::MINIMUM
+end
+puts "==> Merged coverage meets the #{CoverageConfig::MINIMUM}% floor"
+
+# --- 3. runtime-log reassembly -----------------------------------------------
+combined = shard_dirs.flat_map do |d|
+  log = File.join(d, "parallel_runtime_rspec.log")
+  File.exist?(log) ? File.readlines(log).map(&:strip).reject(&:empty?) : []
+end
+FileUtils.mkdir_p("tmp")
+File.write("tmp/parallel_runtime_rspec.log", combined.join("\n") + "\n")
+puts "==> Reassembled runtime log (#{combined.size} entries) for the split cache"
