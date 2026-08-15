@@ -82,6 +82,41 @@ meet the 40% floor. Each run records per-file timings to
 runtime instead of file size (it falls back to file size when the log is
 absent). Coverage report is generated at `coverage/index.html`.
 
+### Spec conventions: the let diet, and when guards are warranted
+
+Two conventions keep the suite readable as it grows (adopted from the
+2026-08-14 panel review, #440):
+
+**The let diet.** `let` is for records that several examples *in the same
+context* genuinely share — it is not a place to park setup. Symptoms of let
+bloat: the same paired `let!`s copy-pasted across contexts, and files whose
+let count grows every month (the worked example:
+`spec/requests/workspaces/members_spec.rb` carried the same
+target-user/target-membership pair as `let!`s in six separate contexts; a
+named `add_member` builder replaced them, 48 lets → 37, and each example's
+cast is now visible at its call site). Rules of thumb:
+
+- One example uses it → build it inline in the example, with a local
+  variable named for its role (`target = add_member`).
+- Several examples in one context share it → a single `let` in that
+  context, built through a named builder so the reader sees *what* it is.
+- Several contexts repeat it → extract a builder method; the repetition was
+  a missing name, not shared state.
+
+There is deliberately **no lint or count ratchet** for this: a counter is
+trivially gamed (inline a let into a `before` block; nothing improves) and
+teaches metric-satisfaction instead of design judgment. The convention is
+enforced in review, by example.
+
+**When a guard spec IS warranted.** Everything in `spec/code_smells/` earns
+its place by naming, in its header, the shipped bug class it catches —
+tenancy leaks, unasserted flashes, worker-colliding constants, live-class
+migrations. That is the line: a guard fences *behavior that already bit
+someone*; a preference with no incident behind it stays a documented
+convention like the one above. Before writing a new guard, fill in the
+blank "this guard exists because ___ shipped" — if you can't, write docs
+instead.
+
 ### One runner at a time
 
 Each test database is a single SQLite file, and `config/database.yml` installs a
@@ -182,7 +217,7 @@ Runs the same checks plus additional linting:
 | `scan_ruby` | Brakeman + bundler-audit (gem CVEs) |
 | `scan_js` | importmap audit (JS dependency CVEs) |
 | `lint` | RuboCop with GitHub annotations |
-| `lint_docs` | markdownlint + herb ERB linter |
+| `lint_docs` | `mdl` (markdown) + `erb_lint` (ERB) |
 | `test` | Full RSpec with Cuprite, axe accessibility, screenshot artifacts on failure |
 | `docker_build` | Verifies the production `Dockerfile` builds successfully on every PR (catches build-time regressions that structural specs cannot). Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/developer/deployment). |
 

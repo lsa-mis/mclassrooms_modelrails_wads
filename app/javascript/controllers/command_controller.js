@@ -112,6 +112,15 @@ export default class extends Controller {
       item.setAttribute("role", "option")
       if (!item.id) item.id = `command-option-${this._optionId++}`
     })
+    // An <hr> separator's implicit role="separator" is an illegal child of
+    // role="listbox" (axe aria-required-children, critical — caught by the
+    // open-state audit, #463). Neutralize caller-supplied separators the same
+    // way options are promoted: the contract is applied here so markup can't
+    // break it.
+    this.listTarget.querySelectorAll("hr").forEach(hr => {
+      hr.setAttribute("role", "presentation")
+      hr.setAttribute("aria-hidden", "true")
+    })
   }
 
   _setActive(item) {

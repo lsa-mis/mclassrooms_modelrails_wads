@@ -49,9 +49,14 @@ module UI
                "bg-surface-overlay p-3 shadow-md data-[open=true]:block"
     SPINNER_WRAP = "flex items-center justify-center gap-1"
     COL_CLS  = "flex flex-col items-center gap-1"
-    SPIN_BTN = "inline-flex size-7 items-center justify-center rounded-md focus-ring " \
+    # size-11 (44px): steppers are aria-hidden to AT but remain POINTER
+    # targets, and WCAG 2.5.5's floor applies to pointer targets regardless
+    # of AT visibility (caught by the open-state audit, #463).
+    SPIN_BTN = "inline-flex size-11 items-center justify-center rounded-md focus-ring " \
                "text-text-muted hover:bg-surface-sunken hover:text-text-heading transition"
-    NUM_CLS  = "w-10 rounded-md border border-border-strong bg-surface-raised px-1 py-0.5 text-center text-sm focus-ring"
+    # min-h-11 + w-12: the spinbutton fields are the primary targets and must
+    # clear the 44px floor (WCAG 2.5.5 AAA — open-state audit, #463).
+    NUM_CLS  = "w-12 min-h-11 rounded-md border border-border-strong bg-surface-raised px-1 text-center text-sm focus-ring"
     SEP_CLS  = "text-lg font-medium text-text-heading pb-1"
 
     # The human-readable format hint, keyed by `format:`.
@@ -153,7 +158,7 @@ module UI
         concat spin_btn("▲", "click->timepicker#hourUp")
         concat spinbutton(:hour, val, 0, hour_max,
           label: I18n.t("modelrails_ui.timepicker.hour", default: "Hour"),
-          action: "change->timepicker#hourChanged")
+          action: "change->timepicker#hourChanged keydown->timepicker#hourKeydown")
         concat spin_btn("▼", "click->timepicker#hourDown")
       end
     end
@@ -163,7 +168,7 @@ module UI
         concat spin_btn("▲", "click->timepicker#minuteUp")
         concat spinbutton(:minute, val, 0, 59,
           label: I18n.t("modelrails_ui.timepicker.minute", default: "Minute"),
-          action: "change->timepicker#minuteChanged")
+          action: "change->timepicker#minuteChanged keydown->timepicker#minuteKeydown")
         concat spin_btn("▼", "click->timepicker#minuteDown")
       end
     end

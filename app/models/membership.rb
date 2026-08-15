@@ -5,6 +5,10 @@ class Membership < ApplicationRecord
 
   belongs_to :user
   belongs_to :workspace
+
+  # Non-persisted grant provenance for the creation audit entry (G): set by
+  # Workspace#admit when an invitation acceptance created this membership.
+  attr_accessor :granted_by
   belongs_to :role
 
   validates :user_id, uniqueness: { scope: :workspace_id }
@@ -127,6 +131,7 @@ class Membership < ApplicationRecord
                        .update_all(role_id: admin_role.id)
       raise ActiveRecord::RecordInvalid, self if rows.zero?
       reload
+      record_ownership_demotion(admin_role)
 
       target_membership.reload
       target_membership.update!(role: owner_role)
@@ -194,6 +199,35 @@ class Membership < ApplicationRecord
                         .exists?
     errors.add(:base, :last_owner)
     raise ActiveRecord::RecordInvalid, self
+  end
+
+  # G (SEC-1 follow-up): membership.created previously carried EMPTY metadata,
+  # and the invitation flow named only the accepting invitee — the most common
+  # grant path recorded no role and no granter. The actor stays the invitee
+  # (they performed the accept); the role and granter ride as metadata.
+  def track_creation
+    metadata = { "role" => role&.slug }
+    metadata["granted_by"] = granted_by.id if granted_by
+    create_activity("membership.created", metadata.compact)
+  end
+
+  # G (SEC-1 follow-up): the transfer's demote is a callback-skipping CAS
+  # update_all (race-safety, by design — see transfer_ownership_to!), which
+  # also skipped Trackable. A privilege demotion must still reach the audit
+  # trail; written explicitly at the visibility a role change gets. Same
+  # best-effort contract as Trackable#create_activity.
+  def record_ownership_demotion(to_role)
+    ActivityLog.create!(
+      actor: Current.user,
+      action: "membership.updated",
+      trackable: self,
+      workspace: workspace,
+      visibility: "admin",
+      metadata: { "changes" => { "role" => [ "owner", to_role.slug ] } }
+    )
+  rescue StandardError => e
+    Rails.logger.warn("Activity tracking failed for Membership##{id} (transfer demote): #{e.message}")
+    Rails.error.report(e, handled: true, context: { trackable: "Membership##{id}", action: "transfer_demote" })
   end
 
   # SEC-1 audit: a role change is a privilege event. Record the role slugs by

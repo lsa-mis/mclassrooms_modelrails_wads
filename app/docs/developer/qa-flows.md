@@ -112,8 +112,9 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
    **Expect:** The `check_email` page renders inline (Turbo Frame replaces the form). In development the heading is a link to `/letter_opener`.
 3. Open `/letter_opener` and click the magic-link sign-in email.
    The link is `GET /magic_link_callback/:token`.
-   **Expect:** `MagicLinkCallbacksController#show` finds the user, atomically consumes the token (prevents double-spend), calls `start_new_session_for`, and redirects to `after_authentication_url`.
-4. The token is now consumed. Clicking the same link a second time shows an invalid-token alert.
+   **Expect:** `MagicLinkCallbacksController#show` finds the user and renders the `:confirm` page ("Sign in as …?"). The GET does **not** consume the token or start a session.
+4. Press the confirmation button (`POST /magic_link_callback/:token/sign_in`).
+   **Expect:** `#sign_in` atomically consumes the token (prevents double-spend), calls `start_new_session_for`, and redirects to `after_authentication_url`. Re-opening the original GET link now shows an invalid-token alert.
 
 ### Existing user (has password)
 
@@ -232,9 +233,8 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
    `stash_for_signup` stores the link token in `session[:pending_join_token]` and redirects to `new_session_path`.
    **Expect (open signup):** Navigate to `/session/new`, enter your email, click the registration magic link, and fill in name — the pending join-link token satisfies `signups_open?` even under `invite_only`.
    **Expect (invite-only):** Same — the pending join token opens the gate regardless of `SIGNUP_MODE`.
-3. After registration, the join token is persisted on the email `Authentication` (`pending_join_link_token`) and claimed at sign-in. The email is already verified inside the registration transaction.
-   `auth.claim_pending_join_link!` calls `workspace.admit` if the link is still valid.
-   **Expect:** You are signed in. If the link was still valid, you are now a member of the workspace. Stale conditions (revoked link, policy changed back to invite, instance allowlist tightened) are silently no-op'd — sign-in proceeds and you land without workspace membership.
+3. On this magic-link registration path the join token is claimed **synchronously inside the registration transaction**: `Signupable#accept_pending_join_link!` reads `session[:pending_join_token]` and calls `workspace.admit` before the user lands. (The digest-parked-on-`Authentication` mechanism — `pending_join_link_digest` + `Authentication#claim_pending_join_link!` — is the *OAuth unverified-email* path only; see the OAuth section.)
+   **Expect:** You are signed in and, if the link was still valid, now a member. Because you are a **brand-new** account, the join is applied automatically (your signup is your consent). Stale conditions (revoked link, policy changed back to invite, instance allowlist tightened) are silently no-op'd — sign-in proceeds and you land without workspace membership.
 
 ### Edge cases — Workspace join
 
@@ -242,6 +242,7 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
 - **Revoked link.** `set_workspace_and_link` checks `join_links.active` (where `revoked_at: nil`). A revoked token produces a neutral "invalid or revoked" alert regardless of which condition failed — no information leakage about workspace existence or join policy.
 - **Personal workspace.** `workspace.open_join?` returns false for personal workspaces (the model validates this). The join URL for a personal workspace always produces the "invalid or revoked" alert.
 - **`open_link` removed from allowlist.** Removing `open_link` from `SIGNUP_PERMITTED_JOIN_STRATEGIES` takes effect immediately at runtime — `SignupPolicy.permits_strategy?(:open_link)` returns false, `open_join?` returns false, existing join links still exist in the database but are unusable.
+- **Pre-existing user follows a link (anti-drive-by-join).** A parked `session[:pending_join_token]` only auto-joins a **brand-new** account created in the same signup. If the person who authenticates turns out to be an *existing* user (e.g. they follow the link logged out, then sign in, or link a new verified OAuth provider), they are **not** silently added. Instead a dismissible "You followed a link to join X — Join / Dismiss" banner renders (`_pending_join_banner`), driven by `PendingJoinsController`: `POST /pending_join` admits, `DELETE /pending_join` dismisses. Verify a lured-in token does not force-join an existing account.
 
 ---
 

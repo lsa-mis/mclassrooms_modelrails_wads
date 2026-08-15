@@ -7,9 +7,9 @@ unless ENV["SKIP_COVERAGE"]
   SimpleCov.start "rails" do
     enable_coverage :branch
     if ENV["TEST_ENV_NUMBER"] # set (possibly "") only under parallel_tests
-      # Workers each cover ~1/N of the suite; the 40% floor is enforced on the
-      # MERGED result by bin/parallel-rspec's collate step. Keep the floor for
-      # single-process runs below. SimpleFormatter: workers skip HTML output so
+      # Workers each cover ~1/N of the suite; the floor (CoverageConfig::MINIMUM)
+      # is enforced on the MERGED result by bin/parallel-rspec's collate step.
+      # Keep the floor for single-process runs below. SimpleFormatter: workers skip HTML output so
       # concurrent report writes can't race; collate produces the final HTML.
       command_name "rspec#{ENV['TEST_ENV_NUMBER']}"
       merge_timeout CoverageConfig::MERGE_TIMEOUT

@@ -16,8 +16,9 @@ RSpec.describe "Timezone beacon (Stimulus + layout connect)", type: :system, js:
     fill_in I18n.t("sessions.new.email_label"), with: user.email_address
     click_button I18n.t("sessions.new.continue")
     expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.where(email: user.email_address).order(:created_at).last.token
+    token = MagicLinkToken.create_for_email(user.email_address)
     visit magic_link_callback_path(token: token)
+    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
     expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
   end
 
@@ -49,9 +50,12 @@ RSpec.describe "Timezone beacon (Stimulus + layout connect)", type: :system, js:
 
       sign_in_via_form(user)
 
-      # Give the beacon a chance to (incorrectly) fire and clobber. If the
-      # contract holds, the explicit value remains.
-      sleep 1.0
+      # Negative assertion (#453): anchor on the beacon controller actually
+      # being connected — its fire/skip decision is made at connect — then
+      # allow a short named window for a wrongful async PATCH to round-trip.
+      # The old bare `sleep 1.0` was all margin and no anchor.
+      wait_for_stimulus_controllers
+      sleep 0.3 # post-connect round-trip margin for a wrongful clobber
       expect(user.preferences.reload.timezone).to eq("Europe/London")
     end
   end

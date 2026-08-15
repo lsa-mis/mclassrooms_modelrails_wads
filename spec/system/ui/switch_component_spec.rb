@@ -29,10 +29,14 @@ require "rails_helper"
 # is stable and load-bearing to the peer-* contract itself, so it is a legitimate
 # selector. Adding a data attr would have meant changing the gem template too.
 RSpec.describe "Switch component accessibility and visual transition", type: :system do
-  PREVIEW = "/rails/view_components/ui/switch_component"
+  preview = "/rails/view_components/ui/switch_component"
 
-  TRACK_SELECTOR = 'input[role="switch"] + span'
-  THUMB_SELECTOR = 'span[aria-hidden="true"]'
+  # `let`, not locals: the selectors are read inside helper defs
+  # (computed_switch_styles, track_outline), which a describe-body local
+  # cannot reach. Bare constants are banned here — they land on Object and
+  # collide across parallel workers (#607/#608).
+  let(:track_selector) { 'input[role="switch"] + span' }
+  let(:thumb_selector) { 'span[aria-hidden="true"]' }
 
   # Read computed styles for the track + thumb off the live page.
   # `cdp_evaluate` returns a Hash with STRING keys; symbolize at the boundary so
@@ -40,8 +44,8 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
   def computed_switch_styles
     raw = cdp_evaluate(<<~JS)
       (() => {
-        const track = document.querySelector(#{TRACK_SELECTOR.to_json});
-        const thumb = document.querySelector(#{THUMB_SELECTOR.to_json});
+        const track = document.querySelector(#{track_selector.to_json});
+        const thumb = document.querySelector(#{thumb_selector.to_json});
         const ts = track ? getComputedStyle(track) : null;
         const hs = thumb ? getComputedStyle(thumb) : null;
         return {
@@ -61,7 +65,7 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
 
   describe "AAA accessibility" do
     it "off scenario has role=switch and passes AAA in both themes" do
-      visit "#{PREVIEW}/off"
+      visit "#{preview}/off"
       expect(page).to have_css('input[role="switch"]')
 
       # Scope to the whole switch widget (the outer label wraps input+track+thumb
@@ -75,7 +79,7 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
     end
 
     it "on scenario has role=switch and passes AAA in both themes" do
-      visit "#{PREVIEW}/on"
+      visit "#{preview}/on"
       expect(page).to have_css('input[role="switch"]')
 
       scope = [ "label" ]
@@ -92,13 +96,13 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
   # this fails (do NOT fudge).
   describe "on/off visual transition (peer-checked cascade)" do
     it "track background-color and thumb translate DIFFER on vs off" do
-      visit "#{PREVIEW}/off"
+      visit "#{preview}/off"
       expect(page).to have_css('input[role="switch"]')
       off = computed_switch_styles
-      expect(off[:trackFound]).to be(true), "track span not found via #{TRACK_SELECTOR}"
-      expect(off[:thumbFound]).to be(true), "thumb span not found via #{THUMB_SELECTOR}"
+      expect(off[:trackFound]).to be(true), "track span not found via #{track_selector}"
+      expect(off[:thumbFound]).to be(true), "thumb span not found via #{thumb_selector}"
 
-      visit "#{PREVIEW}/on"
+      visit "#{preview}/on"
       expect(page).to have_css('input[role="switch"]:checked')
       on = computed_switch_styles
       expect(on[:trackFound]).to be(true)
@@ -145,7 +149,7 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
   # custom property; an outline's longhands are real animatable computed values.)
   describe "focus-visible outline (peer-focus-visible cascade)" do
     it "renders the AAA focus outline on the track when the switch input is keyboard-focused" do
-      visit "#{PREVIEW}/off"
+      visit "#{preview}/off"
       expect(page).to have_css('input[role="switch"]')
 
       unfocused = track_outline
@@ -162,7 +166,7 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
 
       focused = cdp_evaluate_async(<<~JS)
         (async () => {
-          const track = document.querySelector(#{TRACK_SELECTOR.to_json});
+          const track = document.querySelector(#{track_selector.to_json});
           // Poll until the transitioned outline-width settles at its 2px target
           // (or a generous deadline, so a genuine no-outline bug still fails loudly).
           let cs = getComputedStyle(track);
@@ -218,7 +222,7 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
   def track_outline
     result = cdp_evaluate(<<~JS)
       (() => {
-        const cs = getComputedStyle(document.querySelector(#{TRACK_SELECTOR.to_json}));
+        const cs = getComputedStyle(document.querySelector(#{track_selector.to_json}));
         return { style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
       })()
     JS

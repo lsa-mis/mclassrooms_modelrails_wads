@@ -8,6 +8,11 @@
 #      example count; the per-worker counts (spec/support/
 #      parallel_example_count.rb) must sum to exactly that. Catches a
 #      splitter dropping or duplicating spec files.
+#      The enumeration costs ~50s per run: that is the price of "green means
+#      everything ran," paid deliberately (#496, panel-reviewed 2026-08-14).
+#      It exists because the splitter really has dropped files; do not move
+#      it to a schedule or hide it behind a cache — a parity check that runs
+#      sometimes is a parity check you trust never.
 #   2. Merged coverage floor — workers skip the minimum (each sees ~1/N of
 #      the suite); SimpleCov.collate enforces it on the merged result.
 #

@@ -418,11 +418,12 @@ RSpec.describe "Template invariants" do
     # by grepping source (#298). Vars the harness/tooling sets — not a human
     # editing .env — are excluded here with a reason.
     excluded_env_vars = {
-      "BUNDLE_GEMFILE"      => "set by Bundler, not an operator",
-      "CI"                  => "set by the CI runner",
-      "PIDFILE"             => "set by bin/dev / Foreman",
-      "SOLID_QUEUE_IN_PUMA" => "set in config/deploy.yml env.clear, not .env (documented in deployment.md)",
-      "TEST_ENV_NUMBER"     => "set by parallel_tests per worker (bin/parallel-rspec), never by a human"
+      "BUNDLE_GEMFILE"          => "set by Bundler, not an operator",
+      "CI"                      => "set by the CI runner",
+      "PIDFILE"                 => "set by bin/dev / Foreman",
+      "SECRET_KEY_BASE_DUMMY"   => "set by the Dockerfile's assets:precompile RUN (build-time boot marker), never by a human editing .env",
+      "SOLID_QUEUE_IN_PUMA"     => "set in config/deploy.yml env.clear, not .env (documented in deployment.md)",
+      "TEST_ENV_NUMBER"         => "set by parallel_tests per worker (bin/parallel-rspec), never by a human"
     }
 
     it "documents every operator-settable ENV var the code reads (no rediscovery-by-grep)" do
@@ -910,6 +911,27 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  describe "fork placeholder hygiene (self-activating in forks via .fork.yml)" do
+    # In the template these placeholders are CORRECT — bin/fork substitutes
+    # them at fork time — so the check must be inert here. .fork.yml is
+    # committed provenance of a completed fork; its presence switches this on
+    # with zero configuration. It closes the gap bin/fork's TODO reminder
+    # leaves open: advisory output is read once, a failing spec persists until
+    # someone acts (#553). merge=ours means upstream fixes to fork-owned
+    # locale files never arrive on sync, so the fork's own suite is the only
+    # place this class of leftover can be caught.
+    it "ships no placeholder support address in fork-owned locale files" do
+      skip "template repo — placeholders are correct here" unless Rails.root.join(".fork.yml").exist?
+
+      content = Rails.root.join("config/locales/en/pages.en.yml").read
+      stale = content.scan(/[\w.+-]+@[\w.-]+\.example\b/) + content.scan(/[\w.+-]+@example\.com\b/)
+      expect(stale).to be_empty,
+        "placeholder support address still shipping: #{stale.uniq.join(', ')} — " \
+        "set a real address in config/locales/en/pages.en.yml (bin/fork listed this " \
+        "in its post-fork TODOs; this spec is the durable reminder)"
+    end
+  end
+
   # bin scripts in this repo are spec'd by `load`ing them (see
   # spec/bin/parallel_rspec_spec.rb), which only works because the top-level
   # invocation is guarded. Without the guard, loading a script in a spec RUNS
@@ -978,43 +1000,39 @@ RSpec.describe "Template invariants" do
     end
   end
 
-  describe ".graphifyignore carries only graph-scoping deltas" do
-    # graphify merges .gitignore and .graphifyignore (gitignore first, this file
-    # second), so any rule copied from .gitignore is dead weight that goes stale
-    # silently — the copy this replaced still described node_modules as the
-    # "Playwright browser driver" months after Playwright was removed in #497.
-    # The tracked file lists only paths git DOES track but that add noise rather
-    # than architecture to the graph.
-    let(:graphifyignore_path) { root.join(".graphifyignore") }
+  describe "the template ships no AI-agent configuration (forks start AI-agnostic)" do
+    # Policy (2026-08-14): AI tooling is a per-developer choice layered onto a
+    # fork, not something a fork inherits — a forker who wants agents brings
+    # their own setup, independent of the code they forked. The maintainer's
+    # own agent layer (CLAUDE.md, .claude/, agent-os/, .graphifyignore, …)
+    # lives untracked in this checkout via .git/info/exclude. This guard keeps
+    # the boundary from regressing: an agent-config file quietly committed
+    # here becomes unexplainable cruft — or worse, doctrine — in every fork,
+    # and the fork's own suite would then be enforcing another developer's
+    # tooling choices. (This replaced an invariant that did exactly that:
+    # it required .graphifyignore to stay tracked, so a fork deleting a file
+    # for a tool it never used went red.)
+    ai_config_patterns = %r{\A(?:
+      CLAUDE(?:\.local)?\.md |
+      AGENTS\.md |
+      GEMINI\.md |
+      \.claude(?:/|-on-rails/) |
+      \.cursor(?:rules|/) |
+      \.aider |
+      \.graphifyignore |
+      agent-os/ |
+      \.github/copilot-instructions\.md
+    )}x
 
-    # Mirrors graphify's own parser: full-line comments and blanks drop out,
-    # inline comments count only when preceded by whitespace (so a literal
-    # path#with#hash survives).
-    def substantive_rules(path)
-      File.readlines(path).filter_map do |raw|
-        line = raw.rstrip.lstrip
-        next if line.empty? || line.start_with?("#")
+    it "tracks no AI-agent configuration files" do
+      tracked = `git -C #{root} ls-files`.lines.map(&:strip)
+      offenders = tracked.grep(ai_config_patterns)
 
-        line.sub(/\s+#.*\z/, "").rstrip.presence
-      end
-    end
-
-    it "is tracked in git so forks inherit the graph-scoping rules" do
-      tracked = `git -C #{root} ls-files .graphifyignore`.strip
-      expect(tracked).to eq(".graphifyignore"),
-        "expected .graphifyignore tracked in git — the rules describe this repo's " \
-        "directory layout, so every fork should inherit them rather than rediscover " \
-        "which directories bloat the graph."
-    end
-
-    it "duplicates no rule already present in .gitignore" do
-      duplicated = substantive_rules(graphifyignore_path) &
-        substantive_rules(root.join(".gitignore"))
-
-      expect(duplicated).to be_empty,
-        "expected .graphifyignore to hold only rules .gitignore does NOT already " \
-        "cover, found duplicates: #{duplicated.join(', ')}. graphify reads .gitignore " \
-        "first, so copying it here adds nothing and rots out of sync."
+      expect(offenders).to be_empty,
+        "expected no AI-agent configuration tracked in git, found: " \
+        "#{offenders.join(', ')}. Forks start AI-agnostic — keep agent config " \
+        "local via .git/info/exclude (never committed), or extend the pattern " \
+        "here with a reason if a new tool's config genuinely must ship."
     end
   end
 

@@ -16,3 +16,8 @@ Rails.application.config.active_storage.variable_content_types -= %w[
   image/vnd.microsoft.icon
   image/vnd.adobe.photoshop
 ]
+
+# What can be UPLOADED (as opposed to what renders as a variant, above) is
+# gated per surface: avatar/logo attachments by model validations, and
+# rich-text direct uploads by DirectUploadsController — auth + allowlist +
+# size cap live as constants on that controller (SEC-7). Widen there, not here.

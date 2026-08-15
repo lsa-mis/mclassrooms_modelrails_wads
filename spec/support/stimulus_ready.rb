@@ -17,14 +17,20 @@
 #
 # Best-effort: proceeds after a short timeout so a controller that legitimately
 # never connects (or a preview with none) can't hang the suite. Scoped to
-# preview paths so non-component system specs are pass-through and unaffected.
-# window.Stimulus is exposed in app/javascript/controllers/application.js.
+# controller-interactive paths so other system specs are pass-through and
+# unaffected. window.Stimulus is exposed in
+# app/javascript/controllers/application.js.
+#
+# /draft_harness is gated too (#525): the form_drafts specs fill_in immediately
+# after visit, racing form_draft_controller's connect — the flake that survived
+# every local run and failed CI was exactly this file's gate NOT covering the
+# harness.
 module StimulusReady
-  PREVIEW_PATH = "/rails/view_components/"
+  GATED_PATHS = [ "/rails/view_components/", "/draft_harness" ].freeze
 
   def visit(path, *args, **kwargs)
     super.tap do
-      wait_for_stimulus_controllers if path.to_s.include?(PREVIEW_PATH)
+      wait_for_stimulus_controllers if GATED_PATHS.any? { |gated| path.to_s.include?(gated) }
     end
   end
 

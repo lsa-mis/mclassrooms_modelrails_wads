@@ -1,5 +1,7 @@
 module Settings
   class PasswordsController < ApplicationController
+    before_action :require_reauthentication!, only: [ :create, :update, :destroy ]
+
     def new
       redirect_to edit_settings_password_path if Current.user.has_password?
     end

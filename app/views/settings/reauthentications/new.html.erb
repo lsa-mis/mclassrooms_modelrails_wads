@@ -1,0 +1,48 @@
+<% content_for(:title) { t("settings.reauthentications.new.title") } %>
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-semibold text-text-heading"><%= t("settings.reauthentications.new.title") %></h1>
+  <p class="mt-2 text-text-body"><%= t("settings.reauthentications.new.explanation") %></p>
+
+  <div role="group" aria-labelledby="reauth-choose-heading" class="mt-8 space-y-6">
+    <h2 id="reauth-choose-heading" class="text-sm font-medium text-text-heading">
+      <%= t("settings.reauthentications.new.choose_heading") %>
+    </h2>
+
+    <% if @factors.include?(:password) %>
+      <%= form_with url: settings_reauthentication_path, method: :post, class: "space-y-3" do |form| %>
+        <%= form.password_field :password,
+              label: t("settings.reauthentications.new.password_label"),
+              autocomplete: "current-password", required: true %>
+        <%= form.submit t("settings.reauthentications.new.password_submit"), class: "btn-primary" %>
+      <% end %>
+    <% end %>
+
+    <% if @factors.include?(:passkey) %>
+      <div data-controller="webauthn"
+           data-webauthn-auth-options-url-value="<%= passkeys_reauthentication_options_path %>"
+           data-webauthn-auth-verify-url-value="<%= passkeys_reauthentication_verify_path %>"
+           data-webauthn-messages-value="<%= { error: t("settings.reauthentications.new.passkey_error") }.to_json %>">
+        <button type="button" class="btn-secondary btn-touch-target"
+                data-action="webauthn#authenticate">
+          <%= t("settings.reauthentications.new.passkey_button") %>
+        </button>
+        <p class="mt-2 text-sm text-text-muted" data-webauthn-target="status" role="status" aria-live="polite" aria-atomic="true"></p>
+      </div>
+    <% end %>
+
+    <div class="pt-2 border-t border-border">
+      <% if @code_sent %>
+        <%= form_with url: settings_reauthentication_path, method: :post, class: "space-y-3" do |form| %>
+          <%= form.text_field :code,
+                label: t("settings.reauthentications.new.code_label"),
+                inputmode: "numeric", autocomplete: "one-time-code", required: true %>
+          <%= form.submit t("settings.reauthentications.new.code_submit"), class: "btn-primary" %>
+        <% end %>
+      <% else %>
+        <%= form_with url: settings_reauthentication_code_path, method: :post do |form| %>
+          <%= form.submit t("settings.reauthentications.new.email_button"), class: "btn-text" %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

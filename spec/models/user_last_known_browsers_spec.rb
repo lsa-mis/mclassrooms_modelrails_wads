@@ -14,9 +14,23 @@ RSpec.describe User, type: :model do
   end
 
   describe ".browser_digest (single source of truth)" do
-    it 'produces a deterministic SHA256 of "{ua} {os}"' do
+    it "produces a deterministic SHA256 of the version-stripped UA and os" do
       expected = Digest::SHA256.hexdigest("agent macos")
       expect(User.browser_digest("agent", "macos")).to eq expected
+    end
+
+    it "collapses UA strings differing only by version segments onto one digest" do
+      chrome_126 = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) Chrome/126.0.0.0 Safari/537.36"
+      chrome_127 = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_1) Chrome/127.0.1.2 Safari/537.36"
+      expect(User.browser_digest(chrome_126, "Macintosh"))
+        .to eq(User.browser_digest(chrome_127, "Macintosh"))
+    end
+
+    it "still distinguishes genuinely different browsers" do
+      chrome  = "Mozilla/5.0 (Macintosh) Chrome/126.0 Safari/537.36"
+      firefox = "Mozilla/5.0 (Macintosh) Gecko/20100101 Firefox/128.0"
+      expect(User.browser_digest(chrome, "Macintosh"))
+        .not_to eq(User.browser_digest(firefox, "Macintosh"))
     end
   end
 
@@ -34,11 +48,31 @@ RSpec.describe User, type: :model do
         user.record_browser!(user_agent, os)
         entry = user.reload.last_known_browsers.first
         expect(entry).to include(
-          "digest" => Digest::SHA256.hexdigest("#{user_agent} #{os}"),
+          "digest" => User.browser_digest(user_agent, os),
           "first_seen_at" => Time.current.iso8601,
           "last_seen_at"  => Time.current.iso8601
         )
       end
+    end
+
+    it "survives a browser version bump without re-flagging as a new device" do
+      user.record_browser!("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) Chrome/126.0.0.0", os)
+      expect(user.reload.seen_browser?("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) Chrome/127.0.0.0", os)).to be true
+    end
+
+    it "caps the list at MAX_KNOWN_BROWSERS, evicting the least recently seen" do
+      (1..User::MAX_KNOWN_BROWSERS + 1).each do |i|
+        travel_to(Time.zone.parse("2026-01-01") + i.hours) do
+          user.record_browser!("Browser-Alpha-#{"x" * i}", os)
+        end
+      end
+
+      browsers = user.reload.last_known_browsers
+      expect(browsers.size).to eq(User::MAX_KNOWN_BROWSERS)
+      oldest_digest = User.browser_digest("Browser-Alpha-x", os)
+      expect(browsers.map { |e| e["digest"] }).not_to include(oldest_digest)
+      newest_digest = User.browser_digest("Browser-Alpha-#{"x" * (User::MAX_KNOWN_BROWSERS + 1)}", os)
+      expect(browsers.map { |e| e["digest"] }).to include(newest_digest)
     end
 
     it "returns true after a previous record_browser!" do

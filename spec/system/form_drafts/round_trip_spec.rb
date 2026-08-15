@@ -54,8 +54,50 @@ RSpec.describe "Form draft round trip", type: :system do
   it "flushes immediately on navigation (no 300ms data-loss window)" do
     visit "/draft_harness"
     fill_in "Title", with: "Typed then navigated"
+    # Defeat the debounce (#481): without this, any fill_in->visit gap over
+    # 300ms lets the ordinary debounced save satisfy the assertion while a
+    # broken turbo:before-visit flush ships. One synchronous script wipes
+    # anything already persisted, re-dirties the form, and parks the pending
+    # save far out of reach — flush() requires a pending save, so at
+    # navigation time ONLY the before-visit flush can persist the draft.
+    page.execute_script(<<~JS)
+      (() => {
+        const el = document.querySelector("#harness-main");
+        const c = window.Stimulus.getControllerForElementAndIdentifier(el, "form-draft");
+        Object.keys(localStorage).filter(k => k.startsWith("draft:")).forEach(k => localStorage.removeItem(k));
+        el.querySelector("[name='draft[title]']").dispatchEvent(new Event("input", { bubbles: true }));
+        clearTimeout(c.pendingSave);
+        c.pendingSave = setTimeout(() => c.persist(), 60000);
+      })()
+    JS
     visit "/draft_harness" # turbo:before-visit must flush the pending save
     within("#harness-main") { expect(page).to have_text(I18n.t("form_draft.notice")) }
+  end
+
+  it "announces honestly when hidden-backed (rich text) content cannot be restored" do
+    # #479: simulate a Lexxy-style editor — content lives in a hidden input
+    # with no visible sibling. The draft captures it (hidden values are
+    # serialized by design), but recover() can never write it back, and the
+    # announcement must say so instead of reporting a clean restore while the
+    # longest content on the page silently stays empty.
+    visit "/draft_harness"
+    page.execute_script(<<~JS)
+      document.querySelector("#harness-main").insertAdjacentHTML("beforeend",
+        '<input type="hidden" name="draft[rich_body]" value="the whole document">')
+    JS
+    fill_in "Title", with: "honest announcements"
+    wait_for_draft("harness-main")
+
+    visit "/draft_harness"
+    page.execute_script(<<~JS)
+      document.querySelector("#harness-main").insertAdjacentHTML("beforeend",
+        '<input type="hidden" name="draft[rich_body]" value="">')
+    JS
+    within("#harness-main") { click_button I18n.t("form_draft.recover") }
+
+    status = find('#harness-main [data-form-draft-target="status"]', visible: :all)
+    expect(status).to have_text("Rich text content was not restored", wait: 3)
+    expect(status).to have_text("Draft restored")
   end
 
   it "dispatches input/change on recovered fields (sibling resync contract)" do

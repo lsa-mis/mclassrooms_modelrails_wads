@@ -94,6 +94,7 @@ end
 | Notifier | Category | Severity | What it dispatches on |
 |---|---|---|---|
 | `PasswordChangedNotifier` | `security` | `danger` | `User#password_digest` change |
+| `PasskeyAddedNotifier` | `security` | `danger` | Passkey enrollment (`Passkeys::RegistrationsController#verify`) |
 | `SignInFromNewDeviceNotifier` | `security` | `danger` | Login from a previously-unseen browser fingerprint |
 | `WorkspaceInvitationReceivedNotifier` | `account_access` | `info` | `Invitation` created targeting this user |
 | `WorkspaceInvitationAcceptedNotifier` | `workspace_activity` | `success` | An invitee accepts the inviter's invitation |
@@ -133,7 +134,7 @@ The helper owns view-token mapping + severity orchestration. The three public su
 | Method | Returns | Used by |
 |---|---|---|
 | `unread_notification_summary(user)` | `{ count:, severity: }` (severity nil when count zero) | The three partial-rendering broadcasts (avatar button, bell, menu count); passed in as a `summary:` local from `NotificationBroadcaster` to avoid redundant queries |
-| `notification_bell_classes(severity)` | `{ icon: "text-<severity>" }` | The bell partial — maps severity to the saturated `--color-{severity}` token already used by toasts |
+| `notification_bell_classes(severity, variant: :icon)` | `{ icon: "text-<severity>" }` for `:icon`; a dot class (`SEVERITY_DOT_CLASSES`) for `:dot` | The bell partial — maps severity to the saturated `--color-{severity}` token already used by toasts; `variant:` selects the icon-tint vs. dot-indicator form |
 | `avatar_button_aria_label(user, summary = …)` | I18n-composed string ("User menu for Dave. 3 unread notifications, including a security alert.") | The avatar button partial; accepts a precomputed summary so the broadcaster's shared query isn't redone |
 
 `SEVERITY_RANK = { danger: 4, warning: 3, info: 2, success: 1 }` — higher rank wins when multiple severities are unread. `canonical_severity(severity)` clamps any input to one of the four canonical values (defensive coverage for non-production paths; production is already guarded by `ApplicationNotifier.severity`'s DSL).

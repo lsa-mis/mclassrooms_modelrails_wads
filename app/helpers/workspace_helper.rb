@@ -72,20 +72,26 @@ module WorkspaceHelper
 
   def workspace_icon_for(workspace, size: :md)
     config = WORKSPACE_ICON_SIZES.fetch(size)
+    identity = workspace.identity
 
-    if workspace.logo.attached?
-      render_workspace_logo(workspace, config)
-    elsif workspace.personal? && workspace.owner&.avatar&.attached? && workspace.owner.avatar_source == "upload"
+    # The personal-workspace → owner-avatar fallback is deliberately helper-level
+    # composition of two identities, not something WorkspaceIdentity models —
+    # see the CTRL-1 design's non-goals.
+    owner_identity = workspace.personal? ? workspace.owner&.identity : nil
+
+    if identity.image?
+      render_workspace_logo(identity, workspace.name, config)
+    elsif owner_identity&.source == "upload" && owner_identity.image?
       render_owner_avatar_fallback(workspace, config)
     else
-      render_workspace_initials(workspace, config)
+      render_workspace_initials(identity, config)
     end
   end
 
   private
 
-  def render_workspace_logo(workspace, config)
-    variant = workspace.logo.variant(resize_to_fill: [ config[:px], config[:px] ])
+  def render_workspace_logo(identity, name, config)
+    variant = identity.image.variant(resize_to_fill: [ config[:px], config[:px] ])
     # main_app.url_for is required because the shared header / workspace
     # switcher render inside the markdowndocs engine layout too — and
     # `image_tag variant` from a non-main-app context fails (Active Storage
@@ -93,7 +99,7 @@ module WorkspaceHelper
     # the same fix; same pattern, same reason.
     image_tag main_app.url_for(variant),
       class: "#{config[:css]} rounded-full object-cover",
-      alt: workspace.name,
+      alt: name,
       aria: { hidden: true }
   end
 
@@ -101,13 +107,11 @@ module WorkspaceHelper
     avatar_for(workspace.owner, size: WORKSPACE_ICON_SIZES.key(config))
   end
 
-  def render_workspace_initials(workspace, config)
-    hue = workspace.primary_color || 210
-
-    content_tag :div, workspace.initials,
+  def render_workspace_initials(identity, config)
+    content_tag :div, identity.initials,
       class: "#{config[:css]} #{config[:text]} rounded-full flex items-center justify-center
               font-semibold text-white bg-hue-initials",
-      style: "--hue: #{hue}",
+      style: "--hue: #{identity.hue}",
       aria: { hidden: true }
   end
 end

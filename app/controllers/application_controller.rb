@@ -1,5 +1,6 @@
 class ApplicationController < ActionController::Base
   include Authenticatable
+  include Reauthenticatable
   include RequiresOnboarding
   include Pundit::Authorization
   include Toastable
@@ -21,7 +22,7 @@ class ApplicationController < ActionController::Base
   rescue_from Suspendable::SuspendedError, with: :workspace_locked
   rescue_from Workspace::NotAdmittableError, with: :not_admittable
 
-  helper_method :signups_open?
+  helper_method :signups_open?, :pending_join_workspace
 
   def signups_open?
     return @signups_open if defined?(@signups_open)
@@ -32,7 +33,31 @@ class ApplicationController < ActionController::Base
     )
   end
 
+  # A join token parked in the session (open-link Flow B) that resolves to a
+  # workspace the signed-in user could join but isn't in yet. Surfaced as a
+  # dismissible banner so a pre-existing user re-consents to the join instead of
+  # being force-joined — the drive-by-join guard's other half. nil when there's
+  # nothing actionable to offer.
+  def pending_join_workspace
+    return @pending_join_workspace if defined?(@pending_join_workspace)
+
+    @pending_join_workspace = resolve_pending_join_workspace
+  end
+
   private
+
+  def resolve_pending_join_workspace
+    return nil unless Current.user
+
+    token = session[:pending_join_token]
+    return nil if token.blank?
+
+    workspace = WorkspaceJoinLink.find_active(token)&.workspace
+    return nil unless workspace&.accepting_open_joins?
+    return nil if workspace.memberships.kept.exists?(user: Current.user)
+
+    workspace
+  end
 
   # Backs Pundit's pundit_user and is consumed by mounted engines (e.g.
   # markdowndocs) — keep it even though app code should prefer Current.user.
@@ -43,7 +68,28 @@ class ApplicationController < ActionController::Base
   # SEC-1: refuse to grant a role the actor doesn't outrank. The server is the
   # real gate; role selects render assignable_roles_for as defence + UX.
   def authorize_role_grant!(policy_record, role)
-    raise Pundit::NotAuthorizedError unless policy(policy_record).may_grant?(role)
+    return if policy(policy_record).may_grant?(role)
+
+    log_blocked_role_grant(policy_record, role)
+    raise Pundit::NotAuthorizedError
+  end
+
+  # G (SEC-1 follow-up): a blocked escalation attempt is itself a security
+  # event — log the SPECIFIC denial to the admin feed (not every 403; generic
+  # authorization failures stay unlogged). Best-effort, same contract as
+  # Trackable#create_activity: tracking must never fail the request.
+  def log_blocked_role_grant(policy_record, role)
+    ActivityLog.create!(
+      actor: Current.user,
+      action: "membership.role_grant_blocked",
+      trackable: policy_record.is_a?(ActiveRecord::Base) ? policy_record : nil,
+      workspace: Current.workspace,
+      visibility: "admin",
+      metadata: { "attempted_role" => role.slug }
+    )
+  rescue StandardError => e
+    Rails.logger.warn("Blocked-grant logging failed: #{e.class}: #{e.message}")
+    Rails.error.report(e, handled: true, context: { action: "membership.role_grant_blocked" })
   end
 
   def assignable_roles_for(policy_record)
@@ -88,8 +134,10 @@ class ApplicationController < ActionController::Base
   # find_a_room requires a viewer grant (RoomPolicy#index?), so a non-member
   # (e.g. membership revoked mid-session) falls through to root_path — which
   # never redirects — keeping every branch loop-safe.
+  # url_from filters cross-origin referers (SEC-10): a forged Referer must
+  # fall back to root, not make the error handler raise UnsafeRedirectError.
   def not_authorized_redirect_path
-    return request.referer || root_path if Current.workspace.blank?
+    return url_from(request.referer) || root_path if Current.workspace.blank?
     return workspace_path(Current.workspace) if policy(Current.workspace).show?
     return find_a_room_path if Current.user && RoleResolver.for(Current.user).viewer?
 
@@ -99,7 +147,7 @@ class ApplicationController < ActionController::Base
   def record_not_found
     respond_to do |format|
       format.turbo_stream { render turbo_stream: error_toast(t("errors.not_found")), status: :not_found }
-      format.html { redirect_to(request.referer || root_path, alert: t("errors.not_found")) }
+      format.html { redirect_to(url_from(request.referer) || root_path, alert: t("errors.not_found")) }
       format.json { render json: { error: t("errors.not_found") }, status: :not_found }
       format.any { head :not_found }
     end

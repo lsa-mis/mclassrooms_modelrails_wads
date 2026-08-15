@@ -17,9 +17,10 @@ RSpec.describe "Magic link sign-in", type: :system do
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
       expect(page).to have_text(user.email_address)
 
-      # Extract the magic link token and visit it directly
-      token_record = MagicLinkToken.where(email: user.email_address).order(:created_at).last
-      visit magic_link_callback_path(token: token_record.token)
+      # Visit the magic link (equivalent to the emailed one) and confirm sign-in.
+      token = MagicLinkToken.create_for_email(user.email_address)
+      visit magic_link_callback_path(token: token)
+      click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
 
       expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
     end
@@ -42,9 +43,10 @@ RSpec.describe "Magic link sign-in", type: :system do
       expect(page).to have_link(I18n.t("sessions.check_email.use_password"),
                                 href: session_password_form_path(email_address: user.email_address))
 
-      # Sign in via the magic link directly
-      token_record = MagicLinkToken.where(email: user.email_address).order(:created_at).last
-      visit magic_link_callback_path(token: token_record.token)
+      # Sign in via the magic link (confirm on the interstitial).
+      token = MagicLinkToken.create_for_email(user.email_address)
+      visit magic_link_callback_path(token: token)
+      click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
 
       expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
     end
@@ -54,7 +56,7 @@ RSpec.describe "Magic link sign-in", type: :system do
     let(:user) { create(:user) }
     let(:token) do
       t = MagicLinkToken.create_for_email(user.email_address)
-      MagicLinkToken.find_by(token: t).update!(expires_at: 20.minutes.ago)
+      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(t)).update!(expires_at: 20.minutes.ago)
       t
     end
 
@@ -73,6 +75,20 @@ RSpec.describe "Magic link sign-in", type: :system do
     end
   end
 
+  describe "confirmation page accessibility (SEC-5)" do
+    let(:user) { create(:user) }
+    let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+
+    it "renders the sign-in confirmation accessibly in both themes" do
+      token = MagicLinkToken.create_for_email(user.email_address)
+      visit magic_link_callback_path(token: token)
+      expect(page).to have_button(I18n.t("magic_link_callbacks.confirm.sign_in_button"))
+      expect(page).to have_link(I18n.t("magic_link_callbacks.confirm.cancel"))
+      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+        "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+    end
+  end
+
   describe "already-consumed token" do
     let(:user) { create(:user) }
 
@@ -80,9 +96,10 @@ RSpec.describe "Magic link sign-in", type: :system do
       raw_token = MagicLinkToken.create_for_email(user.email_address)
 
       visit magic_link_callback_path(token: raw_token)
+      click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
       expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
 
-      # Token was consumed on first visit — visiting again should fail
+      # Token was consumed on confirm — visiting again should fail
       visit magic_link_callback_path(token: raw_token)
       expect(page).to have_text(I18n.t("magic_link_callbacks.show.invalid"))
     end

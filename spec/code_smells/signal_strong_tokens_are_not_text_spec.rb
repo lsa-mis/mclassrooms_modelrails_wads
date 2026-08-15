@@ -38,10 +38,13 @@ RSpec.describe "the accessibility audit is a real gate" do
 end
 
 RSpec.describe "signal -strong tokens are never used as text colors" do
-  TEXT_UTILITY = /(?<![\w-])(?:dark:)?text-(?:danger|warning|success|info)-strong(?![\w-])/
+  # Locals, not constants: a constant here lands on Object and collides with
+  # any same-named constant in another spec file sharing the worker (this
+  # file's ALLOWED broke the activity-log spec's ALLOWED on 2026-08-14).
+  text_utility = /(?<![\w-])(?:dark:)?text-(?:danger|warning|success|info)-strong(?![\w-])/
 
   # Icons are graphics, judged against 1.4.11's 3:1, not 1.4.6's 7:1.
-  ALLOWED = [
+  allowed_graphics_files = [
     # Tints a danger glyph in the dialog, not a label.
     "app/views/shared/_confirm_dialog.html.erb",
     # The bell IS the indicator — the helper documents why red alone needs
@@ -56,10 +59,10 @@ RSpec.describe "signal -strong tokens are never used as text colors" do
 
     offenders = sources.filter_map do |path|
       relative = Pathname.new(path).relative_path_from(Rails.root).to_s
-      next if ALLOWED.include?(relative)
+      next if allowed_graphics_files.include?(relative)
 
       hits = File.read(path).lines.each_with_index.filter_map do |line, i|
-        "#{relative}:#{i + 1}" if line.match?(TEXT_UTILITY)
+        "#{relative}:#{i + 1}" if line.match?(text_utility)
       end
       hits.presence
     end.flatten
@@ -71,7 +74,7 @@ RSpec.describe "signal -strong tokens are never used as text colors" do
       Those measure roughly 4.5:1 against their tinted surface where WCAG AAA
       needs 7:1. Use the base token (`text-danger`, `text-warning`, …), which is
       tuned for text on dark surfaces. Borders and icons may keep `-strong`;
-      add the file to ALLOWED here if the usage is genuinely non-text.
+      add the file to allowed_graphics_files here if the usage is genuinely non-text.
     MSG
   end
 end

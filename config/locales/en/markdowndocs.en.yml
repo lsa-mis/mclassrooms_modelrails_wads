@@ -1,0 +1,12 @@
+en:
+  markdowndocs:
+    docs:
+      navigation:
+        toc_label: "Table of Contents"
+        on_this_page: "On this page"
+        related: "Related Documentation"
+      index:
+        title: "Documentation"
+        subtitle: "Browse our comprehensive documentation and guides"
+        empty_title: "No documentation available"
+        empty_body: "Documentation will appear here once markdown files are added."

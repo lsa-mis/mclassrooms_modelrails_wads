@@ -28,7 +28,7 @@ require "rails_helper"
 # We scope the audit to the badge subtree by element type so those host-chrome
 # advisories stay out of scope WITHOUT excluding any rule.
 RSpec.describe "Badge component accessibility", type: :system do
-  BADGE_PREVIEW = "/rails/view_components/ui/badge_component"
+  badge_preview = "/rails/view_components/ui/badge_component"
 
   # variant scenario => the element the badge renders as on that preview.
   # `link_href` passes `href:` so the component renders an <a>; every other
@@ -47,7 +47,7 @@ RSpec.describe "Badge component accessibility", type: :system do
     "link_href"   => "a"
   }.each do |scenario, element|
     it "#{scenario} renders a <#{element}> and passes AAA in both themes" do
-      visit "#{BADGE_PREVIEW}/#{scenario}"
+      visit "#{badge_preview}/#{scenario}"
 
       # The badge is the only element of its kind inside the preview body, but
       # scope the matcher to the rounded-full pill class to be precise.
@@ -65,7 +65,7 @@ RSpec.describe "Badge component accessibility", type: :system do
   end
 
   it "showcase renders every proven cell and passes AAA in both themes" do
-    visit "#{BADGE_PREVIEW}/showcase"
+    visit "#{badge_preview}/showcase"
 
     # All 9 proven cells render; scope the audit to the showcase subtree so
     # host-chrome best-practice advisories stay out (no color-contrast exclude).

@@ -7,7 +7,7 @@ require "rails_helper"
 # drops them from the variable list; these examples pin both halves of that —
 # the types that must be gone, and the ones that must stay.
 RSpec.describe "Active Storage variant safety" do
-  BLOCKED_LOADER_TYPES = %w[
+  blocked_loader_types = %w[
     image/bmp
     image/vnd.microsoft.icon
     image/vnd.adobe.photoshop
@@ -15,7 +15,7 @@ RSpec.describe "Active Storage variant safety" do
 
   # Verified against libvips 8.18.4 under Vips.block_untrusted(true): each of
   # these still loads and thumbnails. Do not prune them.
-  SAFE_LOADER_TYPES = %w[
+  safe_loader_types = %w[
     image/png
     image/jpeg
     image/gif
@@ -27,11 +27,11 @@ RSpec.describe "Active Storage variant safety" do
   ].freeze
 
   it "does not treat blocked-loader types as variable" do
-    expect(ActiveStorage.variable_content_types).not_to include(*BLOCKED_LOADER_TYPES)
+    expect(ActiveStorage.variable_content_types).not_to include(*blocked_loader_types)
   end
 
   it "still treats every format libvips can safely transform as variable" do
-    expect(ActiveStorage.variable_content_types).to include(*SAFE_LOADER_TYPES)
+    expect(ActiveStorage.variable_content_types).to include(*safe_loader_types)
   end
 
   it "reports a blocked-loader blob as neither variable nor representable" do

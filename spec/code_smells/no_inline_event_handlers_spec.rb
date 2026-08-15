@@ -17,7 +17,7 @@ RSpec.describe "ERB views have no inline event handlers" do
   # failure message can suggest the specific Stimulus action equivalent
   # and so we don't accidentally trip on legitimate attributes named
   # something like data-only-once.
-  FORBIDDEN_HANDLERS = %w[
+  forbidden_handlers = %w[
     onclick onchange oninput onsubmit onload onunload
     onblur onfocus onkeyup onkeydown onkeypress
     onmouseover onmouseout onmousedown onmouseup onmousemove
@@ -28,7 +28,7 @@ RSpec.describe "ERB views have no inline event handlers" do
 
   it "uses Stimulus actions instead of inline on*= attributes" do
     erb_files = Dir.glob(Rails.root.join("app/views/**/*.erb"))
-    handlers = FORBIDDEN_HANDLERS.join("|")
+    handlers = forbidden_handlers.join("|")
 
     # Three forms a view might emit a forbidden handler:
     #   1. Raw HTML attr:   <button onclick="...">

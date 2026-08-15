@@ -40,6 +40,14 @@ production:
     # mailer work is observable separately from DB sweeps on `default`.
     schedule: every 15 minutes
 
+  unattached_blobs_sweep:
+    class: UnattachedBlobsSweepJob
+    queue: default
+    # Direct-upload blobs that never got attached are permanent files on the
+    # same volume as the SQLite databases; nothing else purges them. Daily
+    # sweep, 2-day grace, purge_later fan-out (see the job's comment).
+    schedule: every day at 5am
+
   expired_sessions_sweep:
     class: ExpiredSessionsSweepJob
     queue: default
@@ -47,6 +55,24 @@ production:
     # cadence isn't security-critical. Daily is plenty; batched delete releases
     # the SQLite writer lock between rounds.
     schedule: every day at 4am
+
+  webauthn_challenges_sweep:
+    class: WebauthnChallengesSweepJob
+    queue: default
+    # The conditional-UI autofill path inserts a challenge row on every load
+    # of the public sign-in page and nothing else ever deletes them (#378).
+    # Expiry/single-use are enforced at consume time, so cadence is pure
+    # housekeeping; daily with a 1-day grace.
+    schedule: every day at 4:30am
+
+  activity_log_retention_sweep:
+    class: ActivityLogRetentionSweepJob
+    queue: default
+    # Bounds the best-effort audit trail at 12 months (#438, panel-decided).
+    # The window and its rationale live as a constant in the job; the job is
+    # registered in the immutability guard's allowed_bypasses. Weekly is
+    # plenty for a 12-month horizon.
+    schedule: every sunday at 3:30am
 
   notification_cleanup:
     class: NotificationCleanupJob

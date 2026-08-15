@@ -123,7 +123,7 @@
       <span data-a11y-sim-target="triggerIcon" class="inline-flex"><%= mode_icons["normal"] %></span>
       <span><%= t("a11y_sim.prefix") %></span>
       <span data-a11y-sim-target="triggerLabel" class="font-semibold"><%= t("a11y_sim.modes.normal") %></span>
-      <span aria-hidden="true" class="text-[9px]">&#9652;</span>
+      <span aria-hidden="true" class="text-[9px]">&#9652;</span> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
     </button>
 
     <div data-a11y-sim-target="menu"

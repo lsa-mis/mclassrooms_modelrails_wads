@@ -173,6 +173,17 @@ RSpec.describe AvatarHelper, type: :helper do
         result = helper.avatar_for(user, size: :md)
         expect(result).to have_css("span", text: "JD")
       end
+
+      # PR 3 (Identity adoption): the helper previously bypassed the
+      # availability check and rendered gravatar.com/...?d=404 for a stale
+      # gravatar source — a permanently broken image once CheckGravatarJob
+      # flipped has_gravatar off. Identity#gravatar_url is consistency-gated.
+      it "falls back to initials when gravatar is no longer an available source" do
+        user.update_columns(avatar_source: "gravatar", has_gravatar: false)
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css("span", text: "JD")
+        expect(result).not_to have_css("img")
+      end
     end
   end
 end

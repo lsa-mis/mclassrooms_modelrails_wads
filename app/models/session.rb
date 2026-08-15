@@ -20,6 +20,18 @@ class Session < ApplicationRecord
   def self.idle_timeout = Rails.configuration.x.session.idle_timeout
   def self.absolute_timeout = Rails.configuration.x.session.absolute_timeout
   def self.touch_throttle = Rails.configuration.x.session.touch_throttle
+  def self.reauth_window = Rails.configuration.x.session.reauth_window
+
+  # Was a factor proven on THIS session recently enough to authorize a
+  # sensitive change? Per-session by design — proving it on one device doesn't
+  # unlock another.
+  def reauthenticated?
+    reauthenticated_at.present? && reauthenticated_at > self.class.reauth_window.ago
+  end
+
+  def confirm_reauthentication!
+    update_column(:reauthenticated_at, Time.current)
+  end
 
   def expired?
     (last_active_at || created_at) <= self.class.idle_timeout.ago ||

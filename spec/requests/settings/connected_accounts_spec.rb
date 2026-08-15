@@ -498,7 +498,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
         uid: "joinme",
         email: "joiner@example.com",
         verified_at: nil,
-        pending_join_link_token: link.token
+        pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token)
       )
     end
 
@@ -516,7 +516,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
         expect(pending_auth.reload.verified_at).to be_present
         # Benign duplicate: the success notice covers it, nothing alarming.
         expect(flash[:alert]).to be_blank
-        expect(pending_auth.reload.pending_join_link_token).to be_nil
+        expect(pending_auth.reload.pending_join_link_digest).to be_nil
       end
     end
 
@@ -530,7 +530,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
         expect(pending_auth.reload.verified_at).to be_present
         expect(flash[:alert]).to eq(I18n.t("settings.connected_accounts.verify.join_link_at_capacity"))
         expect(flash[:alert]).not_to include("Workspace is at capacity")
-        expect(pending_auth.reload.pending_join_link_token).to be_nil
+        expect(pending_auth.reload.pending_join_link_digest).to be_nil
       end
     end
 
@@ -541,7 +541,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
         expect(pending_auth.reload.verified_at).to be_present
         expect(user.reload.workspaces).to include(workspace)
         expect(workspace.memberships.find_by!(user: user).role.slug).to eq("member")
-        expect(pending_auth.reload.pending_join_link_token).to be_nil
+        expect(pending_auth.reload.pending_join_link_digest).to be_nil
         expect(flash[:alert]).to be_blank
         # Unauthenticated caller is signed in once their email is proven.
         expect(response).to redirect_to(root_path)
@@ -556,7 +556,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
 
         expect(pending_auth.reload.verified_at).to be_present
         expect(user.reload.workspaces).not_to include(workspace)
-        expect(pending_auth.reload.pending_join_link_token).to be_nil
+        expect(pending_auth.reload.pending_join_link_digest).to be_nil
         expect(flash[:alert]).to be_blank
       end
     end
@@ -572,7 +572,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
 
         expect(pending_auth.reload.verified_at).to be_present
         expect(user.reload.workspaces).not_to include(workspace)
-        expect(pending_auth.reload.pending_join_link_token).to be_nil
+        expect(pending_auth.reload.pending_join_link_digest).to be_nil
         expect(flash[:alert]).to be_blank
         expect(flash[:alert]).not_to eq(I18n.t("workspaces.locked_notice"))
       end
@@ -592,7 +592,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
 
           expect(pending_auth.reload.verified_at).to be_present
           expect(user.reload.workspaces).not_to include(workspace)
-          expect(pending_auth.reload.pending_join_link_token).to be_nil
+          expect(pending_auth.reload.pending_join_link_digest).to be_nil
           expect(flash[:alert]).to be_blank
           expect(flash[:alert]).not_to match(/archived|deleted|locked|suspended/i)
         end
@@ -607,7 +607,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
 
         expect(pending_auth.reload.verified_at).to be_present
         expect(user.reload.workspaces).not_to include(workspace)
-        expect(pending_auth.reload.pending_join_link_token).to be_nil
+        expect(pending_auth.reload.pending_join_link_digest).to be_nil
         expect(flash[:alert]).to be_blank
       end
     end

@@ -99,6 +99,44 @@ RSpec.describe "Sessions new-device detection", type: :request do
     end
   end
 
+  describe "POST /session — browser version bumps" do
+    it "does not re-fire the notifier when only the browser version changed" do
+      post session_path, params: {
+        email_address: user.email_address,
+        password: "SecureP@ssw0rd123!"
+      }, headers: { "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) Chrome/126.0.0.0" }
+      delete session_path
+
+      expect {
+        post session_path, params: {
+          email_address: user.email_address,
+          password: "SecureP@ssw0rd123!"
+        }, headers: { "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_1) Chrome/127.0.1.2" }
+      }.not_to change { Noticed::Event.where(type: "SignInFromNewDeviceNotifier").count }
+    end
+  end
+
+  describe "POST /session — new_device_notification flag" do
+    around do |example|
+      original = Rails.configuration.x.session.new_device_notification
+      Rails.configuration.x.session.new_device_notification = false
+      example.run
+    ensure
+      Rails.configuration.x.session.new_device_notification = original
+    end
+
+    it "suppresses the alert but still records the fingerprint when disabled" do
+      expect {
+        post session_path, params: {
+          email_address: user.email_address,
+          password: "SecureP@ssw0rd123!"
+        }, headers: { "User-Agent" => "Mozilla/5.0 (Macintosh) Chrome/126.0" }
+      }.not_to change { Noticed::Event.where(type: "SignInFromNewDeviceNotifier").count }
+
+      expect(user.reload.last_known_browsers).not_to be_empty
+    end
+  end
+
   # The new-device hook is best-effort: a DB/queue hiccup must never break
   # sign-in. But the rescue is narrowed to ActiveRecord errors (on this
   # SQLite + Solid Queue stack, even a "queue down" surfaces as one), so a

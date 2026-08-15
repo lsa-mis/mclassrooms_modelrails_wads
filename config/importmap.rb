@@ -1,6 +1,7 @@
 # Pin npm packages by running ./bin/importmap
 
 pin "application"
+pin "navigation_focus"
 pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
@@ -18,9 +19,16 @@ pin "lexxy", to: "lexxy.js"
 # by the admin bulk-upload flow (app/controllers/admin/bulk_uploads_controller.rb),
 # which re-POSTs signed blob ids across two requests and therefore needs the
 # blob uploaded to storage BEFORE the first request, not carried as multipart
-# form data.
+# form data. Lexxy's uploader also dynamic-imports this pin (SEC-7); without
+# it, editor attachments silently never upload.
 pin "@rails/activestorage", to: "activestorage.esm.js"
-pin "cropperjs", to: "https://cdn.jsdelivr.net/npm/cropperjs@2/dist/cropper.esm.js"
+
+# Vendored (SEC-6): the self-contained dist bundle, committed at an exact
+# version so production script-src carries no CDN host and the bytes can't
+# change under a floating tag. Upgrade = download the new
+# cropperjs@X.Y.Z/dist/cropper.esm.js into vendor/javascript/cropperjs.js
+# and commit the diff.
+pin "cropperjs" # @2.1.1
 
 # Pannellum (2.5.7 standalone build, bundles libpannellum) is vendored at
 # vendor/javascript/pannellum.js rather than fetched from a CDN — it has no

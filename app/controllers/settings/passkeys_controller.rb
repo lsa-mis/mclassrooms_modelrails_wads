@@ -1,6 +1,7 @@
 module Settings
   class PasskeysController < ApplicationController
     layout "settings"
+    before_action :require_reauthentication!, only: :destroy
 
     def index
       @passkeys = Current.user.webauthn_credentials.kept.order(:created_at)

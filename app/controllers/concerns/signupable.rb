@@ -18,12 +18,12 @@ module Signupable
   # stale-workspace parked joins never reach here — the pre-check drops them.
   # Sets flash.now[:alert] only on Invitation::NotAcceptable (so the caller
   # can rely on @user.errors for model-validation failures).
-  def commit_signup_atomically(user, &block)
+  def commit_signup_atomically(user, newly_registered: true, &block)
     ApplicationRecord.transaction do
       user.save!
       yield(user)
       accept_pending_invitation!(user)
-      accept_pending_join_link!(user)
+      accept_pending_join_link!(user, newly_registered: newly_registered)
     end
     true
   rescue Invitation::NotAcceptable
@@ -35,7 +35,8 @@ module Signupable
     session.delete(:pending_invitation_token)
     flash.now[:alert] = I18n.t("registrations.create.invitation_consumed")
     false
-  rescue ActiveRecord::RecordInvalid, Workspace::NotAdmittableError
+  rescue ActiveRecord::RecordInvalid, Workspace::NotAdmittableError,
+         Workspace::AlreadyMember, Workspace::AtCapacity
     false
   end
 
@@ -64,24 +65,29 @@ module Signupable
   # Consumes the session's pending open-link join token for a freshly-signed-up,
   # email-verified user. Stale link conditions (revoked, policy reverted,
   # workspace archived/suspended/deleted) are silent no-ops — a visitor who
-  # was never a member must not learn the workspace is locked. Benign
-  # "already a member" is rescued; other capacity errors propagate — the
-  # outer commit_signup_atomically rescues RecordInvalid and returns false,
-  # consistent with the invitation path.
-  def accept_pending_join_link!(user)
+  # was never a member must not learn the workspace is locked. A benign
+  # Workspace::AlreadyMember is swallowed; Workspace::AtCapacity propagates —
+  # the outer commit_signup_atomically rescues it and returns false, consistent
+  # with the invitation path.
+  def accept_pending_join_link!(user, newly_registered:)
     token = session[:pending_join_token]
     return if token.blank?
 
-    link = WorkspaceJoinLink.active.find_by(token: token)
-    if link.nil? || !link.workspace.open_join? || !link.workspace.admittable?
-      session.delete(:pending_join_token)
-      return
-    end
+    link = WorkspaceJoinLink.find_active(token)
+
+    # A brand-new account's signup is its own consent to join the link it
+    # followed. A pre-existing user, though, may be authenticating for an
+    # unrelated reason (linking a new verified OAuth provider) with a lured-in
+    # token riding the session — never silently force-join them. Leave a
+    # still-valid token parked so the pending-join banner can offer an explicit
+    # Join / Dismiss; everything else (stale/consumed) clears below.
+    return if !newly_registered && link&.workspace&.accepting_open_joins?
 
     begin
-      link.workspace.admit(user, role: link.workspace.default_self_join_role)
-    rescue ActiveRecord::RecordInvalid => e
-      raise unless e.message.match?(/already a member/i)
+      link&.admit(user)
+    rescue Workspace::AlreadyMember
+      # Benign: already in the workspace. Capacity (Workspace::AtCapacity)
+      # propagates to commit_signup_atomically, which rolls the signup back.
     ensure
       session.delete(:pending_join_token)
     end

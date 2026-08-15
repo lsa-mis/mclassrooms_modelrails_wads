@@ -1,6 +1,13 @@
 class ReshapeNotificationPreferencesJsonb < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
+  # Frozen (#449): migrations replay from zero on every fresh clone and must
+  # not reference live app classes — this one originally used the real
+  # UserPreferences model, which a fork rename/reshape would break.
+  class MigrationUserPreferences < ActiveRecord::Base
+    self.table_name = "user_preferences"
+  end
+
   # Add the banner-dismissal timestamp column and reshape every existing
   # user_preferences.notification_preferences JSONB to the new
   # parallel-list shape per the spec's backfill rules. Existing v1 5×3
@@ -43,9 +50,9 @@ class ReshapeNotificationPreferencesJsonb < ActiveRecord::Migration[8.1]
     # (factories, create_preferences!) start with the new structure.
     change_column_default :user_preferences, :notification_preferences, NEW_DEFAULT_JSONB
 
-    UserPreferences.reset_column_information
+    MigrationUserPreferences.reset_column_information
 
-    UserPreferences.unscoped.in_batches(of: 500) do |batch|
+    MigrationUserPreferences.unscoped.in_batches(of: 500) do |batch|
       batch.each do |prefs|
         reshaped = self.class.reshape_legacy_jsonb(prefs.notification_preferences)
         prefs.update_columns(notification_preferences: reshaped)
@@ -57,8 +64,8 @@ class ReshapeNotificationPreferencesJsonb < ActiveRecord::Migration[8.1]
     remove_column :user_preferences, :dismissed_notifications_redesign_banner_at
     # Restore schema-default JSONB for every row. User-specific values are
     # lost — documented trade-off (see migration header comment).
-    default_jsonb = UserPreferences.column_defaults["notification_preferences"]
-    UserPreferences.unscoped.update_all(notification_preferences: default_jsonb)
+    default_jsonb = MigrationUserPreferences.column_defaults["notification_preferences"]
+    MigrationUserPreferences.unscoped.update_all(notification_preferences: default_jsonb)
   end
 
   # Pure transformation. Tested via spec/migrations/* without touching
