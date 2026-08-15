@@ -3,8 +3,8 @@
 <aside class="sidebar space-y-6">
   <% if toc_items.length >= 3 %>
     <div class="bg-surface-raised rounded-lg shadow-sm p-6">
-      <nav aria-label="Table of Contents">
-        <h2 class="text-lg font-semibold text-text-heading mb-4">On this page</h2>
+      <nav aria-label="<%= t(".toc_label") %>">
+        <h2 class="text-lg font-semibold text-text-heading mb-4"><%= t(".on_this_page") %></h2>
         <ul class="space-y-2">
           <% toc_items.each do |item| %>
             <li class="<%= 'ml-4' if item[:level] == 3 %>">
@@ -20,7 +20,7 @@
 
   <% if related_docs.any? %>
     <div class="bg-surface-raised rounded-lg shadow-sm p-6 related-docs">
-      <h2 class="text-lg font-semibold text-text-heading mb-4">Related Documentation</h2>
+      <h2 class="text-lg font-semibold text-text-heading mb-4"><%= t(".related") %></h2>
       <ul class="space-y-3">
         <% related_docs.each do |related_doc| %>
           <li>

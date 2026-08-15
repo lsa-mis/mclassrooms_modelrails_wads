@@ -56,27 +56,11 @@
           required: true,
           autocomplete: "family-name" %>
 
-    <% if @user.has_password? %>
-      <%= form.email_field :email_address,
-            label: t("settings.profiles.edit.email_label"),
-            required: true,
-            autocomplete: "email" %>
-
-      <%= form.password_field :current_password,
-            label: t("settings.profiles.edit.current_password_label"),
-            help: t("settings.profiles.edit.current_password_help"),
-            autocomplete: "current-password" %>
-    <% else %>
-      <div class="space-y-2">
-        <p class="block text-sm font-medium text-text-body"><%= t("settings.profiles.edit.email_label") %></p>
-        <p class="text-text-heading"><%= @user.email_address %></p>
-        <p class="text-sm text-text-muted">
-          <%= t("settings.profiles.edit.email_readonly_notice") %>
-          <%= link_to t("settings.profiles.edit.set_password"), new_settings_password_path,
-                class: "text-interactive underline hover:no-underline" %>
-        </p>
-      </div>
-    <% end %>
+    <%= form.email_field :email_address,
+          label: t("settings.profiles.edit.email_label"),
+          help: t("settings.profiles.edit.email_help"),
+          required: true,
+          autocomplete: "email" %>
 
     <% if @user.pending_email.present? %>
       <div class="rounded-lg border border-info-border bg-info-surface p-4">

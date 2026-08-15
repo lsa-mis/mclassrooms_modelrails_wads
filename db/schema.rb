@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_09_021927) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_09_172239) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -83,7 +83,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_021927) do
     t.string "oauth_refresh_token"
     t.string "oauth_token"
     t.string "pending_invitation_token"
-    t.string "pending_join_link_token"
+    t.string "pending_join_link_digest"
     t.string "provider"
     t.string "uid"
     t.datetime "updated_at", null: false
@@ -216,10 +216,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_021927) do
     t.string "email", null: false
     t.datetime "expires_at", null: false
     t.string "intent"
-    t.string "token", null: false
+    t.string "token_digest", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_magic_link_tokens_on_email_unconsumed", unique: true, where: "consumed_at IS NULL"
-    t.index ["token"], name: "index_magic_link_tokens_on_token", unique: true
+    t.index ["token_digest"], name: "index_magic_link_tokens_on_token_digest", unique: true
   end
 
   create_table "media_assets", force: :cascade do |t|
@@ -297,6 +297,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_021927) do
     t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_unread", where: "read_at IS NULL"
     t.check_constraint "recipient_type = 'User'", name: "recipient_type_user_only_v1"
     t.check_constraint "seen_at IS NULL OR read_at IS NULL OR read_at >= seen_at", name: "seen_before_read"
+  end
+
+  create_table "reauthentication_challenges", force: :cascade do |t|
+    t.string "code_digest", null: false
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id"], name: "index_active_reauth_challenge_per_user", unique: true, where: "consumed_at IS NULL"
+    t.index ["user_id"], name: "index_reauthentication_challenges_on_user_id"
   end
 
   create_table "roles", force: :cascade do |t|
@@ -405,6 +416,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_021927) do
     t.datetime "created_at", null: false
     t.string "ip_address"
     t.datetime "last_active_at"
+    t.datetime "reauthenticated_at"
     t.datetime "updated_at", null: false
     t.string "user_agent"
     t.integer "user_id", null: false
@@ -550,11 +562,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_021927) do
     t.datetime "created_at", null: false
     t.integer "created_by_id", null: false
     t.datetime "revoked_at"
-    t.string "token", null: false
+    t.string "token_digest", null: false
     t.datetime "updated_at", null: false
     t.integer "workspace_id", null: false
     t.index ["created_by_id"], name: "index_workspace_join_links_on_created_by_id"
-    t.index ["token"], name: "index_workspace_join_links_on_token", unique: true
+    t.index ["token_digest"], name: "index_workspace_join_links_on_token_digest", unique: true
     t.index ["workspace_id", "revoked_at"], name: "index_workspace_join_links_on_workspace_id_and_revoked_at"
     t.index ["workspace_id"], name: "index_workspace_join_links_on_workspace_id"
     t.index ["workspace_id"], name: "index_workspace_join_links_unique_active_per_workspace", unique: true, where: "revoked_at IS NULL"
@@ -610,6 +622,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_021927) do
   add_foreign_key "notes", "users", column: "author_id"
   add_foreign_key "notes", "workspaces"
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
+  add_foreign_key "reauthentication_challenges", "users"
   add_foreign_key "roles", "workspaces"
   add_foreign_key "room_characteristics", "rooms"
   add_foreign_key "room_characteristics", "workspaces"

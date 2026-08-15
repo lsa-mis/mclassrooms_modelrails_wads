@@ -83,24 +83,24 @@ class Authentication < ApplicationRecord
   # isn't blocked by a workspace whose join policy changed mid-flight. A
   # visitor who was never a member must not learn the workspace is locked.
   # Capacity/already-member errors propagate up so the caller can surface them.
+  # No newly-registered guard (unlike Signupable#accept_pending_join_link!) is
+  # needed: the digest is parked only by handle_unverified_email_oauth, which
+  # always creates a fresh user and refuses to link an existing one, so the
+  # claimer here is never a pre-existing account being drive-by joined.
   def claim_pending_join_link!(user)
-    return if pending_join_link_token.blank?
+    return if pending_join_link_digest.blank?
 
-    link = WorkspaceJoinLink.active.find_by(token: pending_join_link_token)
-
-    if link.nil? || !link.workspace.open_join? || !link.workspace.admittable?
-      update!(pending_join_link_token: nil)
-      return
-    end
+    link = WorkspaceJoinLink.find_active_by_digest(pending_join_link_digest)
 
     # The token is a one-shot claim: verify never retries, so once we attempt
     # admission the token is spent regardless of outcome. Clearing it lives in
     # `ensure` (not bundled in admit's transaction) so a terminal failure like
-    # capacity rolls back the membership but does NOT resurrect the token.
+    # capacity rolls back the membership but does NOT resurrect the token. A
+    # stale link is a silent no-op inside WorkspaceJoinLink#admit.
     begin
-      link.workspace.admit(user, role: link.workspace.default_self_join_role)
+      link&.admit(user)
     ensure
-      update!(pending_join_link_token: nil)
+      update!(pending_join_link_digest: nil)
     end
   end
 

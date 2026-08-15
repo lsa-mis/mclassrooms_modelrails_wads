@@ -34,8 +34,8 @@ RSpec.describe "Flow B: new user signs up via workspace join link", type: :reque
 
   it "stashes the join token, opens the signup gate, admits the user on magic-link signup" do
     # 1. Unauthenticated visitor POSTs the join link → stash + redirect to sign-in.
-    post workspace_join_path(workspace, token: link.token)
-    expect(session[:pending_join_token]).to eq(link.token)
+    post workspace_join_path(workspace, token: link.plaintext_token)
+    expect(session[:pending_join_token]).to eq(link.plaintext_token)
     expect(response).to redirect_to(new_session_path)
 
     # 2. The signup gate is open even under :invite_only because the join

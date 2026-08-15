@@ -3,3 +3,4 @@ en:
     reject_non_essential: "Reject non-essential"
     manage_message: "Update your cookie preferences below."
     cancel: "Cancel"
+    required_marker: "required"

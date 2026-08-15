@@ -12,11 +12,13 @@ module PlaywrightAccessibility
   # known AAA-contrast debt that is tracked separately and not allowed to gate
   # unrelated work:
   #
-  # - .biscuit-banner   GDPR consent banner (biscuit-rails gem). The primary
-  #                     button's OKLCH-derived background + text combination
-  #                     currently sits at ~4.8:1, below AAA's 7:1. Tightening
-  #                     it without dropping `--biscuit-accent` saturation
-  #                     across every workspace hue is a follow-up.
+  # `.biscuit-banner` was previously deferred here (primary button at ~4.8:1
+  # pre-#500). The banner rework fixed the contrast, but the exclusion
+  # outlived the debt — an unexcluded audit passes both themes clean (#462,
+  # proven by spec/system/accessibility/cookie_banner_axe_spec.rb). It is no
+  # longer excluded: the first surface every signed-out visitor meets is held
+  # to the same bar as everything else.
+  #
   # - .highlight        Rouge syntax-highlighting palette
   #                     (--syntax-builtin/-comment/-name/-string/-tag) sits at
   #                     AA. Bumping every token to AAA changes how every code
@@ -38,12 +40,9 @@ module PlaywrightAccessibility
   # `app/assets/tailwind/application.css` "Workspace Branding Override")
   # made them AAA-compliant deterministically, so they are no longer excluded.
   #
-  # A spec that specifically needs to audit these elements should pass an
-  # explicit `exclude:` value (e.g., `exclude: [".biscuit-banner"]` to keep
-  # biscuit out of scope while still checking `.highlight`). Pass `[]` for the
-  # raw, unfiltered audit.
+  # A spec that specifically needs to audit an excluded element should pass an
+  # explicit `exclude:` value. Pass `[]` for the raw, unfiltered audit.
   DEFERRED_AAA_EXCLUDES = [
-    ".biscuit-banner",
     ".highlight"
   ].freeze
 

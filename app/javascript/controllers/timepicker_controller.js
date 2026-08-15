@@ -34,6 +34,18 @@ export default class extends Controller {
   hourUp()   { this.#stepHour(1) }
   hourDown() { this.#stepHour(-1) }
 
+  // role="spinbutton" PROMISES ArrowUp/ArrowDown to AT users — the hour and
+  // minute fields wired only change-> handlers, so the promise was empty
+  // (caught by the keyboard-driven spec, #463). AM/PM already had its own
+  // keydown; these give the numeric fields the same contract.
+  hourKeydown(e)   { this.#arrowStep(e, () => this.hourUp(), () => this.hourDown()) }
+  minuteKeydown(e) { this.#arrowStep(e, () => this.minuteUp(), () => this.minuteDown()) }
+
+  #arrowStep(event, up, down) {
+    if (event.key === "ArrowUp") { event.preventDefault(); up() }
+    else if (event.key === "ArrowDown") { event.preventDefault(); down() }
+  }
+
   minuteUp()   { this.#stepMinute(this.stepValue) }
   minuteDown() { this.#stepMinute(-this.stepValue) }
 

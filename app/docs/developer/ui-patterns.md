@@ -86,7 +86,7 @@ Branding Override" block) remaps:
 
 Why direct OKLCH literals in dark mode: the previous design used
 `color-mix(--ws-primary, white)` to lighten the dark-mode brand color.
-That produced flaky AAA contrast in CI's Playwright/axe renderer because
+That produced flaky AAA contrast in CI's Cuprite/axe renderer because
 OKLCH color-mix resolution varied across Chromium/Ubuntu builds. Direct
 literals are deterministic. See `project_flaky_tests_followup.md §2`
 for the investigation.

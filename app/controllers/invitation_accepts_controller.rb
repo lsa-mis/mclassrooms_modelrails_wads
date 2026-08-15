@@ -25,7 +25,8 @@ class InvitationAcceptsController < ApplicationController
         redirect_to workspace_path(@invitation.invitable), notice: t(".success")
       rescue Invitation::EmailMismatch
         redirect_to root_path, alert: t(".email_mismatch")
-      rescue Invitation::NotAcceptable, ActiveRecord::RecordInvalid
+      rescue Invitation::NotAcceptable, ActiveRecord::RecordInvalid,
+             Workspace::AlreadyMember, Workspace::AtCapacity
         redirect_to root_path, alert: t(".acceptance_failed")
       end
     else

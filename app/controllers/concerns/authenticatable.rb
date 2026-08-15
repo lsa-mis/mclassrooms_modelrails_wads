@@ -78,9 +78,34 @@ module Authenticatable
       root_path
     end
 
+    # Session keys that must survive login. Everything else in the pre-auth
+    # session hash is dropped at the privilege boundary (reset_session below).
+    # Deliberately NOT preserved: current_workspace_id (re-derived per request),
+    # return_to_after_reauthentication and reauthentication_code_sent (only set
+    # while already authenticated, never during initial sign-in). A fork adding
+    # its own pre-auth key registers it here.
+    SESSION_KEYS_SURVIVING_LOGIN = %i[
+      return_to_after_authenticating pending_invitation_token pending_join_token
+      okta_id_token
+    ].freeze
+    # okta_id_token (fork, RP-initiated logout D4): stashed at OAuth callback
+    # time — BEFORE start_new_session_for in the same request, and in the
+    # deferred-verification flow an entire session earlier — so the reset here
+    # would otherwise wipe it and sign-out would silently skip Okta's
+    # end_session_endpoint. See OmniauthCallbacksController#stash_okta_logout_state.
+
     def start_new_session_for(user)
+      # Clear leftover pre-auth session state at the privilege boundary, keeping
+      # only the keys the post-login flow needs. Hygiene, not a fixation fix —
+      # Rails' encrypted cookie store already prevents a forged session hash and
+      # the DB Session row is rotated on every login.
+      preserved = SESSION_KEYS_SURVIVING_LOGIN.index_with { |key| session[key] }.compact
+      reset_session
+      preserved.each { |key, value| session[key] = value }
+
       user.sessions.create!(
-        user_agent: request.user_agent, ip_address: request.remote_ip, last_active_at: Time.current
+        user_agent: request.user_agent, ip_address: request.remote_ip,
+        last_active_at: Time.current, reauthenticated_at: Time.current
       ).tap do |session|
         Current.session = session
         cookies.signed[:session_id] = {
@@ -108,7 +133,9 @@ module Authenticatable
       ua = request.user_agent.to_s
       os = parse_os_from_user_agent(ua)
 
-      unless user.seen_browser?(ua, os)
+      # The flag gates the ALERT only; recording always runs so detection
+      # history survives a fork toggling notifications (sessions.rb).
+      if Rails.configuration.x.session.new_device_notification && !user.seen_browser?(ua, os)
         SignInFromNewDeviceNotifier.with(record: user, user_agent: ua, os: os).deliver(user)
       end
 

@@ -4,5 +4,8 @@ en:
     recover: Recover draft
     discard: Discard draft
     found: Recoverable draft found. Recover and Discard buttons are before the form fields.
-    restored: "Draft restored. %{count} fields updated."
+    restored_one: "Draft restored. 1 field updated."
+    restored_other: "Draft restored. %{count} fields updated."
+    restored_partial: "Draft restored. %{count} fields updated. Rich text content was not restored and remains saved."
+    restored_none: "Draft not restored — its content needs the rich text editor, which does not support draft recovery yet."
     discarded: Draft discarded.

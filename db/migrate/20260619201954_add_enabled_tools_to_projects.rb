@@ -1,14 +1,20 @@
 class AddEnabledToolsToProjects < ActiveRecord::Migration[8.1]
+  # Frozen (#449): migrations replay from zero on every fresh clone, so they
+  # must never reference live app classes — a fork that renames Project or
+  # reshapes ProjectTools::Registry breaks db:migrate on day one. The inline
+  # model and the literal backfill value are this migration's world as of its
+  # timestamp; they deliberately do not track the app.
+  class MigrationProject < ActiveRecord::Base
+    self.table_name = "projects"
+  end
+
   def up
     add_column :projects, :enabled_tools, :json, null: false, default: []
 
-    # Backfill existing projects with the registry's default-enabled tools.
-    # Project and ProjectTools::Registry were removed by a later migration
-    # (DropExampleDomainTables, part of the fork's example-domain removal) —
-    # inlining the historical default (:docs was the only default-enabled
-    # tool) keeps this migration replayable against a fresh database instead
-    # of depending on application constants that no longer exist.
-    execute("UPDATE projects SET enabled_tools = '[\"docs\"]'")
+    # Backfill existing projects with the tools that were default-enabled at
+    # the time this migration shipped.
+    MigrationProject.reset_column_information
+    MigrationProject.update_all(enabled_tools: [ "docs" ])
   end
 
   def down

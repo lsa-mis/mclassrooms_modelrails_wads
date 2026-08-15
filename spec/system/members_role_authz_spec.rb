@@ -18,8 +18,9 @@ RSpec.describe "Members role authorization (admin actor)", type: :system do
     visit new_session_path
     fill_in I18n.t("sessions.new.email_label"), with: admin.email_address
     click_button I18n.t("sessions.new.continue")
-    token = MagicLinkToken.where(email: admin.email_address).order(:created_at).last.token
+    token = MagicLinkToken.create_for_email(admin.email_address)
     visit magic_link_callback_path(token: token)
+    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
     expect(page).to have_css("#user-menu-button")
   end
 

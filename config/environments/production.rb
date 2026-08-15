@@ -79,12 +79,15 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Enable DNS rebinding protection and other `Host` header attacks. Derived
+  # from RAILS_HOST, which config/initializers/required_production_config.rb
+  # requires at boot. Multi-host setups (apex + www, staging subdomains) should
+  # widen this with the array/regex forms, e.g.
+  #   config.hosts = [ "yourdomain.com", /.*\.yourdomain\.com/ ]
+  config.hosts = [ ENV["RAILS_HOST"] ] if ENV["RAILS_HOST"].present?
+
+  # Skip DNS rebinding protection for the default health check endpoint —
+  # kamal-proxy health-checks /up from inside the container; blocking it fails
+  # every deploy.
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end

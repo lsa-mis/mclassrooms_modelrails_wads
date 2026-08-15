@@ -37,6 +37,15 @@ module BulletSafelists
     # (N+1 guard for the common case); accept the false positive for a device-only page.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "SignInFromNewDeviceNotifier", association: :record)
 
+    # The members index eager-loads Invitation :role for the combined
+    # invitation+membership table. Invitations sort to the FRONT of the
+    # combined array, so any page ≥ 2 (and any filter matching zero
+    # invitations) renders no invitation rows and that request's preload goes
+    # unused. Keeping the preload is the N+1 guard for every page that DOES
+    # render invitation rows; the #124/#125 boundary specs exercise exactly
+    # the slices that trip this false positive.
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Invitation", association: :role)
+
     # The workspace sidebar switcher preloads `memberships: [:role, { user: :avatar_attachment }]`
     # so `workspace_icon_for` can fall back to the personal-workspace owner's avatar
     # without N+1ing. The fallback is conditional (skipped when a workspace has its own

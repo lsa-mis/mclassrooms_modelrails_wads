@@ -66,22 +66,21 @@ RSpec.describe "Account Profiles", type: :request do
         end
       end
 
-      context "email change with wrong password" do
-        it "rejects and re-renders form" do
-          patch settings_profile_path, params: {
-            user: { email_address: "new@example.com", current_password: "wrongpassword" }
-          }
-          expect(response).to have_http_status(:unprocessable_entity)
+      context "without a fresh re-authentication (SEC-2b)" do
+        it "redirects an email change to the reauthentication interstitial and starts no change" do
+          user.sessions.update_all(reauthenticated_at: 1.hour.ago)
+          patch settings_profile_path, params: { user: { email_address: "new@example.com" } }
+          expect(response).to redirect_to(new_settings_reauthentication_path)
           expect(user.reload.pending_email).to be_nil
         end
       end
 
-      context "email change with missing password" do
-        it "rejects and re-renders form" do
-          patch settings_profile_path, params: {
-            user: { email_address: "new@example.com" }
-          }
-          expect(response).to have_http_status(:unprocessable_entity)
+      context "passwordless user (SEC-2b: no password required)" do
+        let(:user) { create(:user) } # passwordless; sign_in makes the session reauth-fresh
+
+        it "allows an email change" do
+          patch settings_profile_path, params: { user: { email_address: "new@example.com" } }
+          expect(user.reload.pending_email).to eq("new@example.com")
         end
       end
 

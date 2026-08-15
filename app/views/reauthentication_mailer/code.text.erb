@@ -1,0 +1,9 @@
+<%= t("reauthentication_mailer.code.greeting", name: @user.first_name.presence || @user.email_address) %>
+
+<%= t("reauthentication_mailer.code.body") %>
+
+<%= @code %>
+
+<%= t("reauthentication_mailer.code.expiry", minutes: @expiry_minutes) %>
+
+<%= t("reauthentication_mailer.code.ignore") %>

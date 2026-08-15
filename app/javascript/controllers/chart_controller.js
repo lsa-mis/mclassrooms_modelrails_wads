@@ -1,5 +1,5 @@
 // Chart.js is an OPT-IN dependency — pin it only when you use the chart component:
-//   pin "chart.js", to: "https://cdn.jsdelivr.net/npm/chart.js@4/+esm"
+//   bin/importmap pin chart.js   (downloads to vendor/javascript — production CSP allows no CDN)
 // It is imported lazily (inside connect), so this controller is inert until a chart
 // is on the page: an app that adopts the component but never renders one pays nothing,
 // and an app that hasn't pinned Chart.js gets a one-line hint, not a per-page error.
@@ -21,7 +21,7 @@ export default class extends Controller {
     } catch {
       console.info(
         '[ui:chart] Chart.js is not pinned — the chart will not draw. Add to config/importmap.rb:\n' +
-        '  pin "chart.js", to: "https://cdn.jsdelivr.net/npm/chart.js@4/+esm"\n' +
+        '  bin/importmap pin chart.js   # downloads to vendor/javascript; production CSP allows no CDN\n' +
         "The accessible data table renders without it."
       )
       return

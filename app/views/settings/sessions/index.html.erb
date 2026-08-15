@@ -19,7 +19,7 @@
             <% end %>
           </p>
           <p class="text-sm text-text-muted">
-            <%= session.ip_address %> &middot;
+            <%= session.ip_address %> &middot; <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
             <%= t("settings.sessions.index.last_active", time: time_ago_in_words(session.last_active_at || session.created_at)) %>
           </p>
         </div>

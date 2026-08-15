@@ -1,10 +1,14 @@
-<%# locals: (model:, form_url:, hub_url:, current_source:, has_color_picker: false, available_sources:, is_user:, has_image:, current_hue:, display_url:, gravatar_url:, initials:, hub_title:) -%>
+<%# locals: (identity:, form_url:, hub_url:, current_source:) -%>
+<%
+  display_url = identity.image? ? url_for(identity.image) : nil
+  gravatar_url = identity.gravatar_url
+%>
 <turbo-frame id="identity-picker-hub"
              data-action="turbo:frame-load->identity-picker#onHubLoad">
 
   <%# Large preview — only ONE preview renders based on current_source %>
   <div class="flex flex-col items-center py-6">
-    <% if current_source == "upload" && has_image %>
+    <% if current_source == "upload" && identity.image? %>
       <%# Photo preview (clickable to crop) %>
       <button type="button"
               data-action="click->identity-picker#openCrop"
@@ -39,22 +43,17 @@
       <%# Initials preview (also fallback for upload with no image) %>
       <div class="w-32 h-32 rounded-full flex items-center justify-center text-3xl font-semibold text-white bg-hue-initials"
            data-identity-picker-target="initialsPreview"
-           style="--hue: <%= current_hue %>">
-        <%= initials %>
+           style="--hue: <%= identity.hue %>">
+        <%= identity.initials %>
       </div>
     <% end %>
 
     <span class="text-xs text-text-muted mt-2 uppercase tracking-wider">
       <%= t("identity_picker.preview") %>
     </span>
-    <% last_changed = if is_user && model.avatar.attached?
-                         model.avatar.blob.created_at
-                       elsif !is_user && model.logo.attached?
-                         model.logo.blob.created_at
-                       end %>
-    <% if last_changed %>
+    <% if identity.image_updated_at %>
       <span class="text-xs text-text-muted mt-1">
-        <%= t("identity_picker.last_updated", time: time_ago_in_words(last_changed)) %>
+        <%= t("identity_picker.last_updated", time: time_ago_in_words(identity.image_updated_at)) %>
       </span>
     <% end %>
   </div>
@@ -67,7 +66,7 @@
        class="space-y-2 mb-4">
 
     <%# Photo card %>
-    <% if available_sources.include?("upload") %>
+    <% if identity.available_sources.include?("upload") %>
       <%= link_to "#{hub_url}?source=upload",
             data: { turbo_frame: "identity-picker-hub" },
             role: "radio",
@@ -96,7 +95,7 @@
     <% end %>
 
     <%# Gravatar card %>
-    <% if available_sources.include?("gravatar") %>
+    <% if identity.available_sources.include?("gravatar") %>
       <%= link_to "#{hub_url}?source=gravatar",
             data: { turbo_frame: "identity-picker-hub" },
             role: "radio",
@@ -125,7 +124,7 @@
     <% end %>
 
     <%# Initials card %>
-    <% if available_sources.include?("initials") %>
+    <% if identity.available_sources.include?("initials") %>
       <%= link_to "#{hub_url}?source=initials",
             data: { turbo_frame: "identity-picker-hub" },
             role: "radio",
@@ -134,8 +133,8 @@
                     hover:bg-surface-sunken/50 transition-all no-underline
                     #{current_source == 'initials' ? 'border-interactive bg-interactive/5' : 'border-border'}" do %>
         <span class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0 bg-hue-initials"
-              style="--hue: <%= current_hue %>">
-          <%= initials %>
+              style="--hue: <%= identity.hue %>">
+          <%= identity.initials %>
         </span>
         <div class="flex-1 min-w-0">
           <span class="block text-sm font-medium text-text-heading">
@@ -158,7 +157,7 @@
   </div>
 
   <%# Color picker panel — only renders when initials selected and color picker enabled %>
-  <% if current_source == "initials" && has_color_picker %>
+  <% if current_source == "initials" %>
     <div class="p-4 rounded-lg border border-border space-y-3 mb-4">
       <div class="flex items-center justify-between">
         <span class="text-sm font-medium text-text-heading">
@@ -176,7 +175,7 @@
           updated it), so AT kept announcing the SSR hue (WCAG 4.1.2,
           2026-07-13 review). min/max/step attributes stay — they are real. %>
       <input type="range" min="0" max="360" step="1"
-             value="<%= current_hue %>"
+             value="<%= identity.hue %>"
              autocomplete="off"
              data-identity-picker-target="colorSlider"
              data-action="input->identity-picker#handleColorChange"
@@ -205,7 +204,7 @@
         data: { turbo_frame: "_top" },
         class: "space-y-2" do |f| %>
     <input type="hidden" name="avatar_source" value="<%= current_source %>">
-    <input type="hidden" name="primary_color" value="<%= current_hue %>"
+    <input type="hidden" name="primary_color" value="<%= identity.hue %>"
            data-identity-picker-target="colorField">
 
     <div class="pt-2">
@@ -215,7 +214,7 @@
   <% end %>
 
   <%# Auto-file-picker trigger — renders when Photo selected with no existing image %>
-  <% if current_source == "upload" && !has_image %>
+  <% if current_source == "upload" && !identity.image? %>
     <div data-controller="auto-file-picker"
          data-auto-file-picker-target-value="[data-identity-picker-target='fileInput']">
     </div>
