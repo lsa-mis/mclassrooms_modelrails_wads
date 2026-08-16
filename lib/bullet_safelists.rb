@@ -1,18 +1,10 @@
 # frozen_string_literal: true
 
-# Shared Bullet safelists for development + test.
-#
-# These encode intentional preload / delivery-layer trade-offs that hold in BOTH
-# environments (the app code is identical), so they live here instead of being
-# duplicated per env file. They drifted once: dev.rb carried only 2 of them while
-# test.rb had the full set, so notifications-index false positives fired in dev
-# (Bullet.alert popup) but never in test (Bullet.raise) — invisible to the suite.
-# One source removes that whole class of drift. Each env file keeps its own
-# enable / display / raise config and calls `BulletSafelists.apply` after
-# `Bullet.enable = true`.
-#
-# Loaded via `require_relative` from the env configs, which run before Zeitwerk
-# autoloading is active — same pattern as lib/codespaces.rb.
+# Shared Bullet safelists for development + test. They drifted once — dev.rb
+# carried 2 of the set while test.rb had them all, so false positives fired in
+# dev but were invisible to the suite. Loaded via `require_relative` from the
+# env configs, which run before Zeitwerk autoloading is active.
+# See /docs/developer/testing (Bullet safelists live in one file).
 module BulletSafelists
   module_function
 

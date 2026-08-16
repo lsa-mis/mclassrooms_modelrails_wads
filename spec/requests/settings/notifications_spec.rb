@@ -65,9 +65,6 @@ RSpec.describe "Account Notifications", type: :request do
       recipient.notifications.reload.last
     end
 
-    # Matches the dom_id pattern used by the placeholder index view (Task 12
-    # will swap to a per-row partial that may use a different identifier
-    # shape; if so, update this helper).
     def dom_id_fragment(notification)
       "id=\"#{ActionView::RecordIdentifier.dom_id(notification)}\""
     end
@@ -341,19 +338,11 @@ RSpec.describe "Account Notifications", type: :request do
       end
     end
 
-    # Cross-tab read-state sync (D1): when read_at changes on any of the
-    # user's notifications, TWO frames are broadcast to the user's
-    # `[user, :notifications]` Turbo channel:
-    #   1. `notifications_bell_label_frame` — sr-only span inside the
-    #      standalone header bell link, holding the unread count + severity
-    #      phrase. The bell link itself is NEVER in a broadcast frame so
-    #      clicks landing mid-broadcast still hit a live target.
-    #   2. `notifications_bell_indicator_frame` — the severity-colored bell
-    #      glyph overlay inside the bell link.
-    # Tab A's direct response also refreshes both; the broadcasts cover
-    # Tab B and beyond. Each frame is independent so the surfaces can update
-    # in isolation (e.g., the chip re-renders even when the bell label is
-    # already current).
+    # Cross-tab read-state sync: every read-state mutation must broadcast all
+    # THREE frame targets (avatar dot, hamburger dot, menu count) on the
+    # `[user, :notifications]` channel — the mutating tab's own surfaces come
+    # from the direct response; broadcasts cover every other tab.
+    # See /docs/developer/notifications.
     describe "cross-tab read-state sync (v2 avatar/hamburger/menu broadcasts)" do
       let(:notification) { deliver_security_notification }
 

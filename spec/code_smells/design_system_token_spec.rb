@@ -1,10 +1,10 @@
 require "rails_helper"
 
-# Design-system component utilities are documented in docs/design-system.md
-# as living in application.css's @layer components block. A class declared
-# in @layer utilities instead wins Tailwind v4 cascade ties over components
-# it shouldn't — a real correctness issue, not just a doc nit (caught during
-# the 2026-07-02 header-spacing design-panel review: Adam Wathan, Chris Oliver).
+# Design-system component utilities live in application.css's @layer
+# components block. A class declared in @layer utilities instead wins
+# Tailwind v4 cascade ties over components it shouldn't — a real correctness
+# issue, not just a doc nit (caught during the 2026-07-02 header-spacing
+# design-panel review: Adam Wathan, Chris Oliver).
 RSpec.describe "Design-system CSS layer discipline" do
   let(:application_css) { File.read(Rails.root.join("app/assets/tailwind/application.css")) }
 
@@ -28,13 +28,13 @@ RSpec.describe "Design-system CSS layer discipline" do
     css[block_start..i]
   end
 
-  it ".page-container is declared in @layer components, matching docs/design-system.md" do
+  it ".page-container is declared in @layer components" do
     components_block = layer_block(application_css, "components")
     utilities_block = layer_block(application_css, "utilities")
 
     expect(components_block).to include(".page-container"),
-      "expected .page-container inside @layer components (docs/design-system.md documents " \
-      "the whole 'Component utilities' section, including .page-container, as living there)"
+      "expected .page-container inside @layer components, with the rest of the " \
+      "design-system component utilities"
     expect(utilities_block.to_s).not_to include(".page-container"),
       ".page-container is still declared in @layer utilities — utilities-layer rules win " \
       "cascade ties over components-layer rules of equal specificity in Tailwind v4, so this " \

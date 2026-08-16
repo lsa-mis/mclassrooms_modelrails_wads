@@ -5,10 +5,8 @@
 # (expired rows resolve to nil, fail-closed), so a delayed sweep never opens a
 # security window; it just keeps the table from accumulating dead rows.
 #
-# Batched delete_all: SQLite serializes write transactions, so a large one-shot
-# delete could block sign-ins; per-batch transactions release the writer lock
-# between rounds. No destroy callbacks or dependent cascades on Session (the only
-# FK is Session -> users), so delete_all is correct and instantiates nothing.
+# Batched delete_all: SQLite serializes writers; no destroy callbacks or cascades.
+# See /docs/developer/architecture (Concurrency).
 class ExpiredSessionsSweepJob < ApplicationJob
   queue_as :default
 

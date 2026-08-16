@@ -1,26 +1,9 @@
 # frozen_string_literal: true
 
-# Fires when a Membership is created — i.e. a user joins (or is added to) a workspace.
-#
-# Dual-recipient design (v1 catalog):
-#   1. The added user — receives in-app + email (email gated by their workspace_activity.email pref).
-#   2. All workspace owners EXCLUDING the added user — receive in-app only.
-#      Email is suppressed per-recipient by an event-level conditional; the digest
-#      pipeline (separate, scheduled job) is the intended fallback delivery for owners.
-#
-# In-app gating happens at recipient-resolution time: users whose workspace_activity.in_app
-# preference is false are filtered out of `recipients` entirely, so no notification row is
-# created for them. The :database delivery method is deprecated in Noticed 2.9.x — rows are
-# auto-saved by the deliver pipeline — so per-recipient in-app gating MUST happen here.
-#
-# Users without a UserPreferences row (default factory output) are treated as "opted in" for
-# in-app at the column default level via `ApplicationNotifier.preferences_for`, which wraps
-# the schema default JSONB blob. Without this fallback, freshly-created users would be silently
-# filtered out of every workspace_activity dispatch.
-#
-# Email gating mirrors the WorkspaceRoleChangedNotifier pattern: a `before_enqueue` lambda
-# throws :abort to skip the email job when (a) the recipient is anyone other than the added
-# user, or (b) the added user opted out of workspace_activity.email.
+# Fires when a Membership is created. Dual recipients: the added user gets
+# in-app + email; workspace owners (excluding the added user) get in-app only,
+# with the digest pipeline as their intended email fallback.
+# See /docs/developer/notifications (Notifier subclasses).
 class WorkspaceMemberAddedNotifier < ApplicationNotifier
   category :workspace_activity
   severity :success
@@ -60,10 +43,8 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_member_added
-    # `recipient_pref(:email)` is tri-state in v2: true (deliver now),
-    # false (drop), :digest (queue for DigestMailerJob). Compare to `true`
-    # explicitly so the :digest sentinel aborts the immediate enqueue —
-    # otherwise digest items would silently fire as instant emails.
+    # `== true` aborts on the tri-state :digest sentinel (else digest items fire as instant emails).
+    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
     config.before_enqueue = lambda {
       throw(:abort) unless recipient_id == event.record.user_id
       throw(:abort) unless recipient_pref(:email) == true

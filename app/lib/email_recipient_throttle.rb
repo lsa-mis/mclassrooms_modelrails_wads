@@ -1,21 +1,8 @@
-# Per-recipient email throttle. Caps how many emails of a given KIND we'll send
-# to a single email address within a sliding window — orthogonal to the per-user
-# rate limits that already gate the controller actions that send mail.
-#
-# Why this exists: a per-user rate limit (`rate_limit by: -> { Current.user&.id }`)
-# stops one attacker from spamming verification emails. It does not stop
-# "Alice (attacker A) tries once, then Bob (attacker B) tries once, then Carol
-# (attacker C) tries once..." — coordinated attack or attacker-with-N-accounts.
-# The recipient (victim@example.com) sees N emails to their inbox even though
-# every individual sender stayed under their per-user limit.
-#
-# This module gates by the *recipient* address. Counter lives in Rails.cache
-# (Solid Cache in this project), keyed by SHA-256 of the canonical email +
-# the kind (verification / collision_alert / etc). Independent buckets per
-# kind so a flood of one type doesn't suppress legitimate sends of another.
-#
-# Default policy: 3 sends per recipient per kind per hour. Tightening or
-# loosening should happen here, not at callsites.
+# Per-recipient email throttle: caps sends of a given KIND to one address per
+# sliding window. Gates by *recipient*, which per-user rate limits cannot — an
+# attacker with N accounts stays under every per-user cap while flooding one
+# victim inbox. Policy changes belong here, not at callsites.
+# See /docs/developer/security (Per-Recipient Email Throttle).
 module EmailRecipientThrottle
   module_function
 

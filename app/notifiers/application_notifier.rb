@@ -67,18 +67,10 @@ class ApplicationNotifier < Noticed::Event
       update_column(:seen_at, Time.current)
     end
 
-    # Wrap any Notifier message/url body that traverses associations or
-    # accesses attributes on the resource. Catches:
-    #   - ActiveRecord::RecordNotFound (e.g., resource was destroyed mid-render)
-    #   - NoMethodError on nil receiver (e.g., a chained association is now nil)
-    # Real bugs (typos, missing methods on non-nil receivers) propagate.
-    #
-    # Note: only deletion shapes where Ruby raises with a *nil* receiver are
-    # caught. If your message accesses `resource.invitable.name` and the
-    # `invitable` is gone, the call to `.name` on nil raises NoMethodError
-    # with receiver=nil — caught. Other deletion patterns (stale FK pointing
-    # to a deleted record that still loads as a stub object) won't trigger
-    # nil-receiver and may bubble up as RecordNotFound or other exceptions.
+    # Wrap Notifier message/url bodies. Rescues only deletion shapes —
+    # RecordNotFound and NoMethodError with a *nil* receiver; real bugs on
+    # non-nil receivers propagate.
+    # See /docs/developer/notifications (render_safe_or_placeholder — the deleted-record contract).
     def render_safe_or_placeholder
       yield
     rescue ActiveRecord::RecordNotFound
@@ -115,26 +107,10 @@ class ApplicationNotifier < Noticed::Event
     :deduplicated
   end
 
-  # Resolve a NotificationPreferences object for any user, including users
-  # without a persisted UserPreferences row.
-  #
-  # Why a transient `UserPreferences.new` for the missing-prefs case?
-  # The `user_preferences.notification_preferences` JSONB column has a
-  # database-level default that contains the canonical permission matrix
-  # (see db/schema.rb). Reading it via `UserPreferences.new.notification_preferences`
-  # honors that single source of truth — Rails populates the column default
-  # on the in-memory record. Hard-coding the matrix in Ruby would create a
-  # second copy that could silently drift from the schema default.
-  #
-  # The previous behavior wrapped `nil`, which made every category except
-  # `security` return false from `NotificationPreferences#allow?`. That
-  # produced a silent default-deny posture for freshly-created users with
-  # no preferences row yet — incorrect, since the schema default permits
-  # in-app delivery for every category.
-  #
-  # Available as both a class method (used by the per-recipient
-  # `recipient_pref` shim defined inside `notification_methods`) and an
-  # instance method (used by class-level `recipients` resolvers).
+  # Resolve a NotificationPreferences object for any user. Missing-prefs users
+  # get a transient `UserPreferences.new` so the schema-default JSONB blob stays
+  # the single source of truth (wrapping `nil` silently default-denied new users).
+  # See /docs/developer/notifications (Preference resolution and the missing-row fallback).
   def self.preferences_for(user)
     persisted = user.try(:preferences)
     if persisted&.notification_preferences.present?
@@ -184,10 +160,9 @@ class ApplicationNotifier < Noticed::Event
                       .pluck(:recipient_id)
     return if recipient_ids.empty?
 
-    # NotificationBroadcaster handles the three-broadcast trio (bell-button
-    # frame, dropdown frame, aria-live announcement) AND the swallow-log-
-    # report contract for adapter outages. Per-user iteration so one bad
-    # broadcast doesn't poison the rest — each call is self-rescuing.
+    # NotificationBroadcaster handles the four broadcast targets AND the
+    # swallow-log-report contract for adapter outages. Per-user iteration so one
+    # bad broadcast doesn't poison the rest — each call is self-rescuing.
     User.where(id: recipient_ids).find_each do |user|
       NotificationBroadcaster.refresh_for(user, announcement_key: "notifications.bell.arrival_announcement")
     end

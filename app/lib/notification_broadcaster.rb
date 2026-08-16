@@ -1,43 +1,10 @@
 # frozen_string_literal: true
 
-# Refreshes a user's notification surfaces (v2 — supersedes D1's bell-link
-# broadcaster). Four broadcasts per refresh:
-#
-#   - notifications_indicator_avatar     → severity-colored dot on the avatar
-#   - notifications_indicator_hamburger  → severity-colored dot on the mobile
-#                                          hamburger button
-#   - notifications_menu_count_frame     → the [N new] badge inside the user-menu
-#                                          Notifications row
-#   - notifications-live                 → aria-live SR announcement
-#
-# Each broadcast runs in its own rescue scope: a failure on ONE surface
-# must NOT abort the others. The signature use case this prevents is a
-# transient cable adapter hiccup or partial-rendering exception silently
-# dropping the other broadcasts mid-refresh, leaving the UI stale.
-#
-# Architecture note (v2 supersedes D1): we now have FOUR broadcast targets
-# vs D1's three, because the standalone bell with severity-glyph + aria-label
-# was split into two indicator surfaces (avatar + hamburger) plus an in-menu
-# count badge. D1's `notifications_bell_label_frame` is retired — the avatar
-# and hamburger now carry static identity-only aria-labels, and notification
-# meaning is exposed via the user-menu Notifications row's aria-live region.
-#
-# `announcement_key` is an I18n key passed straight to `I18n.t`. Two
-# canonical values exist today:
-#   - notifications.bell.arrival_announcement   ("New notification")
-#   - notifications.bell.read_state_announcement ("Notifications updated")
-#
-# Two callers, one shape:
-#   1. ApplicationNotifier#broadcast_notifications_arrival (after_create_commit
-#      on the event), called per recipient.
-#   2. Settings::NotificationsController#broadcast_bell_refresh, called for
-#      Current.user after a read-state mutation (mark/unmark, mark_all_read,
-#      open, destroy-when-unread).
-#
-# Performance: the unread breakdown summary is computed ONCE at the top of
-# refresh_for and passed to each receiving partial as a `summary:` local.
-# This avoids redundant `unread_notification_breakdown` queries that would
-# otherwise fire (one per partial that needs it).
+# Refreshes a user's four notification surfaces (avatar dot, hamburger dot,
+# user-menu count badge, aria-live region). Each broadcast is self-rescuing so
+# one failing surface never aborts the others; the unread summary is computed
+# once and passed to every partial. See /docs/developer/notifications
+# (Broadcast pipeline).
 module NotificationBroadcaster
   module_function
 
