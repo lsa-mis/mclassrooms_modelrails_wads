@@ -1,7 +1,7 @@
 ---
 title: Application Flows
 description: A builder's guide to the app's core journeys for developers and designers extending the template — clean wireframes paired with full-size prose explaining the why (the framework decision, seam, or guarantee) behind each screen, on a domain-model primer.
-keywords: wireframes flows builder guide developers designers why rationale model workspace membership role onboarding seam readable
+keywords: wireframes flows builder guide developers designers why rationale model workspace membership role onboarding seam readable signup invitation join-link exception contract email-mismatch capacity oauth verification new-device best-effort
 ---
 
 # Application Flows

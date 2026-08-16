@@ -16,7 +16,7 @@ class MembershipPolicy < ApplicationPolicy
       return false if record.role.slug == "owner" && record.workspace.owners.size == 1
       true
     else
-      # Admin-deactivates-someone-else case (the rule prior to Path AA).
+      # Admin-deactivates-someone-else case.
       can?("manage_members")
     end
   end

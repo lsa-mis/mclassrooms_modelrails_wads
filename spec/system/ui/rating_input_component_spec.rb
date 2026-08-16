@@ -2,45 +2,24 @@
 
 require "rails_helper"
 
-# ENHANCED preview-host proof for the rating_input component.
+# Preview-host proof for the rating_input component: the render harness cannot
+# see graphic contrast of the filled stars in a real browser (`text-warning-icon`
+# must clear WCAG 1.4.11 3:1 — stars are icons, not text) or the Stimulus
+# `rating` controller's live hover/click/keyboard recoloring, so this spec
+# proves both in a real browser. Filled star = `text-warning-icon` on the
+# <button>, unfilled = `text-text-muted`; index params are 1-based.
 #
-# The render harness can see the SERVER-rendered star markup, but it cannot see:
-#   1. graphic contrast of the filled stars in a real browser (the `text-warning-icon`
-#      token must clear WCAG 1.4.11 3:1 for graphics — stars are icons, not text), nor
-#   2. the Stimulus `rating` controller's hover-preview / click-select / keyboard
-#      behavior, which recolors the star <button>s live via class toggling.
-#
-# This spec proves all of it in a real Playwright browser.
-#
-# ## Component structure (server-rendered)
-#   <div role="group" aria-label data-controller="rating" data-rating-...-value>
-#     <button type="button" data-rating-target="star" data-rating-index-param="N"
-#             class="... (text-warning-icon | text-text-muted)">  <svg .../>  </button>
-#     ... (max buttons) ...
-#     <input type="hidden" name=... data-rating-target="input" value=N>  (only with name:)
-#   </div>
-#
-# ## The controller's fill semantics (rating_controller.js)
-#   #render(upTo): star at 0-based array index `i` is FILLED when `i < upTo`.
-#   index params are 1-based (1..max). So previewing/selecting star N (param N)
-#   fills array indices 0..N-1 = DISPLAY stars 1..N. The filled class on the
-#   <button> is `text-warning-icon`; unfilled is `text-text-muted`.
-#
-# ## Stable selectors (NO component edit needed)
-#   group : [role='group'][data-controller='rating']
-#   stars : button[data-rating-target='star']   (in DOM order = display order)
-#   hidden: input[type='hidden'][data-rating-target='input']
-# These are the component's own load-bearing a11y/behavior hooks (role, the
-# Stimulus targets), not selectors invented for the test — no data-* was added.
+# Stable selectors, no component edit needed — the component's own load-bearing
+# a11y/behavior hooks ([role='group'][data-controller='rating'], the
+# data-rating-target attrs; star buttons in DOM order = display order), not
+# selectors invented for the test.
 RSpec.describe "Rating input component accessibility and behavior", type: :system do
-  # `let`, not constants: the selectors are read inside helper defs, and bare
-  # constants in a describe block land on Object, colliding across parallel
-  # workers (#607/#608).
+  # `let`, not constants (#607/#608) — see spec/code_smells/no_object_level_spec_constants_spec.rb.
   let(:rating_preview)         { "/rails/view_components/ui/rating_input_component" }
   let(:rating_star_selector)   { "button[data-rating-target='star']" }
   let(:rating_hidden_selector) { "input[type='hidden'][data-rating-target='input']" }
 
-  # Read each star <button>'s filled-state off the live Playwright page by
+  # Read each star <button>'s filled-state off the live page by
   # inspecting its class list (the controller toggles `text-warning-icon` on the
   # button itself). Returns an array of booleans in DISPLAY order: true = filled.
   def filled_stars

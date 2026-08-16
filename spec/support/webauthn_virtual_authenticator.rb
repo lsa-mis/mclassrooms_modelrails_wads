@@ -10,20 +10,10 @@
 # CDP access pattern: Cuprite exposes the underlying Ferrum::Browser at
 # `page.driver.browser`; raw CDP messages are sent via `browser.page.command`.
 #
-# Origin alignment: WebAuthn's RP `allowed_origins` (from the initializer) is
-# `http://localhost` (derived from the test mailer host). Capybara binds its
-# server to `127.0.0.1:<dynamic_port>` and the browser navigates to that host.
-# `127.0.0.1` and `localhost` are treated as different origins in WebAuthn,
-# so we temporarily set `Capybara.app_host` to force the browser to use
-# `http://localhost:<port>`, which matches the configured RP origin. We also
-# ensure `allowed_origins` includes that exact URL.
-#
-# Usage in a system spec:
-#   with_virtual_authenticator do
-#     sign_in_via_form(user)
-#     visit settings_passkeys_path
-#     # ... navigate + click Add a passkey ...
-#   end
+# Origin alignment: WebAuthn treats `127.0.0.1` and `localhost` as DIFFERENT
+# origins, and Capybara binds to 127.0.0.1 while the RP origin is
+# `http://localhost` — so the block repoints Capybara.app_host and extends
+# `allowed_origins` to the exact URL. See /docs/developer/testing.
 module WebauthnVirtualAuthenticator
   # Enable the CDP virtual authenticator for the duration of the block.
   # The authenticator is ctap2/internal with resident-key + user-verification;

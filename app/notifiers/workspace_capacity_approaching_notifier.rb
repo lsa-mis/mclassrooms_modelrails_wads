@@ -1,28 +1,10 @@
 # frozen_string_literal: true
 
-# Fires when a scheduled sweep job (`WorkspaceCapacitySweepJob`) detects that a
-# workspace has reached >= 80% of its `max_members` quota. Recipients are every
-# owner of the workspace; channels are in-app + email; category is `:billing`
-# (NOT security — DND suppresses these).
-#
-# Idempotency:
-#   The base ApplicationNotifier seeds (class, record.id, minute). For a billing
-#   alert that's emitted by a recurring sweep, a one-minute bucket is too tight:
-#   the sweep cadence is 12 hours, but two manual triggers in the same minute
-#   would silently collapse, AND we want at most one alert per (workspace, metric)
-#   per DAY regardless of how many sweep runs land in that day. Override with
-#   a day-bucket key folded with the metric so:
-#     - Members and projects metrics for the same workspace on the same day each
-#       get one alert (don't collapse onto each other).
-#     - Repeat sweeps the same day collapse onto the same key (deduplicated).
-#     - The next day's sweep gets a fresh key (delivers again if still over).
-#
-# In-app gating happens at recipient-resolution time: owners whose
-# billing.in_app preference is false (or DND on, since billing is non-security)
-# are filtered out of `recipients` entirely, so no notification row is created
-# for them. This mirrors WorkspaceMemberAddedNotifier's gate point — the
-# :database delivery method is deprecated in Noticed 2.9.x, so per-recipient
-# in-app gating MUST happen here.
+# Fired by WorkspaceCapacitySweepJob when a workspace reaches >= 80% of its
+# `max_members` quota; recipients are the workspace owners; category `:billing`
+# (NOT security — DND suppresses these). Idempotency overrides the base
+# minute bucket with a day bucket per (workspace, metric).
+# See /docs/developer/notifications (Idempotency).
 class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
   category :billing
   severity :warning
@@ -46,8 +28,8 @@ class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_capacity_approaching
-    # `== true` to abort on the :digest tri-state sentinel; see
-    # WorkspaceMemberAddedNotifier for the full rationale.
+    # `== true` aborts on the tri-state :digest sentinel.
+    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
     config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
     config.enqueue = true
   end

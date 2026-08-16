@@ -1,14 +1,7 @@
 <%#
-  Passkey enrollment nudge — a non-blocking, dismissible BANNER (not a modal).
-  Shown to eligible users (no kept passkey yet, not previously dismissed). It
-  mirrors the email-verification banner: a tinted signal bar with the text in
-  the signal colour (AAA-proven), inline actions as underlined links.
-
-  "Add a passkey" links to Settings → Passkeys (the named add flow lives there);
-  the dismiss button PATCHes passkey_prompt_path, which stamps
-  passkey_prompt_seen_at so the banner never re-appears (no re-nag). The whole
-  banner hides on browsers without WebAuthn support — the webauthn Stimulus
-  controller adds .passkeys-unsupported in connect().
+  Passkey enrollment nudge — a non-blocking, dismissible BANNER (not a modal);
+  see /docs/developer/passkeys. Hidden on browsers without WebAuthn: the
+  webauthn Stimulus controller adds .passkeys-unsupported in connect().
 -%>
 <% if authenticated? && Current.user.passkey_prompt_eligible? %>
   <div id="passkey-banner"

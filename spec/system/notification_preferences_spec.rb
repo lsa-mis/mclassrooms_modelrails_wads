@@ -313,10 +313,4 @@ RSpec.describe "Notification preferences", type: :system do
         "the live region wrapper must stay in the a11y tree (never hidden) so revealing the warning is announced"
     end
   end
-
-  # Bell-tooltip DND tests removed: the new avatar-bell design surfaces
-  # only severity on the bell overlay (which is aria-hidden). DND state is
-  # canonical on the preferences page; the bell never surfaces it. See
-  # docs/superpowers/specs/2026-05-15-avatar-bell-notification-indicator-design.md
-  # ("Resolved decisions: DND is not surfaced on the bell").
 end
