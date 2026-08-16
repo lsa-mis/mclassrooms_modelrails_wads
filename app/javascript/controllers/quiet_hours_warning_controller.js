@@ -1,22 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Surfaces a deceptive-state warning when the user has quiet hours
-// `enabled` but ZERO day chips checked. The value object treats that
-// combination as quiet-hours-never-active (see
-// app/lib/notification_preferences.rb#quiet_hours_active?), so the toggle
-// label says "Enabled" while the runtime is effectively off. Without
-// this warning, a user can save a contradictory configuration and walk
-// away thinking quiet hours are active when they aren't.
-//
-// Targets:
-//   warning — the <p> with the warning copy (toggled via .hidden class)
-//
-// Listens for bubbled `change` events on its root so we don't have to
-// wire individual `data-action` attributes — every input within the QH
-// scope triggers a re-evaluation. The enabled toggle and day chips are
-// found by their stable `name` attributes (driven by the JSONB key path
-// in NotificationPreferences). Also re-checks on `connect()` so the
-// initial render matches saved server state.
+// Deceptive-state warning: quiet hours `enabled` with ZERO day chips checked
+// means quiet-hours-never-active (NotificationPreferences#quiet_hours_active?)
+// while the toggle still reads "Enabled". Inputs are found by their stable
+// `name` attributes (the JSONB key path).
+// see /docs/developer/notifications
 export default class extends Controller {
   static targets = ["warning"]
 

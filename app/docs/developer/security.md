@@ -1,7 +1,7 @@
 ---
 title: Security
 description: Security configuration, recommendations, and best practices for ModelRails
-keywords: rate limiting account locking headers csp password oauth rack attack https bearer token
+keywords: rate limiting account locking headers csp password oauth rack attack https bearer token libvips heic content types direct upload email normalization punycode recipient throttle nonce form-action provider registry
 ---
 
 # Security
@@ -17,6 +17,32 @@ Auth endpoints are rate-limited via Rails 8 `rate_limit` DSL:
 | POST /session (sign in / email-first lookup) | 10 requests | 3 minutes |
 | POST /passwords (reset) | 10 requests | 3 minutes |
 | POST /magic_links (magic link) | 5 requests | 3 minutes |
+
+### Per-Recipient Email Throttle
+
+The rate limits above gate how fast any one sender can trigger email sends.
+They do not stop a **distributed flood by recipient**: N distinct senders — a
+coordinated attack, or one attacker with N accounts — each send once, each
+stays under its own per-sender limit, and the victim's inbox still receives N
+emails.
+
+`EmailRecipientThrottle` (`app/lib/email_recipient_throttle.rb`) closes that
+gap by gating on the **recipient** address: at most 3 sends per recipient per
+kind per hour by default. The policy lives in the module, not at call sites —
+tighten or loosen it there. The counter lives in `Rails.cache` (Solid Cache),
+keyed by SHA-256 of the canonical email plus the kind; buckets are independent
+per kind, so a flood of one email type doesn't suppress legitimate sends of
+another. The throttle is **fail-open**: if the cache backend can't increment,
+the email is sent — delivery matters more than the throttle in a degraded
+state.
+
+One per-kind override (SEC-9): `:magic_link` allows 5 sends per 15 minutes,
+shared by all four magic-link send endpoints (lookup sign-in, registration,
+resend, password reset). They all mint into one intent-blind supersede pool,
+so they must share one budget or endpoint-hopping resets it. The window
+matches the 15-minute token expiry: a throttled-out user is never stranded
+longer than their newest link's lifetime, and an attacker gets at most the cap
+in supersedes per window before the victim's link becomes untouchable.
 
 ### Account Locking
 
@@ -104,7 +130,43 @@ Configured in `config/initializers/security_headers.rb`:
 - `X-Content-Type-Options: nosniff` — prevents MIME sniffing
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy` — disables camera, microphone, geolocation by default
-- Content Security Policy via `content_security_policy.rb` (enforced in development, production, and test — see #499/#120 in `CHANGELOG.md` for why test enforcement matters)
+- Content Security Policy via `content_security_policy.rb` (enforced in development, production, and test — see #499/#120 in `CHANGELOG.md` for why test enforcement matters); its decided trade-offs are documented in the next section
+
+### Content Security Policy
+
+The CSP lives in `config/initializers/content_security_policy.rb`. Three of
+its choices are decided trade-offs, not defaults waiting to be "fixed":
+
+**`style-src` carries `unsafe-inline` (#444).** Tailwind 4 injects inline
+`style` attributes and Turbo writes inline styles during morphs and
+transitions, so a nonce/hash regime for styles breaks rendering in ways that
+resurface with every framework update — a permanent breakage tax. The accepted
+risk is narrow: style-only injection, with no script execution path
+(`script-src` stays `'self'` plus a nonce). Revisit only if Tailwind and Turbo
+ship nonce-compatible styling, not before.
+
+**The script nonce is per-session, not per-request (#443).** The nonce
+generator returns the session id, so one nonce is valid for a session's
+lifetime. That lets Turbo cache and restore pages whose inline bootstrap still
+validates — a per-request nonce invalidates every cached page's scripts on
+restore. Cost accepted: a nonce leaked from one response is valid for the rest
+of that session, a marginal loss since the session cookie it derives from is
+the larger secret. Revisit only with a concrete injection vector that a
+per-request nonce would have stopped. One subtlety: a visitor's *first*
+request has no session yet, so the generator falls back to a random nonce —
+emitting the invalid blank `'nonce-'` would be ignored by browsers, blocking
+every inline script (the importmap bootstrap and `import "application"`) and
+leaving Stimulus never booting for first-time visitors. Nonces apply to
+`script-src` only.
+
+**`form-action` is derived from the OAuth provider registry.** CSP evaluates
+the entire redirect chain: the POST to `/auth/:provider` returns a 302 to the
+provider's consent page, and browsers block that step unless the provider host
+is in `form-action` — **silently**: no server error, nothing in the logs,
+"clicking Sign in with SSO does nothing." The directive is built from
+`config.x.oauth_providers` (#312) so a swapped provider can never be forgotten
+here; `fetch` raises at boot on a registry entry without a `form_action_host`.
+See [OAuth Security](#oauth-security) for the registry itself.
 
 ### Password Security
 
@@ -112,10 +174,54 @@ Configured in `config/initializers/security_headers.rb`:
 - Pwned password check (Have I Been Pwned API)
 - Account recovery issues a single-use `MagicLinkToken` (`set_password` intent, 15-minute expiry), not a stateless reset token
 
+### Canonical Email Keys
+
+`User#email_address` (and `pending_email`) are normalized through
+`EmailNormalizer` (`app/lib/email_normalizer.rb`): Unicode-NFC-normalized,
+stripped, downcased, with the **domain** punycode-encoded. Every email
+comparison in the app — the invitation `EmailMismatch` guard, OAuth email
+matching, email change — goes through `EmailNormalizer.equivalent?`, so
+storage and lookup share a single canonical key.
+
+Why NFC: visually identical strings can have different byte sequences
+depending on Unicode form — "é" can be the single codepoint U+00E9 (NFC) or
+"e" plus combining acute U+0301 (NFD). User input via web forms tends to be
+NFC and OAuth providers usually return NFC, but rows imported from other
+systems or copy-pasted from PDFs may be NFD. Without normalizing both sides,
+the same mailbox can exist as two `User` rows (a duplicate account), or an
+invitation or OAuth lookup can miss the account it should have matched.
+
+Why punycode the domain: DNS only speaks ASCII, so an IDN like
+`user@bücher.de` is encoded as `user@xn--bcher-kva.de` by mail servers. A user
+might paste either form into a web form, but they are the same address —
+normalizing to the ASCII (punycode) form gives both representations one
+canonical key. The **local part** is deliberately untouched: SMTPUTF8
+(RFC 6531) lets mailboxes accept Unicode local parts, and IDNA does not apply
+there.
+
 ### OAuth Security
 
 - OAuth email matching requires a verified email authentication on the existing account
 - Unverified accounts are not linked — a new user is created instead
+
+**Provider registry.** `config/initializers/0_oauth_provider_registry.rb` is
+the single home for OAuth provider knowledge (#312). Three consumers derive
+from it rather than repeating it: the CSP builds `form-action` from each
+entry's `form_action_host` (see [Content Security Policy](#content-security-policy)
+above), `config/initializers/omniauth.rb` declares strategies for the
+registry's keys, and `app/helpers/oauth_helper.rb` renders sign-in buttons
+from `name`/`icon`. Duplicated knowledge does not announce its drift; it just
+waits — centralizing the registry means a swapped provider can't be updated in
+one place and forgotten in another. Two mechanics worth knowing: the `0_`
+filename prefix makes the initializer sort before its consumers (initializers
+run in filename order), and the registry lives on `config.x` because app
+constants are not referenceable at initializer time (Zeitwerk). To add or swap
+a provider: add the entry here (`form_action_host` is the consent-screen
+origin the browser is redirected to), declare the strategy in `omniauth.rb`,
+and update the literal cross-check hash in
+`spec/initializers/content_security_policy_spec.rb` — the spec fails loudly
+until you do, which is the point: double-entry bookkeeping on a
+security-relevant value.
 
 ### Activity Tracking
 
@@ -131,11 +237,21 @@ Active Storage processes variants with libvips (`variant_processor = :vips`, the
 Two consequences to know about:
 
 - **libvips 8.13+ and ruby-vips 2.2.1+ are required.** Below either, Active Storage raises at boot rather than run unsecured. The production image, the devcontainer and CI all satisfy this; check your own if you build a custom image.
-- **BMP, ICO and PSD variants raise `Vips::Error`.** `config/initializers/active_storage.rb` removes those three from `variable_content_types`, so attachments of those types render as a file chip. Without it they render an `<img>` whose representation URL 500s when the browser fetches it — processing is lazy, so the page still returns 200 and the failure shows up as a broken image plus a logged 500 on every view. PNG, JPEG, GIF, WebP, TIFF, AVIF, HEIC and HEIF are unaffected.
+- **BMP, ICO and PSD variants raise `Vips::Error`.** `config/initializers/active_storage.rb` subtracts exactly those three (`image/bmp`, `image/vnd.microsoft.icon`, `image/vnd.adobe.photoshop`) from `variable_content_types`, which makes `Blob#representable?` false, so the blob partial renders its file-chip branch instead. Without the subtraction they render an `<img>` whose representation URL 500s when the browser fetches it — Action Text attachments carry no content-type allowlist and processing is lazy, so the page still returns 200 and the failure shows up as a broken image plus a logged 500 on every view. The subtraction is exact by verification, not guesswork: on libvips 8.18.4 under `Vips.block_untrusted(true)`, every other entry in the default list (PNG, JPEG, GIF, WebP, TIFF, AVIF, HEIC, HEIF) still loads and transforms — nothing else may be removed there. A fork that needs one of the three should re-enable the specific libvips operation rather than living with the file chip.
 
-Uploads backing user avatars, workspace logos and project logos are restricted by model validations to `ApplicationRecord::IMAGE_CONTENT_TYPES` (PNG, JPEG, GIF, WebP, TIFF, AVIF, HEIC, HEIF) with size caps.
+The initializer governs what renders as a *variant*. What can be *uploaded* is gated per surface — avatar/logo attachments by model validations, rich-text direct uploads by `DirectUploadsController` (next section). Widen those, not the initializer.
 
-Rich-text (Action Text) attachments upload through `DirectUploadsController`, which shadows the Active Storage engine's endpoint — the engine's own controller is **unauthenticated** and gates nothing. The shadow requires a signed-in session, rate-limits per user, and enforces an allowlist (`IMAGE_CONTENT_TYPES` + PDF) and a 10 MB cap; both knobs are constants on that controller. Two honesty notes: the declared byte size is a *hard* ceiling (it's baked into the signed token and the disk service re-verifies length + checksum on receipt), while the declared content type filters honest clients only — Active Storage re-identifies the real type from the stored bytes at attach time, where model validations judge it. And attachment happens by signed GID embedded in the submitted body, so any *new* blob-creation path a fork adds must carry its own gate — a blob's `attachable_sgid` is sufficient to attach it.
+Uploads backing user avatars, workspace logos and project logos are restricted by model validations to `ApplicationRecord::IMAGE_CONTENT_TYPES` (PNG, JPEG, GIF, WebP, HEIC, HEIF) with size caps. That list is deliberately **wider** than `ActiveStorage.web_image_content_types`, which is the set a browser renders directly: Rails converts a variant of anything outside that set to PNG automatically, so the constraint that matters is "can libvips process it safely", not "can a browser display it". HEIC/HEIF is the iPhone camera default — excluding it would bounce the single most common source of an avatar or logo upload for no security benefit: both types load and transform under `Vips.block_untrusted(true)` and remain in `variable_content_types`, and the production base image (Debian's libvips 8.16.1 in `ruby:slim`) ships `heifload` and `heifsave`. The list is one shared constant rather than a copy per model because a single list guards four attachments across two models — a copy per call site is how #496's drift happened.
+
+### Rich-Text Direct Uploads (SEC-7)
+
+Rich-text (Action Text) attachments upload through `DirectUploadsController`, which shadows the Active Storage engine's direct-upload endpoint. The engine's own controller is **unauthenticated** — it inherits `ActionController::Base`, not the app's `ApplicationController` — and mints signed storage-write URLs from client-declared metadata with no type or size gate. The shadow inherits `ApplicationController` (bringing `Authenticatable`, `Current`, and the global `rescue_from`s along for free): it requires a signed-in session, rate-limits per user, and enforces an allowlist (`IMAGE_CONTENT_TYPES` + PDF) and a 10 MB cap. Both knobs are constants on that controller and are THE place a fork widens or narrows rich-text uploads; Office formats stay out by default because they are a real parser surface.
+
+Enforcement reality — what each check actually buys (panel, 2026-08-13):
+
+- The declared **byte size is a hard ceiling**: it is baked into the signed token, and the disk service re-verifies content length + checksum on receipt, so the cap bounds the bytes that reach disk.
+- The declared **content type filters honest clients only**: Active Storage re-identifies the real type from the stored bytes at attach time, where model validations judge it.
+- **Attachment happens by signed GID** embedded in the submitted body — a blob's `attachable_sgid` is sufficient to attach it — so any *new* blob-creation path a fork adds must carry its own gate.
 
 The `>= x.y.z` floor on the `rails` gem in the Gemfile is a security floor: it stops a fresh `bundle install` in a fork from resolving back onto a version patched for a known CVE. Dependabot rewrites that line on every Rails bump and will drop the floor, so `spec/code_smells/template_invariants_spec.rb` fails if the requirement ever admits a vulnerable release again.
 

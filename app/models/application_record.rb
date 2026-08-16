@@ -2,21 +2,10 @@ class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
 
   # Content types accepted for user-supplied images (avatars, workspace logos).
-  #
-  # Deliberately WIDER than ActiveStorage.web_image_content_types, which is the
-  # set a browser renders directly. Rails converts a variant of anything outside
-  # that set to PNG automatically, so the constraint that matters here is "can we
-  # process it safely", not "can a browser display it".
-  #
-  # HEIC/HEIF are the iPhone camera default, so excluding them bounced the single
-  # most common source of an avatar or logo upload — for no security benefit.
-  # config/initializers/active_storage.rb records that both load and transform
-  # under Vips.block_untrusted(true) after CVE-2026-66066, and both remain in
-  # variable_content_types. Confirmed in the production base image too: Debian's
-  # libvips 8.16.1 in ruby:slim ships heifload and heifsave.
-  #
-  # Shared rather than repeated per model: one list guards four attachments
-  # across two models, and a copy per call site is how #496's drift happened.
+  # Deliberately WIDER than ActiveStorage.web_image_content_types — HEIC/HEIF
+  # (the iPhone camera default) stay in. One shared list, not per-model copies:
+  # drift between copies is how #496 happened.
+  # See /docs/developer/security (Image Processing).
   IMAGE_CONTENT_TYPES = %w[
     image/png
     image/jpeg

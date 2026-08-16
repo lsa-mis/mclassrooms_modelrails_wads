@@ -2,39 +2,22 @@
 
 require "rails_helper"
 
-# ENHANCED preview-host proof for the switch component.
+# Preview-host proof for the switch component: the on/off visual is driven
+# entirely by Tailwind's peer-* sibling cascade, and the render harness only
+# verifies class STRINGS — a broken DOM order would pass it yet render a dead
+# switch. This spec proves the cascade in a real browser by reading COMPUTED
+# styles on vs off.
 #
-# The switch is a visually-hidden `<input type=checkbox role=switch class="peer sr-only">`
-# (the `peer`) followed by two LATER-SIBLING spans inside a wrapper: the TRACK and
-# the THUMB. The on/off visual is driven ENTIRELY by Tailwind's peer-* sibling
-# cascade:
-#
-#   TRACK: bg-surface-sunken  ->  peer-checked:bg-interactive
-#   THUMB: translate-x-0      ->  peer-checked:translate-x-[calc(100%-2px)]
-#   TRACK focus outline:          an AAA outline on peer focus-visible (B5)
-#
-# The render harness only verifies class STRINGS are present — it cannot see
-# whether `.peer:checked ~ .track` actually matches and recomputes the cascade.
-# A broken DOM order (input not a peer, or track/thumb not later siblings) would
-# pass the render harness but render a dead switch. This spec proves the cascade
-# in a real browser by reading COMPUTED styles on vs off.
-#
-# Stable selectors (no component edit needed — see CRITICAL note below):
-#   input: input[role="switch"]
-#   TRACK: input[role="switch"] + span        (the input's immediate next sibling)
-#   THUMB: span[aria-hidden="true"]           (the only aria-hidden span in the widget)
-#
-# CRITICAL: I did NOT edit the vendored switch component. The track/thumb have no
-# data-* hooks, but their DOM position (input's next sibling; the aria-hidden span)
-# is stable and load-bearing to the peer-* contract itself, so it is a legitimate
-# selector. Adding a data attr would have meant changing the gem template too.
+# Stable selectors, with the vendored component deliberately unedited: the
+# track/thumb have no data-* hooks, but their DOM position (track = the
+# input[role="switch"]'s immediate next sibling; thumb = the only
+# span[aria-hidden="true"] in the widget) is itself load-bearing to the
+# peer-* contract, so it is a legitimate selector.
 RSpec.describe "Switch component accessibility and visual transition", type: :system do
   preview = "/rails/view_components/ui/switch_component"
 
-  # `let`, not locals: the selectors are read inside helper defs
-  # (computed_switch_styles, track_outline), which a describe-body local
-  # cannot reach. Bare constants are banned here — they land on Object and
-  # collide across parallel workers (#607/#608).
+  # `let`, not locals (helper defs can't reach describe-body locals) and not
+  # constants (#607/#608) — see spec/code_smells/no_object_level_spec_constants_spec.rb.
   let(:track_selector) { 'input[role="switch"] + span' }
   let(:thumb_selector) { 'span[aria-hidden="true"]' }
 

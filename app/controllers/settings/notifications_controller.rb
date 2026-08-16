@@ -84,14 +84,11 @@ module Settings
 
     private
 
-    # Cross-tab read-state sync: refresh the current user's notification
-    # surfaces (bell-button frame, dropdown-list frame, aria-live region)
-    # after any read-state mutation (single mark/unmark, bulk mark-all-read,
-    # bell-dropdown open, destroy-when-unread). Tab A's direct HTTP response
-    # already refreshes its own surfaces; this broadcast covers Tab B and
-    # any other open browser tab/window. The actual three-broadcast trio
-    # lives in NotificationBroadcaster so the notifier callback path and
-    # this controller path share one implementation.
+    # Cross-tab read-state sync: the acting tab's direct HTTP response
+    # refreshes its own surfaces; this broadcast covers every other open
+    # tab/window. The broadcast targets live in NotificationBroadcaster so
+    # the notifier callback path and this controller path share one
+    # implementation. See /docs/developer/notifications (Cross-tab read-state sync).
     def broadcast_bell_refresh
       NotificationBroadcaster.refresh_for(Current.user, announcement_key: "notifications.bell.read_state_announcement")
     end

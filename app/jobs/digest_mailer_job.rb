@@ -1,26 +1,10 @@
 # frozen_string_literal: true
 
-# Scheduled job that emits the daily/weekly digest email for users whose
-# `digest_next_due_at` has passed. Drives the digest channel of the v1
-# notifications stack.
-#
-# Scope strategy: a single indexed range scan against
-# `user_preferences.digest_next_due_at` (the partial index in the migration
-# only covers non-NULL values, so users without a digest schedule are
-# automatically skipped). No per-user polling.
-#
-# `seen_at` semantics: when a digest is enqueued for a user, every
-# notification included in that digest gets `seen_at` stamped immediately.
-# This is the load-bearing dedupe — the next digest cycle's `where(seen_at: nil)`
-# filter skips them, so the user never sees the same item in two consecutive
-# digests. Trade-off: we mark seen at job-run, not at mail-deliver. If the
-# downstream `MailDeliveryJob` fails after this job commits, the user has
-# notifications-marked-seen but no email. The in-app badge still shows them
-# until the user opens them; missing email is recoverable on the next cycle.
-#
-# Cadence: every 15 minutes via `config/recurring.yml`. Each user's
-# individual cadence (daily/weekly) lives in `notification_preferences.digest`
-# and is honored by the `next_due_at_in(timezone)` recompute.
+# Emits digest emails (every 15 min) for users whose `digest_next_due_at` has
+# passed. `seen_at` is stamped at ENQUEUE, not mail delivery — the load-bearing
+# dedupe between cycles — so a downstream mail failure leaves those items
+# marked seen with no email sent (the in-app badge still shows them).
+# See /docs/developer/notifications (DigestMailerJob).
 class DigestMailerJob < ApplicationJob
   queue_as :default
 

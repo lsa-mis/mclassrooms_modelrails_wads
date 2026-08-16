@@ -1,17 +1,11 @@
 <%# locals: (revealed: false) -%>
 <%#
-  Draft-recovery notice. Render INSIDE a form_with carrying
-  data-controller="form-draft" (see the form_draft docs page). Two pieces:
-
-  1. The visible warning chip — navigation-only, hidden until the controller
-     reveals it. NOT the announcement path (un-hiding a populated live region
-     announces unreliably).
-  2. The stable sr-only status region — always present, empty at render; the
-     controller writes announcements into it. Announcement strings ride data
-     attributes because Stimulus has no I18n.
-
-  `revealed:` exists for previews/render-tests only; production callers use
-  the default.
+  Draft-recovery notice; render INSIDE a form_with carrying
+  data-controller="form-draft" — see /docs/developer/form-drafts.
+  The visible chip is navigation-only: announcements go through the
+  always-present sr-only status region (un-hiding a populated live region
+  announces unreliably), and the strings ride data attributes because
+  Stimulus has no I18n. `revealed:` is for previews/render-tests only.
 -%>
 <%= tag.div data: { form_draft_target: "notice" },
       hidden: !revealed,

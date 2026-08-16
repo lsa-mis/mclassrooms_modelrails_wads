@@ -1,15 +1,8 @@
 # Refuses to boot production with configuration that comes up green and broken:
-# with a placeholder RAILS_HOST the /up healthcheck passes while every mailer
-# link (magic links, password resets, invitations) points at a domain this app
-# does not control — the primary sign-in path dies with no visible failure.
-#
-# Scope discipline: deterministic checks only (unset, or a value that can never
-# have been healthy). A previously-healthy configuration must never fail a
-# restart. Heuristic placeholder sweeps belong in bin/fork and CI, not here.
-#
-# Opt out: `git rm config/initializers/required_production_config.rb`. The file
-# is deliberately self-contained so removing it is one command, not a merge
-# conflict. See /docs/developer/deployment (Production preflight).
+# a placeholder RAILS_HOST passes /up while every mailer link points at a domain
+# this app does not control. Deterministic checks only — a previously-healthy
+# config must never fail a restart. See /docs/developer/deployment (Production
+# preflight).
 module RequiredProductionConfig
   # example.com is IANA-reserved (RFC 2606); `.example` is the TLD bin/fork
   # substitutes into placeholders. Neither can ever be a real deployment host.

@@ -1,7 +1,7 @@
 ---
 title: UI Patterns & Design Tokens
 description: Form builder, icons, modals, toasts, design token architecture, and accessibility patterns
-keywords: tailwind design tokens oklch dark mode form builder icons modal toast accessibility wcag aria focus
+keywords: tailwind design tokens oklch dark mode form builder icons modal toast accessibility wcag aria focus signals notification bell severity non-text contrast danger-strong
 ---
 
 # UI Patterns & Design Tokens
@@ -45,6 +45,16 @@ Fixed-meaning colors that don't shift with theming. Red is always danger, green 
 | Warning | `warning`, `warning-surface`, `warning-icon`, `warning-hover`, `warning-border` |
 | Success | `success`, `success-surface`, `success-icon`, `success-hover`, `success-border` |
 | Info | `info`, `info-surface`, `info-icon`, `info-hover`, `info-border` |
+
+#### Signals in graphics: the notification bell
+
+The notification bell is the reference case for using signal tokens on a **graphic** rather than on text, and it encodes two rules worth knowing before you color any icon or indicator.
+
+**Text contrast vs. non-text contrast.** The bell *icon* is tinted with the base signal tokens (`text-danger`, `text-warning`, `text-info`, `text-success`) — the same AAA (7:1) foreground colors used for flash messages and links — with a stacked white drop-shadow outline for legibility on arbitrary avatar backgrounds. The *indicator dot* variant (on the avatar/hamburger) is a different animal: it's decorative, so the applicable spec is WCAG **1.4.11 non-text contrast (3:1 for graphical objects)**, not **1.4.6 enhanced text contrast (7:1)**. That relaxation is legitimate only because the severity meaning doesn't live in the dot alone — it's also exposed textually in the user menu's Notifications row `aria-live` region.
+
+**The red identity-shift problem.** An AAA-readable red on dark surfaces must sit at high OKLCH lightness (dark-mode `--color-danger` is L=0.825), and at that lightness red drifts toward coral/pink — on a bell-sized graphic it stops reading as "danger red." So danger alone gets a `-strong` variant: in light mode `--color-danger-strong` simply aliases `--color-danger` (the AAA warm red already reads as true red), while in dark mode it's a fire-engine red at L=0.65. The bell icon uses `dark:text-danger-strong`, and the danger dot uses `bg-danger-strong`. Because dark-mode `-strong` sits *below* the AAA text threshold (roughly 4–5:1 — AA only), it is for graphics and small accents exclusively: never use it for general text content, and never place a text descendant inside a `bg-danger-strong` fill. Do not extend the `-strong` pattern to other severities — only red has the high-lightness identity shift; amber, green, and sky stay recognizably themselves at AAA lightness. The canonical rule lives in `app/assets/tailwind/tokens/_signals.css`.
+
+**Motion.** Only the danger dot pulses. Users with `prefers-reduced-motion` still get an instant static indicator, and everyone else gets attention-routing for the highest-severity events without warnings and info becoming noisy.
 
 ### Using Tokens in Views
 
@@ -234,7 +244,7 @@ ModelRails targets **WCAG 2.2 Level AAA**:
 
 | Pattern | Implementation |
 |---------|---------------|
-| Touch targets | `--form-input-height` token (default 44px) drives `TailwindFormBuilder` inputs and the `.btn-touch-target` utility. Many existing partials still use the literal `min-h-[44px]` and migrate as touched — see `docs/design-system.md`. |
+| Touch targets | `--form-input-height` token (default 44px) drives `TailwindFormBuilder` inputs and the `.btn-touch-target` utility. Many existing partials still use the literal `min-h-[44px]` and migrate as touched. |
 | Focus indicators | The `focus-ring` utility (2px offset outline) consistently — never `focus:ring-*` box-shadows, which vanish in forced-colors mode |
 | Color contrast | Default interactive token is primary-800 (7.56:1 AAA on white). On workspace-branded routes, contrast varies by hue — see Workspace Branding caveat below. |
 | Skip navigation | `sr-only` link to `#main-content` at top of every page |
@@ -298,17 +308,3 @@ Dispatching a synthetic click to the gem's (hidden) button decouples the footer 
 - Two named `<nav>` landmarks allow screen readers to announce and skip clusters
 - Vertical and horizontal dividers are decorative (`aria-hidden` where needed)
 - All footer links and the Cookie settings button use `inline-flex items-center min-h-[44px] px-2` — meets WCAG 2.5.5 AAA (44×44 target size)
-
-## For contributors
-
-Deeper implementation guides for developers (not rendered to end users, live under `docs/` in the repo):
-
-- **Design system primitives:** `docs/design-system.md` — spacing tokens, component utilities (`.btn-touch-target`, `.btn-text*`, `.action-group`, `.page-container`), class ordering convention, migration recipe
-- **Design tokens & theming:** `docs/theming.md` — three-layer token architecture, OKLCH color mapping, workspace branding overrides
-- **Modal system:** `docs/modals.md` — native `<dialog>` integration, Stimulus controller internals, animation timing
-- **Toast system:** `docs/toasts.md` — pill vs. card routing, flash mapping, duration formula
-
-Additional contributor docs:
-
-- `docs/deployment.md` — Kamal + SSL configuration
-- `docs/superpowers/specs/` and `docs/superpowers/plans/` — feature design docs and implementation plans

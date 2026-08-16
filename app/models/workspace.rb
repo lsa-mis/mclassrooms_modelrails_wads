@@ -88,12 +88,10 @@ class Workspace < ApplicationRecord
     status == :active
   end
 
-  # Guarded lifecycle mutators. Plain `transaction do` opens BEGIN IMMEDIATE
-  # on Rails 8.1's SQLite adapter (write lock taken before the first read),
-  # so lock!-then-guard is atomic check-then-act. lock! raises on records
-  # with unsaved changes — these mutators require clean records.
-  # `next` (not `return`) exits early: it commits the empty transaction;
-  # `return` would roll back.
+  # Guarded lifecycle mutators. `transaction do` opens BEGIN IMMEDIATE on the
+  # SQLite adapter, making lock!-then-guard atomic check-then-act; `next` (not
+  # `return`) exits early by committing rather than rolling back.
+  # See /docs/developer/architecture (Concurrency).
   def archive!
     transaction do
       lock!
@@ -137,24 +135,11 @@ class Workspace < ApplicationRecord
     memberships.detect { |m| m.role.slug == "owner" }&.user
   end
 
-  # Returns all User records currently holding an owner-role kept membership
-  # in this workspace. Used by the capacity-approaching sweep to broadcast a
-  # billing alert to every owner, and exposed for future ownership-management
-  # UIs that need the full owner roster (vs. `#owner`, which returns just one).
-  #
-  # Two-path implementation to avoid an N+1 on `workspaces#index` without
-  # introducing staleness on mutating call sites:
-  #
-  # * When `memberships` is already loaded (controller preloads
-  #   `memberships: [:role, { user: ... }]` for the index page), filter the
-  #   in-memory Array — zero extra queries per row. This is the hot path:
-  #   `MembershipPolicy#destroy?` calls `.owners.size` on every Leave-button
-  #   render.
-  # * When `memberships` is NOT loaded (notifier recipient resolution after
-  #   a membership mutation), issue a fresh narrow query so we see the
-  #   latest committed state. The notifiers run after mutations that change
-  #   the owner roster; we cannot reuse a cached Array there without risk
-  #   of stale reads.
+  # All Users holding an owner-role kept membership. Two-path on purpose:
+  # loaded `memberships` filter in-memory (hot path — the Leave button calls
+  # `.owners.size` per render); unloaded issues a fresh query so notifier
+  # recipient resolution never reads a stale roster.
+  # See /docs/developer/architecture (Owner Lookup).
   def owners
     relation = memberships.loaded? ? memberships : memberships.kept.includes(:role, :user)
     relation

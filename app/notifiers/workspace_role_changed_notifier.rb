@@ -11,8 +11,8 @@ class WorkspaceRoleChangedNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_role_changed
-    # `== true` to abort on the :digest tri-state sentinel; see
-    # WorkspaceMemberAddedNotifier for the full rationale.
+    # `== true` aborts on the tri-state :digest sentinel.
+    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
     config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
     config.enqueue = true
   end

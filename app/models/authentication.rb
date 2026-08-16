@@ -77,16 +77,9 @@ class Authentication < ApplicationRecord
   end
 
   # Reshape 2b: claim a workspace join-link token parked at signup time.
-  # Stale link conditions (revoked, policy reverted, instance no longer
-  # permits :open_link, workspace archived/suspended/deleted) are treated as
-  # silent no-ops — clear the token and continue, so email verification
-  # isn't blocked by a workspace whose join policy changed mid-flight. A
-  # visitor who was never a member must not learn the workspace is locked.
-  # Capacity/already-member errors propagate up so the caller can surface them.
-  # No newly-registered guard (unlike Signupable#accept_pending_join_link!) is
-  # needed: the digest is parked only by handle_unverified_email_oauth, which
-  # always creates a fresh user and refuses to link an existing one, so the
-  # claimer here is never a pre-existing account being drive-by joined.
+  # Stale-link conditions are silent no-ops (a never-member must not learn the
+  # workspace is locked); capacity/already-member errors propagate.
+  # See /docs/developer/application-flows (Deferred claims on the unverified-OAuth path).
   def claim_pending_join_link!(user)
     return if pending_join_link_digest.blank?
 

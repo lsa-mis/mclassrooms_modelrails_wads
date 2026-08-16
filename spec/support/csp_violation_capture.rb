@@ -1,24 +1,11 @@
 # frozen_string_literal: true
 
-# Runtime CSP-violation capture for system specs (#128).
-#
-# The source-level scan (spec/code_smells/no_inline_event_handlers_spec.rb)
-# catches inline handlers, but the suite shipped TWO CSP bugs it was
-# structurally blind to: the blank-nonce generator that emitted an invalid
-# `'nonce-'` and silently blocked every inline script for first-time
-# visitors (#499), and the initializer override that un-enforced CSP in test
-# (#500 follow-up) — both invisible because CDP-driven specs dispatch events
-# at protocol level and never need the blocked scripts. The browser DOES
-# know: it fires `securitypolicyviolation` for every block. This support
-# file listens for that event on every document and fails the example that
-# produced one, converting the class from "found in review" to "red on the
-# first run."
-#
-# Mechanics: one init script per browser process (not per example — the
-# browser is reused, and thousands of duplicate init scripts would tax every
-# navigation). Violations accumulate in sessionStorage so same-tab
-# navigations within an example don't lose them; the after-hook reads AND
-# clears, so nothing bleeds across examples.
+# Runtime CSP-violation capture for system specs (#128): fails any example
+# whose page fired `securitypolicyviolation` — the bug class #499/#500 proved
+# source-level scans are blind to. Mechanics: one init script per browser
+# process accumulates violations in sessionStorage so same-tab navigations
+# within an example don't lose them; the after-hook reads AND clears, so
+# nothing bleeds across examples. See /docs/developer/testing.
 module CspViolationCapture
   LISTENER_JS = <<~JS
     document.addEventListener("securitypolicyviolation", (e) => {

@@ -17,8 +17,6 @@ require "rails_helper"
 #   but pages mix both, so the scenario-less form is enforced uniformly as the one rule that
 #   always resolves.) The safe, universal form is a scenario-less `embed UI::FooComponentPreview`,
 #   which renders the preview's default scenario.
-#
-# See docs/superpowers/specs/2026-06-11-lookbook-tier3-completion-design.md.
 RSpec.describe "Lookbook Pages" do
   preview_root = Rails.root.join("spec/components/previews/ui")
   pages_root = Rails.root.join("spec/components/previews/pages")

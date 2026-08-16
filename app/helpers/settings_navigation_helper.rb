@@ -32,7 +32,6 @@ module SettingsNavigationHelper
     items
   end
 
-  # The five account-level settings items (unconditional).
   def identity_settings_nav_items
     [
       { label: t("settings.sidebar.items.profile"), href: edit_settings_profile_path,

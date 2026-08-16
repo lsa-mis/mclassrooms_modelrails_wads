@@ -1,13 +1,7 @@
-# Shared broadcast pattern — models include this and override broadcast_target
-# to specify what stream to broadcast to. Override self.broadcast_events to
-# customize which lifecycle events trigger broadcasts (default: create + update).
-#
-# Event registration is split across three after_*_commit callbacks (rather
-# than one after_commit on: broadcast_events) so that subclasses can override
-# broadcast_events AFTER `include Broadcastable` and still have the override
-# take effect — the `if:` predicates resolve lazily at callback-fire time.
-# The single-callback form would freeze the array at include-time, silently
-# ignoring any later override.
+# Shared broadcast pattern — override broadcast_target (stream) and
+# self.broadcast_events (default: create + update). Three separate callbacks so
+# the `if:` predicates read broadcast_events lazily — an override registered
+# after `include Broadcastable` still takes effect.
 module Broadcastable
   extend ActiveSupport::Concern
 

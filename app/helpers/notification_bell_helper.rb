@@ -4,19 +4,10 @@ module NotificationBellHelper
   # uses this to select the dominant severity for the bell.
   SEVERITY_RANK = { danger: 4, warning: 3, info: 2, success: 1 }.freeze
 
-  # The bell IS the indicator — no chip. Each severity uses its saturated
-  # `--color-{severity}` token (registered as a Tailwind utility in
-  # application.css's `@theme inline` block), so `text-danger` /
-  # `text-warning` / `text-info` / `text-success` compile to the same AAA
-  # foreground tokens used elsewhere (e.g. flash messages, link colors).
-  # The partial pairs these with a stacked white drop-shadow outline for
-  # legibility on arbitrary avatar backgrounds.
-  # `dark:text-danger-strong` on danger ONLY: the AAA-readable dark
-  # `--color-danger` (L=0.808) reads as coral/pink on the bell-sized
-  # graphic at high lightness. The `-strong` variant (L=0.65) restores
-  # the fire-engine red character. Other severities stay on their
-  # AAA tokens — only red has the high-lightness identity-shift
-  # problem (see `_signals.css` for the rule).
+  # The bell IS the indicator — no chip; severities tint via their saturated
+  # signal tokens. `dark:text-danger-strong` on danger ONLY: the AAA-lightness
+  # dark red reads as coral/pink at bell size; `-strong` restores its identity.
+  # See /docs/developer/ui-patterns (Signals in graphics: the notification bell).
   SEVERITY_CLASSES = {
     danger:  { icon: "text-danger dark:text-danger-strong" },
     warning: { icon: "text-warning" },
@@ -24,20 +15,10 @@ module NotificationBellHelper
     success: { icon: "text-success" }
   }.freeze
 
-  # Indicator-dot bg colors for the avatar/hamburger notification indicator
-  # (v2). Calibrated for WCAG 1.4.11 non-text-contrast 3:1 (graphics target),
-  # not 1.4.6 text 7:1 — the dot is decorative; severity meaning is also
-  # exposed in the user-menu Notifications row aria-live region.
-  #
-  # `bg-danger-strong` is the specifically-calibrated avatar-bell token
-  # (light mode aliases to `--color-danger`; dark mode uses a fire-engine
-  # red tuned for graphic accents — see _signals.css). Other severities
-  # don't need a `-strong` variant — only red has the high-lightness
-  # identity-shift problem at AAA luminance.
-  #
-  # `pulse: true` only on danger so users with prefers-reduced-motion get
-  # an instant indicator and everyone else gets attention-routing for the
-  # highest-severity events without making warnings/info noisy.
+  # Indicator-dot bg colors, calibrated for WCAG 1.4.11 non-text 3:1 (the dot
+  # is decorative; meaning is also in the aria-live region). `pulse: true` on
+  # danger only, so reduced-motion users still get an instant indicator.
+  # See /docs/developer/ui-patterns (Signals in graphics: the notification bell).
   SEVERITY_DOT_CLASSES = {
     danger:  { bg: "bg-danger-strong", pulse: true  },
     warning: { bg: "bg-warning",       pulse: false },

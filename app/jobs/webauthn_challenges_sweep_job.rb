@@ -7,10 +7,8 @@
 # Housekeeping only: expiry and single-use are both enforced at consume time
 # (fail-closed), so sweep cadence is never security-critical.
 #
-# Batched delete_all per the house pattern (ExpiredSessionsSweepJob): SQLite
-# serializes writers, so per-batch transactions release the lock between
-# rounds; WebauthnChallenge has no destroy callbacks or dependent cascades,
-# so delete_all instantiates nothing.
+# Batched delete_all: SQLite serializes writers; no destroy callbacks or cascades.
+# See /docs/developer/architecture (Concurrency).
 class WebauthnChallengesSweepJob < ApplicationJob
   queue_as :default
 

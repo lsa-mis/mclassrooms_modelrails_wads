@@ -14,13 +14,10 @@ class Membership < ApplicationRecord
   validates :user_id, uniqueness: { scope: :workspace_id }
   validate :workspace_has_member_capacity, on: :create
 
-  # Race-safety net for capacity. Pre-flight validator runs before INSERT and
-  # provides the user-facing error, but its workspace.lock! is silently a
-  # no-op across SQLite connections (per-connection locks). This after_create
-  # check runs inside the create transaction *after* the INSERT, so SQLite's
-  # database-level writer lock has already serialized us against any racing
-  # INSERT — the COUNT here reflects committed state including any racer who
-  # just slipped in. Over-capacity → raise → roll back.
+  # Capacity race-safety net: the pre-flight validator's workspace.lock! is
+  # silently a no-op across SQLite connections, so this post-INSERT COUNT is the
+  # real guard — over-capacity → raise → roll back.
+  # See /docs/developer/architecture (Concurrency).
   after_create :enforce_capacity_invariant
 
   # Notify the affected user whenever their role within the workspace changes.
@@ -168,12 +165,9 @@ class Membership < ApplicationRecord
     end
   end
 
-  # Race-safety net for validate_not_last_owner!. Runs after self.discard!
-  # inside the same transaction; the database writer lock has already
-  # serialized us against any racing deactivate, so the COUNT here reflects
-  # committed state. If our discard left zero kept owners, raise to roll
-  # back. (Non-owner discards skip this check — they can't break the
-  # invariant.)
+  # Race-safety net for validate_not_last_owner!: post-discard COUNT in the same
+  # transaction; zero kept owners → raise to roll back. Non-owner discards skip.
+  # See /docs/developer/architecture (Concurrency).
   def enforce_owner_invariant!
     return unless role&.slug == "owner"
     remaining = Membership.kept
@@ -186,11 +180,9 @@ class Membership < ApplicationRecord
     raise ActiveRecord::RecordInvalid, self
   end
 
-  # Owner-floor net for change_role! demotions. Runs after the role UPDATE
-  # inside the same transaction, so — like enforce_owner_invariant! — SQLite's
-  # writer lock means this EXISTS reflects committed state (self is already the
-  # new, non-owner role here, so it counts only the OTHER owners). Zero kept
-  # owners left → raise to roll back the demotion.
+  # Owner-floor net for change_role! demotions: post-UPDATE EXISTS counts only
+  # the OTHER owners (self is already demoted); zero left → roll back.
+  # See /docs/developer/architecture (Concurrency).
   def enforce_owner_floor!
     return if Membership.kept
                         .joins(:role)

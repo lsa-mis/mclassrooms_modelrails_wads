@@ -7,8 +7,8 @@ class ActivityLog < ApplicationRecord
   # failing the business operation — CLAUDE.md deviation #4) and immutable
   # after: persisted rows refuse instance-level update/destroy. Relation-level
   # bypasses (update_all/delete_all) are fenced by
-  # spec/code_smells/activity_log_immutability_spec.rb, where a future
-  # retention job (#438) gets its explicit carve-out.
+  # spec/code_smells/activity_log_immutability_spec.rb, where the retention
+  # sweep job (#438) has its explicit carve-out.
   def readonly? = persisted?
 
   enum :visibility, { workspace: "workspace", admin: "admin" }, default: "workspace"

@@ -24,7 +24,7 @@ Markdowndocs.configure do |config|
     "Architecture & Data Model"  => %w[developer/architecture developer/application-flows developer/accounts-and-identity developer/identity-system],
     "Building & Extending"       => %w[developer/extending developer/forking developer/components developer/ui-patterns developer/form-drafts developer/i18n],
     "Operations"                 => %w[developer/deployment developer/background-jobs developer/security],
-    "Quality & Testing"          => %w[developer/accessibility developer/qa-flows],
+    "Quality & Testing"          => %w[developer/testing developer/accessibility developer/qa-flows],
     "Auth & Notifications (internals)" => %w[developer/passkeys developer/notifications],
     "Troubleshooting"            => %w[developer/troubleshooting]
   }

@@ -12,33 +12,10 @@ module PlaywrightAccessibility
   # known AAA-contrast debt that is tracked separately and not allowed to gate
   # unrelated work:
   #
-  # `.biscuit-banner` was previously deferred here (primary button at ~4.8:1
-  # pre-#500). The banner rework fixed the contrast, but the exclusion
-  # outlived the debt — an unexcluded audit passes both themes clean (#462,
-  # proven by spec/system/accessibility/cookie_banner_axe_spec.rb). It is no
-  # longer excluded: the first surface every signed-out visitor meets is held
-  # to the same bar as everything else.
-  #
   # - .highlight        Rouge syntax-highlighting palette
   #                     (--syntax-builtin/-comment/-name/-string/-tag) sits at
   #                     AA. Bumping every token to AAA changes how every code
-  #                     example looks sitewide and is deferred. Was previously
-  #                     gated via `pending` markers in spec/system/docs_spec.rb.
-  #
-  # `.text-danger` was previously deferred here: dark-mode danger text sat below
-  # AAA on `bg-surface-raised` (the lightest dark surface, neutral-800) at
-  # 6.84:1. Fixed at the TOKEN level on branch `feat/ui-alert-exemplar` by
-  # raising dark `--color-danger`/`--color-danger-icon` from L=0.808 to L=0.825
-  # (now 7.08:1 measured on surface-raised, higher on the darker surfaces). It
-  # is no longer excluded — every danger-text usage app-wide is held to AAA in
-  # both themes. `spec/system/ui/alert_component_spec.rb` proves it unscoped on
-  # the alert.
-  #
-  # `.text-interactive` and `.bg-interactive` were previously deferred under
-  # the workspace-branded color-mix umbrella; the durable two-variable scheme
-  # (`--ws-primary-light` + `--ws-primary-dark`, see
-  # `app/assets/tailwind/application.css` "Workspace Branding Override")
-  # made them AAA-compliant deterministically, so they are no longer excluded.
+  #                     example looks sitewide and is deferred.
   #
   # A spec that specifically needs to audit an excluded element should pass an
   # explicit `exclude:` value. Pass `[]` for the raw, unfiltered audit.

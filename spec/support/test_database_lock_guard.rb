@@ -1,23 +1,7 @@
-# Refuses to start a spec run into an already-locked test database.
-#
-# The single-host topology gives each test database one SQLite file, and
-# config/database.yml installs a 5s Ruby-level busy handler (#304). That is the
-# right call for the app, but it means two processes on the same test DB do not
-# fail fast — they poison each other slowly. Every contended statement waits out
-# the handler before raising, so the suite crawls and sheds failures across
-# unrelated files, none of which name the cause. Observed in a fork on
-# 2026-08-05: a 12-minute suite took 85 minutes and produced 30+ phantom
-# failures before being killed.
-#
-# The kill is the second half of the trap. `pkill -f "bundle exec rspec"`
-# matches the shell wrapper and orphans the `bin/rspec` child, which keeps the
-# WAL lock — after which every run fails in the first `create(...)`.
-#
-# This lives in the boot path rather than in a dedicated runner script on
-# purpose. The runner that caused the incident was a background task invoking
-# `bundle exec rspec`; a guard you have to remember to invoke does not protect
-# against someone who does not know to invoke it. Here it covers the plain
-# runner, every parallel worker, agent invocations, and IDE runners alike.
+# Refuses to start a spec run into an already-locked test database: the 5s
+# busy handler (#304) means two runners poison each other slowly instead of
+# failing fast, and `pkill -f "bundle exec rspec"` orphans a child that keeps
+# the WAL lock. See /docs/developer/testing.
 require "shellwords"
 
 module TestDatabaseLockGuard
