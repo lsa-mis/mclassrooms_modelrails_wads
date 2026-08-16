@@ -1,30 +1,12 @@
 # frozen_string_literal: true
 
-# Component preview specs (spec/system/ui/*) visit a Lookbook preview and often
-# interact with a Stimulus-driven behavior right away — open a menu, hover a
-# card, press a key. The importmap module fetch + Stimulus boot lag behind the
-# page load, so an event dispatched before the controller connects is silently
-# dropped and the behavior never fires. Harmless while a warm spec always ran
-# first, but random spec ordering can make an interactive spec the FIRST to run
-# against a cold module cache — an intermittent failure (context_menu on
-# Shift+F10, hover_card on open, and any of the other ~70 preview specs).
-#
-# Rather than sprinkle a wait across every spec, wait once, centrally: after any
-# system-spec navigation to a /rails/view_components/ preview, block until every
-# data-controller element on the page has its controller(s) connected. The
-# elements are in the DOM the moment `visit` returns (server-rendered HTML) — it
-# is only the JS connection that lags, so this waits for exactly that.
-#
-# Best-effort: proceeds after a short timeout so a controller that legitimately
-# never connects (or a preview with none) can't hang the suite. Scoped to
-# controller-interactive paths so other system specs are pass-through and
-# unaffected. window.Stimulus is exposed in
-# app/javascript/controllers/application.js.
-#
-# /draft_harness is gated too (#525): the form_drafts specs fill_in immediately
-# after visit, racing form_draft_controller's connect — the flake that survived
-# every local run and failed CI was exactly this file's gate NOT covering the
-# harness.
+# Stimulus boot lags behind page load, so an event dispatched before a
+# controller connects is silently dropped — under random spec ordering an
+# interactive preview spec can be the first to hit a cold module cache, an
+# intermittent failure (#525 was exactly the gate not yet covering
+# /draft_harness). This waits once, centrally, after any visit to a gated
+# path; window.Stimulus is exposed in
+# app/javascript/controllers/application.js. See /docs/developer/testing.
 module StimulusReady
   GATED_PATHS = [ "/rails/view_components/", "/draft_harness" ].freeze
 

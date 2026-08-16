@@ -68,19 +68,8 @@ Rails.application.configure do
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 
-  # Two complementary gates, and it is worth being precise about which covers
-  # what — `config.i18n.available_locales` is pinned to [:en] in
-  # application.rb, so this raise only ever exercises the base locale.
-  #
-  #   raise_on_missing_translations — catches a missing :en key, but only on a
-  #     code path some spec actually walks, and only when the call site has no
-  #     inline `default:` to swallow it.
-  #   spec/i18n_spec.rb (i18n-tasks) — catches missing keys repo-wide without
-  #     executing anything, including cross-locale gaps once a fork adds one.
-  #
-  # `fallbacks` mirrors production.rb so a lookup that does reach a non-base
-  # locale terminates at :en rather than dying. A key missing from :en still
-  # raises, which is the point.
+  # Two i18n gates: this runtime raise (base locale, executed paths only) and
+  # the static spec/i18n_spec.rb (repo-wide). See /docs/developer/testing.
   config.i18n.raise_on_missing_translations = true
   config.i18n.fallbacks = true
 

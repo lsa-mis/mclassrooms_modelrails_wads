@@ -8,7 +8,7 @@ keywords: solid queue jobs mailers default low recurring digest cron observabili
 
 This template uses **Solid Queue** as its background job backend — the Rails 8 default. Jobs persist to SQLite (the same database that holds your app data, separated by Active Record's multi-DB support).
 
-> **Design rationale:** queue topology decisions on this page came out of an Ops panel review. See [docs/superpowers/specs/2026-05-18-devcontainer-dockerfile-cleanup-design.md](https://github.com/dschmura/modelrails_base/blob/main/docs/superpowers/specs/2026-05-18-devcontainer-dockerfile-cleanup-design.md).
+> **Design rationale:** queue topology decisions on this page came out of an Ops panel review.
 
 ## Where jobs run
 

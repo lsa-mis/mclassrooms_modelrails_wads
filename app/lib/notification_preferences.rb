@@ -128,11 +128,7 @@ class NotificationPreferences
     end
   end
 
-  # Back-compat alias. The bell button tooltip and any caller asking
-  # "is DND currently active?" gets the same boolean as it did under v1.
-  # Semantic shift: v1 stored a flat boolean; v2 evaluates time-windowed
-  # quiet hours. Callers that wanted "user has set DND-ever" no longer
-  # have that concept — only "DND is active right now".
+  # Back-compat alias from v1's flat DND boolean.
   def do_not_disturb?
     quiet_hours_active?
   end

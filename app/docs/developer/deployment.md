@@ -1,14 +1,14 @@
 ---
 title: Deployment
 description: Deploy ModelRails to production with Kamal — SQLite topology, Solid Queue graduation path, SSL configuration, and the runtime invariants that keep deploys safe.
-keywords: kamal deploy production sqlite solid queue max-replicas stop_wait_time graduation rolling deploy ssl https proxy registry github container
+keywords: kamal deploy production sqlite solid queue max-replicas stop_wait_time graduation rolling deploy ssl https proxy registry github container preflight rails_host placeholder
 ---
 
 # Deployment
 
 This template ships with **Kamal** for zero-downtime container deploys to your own server(s). Most of the configuration follows standard Kamal + Rails 8 conventions; this page covers the non-obvious parts that exist *because* this template defaults to SQLite + Solid Queue in-process.
 
-> **Design rationale:** the topology decisions on this page came out of an Ops panel review (Rosa Gutiérrez, Donal McBreen, Aaron Patterson, Nick Janetakis). Full design record at [docs/superpowers/specs/2026-05-18-devcontainer-dockerfile-cleanup-design.md](https://github.com/dschmura/modelrails_base/blob/main/docs/superpowers/specs/2026-05-18-devcontainer-dockerfile-cleanup-design.md).
+> **Design rationale:** the topology decisions on this page came out of an Ops panel review (Rosa Gutiérrez, Donal McBreen, Aaron Patterson, Nick Janetakis).
 
 ## The SQLite-on-Rails constraint
 
@@ -174,7 +174,7 @@ Before the first deploy:
 
 Rules the guard follows:
 
-- **Deterministic checks only** — unset, or a value that can never have been a working deployment. A configuration that served traffic yesterday can never fail a restart today.
+- **Deterministic checks only** — unset, or a value that can never have been a working deployment (`example.com` is IANA-reserved per RFC 2606; `.example` is the TLD `bin/fork` substitutes into placeholders — neither can ever be a real host). A configuration that served traffic yesterday can never fail a restart today. Heuristic placeholder sweeps belong in `bin/fork` and CI, not in a boot-time guard.
 - **Build-time boots are exempt.** The Dockerfile's `assets:precompile` runs with `SECRET_KEY_BASE_DUMMY=1` and legitimately has no deployment ENV; the guard skips those boots.
 - **Set the value, never silence the check.** There is no bypass variable by design. To opt out permanently: `git rm config/initializers/required_production_config.rb` — the file is self-contained, so deleting it is one command and (since it is not on the `merge=ours` list) it stays deleted until upstream deliberately reintroduces it, which the changelog would note.
 

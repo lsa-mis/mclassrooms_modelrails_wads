@@ -1,20 +1,8 @@
 # frozen_string_literal: true
 
-# Shadows the Active Storage engine's direct-upload endpoint (SEC-7). The
-# engine controller inherits ActionController::Base — no app authentication —
-# and mints signed storage-write URLs from client-declared metadata with no
-# type or size gate. Inheriting ApplicationController brings Authenticatable
-# (and Current, the global rescue_froms) along for free.
-#
-# Enforcement reality, so nobody mistakes what each check buys (panel,
-# 2026-08-13): the declared byte_size becomes part of the SIGNED token and the
-# disk service re-verifies content_length + checksum on the PUT — so the cap
-# here is a hard ceiling on bytes that reach disk. The declared content_type
-# filters honest clients only; Active Storage re-identifies the real type from
-# the stored bytes (Marcel) at attach time, where model validations judge it.
-#
-# THE knob for rich-text uploads: forks widen or narrow these two constants
-# (see also the pointer in config/initializers/active_storage.rb).
+# Shadows the Active Storage engine's UNAUTHENTICATED direct-upload endpoint
+# (SEC-7); ALLOWED_CONTENT_TYPES + MAX_BYTE_SIZE are THE fork knobs for
+# rich-text uploads — see /docs/developer/security (Rich-Text Direct Uploads).
 class DirectUploadsController < ApplicationController
   # The engine's BaseController sets ActiveStorage::Current.url_options per
   # request; the disk service needs it to mint the signed upload URL.

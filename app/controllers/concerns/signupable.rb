@@ -1,23 +1,10 @@
 module Signupable
   extend ActiveSupport::Concern
 
-  # Runs user creation, invitation acceptance, and open-link join in a single
-  # transaction. The block receives the saved user and should perform any
-  # in-transaction work (creating authentications, generating verification
-  # tokens, etc.). Exceptions other than Invitation::NotAcceptable,
-  # ActiveRecord::RecordInvalid, and Workspace::NotAdmittableError will
-  # propagate beyond this method.
-  #
-  # Returns true on commit, false on validation failure, invitation race, or a
-  # parked open-link join whose workspace goes non-admittable under admit's lock
-  # — the TOCTOU backstop for a workspace archived/suspended/deleted between
-  # accept_pending_join_link!'s pre-check and admit's locked re-check
-  # (Workspace#admit raises NotAdmittableError). Rescued the same as RecordInvalid
-  # so the whole signup rolls back cleanly with no orphaned user, instead of the
-  # error escaping and aborting registration with a raw exception. Normal
-  # stale-workspace parked joins never reach here — the pre-check drops them.
-  # Sets flash.now[:alert] only on Invitation::NotAcceptable (so the caller
-  # can rely on @user.errors for model-validation failures).
+  # Runs user creation, invitation acceptance, and open-link join in ONE
+  # transaction; true on commit, false on every handled failure. Sets
+  # flash.now[:alert] only on Invitation::NotAcceptable — callers rely on
+  # @user.errors otherwise. Full exception matrix: /docs/developer/application-flows.
   def commit_signup_atomically(user, newly_registered: true, &block)
     ApplicationRecord.transaction do
       user.save!
@@ -40,11 +27,9 @@ module Signupable
     false
   end
 
-  # Consumes the session's pending invitation token. Idempotent if no token
-  # is present. Raises Invitation::NotAcceptable if the invitation is no longer
-  # acceptable — the caller's commit_signup_atomically rescue clears the token
-  # in that case (I1), so a retry can't loop. This method itself deletes the
-  # token only on successful acceptance or an EmailMismatch skip.
+  # Consumes the session's pending invitation token; idempotent when absent.
+  # EmailMismatch SKIPS the claim (and drops the token) rather than aborting
+  # an otherwise legitimate signup.
   def accept_pending_invitation!(user)
     consumed = Invitation.consume!(
       token: session[:pending_invitation_token],
@@ -62,13 +47,9 @@ module Signupable
     flash[:alert] = I18n.t("registrations.create.invitation_email_mismatch")
   end
 
-  # Consumes the session's pending open-link join token for a freshly-signed-up,
-  # email-verified user. Stale link conditions (revoked, policy reverted,
-  # workspace archived/suspended/deleted) are silent no-ops — a visitor who
-  # was never a member must not learn the workspace is locked. A benign
-  # Workspace::AlreadyMember is swallowed; Workspace::AtCapacity propagates —
-  # the outer commit_signup_atomically rescues it and returns false, consistent
-  # with the invitation path.
+  # Consumes the session's pending open-link join token. Stale-link conditions
+  # are SILENT no-ops — a visitor who was never a member must not learn the
+  # workspace is locked; Workspace::AtCapacity propagates and rolls the signup back.
   def accept_pending_join_link!(user, newly_registered:)
     token = session[:pending_join_token]
     return if token.blank?

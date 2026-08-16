@@ -1,20 +1,6 @@
-# Ferrum/CDP helpers — the pure-Ruby replacements for the Playwright-specific
-# operations the system specs used via `page.driver.with_playwright_page`.
-# Cuprite exposes the underlying Ferrum::Browser at `page.driver.browser`.
-#
-# Playwright → ferrum cheatsheet:
-#   pw.evaluate(async IIFE returning X)  -> cdp_evaluate_async(js)   (js resolves via arguments[last])
-#   pw.evaluate(sync JS, no return)      -> cdp_execute(js)
-#   pw.evaluate(sync JS returning X)     -> cdp_evaluate(js)
-#   pw.context.add_init_script(src)      -> cdp_add_init_script(src)  (call BEFORE visiting)
-#   pw.keyboard.press(key)               -> cdp_press(key)
-#   pw.mouse.click(x, y)                 -> cdp_click_at(x, y)
-#   pw.context.clear_cookies             -> cdp_clear_cookies
-#   pw_page.set_viewport_size(w, h)      -> cdp_resize(w, h)
-#   pw_page.emulate_media(reducedMotion: "reduce") -> cdp_emulate_reduced_motion
-#   pw.context.new_cdp_session(...).send_message(m, params:) -> cdp_command(m, **params)
-#   pw_page.route(pattern, handler)      -> see "Network interception" below (no 1:1 wrapper;
-#                                            ferrum's callback API differs enough to inline per-spec)
+# Ferrum/CDP helpers — pure-Ruby replacements for the Playwright-specific
+# operations the system specs used pre-#497. Cuprite exposes the underlying
+# Ferrum::Browser at `page.driver.browser`. See /docs/developer/testing.
 module CdpHelpers
   def cdp_browser
     page.driver.browser

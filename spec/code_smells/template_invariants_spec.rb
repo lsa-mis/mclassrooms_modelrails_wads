@@ -2,25 +2,11 @@ require "rails_helper"
 require "json"
 require "yaml"
 
-# modelrails_base is an application template intended to be forked. Every
-# default the template ships propagates into every downstream fork.
-#
-# This spec asserts the structural invariants that came out of the 8-reviewer
-# panel review on 2026-05-18 (see docs/superpowers/specs/2026-05-18-devcontainer-
-# dockerfile-cleanup-design.md). Each invariant catches a class of subtle
-# misconfiguration that would otherwise propagate silently to downstream apps:
-#
-#   - Ruby version drift between .tool-versions, Gemfile, Gemfile.lock, and
-#     the production Dockerfile (Aaron Patterson)
-#   - Test gems leaking into the production image (Eileen Uchitelle)
-#   - Dockerfile layer-cache invalidation from vendor/ COPY ordering (Nick
-#     Janetakis + 3 others)
-#   - Dev/prod base-image divergence (Nick Janetakis)
-#   - Devcontainer that can't run `kamal deploy` (Donal McBreen)
-#   - setup.sh that reimplements bin/setup instead of wrapping it (Justin
-#     Searls)
-#   - Missing onboarding signals like .env.example (Chris Oliver)
-#   - Unused free perf: YJIT, MALLOC_CONF (Aaron Patterson)
+# modelrails_base is a template meant to be forked: every default it ships
+# propagates into every downstream fork. This spec asserts the structural
+# invariants from the 2026-05-18 8-reviewer panel review (plus additions
+# since) — each catches a misconfiguration that would otherwise propagate
+# silently. See /docs/developer/testing.
 RSpec.describe "Template invariants" do
   let(:root) { Rails.root }
 
@@ -586,26 +572,9 @@ RSpec.describe "Template invariants" do
         "and the scanner has nothing to scan"
     end
 
-    # This scan NEVER uses the layer cache, on any trigger (#536).
-    #
-    # It was conditional (schedule + workflow_dispatch only), on the theory that
-    # a PR could reuse main's refreshed layers. It cannot: GitHub Actions cache
-    # scoping makes a branch read its OWN scope first, and ci.yml's docker_build
-    # runs on every PR and writes `mode=max` into exactly that scope. So an
-    # affected PR replays its own stale apt layer and main's fix is never
-    # consulted — observed 2026-07-30, when four dependabot PRs kept reporting 5
-    # HIGH CVEs in libexpat1 that Debian had already fixed, and clearing them
-    # took a per-branch dispatch.
-    #
-    # Keying the cache on the base-image digest does NOT fix this: ruby:slim
-    # rebuilds on Debian point releases, not interim security updates (see the
-    # Dockerfile's apt-get upgrade comment), so the digest is unchanged exactly
-    # when the packages inside it are not. The staleness lives in the apt layer,
-    # not in the base reference.
-    #
-    # Measured cost of always rebuilding: ~3.8 min vs ~3.1 min cached — about 45
-    # seconds, because most of the job is Trivy rather than layer building. That
-    # is a cheap price for a red that always means what it says.
+    # This scan NEVER uses the layer cache, on any trigger (#536): GitHub
+    # Actions cache scoping makes a PR replay its OWN stale apt layer, so a
+    # stale-package CVE looks identical to a real one. See /docs/developer/testing.
     it "never reuses the layer cache — a cached apt layer hides current package state" do
       build_step = scan_steps.find { |s| s["uses"].to_s.include?("docker/build-push-action") }
       next if build_step.nil?
@@ -657,16 +626,9 @@ RSpec.describe "Template invariants" do
   end
 
   describe "CI persists the spec runtime log for balanced parallel splits (#488)" do
-    # bin/parallel-rspec writes tmp/parallel_runtime_rspec.log (per-file spec
-    # timings); parallel_tests reads it on the NEXT run to split work by measured
-    # time instead of file size, evening out the slowest worker. That only helps
-    # if the log survives between runs — so the test job must cache it. Without
-    # the cache the log is cold every run and the split silently falls back to
-    # file size (still correct, just unbalanced — the #488 regression).
-    # Since #495's sharding, the cache lifecycle spans three jobs: test_shard
-    # RESTORES the log (in-shard worker balancing), coverage_merge reassembles
-    # every shard's partial log and SAVES it, and split_seed snapshots one
-    # frozen copy so all shards compute the SAME cross-shard split.
+    # tmp/parallel_runtime_rspec.log feeds time-based spec splitting, so it must
+    # be cached across CI runs; since #495's sharding the lifecycle spans the
+    # split_seed/test_shard/coverage_merge jobs. See /docs/developer/testing.
     let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
 
     def job_steps(name) = Array(ci_workflow.dig("jobs", name, "steps"))
@@ -1036,16 +998,8 @@ RSpec.describe "Template invariants" do
 
   describe "the template ships no AI-agent configuration (forks start AI-agnostic)" do
     # Policy (2026-08-14): AI tooling is a per-developer choice layered onto a
-    # fork, not something a fork inherits — a forker who wants agents brings
-    # their own setup, independent of the code they forked. The maintainer's
-    # own agent layer (CLAUDE.md, .claude/, agent-os/, .graphifyignore, …)
-    # lives untracked in this checkout via .git/info/exclude. This guard keeps
-    # the boundary from regressing: an agent-config file quietly committed
-    # here becomes unexplainable cruft — or worse, doctrine — in every fork,
-    # and the fork's own suite would then be enforcing another developer's
-    # tooling choices. (This replaced an invariant that did exactly that:
-    # it required .graphifyignore to stay tracked, so a fork deleting a file
-    # for a tool it never used went red.)
+    # fork, never inherited — the maintainer's own agent layer stays untracked
+    # via .git/info/exclude. See /docs/developer/extending.
     ai_config_patterns = %r{\A(?:
       CLAUDE(?:\.local)?\.md |
       AGENTS\.md |
@@ -1197,7 +1151,7 @@ RSpec.describe "Template invariants" do
       expect(brand_at).not_to be_nil,
         "application.css must @import ./tokens/_brand.css so a fork's color overrides take effect"
       expect(brand_at).to be > primitives_at,
-        "_brand.css must be imported AFTER _primitives.css so a fork's overrides win the cascade (see docs/theming.md)"
+        "_brand.css must be imported AFTER _primitives.css so a fork's overrides win the cascade"
     end
   end
 

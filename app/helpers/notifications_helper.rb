@@ -7,7 +7,7 @@ module NotificationsHelper
   # notifier's `#message` reads it); per-subtype `event.record` traversal
   # may N+1 a single row but the bounded page size keeps the impact small,
   # and the `SignInFromNewDeviceNotifier` exception is already covered by
-  # `config/environments/test.rb`'s safelist.
+  # `lib/bullet_safelists.rb`.
   def recent_notifications_for_dropdown(user)
     unread = user.notifications.where(read_at: nil)
                  .includes(event: :record)
