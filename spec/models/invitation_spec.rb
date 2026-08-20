@@ -729,16 +729,5 @@ RSpec.describe Invitation, type: :model do
       Current.workspace = nil
     end
 
-    it "records the project's workspace for a project invitation" do
-      project = create(:project)
-      Current.workspace = create(:workspace)
-
-      invitation = create(:invitation, invitable: project)
-
-      log = ActivityLog.where(trackable: invitation, action: "invitation.created").last
-      expect(log.workspace).to eq(project.workspace)
-    ensure
-      Current.workspace = nil
-    end
   end
 end

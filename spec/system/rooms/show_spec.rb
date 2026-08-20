@@ -96,7 +96,7 @@ RSpec.describe "Room show", type: :system do
   # role "generic", which doesn't support naming). Fixed at the source by
   # adding `role="region"` to both containers — every page benefits, not
   # just this one.
-  let(:axe_options) { PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup }
+  let(:axe_options) { AxeAccessibility::DEFAULT_AXE_OPTIONS.dup }
 
   it "renders the header, chips, media, notes, and share accessibly in both themes" do
     # Headless Chrome exposes navigator.share, which would relabel the button to
