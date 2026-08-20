@@ -89,7 +89,6 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     "workspaces.projects.memberships.toggle_pin.toggled",
     "workspaces.projects.memberships.update.invalid_role",
     "workspaces.projects.memberships.update.role_updated",
-    "workspaces.projects.not_found",
     "workspaces.projects.resources.create.success",
     "workspaces.projects.resources.destroy.success",
     "workspaces.projects.resources.invalid_type",

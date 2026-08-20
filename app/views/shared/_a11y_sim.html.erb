@@ -1,7 +1,9 @@
 <%# Dev-only accessibility-simulation drop-up. Renders nothing in production. %>
 <% if Rails.env.development? %>
-  <%# `blur` stays 2nd and `cataract` last — the keyboard-nav specs pin those positions.
-      Color-vision-deficiency variants (deuteranopia..achromatopsia) are grouped together. %>
+  <%# Single source of the ordered mode list — the a11y-sim controller reads it
+      from the modes-value serialized below. `blur` stays 2nd and `cataract` last —
+      the keyboard-nav specs pin those positions. Color-vision-deficiency variants
+      (deuteranopia..achromatopsia) are grouped together. %>
   <% modes = %w[normal blur grayscale deuteranopia protanopia tritanopia achromatopsia low_contrast cataract] %>
   <% mode_icons = {} %>
 
@@ -105,6 +107,7 @@
   </svg>
 
   <div data-controller="a11y-sim"
+       data-a11y-sim-modes-value="<%= modes.to_json %>"
        data-a11y-sim-announcement-template-value="<%= t("a11y_sim.announcement_template") %>"
        class="relative">
     <button type="button"

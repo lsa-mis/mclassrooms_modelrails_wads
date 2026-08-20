@@ -12,48 +12,26 @@ RSpec.describe "Account profile — identity picker", type: :system do
   describe "photo upload flow" do
     it "uploads, crops, and saves a new avatar" do
       open_identity_picker
-
-      # Select Photo source — since no image exists yet, this opens the file picker
-      select_identity_source("Photo")
-
-      attach_identity_picker_file(avatar_fixture)
-
-      # File select triggers crop view automatically
-      wait_for_crop_view
-
+      upload_photo(avatar_fixture)
       simulate_crop_adjustment
+      save_crop_and_return_to_hub
 
-      click_button I18n.t("identity_picker.save_crop")
-
-      # After save, modal returns to hub
-      wait_for_hub_view
-
-      # Server-side state: avatar and avatar_original both attached, source is upload
-      user.reload
+      expect_avatar_source(user, :upload)
       expect(user.avatar).to be_attached
       expect(user.avatar_original).to be_attached
-      expect(user.avatar_source).to eq("upload")
     end
   end
 
   describe "source switching" do
     it "switches to Initials with a custom color" do
       open_identity_picker
-
       select_identity_source("Initials")
+      expect_color_picker_visible
 
-      # Color picker panel should appear (server-rendered when initials selected)
-      expect(page).to have_css("[data-identity-picker-target='colorSlider']", wait: 3)
+      set_identity_color_hue(120)
+      save_and_apply
 
-      set_identity_color_hue(120)  # green
-
-      click_button I18n.t("identity_picker.save")
-
-      # Modal closes on save & apply
-      expect(page).to have_no_css("dialog[open]", wait: 3)
-
-      user.reload
-      expect(user.avatar_source).to eq("initials")
+      expect_avatar_source(user, :initials)
       expect(user.primary_color).to eq(120)
     end
 
@@ -65,19 +43,12 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
       it "switches to Gravatar" do
         open_identity_picker
-
         select_identity_source("Gravatar")
+        expect_no_color_picker
 
-        # No color picker for Gravatar (panel is not rendered server-side)
-        expect(page).to have_no_css("[data-identity-picker-target='colorSlider']", wait: 2)
+        save_and_apply
 
-        click_button I18n.t("identity_picker.save")
-
-        # Modal closes on save & apply
-        expect(page).to have_no_css("dialog[open]", wait: 3)
-
-        user.reload
-        expect(user.avatar_source).to eq("gravatar")
+        expect_avatar_source(user, :gravatar)
       end
     end
   end
@@ -90,27 +61,14 @@ RSpec.describe "Account profile — identity picker", type: :system do
       prior_avatar_key = user.avatar.blob.key
 
       open_identity_picker
-
-      # Click the large photo preview to enter crop view
-      find("button[data-identity-picker-target='photoPreview']").click
-
-      wait_for_crop_view
-
-      # Crop view image src should contain the avatar_original blob signed ID (not the avatar's)
-      img_src = page.evaluate_script(
-        "document.querySelector('.cropper-container img').getAttribute('src')"
-      )
-      expect(img_src).to include(original_signed_id)
+      enter_crop_view
+      expect(crop_view_image_src).to include(original_signed_id)
 
       simulate_crop_adjustment
-
-      click_button I18n.t("identity_picker.save_crop")
-
-      wait_for_hub_view
+      save_crop_and_return_to_hub
 
       user.reload
       expect(user.avatar).to be_attached
-      # New crop save creates a new avatar blob (different key than before)
       expect(user.avatar.blob.key).not_to eq(prior_avatar_key)
     end
   end
@@ -120,22 +78,13 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
     it "persists removal immediately (without clicking Save & apply)" do
       open_identity_picker
+      enter_crop_view
 
-      # Enter crop view via photo preview
-      find("button[data-identity-picker-target='photoPreview']").click
-      wait_for_crop_view
+      remove_photo_expecting_modal_close
 
-      click_button I18n.t("identity_picker.remove_photo")
-
-      # Remove photo submits a DELETE via button_to and the turbo stream
-      # response closes the modal automatically
-      expect(page).to have_no_css("dialog[open]", wait: 5)
-
-      # Server state persisted immediately — no Save & apply needed
-      user.reload
+      expect_avatar_source(user, :initials)
       expect(user.avatar).not_to be_attached
       expect(user.avatar_original).not_to be_attached
-      expect(user.avatar_source).to eq("initials")
     end
   end
 
@@ -144,24 +93,20 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
     it "Escape returns to hub without closing the modal" do
       open_identity_picker
-      find("button[data-identity-picker-target='photoPreview']").click
-      wait_for_crop_view
+      enter_crop_view
 
       cdp_press("Escape")
 
-      wait_for_hub_view
-      expect(page).to have_css("dialog[open]")
+      expect_returned_to_hub_without_closing_modal
     end
 
     it "Cancel button returns to hub without closing the modal" do
       open_identity_picker
-      find("button[data-identity-picker-target='photoPreview']").click
-      wait_for_crop_view
+      enter_crop_view
 
       click_button I18n.t("identity_picker.cancel")
 
-      wait_for_hub_view
-      expect(page).to have_css("dialog[open]")
+      expect_returned_to_hub_without_closing_modal
     end
   end
 
@@ -170,16 +115,11 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
     it "changes between hub and crop modes" do
       open_identity_picker
-
-      # Hub view title
       expect(page).to have_css("dialog h2", text: I18n.t("identity_picker.choose_profile_picture"))
 
-      # Enter crop view
-      find("button[data-identity-picker-target='photoPreview']").click
-      wait_for_crop_view
+      enter_crop_view
       expect(page).to have_css("dialog h2", text: I18n.t("identity_picker.adjust_profile_picture"))
 
-      # Return to hub
       click_button I18n.t("identity_picker.cancel")
       wait_for_hub_view
       expect(page).to have_css("dialog h2", text: I18n.t("identity_picker.choose_profile_picture"))
@@ -190,37 +130,21 @@ RSpec.describe "Account profile — identity picker", type: :system do
     it "navigates to Initials source via Tab and Enter and shows color picker" do
       open_identity_picker
 
-      # Source cards are now links. Tab to the Initials link and press Enter.
-      # For a default user (no Gravatar), available sources are ["upload", "initials"].
-      # We Tab past the Photo link to reach Initials, then activate it.
-      # Focus the first source card link (Photo)
-      cdp_execute(<<~JS)
-        const firstLink = document.querySelector(
-          "#identity-picker-hub [role='radiogroup'] a[role='radio']"
-        )
-        firstLink.focus()
-      JS
-      # Tab to the next source card (Initials)
+      # For a default user (no Gravatar) the hub offers Photo then Initials,
+      # so one Tab from the first source card lands on Initials.
+      focus_first_source_card
       cdp_press("Tab")
-      # Activate the Initials link
       cdp_press("Enter")
 
-      # Wait for turbo frame to reload with Initials selected
+      # Wait for the turbo frame to reload with Initials selected.
       expect(page).to have_css("#identity-picker-hub", wait: 5)
 
-      # Initials preview now visible (server-rendered for the initials source)
       expect(page).to have_css("[data-identity-picker-target='initialsPreview']", wait: 3)
-
-      # Color slider visible (has_color_picker: true for User)
-      expect(page).to have_css("[data-identity-picker-target='colorSlider']")
-
-      # The Initials source card has the selected-state aria attribute
+      expect_color_picker_visible
       expect(page).to have_css("#identity-picker-hub a[aria-checked='true']",
         text: I18n.t("identity_picker.sources.initials.title"))
 
-      # Close the modal before the after(:each) axe audit runs.
-      cdp_press("Escape")
-      expect(page).to have_no_css("dialog[open]", wait: 3)
+      close_modal_before_axe_audit
     end
   end
 
@@ -265,11 +189,9 @@ RSpec.describe "Account profile — identity picker", type: :system do
       sleep 0.05 until Time.current > settle_deadline ||
                        page.evaluate_script("(document.querySelector('dialog')?.getAnimations() || []).length").zero?
 
-      # Modal remains open, hub view still visible
       expect(page).to have_css("dialog[open]")
       expect(page).to have_css("#identity-picker-hub:not([hidden])")
 
-      # Flag was reset by the cancel handler
       flag_cleared = page.evaluate_script(<<~JS)
         (() => {
           const el = document.querySelector("[data-controller~='identity-picker']")
@@ -279,20 +201,14 @@ RSpec.describe "Account profile — identity picker", type: :system do
       JS
       expect(flag_cleared).to eq(true)
 
-      # Close the modal before the after(:each) axe audit runs.
-      # The hub's initials source card uses oklch() with a CSS custom property
-      # that axe-core can't resolve for contrast computation.
-      cdp_press("Escape")
-      expect(page).to have_no_css("dialog[open]", wait: 3)
+      close_modal_before_axe_audit
     end
   end
 
   describe "double-click guard on Save crop" do
     it "triggers only one PATCH request even if Save crop is clicked twice rapidly" do
       open_identity_picker
-      select_identity_source("Photo")
-      attach_identity_picker_file(Rails.root.join("spec/fixtures/files/avatar.png"))
-      wait_for_crop_view
+      upload_photo(avatar_fixture)
       simulate_crop_adjustment
 
       # Count PATCH requests and delay their responses so both clicks
@@ -318,7 +234,6 @@ RSpec.describe "Account profile — identity picker", type: :system do
       save_button.click
       double_click_done = true # release the held PATCH — the window has served its purpose
 
-      # Wait for the first response to land (modal returns to hub)
       wait_for_hub_view
 
       expect(patch_count).to eq(1)

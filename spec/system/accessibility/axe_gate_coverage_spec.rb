@@ -18,7 +18,7 @@ RSpec.describe "axe gate rule coverage", type: :system do
     inject_axe
 
     rule_ids = page.evaluate_script(
-      "axe.getRules(#{PlaywrightAccessibility::AXE_TAG_SET.to_json}).map(r => r.ruleId)"
+      "axe.getRules(#{AxeAccessibility::AXE_TAG_SET.to_json}).map(r => r.ruleId)"
     )
 
     expect(rule_ids).to include(

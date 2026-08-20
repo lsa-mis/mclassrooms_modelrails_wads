@@ -13,7 +13,9 @@ class MembershipPolicy < ApplicationPolicy
     if record.user == user
       # Self-leave case: user deactivating their own membership.
       return false if record.workspace.id == user.personal_workspace_id
-      return false if record.role.slug == "owner" && record.workspace.owners.size == 1
+      # Last-owner guard: one indexed EXISTS, fired only for owner rows —
+      # cheaper and fresher than materializing the full owner roster.
+      return false if record.owner? && !Membership.other_kept_owners(record.workspace_id, excluding: record.id).exists?
       true
     else
       # Admin-deactivates-someone-else case.

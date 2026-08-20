@@ -12,7 +12,7 @@
 #
 # NOTE: axe_clean_in_both_themes? runs axe DEFAULT (AA 4.5:1) locally. The
 # authoritative AAA 7:1 audit is the CI-only wcag2aaa after-hook in
-# spec/support/playwright_accessibility.rb.
+# spec/support/axe_accessibility.rb.
 RSpec.describe "Sheet component accessibility", type: :system do
   def open_sheet
     find("[data-action~='click->modal#open']").click
@@ -22,7 +22,7 @@ RSpec.describe "Sheet component accessibility", type: :system do
   # Verifies the panel reached the enter (identity) transform after sliding in.
   # Sheet enter transforms: left/right → translateX(0); top/bottom → translateY(0)
   # Both resolve to the identity matrix. We await the CSS transition to complete
-  # before reading the settled value (mirrors PlaywrightAccessibility#set_theme).
+  # before reading the settled value (mirrors AxeAccessibility#set_theme).
   def assert_panel_slid_in
     expect(page).to have_css("dialog[open] [data-modal-target='panel']")
 

@@ -91,7 +91,6 @@ RSpec.describe UI::RadioGroupComponent, type: :component do
     expect(page).not_to have_css("div[aria-label='Caller override']")
   end
 
-  # AAA semantic tokens (the design-token guarantee), not raw Tailwind:
   it "renders inputs with semantic AAA tokens" do
     render_inline(described_class.new(name: "plan", label: "Billing plan", items: plan_items))
 
@@ -99,7 +98,6 @@ RSpec.describe UI::RadioGroupComponent, type: :component do
     expect(page).to have_css("input.accent-interactive")
   end
 
-  # Standard library focus indicator (the focus-ring outline utility), matching the other form controls.
   it "renders inputs with the standard focus-ring outline" do
     render_inline(described_class.new(name: "plan", label: "Billing plan", items: plan_items))
 

@@ -68,7 +68,6 @@ RSpec.describe ActivityLog, type: :model do
     end
 
     it ".recent orders by created_at desc" do
-      # Create logs with explicit timestamps in the past; recent returns desc order
       old = create(:activity_log, created_at: 2.days.ago)
       new_log = create(:activity_log, created_at: 1.day.ago)
       # recent.first returns the most recently created overall; just verify ordering of our logs

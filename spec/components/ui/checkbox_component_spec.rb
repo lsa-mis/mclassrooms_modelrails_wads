@@ -9,7 +9,6 @@ RSpec.describe UI::CheckboxComponent, type: :component do
     expect(page).to have_css("input[type='checkbox']")
   end
 
-  # AAA semantic tokens (the design-token guarantee), not raw Tailwind:
   it "renders with AAA semantic tokens" do
     render_inline(described_class.new(label: "Accept terms", name: "terms"))
 
@@ -18,7 +17,6 @@ RSpec.describe UI::CheckboxComponent, type: :component do
     expect(page).to have_css('input.checked\\:bg-interactive')
   end
 
-  # Label association: the <label for=...> targets the input's id.
   it "associates the label via for matching the input id" do
     render_inline(described_class.new(label: "Accept terms", name: "terms"))
 
@@ -46,7 +44,6 @@ RSpec.describe UI::CheckboxComponent, type: :component do
     expect(page).to have_css("input[type='checkbox'][checked]")
   end
 
-  # invalid: drives the server-validation-driven aria-invalid posture.
   it "sets aria-invalid when invalid" do
     render_inline(described_class.new(label: "Accept terms", name: "terms", invalid: true))
 

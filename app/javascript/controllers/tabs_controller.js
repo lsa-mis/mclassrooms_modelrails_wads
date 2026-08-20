@@ -15,14 +15,13 @@ export default class extends Controller {
     this.#activate(start, { focus: false })
   }
 
-  // click on a tab
   select(event) {
     const i = this.tabTargets.indexOf(event.currentTarget)
     if (i < 0 || this.#disabled(i)) return
     this.#activate(i, { focus: true })
   }
 
-  // keydown on a tab (bound per-trigger; event.currentTarget is the focused tab)
+  // Bound per-trigger, so event.currentTarget is the focused tab.
   navigate(event) {
     const current = this.tabTargets.indexOf(event.currentTarget)
     if (current < 0) return

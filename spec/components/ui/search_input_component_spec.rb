@@ -26,7 +26,6 @@ RSpec.describe UI::SearchInputComponent, type: :component do
     expect(page).to have_css("input[type='search'][aria-label='Search products']")
   end
 
-  # AAA semantic tokens (the design-token guarantee), not raw Tailwind:
   it "renders with AAA semantic tokens" do
     render_inline(described_class.new(name: "q"))
 
@@ -41,14 +40,12 @@ RSpec.describe UI::SearchInputComponent, type: :component do
     expect(page).to have_css("input.h-11")
   end
 
-  # The decorative magnifier icon must be hidden from assistive tech.
   it "renders the icon as aria-hidden" do
     render_inline(described_class.new(name: "q"))
 
     expect(page).to have_css("svg[aria-hidden='true']")
   end
 
-  # invalid: drives the server-validation-driven aria-invalid posture.
   it "sets aria-invalid when invalid" do
     render_inline(described_class.new(name: "q", invalid: true))
 

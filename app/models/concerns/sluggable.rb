@@ -22,8 +22,6 @@ module Sluggable
     end
   end
 
-  # Default: globally unique within the model's table.
-  # Override for scoped uniqueness (e.g., unique within a workspace).
   def slug_taken?(candidate)
     self.class.where.not(id: id).exists?(slug: candidate)
   end

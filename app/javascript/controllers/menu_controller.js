@@ -20,8 +20,6 @@ export default class extends Controller {
     if (this.typeTimer) clearTimeout(this.typeTimer)
   }
 
-  // --- open / close -------------------------------------------------------
-
   toggle(event) {
     if (event) event.preventDefault()
     this.openValue ? this.close() : this.open()
@@ -60,8 +58,6 @@ export default class extends Controller {
       this.close({ restoreFocus: false })
     }
   }
-
-  // --- roving navigation --------------------------------------------------
 
   get enabledItems() {
     return this.itemTargets.filter((el) => el.getAttribute("aria-disabled") !== "true")
@@ -138,8 +134,6 @@ export default class extends Controller {
     }
   }
 
-  // --- activation ---------------------------------------------------------
-
   activate(event) {
     if (event.currentTarget.getAttribute("aria-disabled") === "true") {
       event.preventDefault()
@@ -148,8 +142,7 @@ export default class extends Controller {
     this.close()
   }
 
-  // --- context_menu: pointer / keyboard positioning -----------------------
-  // (used by context_menu via EXTRA_STIMULUS; dropdown_menu never wires these)
+  // Positioning below is used by context_menu via EXTRA_STIMULUS; dropdown_menu never wires these.
 
   // Right-click: open the menu at the pointer. Re-opens at the new point if
   // already open (a second right-click moves the menu).

@@ -15,7 +15,6 @@ RSpec.describe "Magic link registration", type: :system do
 
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
 
-      # Visit the registration link (equivalent to the emailed one).
       visit magic_link_callback_path(token: MagicLinkToken.create_for_email("brand-new@example.com"))
 
       expect(page).to have_text(I18n.t("magic_link_callbacks.new_registration.title"))

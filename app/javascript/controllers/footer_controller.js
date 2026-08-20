@@ -10,6 +10,8 @@ import { Controller } from "@hotwired/stimulus"
 //   granular choices after an all-or-nothing decision shows stale state
 //   (e.g. all unchecked) until a full reload.
 export default class extends Controller {
+  static values = { cookieName: String }
+
   reopenCookies(event) {
     event.preventDefault()
     this.#syncCheckboxesFromCookie()
@@ -25,15 +27,13 @@ export default class extends Controller {
     })
   }
 
-  // Hardcodes the cookie name "biscuit_consent" — matches
-  // config/initializers/biscuit.rb's config.cookie_name. Update both
-  // together if that's ever changed.
   #readConsentCookie() {
-    const match = document.cookie.match(/(?:^|; )biscuit_consent=([^;]*)/)
-    if (!match) return null
+    const prefix = `${this.cookieNameValue}=`
+    const entry = document.cookie.split("; ").find(cookie => cookie.startsWith(prefix))
+    if (!entry) return null
 
     try {
-      return JSON.parse(decodeURIComponent(match[1]))
+      return JSON.parse(decodeURIComponent(entry.slice(prefix.length)))
     } catch {
       return null
     }

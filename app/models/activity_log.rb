@@ -4,7 +4,7 @@ class ActivityLog < ApplicationRecord
   belongs_to :workspace, optional: true
 
   # The audit trail is best-effort to write (Trackable rescues rather than
-  # failing the business operation — CLAUDE.md deviation #4) and immutable
+  # failing the business operation — see /docs/developer/architecture) and immutable
   # after: persisted rows refuse instance-level update/destroy. Relation-level
   # bypasses (update_all/delete_all) are fenced by
   # spec/code_smells/activity_log_immutability_spec.rb, where the retention

@@ -110,6 +110,26 @@ RSpec.describe NotificationPreferences do
     it "rejects unknown channel" do
       expect(prefs.allow?(category: "security", channel: "carrier_pigeon")).to be false
     end
+
+    context "with Symbol category/channel arguments (boundary normalization)" do
+      # Notifier class attributes and call sites shouldn't have to know that
+      # the JSONB blob is string-keyed; allow? coerces at its boundary.
+      it "treats symbol arguments the same as their string forms" do
+        expect(prefs.allow?(category: :workspace_activity, channel: :email)).to be true
+        expect(prefs.allow?(category: :security, channel: :in_app)).to be true
+      end
+
+      it "returns the :digest sentinel for symbol arguments too" do
+        digest_prefs = prefs_for(
+          default_jsonb.deep_merge("delivery_methods" => { "email" => { "frequency" => "daily" } })
+        )
+        expect(digest_prefs.allow?(category: :workspace_activity, channel: :email)).to eq(:digest)
+      end
+
+      it "still rejects unknown symbols" do
+        expect(prefs.allow?(category: :unicorns, channel: :in_app)).to be false
+      end
+    end
   end
 
   describe "#quiet_hours_active?" do

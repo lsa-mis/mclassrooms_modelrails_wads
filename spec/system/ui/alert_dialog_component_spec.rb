@@ -9,7 +9,7 @@
 #
 # NOTE: axe_clean_in_both_themes? runs axe DEFAULT (AA 4.5:1) locally. The
 # authoritative AAA 7:1 audit is the CI-only wcag2aaa after-hook in
-# spec/support/playwright_accessibility.rb.
+# spec/support/axe_accessibility.rb.
 RSpec.describe "Alert Dialog component accessibility", type: :system do
   def open_alert_dialog
     find("[data-action~='click->modal#open']").click

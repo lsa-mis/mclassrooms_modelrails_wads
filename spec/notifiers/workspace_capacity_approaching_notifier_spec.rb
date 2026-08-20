@@ -61,6 +61,23 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
   end
 
+  describe "recipient resolution query efficiency" do
+    # A third owner so an N+1 (one user_preferences query per owner) diverges
+    # loudly from the single preloaded query the contract requires.
+    let!(:owner_c) { create(:user) }
+    let!(:owner_c_membership) { create(:membership, user: owner_c, workspace: workspace, role: owner_role) }
+
+    it "issues exactly one user_preferences query for N owners (preloaded, not N+1)" do
+      event = described_class.with(record: workspace, metric: "members", current: 8, limit: 10)
+
+      query_count = count_queries_touching("user_preferences") do
+        event.send(:evaluate_recipients)
+      end
+
+      expect(query_count).to eq 1
+    end
+  end
+
   describe "dispatching" do
     it "delivers in-app notifications to all owners under default preferences" do
       result = described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)

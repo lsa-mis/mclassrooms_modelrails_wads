@@ -141,10 +141,6 @@ class User < ApplicationRecord
     factors
   end
 
-  # The email-change state machine (initiate/confirm/cancel) lives in
-  # Users::EmailChange. The pending_email* columns and their validations stay
-  # here; the transitions moved out (DES-1).
-
   # Browser-fingerprint heuristic for the new-device sign-in detector.
   # Digest is intentionally coarse (version-stripped — see .browser_digest) so
   # the same browser/OS combo across UA version bumps still matches "seen".
@@ -190,7 +186,7 @@ class User < ApplicationRecord
   end
 
   # Returns { notifier_class_name => unread_count, ... } for the user.
-  # Used by NotificationBellHelper to compute count and severity in one DB hit.
+  # Used by UnreadNotificationSummary to compute count and severity in one DB hit.
   def unread_notification_breakdown
     notifications
       .where(read_at: nil)
@@ -235,8 +231,11 @@ class User < ApplicationRecord
     case TenancyConfig.onboarding
     when :personal then create_personal_workspace
     when :shared   then join_shared_workspace
-    when :none     then nil # explicit: :none creates no workspace; the user's home is workspace-agnostic (see config/initializers/tenancy.rb)
+    when :none     then skip_workspace_creation
     end
+  end
+
+  def skip_workspace_creation
   end
 
   def create_personal_workspace

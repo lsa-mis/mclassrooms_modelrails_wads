@@ -14,10 +14,8 @@ class PasswordChangedNotifier < ApplicationNotifier
     end
 
     def url
-      # TODO(PR-3): point at a dedicated security hub when one ships. v1 has no
-      # logged-in password-change route (the project's password resource is
-      # `:new, :create` only, i.e. forgot-password flow). Connected accounts is
-      # the closest available security-adjacent landing for now.
+      # Connected accounts is the closest security-adjacent landing: no logged-in
+      # password-change route exists yet (passwords resource is forgot-password only).
       Rails.application.routes.url_helpers.settings_connected_accounts_path
     end
   end

@@ -8,17 +8,14 @@
        data-controller="docs-search"
        data-docs-search-index-url-value="<%= markdowndocs.search_index_path %>"
     <% end %>>
-    <!-- Persistent audience switcher toolbar -->
     <%= render "markdowndocs/docs/docs_toolbar",
       current_mode: @docs_mode,
       available_modes: @available_modes %>
-    <!-- Hero Section -->
     <div class="text-center mb-12">
       <h1 class="text-4xl font-bold text-text-heading mb-4"><%= t(".title") %></h1>
       <p class="text-xl text-text-body"><%= t(".subtitle") %></p>
 
       <% if @search_enabled %>
-        <!-- Search input -->
         <div class="mt-6 max-w-lg mx-auto">
           <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,7 +36,6 @@
     </div>
 
     <% if @docs_by_category.values.flatten.any? %>
-      <!-- No results message -->
       <% if @search_enabled %>
         <div data-docs-search-target="noResults" class="hidden text-center py-12">
           <svg class="mx-auto h-12 w-12 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +46,6 @@
         </div>
       <% end %>
 
-      <!-- Documentation Cards by Category -->
       <% @docs_by_category.each do |category, docs| %>
         <% if docs.any? %>
           <div id="<%= category.parameterize %>" class="mb-12 scroll-mt-6"
@@ -69,7 +64,6 @@
         <% end %>
       <% end %>
     <% else %>
-      <!-- Empty State -->
       <div class="bg-surface-raised rounded-lg shadow-sm">
         <div class="px-4 py-5
               sm:p-6">

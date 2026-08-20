@@ -10,7 +10,7 @@ require "rails_helper"
 # the [role='progressbar'] subtree with NO color-contrast exclude. NOTE: the
 # per-spec assertion below runs axe's default (AA) rule set; the authoritative
 # AAA 7:1 audit is the wcag2aaa after-hook that fires under CI (see
-# spec/support/playwright_accessibility.rb).
+# spec/support/axe_accessibility.rb).
 RSpec.describe "Progress component accessibility", type: :system do
   it "default exposes valuenow/min/max and passes AAA in both themes" do
     visit "/rails/view_components/ui/progress_component/default"

@@ -52,19 +52,20 @@ module Trackable
       actor: Current.user,
       action: action,
       trackable: self,
-      workspace: resolve_workspace_for_activity,
+      workspace: activity_workspace,
       visibility: activity_visibility(action),
       metadata: metadata
     )
   rescue StandardError => e
-    # Best-effort contract (see header): any tracking failure — validation,
-    # statement, or otherwise — is logged and reported, never raised into the
-    # business write that triggered it.
     Rails.logger.warn("Activity tracking failed for #{self.class.name}##{id} (#{action}): #{e.message}")
     Rails.error.report(e, handled: true, context: { trackable: "#{self.class.name}##{id}", action: action })
   end
 
-  def resolve_workspace_for_activity
-    respond_to?(:workspace) ? workspace : Current.workspace
+  # The workspace an activity row is attributed to. Each includer answers for
+  # itself (Membership returns its workspace, Invitation its
+  # resolved_workspace); the default is the ambient request workspace for
+  # models with no workspace of their own.
+  def activity_workspace
+    Current.workspace
   end
 end

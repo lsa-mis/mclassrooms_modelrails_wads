@@ -5,10 +5,8 @@ class ApplicationController < ActionController::Base
   include Pundit::Authorization
   include Toastable
   include Pagy::Method
-  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
-  # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
 
   # Authenticated HTML must not be written to shared caches or the browser's
@@ -164,7 +162,6 @@ class ApplicationController < ActionController::Base
     redirect_to root_path, alert: t("workspaces.joins.invalid_or_revoked")
   end
 
-  # Maps a Passkeys::Error subclass to its localized message for JSON error responses.
   def passkey_error_message(error)
     key = case error
     when Passkeys::ChallengeExpired           then "challenge_expired"

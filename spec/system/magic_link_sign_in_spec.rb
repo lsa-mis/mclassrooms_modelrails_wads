@@ -17,7 +17,6 @@ RSpec.describe "Magic link sign-in", type: :system do
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
       expect(page).to have_text(user.email_address)
 
-      # Visit the magic link (equivalent to the emailed one) and confirm sign-in.
       token = MagicLinkToken.create_for_email(user.email_address)
       visit magic_link_callback_path(token: token)
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
@@ -43,7 +42,6 @@ RSpec.describe "Magic link sign-in", type: :system do
       expect(page).to have_link(I18n.t("sessions.check_email.use_password"),
                                 href: session_password_form_path(email_address: user.email_address))
 
-      # Sign in via the magic link (confirm on the interstitial).
       token = MagicLinkToken.create_for_email(user.email_address)
       visit magic_link_callback_path(token: token)
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")

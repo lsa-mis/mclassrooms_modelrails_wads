@@ -12,7 +12,6 @@
   </div>
 
   <%= turbo_frame_tag "members_results" do %>
-    <%# Filter bar — a plain GET form inside the Turbo Frame %>
     <%= form_with url: workspace_members_path(@workspace),
           method: :get,
           data: { controller: "search-form", turbo_frame: "members_results", turbo_action: "advance" },
@@ -60,7 +59,6 @@
       <%= t("workspaces.members.index.results_summary", count: @pagy.count) %>
     </p>
 
-    <%# Results table — paginated, mixed rows (active members + pending invitations) %>
     <% if @rows.any? %>
       <div class="mt-6 bg-surface-raised rounded-lg border border-border shadow-sm overflow-hidden">
         <table class="w-full" aria-label="<%= t('workspaces.members.index.table_label') %>">
