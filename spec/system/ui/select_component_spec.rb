@@ -9,7 +9,7 @@ require "rails_helper"
 # options are not rendered (axe would skip them).
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative
-# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Select component accessibility", type: :system do
   it "opens a styled picker that passes AAA in both themes" do
     visit "/rails/view_components/ui/select_component/selected"

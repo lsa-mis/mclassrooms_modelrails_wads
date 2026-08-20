@@ -9,7 +9,7 @@ require "rails_helper"
 # ways and audit the LIVE menu.
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative AAA 7:1
-# audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Context menu component accessibility", type: :system do
   before { visit "/rails/view_components/ui/context_menu_component/basic" }
 

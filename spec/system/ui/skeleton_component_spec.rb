@@ -13,7 +13,7 @@ require "rails_helper"
 # out of the placeholder — the structural asserts are the real proof for a
 # decorative element. NOTE: the per-spec assertion below runs axe's default (AA)
 # rule set; the authoritative AAA 7:1 audit is the wcag2aaa after-hook that fires
-# under CI (see spec/support/playwright_accessibility.rb).
+# under CI (see spec/support/axe_accessibility.rb).
 RSpec.describe "Skeleton component accessibility", type: :system do
   %w[default card circle].each do |scenario|
     it "#{scenario} is aria-hidden, pulses, and respects reduced motion" do

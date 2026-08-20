@@ -173,7 +173,6 @@ RSpec.describe "Members table", type: :system do
       find("#user-menu-button").click
       click_button I18n.t("navigation.sign_out")
       expect(page).to have_text(I18n.t("sessions.new.title"))
-      # Sign in as regular member via magic link
       fill_in I18n.t("sessions.new.email_label"), with: regular.email_address
       click_button I18n.t("sessions.new.continue")
       expect(page).to have_text(I18n.t("sessions.check_email.title"))

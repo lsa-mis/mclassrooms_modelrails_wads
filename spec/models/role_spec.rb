@@ -1,6 +1,17 @@
 require "rails_helper"
 
 RSpec.describe Role, type: :model do
+  describe "#owner?" do
+    it "is true for the owner slug" do
+      expect(build(:role, :owner).owner?).to be true
+    end
+
+    it "is false for any other slug" do
+      expect(build(:role, :admin).owner?).to be false
+      expect(build(:role, slug: "custom").owner?).to be false
+    end
+  end
+
   describe "validations" do
     it "requires a name" do
       role = build(:role, name: nil)

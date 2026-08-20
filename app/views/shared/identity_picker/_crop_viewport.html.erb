@@ -1,0 +1,36 @@
+<%# locals: (has_image:, original_url:) -%>
+<div>
+  <%# role="application" tells AT to suppress its own keystroke handling
+      so the image-cropper controller (handleKeydown action) can own
+      arrow keys for pan/zoom — that's the textbook use case for this
+      role, but herb-lint flags it because it's an anti-pattern in most
+      other contexts. The trailing disable comment on the role line is
+      intentional and scoped to that single attribute. %>
+  <div class="cropper-container rounded-lg focus-ring"
+       data-image-cropper-target="container"
+       data-action="keydown->image-cropper#handleKeydown"
+       tabindex="0"
+       role="application" <%# herb:disable html-aria-role-must-be-valid %>
+       aria-label="<%= t('identity_picker.crop_area_label') %>">
+    <% if has_image %>
+      <%= image_tag original_url, class: "max-w-full", alt: "" %>
+    <% else %>
+      <%# src omitted intentionally — image_cropper_controller#load sets it
+          when a file is chosen. Empty src="" can trigger a request to the
+          current page URL in some browsers, so we drop the attribute. %>
+      <img class="max-w-full" alt="">
+    <% end %>
+    <div class="crop-dimension-badge"
+         data-image-cropper-target="dimensionBadge"
+         aria-hidden="true">
+      &mdash;
+    </div>
+  </div>
+
+  <div data-image-cropper-target="liveRegion"
+       aria-live="polite" class="sr-only"></div>
+
+  <p class="text-sm text-text-muted text-center mt-2">
+    <%= t("identity_picker.crop_hint") %>
+  </p>
+</div>

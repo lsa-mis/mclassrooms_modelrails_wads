@@ -3,7 +3,6 @@
 require_relative "../../lib/markdowndocs_local_categories"
 
 Markdowndocs.configure do |config|
-  # Path to markdown files
   config.docs_path = Rails.root.join("app", "docs")
 
   # Allow hand-authored inline SVG diagrams in docs. The sanitizer still
@@ -37,20 +36,8 @@ Markdowndocs.configure do |config|
     Rails.root.join("config/markdowndocs_categories.local.yml")
   )
 
-  # Available documentation modes
   config.modes = %w[user developer]
-
-  # Default mode
   config.default_mode = "user"
-
-  # Rouge syntax highlighting theme (default: "github")
-  # config.rouge_theme = "github"
-
-  # Cache expiry for rendered markdown (default: 1.hour)
-  # config.cache_expiry = 1.hour
-
-  # Enable full-text search on the documentation index (default: false)
-  # Adds a search bar that filters docs by title, description, and content
   config.search_enabled = true
 
   # Resolve the current user's mode preference from the database.

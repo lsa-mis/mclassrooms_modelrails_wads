@@ -8,7 +8,7 @@ require "rails_helper"
 # aria-current; the 2.2.2 pause mechanism flips the live region to polite.
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative
-# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Carousel component accessibility", type: :system do
   let(:scope) { [ "[data-test='carousel']" ] }
 

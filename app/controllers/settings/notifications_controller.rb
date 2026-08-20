@@ -24,7 +24,7 @@ module Settings
     end
 
     def update
-      @notification.update!(read_at: mark_read? ? Time.current : nil)
+      @notification.update!(read_at: marking_as_read? ? Time.current : nil)
       broadcast_bell_refresh
       respond_to do |format|
         format.turbo_stream
@@ -43,7 +43,6 @@ module Settings
       redirect_to settings_notifications_path, notice: t("notifications.destroy.success")
     end
 
-    # GET /account/notifications/:id/open
     # Bell-dropdown click handler: marks the notification as read (idempotent)
     # and redirects to the notifier's `#url`. Each notifier subclass owns its
     # destination via `notification_methods do; def url; ...; end; end`.
@@ -101,11 +100,9 @@ module Settings
       authorize @notification, policy_class: NotificationPolicy
     end
 
-    # Boolean predicate: was the request asking to mark-as-read (any truthy
-    # `read_at` param value) or to unmark? Naming makes the discard explicit
-    # — the user-supplied `read_at` value itself is intentionally NOT used
-    # as a timestamp; we always stamp `Time.current` server-side.
-    def mark_read?
+    # The user-supplied `read_at` param is boolean intent only — never trusted
+    # as a timestamp; the server always stamps `Time.current`.
+    def marking_as_read?
       params[:read_at].present?
     end
 

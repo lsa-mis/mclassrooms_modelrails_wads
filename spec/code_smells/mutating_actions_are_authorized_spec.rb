@@ -1,6 +1,6 @@
 require "rails_helper"
 
-# CLAUDE.md states "All controllers must enforce Pundit authorization." This
+# Project rule: all controllers must enforce Pundit authorization. This
 # spec is the enforcement: every state-changing (POST/PATCH/PUT/DELETE) route
 # must resolve to an action that calls Pundit's `authorize` — or be on an
 # explicit, reviewed allow-list of actions that are public or act only on the

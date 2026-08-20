@@ -16,8 +16,6 @@ export default class extends Controller {
     setTimeout(() => this.element.remove(), duration)
   }
 
-  // Private
-
   animateIn() {
     if (this.prefersReducedMotion) {
       this.element.style.opacity = "1"

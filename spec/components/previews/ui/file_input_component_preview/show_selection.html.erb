@@ -1,0 +1,4 @@
+<%# Pick a few files: one pill per file appears below, plus an sr-only announcement
+    (synced by the `file-input` controller). Labeled externally per the a11y contract. %>
+<label for="demo_gallery" class="block text-sm font-medium text-text-heading mb-1">Gallery images</label>
+<%= ui :file_input, id: "demo_gallery", name: "demo_gallery[]", multiple: true, show_selection: true %>

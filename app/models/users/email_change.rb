@@ -26,13 +26,16 @@ module Users
     # the emailed link. Returns false (no change) on a blank/wrong/expired token
     # or a validation failure.
     def confirm!(token)
+      # Guard clauses stay OUTSIDE the transaction: a `return` inside
+      # `transaction do` commits rather than rolls back under modern Rails,
+      # so an early exit must never share a block with the writes.
       return false if token.blank?
 
-      @user.transaction do
-        @user.reload
-        return false if @user.pending_email_token != token
-        return false unless valid_token?
+      @user.reload
+      return false if @user.pending_email_token != token
+      return false unless valid_token?
 
+      @user.transaction do
         @user.email_address = @user.pending_email
         clear_fields
         @user.save!

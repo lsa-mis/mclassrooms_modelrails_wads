@@ -15,10 +15,7 @@ class SignInFromNewDeviceNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :sign_in_from_new_device
-    # `== true` aborts on the tri-state :digest sentinel (uniform with siblings;
-    # security categories never actually resolve to :digest).
-    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
-    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
+    config.before_enqueue = -> { throw(:abort) unless deliver_email_now? }
     config.enqueue = true
   end
 

@@ -9,7 +9,7 @@ require "rails_helper"
 # `data-state="open"` on the wrapper; Escape closes and returns focus to the trigger.
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative AAA
-# 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 #
 # Focus mechanism: the component listens for a real `focusin` event to open. A
 # JS-level `element.focus()` (via evaluate/execute_script) moves `document.

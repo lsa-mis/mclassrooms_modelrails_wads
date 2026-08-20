@@ -10,7 +10,7 @@ require "rails_helper"
 # Escape path closes it.
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative
-# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Dialog component accessibility", type: :system do
   # The trigger carries `click->modal#open`. Clicking it runs showModal(), which
   # sets the `open` attribute synchronously.

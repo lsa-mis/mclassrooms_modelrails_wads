@@ -1,0 +1,55 @@
+<%# locals: () -%>
+<div class="space-y-5">
+  <%= render "shared/identity_picker/crop_preview" %>
+
+  <div>
+    <div class="flex items-center justify-between mb-2">
+      <span class="inline-flex items-center gap-1.5 text-sm font-medium text-text-heading">
+        <%= t("identity_picker.zoom_label") %>
+      </span>
+      <span class="text-sm font-medium text-interactive"
+            data-image-cropper-target="zoomPercent">
+        100% <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
+      </span>
+    </div>
+    <input type="range" min="0" max="100" value="0"
+           autocomplete="off"
+           data-image-cropper-target="slider"
+           data-action="input->image-cropper#handleSlider"
+           aria-label="<%= t('identity_picker.zoom_aria_label') %>"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+           class="w-full h-2 rounded-full appearance-none cursor-pointer
+                  bg-border
+                  [&::-webkit-slider-thumb]:appearance-none
+                  [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+                  [&::-webkit-slider-thumb]:rounded-full
+                  [&::-webkit-slider-thumb]:bg-white
+                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-border-strong
+                  [&::-webkit-slider-thumb]:shadow">
+  </div>
+
+  <button type="button"
+          data-action="click->identity-picker#resetCrop"
+          class="w-full inline-flex items-center justify-center gap-2 px-4 py-2
+                 text-sm font-medium text-text-body
+                 border border-border rounded-lg
+                 hover:bg-surface-sunken
+                 focus-ring
+                 min-h-[var(--form-input-height)]">
+    <%= icon(:arrow_path, size: :sm) %>
+    <%= t("identity_picker.reset_crop") %>
+  </button>
+
+  <%# GIF warning — shown only when source file is an animated GIF %>
+  <div data-identity-picker-target="gifWarning"
+       class="flex items-start gap-2.5 p-3 rounded-lg bg-warning-surface text-warning text-sm"
+       hidden>
+    <%= icon(:exclamation_triangle, size: :sm, class: "shrink-0 mt-0.5") %>
+    <p><%= t("identity_picker.gif_static_warning") %></p>
+  </div>
+
+  <div class="flex items-start gap-2.5 p-3 rounded-lg bg-info-surface text-info text-sm">
+    <%= icon(:information_circle, size: :sm, class: "shrink-0 mt-0.5") %>
+    <p><%= t("identity_picker.image_quality_tip") %></p>
+  </div>
+</div>

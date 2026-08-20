@@ -1,0 +1,46 @@
+<%# locals: (prefs:) -%>
+<%
+  # Icon mapping for the Notification Types card. The icon set in
+  # app/assets/icons/outline is sparse; pick the closest semantic match
+  # for each category. Security uses :warning to signal "this row is
+  # structurally different" (always-on, non-suppressible).
+  type_icons = {
+    "security"           => { name: "exclamation_triangle", color: :warning },
+    "account_access"     => { name: "bell",                 color: :info },
+    "workspace_activity" => { name: "globe_alt",            color: :info },
+    "project_activity"   => { name: "pencil",               color: :info },
+    "billing"            => { name: "information_circle",   color: :info }
+  }
+%>
+<%= render layout: "shared/preferences_card",
+      locals: {
+        title: t("notifications.preferences.notification_types.heading"),
+        description: t("notifications.preferences.notification_types.description")
+      } do %>
+  <%# Security row is disabled+always-on: the value object forces it true
+      regardless; the disabled checkbox + hidden field "true" round-trip
+      preserves the always-on guarantee even if the form is tampered with. -%>
+  <% NotificationPreferences::CATEGORIES.each do |category| %>
+    <% security = (category == "security") %>
+    <% type_control = capture do %>
+      <%= form_with url: settings_notification_preferences_path,
+            method: :patch,
+            data: { controller: "auto-submit" },
+            class: "inline-block" do |f| %>
+        <%= render "shared/toggle",
+              name: "notification_preferences[notification_types][#{category}]",
+              label: t("notifications.preferences.notification_types.items.#{category}.title"),
+              checked: security || prefs.dig("notification_types", category) == true,
+              disabled: security,
+              hidden_value: (security ? "true" : nil),
+              help: (security ? t("notifications.preferences.notification_types.always_on") : nil) %>
+      <% end %>
+    <% end %>
+    <%= render "shared/preferences_row",
+          icon_name: type_icons[category][:name],
+          icon_color: type_icons[category][:color],
+          title: t("notifications.preferences.notification_types.items.#{category}.title"),
+          description: t("notifications.preferences.notification_types.items.#{category}.description"),
+          control: type_control %>
+  <% end %>
+<% end %>

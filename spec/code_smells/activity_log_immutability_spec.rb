@@ -39,7 +39,7 @@ RSpec.describe "Code smell: activity log immutability" do
 
     expect(offenders).to be_empty,
       "The audit trail is append-only (best-effort to write, impossible to " \
-      "rewrite — CLAUDE.md deviation #4). Relation-level writes found:\n  " \
+      "rewrite — see /docs/developer/architecture). Relation-level writes found:\n  " \
       "#{offenders.join("\n  ")}\nA legitimate retention job belongs in " \
       "allowed_bypasses in this spec with its reason."
   end

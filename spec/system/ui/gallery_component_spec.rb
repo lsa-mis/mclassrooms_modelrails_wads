@@ -12,7 +12,7 @@ require "rails_helper"
 # dialog 0b idiom (spec/system/ui/dialog_component_spec.rb).
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative
-# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# AAA 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Gallery component accessibility", type: :system do
   let(:scope) { [ "[data-test='gallery']" ] }
 

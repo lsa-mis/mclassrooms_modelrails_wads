@@ -23,9 +23,9 @@ These are the headline rules the automated gate checks, alongside the rest of th
 
 ## How the Gate Runs
 
-Accessibility is audited with [axe-core](https://github.com/dequelabs/axe-core), injected into the page through Cuprite (Ferrum/CDP) during system specs. The audit runs the **cumulative** WCAG tag set — 2.0 + 2.1 + 2.2 at A/AA/AAA (`PlaywrightAccessibility::AXE_TAG_SET` — the helper module kept its name across the Playwright→Cuprite migration to avoid churn across every spec that includes it; the versions are separate axe tags, and listing only the 2.0-era ones silently skips every 2.1/2.2 rule). axe's `target-size` rule (24px, 2.5.8) is explicitly enabled — it ships disabled.
+Accessibility is audited with [axe-core](https://github.com/dequelabs/axe-core), injected into the page through Cuprite (Ferrum/CDP) during system specs. The audit runs the **cumulative** WCAG tag set — 2.0 + 2.1 + 2.2 at A/AA/AAA (`AxeAccessibility::AXE_TAG_SET` — the versions are separate axe tags, and listing only the 2.0-era ones silently skips every 2.1/2.2 rule). axe's `target-size` rule (24px, 2.5.8) is explicitly enabled — it ships disabled.
 
-This audit runs automatically after *every* system spec, **everywhere — including locally** — and it audits **both themes**, setting each one explicitly. There is no opt-in to forget. The hook lives in `spec/support/playwright_accessibility.rb` and uses `DEFAULT_AXE_OPTIONS`. If any rule fails, the spec fails.
+This audit runs automatically after *every* system spec, **everywhere — including locally** — and it audits **both themes**, setting each one explicitly. There is no opt-in to forget. The hook lives in `spec/support/axe_accessibility.rb` and uses `DEFAULT_AXE_OPTIONS`. If any rule fails, the spec fails.
 
 Set `SKIP_AXE=1` to opt out for a fast focused loop (roughly a third quicker on a single file). It is deliberately opt-*out*: the default has to be the safe one.
 
@@ -66,7 +66,7 @@ review.
 
 ## Auditing Locally
 
-The `PlaywrightAccessibility` helpers are available in every system spec:
+The `AxeAccessibility` helpers are available in every system spec:
 
 | Helper | Use |
 |--------|-----|

@@ -76,7 +76,6 @@ class Invitation < ApplicationRecord
     sent = 0
     skipped = 0
 
-    # Preload existing members and pending invitations to avoid N+1 queries
     existing_members = workspace.memberships.kept.joins(:user)
       .pluck("LOWER(users.email_address)").to_set
     existing_invites = workspace.invitations.acceptable
@@ -147,21 +146,7 @@ class Invitation < ApplicationRecord
   def accept!(user)
     transaction do
       lock!
-      raise NotAcceptable, "Invitation no longer acceptable" unless pending?
-      raise NotAcceptable, "Invitation no longer acceptable" if expired?
-      # Single choke point for the non-active-workspace gate: every
-      # acceptance path (direct accept controller, magic-link registration,
-      # OAuth signup, email-verification claim) funnels through accept!, so
-      # guarding here — rather than in any one controller — closes all of
-      # them at once. admittable? covers every non-active state (archived,
-      # deleted, suspended) and fails closed when resolved_workspace is nil.
-      # Reuses NotAcceptable's existing invalid/expired rejection copy
-      # rather than the locked_notice copy: an invitee must not learn the
-      # workspace is locked. This also makes Workspace#admit's own
-      # NotAdmittableError raise unreachable from invitation flows; that
-      # guard remains as a backstop for other admit callers (e.g. open-link
-      # self-join).
-      raise NotAcceptable, "Invitation no longer acceptable" unless resolved_workspace&.admittable?
+      guard_acceptable!
       accept_workspace_invitation!(user)
 
       update!(
@@ -221,8 +206,17 @@ class Invitation < ApplicationRecord
 
   private
 
+  # Single choke point: every acceptance path funnels through accept!, so the
+  # workspace-admittability gate here closes them all at once — with the same
+  # generic copy as invalid/expired, so an invitee never learns a workspace is locked.
+  def guard_acceptable!
+    raise NotAcceptable, "Invitation no longer acceptable" unless pending?
+    raise NotAcceptable, "Invitation no longer acceptable" if expired?
+    raise NotAcceptable, "Invitation no longer acceptable" unless resolved_workspace&.admittable?
+  end
+
   def broadcast_target
-    invitable
+    resolved_workspace
   end
 
   def accept_workspace_invitation!(user)
@@ -237,6 +231,13 @@ class Invitation < ApplicationRecord
     self.token = SecureRandom.urlsafe_base64(32)
   end
 
+  # Attribute activity to the invitation's own workspace context, never the
+  # ambient Current.workspace (an invitation can be created/accepted from a
+  # different workspace's page).
+  def activity_workspace
+    resolved_workspace
+  end
+
   def just_accepted?
     accepted_at_previously_changed? && accepted_at.present?
   end
@@ -247,7 +248,7 @@ class Invitation < ApplicationRecord
 
   def notify_accepted
     return if invited_by.blank?
-    return if invited_by == accepted_by  # don't ping the inviter for their own acceptance
+    return if invited_by == accepted_by
     WorkspaceInvitationAcceptedNotifier.with(record: self).deliver(invited_by)
   end
 

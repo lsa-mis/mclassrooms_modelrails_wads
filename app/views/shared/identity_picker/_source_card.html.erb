@@ -1,0 +1,26 @@
+<%# locals: (source:, visual:, hub_url:, current_source:) -%>
+<% checked = current_source == source %>
+<%= link_to "#{hub_url}?source=#{source}",
+      data: { turbo_frame: "identity-picker-hub" },
+      role: "radio",
+      aria: { checked: checked },
+      class: "flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer
+              hover:bg-surface-sunken/50 transition-all no-underline
+              #{checked ? 'border-interactive bg-interactive/5' : 'border-border'}" do %>
+  <%= visual %>
+  <div class="flex-1 min-w-0">
+    <span class="block text-sm font-medium text-text-heading">
+      <%= t("identity_picker.sources.#{source}.title") %>
+    </span>
+    <span class="block text-xs text-text-muted">
+      <%= t("identity_picker.sources.#{source}.description") %>
+    </span>
+  </div>
+  <span class="size-4 rounded-full border-2 shrink-0 flex items-center justify-center
+               <%= checked ? 'border-interactive' : 'border-border-strong' %>"
+        aria-hidden="true">
+    <% if checked %>
+      <span class="size-2 rounded-full bg-interactive"></span>
+    <% end %>
+  </span>
+<% end %>

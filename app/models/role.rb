@@ -19,6 +19,10 @@ class Role < ApplicationRecord
     "viewer" => { name: "Viewer", permissions: {} }
   }.freeze
 
+  def owner?
+    slug == "owner"
+  end
+
   # find_or_create_by! is find-then-create, not atomic: two concurrent
   # callers can both miss the find and race the INSERT. The partial unique
   # index (slug WHERE workspace_id IS NULL) makes the loser raise

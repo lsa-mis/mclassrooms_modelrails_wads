@@ -1,21 +1,17 @@
 # frozen_string_literal: true
 
 class ApplicationNotifier < Noticed::Event
+  # Always a String — the `category` DSL coerces on write.
   class_attribute :category_name, instance_accessor: false
 
-  # Severity stores as a Symbol (unlike `category`, which stores as a String)
-  # because its consumers index into symbol-keyed config tables in
-  # NotificationBellHelper (SEVERITY_RANK, SEVERITY_CLASSES). `category`,
-  # by contrast, is compared against string keys in the JSONB
-  # notification_preferences blob. Keep both DSLs aware of this asymmetry —
-  # comparing severity_name to a string (or category_name to a symbol) will
-  # silently return false.
+  # Always a Symbol — the `severity` DSL coerces and validates on write.
   class_attribute :severity_name, instance_accessor: false, default: :info
 
-  # Canonical severity set consumed by NotificationBellHelper (SEVERITY_RANK
-  # and SEVERITY_CLASSES). Any value declared via `severity :foo` MUST be one
-  # of these — otherwise the helper's `SEVERITY_RANK.fetch(_1)` raises
-  # KeyError at render time, far from the typo's source.
+  # Canonical severity set consumed by UnreadNotificationSummary
+  # (SEVERITY_RANK) and NotificationBellHelper (SEVERITY_CLASSES). Any value
+  # declared via `severity :foo` MUST be one of these — otherwise the
+  # summary's `SEVERITY_RANK.fetch(_1)` raises KeyError at render time, far
+  # from the typo's source.
   VALID_SEVERITIES = %i[danger warning info success].freeze
 
   def self.category(name)
@@ -48,7 +44,16 @@ class ApplicationNotifier < Noticed::Event
 
   notification_methods do
     def recipient_pref(channel)
-      preferences_object.allow?(category: event.class.category_name, channel: channel.to_s)
+      preferences_object.allow?(category: event.class.category_name, channel: channel)
+    end
+
+    # The email gate for `deliver_by :email` before_enqueue hooks.
+    # recipient_pref(:email) is tri-state: only a literal `true` means "send
+    # the instant email now" — false (opted out / DND) and the :digest
+    # sentinel (queued for the digest pipeline) both abort.
+    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
+    def deliver_email_now?
+      recipient_pref(:email) == true
     end
 
     def recipient_locale
@@ -122,6 +127,20 @@ class ApplicationNotifier < Noticed::Event
 
   def preferences_for(user)
     self.class.preferences_for(user)
+  end
+
+  # Shared recipient gate for `recipients do ... end` blocks: preloads
+  # :preferences for the whole candidate set in ONE query (`preferences_for`
+  # reads `user.preferences` per-user — an N+1 without the preload; Bullet
+  # caught the original in the Reshape 2a open-link self-join request specs),
+  # then keeps only users whose preferences allow this class's declared
+  # category on the in_app channel. Uses `category_name` from the `category`
+  # DSL so subclasses never restate their category as a string literal.
+  def permitted_in_app(candidates)
+    ActiveRecord::Associations::Preloader.new(records: candidates, associations: :preferences).call
+    candidates.select do |user|
+      preferences_for(user).allow?(category: self.class.category_name, channel: "in_app")
+    end
   end
 
   # Returns the per-notification STI `type` strings for every Notifier

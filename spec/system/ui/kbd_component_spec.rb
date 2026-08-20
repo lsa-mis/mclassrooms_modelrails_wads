@@ -10,7 +10,7 @@ require "rails_helper"
 # themes. This spec audits each scenario scoped to the <kbd> subtree with NO
 # color-contrast exclude. NOTE: the per-spec assertion below runs axe's default
 # (AA) rule set; the authoritative AAA 7:1 audit is the wcag2aaa after-hook that
-# fires under CI (see spec/support/playwright_accessibility.rb).
+# fires under CI (see spec/support/axe_accessibility.rb).
 #
 # The preview-host minimal layout emits axe best-practice advisories
 # (landmark-one-main, page-has-heading-one) that are NOT WCAG and NOT about the kbd,

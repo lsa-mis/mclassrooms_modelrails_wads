@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Bounds the activity log at 12 months (#438): the trail is best-effort BY
-# DESIGN (CLAUDE.md deviation #4), not compliance-grade evidence, and this job
+# DESIGN, not compliance-grade evidence, and this job
 # is the registered bypass through the ActivityLog immutability guard (#604).
 # Batched delete_all — SQLite serializes writers.
 # See /docs/developer/architecture (Activity Tracking).

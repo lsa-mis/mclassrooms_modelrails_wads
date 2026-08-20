@@ -8,7 +8,7 @@ require "rails_helper"
 # embedded region). We prove the titled iframe is present per provider and that
 # the wrapper clears AAA in both themes. The per-spec axe call runs the default
 # (AA) rule set; the authoritative AAA 7:1 audit is the CI-only wcag2aaa
-# after-hook (spec/support/playwright_accessibility.rb).
+# after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Embed component accessibility", type: :system do
   let(:scope) { [ "[data-test='embed']" ] }
 

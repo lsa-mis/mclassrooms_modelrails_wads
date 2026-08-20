@@ -2,10 +2,8 @@
 
 # Accessibility testing helper using axe-core. Injects axe-core JavaScript and
 # runs accessibility audits. Drives Chrome through the Ferrum/CDP helpers
-# (CdpHelpers, `page.driver.browser`) — the pure-Ruby CDP path — rather than
-# Playwright. The module name is kept as PlaywrightAccessibility for now to
-# avoid churn across the many specs that include it.
-module PlaywrightAccessibility
+# (CdpHelpers, `page.driver.browser`) — the pure-Ruby CDP path.
+module AxeAccessibility
   AXE_SOURCE = Axe::Configuration.instance.jslib.freeze
 
   # Selectors excluded from axe checks by default. These mark UI surfaces with
@@ -39,7 +37,6 @@ module PlaywrightAccessibility
     rules: AXE_RULE_OVERRIDES
   }.freeze
 
-  # Run axe accessibility audit on the current page.
   # `exclude` defaults to DEFERRED_AAA_EXCLUDES so tests don't fail on tracked
   # debt. Pass an explicit array (or `[]`) to override.
   #
@@ -355,22 +352,20 @@ module PlaywrightAccessibility
     result
   end
 
-  # Check if page has any accessibility violations
   def axe_clean?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
     results = run_axe_audit(options, exclude: exclude, include: include)
     results["violations"].empty?
   end
 
-  # Get formatted violation messages. Color-contrast violations include the
-  # ancestor-chain / theme / animation debug payload captured by `run_axe_audit`.
+  # Color-contrast violations include the ancestor-chain / theme / animation
+  # debug payload captured by `run_axe_audit`.
   def axe_violations(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
     results = run_axe_audit(options, exclude: exclude, include: include)
     Array(results["violations"]).map { |v| format_violation(v) }
   end
 
-  # Render a single violation as a multi-line string. Color-contrast violations
-  # surface the diagnostic payload (`_debug` on each node) so the cascade and
-  # theme state at scan time are visible in CI logs.
+  # Color-contrast violations surface the diagnostic payload (`_debug` on each
+  # node) so the cascade and theme state at scan time are visible in CI logs.
   def format_violation(violation)
     id     = violation["id"].to_s
     help   = violation["help"]
@@ -419,8 +414,6 @@ module PlaywrightAccessibility
     lines.join("\n")
   end
 
-  # Run axe in both light and dark mode and AND the results.
-  # Returns true only when both passes have zero violations.
   def axe_clean_in_both_themes?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
     ensure_light_mode
     light_clean = axe_clean?(options, exclude: exclude, include: include)
@@ -447,7 +440,6 @@ module PlaywrightAccessibility
     set_theme("light")
   end
 
-  # Force the document into dark mode.
   def ensure_dark_mode
     set_theme("dark")
   end
@@ -498,7 +490,7 @@ module PlaywrightAccessibility
 end
 
 RSpec.configure do |config|
-  config.include PlaywrightAccessibility, type: :system
+  config.include AxeAccessibility, type: :system
 
   # Automatically audit every system spec, everywhere — not just CI.
   #
@@ -576,7 +568,7 @@ RSpec.configure do |config|
       # dark-only contrast bug sat on main under a green CI.
       violations = %w[light dark].flat_map do |theme|
         set_theme(theme)
-        results = run_axe_audit(PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup)
+        results = run_axe_audit(AxeAccessibility::DEFAULT_AXE_OPTIONS.dup)
         (results["violations"] || []).map { |v| v.merge("themeContext" => theme) }
       end
 

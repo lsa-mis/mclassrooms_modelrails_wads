@@ -8,7 +8,7 @@ require "rails_helper"
 # UA-labelled) controls; the `captions` scenario also proves a
 # <track kind="captions"> reaches the DOM. The per-spec axe call runs the
 # default (AA) rule set; the authoritative AAA 7:1 audit is the CI-only
-# wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Video component accessibility", type: :system do
   let(:scope) { [ "[data-test='video']" ] }
 

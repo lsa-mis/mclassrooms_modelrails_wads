@@ -9,7 +9,7 @@ require "rails_helper"
 # narrowed `include:`.
 #
 # Per-spec axe runs at the default rule level locally; AAA is a CI-only
-# claim (see spec/support/playwright_accessibility.rb) — do not claim AAA
+# claim (see spec/support/axe_accessibility.rb) — do not claim AAA
 # from a local run.
 RSpec.describe "Toast containers — axe landmark audit", type: :system do
   let(:user) { create(:user) }

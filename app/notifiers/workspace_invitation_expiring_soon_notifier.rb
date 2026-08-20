@@ -11,9 +11,7 @@ class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_invitation_expiring_soon
-    # `== true` aborts on the tri-state :digest sentinel.
-    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
-    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
+    config.before_enqueue = -> { throw(:abort) unless deliver_email_now? }
     config.enqueue = true
   end
 

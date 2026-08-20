@@ -11,7 +11,6 @@ RSpec.describe UI::SelectComponent, type: :component do
     expect(page).to have_css("select option", text: "Published")
   end
 
-  # AAA semantic tokens (the design-token guarantee), not raw Tailwind:
   it "renders with AAA semantic tokens" do
     render_inline(described_class.new(options: %w[A B]))
 

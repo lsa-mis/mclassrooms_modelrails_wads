@@ -8,7 +8,7 @@ require "rails_helper"
 # fires. We OPEN it via the real button and audit the LIVE menu.
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative AAA
-# 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Dropdown menu component accessibility", type: :system do
   def open_menu
     find("button[aria-haspopup='menu']").click

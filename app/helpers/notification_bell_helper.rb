@@ -1,9 +1,4 @@
 module NotificationBellHelper
-  # Higher rank wins when multiple severities are unread.
-  # `max_by { SEVERITY_RANK.fetch(_1) }` in #unread_notification_summary
-  # uses this to select the dominant severity for the bell.
-  SEVERITY_RANK = { danger: 4, warning: 3, info: 2, success: 1 }.freeze
-
   # The bell IS the indicator — no chip; severities tint via their saturated
   # signal tokens. `dark:text-danger-strong` on danger ONLY: the AAA-lightness
   # dark red reads as coral/pink at bell size; `-strong` restores its identity.
@@ -26,24 +21,8 @@ module NotificationBellHelper
     success: { bg: "bg-success",       pulse: false }
   }.freeze
 
-  # `extend self` makes every method below callable BOTH as a module
-  # method (e.g. `NotificationBellHelper.unread_notification_summary(user)`,
-  # used by NotificationBroadcaster which has no view-helper context) AND
-  # as a public instance method when the module is mixed into a view (the
-  # normal ActionView helper path). Unlike `module_function`, instance-mixed
-  # methods remain public — so `helper.foo` works in specs.
-  extend self
-
   def unread_notification_summary(user)
-    breakdown = user.unread_notification_breakdown
-    return { count: 0, severity: nil } if breakdown.empty?
-
-    count = breakdown.values.sum
-    severity = breakdown.keys
-      .map { _resolve_severity_for(_1) }
-      .max_by { SEVERITY_RANK.fetch(_1) }
-
-    { count: count, severity: severity }
+    UnreadNotificationSummary.new(user).to_h
   end
 
   def notification_bell_classes(severity, variant: :icon)
@@ -59,7 +38,7 @@ module NotificationBellHelper
   # is defensive coverage for test stubs, library injection, and other
   # non-production cases.
   def canonical_severity(severity)
-    SEVERITY_RANK.key?(severity) ? severity : :info
+    UnreadNotificationSummary::SEVERITY_RANK.key?(severity) ? severity : :info
   end
 
   def avatar_button_aria_label(user, summary = unread_notification_summary(user))
@@ -70,16 +49,6 @@ module NotificationBellHelper
         name: user.full_name,
         count: summary[:count],
         phrase: t("notifications.severity_phrase.#{summary[:severity]}"))
-    end
-  end
-
-  def _resolve_severity_for(notifier_class_name)
-    case notifier_class_name.safe_constantize
-    in nil
-      Rails.logger.warn("Stale notifier class in unread notifications: #{notifier_class_name}")
-      :info
-    in notifier_class
-      notifier_class.severity_name || :info
     end
   end
 end

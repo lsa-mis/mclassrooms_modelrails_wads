@@ -33,7 +33,6 @@ RSpec.describe "Invite-only signup flow", type: :system do
       form.submit();
     JS
 
-    # Wait for the redirect to land before continuing.
     expect(page).to have_current_path(new_session_path, wait: 5)
   end
 
@@ -44,7 +43,6 @@ RSpec.describe "Invite-only signup flow", type: :system do
     # Stash the pending_invitation_token in the browser session via POST.
     post_accept_invitation(invitation.token)
 
-    # Now on sessions/new — enter email to request magic link.
     expect(page).to have_field(I18n.t("sessions.new.email_label"))
     fill_in I18n.t("sessions.new.email_label"), with: "newuser@example.com"
     click_button I18n.t("sessions.new.continue")

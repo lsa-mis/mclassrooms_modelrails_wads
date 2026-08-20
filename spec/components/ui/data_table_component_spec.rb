@@ -49,7 +49,6 @@ RSpec.describe UI::DataTableComponent, type: :component do
     expect(page).not_to have_css("th[data-action~='click->data-table#sort']")
   end
 
-  # Non-sortable columns stay a plain <th> with no aria-sort and no sort button.
   it "leaves non-sortable headers without aria-sort and without a button" do
     render_default
 
