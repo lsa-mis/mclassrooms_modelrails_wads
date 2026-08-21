@@ -16,4 +16,20 @@ class UserPreferences < ApplicationRecord
   def notification_preferences_object
     NotificationPreferences.new(notification_preferences, user: user)
   end
+
+  # Single owner of the timezone fallback rule: unset or unrecognized
+  # `timezone` names resolve to Time.zone, never raise.
+  def time_zone
+    name = timezone.presence
+    (name && ActiveSupport::TimeZone[name]) || Time.zone
+  end
+
+  # Recompute digest_next_due_at from the user's cadence and timezone.
+  # update_column is intentional: DigestMailerJob reschedules every
+  # digest-eligible user each 15-minute cycle, and bumping updated_at would
+  # cause useless cache busts on any view that reads the row's freshness.
+  # No after_update_commit hooks need to fire here.
+  def reschedule_digest!
+    update_column(:digest_next_due_at, notification_preferences_object.next_due_at)
+  end
 end

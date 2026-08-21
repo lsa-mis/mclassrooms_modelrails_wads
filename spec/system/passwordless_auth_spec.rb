@@ -58,13 +58,11 @@ RSpec.describe "Passwordless-first auth", type: :system do
       fill_in I18n.t("sessions.new.email_label"), with: user.email_address
       click_button I18n.t("sessions.new.continue")
 
-      # check_email shows the escape hatch for password-holders
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
       expect(page).to have_link(I18n.t("sessions.check_email.use_password"))
 
       click_link I18n.t("sessions.check_email.use_password")
 
-      # Password form: fill in and submit
       fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
       click_button I18n.t("sessions.password_form.submit")
 
@@ -94,7 +92,6 @@ RSpec.describe "Passwordless-first auth", type: :system do
 
       click_link I18n.t("sessions.check_email.use_password")
 
-      # Wait for the turbo_frame to update with the password form before proceeding.
       expect(page).to have_field(I18n.t("sessions.password_form.password_label"), wait: 5)
 
       # "Forgot your password?" is a button_to (POST to /password_reset) inside
@@ -113,7 +110,6 @@ RSpec.describe "Passwordless-first auth", type: :system do
       # Wait for that heading to confirm the server rendered it.
       expect(page).to have_text(I18n.t("sessions.check_email.title"), wait: 10)
 
-      # Visit the set_password link and confirm sign-in on the interstitial.
       visit magic_link_callback_path(token: MagicLinkToken.create_for_email(user.email_address, intent: "set_password"))
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
 

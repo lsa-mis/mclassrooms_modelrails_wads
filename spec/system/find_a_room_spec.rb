@@ -13,7 +13,7 @@ RSpec.describe "Find a Room", type: :system do
   # The shared cumulative tag set + rule overrides (backlog #10): 2.0+2.1+2.2
   # at A/AA/AAA plus target-size enablement and the mc-* custom checks that
   # run inside every audit. One source of truth in playwright_accessibility.rb.
-  let(:axe_options) { PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup }
+  let(:axe_options) { AxeAccessibility::DEFAULT_AXE_OPTIONS.dup }
 
   # `find_a_room` runs under DirectoryScoped, which sets Current.workspace to
   # the ONE shared workspace resolved by TenancyConfig.shared_workspace_slug,

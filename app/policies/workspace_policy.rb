@@ -1,10 +1,10 @@
 class WorkspacePolicy < ApplicationPolicy
   def index?
-    true  # Any authenticated user can list their workspaces
+    true
   end
 
   def create?
-    true  # Any authenticated user can create a workspace
+    true
   end
 
   def new?

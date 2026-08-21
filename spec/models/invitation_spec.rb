@@ -338,6 +338,47 @@ RSpec.describe Invitation, type: :model do
       expect(workspace.invitations.count).to eq(2)
     end
 
+    # C8: the raw textarea string is bulk_invite!'s to parse — both invite
+    # forms hand it over verbatim instead of duplicating the split/strip.
+    describe "raw-string email list" do
+      it "splits on newlines and commas, stripping whitespace" do
+        result = Invitation.bulk_invite!(
+          workspace: workspace,
+          emails: "alice@example.com, bob@example.com\n  carol@example.com  ",
+          role: role,
+          invited_by: inviter
+        )
+
+        expect(result[:sent]).to eq(3)
+        expect(result[:skipped]).to eq(0)
+        expect(workspace.invitations.pluck(:email))
+          .to contain_exactly("alice@example.com", "bob@example.com", "carol@example.com")
+      end
+
+      it "ignores blank entries from stray separators" do
+        result = Invitation.bulk_invite!(
+          workspace: workspace,
+          emails: ",\n alice@example.com ,,\n\n",
+          role: role,
+          invited_by: inviter
+        )
+
+        expect(result[:sent]).to eq(1)
+        expect(result[:skipped]).to eq(0)
+      end
+
+      it "treats an all-separator string as an empty list" do
+        result = Invitation.bulk_invite!(
+          workspace: workspace,
+          emails: " ,\n, ",
+          role: role,
+          invited_by: inviter
+        )
+
+        expect(result).to eq(sent: 0, skipped: 0)
+      end
+    end
+
     it "skips invalid email formats" do
       result = Invitation.bulk_invite!(
         workspace: workspace,
@@ -712,6 +753,21 @@ RSpec.describe Invitation, type: :model do
           self_invitation.decline!
         }.not_to change { Noticed::Event.where(type: "WorkspaceInvitationDeclinedNotifier").count }
       end
+    end
+  end
+
+  describe "activity workspace attribution" do
+    it "records the invitation's resolved workspace even when Current.workspace is a different workspace" do
+      workspace = create(:workspace)
+      other_workspace = create(:workspace)
+      Current.workspace = other_workspace
+
+      invitation = create(:invitation, invitable: workspace)
+
+      log = ActivityLog.where(trackable: invitation, action: "invitation.created").last
+      expect(log.workspace).to eq(workspace)
+    ensure
+      Current.workspace = nil
     end
   end
 end

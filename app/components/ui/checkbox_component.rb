@@ -36,9 +36,13 @@ module UI
 
     # invalid: drives the app's server-validation-driven aria-invalid posture.
     # describedby: wires the input to its error message's id (aria-describedby).
-    def initialize(label: nil, checked: false, invalid: false, describedby: nil, **html_attrs)
+    # indeterminate: tri-state ("some children checked"). No HTML attribute exists for it,
+    #   so a controller sets the DOM property on connect and clears it once the user acts.
+    def initialize(label: nil, checked: false, invalid: false, describedby: nil,
+      indeterminate: false, **html_attrs)
       @label = label
       @checked = checked
+      @indeterminate = indeterminate
       @invalid = invalid
       @describedby = describedby
       # Always resolve an id so the label association never breaks: explicit id →
@@ -68,6 +72,13 @@ module UI
         class: cn(BASE, @extra_class)
       )
       attrs[:checked] = true if @checked
+      if @indeterminate
+        caller_data = attrs.delete(:data) || {}
+        attrs[:data] = {
+          controller: [ caller_data[:controller], "indeterminate" ].compact.join(" "),
+          action: [ caller_data[:action], "change->indeterminate#clear" ].compact.join(" ")
+        }.merge(caller_data.except(:controller, :action))
+      end
       attrs[:"aria-invalid"] = "true" if @invalid
       attrs[:"aria-describedby"] = @describedby if @describedby
       content_tag(:input, nil, **attrs)

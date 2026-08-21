@@ -26,7 +26,6 @@ module IdentityPickerHelpers
   def open_identity_picker
     find("[data-controller='modal'] button[data-action*='modal#open']", match: :first).click
     expect(page).to have_css("dialog[open]", wait: 10)
-    # Wait for the hub turbo frame to load its content
     expect(page).to have_css("#identity-picker-hub [role='radiogroup']", wait: 10)
   end
 
@@ -38,9 +37,7 @@ module IdentityPickerHelpers
     within("#identity-picker-hub") do
       click_link title
     end
-    # Wait for the turbo frame to finish loading (Turbo removes [busy] when done)
     expect(page).to have_no_css("#identity-picker-hub[busy]", wait: 10)
-    # Wait for the selected source to be active
     expect(page).to have_css(
       "#identity-picker-hub a[aria-checked='true']", text: title, wait: 10
     )
@@ -107,6 +104,88 @@ module IdentityPickerHelpers
   # unhide, so the wait IS what budgets it).
   def wait_for_hub_view
     expect(page).to have_css("#identity-picker-hub:not([hidden])", wait: 10)
+  end
+
+  # Choose the Photo source and attach a file. With no image selected yet the
+  # source card opens the file picker, and a file selection enters crop view
+  # automatically.
+  def upload_photo(path)
+    select_identity_source("Photo")
+    attach_identity_picker_file(path)
+    wait_for_crop_view
+  end
+
+  # Enter crop view from the hub by clicking the large photo preview
+  # (rendered when a photo already exists).
+  def enter_crop_view
+    find("button[data-identity-picker-target='photoPreview']").click
+    wait_for_crop_view
+  end
+
+  # The src of the image the cropper is editing in crop view.
+  def crop_view_image_src
+    page.evaluate_script(
+      "document.querySelector('.cropper-container img').getAttribute('src')"
+    )
+  end
+
+  # Save the crop; on success the modal returns to hub view.
+  def save_crop_and_return_to_hub
+    click_button I18n.t("identity_picker.save_crop")
+    wait_for_hub_view
+  end
+
+  # Save & apply the selected source; the modal closes on success.
+  def save_and_apply
+    click_button I18n.t("identity_picker.save")
+    expect(page).to have_no_css("dialog[open]", wait: 3)
+  end
+
+  # Remove photo submits a DELETE via button_to; the turbo stream response
+  # closes the modal automatically (no Save & apply involved).
+  def remove_photo_expecting_modal_close
+    click_button I18n.t("identity_picker.remove_photo")
+    expect(page).to have_no_css("dialog[open]", wait: 5)
+  end
+
+  # The color picker panel is server-rendered only for sources that support
+  # it (initials); other sources omit it entirely.
+  def expect_color_picker_visible
+    expect(page).to have_css("[data-identity-picker-target='colorSlider']", wait: 3)
+  end
+
+  def expect_no_color_picker
+    expect(page).to have_no_css("[data-identity-picker-target='colorSlider']", wait: 2)
+  end
+
+  # Reload the record and assert its persisted avatar source
+  # ("upload", "gravatar", "initials").
+  def expect_avatar_source(record, source)
+    expect(record.reload.avatar_source).to eq(source.to_s)
+  end
+
+  def expect_returned_to_hub_without_closing_modal
+    wait_for_hub_view
+    expect(page).to have_css("dialog[open]")
+  end
+
+  # Focus the first source card link in the hub radiogroup, giving keyboard
+  # navigation tests a deterministic starting position.
+  def focus_first_source_card
+    cdp_execute(<<~JS)
+      const firstLink = document.querySelector(
+        "#identity-picker-hub [role='radiogroup'] a[role='radio']"
+      )
+      firstLink.focus()
+    JS
+  end
+
+  # Close the modal so the after(:each) axe audit doesn't scan the open
+  # dialog (the hub's initials source card uses oklch() with a CSS custom
+  # property axe-core can't resolve for contrast computation).
+  def close_modal_before_axe_audit
+    cdp_press("Escape")
+    expect(page).to have_no_css("dialog[open]", wait: 3)
   end
 
   # Build a user with a cropped avatar and its original, source set to "upload".

@@ -10,15 +10,7 @@ class MembershipPolicy < ApplicationPolicy
   def destroy?
     return false if record.workspace.discarded?
 
-    if record.user == user
-      # Self-leave case: user deactivating their own membership.
-      return false if record.workspace.id == user.personal_workspace_id
-      return false if record.role.slug == "owner" && record.workspace.owners.size == 1
-      true
-    else
-      # Admin-deactivates-someone-else case.
-      can?("manage_members")
-    end
+    self_leave? ? may_leave? : can?("manage_members")
   end
 
   def reactivate?
@@ -27,5 +19,25 @@ class MembershipPolicy < ApplicationPolicy
 
   def transfer_ownership?
     can?("manage_workspace")
+  end
+
+  private
+
+  def self_leave?
+    record.user == user
+  end
+
+  def may_leave?
+    !personal_workspace? && !sole_owner?
+  end
+
+  def personal_workspace?
+    record.workspace.id == user.personal_workspace_id
+  end
+
+  # One indexed EXISTS, fired only for owner rows — cheaper and fresher than
+  # materializing the full owner roster.
+  def sole_owner?
+    record.owner? && !Membership.other_kept_owners(record.workspace_id, excluding: record.id).exists?
   end
 end

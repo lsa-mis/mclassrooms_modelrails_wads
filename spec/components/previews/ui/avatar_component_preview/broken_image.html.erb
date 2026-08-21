@@ -1,0 +1,6 @@
+<%# The src 404s on purpose: the initials must take over rather than leaving the
+    browser's broken-image glyph. %>
+<div class="flex items-center gap-4 p-8">
+  <%= ui :avatar, src: "/this-image-does-not-exist.png", fallback: "DC", aria_label: "Dave Chmura" %>
+  <%= ui :avatar, src: "/also-missing.png", fallback: "AB", aria_label: "Ada Byron", size: :lg %>
+</div>

@@ -31,7 +31,6 @@ RSpec.describe UI::AlertComponent, type: :component do
     end
   end
 
-  # The canonical single tone: axis.
   describe "tone:" do
     it "renders tone: :neutral identically to the legacy variant: :default" do
       render_inline(described_class.new(tone: :neutral, title: "Heads up"))

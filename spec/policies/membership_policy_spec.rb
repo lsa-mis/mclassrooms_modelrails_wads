@@ -92,6 +92,11 @@ RSpec.describe MembershipPolicy do
       expect(policy.destroy?).to be(false)
     end
 
+    it "permits an owner leaving while another owner remains" do
+      record.update!(role: Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" })
+      expect(policy.destroy?).to be(true)
+    end
+
     it "denies leaving when the user is the last owner" do
       owner_membership_other.discard!
       record.update!(role: Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" })

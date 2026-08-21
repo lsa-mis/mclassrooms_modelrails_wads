@@ -1,5 +1,7 @@
 module Settings
   class AvatarsController < ApplicationController
+    include IdentityParams
+
     rate_limit to: 20, within: 3.minutes, only: [ :update, :destroy ],
       by: -> { Current.user&.id || request.remote_ip },
       with: -> {
@@ -69,16 +71,8 @@ module Settings
 
     private
 
-    # Explicit extraction of the identity-picker wire protocol — top-level
-    # params, frozen (the JS posts these names for both User and Workspace).
     def identity_update_params
-      @identity_update_params ||= {
-        image: params[:avatar],
-        image_original: params[:avatar_original],
-        crop_coordinates: params[:crop_coordinates],
-        source: params[:avatar_source],
-        color: params[:primary_color]
-      }
+      @identity_update_params ||= identity_wire_params
     end
   end
 end

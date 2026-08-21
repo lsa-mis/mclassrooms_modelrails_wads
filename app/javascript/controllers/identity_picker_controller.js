@@ -233,8 +233,6 @@ export default class extends Controller {
     this._announceColor(hue)
   }
 
-  // ── Private ────────────────────────────────────────────────────
-
   _getCropper() {
     const el = this.element.querySelector("[data-controller='image-cropper']")
     return el ? this.application.getControllerForElementAndIdentifier(el, "image-cropper") : null

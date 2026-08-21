@@ -1,0 +1,34 @@
+<%# locals: (prefs_object:) -%>
+<%= render layout: "shared/preferences_card",
+      locals: { title: t("notifications.preferences.advanced.heading") } do %>
+  <div class="px-6 py-5 space-y-4">
+    <%= form_with url: settings_notification_preferences_path,
+          method: :patch,
+          data: { controller: "auto-submit" },
+          class: "flex flex-wrap items-center gap-3" do |f| %>
+      <label for="retention-days"
+             class="text-sm text-text-body">
+        <%= t("notifications.preferences.advanced.retention_label") %>
+      </label>
+      <select id="retention-days"
+              name="notification_preferences[retention_days]"
+              autocomplete="off"
+              data-action="change->auto-submit#submit"
+              class="form-input ui-select">
+        <% [ 30, 60, 90, 180, 365 ].each do |days| %>
+          <option value="<%= days %>"
+                  <% if prefs_object.retention_days == days %>selected<% end %>>
+            <%= t("notifications.preferences.advanced.retention_options.#{days}") %>
+          </option>
+        <% end %>
+        <option value=""
+                <% if prefs_object.retention_days.nil? %>selected<% end %>>
+          <%= t("notifications.preferences.advanced.retention_options.never") %>
+        </option>
+      </select>
+    <% end %>
+    <p class="text-xs text-text-muted">
+      <%= t("notifications.preferences.advanced.retention_help") %>
+    </p>
+  </div>
+<% end %>

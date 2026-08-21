@@ -15,7 +15,6 @@ RSpec.describe "Magic link registration", type: :system do
 
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
 
-      # Visit the registration link (equivalent to the emailed one).
       visit magic_link_callback_path(token: MagicLinkToken.create_for_email("brand-new@example.com"))
 
       expect(page).to have_text(I18n.t("magic_link_callbacks.new_registration.title"))
@@ -53,16 +52,24 @@ RSpec.describe "Magic link registration", type: :system do
   end
 
   describe "registration with missing name" do
-    it "prevents submission via browser validation on required fields" do
+    it "rejects a nameless registration server-side and renders the errors" do
       token = MagicLinkToken.create_for_email("noname@example.com")
 
       visit magic_link_callback_path(token: token)
 
-      # Fields are required — browser prevents submission, user stays on form
+      # No field carries a native `required` attribute (TailwindFormBuilder renders
+      # aria-required only — see app/form_builders/tailwind_form_builder.rb), so the
+      # browser does not block this submit: it reaches the server and User's
+      # first_name/last_name presence validations (app/models/user.rb) reject it,
+      # re-rendering this same form with the errors below.
       click_button I18n.t("magic_link_callbacks.new_registration.submit")
 
       expect(page).to have_text(I18n.t("magic_link_callbacks.new_registration.title"))
       expect(User.find_by(email_address: "noname@example.com")).to be_nil
+
+      expect(page).to have_selector("[role='alert']", text: I18n.t("errors.form_errors", count: 2))
+      expect(page).to have_text("#{User.human_attribute_name(:first_name)} #{I18n.t('errors.messages.blank')}")
+      expect(page).to have_text("#{User.human_attribute_name(:last_name)} #{I18n.t('errors.messages.blank')}")
     end
   end
 end

@@ -12,7 +12,7 @@
 #
 # NOTE: axe_clean_in_both_themes? runs axe DEFAULT (AA 4.5:1) locally. The
 # authoritative AAA 7:1 audit is the CI-only wcag2aaa after-hook in
-# spec/support/playwright_accessibility.rb.
+# spec/support/axe_accessibility.rb.
 RSpec.describe "Drawer component accessibility", type: :system do
   def open_drawer
     find("[data-action~='click->modal#open']").click
@@ -34,7 +34,7 @@ RSpec.describe "Drawer component accessibility", type: :system do
       expect(page).to have_css("dialog[open] [data-modal-target='panel']")
 
       # Await all CSS transitions on the panel, then read the settled transform.
-      # This mirrors the same pattern used in PlaywrightAccessibility#set_theme.
+      # This mirrors the same pattern used in AxeAccessibility#set_theme.
       cdp_evaluate_async(<<~JS)
         const done = arguments[arguments.length - 1];
         const panel = document.querySelector("dialog[open] [data-modal-target='panel']");

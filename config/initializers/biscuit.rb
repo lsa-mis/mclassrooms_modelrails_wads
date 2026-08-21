@@ -1,14 +1,5 @@
 # frozen_string_literal: true
 
-# GDPR Cookie Consent Configuration
-#
-# Biscuit provides the consent UI and cookie storage. It does NOT auto-block
-# third-party scripts — you must conditionally load them:
-#
-#   <% if biscuit_allowed?(:analytics) %>
-#     <!-- Google Analytics or similar -->
-#   <% end %>
-
 Biscuit.configure do |config|
   config.categories = {
     necessary:   { required: true },

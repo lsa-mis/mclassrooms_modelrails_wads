@@ -1,0 +1,13 @@
+<%# Two instances is the case that exposes shared ids: a constant listbox id, or option
+    ids minted from a fixed prefix, collide here and aria-controls /
+    aria-activedescendant then resolve to whichever rendered first. %>
+<div class="flex gap-8 p-8">
+  <div class="w-64">
+    <%= ui :combobox, name: "origin", label: "Origin",
+          options: [{value: "us", label: "United States"}, {value: "ca", label: "Canada"}] %>
+  </div>
+  <div class="w-64">
+    <%= ui :combobox, name: "destination", label: "Destination",
+          options: [{value: "mx", label: "Mexico"}, {value: "br", label: "Brazil"}] %>
+  </div>
+</div>

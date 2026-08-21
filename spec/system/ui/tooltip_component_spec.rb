@@ -8,7 +8,7 @@ require "rails_helper"
 # via CSS; Escape dismisses it (WCAG 1.4.13) via the shared `floating` controller.
 #
 # NOTE: the per-spec axe call runs axe's default (AA) rule set; the authoritative AAA
-# 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# 7:1 audit is the CI-only wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Tooltip component accessibility", type: :system do
   def trigger_selector
     "[data-controller='floating'][tabindex='0']"

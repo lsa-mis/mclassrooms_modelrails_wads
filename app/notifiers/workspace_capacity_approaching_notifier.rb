@@ -2,35 +2,30 @@
 
 # Fired by WorkspaceCapacitySweepJob when a workspace reaches >= 80% of its
 # `max_members` quota; recipients are the workspace owners; category `:billing`
-# (NOT security — DND suppresses these). Idempotency overrides the base
-# minute bucket with a day bucket per (workspace, metric).
+# (NOT security — DND suppresses these). Dedup is one notification per
+# (workspace, metric, day) — the sweep re-fires within a day, the metric seed
+# keeps members/projects alerts distinct.
 # See /docs/developer/notifications (Idempotency).
 class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
   category :billing
   severity :warning
+  dedup_bucket :day
+  dedup_seed { params[:metric] }
 
   required_param :metric, :current, :limit
 
   recipients do
-    workspace = record
-    # Delegate owner resolution to the canonical helper on Workspace (which
-    # joins :role, filters by slug "owner", and preloads :user to avoid N+1).
-    # Filter the resulting Users by their billing.in_app preference: see the
-    # class-level docs above for why this is the correct gate point. The
-    # `preferences_for` helper wraps the schema-default JSONB blob for users
-    # without a persisted UserPreferences row, so newly-created users are
-    # correctly treated as opted-in for in-app at the column-default level.
-    workspace.owners.select do |user|
-      preferences_for(user).allow?(category: "billing", channel: "in_app")
-    end
+    # Owner resolution delegates to the canonical `Workspace#owners` helper;
+    # `permitted_in_app` (ApplicationNotifier) preloads :preferences and gates
+    # on the declared category's in_app preference — see the class-level docs
+    # above for why the gate belongs here.
+    permitted_in_app(record.owners)
   end
 
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_capacity_approaching
-    # `== true` aborts on the tri-state :digest sentinel.
-    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
-    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
+    config.before_enqueue = -> { throw(:abort) unless deliver_email_now? }
     config.enqueue = true
   end
 
@@ -51,15 +46,5 @@ class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
     def url
       Rails.application.routes.url_helpers.edit_workspace_settings_path(event.record)
     end
-  end
-
-  private
-
-  # Day-bucket idempotency, scoped per (workspace, metric) — see class-level
-  # docs above for the full rationale.
-  def populate_idempotency_key
-    return if idempotency_key.present?
-    day = Time.current.to_date.iso8601
-    self.idempotency_key = "#{self.class.name}_#{record.id}_#{params[:metric]}_#{day}"
   end
 end

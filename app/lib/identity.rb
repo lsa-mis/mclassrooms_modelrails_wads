@@ -44,16 +44,13 @@ class Identity
   # "upload". Blank values are treated as absent, except `name` (nil-is-absent
   # — a submitted blank rename must fail validation, not be ignored).
   def apply(image: nil, image_original: nil, crop_coordinates: nil, source: nil, color: nil, name: nil)
-    # Kwargs shadow the same-named readers here — inside apply, bare
-    # image/image_original/source are the INCOMING values; use helpers for
-    # model state.
-    image = image.presence
-    image_original = image_original.presence
-    crop_coordinates = crop_coordinates.presence
-    source = source.presence
-    color = color.presence
+    incoming_image = image.presence
+    incoming_original = image_original.presence
+    incoming_crop = crop_coordinates.presence
+    incoming_source = source.presence
+    incoming_color = color.presence
 
-    if (failure = source_guard(image, source))
+    if (failure = source_guard(incoming_image, incoming_source))
       return failure
     end
 
@@ -61,19 +58,19 @@ class Identity
     # with a name:) must raise before side effects, not after purging blobs.
     write_name(name) unless name.nil?
 
-    if image
-      assign_image(image)
+    if incoming_image
+      assign_image(incoming_image)
       write_source("upload")
     end
-    assign_image_original(image_original) if image_original
-    apply_crop_metadata(crop_coordinates) if crop_coordinates
+    assign_image_original(incoming_original) if incoming_original
+    apply_crop_metadata(incoming_crop) if incoming_crop
 
-    if source && image.nil?
-      write_source(source)
-      purge_images if source != "upload"
+    if incoming_source && incoming_image.nil?
+      write_source(incoming_source)
+      purge_images if incoming_source != "upload"
     end
 
-    model.primary_color = color.to_i if color
+    model.primary_color = incoming_color.to_i if incoming_color
 
     save_result
   end

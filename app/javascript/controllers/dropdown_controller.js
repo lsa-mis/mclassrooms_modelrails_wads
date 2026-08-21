@@ -78,8 +78,6 @@ export default class extends Controller {
     }
   }
 
-  // Private
-
   isOpen() {
     return !this.menuTarget.classList.contains("hidden")
   }

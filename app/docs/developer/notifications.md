@@ -80,7 +80,7 @@ class PasswordChangedNotifier < ApplicationNotifier
   severity :danger
 
   deliver_by :email, mailer: "NotificationMailer", method: :password_changed,
-             if: ->(recipient) { recipient_pref(:email) == true }
+             if: ->(recipient) { deliver_email_now? }
 
   notification_methods do
     def message = I18n.t("notifications.password_changed.message", user_name: recipient.full_name)
@@ -107,28 +107,28 @@ end
 
 ### Category → notifier types
 
-`ApplicationNotifier.notification_types_for(category)` returns the `Noticed::Notification` STI type strings for that category — used by `NotificationsController#index` for `?category=foo` filtering, and by `NotificationPreferences.security_notifier_types` for retention-floor enforcement.
+`ApplicationNotifier.notification_types_for(category)` returns the `Noticed::Notification` STI type strings for that category — used by `NotificationsController#index` for `?category=foo` filtering, and by `NotificationCleanupJob` for retention-floor enforcement. The suffix-free variant `ApplicationNotifier.notifier_class_names_for(category)` returns the parent Notifier class names.
 
 ### Preference resolution and the missing-row fallback
 
 `ApplicationNotifier.preferences_for(user)` resolves a `NotificationPreferences` object for any user, **including users with no persisted `user_preferences` row**: it falls back to wrapping `UserPreferences.new.notification_preferences`. Why a transient record instead of a Ruby constant? The `notification_preferences` JSONB column carries a database-level default containing the canonical permission matrix (see `db/schema.rb`), and Rails populates column defaults on the in-memory record — so the schema default stays the single source of truth. Hard-coding the matrix in Ruby would create a second copy that could silently drift from the schema.
 
-This replaced an earlier behavior that wrapped `nil`, which made every category except `security` return `false` from `allow?` — a silent default-deny posture for freshly-created users with no preferences row yet. Incorrect, since the schema default permits in-app delivery for every category.
+This replaced an earlier behavior that wrapped `nil`, which made every category except `security` answer `false` from `deliver_now?` — a silent default-deny posture for freshly-created users with no preferences row yet. Incorrect, since the schema default permits in-app delivery for every category.
 
 The method is available as both a class method (backing the per-recipient `recipient_pref` shim inside `notification_methods`) and an instance method (used by class-level `recipients` resolvers).
 
 ### In-app gating lives in `recipients`
 
-Noticed 2.9.x deprecates the `:database` delivery method — notification rows are auto-saved by the deliver pipeline itself, so there is no delivery-method conditional to hang an "is in-app enabled for this recipient?" check on. The only place to prevent a `noticed_notifications` row from ever existing is **recipient resolution**: the notifier's `recipients` block filters out users whose `<category>.in_app` preference is `false` (which, for non-security categories, also covers quiet hours via `allow?`). This is the pattern for every notifier that respects in-app preferences; `WorkspaceMemberAddedNotifier` and `WorkspaceCapacityApproachingNotifier` are the two current examples. Combined with the missing-row fallback above, users without a preferences row are correctly treated as opted-in at the column-default level instead of being silently filtered out of every dispatch.
+Noticed 2.9.x deprecates the `:database` delivery method — notification rows are auto-saved by the deliver pipeline itself, so there is no delivery-method conditional to hang an "is in-app enabled for this recipient?" check on. The only place to prevent a `noticed_notifications` row from ever existing is **recipient resolution**: the notifier's `recipients` block filters out users whose `<category>.in_app` preference is `false` (which, for non-security categories, also covers quiet hours via `deliver_now?`). This is the pattern for every notifier that respects in-app preferences; `WorkspaceMemberAddedNotifier` and `WorkspaceCapacityApproachingNotifier` are the two current examples. Combined with the missing-row fallback above, users without a preferences row are correctly treated as opted-in at the column-default level instead of being silently filtered out of every dispatch.
 
 Genuinely per-notifier specifics:
 
 - **`WorkspaceMemberAddedNotifier`** (fires on `Membership` create) is dual-recipient: (1) the added user, (2) all workspace owners, `.uniq`'d so an added user who is already an owner isn't double-notified. The block preloads `:preferences` in one query — per-user `user.preferences` access inside the filter is otherwise an N+1 across the candidate set (Bullet caught it). Email goes **only** to the added user: a `before_enqueue` lambda `throw(:abort)`s unless `recipient_id == event.record.user_id` AND the added user's `workspace_activity.email` pref is `true`. Comparing on the `recipient_id` column (not the loaded association) avoids a per-row association load that Bullet would flag when Noticed's `EventJob` iterates `event.notifications`. Owners never get an immediate email — the digest pipeline is their intended email fallback.
-- **`WorkspaceCapacityApproachingNotifier`** (fired by `WorkspaceCapacitySweepJob` when a workspace reaches ≥ 80% of a plan quota; v1 sweeps only the `members` metric) sends to workspace owners filtered by `billing.in_app` — the category is deliberately `billing`, not `security`, so quiet hours suppress these. It overrides `populate_idempotency_key`: the default one-minute bucket is wrong for a recurring sweep (cadence in `config/recurring.yml`), so the override folds `(workspace, metric)` with a **day** bucket. Repeat sweeps in one day dedupe to a single alert; distinct metrics for the same workspace on the same day don't collapse onto each other; the next day's sweep gets a fresh key and delivers again if the workspace is still over threshold.
+- **`WorkspaceCapacityApproachingNotifier`** (fired by `WorkspaceCapacitySweepJob` when a workspace reaches ≥ 80% of a plan quota; v1 sweeps only the `members` metric) sends to workspace owners filtered by `billing.in_app` — the category is deliberately `billing`, not `security`, so quiet hours suppress these. It declares `dedup_bucket :day` + `dedup_seed { params[:metric] }`: the default one-minute bucket is wrong for a recurring sweep (cadence in `config/recurring.yml`), so the key is scoped per `(workspace, metric)` with a **day** bucket. Repeat sweeps in one day dedupe to a single alert; distinct metrics for the same workspace on the same day don't collapse onto each other; the next day's sweep gets a fresh key and delivers again if the workspace is still over threshold.
 
 ### Email gating and the `:digest` sentinel
 
-`recipient_pref(:email)` is tri-state: `true` (deliver now), `false` (drop), or the `:digest` sentinel (the item waits for `DigestMailerJob` to pick it up). Email `before_enqueue` guards must therefore compare `== true` explicitly — a truthiness check would let `:digest` fire an instant email, silently defeating the user's digest frequency choice.
+An email is one of three fates: deliver now, drop, or wait for `DigestMailerJob` to pick it up. Email `before_enqueue` guards call `deliver_email_now?`, which is strictly "send the instant email now" — it answers `false` both for an opt-out/DND drop and for the digest deferral, so the digest frequency choice can never be defeated by an accidental truthiness check. (`recipient_pref(:email)` still reports the tri-state — `true` / `false` / `:digest` — as an introspection surface.)
 
 ### `render_safe_or_placeholder` — the deleted-record contract
 
@@ -190,6 +190,11 @@ Where `minute_bucket = Time.current.to_i / 60`. This means:
 - The same notifier + same record dispatched **within the same minute** dedupes to one event
 - A dispatch at second 59 and a retry at second 0 of the next minute **both succeed** (different buckets)
 - The DB partial unique index enforces the dedup atomically; there's no app-level SELECT-then-INSERT race
+
+Notifiers tune their key declaratively — key assembly itself stays in the one base callback:
+
+- `dedup_bucket :day` swaps the minute bucket for an ISO-date bucket (right for recurring sweeps: `WorkspaceInvitationExpiringSoonNotifier`, `WorkspaceCapacityApproachingNotifier`)
+- `dedup_seed { ... }` contributes extra segments between the record id and the bucket, instance-exec'd on the event so it can read `params`/`record` (`SignInFromNewDeviceNotifier` folds in the browser digest; `WorkspaceCapacityApproachingNotifier` the metric)
 
 Callers can pass `idempotency_key: "custom"` to override the default. If neither `:record` nor an explicit key is supplied, `populate_idempotency_key` raises `ArgumentError` — loud failure beats silent dedup-collapse across distinct events.
 
@@ -263,15 +268,17 @@ The tab that performs a read-state mutation gets its own surfaces refreshed by t
 
 `app/lib/notification_preferences.rb` wraps the JSONB hash with typed accessors. The two methods you'll touch most:
 
-### `allow?(category:, channel:)` — decision tree
+### `deliver_now?` / `defer_to_digest?` — the decision surface
 
-1. Reject unknown category/channel pairs (`false`)
-2. If `category == "security"` → `true` (with one exception: if `channel == "email"` and email is disabled, return `false` — a user who turned off all email accepts that security alerts won't email; in-app remains always-on)
-3. If `notification_types[category] != true` → `false`
-4. If `delivery_methods[channel].enabled != true` → `false`
-5. If `channel == "email"` and frequency is not `"instant"` → return `:digest` sentinel (caller queues for `DigestMailerJob`)
-6. If `quiet_hours_active?` → `false` (non-security only; security already returned true in step 2)
-7. Otherwise → `true`
+Two strict predicates, both `(category:, channel:)`: `deliver_now?` is "send through this channel right now"; `defer_to_digest?` is "email queued for the digest pipeline" (never true for in-app or security). They share one private decision tree (`allow?` — the tri-state encoding never leaves the object):
+
+1. Reject unknown category/channel pairs (deny)
+2. If `category == "security"` → deliver (with one exception: if `channel == "email"` and email is disabled, deny — a user who turned off all email accepts that security alerts won't email; in-app remains always-on)
+3. If `notification_types[category] != true` → deny
+4. If `delivery_methods[channel].enabled != true` → deny
+5. If `channel == "email"` and frequency is not `"instant"` → defer to digest (`DigestMailerJob` picks it up)
+6. If `quiet_hours_active?` → deny (non-security only; security already delivered in step 2)
+7. Otherwise → deliver now
 
 ### `quiet_hours_active?(now: Time.current)`
 
@@ -314,7 +321,7 @@ For each due user:
 
 1. Computes the recipient's pending notifications since their last digest send (`seen_at: nil`, created since `digest_last_sent_at`, excluding `security` types — security always delivers instantly)
 2. If non-empty: dispatches `NotificationMailer.digest(user, notifications)` and stamps `seen_at` on every included notification
-3. Updates `digest_last_sent_at` + recomputes `digest_next_due_at` from the user's cadence (`daily` or `weekly`, stored in `notification_preferences`) in their timezone via `next_due_at_in` (digest hour is hardcoded at 8 AM local)
+3. Updates `digest_last_sent_at` + recomputes `digest_next_due_at` via `UserPreferences#reschedule_digest!`, which writes `NotificationPreferences#next_due_at` — the user's cadence (`daily` or `weekly`, stored in `notification_preferences`) in their own timezone (digest hour is hardcoded at 8 AM local)
 
 If quiet hours block delivery at the digest time, the digest is held until the window closes.
 
@@ -326,7 +333,7 @@ Per-user retention enforcement. For each user with non-`nil` `retention_days`:
 
 1. Cutoff = `(retention_days + 2).days.ago` (2-day grace so cleanup never deletes today's reads)
 2. Delete `Noticed::Notification` where `recipient_id = user.id` AND `read_at < cutoff` AND `read_at IS NOT NULL`
-3. **Security floor exception** — notifications whose notifier carries `category :security` are kept for at least 365 days regardless of user retention preference. The floor is defined in `NotificationPreferences::RETENTION_FLOORS` and the job filters via `NotificationPreferences.security_notifier_types`
+3. **Security floor exception** — notifications whose notifier carries `category :security` are kept for at least 365 days regardless of user retention preference. The floor is defined in `NotificationPreferences::RETENTION_FLOORS` and the job filters via `ApplicationNotifier.notification_types_for("security")`
 
 **Unread is never deleted**, regardless of age: the user hasn't seen the item yet, so the retention clock effectively starts at `read_at`, not `created_at`. A `nil` `retention_days` means "Never" — the user opted out of auto-deletion and the job skips them entirely.
 

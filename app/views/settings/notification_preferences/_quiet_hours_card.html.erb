@@ -1,0 +1,127 @@
+<%# locals: (prefs:) -%>
+<%# Custom layout (not _preferences_row): the toggle + time inputs
+    + reassurance text flow together as one configuration cluster. -%>
+<%= render layout: "shared/preferences_card",
+      locals: {
+        title: t("notifications.preferences.quiet_hours.heading"),
+        description: t("notifications.preferences.quiet_hours.description")
+      } do %>
+  <%# `quiet-hours-warning` Stimulus controller watches the enabled toggle
+      + day chips inside this scope; surfaces the empty-days warning <p>
+      when QH is enabled but no days are checked (a deceptive state — the
+      value object treats it as quiet-hours-never-active). -%>
+  <div class="px-6 py-5 space-y-4"
+       data-controller="quiet-hours-warning">
+    <%= form_with url: settings_notification_preferences_path,
+          method: :patch,
+          data: { controller: "auto-submit" } do |f| %>
+      <%= render "shared/toggle",
+            name: "notification_preferences[quiet_hours][enabled]",
+            label: t("notifications.preferences.quiet_hours.enabled_label"),
+            checked: prefs.dig("quiet_hours", "enabled") == true %>
+    <% end %>
+
+    <%= form_with url: settings_notification_preferences_path,
+          method: :patch,
+          data: { controller: "auto-submit" },
+          class: "flex flex-wrap gap-4 items-end" do |f| %>
+      <div>
+        <label for="quiet-hours-start"
+               class="block text-sm font-medium text-text-heading mb-2">
+          <%= t("notifications.preferences.quiet_hours.start_label") %>
+        </label>
+        <input type="time"
+               id="quiet-hours-start"
+               name="notification_preferences[quiet_hours][start]"
+               value="<%= prefs.dig("quiet_hours", "start") || "22:00" %>"
+               autocomplete="off"
+               data-action="change->auto-submit#submit"
+               class="form-input">
+      </div>
+      <div>
+        <label for="quiet-hours-end"
+               class="block text-sm font-medium text-text-heading mb-2">
+          <%= t("notifications.preferences.quiet_hours.end_label") %>
+        </label>
+        <input type="time"
+               id="quiet-hours-end"
+               name="notification_preferences[quiet_hours][end]"
+               value="<%= prefs.dig("quiet_hours", "end") || "07:00" %>"
+               autocomplete="off"
+               data-action="change->auto-submit#submit"
+               class="form-input">
+      </div>
+    <% end %>
+
+    <%# Active-days picker: which weekdays the QH window applies on.
+        Missing active_days key on a user's row (legacy data) is treated as
+        all-7-days by the value object; render as all-checked here too so
+        the displayed state matches runtime behavior. The hidden ""-value
+        field at the top of the form ensures the active_days param is
+        always submitted as an array (so when zero boxes are checked, the
+        controller still sees `active_days=[""]` and strips the sentinel
+        to land on `[]`). -%>
+    <%# `aria-describedby` points at the empty-days warning below so SR
+        users navigating into the fieldset hear the explanation when
+        the deceptive state is active (warning's text content is only
+        present when the warning is visible). -%>
+    <fieldset aria-describedby="quiet-hours-empty-days-warning">
+      <legend class="block text-sm font-medium text-text-heading mb-2">
+        <%= t("notifications.preferences.quiet_hours.active_days_label") %>
+      </legend>
+      <%= form_with url: settings_notification_preferences_path,
+            method: :patch,
+            data: { controller: "auto-submit" },
+            class: "flex flex-wrap gap-2" do |f| %>
+        <input type="hidden"
+               name="notification_preferences[quiet_hours][active_days][]"
+               value="">
+        <% current_active = prefs.dig("quiet_hours", "active_days") || NotificationPreferences::DAYS_OF_WEEK %>
+        <% NotificationPreferences::DAYS_OF_WEEK.each do |day| %>
+          <% day_id = "quiet-hours-active-day-#{day}" %>
+          <% checked = current_active.include?(day) %>
+          <label for="<%= day_id %>"
+                 class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] px-2 rounded-md
+                        border border-border-strong cursor-pointer text-sm font-medium
+                        bg-surface text-text-body
+                        has-[:checked]:bg-interactive has-[:checked]:text-text-on-interactive
+                        has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-interactive-focus">
+            <input type="checkbox"
+                   id="<%= day_id %>"
+                   name="notification_preferences[quiet_hours][active_days][]"
+                   value="<%= day %>"
+                   <% if checked %>checked<% end %>
+                   data-action="change->auto-submit#submit"
+                   class="sr-only">
+            <span aria-label="<%= t("notifications.preferences.quiet_hours.days_full.#{day}") %>">
+              <%= t("notifications.preferences.quiet_hours.days.#{day}") %>
+            </span>
+          </label>
+        <% end %>
+      <% end %>
+    </fieldset>
+
+    <%# Deceptive-state warning: surfaced by `quiet-hours-warning` Stimulus
+        controller when QH is enabled but no days are checked. Initial
+        `hidden` class is removed on connect() if the server-rendered
+        state is already deceptive.
+        The role=status/aria-live region is the STABLE wrapper, not the
+        toggled <p>: a live region that itself flips display:none→block pops
+        into the a11y tree and announces unreliably. Keeping the region
+        always-present means the inner <p>'s text appearing is spoken. -%>
+    <div role="status" aria-live="polite">
+      <p id="quiet-hours-empty-days-warning"
+         class="text-xs text-warning hidden"
+         data-quiet-hours-warning-target="warning">
+        <%= t("notifications.preferences.quiet_hours.empty_days_warning") %>
+      </p>
+    </div>
+
+    <%# Security reassurance is FIXED TEXT per spec decision #6 — not a
+        toggle, because security always bypasses quiet_hours and a toggle
+        without runtime effect would be deceptive UI. -%>
+    <p class="text-xs text-text-muted">
+      <%= t("notifications.preferences.quiet_hours.security_reassurance") %>
+    </p>
+  </div>
+<% end %>

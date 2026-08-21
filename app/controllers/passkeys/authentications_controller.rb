@@ -22,7 +22,7 @@ module Passkeys
       start_new_session_for(user)
       render json: { redirect_to: after_authentication_url }
     rescue Passkeys::Error => e
-      render json: { error: passkey_error_message(e) }, status: :unprocessable_content
+      render json: { error: t(e.i18n_key) }, status: :unprocessable_content
     end
   end
 end

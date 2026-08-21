@@ -48,7 +48,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "is NOT a security category notifier (does not bypass DND)" do
-      expect(NotificationPreferences.security_notifier_types).not_to include(described_class.name)
+      expect(ApplicationNotifier.notifier_class_names_for("security")).not_to include(described_class.name)
     end
   end
 
@@ -58,6 +58,23 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
       recipients = event.send(:evaluate_recipients)
       expect(recipients).to match_array([ owner_a, owner_b ])
       expect(recipients).not_to include(non_owner)
+    end
+  end
+
+  describe "recipient resolution query efficiency" do
+    # A third owner so an N+1 (one user_preferences query per owner) diverges
+    # loudly from the single preloaded query the contract requires.
+    let!(:owner_c) { create(:user) }
+    let!(:owner_c_membership) { create(:membership, user: owner_c, workspace: workspace, role: owner_role) }
+
+    it "issues exactly one user_preferences query for N owners (preloaded, not N+1)" do
+      event = described_class.with(record: workspace, metric: "members", current: 8, limit: 10)
+
+      query_count = count_queries_touching("user_preferences") do
+        event.send(:evaluate_recipients)
+      end
+
+      expect(query_count).to eq 1
     end
   end
 

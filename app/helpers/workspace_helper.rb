@@ -82,7 +82,7 @@ module WorkspaceHelper
     if identity.image?
       render_workspace_logo(identity, workspace.name, config)
     elsif owner_identity&.source == "upload" && owner_identity.image?
-      render_owner_avatar_fallback(workspace, config)
+      render_owner_avatar_fallback(workspace, size)
     else
       render_workspace_initials(identity, config)
     end
@@ -103,8 +103,8 @@ module WorkspaceHelper
       aria: { hidden: true }
   end
 
-  def render_owner_avatar_fallback(workspace, config)
-    avatar_for(workspace.owner, size: WORKSPACE_ICON_SIZES.key(config))
+  def render_owner_avatar_fallback(workspace, size)
+    avatar_for(workspace.owner, size: size)
   end
 
   def render_workspace_initials(identity, config)

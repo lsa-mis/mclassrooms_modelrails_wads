@@ -1,0 +1,65 @@
+<%# locals: (prefs:) -%>
+<%# Each control gets its own form so auto-submit fires per-change. -%>
+<%= render layout: "shared/preferences_card",
+      locals: {
+        title: t("notifications.preferences.delivery_methods.heading"),
+        description: t("notifications.preferences.delivery_methods.description")
+      } do %>
+  <% in_app_control = capture do %>
+    <%= form_with url: settings_notification_preferences_path,
+          method: :patch,
+          data: { controller: "auto-submit" },
+          class: "inline-block" do |f| %>
+      <%= render "shared/toggle",
+            name: "notification_preferences[delivery_methods][in_app][enabled]",
+            label: t("notifications.preferences.delivery_methods.items.in_app.title"),
+            checked: prefs.dig("delivery_methods", "in_app", "enabled") == true %>
+    <% end %>
+  <% end %>
+  <%= render "shared/preferences_row",
+        icon_name: "computer_desktop",
+        icon_color: :info,
+        title: t("notifications.preferences.delivery_methods.items.in_app.title"),
+        description: t("notifications.preferences.delivery_methods.items.in_app.description"),
+        control: in_app_control %>
+
+  <% email_control = capture do %>
+    <div class="flex items-center gap-3">
+      <%= form_with url: settings_notification_preferences_path,
+            method: :patch,
+            data: { controller: "auto-submit" },
+            class: "inline-block" do |f| %>
+        <%= render "shared/toggle",
+              name: "notification_preferences[delivery_methods][email][enabled]",
+              label: t("notifications.preferences.delivery_methods.items.email.title"),
+              checked: prefs.dig("delivery_methods", "email", "enabled") == true %>
+      <% end %>
+      <%= form_with url: settings_notification_preferences_path,
+            method: :patch,
+            data: { controller: "auto-submit" },
+            class: "inline-block" do |f| %>
+        <label for="email-frequency" class="sr-only">
+          <%= t("notifications.preferences.delivery_methods.frequency.label") %>
+        </label>
+        <select id="email-frequency"
+                name="notification_preferences[delivery_methods][email][frequency]"
+                autocomplete="off"
+                data-action="change->auto-submit#submit"
+                class="form-input ui-select">
+          <% NotificationPreferences::EMAIL_FREQUENCIES.each do |freq| %>
+            <option value="<%= freq %>"
+                    <% if prefs.dig("delivery_methods", "email", "frequency") == freq %>selected<% end %>>
+              <%= t("notifications.preferences.delivery_methods.frequency.options.#{freq}") %>
+            </option>
+          <% end %>
+        </select>
+      <% end %>
+    </div>
+  <% end %>
+  <%= render "shared/preferences_row",
+        icon_name: "envelope",
+        icon_color: :info,
+        title: t("notifications.preferences.delivery_methods.items.email.title"),
+        description: t("notifications.preferences.delivery_methods.items.email.description"),
+        control: email_control %>
+<% end %>

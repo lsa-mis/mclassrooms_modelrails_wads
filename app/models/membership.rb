@@ -1,4 +1,11 @@
 class Membership < ApplicationRecord
+  # Raised by the last-owner invariants (validate_not_last_owner!,
+  # enforce_owner_invariant!, enforce_owner_floor!) so controllers rescue the
+  # NAMED condition instead of blanket-mapping every RecordInvalid to the
+  # last-owner flash. Subclasses RecordInvalid so generic boundary rescues
+  # keep working.
+  class LastOwner < ActiveRecord::RecordInvalid; end
+
   include Discardable
   include Trackable
   include Broadcastable
@@ -79,8 +86,22 @@ class Membership < ApplicationRecord
       .sorted_by(sort, direction)
   }
 
+  # Kept owner-role memberships in the workspace, excluding the given
+  # membership id — "are there OTHER owners besides this one?".
+  def self.other_kept_owners(workspace_id, excluding:)
+    kept.joins(:role)
+        .where(workspace_id: workspace_id, roles: { slug: "owner" })
+        .where.not(id: excluding)
+  end
+
+  # Role identity only — deliberately silent on kept/discarded state; the
+  # owner-floor queries carry their own kept filtering.
+  def owner?
+    role.present? && role.owner?
+  end
+
   def change_role!(new_role)
-    demoting_owner = role.slug == "owner" && new_role.slug != "owner"
+    demoting_owner = owner? && !new_role.owner?
     transaction do
       workspace.lock!
       update!(role: new_role)
@@ -141,10 +162,14 @@ class Membership < ApplicationRecord
     workspace
   end
 
+  def activity_workspace
+    workspace
+  end
+
   def workspace_has_member_capacity
     return unless workspace
     workspace.lock!
-    if workspace.memberships.kept.count >= workspace.max_members
+    if workspace.at_capacity?
       errors.add(:base, :workspace_member_limit)
     end
   end
@@ -159,9 +184,9 @@ class Membership < ApplicationRecord
   end
 
   def validate_not_last_owner!
-    if role.slug == "owner" && workspace.memberships.kept.joins(:role).where(roles: { slug: "owner" }).count <= 1
+    if owner? && !Membership.other_kept_owners(workspace_id, excluding: id).exists?
       errors.add(:base, :last_owner)
-      raise ActiveRecord::RecordInvalid, self
+      raise LastOwner, self
     end
   end
 
@@ -169,28 +194,23 @@ class Membership < ApplicationRecord
   # transaction; zero kept owners → raise to roll back. Non-owner discards skip.
   # See /docs/developer/architecture (Concurrency).
   def enforce_owner_invariant!
-    return unless role&.slug == "owner"
-    remaining = Membership.kept
-                          .joins(:role)
-                          .where(workspace_id: workspace_id)
-                          .where(roles: { slug: "owner" })
-                          .count
-    return if remaining > 0
+    return unless owner?
+    # Self is already discarded here, so "any kept owner" == "any OTHER kept
+    # owner" — the shared query reads identically either way.
+    return if Membership.other_kept_owners(workspace_id, excluding: id).exists?
     errors.add(:base, :last_owner)
-    raise ActiveRecord::RecordInvalid, self
+    raise LastOwner, self
   end
 
   # Owner-floor net for change_role! demotions: post-UPDATE EXISTS counts only
   # the OTHER owners (self is already demoted); zero left → roll back.
   # See /docs/developer/architecture (Concurrency).
   def enforce_owner_floor!
-    return if Membership.kept
-                        .joins(:role)
-                        .where(workspace_id: workspace_id)
-                        .where(roles: { slug: "owner" })
-                        .exists?
+    # Self is already demoted here, so counting all kept owners == counting
+    # the OTHER kept owners — the shared query reads identically either way.
+    return if Membership.other_kept_owners(workspace_id, excluding: id).exists?
     errors.add(:base, :last_owner)
-    raise ActiveRecord::RecordInvalid, self
+    raise LastOwner, self
   end
 
   # G (SEC-1 follow-up): membership.created previously carried EMPTY metadata,
@@ -248,21 +268,10 @@ class Membership < ApplicationRecord
     WorkspaceMemberAddedNotifier.with(record: self).deliver(nil)
   end
 
-  # True when at least one OTHER kept owner-role membership exists in the
-  # workspace at the moment of after_create_commit. The `where.not(id: id)`
-  # self-exclusion is load-bearing: it ensures the very first owner being
-  # seeded (User#create_personal_workspace, bootstrap) is not treated as
-  # having a pre-existing owner. The method name surfaces this — "OTHER
-  # owners" — so a future reader of the `if:` callback option immediately
-  # understands that self-exclusion is the contract, not an accident.
-  # Owners-from-other-workspaces are correctly excluded by the workspace_id scope.
+  # Self-exclusion is the contract: the very first owner being seeded
+  # (User#create_personal_workspace, bootstrap) must not count as a pre-existing owner.
   def workspace_has_other_owners?
     return false if workspace_id.blank?
-    Membership.kept
-      .joins(:role)
-      .where(workspace_id: workspace_id)
-      .where(roles: { slug: "owner" })
-      .where.not(id: id)
-      .exists?
+    Membership.other_kept_owners(workspace_id, excluding: id).exists?
   end
 end

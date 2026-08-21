@@ -5,6 +5,13 @@ module Settings
 
     allow_unauthenticated_access only: :verify
 
+    # Verification-time rendering of PendingClaims problems.
+    CLAIM_PROBLEM_MESSAGES = {
+      invitation_email_mismatch: "settings.connected_accounts.verify.email_mismatch",
+      invitation_consumed: "registrations.create.invitation_consumed",
+      join_link_at_capacity: "settings.connected_accounts.verify.join_link_at_capacity"
+    }.freeze
+
     rate_limit to: 3, within: 3.minutes, only: :resend_verification,
       by: -> { Current.user&.id || request.remote_ip },
       with: -> {
@@ -42,31 +49,15 @@ module Settings
       # is proven. This is a one-shot sign-in tied to email verification.
       start_new_session_for(auth.user) unless was_authenticated
 
-      # Claim any pending invitation that was persisted onto this Authentication
-      # during unverified-email OAuth signup. A stale invitation (consumed by
-      # someone else, expired, etc.) shouldn't block sign-in — surface as flash
-      # but continue.
-      begin
-        auth.claim_pending_invitation!(Current.user)
-      rescue Invitation::EmailMismatch
-        flash[:alert] = t(".email_mismatch")
-      rescue Invitation::NotAcceptable
-        flash[:alert] = t("registrations.create.invitation_consumed")
-      end
-
-      # Reshape 2b: claim any pending workspace join-link token. Stale link
-      # conditions (revoked, policy reverted) are silently no-op'd inside
-      # claim_pending_join_link!; capacity errors propagate and we surface
-      # them as a flash without blocking sign-in.
-      begin
-        auth.claim_pending_join_link!(Current.user)
-      rescue Workspace::AlreadyMember
-        # Benign here — a pending invitation and a pending join link can both
-        # resolve to the same workspace, so the second claim is a harmless
-        # duplicate the success notice already covers.
-      rescue Workspace::AtCapacity
-        # The one real blocker — a localized message, never the raw model string.
-        flash[:alert] = t(".join_link_at_capacity")
+      # Claim whatever was parked on this Authentication during unverified-email
+      # OAuth signup (invitation token + join-link digest). Continue semantics:
+      # a stale claim shouldn't block sign-in — problems surface as flash. The
+      # exception matrix lives in PendingClaims; only the copy is chosen here
+      # (deliberately different wording from the signup-time site, which speaks
+      # to a signed-in user rather than a just-verified one).
+      problems = auth.claim_pending!(Current.user).problems
+      if problems.any?
+        flash[:alert] = problems.map { |problem| t(CLAIM_PROBLEM_MESSAGES.fetch(problem)) }.join(" ")
       end
 
       if was_authenticated

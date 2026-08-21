@@ -10,7 +10,7 @@ require "rails_helper"
 # scenario and audits each scoped to the [role='status'] subtree with NO
 # color-contrast exclude. NOTE: the per-spec assertion below runs axe's default
 # (AA) rule set; the authoritative AAA 7:1 audit is the wcag2aaa after-hook that
-# fires under CI (see spec/support/playwright_accessibility.rb).
+# fires under CI (see spec/support/axe_accessibility.rb).
 RSpec.describe "Spinner component accessibility", type: :system do
   %w[default sizes on_surface].each do |scenario|
     it "#{scenario} has role=status with an sr-only label and passes AAA in both themes" do

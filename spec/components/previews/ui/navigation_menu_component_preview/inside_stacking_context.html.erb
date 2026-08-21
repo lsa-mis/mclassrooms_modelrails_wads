@@ -1,0 +1,20 @@
+<%# Same trap as the popover and dropdown scenarios: a sticky z-40 header with a
+    backdrop-blur is a stacking context, so the flyout z-50 is scoped inside it and the
+    z-50 page content below paints over it. Anchor positioning makes the flyout
+    viewport-positioned, so it can be promoted to the top layer and stay tethered. %>
+<div class="relative h-96">
+  <header class="sticky top-0 z-40 flex justify-center border-b border-border bg-surface-raised/95 p-4 backdrop-blur">
+    <%= ui :navigation_menu, label: "Primary" do |nav| %>
+      <% nav.with_item(label: "Home", href: "#", active: true) %>
+      <% nav.with_item(label: "Products") do %>
+        <a href="#" class="flex flex-col gap-1 rounded-sm p-2 text-sm focus-ring hover:bg-surface-sunken">
+          <span class="font-medium text-text-heading">Analytics</span>
+        </a>
+      <% end %>
+    <% end %>
+  </header>
+
+  <div data-testid="occluder" class="relative z-50 h-64 bg-surface-sunken p-4 text-text-body">
+    Page content sitting in the root stacking context, outranking the header z-40.
+  </div>
+</div>

@@ -8,7 +8,7 @@ require "rails_helper"
 # breadcrumb, identity-bar link, tightened spacing).
 #
 # Per-spec axe runs AA locally; the AAA 7:1 audit is the CI-only wcag2aaa hook
-# (see spec/support/playwright_accessibility.rb). Do not claim AAA from a
+# (see spec/support/axe_accessibility.rb). Do not claim AAA from a
 # local run — CI is the gate.
 RSpec.describe "Workspace settings section — AAA", type: :system do
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }

@@ -18,7 +18,7 @@ require "rails_helper"
 # violation reached main under a green CI, and the two reasons were that the
 # audit only ran on CI and only ever saw one theme.
 RSpec.describe "the accessibility audit is a real gate" do
-  let(:source) { File.read(Rails.root.join("spec/support/playwright_accessibility.rb")) }
+  let(:source) { File.read(Rails.root.join("spec/support/axe_accessibility.rb")) }
 
   it "audits everywhere, not only on CI" do
     expect(source).not_to match(/^\s*if ENV\["CI"\]/),

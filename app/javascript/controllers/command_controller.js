@@ -76,7 +76,11 @@ export default class extends Controller {
         next = visible[(current + 1) % visible.length]
         break
       case "ArrowUp":
-        next = visible[(current - 1 + visible.length) % visible.length]
+        // Same #661 correction as combobox_controller (the duplicated pair
+        // #659 tracks): with no active option, enter at the LAST item. Not
+        // keyboard-reachable here today (filter() re-seeds the active option
+        // on every open and input), so this is parity, not a live bug.
+        next = current === -1 ? visible[visible.length - 1] : visible[(current - 1 + visible.length) % visible.length]
         break
       case "Home":
         next = visible[0]
@@ -107,10 +111,17 @@ export default class extends Controller {
 
   // Promote caller-supplied items to listbox options with stable ids (the markup
   // stays plain — the role/id contract is applied here so callers can't break it).
+  // The host element's id is unique per instance; deriving the prefix from it keeps
+  // option ids unique across several instances on one page, which aria-activedescendant
+  // depends on to point at the right node.
+  get _idPrefix() {
+    return this.element.id || "command"
+  }
+
   _tagOptions() {
     this.options.forEach(item => {
       item.setAttribute("role", "option")
-      if (!item.id) item.id = `command-option-${this._optionId++}`
+      if (!item.id) item.id = `${this._idPrefix}-option-${this._optionId++}`
     })
     // An <hr> separator's implicit role="separator" is an illegal child of
     // role="listbox" (axe aria-required-children, critical — caught by the

@@ -18,7 +18,7 @@ module Settings
 
       ActiveRecord::Base.transaction do
         @preferences.update!(notification_preferences: new_object.to_h)
-        recompute_digest_due_at! if new_object.digest_changed_by?(raw_changes)
+        @preferences.reschedule_digest! if new_object.digest_changed_by?(raw_changes)
       end
 
       respond_to do |format|
@@ -45,13 +45,6 @@ module Settings
       raw = params[:notification_preferences]
       return {} if raw.blank?
       raw.to_unsafe_h.deep_stringify_keys
-    end
-
-    def recompute_digest_due_at!
-      tz_name = @preferences.timezone.presence
-      timezone = (tz_name && ActiveSupport::TimeZone[tz_name]) || Time.zone
-      next_due = @preferences.notification_preferences_object.next_due_at_in(timezone)
-      @preferences.update!(digest_next_due_at: next_due)
     end
   end
 end

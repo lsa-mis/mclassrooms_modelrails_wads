@@ -3,6 +3,14 @@
 class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
   category :account_access
   severity :warning
+  # Dispatched by WorkspaceInvitationExpiringSweepJob, which scans the
+  # 24-hour expiring window every 6 hours. With the default minute bucket,
+  # each invitation in the window would receive ~4 dispatches per day (one
+  # per sweep tick); the day bucket collapses those to one per (invitation,
+  # day). Cross-day dispatches still succeed — an invitation lingering in
+  # the window notifies once per day, the intended cadence (escalating
+  # reminder volume is digest territory, not idempotency).
+  dedup_bucket :day
 
   # Email is gated by the recipient's account_access.email preference (default: true).
   # before_enqueue throws :abort to skip the email job entirely when the recipient
@@ -11,9 +19,7 @@ class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_invitation_expiring_soon
-    # `== true` aborts on the tri-state :digest sentinel.
-    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
-    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
+    config.before_enqueue = -> { throw(:abort) unless deliver_email_now? }
     config.enqueue = true
   end
 
@@ -32,27 +38,5 @@ class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
     def url
       Rails.application.routes.url_helpers.accept_invitation_path(token: event.record.token)
     end
-  end
-
-  private
-
-  # Day-bucket idempotency override.
-  #
-  # The base ApplicationNotifier seeds (class, record.id, minute). This Notifier
-  # is dispatched by `WorkspaceInvitationExpiringSweepJob`, which scans the
-  # 24-hour expiring window every 6 hours. With a minute-bucket key, each
-  # invitation in the window would receive ~4 dispatches per day (one per
-  # sweep tick). A per-(invitation, day) key collapses those to one
-  # notification per invitation per day until the invitation is accepted,
-  # declined, or expired and falls out of the sweep window.
-  #
-  # Cross-day dispatches still succeed: an invitation that lingers in the
-  # sweep window on day N and day N+1 will produce one notification each day,
-  # which is the intended cadence (escalating reminder volume is digest
-  # territory, not idempotency).
-  def populate_idempotency_key
-    return if idempotency_key.present?
-    day = Time.current.to_date.iso8601
-    self.idempotency_key = "#{self.class.name}_#{record.id}_#{day}"
   end
 end

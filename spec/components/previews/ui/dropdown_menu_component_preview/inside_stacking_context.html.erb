@@ -1,0 +1,20 @@
+<%# Same trap as the popover scenario: a sticky z-40 header with a backdrop-blur is a
+    stacking context, so the panel's z-50 is scoped inside it and the z-50 page content
+    below paints over it. Dropdown places via CSS anchor positioning (position: fixed +
+    position-area), so its containing block is already the viewport — promoting it to
+    the top layer must fix the occlusion WITHOUT moving it off its trigger. %>
+<div class="relative h-96">
+  <header class="sticky top-0 z-40 flex justify-center border-b border-border bg-surface-raised/95 p-4 backdrop-blur">
+    <%= render(UI::DropdownMenuComponent.new) do |c| %>
+      <% c.with_trigger { "Actions" } %>
+      <% c.with_item { "Edit" } %>
+      <% c.with_item { "Duplicate" } %>
+      <% c.with_item(href: "#") { "Open docs" } %>
+    <% end %>
+  </header>
+
+  <div data-testid="occluder" class="relative z-50 h-64 bg-surface-sunken p-4 text-text-body">
+    Page content sitting in the root stacking context, outranking the header's
+    <code>z-40</code>.
+  </div>
+</div>

@@ -9,7 +9,6 @@ RSpec.describe UI::FloatingLabelComponent, type: :component do
     expect(page).to have_css("div.relative input.peer")
   end
 
-  # AAA semantic tokens (the design-token guarantee), not raw Tailwind:
   it "renders with AAA semantic tokens" do
     render_inline(described_class.new(label: "Email"))
 
@@ -31,7 +30,6 @@ RSpec.describe UI::FloatingLabelComponent, type: :component do
     expect(page).to have_css("div.relative input.peer + label")
   end
 
-  # Label association: the <label for=...> targets the input's id.
   it "associates the label via for matching the input id" do
     render_inline(described_class.new(label: "Email", name: "user[email]"))
 

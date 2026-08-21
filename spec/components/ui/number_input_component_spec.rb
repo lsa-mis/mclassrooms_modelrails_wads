@@ -9,14 +9,12 @@ RSpec.describe UI::NumberInputComponent, type: :component do
     expect(page).to have_css("input[type='number']")
   end
 
-  # min / max / step / value pass straight through to the native attributes.
   it "passes native numeric attrs straight through" do
     render_inline(described_class.new(name: "qty", min: 0, max: 100, step: 5, value: 10))
 
     expect(page).to have_css("input[type='number'][min='0'][max='100'][step='5'][value='10']")
   end
 
-  # AAA semantic tokens (the design-token guarantee), not raw colors:
   it "renders with AAA semantic tokens" do
     render_inline(described_class.new(name: "qty"))
 
@@ -53,7 +51,6 @@ RSpec.describe UI::NumberInputComponent, type: :component do
     expect(page).to have_css("input[type='number'][id='my_qty']")
   end
 
-  # invalid: drives the server-validation-driven aria-invalid posture.
   it "sets aria-invalid when invalid" do
     render_inline(described_class.new(name: "qty", invalid: true))
 
@@ -78,7 +75,6 @@ RSpec.describe UI::NumberInputComponent, type: :component do
     expect(page).not_to have_css("input[aria-describedby]")
   end
 
-  # required: sets the native HTML required AND aria-required.
   it "sets required and aria-required when required" do
     render_inline(described_class.new(name: "qty", required: true))
 

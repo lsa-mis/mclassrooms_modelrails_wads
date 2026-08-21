@@ -29,8 +29,8 @@ class DigestMailerJob < ApplicationJob
 
   def send_digest_for(user)
     prefs = user.preferences&.notification_preferences_object
-    return reschedule(user, prefs) if prefs.nil?
-    return reschedule(user, prefs) if prefs.do_not_disturb? || !prefs.digest_enabled?
+    return if prefs.nil?
+    return user.preferences.reschedule_digest! if prefs.do_not_disturb? || !prefs.digest_enabled?
 
     notifications = digest_scope(user).to_a
 
@@ -40,7 +40,7 @@ class DigestMailerJob < ApplicationJob
       user.preferences.update!(digest_last_sent_at: Time.current)
     end
 
-    reschedule(user, prefs)
+    user.preferences.reschedule_digest!
   end
 
   def digest_scope(user)
@@ -67,21 +67,5 @@ class DigestMailerJob < ApplicationJob
     Noticed::Notification
       .where(id: notifications.map(&:id))
       .update_all(seen_at: Time.current)
-  end
-
-  # Skip-callbacks via update_column is intentional: reschedule fires every
-  # 15 minutes for every digest-eligible user, and we don't want to bump
-  # user_preferences.updated_at on each cycle (causes useless cache busts
-  # on any view that reads the row's freshness). UserPreferences has no
-  # after_update_commit hooks that need to fire here.
-  def reschedule(user, prefs)
-    return unless user.preferences && prefs
-
-    tz_name = user.preferences.timezone.presence
-    timezone = (tz_name && ActiveSupport::TimeZone[tz_name]) || Time.zone
-    user.preferences.update_column(
-      :digest_next_due_at,
-      prefs.next_due_at_in(timezone)
-    )
   end
 end

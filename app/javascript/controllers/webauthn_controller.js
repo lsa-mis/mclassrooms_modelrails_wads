@@ -58,8 +58,6 @@ export default class extends Controller {
     }
   }
 
-  // ── Private ──────────────────────────────────────────────────────────────
-
   async #conditionalAuthenticate() {
     try {
       const available = await window.PublicKeyCredential
@@ -107,7 +105,6 @@ export default class extends Controller {
     return data
   }
 
-  // Decode server-supplied options: base64url strings → ArrayBuffers
   #decodeGetOptions(opts) {
     const decoded = { ...opts }
     decoded.challenge = this.#b64ToBuffer(opts.challenge)
@@ -120,7 +117,6 @@ export default class extends Controller {
     return decoded
   }
 
-  // Encode assertion: ArrayBuffers → base64url strings for JSON transport
   #encodeAssertion(assertion) {
     return {
       id:    assertion.id,
@@ -137,7 +133,6 @@ export default class extends Controller {
     }
   }
 
-  // Decode server-supplied creation options: base64url strings → ArrayBuffers
   #decodeCreateOptions(opts) {
     const decoded = { ...opts }
     decoded.challenge = this.#b64ToBuffer(opts.challenge)
@@ -151,7 +146,6 @@ export default class extends Controller {
     return decoded
   }
 
-  // Encode attestation: ArrayBuffers → base64url strings for JSON transport
   #encodeAttestation(credential) {
     return {
       id:    credential.id,
@@ -164,7 +158,6 @@ export default class extends Controller {
     }
   }
 
-  // base64url → ArrayBuffer (standard WebAuthn JSON conversion)
   #b64ToBuffer(b64url) {
     const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/")
     const bin = atob(b64)
@@ -173,7 +166,6 @@ export default class extends Controller {
     return buf.buffer
   }
 
-  // ArrayBuffer → base64url
   #bufferToB64(buffer) {
     const bytes = new Uint8Array(buffer)
     let bin = ""

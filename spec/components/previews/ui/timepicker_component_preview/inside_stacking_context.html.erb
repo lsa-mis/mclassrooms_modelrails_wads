@@ -1,0 +1,13 @@
+<%# Same trap as the popover and dropdown scenarios: a sticky z-40 header with a
+    backdrop-blur is a stacking context, so the panel z-50 is scoped inside it and the
+    z-50 page content below paints over it. Anchor positioning makes the panel
+    viewport-positioned, so it can be promoted to the top layer and stay tethered. %>
+<div class="relative h-96">
+  <header class="sticky top-0 z-40 flex justify-center border-b border-border bg-surface-raised/95 p-4 backdrop-blur">
+    <%= render(UI::TimepickerComponent.new(label: "Meeting time", value: "09:30", name: "event[time]")) %>
+  </header>
+
+  <div data-testid="occluder" class="relative z-50 h-64 bg-surface-sunken p-4 text-text-body">
+    Page content sitting in the root stacking context, outranking the header z-40.
+  </div>
+</div>

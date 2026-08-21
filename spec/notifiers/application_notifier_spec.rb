@@ -21,6 +21,15 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     end
   end unless defined?(StubSecurityNotifier)
 
+  class StubBillingNotifier < ApplicationNotifier
+    category :billing
+
+    notification_methods do
+      def message = "stub-billing"
+      def url     = "/stub"
+    end
+  end unless defined?(StubBillingNotifier)
+
   class StubNoRecordNotifier < ApplicationNotifier
     category :account_access
 
@@ -127,6 +136,105 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     end
   end
 
+  describe "dedup DSL (.dedup_bucket / .dedup_seed)" do
+    # Subclasses declare their dedup window and extra key segments the same
+    # way they declare `category`/`severity`; key assembly stays in ONE place
+    # (the base populate_idempotency_key).
+    class StubDayBucketNotifier < ApplicationNotifier
+      category :account_access
+      dedup_bucket :day
+
+      notification_methods do
+        def message = "stub-day"
+        def url     = "/stub"
+      end
+    end unless defined?(StubDayBucketNotifier)
+
+    class StubSeededNotifier < ApplicationNotifier
+      category :account_access
+      dedup_seed { params[:flavor] }
+
+      notification_methods do
+        def message = "stub-seeded"
+        def url     = "/stub"
+      end
+    end unless defined?(StubSeededNotifier)
+
+    let(:user) { create(:user) }
+    let(:resource) { create(:user) }
+
+    it "defaults to :minute granularity with no extra seed (the base behavior)" do
+      expect(ApplicationNotifier.dedup_bucket_granularity).to eq :minute
+      expect(StubAccountAccessNotifier.dedup_bucket_granularity).to eq :minute
+      expect(StubAccountAccessNotifier.dedup_seed_block).to be_nil
+    end
+
+    it "raises ArgumentError at class-definition time for an unknown bucket granularity" do
+      expect {
+        Class.new(ApplicationNotifier) { dedup_bucket :fortnight }
+      }.to raise_error(ArgumentError, /Invalid dedup bucket/)
+    end
+
+    it "does not leak dedup declarations between subclasses" do
+      expect(StubDayBucketNotifier.dedup_bucket_granularity).to eq :day
+      expect(StubAccountAccessNotifier.dedup_bucket_granularity).to eq :minute
+    end
+
+    context "with dedup_bucket :day" do
+      it "deduplicates dispatches hours apart within the same day" do
+        midday = Time.current.beginning_of_day + 6.hours
+        first = nil
+        second = nil
+        travel_to(midday) do
+          first = StubDayBucketNotifier.with(record: resource).deliver(user)
+        end
+        travel_to(midday + 6.hours) do
+          second = StubDayBucketNotifier.with(record: resource).deliver(user)
+        end
+        expect(first).to eq :delivered
+        expect(second).to eq :deduplicated
+      end
+
+      it "delivers a fresh dispatch the next day" do
+        now = Time.current
+        travel_to(now) do
+          StubDayBucketNotifier.with(record: resource).deliver(user)
+        end
+        travel_to(now + 1.day) do
+          expect(StubDayBucketNotifier.with(record: resource).deliver(user)).to eq :delivered
+        end
+      end
+    end
+
+    context "with dedup_seed" do
+      it "keeps distinct seeds distinct within the same bucket" do
+        freeze_time do
+          vanilla   = StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          pistachio = StubSeededNotifier.with(record: resource, flavor: "pistachio").deliver(user)
+          expect(vanilla).to eq :delivered
+          expect(pistachio).to eq :delivered
+        end
+      end
+
+      it "still deduplicates identical seeds within the same bucket" do
+        freeze_time do
+          first  = StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          second = StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          expect(first).to eq :delivered
+          expect(second).to eq :deduplicated
+        end
+      end
+
+      it "contributes the seed as a key segment between the record id and the bucket" do
+        freeze_time do
+          StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          event = Noticed::Event.where(type: "StubSeededNotifier").last
+          expect(event.idempotency_key).to eq "StubSeededNotifier_#{resource.id}_vanilla_#{Time.current.to_i / 60}"
+        end
+      end
+    end
+  end
+
   describe "#deliver sentinel return" do
     let(:user) { create(:user) }
     let(:resource) { create(:user) }
@@ -185,7 +293,7 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     let(:user) { create(:user) }
     let!(:prefs) { create(:user_preferences, user: user) }
 
-    it "delegates to NotificationPreferences#allow?" do
+    it "reports the recipient's delivery decision for a channel" do
       StubAccountAccessNotifier.with(record: user).deliver(user)
       notification = user.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true
@@ -239,6 +347,83 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     end
   end
 
+  describe "#deliver_email_now?" do
+    # The single email gate used by every `deliver_by :email` before_enqueue
+    # hook. Encapsulates the tri-state contract of recipient_pref(:email):
+    # only a literal `true` means "send the instant email now" — both `false`
+    # (opted out / DND) and the `:digest` sentinel (queued for the digest
+    # pipeline) must abort the immediate send.
+    let(:user) { create(:user) }
+    let!(:prefs) { create(:user_preferences, user: user) }
+
+    it "is true when the recipient's email preference resolves to instant delivery" do
+      StubAccountAccessNotifier.with(record: user).deliver(user)
+      notification = user.notifications.last
+      expect(notification.deliver_email_now?).to be true
+    end
+
+    it "is false when the email preference denies (DND on for non-security)" do
+      prefs.update!(notification_preferences:
+        prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
+      StubAccountAccessNotifier.with(record: user).deliver(user)
+      notification = user.notifications.last
+      expect(notification.deliver_email_now?).to be false
+    end
+
+    it "is false when the preference resolves to the :digest sentinel (non-instant frequency)" do
+      np = prefs.notification_preferences.deep_dup
+      np["delivery_methods"]["email"]["frequency"] = "daily"
+      prefs.update!(notification_preferences: np)
+      StubAccountAccessNotifier.with(record: user).deliver(user)
+      notification = user.notifications.last
+      expect(notification.recipient_pref(:email)).to eq(:digest)
+      expect(notification.deliver_email_now?).to be false
+    end
+  end
+
+  describe "#permitted_in_app" do
+    # The shared recipient gate used by every `recipients do ... end` block:
+    # preload :preferences for the whole candidate set in one query, then keep
+    # only users whose preferences allow the class's DECLARED category in-app.
+    let(:resource) { create(:user) }
+    let(:allowing_user) { create(:user) }
+    let(:denying_user) { create(:user) }
+
+    before do
+      prefs = create(:user_preferences, user: denying_user)
+      np = prefs.notification_preferences.deep_dup
+      np["notification_types"]["account_access"] = false
+      prefs.update!(notification_preferences: np)
+    end
+
+    it "keeps users whose preferences allow the category in_app and filters out those who deny" do
+      event = StubAccountAccessNotifier.with(record: resource)
+      expect(event.permitted_in_app([ allowing_user, denying_user ])).to eq [ allowing_user ]
+    end
+
+    it "gates on the class's declared category_name, not a hardcoded literal" do
+      # denying_user disabled ONLY account_access; billing stays on. The same
+      # candidate passes StubBillingNotifier's gate and fails
+      # StubAccountAccessNotifier's — provable only if the category comes from
+      # each class's `category` declaration rather than a re-typed string.
+      expect(StubBillingNotifier.with(record: resource).permitted_in_app([ denying_user ]))
+        .to eq [ denying_user ]
+      expect(StubAccountAccessNotifier.with(record: resource).permitted_in_app([ denying_user ]))
+        .to eq []
+    end
+
+    it "preloads :preferences once for the whole candidate set (no per-user N+1)" do
+      candidates = [ allowing_user, denying_user, create(:user) ]
+      event = StubAccountAccessNotifier.with(record: resource)
+
+      query_count = count_queries_touching("user_preferences") do
+        event.permitted_in_app(candidates)
+      end
+
+      expect(query_count).to eq 1
+    end
+  end
+
   describe "#preferences_for (missing-prefs fallback)" do
     # Regression spec for the centralized fallback: a user without a
     # UserPreferences row must wrap the schema-default JSONB blob, not a
@@ -252,9 +437,9 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       prefs = ApplicationNotifier.new.send(:preferences_for, bare_user)
 
       expect(prefs).to be_a(NotificationPreferences)
-      expect(prefs.allow?(category: "account_access", channel: "in_app")).to be true
-      expect(prefs.allow?(category: "workspace_activity", channel: "in_app")).to be true
-      expect(prefs.allow?(category: "billing", channel: "email")).to be true
+      expect(prefs.deliver_now?(category: "account_access", channel: "in_app")).to be true
+      expect(prefs.deliver_now?(category: "workspace_activity", channel: "in_app")).to be true
+      expect(prefs.deliver_now?(category: "billing", channel: "email")).to be true
     end
 
     it "returns the user's own preferences object when a UserPreferences row exists" do
@@ -395,8 +580,6 @@ RSpec.describe ApplicationNotifier, type: :notifier do
   end
 
   describe ".notification_types_for" do
-    # Reference both stubs explicitly so autoload runs and they appear in
-    # ApplicationNotifier.descendants.
     before do
       _ = StubAccountAccessNotifier
       _ = StubSecurityNotifier
@@ -468,9 +651,8 @@ RSpec.describe ApplicationNotifier, type: :notifier do
   end
 
   describe ".notifier_class_names_for" do
-    # Raw class-name variant (no ::Notification suffix). Used by
-    # NotificationPreferences#security_notifier_types and elsewhere where
-    # the parent Notifier class name is the right thing (e.g. retention
+    # Raw class-name variant (no ::Notification suffix). Used where the
+    # parent Notifier class name is the right thing (e.g. retention
     # floor enforcement keyed by event type, not the per-notification type).
     before do
       _ = StubAccountAccessNotifier

@@ -9,9 +9,9 @@ class Current < ActiveSupport::CurrentAttributes
 
   # Fail-loud accessor for call sites that require a workspace — jobs, rake
   # tasks, any future non-browser entry point. Outside the request cycle
-  # nothing establishes workspace context automatically (CLAUDE.md deviation
-  # #1), and a forgotten nil in a where-clause silently widens a query to
-  # every tenant; this raises instead.
+  # nothing establishes workspace context automatically, and a forgotten nil
+  # in a where-clause silently widens a query to every tenant; this raises
+  # instead.
   def workspace!
     workspace || raise(NoWorkspaceError,
       "Current.workspace is not set — establish workspace context before " \

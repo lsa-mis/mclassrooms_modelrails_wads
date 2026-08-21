@@ -1,6 +1,23 @@
 require "rails_helper"
 
 RSpec.describe Membership, type: :model do
+  describe "#owner?" do
+    it "is true when the role is the owner role" do
+      expect(build(:membership, :owner).owner?).to be true
+    end
+
+    it "is false for non-owner roles" do
+      expect(build(:membership).owner?).to be false
+    end
+
+    it "answers role identity only — a discarded owner membership is still owner?" do
+      membership = create(:membership, :owner)
+      membership.discard!
+
+      expect(membership.owner?).to be true
+    end
+  end
+
   # SEC-1: a role change is a privilege event — audit it readably (role slugs,
   # not the mutable role_id FK) and in the admin-only feed.
   describe "role-change audit trail" do
@@ -175,9 +192,7 @@ RSpec.describe Membership, type: :model do
 
   describe "max_members enforcement" do
     it "prevents exceeding max_members" do
-      # Create a workspace with max_members: 2
-      # The workspace factory does not auto-create memberships,
-      # so we manually create 2 memberships then try a third.
+      # The workspace factory does not auto-create memberships.
       workspace = create(:workspace, max_members: 2)
       create(:membership, :owner, workspace: workspace)
       create(:membership, workspace: workspace)
@@ -432,6 +447,27 @@ RSpec.describe Membership, type: :model do
       other_workspace = create(:workspace)
       create(:membership, :owner, workspace: other_workspace)
       expect(sole_in_target.send(:workspace_has_other_owners?)).to be false
+    end
+  end
+
+  describe ".other_kept_owners" do
+    let(:workspace) { create(:workspace) }
+
+    it "returns kept owner-role memberships in the workspace excluding the given membership id" do
+      first_owner = create(:membership, :owner, workspace: workspace)
+      second_owner = create(:membership, :owner, workspace: workspace)
+
+      expect(Membership.other_kept_owners(workspace.id, excluding: first_owner.id))
+        .to contain_exactly(second_owner)
+    end
+
+    it "excludes discarded owners, non-owner roles, and owners of other workspaces" do
+      owner = create(:membership, :owner, workspace: workspace)
+      create(:membership, :owner, workspace: workspace).discard!
+      create(:membership, :admin, workspace: workspace)
+      create(:membership, :owner, workspace: create(:workspace))
+
+      expect(Membership.other_kept_owners(workspace.id, excluding: owner.id)).to be_empty
     end
   end
 

@@ -9,7 +9,6 @@ RSpec.describe UI::BadgeComponent, type: :component do
     expect(page).to have_css("span", text: "New")
   end
 
-  # AAA semantic tokens (the design-token guarantee), not raw Tailwind:
   it "renders the default variant with AAA semantic tokens" do
     render_inline(described_class.new("New"))
 

@@ -53,6 +53,10 @@ module UI
     # Renders spec/components/previews/ui/dialog_component_preview/confirm_destructive.html.erb
     def confirm_destructive; end
 
+    # A dropdown menu inside the dialog — two dismissable layers at once. Escape closes
+    # only the topmost (the menu); the dialog stays open.
+    def nested_menu; end
+
     # @!endgroup
 
     # @!group Reference

@@ -1,6 +1,4 @@
 module Settings
-  # The signed-in user's active devices: list and revoke. Scoped to
-  # Current.user.sessions so one user can never see or revoke another's.
   class SessionsController < ApplicationController
     def index
       @sessions = Current.user.sessions.active.order(last_active_at: :desc)

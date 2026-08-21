@@ -13,7 +13,6 @@ module CdpHelpers
     cdp_browser.execute(js)
   end
 
-  # Evaluate JS and return its value (synchronous).
   def cdp_evaluate(js)
     cdp_browser.evaluate(js)
   end
@@ -47,27 +46,22 @@ module CdpHelpers
     cdp_browser.keyboard.type(modifiers.empty? ? final : modifiers + [ final ])
   end
 
-  # Click at absolute viewport coordinates.
   def cdp_click_at(x, y)
     cdp_browser.mouse.click(x: x, y: y)
   end
 
-  # Clear all cookies for the current browsing context.
   def cdp_clear_cookies
     cdp_browser.cookies.clear
   end
 
-  # Send a raw CDP command to the current page (WebAuthn domain, etc.).
   def cdp_command(method, **params)
     cdp_browser.page.command(method, **params)
   end
 
-  # Resize the viewport (Playwright's set_viewport_size).
   def cdp_resize(width, height)
     cdp_browser.page.resize(width: width, height: height)
   end
 
-  # Force prefers-reduced-motion: reduce for the current page.
   def cdp_emulate_reduced_motion
     cdp_command("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
   end

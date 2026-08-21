@@ -1,0 +1,21 @@
+<%# Same trap as the other overlay scenarios. The panel also has to keep matching the
+    input's width: `w-full` cannot survive `position: fixed` (it would mean the whole
+    viewport), so the modern path takes its width from the anchor via anchor-size(). %>
+<div class="relative h-96">
+  <header class="sticky top-0 z-40 flex justify-center border-b border-border bg-surface-raised/95 p-4 backdrop-blur">
+    <div class="w-64">
+      <%= ui :combobox,
+            name: "country",
+            label: "Country",
+            options: [
+              { value: "us", label: "United States" },
+              { value: "ca", label: "Canada" },
+              { value: "mx", label: "Mexico" }
+            ] %>
+    </div>
+  </header>
+
+  <div data-testid="occluder" class="relative z-50 h-64 bg-surface-sunken p-4 text-text-body">
+    Page content sitting in the root stacking context, outranking the header z-40.
+  </div>
+</div>

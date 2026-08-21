@@ -39,4 +39,8 @@ class SignupPolicy
   def self.permits_strategy?(strategy)
     Rails.configuration.x.signup.permitted_join_strategies.include?(strategy.to_sym)
   end
+
+  # The three OR-branches are implementation detail of allows_signup? — the
+  # public API is allows_signup? + permits_strategy? only.
+  private_class_method :config_allows_signup?, :invitation_acceptable?, :workspace_join_acceptable?
 end
