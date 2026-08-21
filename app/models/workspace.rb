@@ -230,28 +230,6 @@ class Workspace < ApplicationRecord
     end
   end
 
-  # Single project-creation entry point — both create sites (workspace projects
-  # UI and onboarding) call this. The project INSERT and the creator membership
-  # commit or roll back together; previously the membership was created outside
-  # any transaction, so a failed insert left a committed project invisible and
-  # un-editable to its own creator (ProjectPolicy#show?/update? key off the
-  # membership) while permanently consuming a max_projects slot. Suspension is
-  # guarded here (not per-controller) in the guarded-lifecycle-mutator shape
-  # above. Returns the possibly-invalid project — form callers render its
-  # errors; there is deliberately no bang twin until a non-form caller exists.
-  def create_project(attrs, creator:)
-    transaction do
-      lock!
-      raise Suspendable::SuspendedError if suspended?
-      project = projects.build(attrs)
-      project.created_by = creator
-      if project.save
-        project.project_memberships.create!(user: creator, role: "creator")
-      end
-      project
-    end
-  end
-
   private
 
   def personal_workspaces_are_invite_only
