@@ -769,6 +769,5 @@ RSpec.describe Invitation, type: :model do
     ensure
       Current.workspace = nil
     end
-
   end
 end
