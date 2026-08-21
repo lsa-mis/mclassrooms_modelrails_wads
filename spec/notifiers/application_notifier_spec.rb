@@ -136,6 +136,105 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     end
   end
 
+  describe "dedup DSL (.dedup_bucket / .dedup_seed)" do
+    # Subclasses declare their dedup window and extra key segments the same
+    # way they declare `category`/`severity`; key assembly stays in ONE place
+    # (the base populate_idempotency_key).
+    class StubDayBucketNotifier < ApplicationNotifier
+      category :account_access
+      dedup_bucket :day
+
+      notification_methods do
+        def message = "stub-day"
+        def url     = "/stub"
+      end
+    end unless defined?(StubDayBucketNotifier)
+
+    class StubSeededNotifier < ApplicationNotifier
+      category :account_access
+      dedup_seed { params[:flavor] }
+
+      notification_methods do
+        def message = "stub-seeded"
+        def url     = "/stub"
+      end
+    end unless defined?(StubSeededNotifier)
+
+    let(:user) { create(:user) }
+    let(:resource) { create(:user) }
+
+    it "defaults to :minute granularity with no extra seed (the base behavior)" do
+      expect(ApplicationNotifier.dedup_bucket_granularity).to eq :minute
+      expect(StubAccountAccessNotifier.dedup_bucket_granularity).to eq :minute
+      expect(StubAccountAccessNotifier.dedup_seed_block).to be_nil
+    end
+
+    it "raises ArgumentError at class-definition time for an unknown bucket granularity" do
+      expect {
+        Class.new(ApplicationNotifier) { dedup_bucket :fortnight }
+      }.to raise_error(ArgumentError, /Invalid dedup bucket/)
+    end
+
+    it "does not leak dedup declarations between subclasses" do
+      expect(StubDayBucketNotifier.dedup_bucket_granularity).to eq :day
+      expect(StubAccountAccessNotifier.dedup_bucket_granularity).to eq :minute
+    end
+
+    context "with dedup_bucket :day" do
+      it "deduplicates dispatches hours apart within the same day" do
+        midday = Time.current.beginning_of_day + 6.hours
+        first = nil
+        second = nil
+        travel_to(midday) do
+          first = StubDayBucketNotifier.with(record: resource).deliver(user)
+        end
+        travel_to(midday + 6.hours) do
+          second = StubDayBucketNotifier.with(record: resource).deliver(user)
+        end
+        expect(first).to eq :delivered
+        expect(second).to eq :deduplicated
+      end
+
+      it "delivers a fresh dispatch the next day" do
+        now = Time.current
+        travel_to(now) do
+          StubDayBucketNotifier.with(record: resource).deliver(user)
+        end
+        travel_to(now + 1.day) do
+          expect(StubDayBucketNotifier.with(record: resource).deliver(user)).to eq :delivered
+        end
+      end
+    end
+
+    context "with dedup_seed" do
+      it "keeps distinct seeds distinct within the same bucket" do
+        freeze_time do
+          vanilla   = StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          pistachio = StubSeededNotifier.with(record: resource, flavor: "pistachio").deliver(user)
+          expect(vanilla).to eq :delivered
+          expect(pistachio).to eq :delivered
+        end
+      end
+
+      it "still deduplicates identical seeds within the same bucket" do
+        freeze_time do
+          first  = StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          second = StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          expect(first).to eq :delivered
+          expect(second).to eq :deduplicated
+        end
+      end
+
+      it "contributes the seed as a key segment between the record id and the bucket" do
+        freeze_time do
+          StubSeededNotifier.with(record: resource, flavor: "vanilla").deliver(user)
+          event = Noticed::Event.where(type: "StubSeededNotifier").last
+          expect(event.idempotency_key).to eq "StubSeededNotifier_#{resource.id}_vanilla_#{Time.current.to_i / 60}"
+        end
+      end
+    end
+  end
+
   describe "#deliver sentinel return" do
     let(:user) { create(:user) }
     let(:resource) { create(:user) }
@@ -194,7 +293,7 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     let(:user) { create(:user) }
     let!(:prefs) { create(:user_preferences, user: user) }
 
-    it "delegates to NotificationPreferences#allow?" do
+    it "reports the recipient's delivery decision for a channel" do
       StubAccountAccessNotifier.with(record: user).deliver(user)
       notification = user.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true
@@ -338,9 +437,9 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       prefs = ApplicationNotifier.new.send(:preferences_for, bare_user)
 
       expect(prefs).to be_a(NotificationPreferences)
-      expect(prefs.allow?(category: "account_access", channel: "in_app")).to be true
-      expect(prefs.allow?(category: "workspace_activity", channel: "in_app")).to be true
-      expect(prefs.allow?(category: "billing", channel: "email")).to be true
+      expect(prefs.deliver_now?(category: "account_access", channel: "in_app")).to be true
+      expect(prefs.deliver_now?(category: "workspace_activity", channel: "in_app")).to be true
+      expect(prefs.deliver_now?(category: "billing", channel: "email")).to be true
     end
 
     it "returns the user's own preferences object when a UserPreferences row exists" do
@@ -552,9 +651,8 @@ RSpec.describe ApplicationNotifier, type: :notifier do
   end
 
   describe ".notifier_class_names_for" do
-    # Raw class-name variant (no ::Notification suffix). Used by
-    # NotificationPreferences#security_notifier_types and elsewhere where
-    # the parent Notifier class name is the right thing (e.g. retention
+    # Raw class-name variant (no ::Notification suffix). Used where the
+    # parent Notifier class name is the right thing (e.g. retention
     # floor enforcement keyed by event type, not the per-notification type).
     before do
       _ = StubAccountAccessNotifier

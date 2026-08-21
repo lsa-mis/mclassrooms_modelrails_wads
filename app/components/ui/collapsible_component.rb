@@ -5,6 +5,11 @@ module UI
   #
   # trigger slot: content for the summary row (button, icon, label, etc.)
   # open:         render pre-expanded (default: false)
+  # disabled:     the disclosure is announced as disabled and cannot be operated.
+  #               <details> has no `disabled` attribute, so this is aria-disabled +
+  #               out of the tab order + pointer-inert. An already-open disclosure
+  #               stays open: disabling blocks the control, it does not collapse
+  #               content out from under the reader.
   #
   # Accessibility contract:
   # - Native <details>/<summary> carries the disclosure semantics — the summary is
@@ -21,8 +26,9 @@ module UI
 
     renders_one :trigger
 
-    def initialize(open: false, **html_attrs)
+    def initialize(open: false, disabled: false, **html_attrs)
       @open = open
+      @disabled = disabled
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
@@ -32,9 +38,21 @@ module UI
       attrs[:open] = true if @open
 
       content_tag(:details, **attrs) do
-        concat content_tag(:summary, trigger, class: SUMMARY_CLS)
+        concat content_tag(:summary, trigger, **summary_attrs)
         concat content_tag(:div, content, class: CONTENT_CLS)
       end
+    end
+
+    private
+
+    def summary_attrs
+      return { class: SUMMARY_CLS } unless @disabled
+
+      {
+        class: cn(SUMMARY_CLS, "pointer-events-none opacity-60"),
+        "aria-disabled": "true",
+        tabindex: "-1"
+      }
     end
   end
 end

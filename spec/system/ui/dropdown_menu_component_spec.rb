@@ -19,7 +19,7 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     page.evaluate_script("document.activeElement.textContent.trim()")
   end
 
-  %w[basic positioned].each do |scenario|
+  %w[basic positioned inside_stacking_context checkable_items submenus].each do |scenario|
     it "#{scenario}: opens a menu that passes AAA in both themes" do
       visit "/rails/view_components/ui/dropdown_menu_component/#{scenario}"
 

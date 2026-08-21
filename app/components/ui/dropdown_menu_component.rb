@@ -34,17 +34,33 @@ module UI
     # `disabled:` marks it `aria-disabled` (skipped by keyboard nav; activation
     # rejected). `separator: true` renders a non-interactive divider in source order
     # instead of an item. Pass-through `class:`/attrs land on the element.
-    renders_many :items, ->(separator: false, disabled: false, href: nil, **attrs, &block) do
+    renders_many :items, ->(separator: false, disabled: false, href: nil, checkbox: false,
+      radio: nil, value: nil, checked: false, tone: nil, submenu: nil, **attrs, &block) do
       next content_tag(:div, "", role: "separator", class: SEPARATOR) if separator
+      next submenu_group(submenu, disabled: disabled, **attrs, &block) if submenu
 
+      tone = validate_tone(tone)
       tag_name = href ? :a : :button
       caller_data = attrs.delete(:data) || {}
+      # menuitemcheckbox / menuitemradio per the APG menu pattern. `aria-checked` is
+      # rendered from server state so the menu reads correctly before any JS runs;
+      # `menu#activate` then toggles it in place rather than closing the menu.
+      role = if radio
+        "menuitemradio"
+      else
+        (checkbox ? "menuitemcheckbox" : "menuitem")
+      end
+      wiring = { menu_target: "item", action: "click->menu#activate" }
+      wiring[:menu_radio_group] = radio if radio
+      wiring[:menu_value] = value if value
+      wiring[:tone] = tone if tone
       el = {
-        role: "menuitem",
+        role: role,
         tabindex: "-1",
-        class: cn(ITEM, attrs.delete(:class)),
-        data: { menu_target: "item", action: "click->menu#activate" }.merge(caller_data)
+        class: cn(ITEM, (ITEM_TONES.fetch(tone) if tone), attrs.delete(:class)),
+        data: wiring.merge(caller_data)
       }
+      el[:"aria-checked"] = checked.to_s if role != "menuitem"
       el[:href] = href if href
       el[:type] = "button" unless href
       el[:"aria-disabled"] = "true" if disabled
@@ -68,6 +84,113 @@ module UI
            "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 " \
            "[&_svg:not([class*='text-'])]:text-text-muted"
     SEPARATOR = "-mx-1 my-1 h-px bg-border"
+
+    # Opens to the side of its parent item, flipping to the other side near the edge.
+    SUBMENU_PLACEMENT = "supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:right_span-bottom] supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:left-full not-supports-[position-area:bottom]:top-0"
+
+    # Signal tones are TEXT colours, never a fill — a menu item keeps the surface
+    # highlight it shares with every other item and only its label changes colour.
+    ITEM_TONES = {
+      danger: "text-danger hover:text-danger focus-visible:text-danger"
+    }.freeze
+
+    # Collects a submenu's items so the caller writes the same `with_item` it uses on the
+    # parent, in source order:
+    #
+    #   c.with_item(submenu: "Share") { |sub| sub.with_item { "Email" } }
+    class SubmenuBuilder
+      attr_reader :items
+
+      def initialize(component)
+        @component = component
+        @items = []
+      end
+
+      def with_item(**opts, &block)
+        @items << @component.submenu_item(**opts, &block)
+        nil
+      end
+    end
+
+    # A submenu is a nested controller with a DISTINCT identifier, so the sub-trigger can
+    # be `data-menu-target="item"` (staying in the parent's arrow-key rotation) while also
+    # being `data-submenu-target="trigger"`. One element, two controllers, no collision.
+    def submenu_group(label, disabled: false, **attrs, &block)
+      builder = SubmenuBuilder.new(self)
+      capture(builder, &block)
+      id = "submenu-#{SecureRandom.hex(4)}"
+
+      content_tag(:div,
+        data: {
+          controller: "submenu",
+          action: "mouseleave->submenu#scheduleClose menu:close->submenu#forceClose"
+        },
+        style: "anchor-name: --#{id}") do
+        safe_join([ submenu_trigger(label, id, disabled, **attrs), submenu_panel(id, builder.items) ])
+      end
+    end
+
+    def submenu_trigger(label, id, disabled, **attrs)
+      el = {
+        type: "button",
+        role: "menuitem",
+        tabindex: "-1",
+        "aria-haspopup": "menu",
+        "aria-expanded": "false",
+        "aria-controls": id,
+        class: cn(ITEM, "justify-between", attrs.delete(:class)),
+        data: {
+          menu_target: "item",
+          submenu_target: "trigger",
+          action: "click->submenu#toggle keydown->submenu#triggerKeydown mouseenter->submenu#open"
+        }
+      }
+      el[:"aria-disabled"] = "true" if disabled
+      content_tag(:button, safe_join([ label, submenu_chevron ]), **attrs, **el)
+    end
+
+    def submenu_panel(id, items)
+      content_tag(:div, safe_join(items),
+        id: id,
+        role: "menu",
+        tabindex: "-1",
+        hidden: true,
+        style: "position-anchor: --#{id}",
+        data: { submenu_target: "panel", action: "keydown->submenu#navigate" },
+        class: cn(PANEL_BASE, SUBMENU_PLACEMENT))
+    end
+
+    def submenu_chevron
+      content_tag(:svg, tag.path(d: "m9 18 6-6-6-6"),
+        class: "size-4 shrink-0 text-text-muted", viewBox: "0 0 24 24", fill: "none",
+        stroke: "currentColor", "stroke-width": "2", "aria-hidden": "true")
+    end
+
+    # Rendered by SubmenuBuilder, so it carries `data-submenu-target` rather than
+    # `data-menu-target` — sub-items belong to the submenu's rotation, not the parent's.
+    def submenu_item(disabled: false, href: nil, **attrs, &block)
+      tag_name = href ? :a : :button
+      el = {
+        role: "menuitem",
+        tabindex: "-1",
+        class: cn(ITEM, attrs.delete(:class)),
+        data: { submenu_target: "item", action: "click->submenu#activate" }
+      }
+      el[:href] = href if href
+      el[:type] = "button" unless href
+      el[:"aria-disabled"] = "true" if disabled
+      content_tag(tag_name, capture(&block), **attrs, **el)
+    end
+
+    def validate_tone(tone)
+      return nil if tone.nil?
+
+      key = tone.to_sym
+      return key if ITEM_TONES.key?(key)
+
+      raise ArgumentError,
+        "UI::DropdownMenu unknown item tone: #{tone.inspect} (allowed: #{ITEM_TONES.keys.join(", ")})"
+    end
 
     SIDES = %i[bottom top].freeze
     ALIGNS = %i[start end].freeze

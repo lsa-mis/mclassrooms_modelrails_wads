@@ -1,4 +1,11 @@
 class Membership < ApplicationRecord
+  # Raised by the last-owner invariants (validate_not_last_owner!,
+  # enforce_owner_invariant!, enforce_owner_floor!) so controllers rescue the
+  # NAMED condition instead of blanket-mapping every RecordInvalid to the
+  # last-owner flash. Subclasses RecordInvalid so generic boundary rescues
+  # keep working.
+  class LastOwner < ActiveRecord::RecordInvalid; end
+
   include Discardable
   include Trackable
   include Broadcastable
@@ -179,7 +186,7 @@ class Membership < ApplicationRecord
   def validate_not_last_owner!
     if owner? && !Membership.other_kept_owners(workspace_id, excluding: id).exists?
       errors.add(:base, :last_owner)
-      raise ActiveRecord::RecordInvalid, self
+      raise LastOwner, self
     end
   end
 
@@ -192,7 +199,7 @@ class Membership < ApplicationRecord
     # owner" — the shared query reads identically either way.
     return if Membership.other_kept_owners(workspace_id, excluding: id).exists?
     errors.add(:base, :last_owner)
-    raise ActiveRecord::RecordInvalid, self
+    raise LastOwner, self
   end
 
   # Owner-floor net for change_role! demotions: post-UPDATE EXISTS counts only
@@ -203,7 +210,7 @@ class Membership < ApplicationRecord
     # the OTHER kept owners — the shared query reads identically either way.
     return if Membership.other_kept_owners(workspace_id, excluding: id).exists?
     errors.add(:base, :last_owner)
-    raise ActiveRecord::RecordInvalid, self
+    raise LastOwner, self
   end
 
   # G (SEC-1 follow-up): membership.created previously carried EMPTY metadata,

@@ -51,7 +51,7 @@ module Workspaces
       else
         redirect_to workspace_members_path(@workspace), notice: t(".success")
       end
-    rescue ActiveRecord::RecordInvalid
+    rescue Membership::LastOwner
       # The edit form posts from inside a Turbo Frame; a redirect's flash lives
       # in the layout outside the frame and would be dropped. Answer frame
       # submissions with a toast stream so the error is actually announced.
@@ -78,7 +78,7 @@ module Workspaces
         redirect_to workspace_members_path(@workspace),
                     notice: t(".deactivated")
       end
-    rescue ActiveRecord::RecordInvalid
+    rescue Membership::LastOwner
       if @membership&.user == Current.user
         redirect_to workspaces_path,
                     alert: t("workspaces.members.destroy.cannot_leave_last_owner")

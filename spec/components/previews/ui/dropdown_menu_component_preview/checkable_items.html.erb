@@ -1,0 +1,12 @@
+<div class="p-24 flex justify-center">
+  <%= render(UI::DropdownMenuComponent.new) do |c| %>
+    <% c.with_trigger { "View" } %>
+    <% c.with_item(checkbox: true, checked: true) { "Show grid" } %>
+    <% c.with_item(checkbox: true) { "Show rulers" } %>
+    <% c.with_item(separator: true) %>
+    <% c.with_item(radio: "density", value: "cosy", checked: true) { "Cosy" } %>
+    <% c.with_item(radio: "density", value: "compact") { "Compact" } %>
+    <% c.with_item(separator: true) %>
+    <% c.with_item(tone: :danger) { "Delete view" } %>
+  <% end %>
+</div>

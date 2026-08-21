@@ -5,72 +5,52 @@ module Signupable
   # transaction; true on commit, false on every handled failure. Sets
   # flash.now[:alert] only on Invitation::NotAcceptable — callers rely on
   # @user.errors otherwise. Full exception matrix: /docs/developer/application-flows.
-  def commit_signup_atomically(user, newly_registered: true, &block)
+  #
+  # The invitation/join exception matrix itself lives in PendingClaims (shared
+  # with the verification-time claim, Authentication#claim_pending!). What is
+  # deliberately signup-specific here — do not "unify" it away:
+  # * abort semantics: a stale invitation or full workspace rolls the whole
+  #   signup back (PendingClaims#claim! propagates), where the verify-time
+  #   claim must never block sign-in;
+  # * session-token bookkeeping: spent tokens are dropped from the session even
+  #   when the DB rolled back — session writes aren't transactional, and
+  #   re-parking a dead token would reject forever. The invitation itself stays
+  #   pending? (accept! guards before marking it consumed), so it's still
+  #   reclaimable via the emailed link;
+  # * copy: the mismatch message speaks to a signup, not a verification
+  #   (contextually different wording from the verify site by design).
+  def commit_signup_atomically(user, newly_registered: true)
+    claims = PendingClaims.new(
+      invitation_token: session[:pending_invitation_token],
+      join_token: session[:pending_join_token]
+    )
     ApplicationRecord.transaction do
       user.save!
       yield(user)
-      accept_pending_invitation!(user)
-      accept_pending_join_link!(user, newly_registered: newly_registered)
+      claims.claim!(user, newly_registered: newly_registered)
     end
+    settle_pending_claims(claims)
     true
   rescue Invitation::NotAcceptable
-    # Clear the parked token here — session writes aren't transactional, so
-    # this persists even though the DB rolls back. Without it, a retry would
-    # hit the same non-admittable workspace and reject forever. The
-    # invitation itself stays pending? (accept! guards before marking it
-    # consumed), so it's still reclaimable via the emailed link.
-    session.delete(:pending_invitation_token)
+    settle_pending_claims(claims)
     flash.now[:alert] = I18n.t("registrations.create.invitation_consumed")
     false
   rescue ActiveRecord::RecordInvalid, Workspace::NotAdmittableError,
          Workspace::AlreadyMember, Workspace::AtCapacity
+    settle_pending_claims(claims)
     false
   end
 
-  # Consumes the session's pending invitation token; idempotent when absent.
-  # EmailMismatch SKIPS the claim (and drops the token) rather than aborting
-  # an otherwise legitimate signup.
-  def accept_pending_invitation!(user)
-    consumed = Invitation.consume!(
-      token: session[:pending_invitation_token],
-      user: user,
-      expected_email: user.email_address
-    )
-    session.delete(:pending_invitation_token) if consumed
-  rescue Invitation::EmailMismatch
-    # The invitation was addressed to a different email than the one being
-    # registered here. Skip it rather than aborting an otherwise legitimate
-    # signup, drop the token so it isn't retried, and tell the user why they
-    # weren't added to the invited workspace. (These callers redirect, so a
-    # persistent flash — not flash.now — survives to the landing page.)
-    session.delete(:pending_invitation_token)
+  private
+
+  # Drops spent tokens and renders the one continue-past problem (mismatch)
+  # with a persistent flash — these callers redirect, so flash.now wouldn't
+  # survive to the landing page.
+  def settle_pending_claims(claims)
+    session.delete(:pending_invitation_token) if claims.spent.include?(:invitation)
+    session.delete(:pending_join_token) if claims.spent.include?(:join)
+    return unless claims.problems.include?(:invitation_email_mismatch)
+
     flash[:alert] = I18n.t("registrations.create.invitation_email_mismatch")
-  end
-
-  # Consumes the session's pending open-link join token. Stale-link conditions
-  # are SILENT no-ops — a visitor who was never a member must not learn the
-  # workspace is locked; Workspace::AtCapacity propagates and rolls the signup back.
-  def accept_pending_join_link!(user, newly_registered:)
-    token = session[:pending_join_token]
-    return if token.blank?
-
-    link = WorkspaceJoinLink.find_active(token)
-
-    # A brand-new account's signup is its own consent to join the link it
-    # followed. A pre-existing user, though, may be authenticating for an
-    # unrelated reason (linking a new verified OAuth provider) with a lured-in
-    # token riding the session — never silently force-join them. Leave a
-    # still-valid token parked so the pending-join banner can offer an explicit
-    # Join / Dismiss; everything else (stale/consumed) clears below.
-    return if !newly_registered && link&.workspace&.accepting_open_joins?
-
-    begin
-      link&.admit(user)
-    rescue Workspace::AlreadyMember
-      # Benign: already in the workspace. Capacity (Workspace::AtCapacity)
-      # propagates to commit_signup_atomically, which rolls the signup back.
-    ensure
-      session.delete(:pending_join_token)
-    end
   end
 end

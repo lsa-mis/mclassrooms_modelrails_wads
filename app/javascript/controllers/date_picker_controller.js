@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import * as topLayer from "overlays/top_layer"
 
 export default class extends Controller {
   static targets = ["trigger", "popover", "label", "hidden"]
@@ -18,13 +19,19 @@ export default class extends Controller {
   }
 
   open() {
+    // No-op unless the panel is anchor-positioned (`position: fixed`); top_layer.js
+    // refuses anything still on the pre-Baseline `absolute` fallback.
     this.popoverTarget.dataset.open = "true"
+    topLayer.enable(this.popoverTarget)
+    topLayer.show(this.popoverTarget)
     this.triggerTarget.setAttribute("aria-expanded", "true")
     document.addEventListener("click", this.#outsideHandler)
     this.isOpen = true
   }
 
   close() {
+    topLayer.hide(this.popoverTarget)
+    topLayer.disable(this.popoverTarget)
     this.popoverTarget.dataset.open = "false"
     this.triggerTarget.setAttribute("aria-expanded", "false")
     document.removeEventListener("click", this.#outsideHandler)

@@ -2,12 +2,15 @@
 
 # Fired by WorkspaceCapacitySweepJob when a workspace reaches >= 80% of its
 # `max_members` quota; recipients are the workspace owners; category `:billing`
-# (NOT security — DND suppresses these). Idempotency overrides the base
-# minute bucket with a day bucket per (workspace, metric).
+# (NOT security — DND suppresses these). Dedup is one notification per
+# (workspace, metric, day) — the sweep re-fires within a day, the metric seed
+# keeps members/projects alerts distinct.
 # See /docs/developer/notifications (Idempotency).
 class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
   category :billing
   severity :warning
+  dedup_bucket :day
+  dedup_seed { params[:metric] }
 
   required_param :metric, :current, :limit
 
@@ -43,15 +46,5 @@ class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
     def url
       Rails.application.routes.url_helpers.edit_workspace_settings_path(event.record)
     end
-  end
-
-  private
-
-  # Day-bucket idempotency, scoped per (workspace, metric) — see class-level
-  # docs above for the full rationale.
-  def populate_idempotency_key
-    return if idempotency_key.present?
-    day = Time.current.to_date.iso8601
-    self.idempotency_key = "#{self.class.name}_#{record.id}_#{params[:metric]}_#{day}"
   end
 end

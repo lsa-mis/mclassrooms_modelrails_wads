@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import * as topLayer from "overlays/top_layer"
 
 // Autocomplete-select behavior. Owns the WAI-ARIA APG combobox + listbox
 // contract: the text input is the combobox (keeps DOM focus) and the popup is the
@@ -17,11 +18,17 @@ export default class extends Controller {
 
   open() {
     this.panelTarget.hidden = false
+    // No-op unless anchor-positioned (`position: fixed`); top_layer.js refuses the
+    // pre-Baseline `absolute` fallback, where promotion would tear the panel off-screen.
+    topLayer.enable(this.panelTarget)
+    topLayer.show(this.panelTarget)
     this.inputTarget.setAttribute("aria-expanded", "true")
     this.filter()
   }
 
   close() {
+    topLayer.hide(this.panelTarget)
+    topLayer.disable(this.panelTarget)
     this.panelTarget.hidden = true
     this.inputTarget.setAttribute("aria-expanded", "false")
     this._setActive(null)
@@ -62,7 +69,9 @@ export default class extends Controller {
         break
       case "ArrowUp":
         if (this.panelTarget.hidden) this.open()
-        next = visible[(current - 1 + visible.length) % visible.length]
+        // No active option (current === -1): APG says ArrowUp enters at the
+        // LAST option — the modulo alone lands one short of it (#661).
+        next = current === -1 ? visible[visible.length - 1] : visible[(current - 1 + visible.length) % visible.length]
         break
       case "Home":
         next = visible[0]
@@ -101,9 +110,16 @@ export default class extends Controller {
 
   // Promote options to stable ids so aria-activedescendant can reference them
   // (the markup ships role="option"; the id contract is applied here).
+  // The host element's id is unique per instance; deriving the prefix from it keeps
+  // option ids unique across several instances on one page, which aria-activedescendant
+  // depends on to point at the right node.
+  get _idPrefix() {
+    return this.element.id || "combobox"
+  }
+
   _tagOptions() {
     this.optionTargets.forEach(option => {
-      if (!option.id) option.id = `combobox-option-${this._optionId++}`
+      if (!option.id) option.id = `${this._idPrefix}-option-${this._optionId++}`
     })
   }
 

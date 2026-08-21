@@ -51,8 +51,11 @@ module UI
                "aria-[current]:bg-surface-sunken/50 aria-[current]:text-text-heading"
 
     # Flyout panel
-    CONTENT = "absolute top-full left-0 z-50 mt-1.5 min-w-48 overflow-hidden rounded-md border " \
-              "bg-surface-overlay p-1 text-text-body shadow"
+    # Placement is CSS anchor positioning: `position: fixed` (containing block = the
+    # viewport) tethered to the trigger via `anchor-name`/`position-anchor`. Being
+    # viewport-positioned is what lets the panel be promoted to the top layer, so a
+    # sticky/backdrop-blur ancestor cannot bury it (app/javascript/overlays/top_layer.js).
+    CONTENT = "z-50 min-w-48 overflow-hidden rounded-md border bg-surface-overlay p-1 text-text-body shadow mt-1.5 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
 
     # Styled link inside a flyout panel
     PANEL_LINK = "flex flex-col gap-1 rounded-sm p-2 text-sm transition-all focus-ring " \
@@ -131,6 +134,7 @@ module UI
       def trigger_item
         content_tag(:div,
           class: "relative",
+          style: "anchor-name: --#{@panel_id}",
           data: {
             controller: "navigation-menu",
             action: "mouseenter->navigation-menu#open mouseleave->navigation-menu#scheduleClose " \
@@ -160,6 +164,7 @@ module UI
           content,
           id: @panel_id,
           class: NavigationMenuComponent::CONTENT,
+          style: "position-anchor: --#{@panel_id}",
           hidden: true,
           data: {
             navigation_menu_target: "content",

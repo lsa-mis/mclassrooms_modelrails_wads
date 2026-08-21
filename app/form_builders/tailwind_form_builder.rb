@@ -226,7 +226,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     # Advertise required state via aria-required ONLY (component required: false), to
     # match the app's existing fields: a native HTML `required` would let the browser
     # block empty submits before they reach the server, suppressing the server-rendered
-    # error summary/inline errors (see spec/system/registration_validation_spec.rb).
+    # error summary/inline errors (see spec/system/magic_link_registration_spec.rb).
     opts["aria-required"] = "true" if required
 
     @template.render(UI::InputComponent.new(

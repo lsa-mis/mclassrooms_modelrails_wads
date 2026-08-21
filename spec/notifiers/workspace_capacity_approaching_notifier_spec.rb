@@ -48,7 +48,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "is NOT a security category notifier (does not bypass DND)" do
-      expect(NotificationPreferences.security_notifier_types).not_to include(described_class.name)
+      expect(ApplicationNotifier.notifier_class_names_for("security")).not_to include(described_class.name)
     end
   end
 

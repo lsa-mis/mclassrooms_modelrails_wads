@@ -13,7 +13,9 @@ module UI
       xl: { css: "w-32 h-32", text: "text-3xl" }
     }.freeze
 
-    # src:        image URL (renders <img>); falls back to initials when nil
+    # src:        image URL (renders <img>); falls back to initials when nil. When a
+    #             `fallback:` is also given, a controller swaps the initials in if the
+    #             image FAILS to load — `fallback:` alone only covers a nil src.
     # alt:        image alt text
     # fallback:   initials string (rendered as-is — caller supplies them)
     # size:       xs | sm | md | lg | xl
@@ -31,7 +33,10 @@ module UI
     end
 
     def call
-      @src ? image_avatar : initials_avatar
+      return initials_avatar unless @src
+      return image_avatar unless @fallback
+
+      recoverable_image
     end
 
     private
@@ -55,6 +60,36 @@ module UI
       end
 
       :md
+    end
+
+    # Both nodes ship together so the swap needs no network round trip. BOTH carry the
+    # accessible name: the <img> is removed on failure, so initials that were unnamed
+    # would leave the avatar absent from the accessibility tree entirely. Only one is ever
+    # exposed, because `hidden` keeps the other out.
+    def recoverable_image
+      content_tag(:span, class: "contents", data: { controller: "avatar" }) do
+        concat content_tag(:img, nil, **recoverable_image_attrs)
+        concat content_tag(:span, @fallback,
+          class: cn(config[:css], config[:text],
+            "rounded-full flex items-center justify-center font-semibold", color_classes, @extra_class),
+          hidden: true,
+          **aria_attrs,
+          data: { avatar_target: "fallback" })
+      end
+    end
+
+    # The Stimulus wiring is merged over any caller `data:` rather than splatted before
+    # it: a caller passing `data: { testid: ... }` used to clobber the whole hash and
+    # silently disable the fallback.
+    def recoverable_image_attrs
+      caller_attrs = @html_attrs.dup
+      caller_data = caller_attrs.delete(:data) || {}
+      {
+        src: @src, alt: (@aria_label.presence || @alt),
+        class: cn(config[:css], "rounded-full object-cover", @extra_class),
+        **aria_attrs, **caller_attrs,
+        data: caller_data.merge(avatar_target: "image", action: "error->avatar#showFallback")
+      }
     end
 
     def image_avatar

@@ -72,7 +72,16 @@ class Invitation < ApplicationRecord
     scope
   }
 
+  # Parse a raw invite-form string ("a@x.com, b@y.com\nc@z.com") into a clean
+  # address list. bulk_invite! applies it to whatever it's given, so the
+  # invite forms hand the textarea value over verbatim instead of each
+  # duplicating the split/strip.
+  def self.parse_email_list(emails)
+    Array(emails).flat_map { |chunk| chunk.to_s.split(/[\n,]/) }.map(&:strip).reject(&:blank?)
+  end
+
   def self.bulk_invite!(workspace:, emails:, role:, invited_by:)
+    emails = parse_email_list(emails)
     sent = 0
     skipped = 0
 

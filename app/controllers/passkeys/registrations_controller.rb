@@ -26,7 +26,7 @@ module Passkeys
       notify_passkey_added
       render json: { redirect_to: settings_passkeys_path }, status: :created
     rescue Passkeys::Error => e
-      render json: { error: passkey_error_message(e) }, status: :unprocessable_content
+      render json: { error: t(e.i18n_key) }, status: :unprocessable_content
     end
 
     private

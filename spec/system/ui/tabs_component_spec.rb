@@ -74,4 +74,21 @@ RSpec.describe "Tabs component accessibility", type: :system do
     expect(tab("Profile")["tabindex"]).to eq("0")
     expect(tab("Password")["tabindex"]).to eq("-1")
   end
+
+  # The new axes get their own AAA pass: a vertical tablist restacks the bar, and manual
+  # activation renders a focused-but-unselected tab, which is a state the basic scenario
+  # never produces.
+  %w[vertical manual].each do |scenario|
+    it "#{scenario} passes AAA in both themes" do
+      visit "/rails/view_components/ui/tabs_component/#{scenario}"
+
+      expect(page).to have_css("[role='tablist']")
+
+      scope = [ "[role='tablist']", "[role='tabpanel']:not([hidden])" ]
+      expect(axe_clean_in_both_themes?(include: scope)).to(
+        be(true),
+        axe_violations_in_both_themes(include: scope).join("\n")
+      )
+    end
+  end
 end

@@ -25,5 +25,14 @@ module UI
     # Profile / Password / Notifications (Notifications disabled).
     def basic
     end
+
+    # Vertical tablist — ↑/↓ navigate instead of ←/→.
+    def vertical
+    end
+
+    # Manual activation — arrows move focus only; Enter/Space reveals the panel. Suits
+    # panels that are expensive to reveal.
+    def manual
+    end
   end
 end

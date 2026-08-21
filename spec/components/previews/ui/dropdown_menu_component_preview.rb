@@ -30,6 +30,21 @@ module UI
     def positioned
     end
 
+    # A trigger inside a `sticky z-40` header — a stacking context the panel's own
+    # `z-50` cannot escape. The panel must reach the top layer to stay clickable.
+    def inside_stacking_context
+    end
+
+    # Checkable items (`menuitemcheckbox` / `menuitemradio`) toggle in place and keep the
+    # menu open; `tone: :danger` marks a destructive action.
+    def checkable_items
+    end
+
+    # A nested menu. The sub-trigger stays part of the parent's arrow-key rotation;
+    # ArrowRight/Enter opens the submenu, ArrowLeft/Escape closes it.
+    def submenus
+    end
+
     # @!endgroup
 
     # @!group Reference
