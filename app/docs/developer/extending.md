@@ -1,7 +1,7 @@
 ---
 title: Extending
 description: How to add tenant-scoped models, custom roles, and new features to ModelRails
-keywords: tenanted roles permissions migration customization logo branding cookies gdpr consent analytics
+keywords: tenanted roles permissions migration customization logo branding cookies gdpr consent analytics cross-workspace unscoped queries sweep jobs admin rake tasks
 ---
 
 # Extending ModelRails
@@ -113,6 +113,113 @@ class DigestJob < ApplicationJob
   end
 end
 ```
+
+## Cross-workspace queries
+
+Everything above scopes to *one* workspace. Some code legitimately needs the
+opposite — a query that spans every workspace on purpose: a maintenance
+sweep, a retention job, an operator fixing a single account from the command
+line. `Tenanted` installs no `default_scope`, so nothing *stops* a query from
+crossing workspaces; the question is where it's safe to write one.
+
+### Where it's safe
+
+`spec/code_smells/no_unscoped_tenant_loads_spec.rb` only scans
+`app/controllers/`, `app/helpers/`, and `app/views/` — request-context code,
+where `Current.workspace` is ambient and a stray class-level
+`Room.find(params[:id])` can hand a signed-in user's role in *their*
+workspace the authority to act on someone else's record
+(`ApplicationPolicy#record_in_current_workspace?` is the runtime backstop for
+that case, but the unscoped load itself is the smell the spec fails on).
+**Jobs, rake tasks, and the Rails console are outside that scan** — there's
+no ambient `Current.workspace` to leak and no signed-in user's permissions to
+misapply. That's the boundary: request-context code always scopes through
+the workspace (see [Adding a workspace-scoped
+feature](#adding-a-workspace-scoped-feature) above); background code whose
+whole job is touching many or all workspaces queries the model directly.
+
+### Pattern 1 — iterate every workspace explicitly
+
+`WorkspaceCapacitySweepJob` walks every kept workspace and reads each one's
+own associations — never `Current.workspace`, never `for_current_workspace`:
+
+```ruby
+# app/jobs/workspace_capacity_sweep_job.rb
+Workspace.kept.find_each do |workspace|
+  sweep_members_metric(workspace)   # workspace.memberships.kept.count, etc.
+end
+```
+
+Reach for this shape when the job genuinely means "every workspace" — quota
+checks, per-tenant digests, anything that needs each workspace's own scoped
+data one at a time.
+
+> **Trap:** don't call `for_current_workspace` from code like this expecting
+> "every record." It reads ambient `Current.workspace`, which is `nil`
+> outside a request, so the scope silently becomes `where(workspace: nil)` —
+> zero rows, not all of them. Query through the workspace association
+> instead (`workspace.memberships.kept`), as above.
+
+### Pattern 2 — a global condition, not a tenant identity
+
+Most of the scheduled sweeps in `app/jobs/` (registered in
+`config/recurring.yml`) don't iterate workspaces at all. They query the model
+directly on a condition that has nothing to do with tenancy — age, status —
+so touching every workspace is just what "in batches" naturally does:
+
+```ruby
+# ActivityLogRetentionSweepJob — 12-month retention window, no workspace filter
+ActivityLog.where(created_at: ...RETENTION_WINDOW.ago).in_batches(of: 100, &:delete_all)
+
+# WorkspaceInvitationExpiringSweepJob — every workspace's expiring invitations at once
+Invitation.where(accepted_at: nil, declined_at: nil)
+          .where("expires_at BETWEEN ? AND ?", Time.current, 24.hours.from_now)
+          .find_each { |invitation| ... }
+
+# DigestMailerJob — User isn't even Tenanted, but the same shape applies
+User.joins(:preferences)
+    .where("user_preferences.digest_next_due_at <= ?", Time.current)
+    .find_each { |user| ... }
+```
+
+This is the same class-level-finder shape the request-context spec forbids
+in a controller — legitimate here for the same reason as Pattern 1: no
+ambient `Current.workspace` to misapply, and the condition doing the scoping
+is global by design rather than standing in for "the current workspace."
+
+### Pattern 3 — operator tools resolve one record by its own identifier
+
+`lib/tasks/admin.rake` and `lib/tasks/tenancy.rake` run outside any request
+too, so an operator can resolve a single record with a class-level finder —
+something the code-smell spec would flag inside a controller:
+
+```ruby
+# lib/tasks/admin.rake
+user = User.find_by!(email_address: args[:email])
+workspace = Workspace.find_by!(slug: args[:slug])
+```
+
+It's safe here because there's no signed-in user whose permissions could
+misfire against the result — the operator names the target directly on the
+command line, and the task acts on exactly that record, not on "whatever the
+current workspace happens to be."
+
+### Rule of thumb
+
+- **Request-context code** (controllers, helpers, views): always scope
+  through the workspace association (`@workspace.projects.find_by!(...)`).
+  Never a class-level finder on a `Tenanted` model — the code-smell spec
+  enforces this.
+- **Background code that deliberately spans workspaces** (jobs, rake tasks,
+  console): query the model directly — either by iterating `Workspace.kept`
+  and reading each workspace's own associations (Pattern 1), or by a
+  business condition unrelated to tenant identity (Pattern 2). Never reach
+  for `for_current_workspace` there; `Current.workspace` isn't set, and the
+  scope will silently return nothing instead of everything.
+- **Background code that means to act on one workspace** (the `DigestJob`
+  example in step 6 above) sets `Current.workspace` explicitly and reads it
+  back with `Current.workspace!` — the opposite of this section, and
+  documented there.
 
 ## Customizing the Site Logo
 

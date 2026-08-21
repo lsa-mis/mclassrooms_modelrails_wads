@@ -1,0 +1,11 @@
+<%# Two palettes on one page — the case a constant listbox id collides in. %>
+<div class="flex gap-8 p-8">
+  <%= ui :command do |c| %>
+    <% c.with_trigger { "Open search" } %>
+    <button type="button" class="w-full px-2 py-1.5 text-left text-sm">New project</button>
+  <% end %>
+  <%= ui :command do |c| %>
+    <% c.with_trigger { "Open actions" } %>
+    <button type="button" class="w-full px-2 py-1.5 text-left text-sm">Invite teammate</button>
+  <% end %>
+</div>

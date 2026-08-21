@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import * as topLayer from "overlays/top_layer"
 
 // Behavior for the menu-pattern band. dropdown_menu is the exemplar/home; context_menu
 // and menubar reuse this via EXTRA_STIMULUS. CSS owns positioning (anchor positioning);
@@ -41,6 +42,10 @@ export default class extends Controller {
     if (this.openValue) return
     this.openValue = true
     this.menuTarget.hidden = false
+    // Safe here because placement is CSS anchor positioning (already `position: fixed`
+    // against the viewport), so the top layer changes paint order only.
+    topLayer.enable(this.menuTarget)
+    topLayer.show(this.menuTarget)
     this.triggerTarget.setAttribute("aria-expanded", "true")
     focus === "last" ? this.focusLast() : this.focusFirst()
   }
@@ -48,9 +53,20 @@ export default class extends Controller {
   close({ restoreFocus = true } = {}) {
     if (!this.openValue) return
     this.openValue = false
+    // A submenu is its own controller, so it does not close just because this one did.
+    // Left alone it stays popover-open with aria-expanded="true" and reappears already
+    // expanded the next time this menu opens.
+    this.#closeSubmenus()
+    topLayer.hide(this.menuTarget)
+    topLayer.disable(this.menuTarget)
     this.menuTarget.hidden = true
     this.triggerTarget.setAttribute("aria-expanded", "false")
     if (restoreFocus) this.triggerTarget.focus()
+  }
+
+  #closeSubmenus() {
+    this.element.querySelectorAll("[data-controller~='submenu']")
+      .forEach((el) => el.dispatchEvent(new CustomEvent("menu:close")))
   }
 
   closeOnClickOutside(event) {
@@ -135,10 +151,27 @@ export default class extends Controller {
   }
 
   activate(event) {
-    if (event.currentTarget.getAttribute("aria-disabled") === "true") {
+    const item = event.currentTarget
+    if (item.getAttribute("aria-disabled") === "true") {
       event.preventDefault()
       return
     }
+
+    // Checkable items change state and leave the menu open (APG menu pattern), so a
+    // multi-select view menu is usable in one pass. Plain items still close.
+    switch (item.getAttribute("role")) {
+      case "menuitemcheckbox":
+        item.setAttribute("aria-checked", String(item.getAttribute("aria-checked") !== "true"))
+        return
+      case "menuitemradio": {
+        const group = item.dataset.menuRadioGroup
+        this.itemTargets
+          .filter((el) => el.dataset.menuRadioGroup === group)
+          .forEach((el) => el.setAttribute("aria-checked", String(el === item)))
+        return
+      }
+    }
+
     this.close()
   }
 

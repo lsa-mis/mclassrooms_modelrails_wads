@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import * as topLayer from "overlays/top_layer"
 
 // Behavior for the floating-overlays band. Wave 5a wires popover (click toggle).
 // Non-modal: CSS owns positioning; this owns open/close, aria-expanded sync,
@@ -29,6 +30,11 @@ export default class extends Controller {
     if (this.openValue) return
     this.openValue = true
     this.panelTarget.hidden = false
+    // No-op unless the panel is anchor-positioned (`position: fixed`); top_layer.js
+    // refuses anything still on the pre-Baseline `absolute` fallback. The CSS-shown
+    // tooltip/hover_card paths below never reach here.
+    topLayer.enable(this.panelTarget)
+    topLayer.show(this.panelTarget)
     this.triggerTarget.setAttribute("aria-expanded", "true")
     this.panelTarget.focus()
   }
@@ -36,6 +42,8 @@ export default class extends Controller {
   close() {
     if (!this.openValue) return
     this.openValue = false
+    topLayer.hide(this.panelTarget)
+    topLayer.disable(this.panelTarget)
     this.panelTarget.hidden = true
     this.triggerTarget.setAttribute("aria-expanded", "false")
     this.triggerTarget.focus()

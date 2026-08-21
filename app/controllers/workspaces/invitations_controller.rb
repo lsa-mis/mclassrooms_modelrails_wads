@@ -60,13 +60,12 @@ module Workspaces
     private
 
     def create_email_invitations
-      emails = invitation_params[:emails].to_s.split(/[\n,]/).map(&:strip).reject(&:blank?)
       role = @workspace.effective_roles.find(invitation_params[:role_id])
       authorize_role_grant!(Invitation, role)
 
       result = Invitation.bulk_invite!(
         workspace: @workspace,
-        emails: emails,
+        emails: invitation_params[:emails],
         role: role,
         invited_by: Current.user
       )

@@ -31,8 +31,12 @@ module UI
                   "hover:bg-surface-sunken hover:text-text-heading " \
                   "data-[state=open]:bg-surface-sunken/50 data-[state=open]:text-text-heading"
 
-    PANEL_CLS = "absolute left-0 top-full z-50 mt-1.5 w-full overflow-hidden rounded-md border " \
-                "bg-surface-overlay text-text-body shadow-lg"
+    # Placement is CSS anchor positioning: `position: fixed` (containing block = the
+    # viewport) tethered to the bar via `anchor-name`/`position-anchor`, which is what lets
+    # the panel be promoted to the top layer (app/javascript/overlays/top_layer.js).
+    # `w-full` cannot come along — against the viewport it would mean the whole screen — so
+    # the modern path takes its width from the anchor via `anchor-size(width)`.
+    PANEL_CLS = "z-50 overflow-hidden rounded-md border bg-surface-overlay shadow mt-1.5 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[width:anchor-size(width)] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0 not-supports-[position-area:bottom]:w-full"
 
     INNER_CLS = "container mx-auto grid gap-6 p-6"
 
@@ -64,6 +68,7 @@ module UI
       content_tag(:div,
         id: @id,
         class: cn("relative", @extra_class),
+        style: "anchor-name: --#{@id}",
         data: {
           controller: "mega-menu",
           action: "click@document->mega-menu#closeOnClickOutside"
@@ -99,6 +104,7 @@ module UI
         "aria-label": @label,
         hidden: true,
         class: PANEL_CLS,
+        style: "position-anchor: --#{@id}",
         data: { mega_menu_target: "panel" }) do
         content_tag(:div, class: cn(INNER_CLS, grid_cls)) do
           safe_join(columns)

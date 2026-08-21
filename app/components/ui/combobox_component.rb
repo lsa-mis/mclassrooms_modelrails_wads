@@ -35,8 +35,13 @@ module UI
     # `focus-ring` is the AAA offset outline (never a clipped box-shadow ring).
     INPUT = "flex w-full rounded-md border border-border-strong bg-transparent px-3 py-2 text-sm shadow-xs " \
             "text-text-body placeholder:text-text-muted focus-ring"
-    PANEL = "absolute z-50 top-full left-0 mt-1 w-full overflow-hidden rounded-md border border-border " \
-            "bg-surface-overlay text-text-body shadow-md"
+    # Placement is CSS anchor positioning: `position: fixed` (containing block = the
+    # viewport) tethered to the field via `anchor-name`/`position-anchor`, which is what
+    # lets the panel be promoted to the top layer (app/javascript/overlays/top_layer.js).
+    # `w-full` cannot come along — against the viewport it would mean the whole screen —
+    # so the modern path takes its width from the anchor via `anchor-size(width)`, and
+    # `w-full` stays on the pre-Baseline `absolute` fallback.
+    PANEL = "z-50 overflow-hidden rounded-md border border-border bg-surface-overlay shadow-md mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[width:anchor-size(width)] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0 not-supports-[position-area:bottom]:w-full"
     LIST = "max-h-[200px] overflow-y-auto p-1"
     # `focus-ring` keeps the AAA offset outline if an option takes DOM focus;
     # `aria-selected:` styles the controller-tracked active option for pointer +
@@ -62,6 +67,7 @@ module UI
       @placeholder = placeholder
       @label = label
       @size = coerce_size(size)
+      @id = html_attrs.delete(:id) || "combobox-#{SecureRandom.hex(4)}"
       @extra_class = html_attrs.delete(:class)
       # Merge the controller wiring into any caller `data:` so a passed-through
       # `data:` attr can't clobber `data-controller` and silently break Stimulus.
@@ -73,7 +79,8 @@ module UI
     end
 
     def call
-      content_tag(:div, class: cn("relative", @extra_class), data: @data, **@html_attrs) do
+      content_tag(:div, id: @id, class: cn("relative", @extra_class),
+        style: "anchor-name: --#{@id}", data: @data, **@html_attrs) do
         concat hidden_input
         concat text_input
         concat dropdown
@@ -82,7 +89,6 @@ module UI
 
     private
 
-    LIST_ID = "combobox-list"
 
     def accessible_name
       @label || I18n.t("modelrails_ui.combobox.label", default: "Search and select an option")
@@ -105,7 +111,7 @@ module UI
         value: selected_label,
         "aria-label": accessible_name,
         "aria-expanded": "false",
-        "aria-controls": LIST_ID,
+        "aria-controls": list_id,
         "aria-autocomplete": "list",
         autocomplete: "off",
         spellcheck: "false",
@@ -117,13 +123,16 @@ module UI
       )
     end
 
+    def list_id = "#{@id}-list"
+
     def dropdown
-      content_tag(:div, listbox, data: { combobox_target: "panel" }, hidden: true, class: PANEL)
+      content_tag(:div, listbox, data: { combobox_target: "panel" }, hidden: true,
+        style: "position-anchor: --#{@id}", class: PANEL)
     end
 
     def listbox
       content_tag(:div,
-        id: LIST_ID,
+        id: list_id,
         role: "listbox",
         "aria-label": accessible_name,
         class: LIST,

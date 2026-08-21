@@ -40,5 +40,9 @@ module UI
     # The wide (`lg`) panel — same contract, more room for long item labels.
     def large
     end
+
+    # Two instances on one page — the case shared element ids collide in.
+    def two_on_a_page
+    end
   end
 end

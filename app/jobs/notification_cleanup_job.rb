@@ -9,14 +9,17 @@ class NotificationCleanupJob < ApplicationJob
   queue_as :default
 
   def perform
+    security_types = ApplicationNotifier.notification_types_for(NotificationPreferences::SECURITY_CATEGORY)
+    security_floor_cutoff = NotificationPreferences::RETENTION_FLOORS["security"].ago
+
     User.find_each do |user|
-      cleanup_for(user)
+      cleanup_for(user, security_types, security_floor_cutoff)
     end
   end
 
   private
 
-  def cleanup_for(user)
+  def cleanup_for(user, security_types, security_floor_cutoff)
     prefs = user.preferences&.notification_preferences_object
     return unless prefs
 
@@ -24,9 +27,6 @@ class NotificationCleanupJob < ApplicationJob
     return if days.nil?  # "Never" — user opted out of auto-delete
 
     cutoff = (days + 2).days.ago
-    security_floor_cutoff = NotificationPreferences::RETENTION_FLOORS["security"].ago
-    security_types = NotificationPreferences.security_notifier_types
-                       .map { |name| "#{name}::Notification" }
 
     scope = user.notifications
                 .where.not(read_at: nil)

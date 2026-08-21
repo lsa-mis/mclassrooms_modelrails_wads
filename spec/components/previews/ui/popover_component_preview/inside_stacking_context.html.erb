@@ -1,0 +1,22 @@
+<%# Both the sticky z-40 header and the backdrop-blur are ordinary chrome in this app
+    (app/views/shared/_header.html.erb and UI::NavbarComponent), and each establishes a
+    stacking context. The panel's own z-50 is scoped inside it, so the z-50 page content
+    below outranks the whole header and paints over the panel. No z-index on the panel
+    fixes this from the inside — only the top layer does. %>
+<div class="relative h-96">
+  <header class="sticky top-0 z-40 flex justify-center border-b border-border bg-surface-raised/95 p-4 backdrop-blur">
+    <%= render(UI::PopoverComponent.new(label: "Account menu")) do |c| %>
+      <% c.with_trigger { "Open popover" } %>
+      <div class="space-y-2">
+        <p class="font-medium text-text-heading">Signed in as Dave</p>
+        <a href="#" class="flex min-h-11 items-center text-text-body underline">Account settings</a>
+        <a href="#" class="flex min-h-11 items-center text-text-body underline">Sign out</a>
+      </div>
+    <% end %>
+  </header>
+
+  <div data-testid="occluder" class="relative z-50 h-64 bg-surface-sunken p-4 text-text-body">
+    Page content sitting in the root stacking context. Its <code>z-50</code> outranks the
+    header's <code>z-40</code>, so it paints over the popover panel trapped inside.
+  </div>
+</div>

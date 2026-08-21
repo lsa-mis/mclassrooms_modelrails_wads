@@ -1,0 +1,26 @@
+<%# locals: () -%>
+<%# Two dismissable layers at once. Escape must close only the topmost one: the menu
+    closes, the dialog stays open. Without a shared layer stack each controller answers
+    Escape independently and both close together. %>
+<%= render "shared/modal",
+      title: "Assign reviewer",
+      description: "Pick a reviewer, then confirm.",
+      trigger: "Open dialog",
+      trigger_class: "btn-primary" do %>
+  <p class="text-text-body leading-relaxed mb-4">
+    Choose who should review this change.
+  </p>
+
+  <%= render(UI::DropdownMenuComponent.new) do |c| %>
+    <% c.with_trigger { "Actions" } %>
+    <% c.with_item { "Edit" } %>
+    <% c.with_item { "Duplicate" } %>
+    <% c.with_item(href: "#") { "Open docs" } %>
+  <% end %>
+
+  <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-border">
+    <button type="button" data-action="click->modal#close" class="btn-secondary">
+      <%= t("modals.cancel") %>
+    </button>
+  </div>
+<% end %>

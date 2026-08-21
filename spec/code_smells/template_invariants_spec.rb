@@ -1197,4 +1197,38 @@ RSpec.describe "Template invariants" do
         "bump deliberately instead (see #299; the drift it caused is PR #319)"
     end
   end
+
+  describe "GitHub Actions are SHA-pinned (supply-chain integrity)" do
+    # A version tag (`@v7`) is a moving pointer a compromised upstream can
+    # re-aim at malicious code; a 40-hex commit SHA is content-addressed.
+    # The trailing `# <tag>` comment is what Dependabot's updater rewrites on
+    # grouped weekly bumps — it is load-bearing, not decoration. Covers
+    # composite actions too (.github/actions/**) so they can't launder an
+    # unpinned `uses:` — forward-looking; the directory doesn't exist today.
+    let(:pinnable_uses_refs) do
+      globs = %w[
+        .github/workflows/*.yml .github/workflows/*.yaml
+        .github/actions/**/action.yml .github/actions/**/action.yaml
+      ]
+      globs.flat_map { |glob| Dir[root.join(glob).to_s] }.flat_map do |path|
+        File.foreach(path).with_index(1).filter_map do |line, lineno|
+          match = line.match(/^\s*(?:-\s+)?uses:\s*["']?(?<ref>[^\s"'#]+)/)
+          next unless match
+          ref = match[:ref]
+          next if ref.start_with?("./")        # in-repo refs move with the repo — no external exposure
+          next if ref.start_with?("docker://") # image digests are a different pinning mechanism
+          [ "#{Pathname(path).relative_path_from(root)}:#{lineno}", ref ]
+        end
+      end
+    end
+
+    it "pins every external uses: ref to a 40-hex commit SHA" do
+      # The anchor sits on the ref tail, so the reusable-workflow form
+      # (owner/repo/.github/workflows/x.yml@sha) is covered identically.
+      offenders = pinnable_uses_refs.reject { |(_site, ref)| ref.match?(/@[0-9a-f]{40}\z/) }
+      expect(offenders).to be_empty,
+        "expected every external `uses:` pinned as owner/repo@<40-hex-sha> # <tag>, got:\n" +
+        offenders.map { |site, ref| "  #{site} #{ref}" }.join("\n")
+    end
+  end
 end

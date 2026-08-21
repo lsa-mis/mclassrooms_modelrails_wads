@@ -45,8 +45,11 @@ module UI
                "bg-surface-raised px-3 text-sm text-text-heading shadow-xs focus-ring transition " \
                "aria-expanded:border-border-focus"
     ICON_CLS = "size-4 shrink-0 text-text-muted"
-    POPOVER  = "absolute left-0 top-full z-50 mt-1 hidden w-max rounded-lg border border-border " \
-               "bg-surface-overlay p-3 shadow-md data-[open=true]:block"
+    # Placement is CSS anchor positioning: `position: fixed` (containing block = the
+    # viewport) tethered to the trigger via `anchor-name`/`position-anchor`. Being
+    # viewport-positioned is what lets the panel be promoted to the top layer, so a
+    # sticky/backdrop-blur ancestor cannot bury it (app/javascript/overlays/top_layer.js).
+    POPOVER  = "z-50 hidden w-max rounded-lg border border-border bg-surface-overlay p-3 shadow-md data-[open=true]:block mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
     SPINNER_WRAP = "flex items-center justify-center gap-1"
     COL_CLS  = "flex flex-col items-center gap-1"
     # size-11 (44px): steppers are aria-hidden to AT but remain POINTER
@@ -80,6 +83,7 @@ module UI
       caller_data = @html_attrs.delete(:data) || {}
       content_tag(:div,
         class: cn(WRAPPER, @extra_class),
+        style: "anchor-name: --#{@id}",
         data: {
           controller: "timepicker",
           timepicker_format_value: @format,
@@ -139,6 +143,7 @@ module UI
       content_tag(:div,
         id: popover_id,
         class: POPOVER,
+        style: "position-anchor: --#{@id}",
         role: "dialog",
         "aria-label": @label,
         "aria-modal": "true",

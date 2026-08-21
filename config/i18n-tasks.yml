@@ -181,6 +181,12 @@ ignore_unused:
   - "media.derived_alt.room.*"
   - modals.delete
   - modals.save
+  # Rendered by Settings::ConnectedAccountsController#verify through the
+  # PendingClaims problems map (symbol -> key string in a constant hash),
+  # a call form the static scanner cannot resolve. Both keys are exercised
+  # by the connected_accounts verify request specs.
+  - settings.connected_accounts.verify.email_mismatch
+  - settings.connected_accounts.verify.join_link_at_capacity
   # Read at broadcast/announce time by ApplicationNotifier and the
   # notifications controller in call forms the static scanner misses;
   # deleting them turns the aria-live announcements into
@@ -196,6 +202,11 @@ ignore_unused:
   - workspaces.invitations.resend.resent
   # Resolved dynamically at runtime, so no static call site exists.
   - notification_mailer.digest.subject.*
+  # Rendered via t(error.i18n_key) — each Passkeys::Error subclass derives its
+  # own key from its class name (app/lib/passkeys/error.rb), so the scanner
+  # sees no static reference. spec/lib/passkeys/errors_spec.rb pins every
+  # key's existence, so a stale entry here still fails the suite.
+  - passkeys.errors.*
   # activity_logs/_activity_log.html.erb builds the key from the record:
   #   t("activity.actions.#{activity_log.action}", default: action.humanize)
   # The `default:` is what makes this dangerous rather than merely invisible —

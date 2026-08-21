@@ -10,3 +10,10 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  # One grouped PR per week instead of one per action. With SHA-pinned
+  # `uses:` refs (33+ sites) this is what keeps the pin-update churn
+  # survivable for the template AND every fork that inherits it.
+  groups:
+    github-actions:
+      patterns:
+        - "*"

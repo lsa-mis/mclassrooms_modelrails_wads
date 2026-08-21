@@ -383,6 +383,31 @@ RSpec.describe "Workspace Members", type: :request do
       end
     end
 
+    # C7: the last-owner rescues name their condition (Membership::LastOwner).
+    # Any OTHER validation failure on these paths is a different bug and must
+    # surface as itself, not be blanket-mapped to the last-owner flash.
+    describe "unrelated validation failures are not reported as last-owner" do
+      let(:admin_role) { Role.system_default!("admin") }
+
+      it "PATCH surfaces a non-last-owner RecordInvalid instead of the demote flash" do
+        target = add_member
+        allow_any_instance_of(Membership).to receive(:change_role!)
+          .and_raise(ActiveRecord::RecordInvalid.new(target))
+        patch workspace_member_path(workspace, target), params: { membership: { role_id: admin_role.id } }
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(flash[:alert]).to be_nil
+      end
+
+      it "DELETE surfaces a non-last-owner RecordInvalid instead of the deactivate flash" do
+        target = add_member
+        allow_any_instance_of(Membership).to receive(:deactivate!)
+          .and_raise(ActiveRecord::RecordInvalid.new(target))
+        delete workspace_member_path(workspace, target)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(flash[:alert]).to be_nil
+      end
+    end
+
     describe "DELETE /workspaces/:workspace_slug/members/:id" do
       let!(:target_membership) { add_member }
 

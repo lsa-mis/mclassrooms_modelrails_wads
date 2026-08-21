@@ -1,0 +1,11 @@
+<div class="p-24 flex justify-center">
+  <%= render(UI::DropdownMenuComponent.new) do |c| %>
+    <% c.with_trigger { "Actions" } %>
+    <% c.with_item { "Edit" } %>
+    <% c.with_item(submenu: "Share") do |sub| %>
+      <% sub.with_item { "Email" } %>
+      <% sub.with_item { "Copy link" } %>
+    <% end %>
+    <% c.with_item { "Duplicate" } %>
+  <% end %>
+</div>

@@ -292,6 +292,60 @@ This is especially relevant for:
 - `Document` content processed by search indexes or AI features
 - Any data sent to third-party analytics or monitoring
 
+### Outbound Requests (SSRF)
+
+The template makes exactly one outbound HTTP call today — a gravatar existence
+check against a hardcoded host — so it ships **no** SSRF machinery. The moment
+a fork adds its first **user-controlled outbound host** (webhook deliveries,
+avatar-by-URL, link previews, OAuth discovery), that feature needs all of the
+following, **in this order**:
+
+1. **Scheme allowlist first.** An IP-range check never sees the scheme —
+   `file://`, `gopher://`, and `ftp://` must be rejected before anything else:
+   `return unless uri.scheme == "https"`.
+
+2. **Host allowlist second, before any DNS resolution.** A pure string check
+   on the parsed `uri.host` — exact match, or suffix with a leading dot.
+   Naive `include?` fails both ways: `evil-gravatar.com` and
+   `gravatar.com.attacker.net` each contain `gravatar.com`. Checking before
+   resolution also means a non-allowlisted host never triggers a lookup, so
+   the app can't be used as a DNS oracle and resolution timeouts can't burn
+   worker time.
+
+3. **Resolve, reject private ranges, then PIN the resolved IP.** Resolving
+   and checking is not enough — a rebinding attacker answers the check with a
+   public IP and the actual request with `10.0.0.1`. The defense is making
+   the request to the address you checked:
+
+   ```ruby
+   http = Net::HTTP.new(uri.host, uri.port).tap do |h|
+     h.use_ssl = true
+     h.ipaddr = resolved_ip # rebinding defense — connect to the CHECKED address
+   end
+   ```
+
+   For the resolve-and-reject step, port fizzy's `SsrfProtection` module
+   (`app/models/ssrf_protection.rb` in basecamp/fizzy @ be42ca2, with its
+   caller at `app/models/webhook/delivery.rb:111`) — the NAT64/Teredo/
+   IPv4-mapped-IPv6 edge cases it handles are the parts hand-rolled versions
+   get wrong. It is deliberately **not** vendored here while nothing calls it
+   (an unexercised security primitive invites unpinned callers that are
+   exactly as vulnerable as no check, while believing otherwise). The port
+   checklist lives in the template repo's issue tracker.
+
+4. **Redirects: re-resolve, re-check, and re-pin on every hop — or refuse to
+   follow them.** Pinning hop 1 and following a redirect unpinned is fully
+   exploitable; fizzy sidesteps the problem by never following redirects.
+
+5. **Rescue resolver errors explicitly.** DNS failures raise
+   (`Resolv::ResolvTimeout`, `Resolv::ResolvError`, `SocketError`) — a caller
+   that copies the happy path without those rescues turns any DNS hiccup into
+   a 500.
+
+6. **Background jobs only.** Resolution against external nameservers can take
+   seconds; it never belongs on a request thread, and it hard-fails in
+   egress-restricted environments.
+
 ### HTTPS and HSTS
 
 Configure in `config/environments/production.rb`:

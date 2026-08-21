@@ -27,21 +27,27 @@ RSpec.describe NotificationPreferences do
   end
 
   # Helper to wrap with a user that has a known timezone (for
-  # quiet_hours_active? tests).
+  # quiet_hours_active? / next_due_at tests). Mirrors the
+  # UserPreferences#time_zone contract: resolved zone, Time.zone fallback.
   def prefs_for(jsonb, timezone: "America/New_York")
-    user = double("User", preferences: double(timezone: timezone))
+    zone = (timezone && ActiveSupport::TimeZone[timezone]) || Time.zone
+    user = double("User", preferences: double("UserPreferences", time_zone: zone))
     described_class.new(jsonb, user: user)
   end
 
-  describe "#allow?" do
+  # The public delivery decision surface. deliver_now? is strictly "send
+  # through this channel right now"; defer_to_digest? is strictly "email
+  # queued for the digest pipeline". The tri-state allow? encoding is a
+  # private implementation detail — callers never see :digest as a value.
+  describe "#deliver_now?" do
     subject(:prefs) { prefs_for(default_jsonb) }
 
     it "permits in_app for security under defaults" do
-      expect(prefs.allow?(category: "security", channel: "in_app")).to be true
+      expect(prefs.deliver_now?(category: "security", channel: "in_app")).to be true
     end
 
     it "permits email for workspace_activity under defaults" do
-      expect(prefs.allow?(category: "workspace_activity", channel: "email")).to be true
+      expect(prefs.deliver_now?(category: "workspace_activity", channel: "email")).to be true
     end
 
     context "when notification_types disables a category" do
@@ -49,12 +55,12 @@ RSpec.describe NotificationPreferences do
       subject(:prefs) { prefs_for(jsonb) }
 
       it "denies the disabled category for both channels" do
-        expect(prefs.allow?(category: "workspace_activity", channel: "in_app")).to be false
-        expect(prefs.allow?(category: "workspace_activity", channel: "email")).to be false
+        expect(prefs.deliver_now?(category: "workspace_activity", channel: "in_app")).to be false
+        expect(prefs.deliver_now?(category: "workspace_activity", channel: "email")).to be false
       end
 
       it "still permits security regardless (security floor)" do
-        expect(prefs.allow?(category: "security", channel: "in_app")).to be true
+        expect(prefs.deliver_now?(category: "security", channel: "in_app")).to be true
       end
     end
 
@@ -65,11 +71,11 @@ RSpec.describe NotificationPreferences do
       it "denies that channel even for security (channel-disabled is honored except for in_app)" do
         # Decision: a user who turns off email-channel entirely accepts that
         # security alerts won't email. Security still gets in_app though.
-        expect(prefs.allow?(category: "security", channel: "email")).to be false
+        expect(prefs.deliver_now?(category: "security", channel: "email")).to be false
       end
 
       it "still permits security via in_app" do
-        expect(prefs.allow?(category: "security", channel: "in_app")).to be true
+        expect(prefs.deliver_now?(category: "security", channel: "in_app")).to be true
       end
     end
 
@@ -77,17 +83,17 @@ RSpec.describe NotificationPreferences do
       let(:jsonb) { default_jsonb.deep_merge("delivery_methods" => { "email" => { "frequency" => "daily" } }) }
       subject(:prefs) { prefs_for(jsonb) }
 
-      it "returns :digest for email channel of non-security categories (queued, not instant)" do
-        expect(prefs.allow?(category: "workspace_activity", channel: "email")).to eq(:digest)
+      it "is false for email of non-security categories (queued for digest, not instant)" do
+        expect(prefs.deliver_now?(category: "workspace_activity", channel: "email")).to be false
       end
 
-      it "still returns true (instant) for security email regardless of frequency" do
+      it "still permits security email regardless of frequency" do
         # Security is structurally always-instant — see spec decision #7.
-        expect(prefs.allow?(category: "security", channel: "email")).to be true
+        expect(prefs.deliver_now?(category: "security", channel: "email")).to be true
       end
 
       it "is unaffected for in_app channel (no digest concept)" do
-        expect(prefs.allow?(category: "workspace_activity", channel: "in_app")).to be true
+        expect(prefs.deliver_now?(category: "workspace_activity", channel: "in_app")).to be true
       end
     end
 
@@ -95,40 +101,62 @@ RSpec.describe NotificationPreferences do
       subject(:prefs) { prefs_for(nil) }
 
       it "returns false for any non-security request" do
-        expect(prefs.allow?(category: "workspace_activity", channel: "in_app")).to be false
+        expect(prefs.deliver_now?(category: "workspace_activity", channel: "in_app")).to be false
       end
 
       it "still permits security (security bypasses missing data)" do
-        expect(prefs.allow?(category: "security", channel: "in_app")).to be true
+        expect(prefs.deliver_now?(category: "security", channel: "in_app")).to be true
       end
     end
 
     it "rejects unknown category" do
-      expect(prefs.allow?(category: "unicorns", channel: "in_app")).to be false
+      expect(prefs.deliver_now?(category: "unicorns", channel: "in_app")).to be false
     end
 
     it "rejects unknown channel" do
-      expect(prefs.allow?(category: "security", channel: "carrier_pigeon")).to be false
+      expect(prefs.deliver_now?(category: "security", channel: "carrier_pigeon")).to be false
     end
 
     context "with Symbol category/channel arguments (boundary normalization)" do
       # Notifier class attributes and call sites shouldn't have to know that
-      # the JSONB blob is string-keyed; allow? coerces at its boundary.
+      # the JSONB blob is string-keyed; coercion happens at the boundary.
       it "treats symbol arguments the same as their string forms" do
-        expect(prefs.allow?(category: :workspace_activity, channel: :email)).to be true
-        expect(prefs.allow?(category: :security, channel: :in_app)).to be true
-      end
-
-      it "returns the :digest sentinel for symbol arguments too" do
-        digest_prefs = prefs_for(
-          default_jsonb.deep_merge("delivery_methods" => { "email" => { "frequency" => "daily" } })
-        )
-        expect(digest_prefs.allow?(category: :workspace_activity, channel: :email)).to eq(:digest)
+        expect(prefs.deliver_now?(category: :workspace_activity, channel: :email)).to be true
+        expect(prefs.deliver_now?(category: :security, channel: :in_app)).to be true
       end
 
       it "still rejects unknown symbols" do
-        expect(prefs.allow?(category: :unicorns, channel: :in_app)).to be false
+        expect(prefs.deliver_now?(category: :unicorns, channel: :in_app)).to be false
       end
+    end
+  end
+
+  describe "#defer_to_digest?" do
+    let(:digest_jsonb) { default_jsonb.deep_merge("delivery_methods" => { "email" => { "frequency" => "daily" } }) }
+
+    it "is true for email of a non-security category under non-instant frequency" do
+      expect(prefs_for(digest_jsonb).defer_to_digest?(category: "workspace_activity", channel: "email")).to be true
+    end
+
+    it "is false when email frequency is instant (delivery happens now instead)" do
+      expect(prefs_for(default_jsonb).defer_to_digest?(category: "workspace_activity", channel: "email")).to be false
+    end
+
+    it "is false for security email even under non-instant frequency (always instant)" do
+      expect(prefs_for(digest_jsonb).defer_to_digest?(category: "security", channel: "email")).to be false
+    end
+
+    it "is false for the in_app channel (no digest concept)" do
+      expect(prefs_for(digest_jsonb).defer_to_digest?(category: "workspace_activity", channel: "in_app")).to be false
+    end
+
+    it "is false when the category is disabled (nothing to defer — it is dropped)" do
+      jsonb = digest_jsonb.deep_merge("notification_types" => { "workspace_activity" => false })
+      expect(prefs_for(jsonb).defer_to_digest?(category: "workspace_activity", channel: "email")).to be false
+    end
+
+    it "accepts Symbol arguments" do
+      expect(prefs_for(digest_jsonb).defer_to_digest?(category: :workspace_activity, channel: :email)).to be true
     end
   end
 
@@ -322,7 +350,7 @@ RSpec.describe NotificationPreferences do
     end
   end
 
-  describe "#allow? with quiet hours active" do
+  describe "#deliver_now? with quiet hours active" do
     let(:tz_name) { "America/New_York" }
     let(:tz) { ActiveSupport::TimeZone[tz_name] }
     let(:always_on) { { "enabled" => true, "start" => "00:00", "end" => "23:59" } }
@@ -330,14 +358,14 @@ RSpec.describe NotificationPreferences do
     it "denies non-security categories when quiet hours are active" do
       jsonb = default_jsonb.deep_merge("quiet_hours" => always_on)
       travel_to(tz.parse("2026-05-10 12:00:00")) do
-        expect(prefs_for(jsonb).allow?(category: "workspace_activity", channel: "email")).to be false
+        expect(prefs_for(jsonb).deliver_now?(category: "workspace_activity", channel: "email")).to be false
       end
     end
 
     it "still permits security category when quiet hours are active (security bypasses)" do
       jsonb = default_jsonb.deep_merge("quiet_hours" => always_on)
       travel_to(tz.parse("2026-05-10 12:00:00")) do
-        expect(prefs_for(jsonb).allow?(category: "security", channel: "email")).to be true
+        expect(prefs_for(jsonb).deliver_now?(category: "security", channel: "email")).to be true
       end
     end
   end
@@ -399,20 +427,27 @@ RSpec.describe NotificationPreferences do
     end
   end
 
-  describe "#next_due_at_in" do
+  describe "#next_due_at" do
     let(:tz) { ActiveSupport::TimeZone["America/New_York"] }
 
-    it "returns the next 8am-local for daily cadence" do
+    it "returns the next 8am in the user's own timezone for daily cadence" do
       jsonb = default_jsonb.deep_merge("delivery_methods" => { "email" => { "frequency" => "daily" } })
       travel_to(tz.parse("2026-04-30 14:00:00")) do
-        expect(prefs_for(jsonb).next_due_at_in(tz)).to eq tz.parse("2026-05-01 08:00:00")
+        expect(prefs_for(jsonb).next_due_at).to eq tz.parse("2026-05-01 08:00:00")
       end
     end
 
     it "returns 7 days out for weekly cadence" do
       jsonb = default_jsonb.deep_merge("delivery_methods" => { "email" => { "frequency" => "weekly" } })
       travel_to(tz.parse("2026-04-30 14:00:00")) do
-        expect(prefs_for(jsonb).next_due_at_in(tz)).to eq tz.parse("2026-05-07 08:00:00")
+        expect(prefs_for(jsonb).next_due_at).to eq tz.parse("2026-05-07 08:00:00")
+      end
+    end
+
+    it "falls back to Time.zone when the user has no usable timezone" do
+      jsonb = default_jsonb.deep_merge("delivery_methods" => { "email" => { "frequency" => "daily" } })
+      travel_to(Time.zone.parse("2026-04-30 14:00:00")) do
+        expect(prefs_for(jsonb, timezone: nil).next_due_at).to eq Time.zone.parse("2026-05-01 08:00:00")
       end
     end
   end
@@ -439,20 +474,6 @@ RSpec.describe NotificationPreferences do
       expect(described_class::CHANNELS).to be_frozen
       expect(described_class::EMAIL_FREQUENCIES).to be_frozen
       expect(described_class::RETENTION_FLOORS).to be_frozen
-    end
-  end
-
-  describe ".security_notifier_types" do
-    it "returns class names of every Notifier with category :security" do
-      _ = PasswordChangedNotifier
-      result = described_class.security_notifier_types
-      expect(result).to include("PasswordChangedNotifier")
-    end
-
-    it "excludes non-security Notifiers" do
-      _ = WorkspaceInvitationReceivedNotifier
-      result = described_class.security_notifier_types
-      expect(result).not_to include("WorkspaceInvitationReceivedNotifier")
     end
   end
 

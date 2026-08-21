@@ -161,16 +161,4 @@ class ApplicationController < ActionController::Base
   def not_admittable
     redirect_to root_path, alert: t("workspaces.joins.invalid_or_revoked")
   end
-
-  def passkey_error_message(error)
-    key = case error
-    when Passkeys::ChallengeExpired           then "challenge_expired"
-    when Passkeys::CredentialNotFound         then "credential_not_found"
-    when Passkeys::CredentialAlreadyRegistered then "credential_already_registered"
-    when Passkeys::ClonedAuthenticator        then "cloned_authenticator"
-    when Passkeys::VerificationFailed         then "verification_failed"
-    else                                           "unknown"
-    end
-    t("passkeys.errors.#{key}")
-  end
 end

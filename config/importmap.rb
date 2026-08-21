@@ -6,6 +6,10 @@ pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
+# Shared overlay primitives (top layer, dismissal stack) — plain ES modules rather
+# than controllers, because the dismissal stack must be a single instance shared by
+# every overlay controller.
+pin_all_from "app/javascript/overlays", under: "overlays"
 pin "lexxy", to: "lexxy.js"
 
 # ActiveStorage direct upload (MiClassrooms Phase 4 Task 11, Brief §5.3):

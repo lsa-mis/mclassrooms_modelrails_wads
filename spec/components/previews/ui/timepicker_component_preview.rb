@@ -36,6 +36,11 @@ module UI
     def twelve_hour
     end
 
+    # A trigger inside a `sticky z-40` header — a stacking context the panel's own `z-50`
+    # cannot escape. Anchor positioning lets it be promoted to the top layer instead.
+    def inside_stacking_context
+    end
+
     # @!endgroup
 
     # @!group Reference

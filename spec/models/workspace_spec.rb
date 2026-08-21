@@ -360,6 +360,61 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
+  describe "#create_project" do
+    let(:workspace) { create(:workspace, personal: false) }
+    let(:creator) { create(:user) }
+    let!(:member_role) {
+      Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
+        r.name = "Member"
+        r.permissions = { manage_projects: true }
+      }
+    }
+
+    before { workspace.memberships.create!(user: creator, role: member_role) }
+
+    it "creates the project and its creator membership atomically" do
+      project = nil
+      expect {
+        project = workspace.create_project({ name: "Atlas" }, creator: creator)
+      }.to change(workspace.projects, :count).by(1)
+
+      expect(project).to be_persisted
+      expect(project.created_by).to eq(creator)
+      expect(project.project_memberships.find_by!(user: creator).role).to eq("creator")
+    end
+
+    it "returns the unpersisted project with errors when attributes are invalid" do
+      project = nil
+      expect {
+        project = workspace.create_project({ name: "" }, creator: creator)
+      }.not_to change(workspace.projects, :count)
+
+      expect(project).not_to be_persisted
+      expect(project.errors[:name]).to be_present
+      expect(ProjectMembership.count).to eq(0)
+    end
+
+    it "rolls back the project INSERT when the creator membership cannot be created" do
+      outsider = create(:user)
+
+      expect {
+        expect {
+          workspace.create_project({ name: "Atlas" }, creator: outsider)
+        }.to raise_error(ActiveRecord::RecordInvalid)
+      }.not_to change(workspace.projects, :count)
+    end
+
+    it "raises SuspendedError on a suspended workspace and creates nothing" do
+      workspace.suspend!
+
+      expect {
+        expect {
+          workspace.create_project({ name: "Atlas" }, creator: creator)
+        }.to raise_error(Suspendable::SuspendedError)
+      }.not_to change(workspace.projects, :count)
+    end
+  end
+
   describe "#admit" do
     let(:workspace) { create(:workspace, max_members: 3, personal: false) }
     let(:user) { create(:user) }

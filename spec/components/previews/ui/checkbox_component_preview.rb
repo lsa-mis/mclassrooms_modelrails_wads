@@ -42,6 +42,10 @@ module UI
     def disabled
     end
 
+    # Tri-state parent: `indeterminate:` sets the DOM property a checkbox cannot render.
+    def indeterminate
+    end
+
     # @!endgroup
 
     # @!group Reference
