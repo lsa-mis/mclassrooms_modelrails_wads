@@ -16,6 +16,7 @@
 - [ ] All user-facing text uses I18n locale keys (no hardcoded strings)
 - [ ] Controllers enforce Pundit authorization where the action is policy-scoped
 - [ ] RESTful routes only (no custom aliases, no single-action sub-resource controllers)
+- [ ] Comments only where code can't say it (gist + pointer; see `/docs/developer/conventions`) — the *why* is in this PR body
 - [ ] **Docs:** if you changed behavior, the relevant `app/docs/*` page is updated — and if you touched **auth, onboarding, invitations, or clientside** flows, re-check the Application Flows guide (`app/docs/user/application-flows.md`)
 - [ ] **Changelog:** user-visible or operational changes get an entry in `CHANGELOG.mclassrooms.md` under `[Unreleased]`, in this PR. (Root `CHANGELOG.md` is the upstream template's — it arrives via sync, so fork entries there become merge conflicts.)
 
@@ -24,7 +25,7 @@
 <!-- Delete this whole section for non-UI PRs. -->
 
 - [ ] Built on a documented `UI::*` primitive / canonical design-system class (no raw hex, off-system fonts, or `focus:ring-*`)
-- [ ] Verified in **both** light and dark themes (AAA contrast is proven in CI, not locally)
+- [ ] Verified in **both** light and dark themes (the axe AAA audit runs locally by default — a local failure is real; see #541/#542)
 - [ ] Screenshots attached below (both themes)
 
 <!-- Screenshots: -->

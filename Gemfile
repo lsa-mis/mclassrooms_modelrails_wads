@@ -144,7 +144,7 @@ group :development do
   gem "hotwire-spark"
 end
 
-gem "axe-core-rspec", "~> 4.12", group: :test
+gem "axe-core-rspec", "~> 4.13", group: :test
 gem "axe-core-api", "~> 4.11", group: :test
 
 gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
@@ -178,7 +178,7 @@ group :development do
   # moment the branch moves). Dev-only, so no production/runtime impact.
   # Setup: run `rails g modelrails_ui:agent_rules` to scaffold your local agent rules
   # (.modelrails_ui/ + a CLAUDE.md import — kept local, like CLAUDE.md itself).
-  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.8.0"
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.9.0"
 
   # Living documentation / component explorer for the vendored UI::* components
   # (scaffolded by `rails g modelrails_ui:lookbook`). Mounted at /lookbook in

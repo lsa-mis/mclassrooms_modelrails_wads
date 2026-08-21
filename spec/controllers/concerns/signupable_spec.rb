@@ -115,40 +115,30 @@ RSpec.describe Signupable, type: :controller do
     end
   end
 
-  describe "#accept_pending_invitation!" do
-    let(:user) { create(:user) }
+  describe "#commit_signup_atomically (pending invitation handling)" do
+    it "leaves an unmatched session token parked" do
+      session[:pending_invitation_token] = "no-such-token"
 
-    it "is a no-op when no token in session" do
-      expect { controller.send(:accept_pending_invitation!, user) }.not_to raise_error
+      post :create, params: { email_address: "unmatched@example.com" }
+
+      expect(response).to have_http_status(:ok)
+      expect(session[:pending_invitation_token]).to eq("no-such-token")
     end
 
-    it "is a no-op when token does not match any invitation" do
-      controller.session[:pending_invitation_token] = "no-such-token"
-      controller.send(:accept_pending_invitation!, user)
-      expect(controller.session[:pending_invitation_token]).to eq("no-such-token")
-    end
-
-    it "accepts and clears token on valid invitation" do
-      invitation = create(:invitation, email: user.email_address)
-      controller.session[:pending_invitation_token] = invitation.token
-      controller.send(:accept_pending_invitation!, user)
-      expect(invitation.reload).to be_accepted
-      expect(controller.session[:pending_invitation_token]).to be_nil
-    end
-
-    it "skips a mismatched invitation without raising, clears the token, and flashes why" do
+    it "skips a mismatched invitation without aborting the signup, clears the token, and flashes why" do
       invitation = create(:invitation, email: "invited@example.com")
-      controller.session[:pending_invitation_token] = invitation.token
-      # `user`'s email differs from the invitation address; a mismatch must not
-      # abort the (otherwise legitimate) signup, but the user should be told the
-      # invited workspace wasn't joined.
-      expect {
-        controller.send(:accept_pending_invitation!, user)
-      }.not_to raise_error
+      session[:pending_invitation_token] = invitation.token
 
+      # The registering email differs from the invitation address; a mismatch
+      # must not abort the (otherwise legitimate) signup, but the user should
+      # be told the invited workspace wasn't joined.
+      post :create, params: { email_address: "someone-else@example.com" }
+
+      expect(response).to have_http_status(:ok)
+      expect(User.find_by(email_address: "someone-else@example.com")).to be_present
       expect(invitation.reload).to be_pending
-      expect(controller.session[:pending_invitation_token]).to be_nil
-      expect(controller.flash[:alert]).to eq(I18n.t("registrations.create.invitation_email_mismatch"))
+      expect(session[:pending_invitation_token]).to be_nil
+      expect(flash[:alert]).to eq(I18n.t("registrations.create.invitation_email_mismatch"))
     end
   end
 end

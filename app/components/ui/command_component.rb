@@ -82,6 +82,7 @@ module UI
 
     def initialize(size: :md, **html_attrs)
       @size        = coerce_size(size)
+      @id          = html_attrs.delete(:id) || "command-#{SecureRandom.hex(4)}"
       @extra_class = html_attrs.delete(:class)
       # Merge the controller wiring into any caller `data:` so a passed-through
       # `data:` attr can't clobber `data-controller` and silently break Stimulus.
@@ -90,7 +91,7 @@ module UI
     end
 
     def call
-      content_tag(:div, data: @data, **@html_attrs) do
+      content_tag(:div, id: @id, data: @data, **@html_attrs) do
         concat content_tag(:span, trigger, data: { action: "click->command#open" }, class: "contents") if trigger
         concat panel
       end
@@ -98,7 +99,9 @@ module UI
 
     private
 
-    LIST_ID = "command-list"
+    # Derived per instance: a constant id collides the moment a page renders two
+    # palettes, and the aria-controls pointing at it resolves to the first.
+    def list_id = "#{@id}-list"
 
     def panel
       content_tag(:div, data: { command_target: "panel" }, hidden: true) do
@@ -120,7 +123,7 @@ module UI
           concat search_bar
           concat content_tag(:div,
             class: LIST,
-            id: LIST_ID,
+            id: list_id,
             role: "listbox",
             "aria-label": I18n.t("modelrails_ui.command.list_label", default: "Commands"),
             data: { command_target: "list" }) {
@@ -145,7 +148,7 @@ module UI
           placeholder: I18n.t("modelrails_ui.command.placeholder", default: "Type a command or search…"),
           "aria-label": I18n.t("modelrails_ui.command.input_label", default: "Search commands"),
           "aria-expanded": "true",
-          "aria-controls": LIST_ID,
+          "aria-controls": list_id,
           "aria-autocomplete": "list",
           autocomplete: "off",
           spellcheck: "false",

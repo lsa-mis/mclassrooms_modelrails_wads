@@ -8,7 +8,7 @@ require "rails_helper"
 # UA-labelled) controls, so the 0b only proves the element is present and the
 # surrounding chrome clears AAA in both themes. The per-spec axe call runs the
 # default (AA) rule set; the authoritative AAA 7:1 audit is the CI-only
-# wcag2aaa after-hook (spec/support/playwright_accessibility.rb).
+# wcag2aaa after-hook (spec/support/axe_accessibility.rb).
 RSpec.describe "Audio component accessibility", type: :system do
   # `let`, not a top-level constant (a constant inside describe leaks to ::SCOPE
   # and collides across scoped 0b specs).

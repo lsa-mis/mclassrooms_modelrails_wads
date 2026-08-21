@@ -1,6 +1,22 @@
 require "rails_helper"
 
 RSpec.describe WorkspaceHelper, type: :helper do
+  describe "#workspace_icon_for" do
+    it "renders the owner-avatar fallback at the requested size" do
+      user = create(:user)
+      user.avatar.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "avatar.png",
+        content_type: "image/png"
+      )
+      user.update_columns(avatar_source: "upload")
+
+      result = helper.workspace_icon_for(user.personal_workspace, size: :sm)
+
+      expect(result).to have_css("img.w-8.h-8")
+    end
+  end
+
   describe "#current_workspace_section" do
     def stub_route(controller_path, action_name)
       allow(helper.controller).to receive(:controller_path).and_return(controller_path)

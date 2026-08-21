@@ -25,7 +25,7 @@ RSpec.describe SignInFromNewDeviceNotifier, type: :notifier do
     end
 
     it "auto-registers as a security notifier type" do
-      expect(NotificationPreferences.security_notifier_types).to include(described_class.name)
+      expect(ApplicationNotifier.notifier_class_names_for("security")).to include(described_class.name)
     end
   end
 

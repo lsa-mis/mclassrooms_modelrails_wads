@@ -45,7 +45,6 @@ RSpec.describe "Passwordless join-link signup", type: :system do
       form.submit();
     JS
 
-    # Wait for the redirect to new_session_path before continuing.
     expect(page).to have_current_path(new_session_path, wait: 5)
   end
 

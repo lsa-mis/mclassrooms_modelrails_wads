@@ -1,0 +1,41 @@
+# Audits the workflow tree with zizmor (https://docs.zizmor.sh) — the static
+# analyzer for GitHub Actions security: unpinned refs, credential persistence,
+# dangerous triggers, template injection.
+#
+# The auditor must not itself float: setup-uv is SHA-pinned and zizmor is
+# version-pinned below. Bump both deliberately (Dependabot rewrites the
+# setup-uv pin; the zizmor version is manual).
+#
+# Suppressions live inline in the workflows as `# zizmor: ignore[rule]`
+# comments with a justification comment beside each — the only current ones
+# are in dependabot-checksums.yml, whose pull_request_target + credentialed
+# checkout are that job's documented, actor-gated purpose.
+
+name: Workflow audit
+
+on:
+  pull_request:
+    paths:
+      - ".github/**"
+  schedule:
+    # Weekly Monday sweep: new zizmor releases are pinned, so this catches
+    # drift introduced by merged PRs, not new-rule churn.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Audit the workflow tree
+        run: uvx zizmor==1.29.0 .github/workflows/

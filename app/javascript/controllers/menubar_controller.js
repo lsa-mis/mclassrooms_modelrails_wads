@@ -24,8 +24,6 @@ export default class extends Controller {
     if (this.typeTimer) clearTimeout(this.typeTimer)
   }
 
-  // --- roving tabindex across bar items -----------------------------------
-
   get enabledIndexes() {
     return this.itemTargets
       .map((el, i) => (el.getAttribute("aria-disabled") === "true" ? -1 : i))
@@ -58,8 +56,6 @@ export default class extends Controller {
     const focused = this.itemTargets.indexOf(document.activeElement)
     return focused >= 0 ? focused : (this.enabledIndexes[0] ?? 0)
   }
-
-  // --- horizontal navigation (bar level) ----------------------------------
 
   navigate(event) {
     if (event.defaultPrevented) return // the open submenu's menu#navigate already handled it

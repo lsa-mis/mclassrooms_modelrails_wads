@@ -26,11 +26,8 @@
            hover:text-interactive-hover
            focus-ring rounded"
   >
-    <%# Sun icon (light mode) %>
     <%= icon(:sun, class: "hidden", data: { theme_toggle_target: "lightIcon" }) %>
-    <%# Moon icon (dark mode) %>
     <%= icon(:moon, class: "hidden", data: { theme_toggle_target: "darkIcon" }) %>
-    <%# Monitor icon (system mode) %>
     <%= icon(:computer_desktop, class: "hidden", data: { theme_toggle_target: "systemIcon" }) %>
     <% if style != :icon %>
       <span data-theme-toggle-target="label" class="text-sm"><%= t("theme.system") %></span>

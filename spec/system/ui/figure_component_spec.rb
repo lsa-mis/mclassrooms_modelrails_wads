@@ -11,7 +11,7 @@ require "rails_helper"
 # figure/figcaption association and audits each scenario scoped to the <figure>
 # subtree with NO color-contrast exclude. NOTE: the per-spec assertion below runs
 # axe's default (AA) rule set; the authoritative AAA 7:1 audit is the wcag2aaa
-# after-hook that fires under CI (see spec/support/playwright_accessibility.rb).
+# after-hook that fires under CI (see spec/support/axe_accessibility.rb).
 RSpec.describe "Figure component accessibility", type: :system do
   it "default renders a figcaption and passes AAA in both themes" do
     visit "/rails/view_components/ui/figure_component/default"

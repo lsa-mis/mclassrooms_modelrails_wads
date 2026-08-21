@@ -132,19 +132,20 @@ class Workspace < ApplicationRecord
   def owner
     # Uses detect (not joins + find_by) so it works from preloaded
     # memberships without firing a per-row query in list views.
-    memberships.detect { |m| m.role.slug == "owner" }&.user
+    memberships.detect(&:owner?)&.user
   end
 
-  # All Users holding an owner-role kept membership. Two-path on purpose:
-  # loaded `memberships` filter in-memory (hot path — the Leave button calls
-  # `.owners.size` per render); unloaded issues a fresh query so notifier
-  # recipient resolution never reads a stale roster.
+  # All Users holding an owner-role kept membership — ALWAYS a fresh query,
+  # even when `memberships` is already loaded, so notifier recipient
+  # resolution never reads a stale roster. Render paths that only need an
+  # existence check use Membership.other_kept_owners instead (one indexed
+  # EXISTS — see MembershipPolicy#destroy?).
   # See /docs/developer/architecture (Owner Lookup).
   def owners
-    relation = memberships.loaded? ? memberships : memberships.kept.includes(:role, :user)
-    relation
-      .reject(&:discarded?)
-      .select { |m| m.role.slug == "owner" }
+    memberships.kept
+      .joins(:role)
+      .where(roles: { slug: "owner" })
+      .includes(:user)
       .map(&:user)
       .compact
   end
@@ -177,6 +178,14 @@ class Workspace < ApplicationRecord
     open_join? && admittable?
   end
 
+  # The seat-capacity rule, in one place: full when kept memberships have
+  # reached max_members. Always a fresh COUNT — callers that need locked
+  # semantics (Workspace#admit) take the row lock first and rely on this
+  # querying, never caching.
+  def at_capacity?
+    memberships.kept.count >= max_members
+  end
+
   # Role granted to users self-joining via an open-link. Pinned to the
   # lowest-privilege system role for safety (Reshape 1 reasoning); per-link
   # or per-workspace role customization is deferred until requested.
@@ -191,25 +200,31 @@ class Workspace < ApplicationRecord
   # are safe; nested calls join the surrounding transaction.
   # granted_by: audit provenance only (G) — the inviter, when an invitation
   # acceptance is what created the membership. Never affects admission logic.
-  def admit(user, role:, granted_by: nil)
+  # on_existing: policy for a kept member showing up again. :raise preserves
+  # the duplicate-accept error (reconciling the role first under :shared);
+  # :adopt returns the membership untouched — for callers like project-invite
+  # acceptance whose real work lies past workspace admission. Returns the
+  # membership on every non-raising path.
+  def admit(user, role:, granted_by: nil, on_existing: :raise)
     transaction do
       lock!
       raise NotAdmittableError unless admittable?
       existing = memberships.find_by(user: user)
       if existing&.discarded?
         existing.undiscard!
-      elsif existing && !existing.discarded?
-        if TenancyConfig.shared?
+        existing
+      elsif existing
+        raise AlreadyMember unless on_existing == :adopt || TenancyConfig.shared?
+        if on_existing != :adopt && existing.role_id != role.id
           # Under :shared, the User#onboard_workspace callback pre-creates a
           # placeholder Member membership. Reconcile: adopt the new role
           # rather than treating it as duplicate-accept. Solo-default
           # (:personal) semantics are preserved exactly.
-          existing.update!(role: role) unless existing.role_id == role.id
-        else
-          raise AlreadyMember
+          existing.update!(role: role)
         end
+        existing
       else
-        raise AtCapacity if memberships.kept.count >= max_members
+        raise AtCapacity if at_capacity?
         memberships.create!(user: user, role: role, granted_by: granted_by)
       end
     end

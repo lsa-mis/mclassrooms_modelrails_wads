@@ -10,14 +10,6 @@
 #                         email:  { enabled, frequency: instant|daily|weekly } }
 #   quiet_hours:        { enabled, start: "HH:MM", end: "HH:MM", allow_urgent }
 #   retention_days:     Integer (30/60/90/180/365) or nil ("never")
-#
-# Decision tree (allow?):
-#   1. category == "security"          → always allow (security floor)
-#   2. notification_types[c] == false  → deny
-#   3. delivery_methods[ch].enabled    → deny if false
-#   4. ch == "email" && freq != "instant" → return :digest sentinel
-#   5. quiet_hours_active?(now)        → deny (security exempt via step 1)
-#   6. otherwise                       → allow
 class NotificationPreferences
   CATEGORIES = %w[security account_access workspace_activity billing].freeze
   # Digest is folded into Email channel's frequency selector — no longer a channel.
@@ -40,49 +32,26 @@ class NotificationPreferences
   # Caller catches and responds 422 — see Settings::NotificationPreferencesController#update.
   class InvalidChange < StandardError; end
 
-  # Computed from ApplicationNotifier subclasses; consumed by
-  # NotificationCleanupJob to look up which notifier classes carry the
-  # security retention floor. Walk lives in one place — see Notifier.
-  def self.security_notifier_types
-    ApplicationNotifier.notifier_class_names_for(SECURITY_CATEGORY)
-  end
-
-  # `user:` is optional but required for quiet_hours_active? to read the
-  # user's timezone. Callers that only need allow?/digest_enabled? etc.
-  # may pass user: nil.
+  # `user:` is optional but required for quiet_hours_active? / next_due_at
+  # to read the user's timezone. Callers that only need
+  # deliver_now?/digest_enabled? etc. may pass user: nil.
   def initialize(jsonb_hash, user: nil)
     @data = jsonb_hash || {}
     @user = user
   end
 
-  def allow?(category:, channel:)
-    return false unless CATEGORIES.include?(category) && CHANNELS.include?(channel)
+  # Strictly "send through this channel right now". A false answer says
+  # nothing about WHY (opted out, quiet hours, or deferred to digest) —
+  # callers that care about the digest case ask defer_to_digest?.
+  # Accepts String or Symbol arguments.
+  def deliver_now?(category:, channel:)
+    allow?(category: category, channel: channel) == true
+  end
 
-    # Step 1: security floor. Always-on for in_app + always-instant for email.
-    if category == SECURITY_CATEGORY
-      # Honor channel-disabled even for security at the email layer — a
-      # user who disabled email entirely accepts that security alerts
-      # won't email. In-app remains always-on.
-      return false if channel == "email" && @data.dig("delivery_methods", "email", "enabled") == false
-      return true
-    end
-
-    # Step 2: type disabled
-    return false unless @data.dig("notification_types", category) == true
-
-    # Step 3: channel disabled
-    return false unless @data.dig("delivery_methods", channel, "enabled") == true
-
-    # Step 4: email frequency non-instant → queue for digest
-    if channel == "email"
-      freq = @data.dig("delivery_methods", "email", "frequency") || "instant"
-      return :digest if freq != "instant"
-    end
-
-    # Step 5: quiet hours active (non-security only)
-    return false if quiet_hours_active?
-
-    true
+  # Strictly "email is queued for the digest pipeline instead of sending
+  # now". Never true for in_app or for security (always instant).
+  def defer_to_digest?(category:, channel:)
+    allow?(category: category, channel: channel) == :digest
   end
 
   # Whether quiet hours are currently suppressing non-security delivery.
@@ -100,8 +69,7 @@ class NotificationPreferences
     qh = @data["quiet_hours"] || {}
     return false unless qh["enabled"] == true
 
-    zone_name = @user&.preferences&.timezone
-    zone = (zone_name && ActiveSupport::TimeZone[zone_name]) || Time.zone
+    zone = user_time_zone
 
     active_days = qh["active_days"]
     if active_days.is_a?(Array)
@@ -120,10 +88,8 @@ class NotificationPreferences
 
     cur = zone.now.strftime("%H:%M")
     if s <= e
-      # Same-day window: 09:00..17:00 → in-window if s <= cur < e
       cur >= s && cur < e
     else
-      # Overnight wrap: 22:00..07:00 → in-window if cur >= s OR cur < e
       cur >= s || cur < e
     end
   end
@@ -159,9 +125,11 @@ class NotificationPreferences
     @data["retention_days"]
   end
 
-  def next_due_at_in(timezone)
-    now = Time.current.in_time_zone(timezone)
-    next_local = timezone.local(now.year, now.month, now.day, digest_hour_local)
+  # Next digest send time (8am local) in the user's own timezone.
+  def next_due_at
+    zone = user_time_zone
+    now = Time.current.in_time_zone(zone)
+    next_local = zone.local(now.year, now.month, now.day, digest_hour_local)
     next_local += 1.day if next_local <= now
     next_local += 6.days if digest_cadence == "weekly"
     next_local
@@ -201,6 +169,61 @@ class NotificationPreferences
   end
 
   private
+
+  # Returns true, false, or the :digest sentinel (email deferred to the
+  # digest pipeline). The tri-state is an internal encoding — the public
+  # surface is the deliver_now?/defer_to_digest? predicate pair, so no
+  # caller ever needs to know `true` must be compared strictly. Coerces
+  # String/Symbol arguments so callers never need to know the JSONB blob
+  # is string-keyed.
+  def allow?(category:, channel:)
+    category = category.to_s
+    channel  = channel.to_s
+
+    return false unless recognized?(category, channel)
+    return security_delivery_allowed?(channel) if security_floor?(category)
+    return false unless type_enabled?(category)
+    return false unless channel_enabled?(channel)
+    return :digest if deferred_to_digest?(channel)
+    return false if quiet_hours_active?
+
+    true
+  end
+
+  # UserPreferences#time_zone owns the name→zone fallback; this only covers
+  # the "no user / no preferences row attached" construction case.
+  def user_time_zone
+    @user&.preferences&.time_zone || Time.zone
+  end
+
+  def recognized?(category, channel)
+    CATEGORIES.include?(category) && CHANNELS.include?(channel)
+  end
+
+  # Security bypasses type toggles, digest deferral, and quiet hours.
+  def security_floor?(category)
+    category == SECURITY_CATEGORY
+  end
+
+  # In-app security is always-on; email honors an explicit channel opt-out —
+  # a user who disabled email entirely accepts that security alerts won't email.
+  def security_delivery_allowed?(channel)
+    channel != "email" || @data.dig("delivery_methods", "email", "enabled") != false
+  end
+
+  def type_enabled?(category)
+    @data.dig("notification_types", category) == true
+  end
+
+  def channel_enabled?(channel)
+    @data.dig("delivery_methods", channel, "enabled") == true
+  end
+
+  # Non-instant email frequency queues for the digest pipeline instead of
+  # sending now.
+  def deferred_to_digest?(channel)
+    channel == "email" && email_frequency != "instant"
+  end
 
   def validate_and_coerce!(changes)
     if changes.key?("retention_days")

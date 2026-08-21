@@ -187,19 +187,4 @@ RSpec.describe NotificationBellHelper, type: :helper do
       expect(label).to include("an important update")
     end
   end
-
-  # Pins the module-level entry points used by callers outside the view
-  # context (currently NotificationBroadcaster, which has no view-helper
-  # mixin and must call NotificationBellHelper.<method> directly).
-  describe "module-level entry points (for NotificationBroadcaster)" do
-    let(:summary_user) { create(:user) }
-
-    it "exposes unread_notification_summary as a module method" do
-      expect(NotificationBellHelper.unread_notification_summary(summary_user)).to eq(count: 0, severity: nil)
-    end
-
-    it "exposes notification_bell_classes as a module method" do
-      expect(NotificationBellHelper.notification_bell_classes(:danger)).to eq(icon: "text-danger dark:text-danger-strong")
-    end
-  end
 end

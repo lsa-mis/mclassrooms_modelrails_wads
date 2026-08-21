@@ -1,5 +1,6 @@
 class WorkspacesController < ApplicationController
   include WorkspaceScoped
+  include IdentityParams
   skip_before_action :set_workspace, only: [ :index, :new, :create ]
   before_action :ensure_workspace_creation_enabled, only: [ :new, :create ]
 
@@ -145,20 +146,17 @@ class WorkspacesController < ApplicationController
     params.require(:workspace).permit(:name)
   end
 
-  # The identity-picker JS posts avatar-named params for BOTH models (frozen
-  # wire protocol); logo-named params serve non-JS callers. name arrives under
-  # workspace[name] from the profile/customize forms — key-presence (not
-  # blankness) decides whether it participates, so a blank rename still fails
-  # validation inside apply's single save.
+  # Workspace extras on top of IdentityParams#identity_wire_params: logo-named
+  # params serve non-JS callers, and name arrives under workspace[name] from
+  # the profile/customize forms — key-presence (not blankness) decides whether
+  # it participates, so a blank rename still fails validation inside apply's
+  # single save.
   def identity_update_params
-    @identity_update_params ||= {
+    @identity_update_params ||= identity_wire_params.merge(
       image: params[:avatar] || params[:logo],
       image_original: params[:avatar_original] || params[:logo_original],
-      crop_coordinates: params[:crop_coordinates],
-      source: params[:avatar_source],
-      color: params[:primary_color],
       name: workspace_attrs.key?(:name) ? workspace_attrs[:name] : nil
-    }
+    )
   end
 
   # Strong-params extraction for the workspace-only `name` field: a non-scalar

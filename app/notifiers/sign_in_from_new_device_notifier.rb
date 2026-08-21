@@ -9,16 +9,24 @@
 class SignInFromNewDeviceNotifier < ApplicationNotifier
   category :security
   severity :danger
+  # `record` here is the user, so the base (class, record.id, minute) key
+  # would collapse two distinct devices signing in within the same minute —
+  # a phisher signing in seconds after the legitimate user would silently
+  # lose their alert to the dedup index, and a user switching laptop→phone
+  # would only see the first alert. Folding the same browser digest used by
+  # `User.browser_digest` into the seed makes dedup (user, device, minute) —
+  # collapse only on a true same-device retry, the legitimate dedup case.
+  # 12 hex chars (~48 bits) is plenty: the goal is differentiation between
+  # devices for one user inside a one-minute window, not cryptographic
+  # uniqueness; truncation keeps the column readable in logs.
+  dedup_seed { User.browser_digest(params[:user_agent], params[:os])[0, 12] }
 
   required_param :user_agent, :os
 
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :sign_in_from_new_device
-    # `== true` aborts on the tri-state :digest sentinel (uniform with siblings;
-    # security categories never actually resolve to :digest).
-    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
-    config.before_enqueue = -> { throw(:abort) unless recipient_pref(:email) == true }
+    config.before_enqueue = -> { throw(:abort) unless deliver_email_now? }
     config.enqueue = true
   end
 
@@ -36,28 +44,5 @@ class SignInFromNewDeviceNotifier < ApplicationNotifier
     def url
       Rails.application.routes.url_helpers.settings_connected_accounts_path
     end
-  end
-
-  private
-
-  # Override the base seed so two distinct devices signing in for the same
-  # user within the same minute don't collapse onto a single event.
-  #
-  # The base ApplicationNotifier seeds (class, record.id, minute). Here
-  # `record` is the user — meaning a phisher signing in seconds after the
-  # legitimate user would silently lose their alert to the dedup index, or a
-  # user switching from laptop to phone would only see the first alert. By
-  # folding the same browser digest used by `User.browser_digest` into the
-  # key, dedup is now (user, device, minute) — collapse only on a true
-  # same-device retry, which IS the legitimate dedup case.
-  #
-  # 12 hex chars (~48 bits) is plenty: the goal is differentiation between
-  # devices for one user inside a one-minute window, not cryptographic
-  # uniqueness. Truncation keeps the column readable in logs.
-  def populate_idempotency_key
-    return if idempotency_key.present?
-
-    digest_short = User.browser_digest(params[:user_agent], params[:os])[0, 12]
-    self.idempotency_key = "#{self.class.name}_#{record.id}_#{digest_short}_#{Time.current.to_i / 60}"
   end
 end

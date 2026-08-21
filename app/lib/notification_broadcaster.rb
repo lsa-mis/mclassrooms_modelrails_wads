@@ -10,7 +10,7 @@ module NotificationBroadcaster
 
   def refresh_for(user, announcement_key:)
     stream_key = [ user, :notifications ]
-    summary = NotificationBellHelper.unread_notification_summary(user)
+    summary = UnreadNotificationSummary.new(user).to_h
 
     # broadcast_update_to (not _replace_to): each target is a <turbo-frame> and
     # these partials render the frame's CONTENTS, not the frame itself. `replace`

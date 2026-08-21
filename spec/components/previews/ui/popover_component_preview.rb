@@ -5,7 +5,9 @@ module UI
   #
   # A non-modal floating panel anchored to a trigger button, driven by the `floating`
   # Stimulus controller. Click the trigger to toggle; Escape or an outside click closes
-  # it and returns focus to the trigger.
+  # it and returns focus to the trigger. Placement is CSS anchor positioning, so the panel
+  # flips to stay on-screen and is promoted to the top layer rather than being buried by a
+  # `sticky` or `backdrop-blur` ancestor.
   #
   # ## Accessibility contract
   # - **Guarantees:** a real `<button>` trigger with `aria-haspopup="dialog"`,
@@ -27,6 +29,12 @@ module UI
 
     # `side:` and `align:` place the panel relative to the trigger.
     def positioned
+    end
+
+    # A trigger inside a `sticky z-40` header — a stacking context the panel's own `z-50`
+    # cannot escape. Anchor positioning lets the panel be promoted to the top layer, so it
+    # paints over the page while staying tethered to its trigger.
+    def inside_stacking_context
     end
 
     # @!endgroup

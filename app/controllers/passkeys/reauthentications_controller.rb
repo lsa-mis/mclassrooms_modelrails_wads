@@ -22,7 +22,7 @@ module Passkeys
       Current.session.confirm_reauthentication!
       render json: { redirect_to: reauthentication_return_to }
     rescue Passkeys::Error => e
-      render json: { error: passkey_error_message(e) }, status: :unprocessable_content
+      render json: { error: t(e.i18n_key) }, status: :unprocessable_content
     end
   end
 end

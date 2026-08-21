@@ -21,7 +21,7 @@ RSpec.describe "Room media stage", type: :system do
 
   # Scopes the axe sweep to the full WCAG 2.2 conformance set (A + AA + AAA),
   # same pattern as show_spec.rb.
-  let(:axe_options) { PlaywrightAccessibility::DEFAULT_AXE_OPTIONS.dup }
+  let(:axe_options) { AxeAccessibility::DEFAULT_AXE_OPTIONS.dup }
 
   # count() `:media_asset` rows on `room`, position 1..count in creation
   # order so MediaAsset.ordered (position, id) yields a deterministic index.

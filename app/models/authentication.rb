@@ -61,40 +61,33 @@ class Authentication < ApplicationRecord
     update!(verified_at: Time.current)
   end
 
-  def claim_pending_invitation!(user)
-    return if pending_invitation_token.blank?
-
-    ApplicationRecord.transaction do
-      Invitation.consume!(token: pending_invitation_token, user: user, expected_email: user.email_address)
-      update!(pending_invitation_token: nil)
-    end
-  rescue Invitation::EmailMismatch
-    # Wrong-address claim: the transaction rolled back (token still set), so
-    # clear the parked token here — it can never be claimed by this user — and
-    # re-raise so the caller can tell the user why they weren't added.
-    update!(pending_invitation_token: nil)
-    raise
-  end
-
-  # Reshape 2b: claim a workspace join-link token parked at signup time.
-  # Stale-link conditions are silent no-ops (a never-member must not learn the
-  # workspace is locked); capacity/already-member errors propagate.
+  # One-shot claim of everything parked on this Authentication during the
+  # deferred (unverified-email OAuth) signup flow: invitation token + join-link
+  # digest. Runs at email-verification time with continue semantics — the user
+  # just proved ownership, so no stale claim may block sign-in; failures come
+  # back as `problems` for the caller to render. The exception matrix lives in
+  # PendingClaims (shared with the signup-time claim in Signupable).
   # See /docs/developer/application-flows (Deferred claims on the unverified-OAuth path).
-  def claim_pending_join_link!(user)
-    return if pending_join_link_digest.blank?
-
-    link = WorkspaceJoinLink.find_active_by_digest(pending_join_link_digest)
-
-    # The token is a one-shot claim: verify never retries, so once we attempt
-    # admission the token is spent regardless of outcome. Clearing it lives in
-    # `ensure` (not bundled in admit's transaction) so a terminal failure like
-    # capacity rolls back the membership but does NOT resurrect the token. A
-    # stale link is a silent no-op inside WorkspaceJoinLink#admit.
+  #
+  # Every attempted token is spent (verify never retries): spent columns are
+  # cleared even when the claim failed or raised, so no token lingers as
+  # orphaned state. The clear is a separate write from the claim transaction —
+  # a process crash in between re-runs nothing (the verification link is
+  # single-use), it only leaves the already-spent token to this same cleanup.
+  def claim_pending!(user)
+    claims = PendingClaims.new(
+      invitation_token: pending_invitation_token,
+      join_digest: pending_join_link_digest
+    )
     begin
-      link&.admit(user)
+      claims.claim(user)
     ensure
-      update!(pending_join_link_digest: nil)
+      cleared = {}
+      cleared[:pending_invitation_token] = nil if claims.spent.include?(:invitation)
+      cleared[:pending_join_link_digest] = nil if claims.spent.include?(:join)
+      update!(**cleared) if cleared.any?
     end
+    claims
   end
 
   private

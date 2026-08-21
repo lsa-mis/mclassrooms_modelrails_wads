@@ -47,6 +47,10 @@ module UI
     def custom_hue
     end
 
+    # The image 404s, so the initials take over instead of a broken-image glyph.
+    def broken_image
+    end
+
     # @!endgroup
 
     # @!group Reference

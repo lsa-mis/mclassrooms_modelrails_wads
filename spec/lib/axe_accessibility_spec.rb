@@ -1,7 +1,7 @@
 require "rails_helper"
 
-RSpec.describe PlaywrightAccessibility, "#format_violation" do
-  let(:formatter) { Class.new { include PlaywrightAccessibility }.new }
+RSpec.describe AxeAccessibility, "#format_violation" do
+  let(:formatter) { Class.new { include AxeAccessibility }.new }
 
   context "for a non-color-contrast violation" do
     let(:violation) do

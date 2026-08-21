@@ -1,6 +1,7 @@
-<footer data-controller="footer" class="bg-surface border-t border-border mt-auto">
+<footer data-controller="footer"
+        data-footer-cookie-name-value="<%= Biscuit.configuration.cookie_name %>"
+        class="bg-surface border-t border-border mt-auto">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-    <%# Row 1: brand + nav clusters + dev trigger (responsive) %>
     <% home_path = main_app.root_path %>
     <div class="flex flex-col items-center gap-3
                 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4
@@ -79,10 +80,8 @@
       <%= render "shared/a11y_sim" %>
     </div>
 
-    <%# Horizontal divider between rows %>
     <div class="mt-3 sm:mt-6 border-t border-border"></div>
 
-    <%# Row 2: centered copyright %>
     <p class="mt-3 sm:mt-6 text-xs text-text-muted text-center">
       &copy; <%= Date.current.year %> <%= t("footer.copyright") %>
     </p>

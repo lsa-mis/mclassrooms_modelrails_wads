@@ -27,7 +27,10 @@
 
 name: Dependabot lockfile checksums
 
-on:
+# The trigger below is zizmor's dangerous-triggers finding, and it is
+# intentional — see the header comment: actor-gated, runs `bundle lock` only
+# (no gem code execution), and the push is the job's entire purpose.
+on: # zizmor: ignore[dangerous-triggers]
   pull_request_target:
     paths:
       - Gemfile.lock
@@ -41,17 +44,23 @@ concurrency:
 
 jobs:
   restore-checksums:
-    if: github.actor == 'dependabot[bot]'
+    # PR-author id, not actor login (zizmor bot-conditions): the actor changes
+    # on re-runs and a login string is spoofable, but the PR author's numeric
+    # id is immutable. 49699333 is dependabot[bot]'s well-known id — the same
+    # number in the git config email below.
+    if: github.event.pull_request.user.id == '49699333'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the PR branch
-        uses: actions/checkout@v7
+        # This checkout DELIBERATELY keeps its credentials — pushing the fixed
+        # lockfile is the job's entire purpose (zizmor artipacked otherwise).
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 # zizmor: ignore[artipacked]
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.DEPENDABOT_CHECKSUMS_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
           bundler-cache: false
 

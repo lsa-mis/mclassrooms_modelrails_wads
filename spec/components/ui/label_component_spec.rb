@@ -25,7 +25,6 @@ RSpec.describe UI::LabelComponent, type: :component do
     expect(page).to have_css("label.text-text-body")
   end
 
-  # Association: for: targets the input's id so clicking the label focuses it.
   it "associates to an input id via for" do
     render_inline(described_class.new("Email address", for: "user_email"))
 
@@ -52,7 +51,6 @@ RSpec.describe UI::LabelComponent, type: :component do
     expect(page).not_to have_css("label span[aria-hidden='true']")
   end
 
-  # The visible label text is still present alongside the required marker.
   it "keeps the label text when required" do
     render_inline(described_class.new("Email address", required: true))
 

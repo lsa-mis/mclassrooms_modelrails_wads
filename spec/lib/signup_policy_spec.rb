@@ -64,50 +64,42 @@ RSpec.describe SignupPolicy do
     end
   end
 
-  describe ".config_allows_signup?" do
-    it "returns true when mode is :open" do
-      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
-      expect(SignupPolicy.config_allows_signup?).to be true
-    end
-
-    it "returns false when mode is :invite_only" do
-      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
-      expect(SignupPolicy.config_allows_signup?).to be false
-    end
-  end
-
-  describe ".workspace_join_acceptable?" do
+  # The join-link OR-branch is private implementation of allows_signup? —
+  # exercised through the public gate with the config mode held closed so the
+  # join_token alone decides the outcome.
+  describe "the workspace join-link branch of .allows_signup?" do
     let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
     let(:link) { create(:workspace_join_link, workspace: workspace, created_by: create(:user)) }
 
     before do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
       allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
     end
 
-    it "returns true for an active link of an open-join workspace" do
-      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be true
+    it "opens the gate for an active link of an open-join workspace" do
+      expect(SignupPolicy.allows_signup?(join_token: link.plaintext_token)).to be true
     end
 
-    it "returns false for a blank or unknown token" do
-      expect(SignupPolicy.workspace_join_acceptable?(nil)).to be false
-      expect(SignupPolicy.workspace_join_acceptable?("")).to be false
-      expect(SignupPolicy.workspace_join_acceptable?("does-not-exist")).to be false
+    it "keeps the gate closed for a blank or unknown token" do
+      expect(SignupPolicy.allows_signup?(join_token: nil)).to be false
+      expect(SignupPolicy.allows_signup?(join_token: "")).to be false
+      expect(SignupPolicy.allows_signup?(join_token: "does-not-exist")).to be false
     end
 
-    it "returns false for a revoked link" do
+    it "keeps the gate closed for a revoked link" do
       link.revoke!
-      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be false
+      expect(SignupPolicy.allows_signup?(join_token: link.plaintext_token)).to be false
     end
 
-    it "returns false when the workspace's policy isn't open_link" do
+    it "keeps the gate closed when the workspace's policy isn't open_link" do
       workspace.update!(join_policy: "invite")
-      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be false
+      expect(SignupPolicy.allows_signup?(join_token: link.plaintext_token)).to be false
     end
 
-    it "returns false when the instance allowlist excludes :open_link" do
-      link  # materialize while permissive allowlist is in effect
+    it "keeps the gate closed when the instance allowlist excludes :open_link" do
+      link # materialize while permissive allowlist is in effect
       allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite])
-      expect(SignupPolicy.workspace_join_acceptable?(link.plaintext_token)).to be false
+      expect(SignupPolicy.allows_signup?(join_token: link.plaintext_token)).to be false
     end
   end
 

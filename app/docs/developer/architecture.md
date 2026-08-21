@@ -66,10 +66,9 @@ The `Trackable` concern auto-creates `ActivityLog` records via `after_commit` ca
 
 `Workspace#owner` returns a single owning user and deliberately uses `detect` over `memberships` (not `joins` + `find_by`) so it works from preloaded associations without a per-row query in list views.
 
-`Workspace#owners` returns **all** users currently holding a kept owner-role membership — used by the capacity-approaching sweep to alert every owner, and by any ownership-management UI that needs the full roster. It has a two-path implementation to avoid an N+1 without introducing staleness:
+`Workspace#owners` returns **all** users currently holding a kept owner-role membership — used by the capacity-approaching sweep to alert every owner, and by any ownership-management UI that needs the full roster. It **always issues a fresh query**, even when `memberships` is preloaded: its callers are notifier recipient resolution paths that run right after mutations changing the owner roster, so a cached array can't be trusted.
 
-- **Association already loaded** (the workspaces index preloads `memberships: [:role, { user: … }]`): filter the in-memory array — zero extra queries per row. This is the hot path: `MembershipPolicy#destroy?` calls `.owners.size` on every Leave-button render.
-- **Association not loaded** (notifier recipient resolution after a membership mutation): issue a fresh narrow query. Those notifiers run right after mutations that change the owner roster, so a cached array can't be trusted — the query guarantees the latest committed state.
+Render paths that only need a last-owner *existence check* (the Leave button — `MembershipPolicy#destroy?`) use `Membership.other_kept_owners(...).exists?` instead: one indexed EXISTS, fired only for owner rows, rather than materializing the roster per render.
 
 ## Real-Time
 

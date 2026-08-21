@@ -30,14 +30,29 @@ module UI
     # rubocop:enable Layout/LineLength
     PANEL = "mt-2 focus-ring"
 
-    # label:    accessible name for the tablist (aria-label; required; i18n at the call site).
-    # selected: index of the initially-active tab (default 0).
-    # id:       base id (auto-generated; → tab/panel ids).
-    def initialize(label:, selected: 0, id: nil, tablist_class: nil, **html_attrs)
+    ORIENTATIONS = %i[horizontal vertical].freeze
+    ACTIVATIONS = %i[automatic manual].freeze
+
+    # Vertical tablists stack, so the bar grows down instead of across.
+    TABLIST_VERTICAL = "inline-flex flex-col items-stretch rounded-lg bg-surface-sunken " \
+                       "p-1 text-text-muted"
+
+    # label:       accessible name for the tablist (aria-label; required; i18n at the call site).
+    # selected:    index of the initially-active tab (default 0).
+    # id:          base id (auto-generated; → tab/panel ids).
+    # orientation: :horizontal (←/→) | :vertical (↑/↓) — also sets aria-orientation.
+    # activation:  :automatic (focus reveals the panel, APG default) | :manual (arrows move
+    #              focus only; Enter/Space reveals). Manual suits panels that are expensive
+    #              to reveal, where activating on every arrow press would thrash.
+    # tablist_class: fork extension — extra classes merged onto the tablist bar.
+    def initialize(label:, selected: 0, id: nil, orientation: :horizontal, activation: :automatic,
+      tablist_class: nil, **html_attrs)
       @label = label
       @tablist_class = tablist_class
       @selected = selected.to_i
       @id = id || "tabs-#{SecureRandom.hex(4)}"
+      @orientation = coerce(:orientation, orientation, ORIENTATIONS)
+      @activation = coerce(:activation, activation, ACTIVATIONS)
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
@@ -46,7 +61,12 @@ module UI
       caller_data = @html_attrs.delete(:data) || {}
       content_tag(:div, safe_join([ tablist, *panels ]),
         class: cn("w-full", @extra_class),
-        data: { controller: "tabs", tabs_index_value: @selected }.merge(caller_data),
+        data: {
+          controller: "tabs",
+          tabs_index_value: @selected,
+          tabs_orientation_value: @orientation,
+          tabs_activation_value: @activation
+        }.merge(caller_data),
         **@html_attrs)
     end
 
@@ -56,8 +76,15 @@ module UI
       content_tag(:div, safe_join(tabs.each_with_index.map { |tab, i| trigger(tab, i) }),
         role: "tablist",
         "aria-label": @label,
-        "aria-orientation": "horizontal",
-        class: cn(TABLIST, @tablist_class))
+        "aria-orientation": @orientation,
+        class: cn((@orientation == :vertical ? TABLIST_VERTICAL : TABLIST), @tablist_class))
+    end
+
+    def coerce(name, value, allowed)
+      key = value.to_sym
+      return key if allowed.include?(key)
+
+      raise ArgumentError, "UI::Tabs unknown #{name}: #{value.inspect} (allowed: #{allowed.join(", ")})"
     end
 
     def trigger(tab, index)

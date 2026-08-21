@@ -51,6 +51,19 @@ RSpec.describe "Passkeys::Registrations", type: :request do
         post passkeys_registration_options_path
         expect(response).to have_http_status(:ok)
       end
+
+      # C7: storing the return path tolerates a bad referer (URI parse), but a
+      # modifier `rescue nil` was swallowing EVERY error class — a typo in
+      # that method would vanish silently. Anything else must surface.
+      it "does not swallow unexpected errors while storing the return path" do
+        user.sessions.last.update!(reauthenticated_at: 20.minutes.ago)
+        allow_any_instance_of(Passkeys::RegistrationsController)
+          .to receive(:url_from).and_raise(NoMethodError, "boom")
+
+        expect {
+          post passkeys_registration_options_path, headers: { "ACCEPT" => "application/json" }
+        }.to raise_error(NoMethodError, /boom/)
+      end
     end
 
     describe "POST /passkeys/registration/verify" do

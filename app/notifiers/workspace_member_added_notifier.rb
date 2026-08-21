@@ -10,27 +10,12 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
 
   recipients do
     added_user = record.user
-    workspace = record.workspace
 
-    # Delegate owner resolution to the canonical helper on Workspace (which joins
-    # :role, filters by slug "owner", and preloads :user to avoid N+1). Then
+    # Owner resolution delegates to the canonical `Workspace#owners` helper;
     # `[added_user] + ...` plus `.uniq` handles the "added user is already an
-    # owner" dedup case without changing observable behavior.
-    candidates = ([ added_user ] + workspace.owners).compact.uniq
-
-    # Preload :preferences in one query — `preferences_for(user)` accesses
-    # `user.preferences` per-user, which without preloading is N+1 when the
-    # candidate set has more than one user. Surfaced by the Reshape 2a
-    # open-link self-join request specs (Bullet caught it).
-    ActiveRecord::Associations::Preloader.new(records: candidates, associations: :preferences).call
-
-    # Filter out users whose workspace_activity.in_app preference is off (or DND).
-    # See class-level docs above for why this is the correct gate point. The
-    # `preferences_for` helper wraps the schema-default JSONB blob for users
-    # without a persisted UserPreferences row.
-    candidates.select do |user|
-      preferences_for(user).allow?(category: "workspace_activity", channel: "in_app")
-    end
+    # owner" dedup case. `permitted_in_app` (ApplicationNotifier) preloads
+    # :preferences and gates on the declared category's in_app preference.
+    permitted_in_app(([ added_user ] + record.workspace.owners).compact.uniq)
   end
 
   # Email is gated to only the added user, AND only when their workspace_activity.email
@@ -43,11 +28,9 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_member_added
-    # `== true` aborts on the tri-state :digest sentinel (else digest items fire as instant emails).
-    # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
     config.before_enqueue = lambda {
       throw(:abort) unless recipient_id == event.record.user_id
-      throw(:abort) unless recipient_pref(:email) == true
+      throw(:abort) unless deliver_email_now?
     }
     config.enqueue = true
   end

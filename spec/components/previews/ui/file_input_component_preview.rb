@@ -48,6 +48,11 @@ module UI
     # in `[]` when paired with a Rails controller that expects an array.
     def multiple; end
 
+    # Shows WHICH files were picked: one pill per selected file plus an sr-only
+    # live-region announcement, synced by the `file-input` Stimulus controller —
+    # the native control alone only shows a count ("3 files").
+    def show_selection; end
+
     # @!endgroup
 
     # @!group Reference

@@ -1,14 +1,16 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Keep in sync with the `modes` array in shared/_a11y_sim.html.erb. `blur` stays
-// index 1 and `cataract` last — the keyboard-nav specs pin those positions.
-const MODES = ["normal", "blur", "grayscale", "deuteranopia", "protanopia", "tritanopia", "achromatopsia", "low_contrast", "cataract"]
 const STORAGE_KEY = "a11y_sim_mode"
 const BODY_CLASS_PREFIX = "a11y-sim-"
 
 export default class extends Controller {
   static targets = ["menu", "trigger", "triggerIcon", "triggerLabel", "item", "announcer", "tooltip"]
-  static values = { announcementTemplate: { type: String, default: "Filter: %{mode}" } }
+  // The ordered mode list is owned by shared/_a11y_sim.html.erb, which
+  // serializes it into `modes-value` alongside the menu it renders.
+  static values = {
+    modes: Array,
+    announcementTemplate: { type: String, default: "Filter: %{mode}" }
+  }
 
   connect() {
     this.handleOutsideClick = this.handleOutsideClick.bind(this)
@@ -32,7 +34,7 @@ export default class extends Controller {
 
   select(event) {
     const mode = event.currentTarget.dataset.mode
-    if (!MODES.includes(mode)) return
+    if (!this.modesValue.includes(mode)) return
     this.applyMode(mode)
     this.closeMenu()
   }
@@ -100,9 +102,9 @@ export default class extends Controller {
   }
 
   applyMode(mode) {
-    const normalized = MODES.includes(mode) ? mode : "normal"
+    const normalized = this.modesValue.includes(mode) ? mode : "normal"
 
-    MODES.forEach(m => {
+    this.modesValue.forEach(m => {
       if (m === "normal") return
       document.body.classList.toggle(`${BODY_CLASS_PREFIX}${m}`, m === normalized)
     })
@@ -165,7 +167,7 @@ export default class extends Controller {
   readStoredMode() {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY)
-      return MODES.includes(stored) ? stored : "normal"
+      return this.modesValue.includes(stored) ? stored : "normal"
     } catch (_error) {
       return "normal"
     }
@@ -210,9 +212,9 @@ export default class extends Controller {
         return
     }
 
-    if (event.key >= "0" && event.key <= "8") {
+    if (event.key >= "0" && event.key <= "9") {
       const index = parseInt(event.key, 10)
-      const mode = MODES[index]
+      const mode = this.modesValue[index]
       if (mode) {
         event.preventDefault()
         this.applyMode(mode)

@@ -162,6 +162,25 @@ summary::-webkit-details-marker { display: none; }
   min-width: var(--form-input-height);
 }
 
+/* Overlays promoted to the top layer (app/javascript/overlays/top_layer.js) take the
+   UA's `[popover]` box with them: fixed, inset-0, centred, bordered, opaque. We want
+   only the top layer — the component's own classes keep owning geometry and chrome.
+   In @layer base so it outranks the UA sheet but still loses to Tailwind utilities;
+   `position` is deliberately not reset, since every promoted panel sets its own. */
+@layer base {
+  [data-top-layer] {
+    inset: auto;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    background: transparent;
+    color: inherit;
+  }
+}
+
 /* Component utilities — composition rules for repeated view patterns (not theme tokens). */
 
 @layer components {

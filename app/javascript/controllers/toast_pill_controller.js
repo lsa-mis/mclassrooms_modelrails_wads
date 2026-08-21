@@ -51,8 +51,6 @@ export default class extends Controller {
     }
   }
 
-  // Private
-
   animateIn() {
     if (this.prefersReducedMotion) {
       this.element.style.opacity = "1"

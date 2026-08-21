@@ -31,7 +31,6 @@
     <p class="mt-2 text-sm text-text-muted" data-webauthn-target="status" role="status" aria-live="polite" aria-atomic="true"></p>
   </div>
 
-  <%# Passkey list %>
   <% if @passkeys.any? %>
     <ul role="list" class="mt-8 space-y-4">
       <% @passkeys.each do |passkey| %>

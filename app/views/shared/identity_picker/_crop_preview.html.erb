@@ -1,0 +1,24 @@
+<%# locals: () -%>
+<div>
+  <span class="block text-xs uppercase tracking-wider text-text-muted mb-3">
+    <%= t("identity_picker.preview") %>
+  </span>
+  <div class="flex items-center gap-3">
+    <div class="w-16 h-16 rounded-full bg-surface-sunken overflow-hidden shrink-0"
+         aria-hidden="true">
+      <%# src omitted intentionally — identity_picker_controller#updateCropPreview
+          sets it from canvas.toDataURL() each time the crop changes. %>
+      <img alt=""
+           class="w-full h-full object-cover"
+           data-identity-picker-target="cropPreview">
+    </div>
+    <div>
+      <span class="block text-sm font-medium text-text-heading">
+        <%= t("identity_picker.preview_title") %>
+      </span>
+      <span class="block text-xs text-text-muted">
+        <%= t("identity_picker.preview_description") %>
+      </span>
+    </div>
+  </div>
+</div>

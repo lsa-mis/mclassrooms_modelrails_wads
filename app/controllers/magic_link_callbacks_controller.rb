@@ -25,8 +25,6 @@ class MagicLinkCallbacksController < ApplicationController
     end
   end
 
-  # POST. The state-changing half: atomically consume the token and sign the
-  # existing user in.
   def sign_in
     token_record = MagicLinkToken.find_valid(params[:token])
     user = token_record && User.find_by(email_address: token_record.email)
