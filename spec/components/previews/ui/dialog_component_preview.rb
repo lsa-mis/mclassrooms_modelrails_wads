@@ -34,7 +34,7 @@ module UI
   #   a parent element and wire your own trigger.
   #
   # ## Related
-  # `alert_dialog` · `drawer` · `sheet`
+  # `drawer` · `sheet`
   # @logical_path Overlays
   class DialogComponentPreview < ViewComponent::Preview
     include UIHelper
@@ -56,6 +56,16 @@ module UI
     # A dropdown menu inside the dialog — two dismissable layers at once. Escape closes
     # only the topmost (the menu); the dialog stays open.
     def nested_menu; end
+
+    # Two modals at once — a confirm opened from inside a form dialog. Native <dialog>
+    # stacks them: the second takes the top layer, the focus trap, and Escape.
+    def stacked
+    end
+
+    # A destructive confirm: role: :alertdialog announces as an alert dialog
+    # and caps the panel at max-w-md regardless of size:.
+    def alertdialog
+    end
 
     # @!endgroup
 

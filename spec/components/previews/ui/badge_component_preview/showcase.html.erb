@@ -1,6 +1,6 @@
 <%# locals: () -%>
 <div data-showcase="badge" class="flex flex-wrap items-start gap-4">
-  <% [%w[solid primary], %w[soft primary], %w[soft info], %w[soft success], %w[soft warning], %w[soft danger], %w[outline neutral], %w[ghost neutral], %w[link primary]].each do |variant, tone| %>
+  <% [%w[solid primary], %w[soft primary], %w[soft info], %w[soft success], %w[soft warning], %w[soft danger], %w[soft neutral], %w[outline neutral], %w[ghost neutral], %w[link primary]].each do |variant, tone| %>
     <div class="flex flex-col items-center gap-1">
       <%= ui :badge, "Badge", variant: variant.to_sym, tone: tone.to_sym %>
       <span class="text-xs text-text-muted"><%= variant %> / <%= tone %></span>

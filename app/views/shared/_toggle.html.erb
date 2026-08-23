@@ -1,24 +1,36 @@
-<%# locals: (name:, label:, checked: false, disabled: false, value: "true", help: nil, hidden_value: nil) -%>
+<%# locals: (name:, label:, checked: false, disabled: false, value: "true", help: nil, hidden_value: nil, visible_label: true) -%>
 <%# Switch-style toggle. Wraps a hidden checkbox inside a styled label so
     screen readers get the proper input semantics + the visual is a sliding
     pill. The pill's visual state is driven entirely by CSS via Tailwind's
     group-has-[:checked]: and group-has-[:disabled]: variants — clicks
     update the visual instantly without waiting for the auto-submit
-    round-trip. The server remains the source of truth on next render. %>
+    round-trip. The server remains the source of truth on next render.
+
+    `visible_label: false` renders the label text sr-only (the text stays in
+    the DOM — it is the checkbox's accessible name). Pass it whenever this
+    toggle is the `control:` of shared/_preferences_row, which already shows
+    the same string as the row title; a visible toggle label duplicates it
+    and collides with the title at phone widths (W1-3). Standalone toggles
+    keep the default visible label. %>
 <%
   toggle_id = "toggle-#{name.to_s.parameterize.tr('_', '-')}-#{SecureRandom.hex(2)}"
-  help_id = "#{toggle_id}-help" if help.present?
+  hint_id = "#{toggle_id}-hint" if help.present?
 %>
+<%# min-h-11: the label is the pointer target; with the text sr-only it would
+    otherwise collapse to the 44x24 pill, under the 44px AAA floor (2.5.5).
+    gap-3 only when visible text follows the pill — an sr-only label is
+    absolutely positioned, and gap against its empty wrapper leaves 12px of
+    dead space trailing the pill. %>
 <label for="<%= toggle_id %>"
-       class="inline-flex items-center gap-3 cursor-pointer group
-              has-[:disabled]:cursor-not-allowed">
+       class="<%= class_names("inline-flex min-h-11 items-center cursor-pointer group has-[:disabled]:cursor-not-allowed",
+                              "gap-3" => visible_label || help.present?) %>">
   <input type="checkbox"
          id="<%= toggle_id %>"
          name="<%= name %>"
          value="<%= value %>"
          <% if checked %>checked<% end %>
          <% if disabled %>disabled<% end %>
-         <% if help_id %>aria-describedby="<%= help_id %>"<% end %>
+         <% if hint_id %>aria-describedby="<%= hint_id %>"<% end %>
          data-action="change->auto-submit#submit"
          class="sr-only peer">
   <%# A `disabled` checkbox doesn't submit a value, so when the security
@@ -37,11 +49,12 @@
                  translate-x-0 group-has-[:checked]:translate-x-5"></span>
   </span>
   <span class="flex flex-col">
-    <span class="text-sm text-text-body group-has-[:disabled]:text-text-muted">
+    <span data-toggle-label
+          class="<%= class_names("text-sm text-text-body group-has-[:disabled]:text-text-muted", "sr-only" => !visible_label) %>">
       <%= label %>
     </span>
     <% if help.present? %>
-      <span id="<%= help_id %>" class="text-xs text-text-muted">
+      <span id="<%= hint_id %>" class="text-xs text-text-muted">
         <%= help %>
       </span>
     <% end %>

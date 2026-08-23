@@ -32,6 +32,12 @@ RSpec.describe "Pages", type: :request do
         expect(response.body).to include(I18n.t("pages.home.cta.button"))
         expect(response.body).to include(new_session_path)
       end
+
+      it "renders the secondary hero CTA as a brand-outline button" do
+        get root_path
+        expect(Capybara.string(response.body)).to have_css("a.btn-outline-primary",
+          text: I18n.t("pages.home.hero.cta_secondary"))
+      end
     end
 
     context "when SIGNUP_MODE is :invite_only without a token" do
@@ -42,6 +48,46 @@ RSpec.describe "Pages", type: :request do
         expect(response.body).to include(I18n.t("pages.home.cta.button"))
         expect(response.body).to include(new_session_path)
       end
+    end
+  end
+
+  describe "landing page for a signed-in user" do
+    let(:user) { create(:user) }
+
+    before do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
+      sign_in(user)
+    end
+
+    it "swaps the hero CTA for a workspaces link" do
+      get root_path
+      expect(Capybara.string(response.body)).to have_link(
+        I18n.t("pages.home.hero.cta_signed_in"), href: workspaces_path
+      )
+    end
+
+    it "softens the bottom CTA section and links to workspaces" do
+      get root_path
+      page = Capybara.string(response.body)
+      expect(response.body).to include(I18n.t("pages.home.cta.signed_in.title"))
+      expect(response.body).to include(I18n.t("pages.home.cta.signed_in.subtitle"))
+      expect(page).to have_link(I18n.t("pages.home.cta.signed_in.button"), href: workspaces_path)
+    end
+
+    it "does not render the sign-up copy or a sign-in link CTA" do
+      get root_path
+      expect(response.body).not_to include(I18n.t("pages.home.cta.title"))
+      expect(Capybara.string(response.body)).to have_no_link(
+        I18n.t("pages.home.hero.cta_primary"), href: new_session_path
+      )
+    end
+
+    it "shows the workspaces CTA even when signups are closed" do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+      get root_path
+      expect(Capybara.string(response.body)).to have_link(
+        I18n.t("pages.home.cta.signed_in.button"), href: workspaces_path
+      )
     end
   end
 

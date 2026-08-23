@@ -13,7 +13,8 @@
       <%= render "shared/toggle",
             name: "notification_preferences[delivery_methods][in_app][enabled]",
             label: t("notifications.preferences.delivery_methods.items.in_app.title"),
-            checked: prefs.dig("delivery_methods", "in_app", "enabled") == true %>
+            checked: prefs.dig("delivery_methods", "in_app", "enabled") == true,
+            visible_label: false %>
     <% end %>
   <% end %>
   <%= render "shared/preferences_row",
@@ -32,7 +33,8 @@
         <%= render "shared/toggle",
               name: "notification_preferences[delivery_methods][email][enabled]",
               label: t("notifications.preferences.delivery_methods.items.email.title"),
-              checked: prefs.dig("delivery_methods", "email", "enabled") == true %>
+              checked: prefs.dig("delivery_methods", "email", "enabled") == true,
+              visible_label: false %>
       <% end %>
       <%= form_with url: settings_notification_preferences_path,
             method: :patch,

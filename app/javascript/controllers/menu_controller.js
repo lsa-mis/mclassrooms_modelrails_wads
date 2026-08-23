@@ -107,7 +107,12 @@ export default class extends Controller {
         break
       case "ArrowUp":
         event.preventDefault()
-        this.focusItem(items[(current - 1 + items.length) % items.length])
+        // No item focused (current === -1): the panel itself holds focus —
+        // its tabindex="-1" catches clicks on padding or a separator. APG says
+        // ArrowUp enters at the LAST item; the modulo alone lands one short
+        // of it. Same correction as combobox/command; typeAhead already
+        // guards -1 with Math.max — this was the one unguarded path.
+        this.focusItem(current === -1 ? items[items.length - 1] : items[(current - 1 + items.length) % items.length])
         break
       case "Home":
         event.preventDefault()

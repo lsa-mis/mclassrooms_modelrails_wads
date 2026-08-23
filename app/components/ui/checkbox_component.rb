@@ -30,7 +30,7 @@ module UI
     BASE = "peer size-4 shrink-0 rounded-[4px] border border-border-strong shadow-xs transition-shadow outline-none " \
            "focus-ring " \
            "disabled:cursor-not-allowed disabled:opacity-50 " \
-           "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
+           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger  " \
            "checked:border-interactive checked:bg-interactive checked:text-text-on-interactive " \
            " "
 

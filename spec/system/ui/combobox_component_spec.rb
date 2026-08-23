@@ -148,5 +148,29 @@ RSpec.describe "Combobox component accessibility", type: :system do
       expect(page).not_to have_css("[data-combobox-target='option']:not([hidden])")
       expect(active_option_text).to be_nil
     end
+
+    # #677 bug 2: close() leaves a zero-match filter's hidden states in place,
+    # and with the reopen branch behind the empty-visible guard NO key could
+    # reopen the listbox — aria-expanded stuck false until a printable
+    # keystroke. Reopen must run before the visible set is computed.
+    it "reopens on ArrowUp after Escape abandons a zero-match filter, entering at the LAST option" do
+      input.click
+      cdp_browser.keyboard.type("zz")
+      cdp_press(:escape)
+      cdp_press(:up)
+
+      expect(input["aria-expanded"]).to eq("true")
+      expect(active_option_text).to eq("Argentina")
+    end
+
+    it "reopens on ArrowDown after Escape abandons a zero-match filter, entering at the FIRST option" do
+      input.click
+      cdp_browser.keyboard.type("zz")
+      cdp_press(:escape)
+      cdp_press(:down)
+
+      expect(input["aria-expanded"]).to eq("true")
+      expect(active_option_text).to eq("United States")
+    end
   end
 end

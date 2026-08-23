@@ -16,3 +16,7 @@ Metrics/MethodLength:
     - 'app/controllers/settings/connected_accounts_controller.rb'
     - 'app/lib/notification_broadcaster.rb'
     - 'app/models/invitation.rb'
+    # Vendored/regenerable (rails g modelrails_ui:add form_builder) — never
+    # hand-edit to shrink; see app/form_builders/tailwind_form_builder.rb's
+    # class comment.
+    - 'app/form_builders/ui/form_builder.rb'

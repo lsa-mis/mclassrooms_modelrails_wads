@@ -51,6 +51,24 @@ RSpec.describe "Sessions", type: :request do
         expect(flash[:notice]).to eq(I18n.t("authentication.already_signed_in"))
       end
     end
+
+    context "with oauth providers enabled" do
+      before do
+        # oauth_enabled? gates the button rendering. enabled_oauth_providers filters
+        # PROVIDER_CONFIG by which providers have a client_id in credentials
+        # (OauthHelper#enabled_oauth_providers). Stub the SOURCE so the real helper
+        # computes: google present -> the Google button renders (spec/system/invite_only_signup_spec.rb's pattern).
+        allow(Rails.application.credentials).to receive(:dig).and_call_original
+        allow(Rails.application.credentials).to receive(:dig)
+          .with(:oauth, :google, :client_id).and_return("test-google-client-id")
+      end
+
+      it "renders provider buttons as secondary buttons preserving the non-Turbo form" do
+        get new_session_path
+        html = Capybara.string(response.body)
+        expect(html).to have_css("form[data-turbo='false'] button.btn-secondary.w-full.gap-3")
+      end
+    end
   end
 
   describe "POST /session" do

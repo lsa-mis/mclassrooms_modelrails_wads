@@ -1,9 +1,0 @@
-<%= render(UI::AlertDialogComponent.new(
-      title: "Confirm action",
-      description: "This action cannot be undone. All related data will be permanently removed.")) do |c| %>
-  <% c.with_trigger { "Open alert dialog" } %>
-  <% c.with_footer do %>
-    <button type="button" class="btn-secondary" data-action="click->modal#close">Cancel</button>
-    <button type="button" class="btn-primary">Confirm</button>
-  <% end %>
-<% end %>

@@ -52,11 +52,28 @@ export default class extends Controller {
   // focus stays on the input (combobox pattern), so selection is driven via
   // aria-activedescendant rather than moving focus onto options.
   navigate(event) {
-    const visible = this.optionTargets.filter(o => !o.hidden)
     if (event.key === "Escape") {
       this.close()
       return
     }
+
+    // Reopen handling runs BEFORE the visible set is computed: after Escape
+    // on a zero-match filter the stale option.hidden states would leave
+    // `visible` empty, and an early return here locked the keyboard out of
+    // ever reopening (only a printable keystroke recovered — #677). open()
+    // re-runs filter() against the restored committed label; entry then
+    // follows APG — ArrowDown activates the FIRST visible option, ArrowUp
+    // the LAST.
+    if ((event.key === "ArrowDown" || event.key === "ArrowUp") && this.panelTarget.hidden) {
+      event.preventDefault()
+      this.open()
+      const reopened = this.optionTargets.filter(o => !o.hidden)
+      if (!reopened.length) return
+      this._setActive(event.key === "ArrowUp" ? reopened[reopened.length - 1] : reopened[0])
+      return
+    }
+
+    const visible = this.optionTargets.filter(o => !o.hidden)
     if (!visible.length) return
 
     const current = visible.findIndex(el => el.id === this.activeId)
@@ -64,11 +81,9 @@ export default class extends Controller {
 
     switch (event.key) {
       case "ArrowDown":
-        if (this.panelTarget.hidden) this.open()
         next = visible[(current + 1) % visible.length]
         break
       case "ArrowUp":
-        if (this.panelTarget.hidden) this.open()
         // No active option (current === -1): APG says ArrowUp enters at the
         // LAST option — the modulo alone lands one short of it (#661).
         next = current === -1 ? visible[visible.length - 1] : visible[(current - 1 + visible.length) % visible.length]

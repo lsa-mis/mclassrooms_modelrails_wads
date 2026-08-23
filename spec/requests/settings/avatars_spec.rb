@@ -372,6 +372,19 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
+    describe "GET /settings/profile (identity picker crop controls)" do
+      it "renders the crop reset/cancel/save through btn utilities (icon-text pair excluded, #760)" do
+        get edit_settings_profile_path
+        html = Capybara.string(response.body)
+        expect(html).to have_css("button.btn-secondary.w-full", text: I18n.t("identity_picker.reset_crop"), visible: :all)
+        expect(html).to have_css("button.btn-secondary", text: I18n.t("identity_picker.cancel"), visible: :all)
+        expect(html).to have_css("button.btn-primary", text: I18n.t("identity_picker.save_crop"), visible: :all)
+        # Guards (green before and after): the two icon+label text buttons stay hand-rolled (#760).
+        expect(html).to have_no_css("button.btn-text", text: I18n.t("identity_picker.upload_new"), visible: :all)
+        expect(html).to have_no_css("button.btn-text", text: I18n.t("identity_picker.remove_photo"), visible: :all)
+      end
+    end
+
     describe "GET /account/avatar/hub" do
       it "renders the hub partial" do
         get hub_settings_avatar_path(source: "initials"),

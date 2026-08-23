@@ -37,6 +37,22 @@ RSpec.describe "Workspace Members", type: :request do
         expect(response.body).to include("Owner")
       end
 
+      it "renders member and invitation status pills through UI::Badge (canonical chip look)" do
+        deactivated_membership = add_member
+        deactivated_membership.discard!
+        create(:invitation, invitable: workspace, email: "pillcheck@example.com", invited_by: user)
+
+        get workspace_members_path(workspace)
+
+        html = Capybara.string(response.body)
+        expect(html).to have_css("span[data-variant='soft'][data-tone='success']",
+          exact_text: I18n.t("workspaces.members.index.active"))
+        expect(html).to have_css("span[data-variant='soft'][data-tone='danger']",
+          exact_text: I18n.t("workspaces.members.index.deactivated"))
+        expect(html).to have_css("span[data-variant='soft'][data-tone='warning']",
+          exact_text: I18n.t("workspaces.members.index.pending_invitations.pending"))
+      end
+
       context "with search" do
         let!(:alice_membership) { add_member(user: create(:user, first_name: "Alice", last_name: "Anderson")) }
 

@@ -45,7 +45,7 @@ RSpec.describe "Active devices (settings/sessions)", type: :system do
       click_button I18n.t("settings.sessions.index.revoke_button")
     end
     expect(page).to have_text(I18n.t("settings.sessions.destroy.signed_out", device: "Firefox on Windows"))
-    within("ul[role='list']") do
+    within("#main-content ul[role='list']") do
       expect(page).not_to have_text("Firefox on Windows")
     end
   end

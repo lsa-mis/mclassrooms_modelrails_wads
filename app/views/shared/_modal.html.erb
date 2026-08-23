@@ -1,11 +1,11 @@
-<%# locals: (title:, id: nil, size: :md, description: nil, trigger: nil, trigger_class: "btn-secondary") -%>
+<%# locals: (title:, id: nil, body_id: nil, size: :md, description: nil, trigger: nil, trigger_class: "btn-secondary") -%>
 <%#
   Thin adapter over UI::DialogComponent.
 
   Surface-only (default, no trigger:): renders ONLY the <dialog> (wrapper: false).
   Callers own the surrounding data-controller="modal" wrapper + trigger button.
-  body_id stays "modal-body" to preserve the Turbo Stream contract
-  (turbo_stream.append "modal-body"). Existing call sites are unchanged.
+  body_id defaults to "modal-body" to preserve the Turbo Stream contract
+  (turbo_stream.append "modal-body").
 
   Complete (pass trigger:): renders the data-controller="modal" wrapper + a trigger
   button + the <dialog> as one copy-paste unit (wrapper: true). body_id uses the
@@ -13,7 +13,7 @@
 -%>
 <% if trigger.present? %>
   <%= render UI::DialogComponent.new(
-        title: title, id: id, size: size, description: description, wrapper: true) do |d| %>
+        title: title, id: id, body_id: body_id, size: size, description: description, wrapper: true) do |d| %>
     <% d.with_trigger do %>
       <%= tag.button(trigger, type: "button", class: trigger_class) %>
     <% end %>
@@ -21,6 +21,6 @@
   <% end %>
 <% else %>
   <%= render UI::DialogComponent.new(
-        title: title, id: id, size: size, description: description,
-        wrapper: false, body_id: "modal-body") do %><%= yield %><% end %>
+        title: title, id: id, body_id: body_id || "modal-body", size: size, description: description,
+        wrapper: false) do %><%= yield %><% end %>
 <% end %>

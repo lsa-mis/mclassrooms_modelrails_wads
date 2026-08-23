@@ -1,0 +1,11 @@
+<% article = UI::FormBuilderComponentPreview::Article.new %>
+<% article.errors.add(:title, "can't be blank") %>
+<% article.errors.add(:terms, "must be accepted") %>
+<%= form_with model: article, url: "#", builder: UI::FormBuilder, scope: :article do |f| %>
+  <div class="space-y-6 max-w-md">
+    <%= f.error_summary %>
+    <%= f.text_field :title, help: "Shown in the list view", required: true %>
+    <%= f.checkbox :terms, label: "I accept the terms" %>
+    <%= f.submit "Save" %>
+  </div>
+<% end %>

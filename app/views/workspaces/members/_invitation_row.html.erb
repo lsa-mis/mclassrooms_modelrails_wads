@@ -19,10 +19,8 @@
     <%= invitation.role.name %>
   </td>
   <td class="py-3 px-2">
-    <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full
-                 bg-warning-surface text-warning">
-      <%= t("workspaces.members.index.pending_invitations.pending") %>
-    </span>
+    <%= ui :badge, t("workspaces.members.index.pending_invitations.pending"),
+          variant: :soft, tone: :warning %>
   </td>
   <td class="py-3 px-2 space-x-2">
     <% if policy(invitation).resend? %>

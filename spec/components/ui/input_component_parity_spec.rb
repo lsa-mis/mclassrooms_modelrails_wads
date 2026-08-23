@@ -2,22 +2,41 @@
 
 require "rails_helper"
 
-# Parity gate: UI::InputComponent must apply `.form-field`, which is the shared
-# source of truth for field styling (defined in application.css). Error styling
-# is attribute-driven via `.form-field[aria-invalid]`.
+# Parity gate: UI::InputComponent must render identically whether instantiated
+# directly or through TailwindFormBuilder — the builder is a thin wrapper that
+# delegates to this exact component (see app/form_builders/ui/form_builder.rb),
+# so there is no separate `.form-field` class scheme to keep in sync anymore;
+# the parity IS the shared component.
 RSpec.describe UI::InputComponent, "field styling parity with TailwindFormBuilder", type: :component do
-  it "applies the .form-field class in normal state" do
-    render_inline(described_class.new(name: "user[name]"))
-    cls = page.find("input")[:class]
+  include Capybara::RSpecMatchers
 
-    expect(cls).to include("form-field")
+  let(:user) { User.new }
+  let(:builder) { TailwindFormBuilder.new(:user, user, vc_test_controller.view_context, {}) }
+
+  def parse(html)
+    Capybara.string(html.to_s)
   end
 
-  it "applies aria-invalid in error state so .form-field[aria-invalid] styling triggers" do
-    render_inline(described_class.new(name: "user[name]", invalid: true))
-    input = page.find("input")
+  it "applies the same base chrome classes in normal state as the builder's text_field" do
+    render_inline(described_class.new(name: "user[first_name]"))
+    direct_class = page.find("input")[:class]
 
-    expect(input[:class]).to include("form-field")
-    expect(input["aria-invalid"]).to eq("true")
+    builder_result = parse(builder.text_field(:first_name))
+    builder_class = builder_result.find("input")[:class]
+
+    expect(direct_class).to eq(builder_class)
+  end
+
+  it "applies the same error-state classes as the builder's text_field on an invalid field" do
+    user.errors.add(:first_name, "can't be blank")
+
+    render_inline(described_class.new(name: "user[first_name]", invalid: true))
+    direct_class = page.find("input")[:class]
+
+    builder_result = parse(builder.text_field(:first_name))
+    builder_class = builder_result.find("input")[:class]
+
+    expect(direct_class).to eq(builder_class)
+    expect(direct_class).to include("border-danger")
   end
 end

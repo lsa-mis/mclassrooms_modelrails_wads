@@ -19,6 +19,12 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         get edit_settings_profile_path
         expect(response).to redirect_to(new_session_path)
       end
+
+      it "renders the cancel link as a text button" do
+        get magic_link_callback_path(token: token)
+        expect(Capybara.string(response.body)).to have_css("a.btn-text",
+          text: I18n.t("magic_link_callbacks.confirm.cancel"))
+      end
     end
 
     context "valid token for new email (no existing user)" do

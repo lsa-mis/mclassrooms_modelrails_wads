@@ -94,4 +94,25 @@ RSpec.describe "shared/_modal", type: :view do
       expect(rendered).to have_css("button[aria-label='#{I18n.t("modals.close")}']")
     end
   end
+
+  describe "body_id threading (v0.11.0 contract)" do
+    it "surface-only branch keeps the modal-body default" do
+      render_modal(title: "T", content: "BODY")
+
+      expect(rendered).to have_css("dialog [id='modal-body']", text: "BODY", visible: :all)
+    end
+
+    it "surface-only branch accepts a custom body_id" do
+      render_modal(title: "T", body_id: "custom-target", content: "BODY")
+
+      expect(rendered).to have_css("dialog [id='custom-target']", visible: :all)
+      expect(rendered).to have_no_css("[id='modal-body']")
+    end
+
+    it "complete branch derives body id from the explicit id" do
+      render_modal(title: "T", id: "wired", trigger: "Open", content: "BODY")
+
+      expect(rendered).to have_css("dialog [id='wired-body']", visible: :all)
+    end
+  end
 end

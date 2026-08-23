@@ -9,7 +9,7 @@ module UI
     INPUT_BASE = "peer h-12 w-full min-w-0 rounded-md border border-border-strong bg-transparent px-3 pb-1.5 pt-4 " \
                  "text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-transparent " \
                  "focus-ring " \
-                 "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
+                 "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger  " \
                  "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 " \
                  "md:text-sm "
 
