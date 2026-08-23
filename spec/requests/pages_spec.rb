@@ -59,34 +59,37 @@ RSpec.describe "Pages", type: :request do
       sign_in(user)
     end
 
-    it "swaps the hero CTA for a workspaces link" do
+    # Fork behavior (differs from the template's workspaces-link version):
+    # a signed-in visitor's CTAs point at the product — Find a Room — and the
+    # bottom CTA keeps its shared title, swapping only subtitle + button
+    # (pages.home.cta.*_signed_in keys; see app/views/pages/home.html.erb).
+    it "swaps the hero CTA for a Find-a-Room link" do
       get root_path
       expect(Capybara.string(response.body)).to have_link(
-        I18n.t("pages.home.hero.cta_signed_in"), href: workspaces_path
+        I18n.t("pages.home.hero.cta_primary_signed_in"), href: find_a_room_path
       )
     end
 
-    it "softens the bottom CTA section and links to workspaces" do
+    it "softens the bottom CTA section and links to Find a Room" do
       get root_path
       page = Capybara.string(response.body)
-      expect(response.body).to include(I18n.t("pages.home.cta.signed_in.title"))
-      expect(response.body).to include(I18n.t("pages.home.cta.signed_in.subtitle"))
-      expect(page).to have_link(I18n.t("pages.home.cta.signed_in.button"), href: workspaces_path)
+      expect(response.body).to include(I18n.t("pages.home.cta.title"))
+      expect(response.body).to include(I18n.t("pages.home.cta.subtitle_signed_in"))
+      expect(page).to have_link(I18n.t("pages.home.cta.button_signed_in"), href: find_a_room_path)
     end
 
-    it "does not render the sign-up copy or a sign-in link CTA" do
+    it "does not render a sign-in link CTA" do
       get root_path
-      expect(response.body).not_to include(I18n.t("pages.home.cta.title"))
       expect(Capybara.string(response.body)).to have_no_link(
         I18n.t("pages.home.hero.cta_primary"), href: new_session_path
       )
     end
 
-    it "shows the workspaces CTA even when signups are closed" do
+    it "shows the Find-a-Room CTA even when signups are closed" do
       allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
       get root_path
       expect(Capybara.string(response.body)).to have_link(
-        I18n.t("pages.home.cta.signed_in.button"), href: workspaces_path
+        I18n.t("pages.home.cta.button_signed_in"), href: find_a_room_path
       )
     end
   end

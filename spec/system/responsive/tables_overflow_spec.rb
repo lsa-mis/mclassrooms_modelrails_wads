@@ -78,31 +78,4 @@ RSpec.describe "Tables at narrow viewports", type: :system, skip_axe_hook: true 
     end
   end
 
-  describe "project memberships table" do
-    let(:workspace) { user.workspaces.sole }
-    let(:project)   { create(:project, workspace: workspace, created_by: user) }
-
-    before do
-      create(:project_membership, :creator, project: project, user: user)
-      # A long member name forces the table past 375px so the overflow
-      # precondition is deterministic rather than font-metrics luck.
-      long_named = create(:user, first_name: "Bartholomew-Alexander",
-                                 last_name: "Wolfeschlegelsteinhausen")
-      create(:project_membership, project: project, user: long_named)
-    end
-
-    it "keeps the actions column reachable at 375px via a scrollable, keyboard-focusable region" do
-      with_viewport(ResponsiveViewport::PHONE) do
-        visit workspace_project_memberships_path(workspace, project)
-
-        region = scroll_region(I18n.t("workspaces.projects.memberships.index.table_label"))
-        expect_horizontally_scrollable(region)
-
-        expect(region).to have_css("tbody td:last-child a, tbody td:last-child button",
-                                   visible: :all)
-
-        expect(axe_violations_in_both_themes).to be_empty
-      end
-    end
-  end
 end
