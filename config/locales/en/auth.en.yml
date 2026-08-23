@@ -38,10 +38,6 @@ en:
         Click the link in that message to get started.
       sign_in_link: "Sign in to an existing account"
       oauth_blocked: "Sign-ups are by invitation only. Please ask your workspace administrator for an invitation."
-  errors:
-    form_errors:
-      one: "1 error prevented this form from being saved:"
-      other: "%{count} errors prevented this form from being saved:"
   activerecord:
     errors:
       models:

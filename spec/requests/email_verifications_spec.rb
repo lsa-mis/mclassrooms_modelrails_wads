@@ -15,6 +15,17 @@ RSpec.describe "Email verifications", type: :request do
       get new_email_verification_path
       expect(response).to redirect_to(new_session_path)
     end
+
+    it "styles the resend and continue actions with real button utilities (phantom classes fixed)" do
+      sign_in(user)
+      get new_email_verification_path
+
+      html = Capybara.string(response.body)
+      expect(html).to have_css("button.btn-secondary[type='submit']") # resend button_to renders <button> in this app
+      expect(html).to have_css("a.btn-primary", text: I18n.t("email_verifications.new.continue"))
+      expect(html).to have_no_css(".btn-neutral")
+      expect(html).to have_no_css("a.btn-solid")
+    end
   end
 
   describe "POST /email_verification_resend" do

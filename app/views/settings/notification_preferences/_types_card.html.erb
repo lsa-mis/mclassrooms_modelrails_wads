@@ -33,7 +33,8 @@
               checked: security || prefs.dig("notification_types", category) == true,
               disabled: security,
               hidden_value: (security ? "true" : nil),
-              help: (security ? t("notifications.preferences.notification_types.always_on") : nil) %>
+              help: (security ? t("notifications.preferences.notification_types.always_on") : nil),
+              visible_label: false %>
       <% end %>
     <% end %>
     <%= render "shared/preferences_row",

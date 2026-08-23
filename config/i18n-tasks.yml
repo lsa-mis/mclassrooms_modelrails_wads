@@ -44,7 +44,6 @@ data:
     - ['email_verifications.new.*', 'config/locales/%{locale}/onboarding.%{locale}.yml']
     - ['errors.not_authorized', 'config/locales/%{locale}/application.%{locale}.yml']
     - ['errors.not_found', 'config/locales/%{locale}/application.%{locale}.yml']
-    - ['errors.form_errors.*', 'config/locales/%{locale}/auth.%{locale}.yml']
     - ['footer.about', 'config/locales/%{locale}/application.%{locale}.yml']
     - ['footer.aria.*', 'config/locales/%{locale}/application.%{locale}.yml']
     - ['footer.contact', 'config/locales/%{locale}/application.%{locale}.yml']
@@ -181,6 +180,23 @@ ignore_unused:
   - "media.derived_alt.room.*"
   - modals.delete
   - modals.save
+  # config/locales/modelrails_ui.en.yml is the delegate-file for every
+  # `modelrails_ui.*` key the gem's components call (see that file's header):
+  # gem-shipped, host-owned, copied in WHOLE from the gem's install template
+  # (B1 adoption) so every current AND future component has an override-ready
+  # key, not just the ones this app has installed today. Consumers live under
+  # app/components/ui, a path excluded from the scanner on purpose (every
+  # t() there carries an inline `default:`, so an absent app key is
+  # intentional — same reasoning as modals.* above); a few (e.g.
+  # chat_bubble.sent/received) are also dynamic key lookups the static
+  # scanner couldn't resolve even if the path weren't excluded. Deleting a
+  # key here only degrades that component to its shipped English default.
+  - modelrails_ui.*
+  # Off-namespace legacy key (predates the modelrails_ui.* convention)
+  # consumed by UI::BreadcrumbComponent under the scanner-excluded
+  # app/components/ui — same reasoning as modals.* above. Defined so the
+  # breadcrumb nav landmark name is translatable (W1 CP3).
+  - ui.breadcrumb.label
   # Rendered by Settings::ConnectedAccountsController#verify through the
   # PendingClaims problems map (symbol -> key string in a constant hash),
   # a call form the static scanner cannot resolve. Both keys are exercised

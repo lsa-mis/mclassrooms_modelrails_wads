@@ -126,6 +126,21 @@ RSpec.describe "Notifications index page", type: :system do
       end
     end
 
+    describe "button styling (btn utilities)" do
+      it "renders bulk and per-item actions as secondary buttons (danger tones retained)" do
+        notification = deliver_security_notification
+
+        visit settings_notifications_path
+
+        expect(page).to have_css("button.btn-secondary", text: I18n.t("notifications.index.mark_all_read.action"))
+        expect(page).to have_css("button.btn-secondary.text-danger", text: I18n.t("notifications.index.destroy_all_read.action"))
+        # One unread row -> mark_read + delete = 2 per-item action buttons.
+        within "##{ActionView::RecordIdentifier.dom_id(notification)}" do
+          expect(page).to have_css("button.btn-secondary[type='submit']", count: 2)
+        end
+      end
+    end
+
     describe "bulk actions" do
       it "marks every unread notification as read after confirming the bulk modal" do
         unread_a = deliver_security_notification

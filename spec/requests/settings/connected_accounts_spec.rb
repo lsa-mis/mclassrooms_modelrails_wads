@@ -26,6 +26,16 @@ RSpec.describe "Account Connected Accounts", type: :request do
         expect(response.body).to include("turbo-cable-stream-source")
         expect(response.body).to match(/signed-stream-name="[^"]+"/)
       end
+
+      it "renders the verified pill through UI::Badge (canonical padding)" do
+        create(:authentication, :verified, user: user, provider: "email", uid: user.email_address)
+
+        get settings_connected_accounts_path
+
+        html = Capybara.string(response.body)
+        expect(html).to have_css("span[data-variant='soft'][data-tone='success']",
+          exact_text: I18n.t("settings.connected_accounts.index.verified"))
+      end
     end
 
     describe "GET /account/connected_accounts (email label reflects password)" do

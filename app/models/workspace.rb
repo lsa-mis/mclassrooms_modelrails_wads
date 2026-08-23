@@ -131,8 +131,11 @@ class Workspace < ApplicationRecord
 
   def owner
     # Uses detect (not joins + find_by) so it works from preloaded
-    # memberships without firing a per-row query in list views.
-    memberships.detect(&:owner?)&.user
+    # memberships without firing a per-row query in list views. When nothing
+    # is preloaded, load roles alongside so the detect doesn't N+1 the role
+    # lookup (Bullet, first seen via the personal-workspace icon fallback).
+    ms = memberships.loaded? ? memberships : memberships.includes(:role)
+    ms.detect(&:owner?)&.user
   end
 
   # All Users holding an owner-role kept membership — ALWAYS a fresh query,

@@ -28,12 +28,34 @@ module UI
                   "transition-opacity group-data-[collapsed=true]:opacity-0 group-data-[collapsed=true]:h-0 " \
                   "group-data-[collapsed=true]:overflow-hidden group-data-[collapsed=true]:mb-0"
 
-    ITEM_CLS = "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors " \
+    ITEM_CLS = "group/item flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors " \
                "overflow-hidden " \
                "group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-0 " \
                "hover:bg-surface-sunken hover:text-text-heading " \
                "aria-[current]:bg-surface-sunken aria-[current]:text-text-heading aria-[current]:font-semibold " \
                "focus-ring"
+
+    # The collapsed rail's icon hint. Only a visual affordance: the item's label is clipped
+    # to width 0 but stays in the accessibility tree, so the link already has its name —
+    # announcing this too would name every item twice. Hence aria-hidden.
+    #
+    # It must be `fixed` on the modern path: the nav is `overflow-y-auto`, which makes its
+    # overflow-x non-visible too, so an `absolute` bubble is clipped at the 64px rail edge.
+    # Anchor positioning tethers the fixed bubble back to its item. Pre-Baseline browsers
+    # take the `absolute` fallback and lose the hint to that clip — the accessible name is
+    # unaffected, so this degrades a nicety, not the semantics.
+    RAIL_TOOLTIP = "pointer-events-none z-50 w-max max-w-48 rounded-md px-2 py-1 " \
+                   "bg-text-heading text-surface-raised text-xs whitespace-nowrap " \
+                   "opacity-0 transition-opacity duration-150 " \
+                   "group-hover/item:opacity-100 group-focus-within/item:opacity-100 " \
+                   "hidden group-data-[collapsed=true]:block " \
+                   "ml-2 supports-[position-area:bottom]:fixed " \
+                   "supports-[position-area:bottom]:[position-area:center_right] " \
+                   "supports-[position-area:bottom]:[position-try-fallbacks:flip-inline] " \
+                   "not-supports-[position-area:bottom]:absolute " \
+                   "not-supports-[position-area:bottom]:left-full " \
+                   "not-supports-[position-area:bottom]:top-1/2 " \
+                   "not-supports-[position-area:bottom]:-translate-y-1/2"
 
     ITEM_LABEL = "transition-[opacity,width] group-data-[collapsed=true]:w-0 " \
                  "group-data-[collapsed=true]:opacity-0 group-data-[collapsed=true]:overflow-hidden " \
@@ -45,9 +67,16 @@ module UI
     # brand:     text shown in the header
     # collapsed: initial collapsed state (default: false)
     # label:     accessible name for the <nav> landmark (default: i18n "Sidebar")
-    def initialize(brand: nil, collapsed: false, label: nil, **html_attrs)
+    # brand:     text shown in the header
+    # collapsed: initial collapsed state. Pass `sidebar_collapsed?` to honour the
+    #            visitor's remembered choice on the server and avoid a collapse flash.
+    # remember:  persist the choice to a cookie the server can read back (default true)
+    # label:     accessible name for the <nav> landmark
+    def initialize(brand: nil, collapsed: false, remember: true, label: nil, id: nil, **html_attrs)
       @brand       = brand
       @collapsed   = collapsed
+      @remember    = remember
+      @id          = id || "sidebar-#{SecureRandom.hex(4)}"
       @label       = label
       @extra_class = html_attrs.delete(:class)
       @html_attrs  = html_attrs
@@ -57,7 +86,7 @@ module UI
       content_tag(:aside,
         class: cn(RAIL_CLS, @extra_class),
         "data-collapsed": @collapsed.to_s,
-        data: { controller: "sidebar" },
+        data: { controller: "sidebar", sidebar_remember_value: @remember.to_s },
         **@html_attrs) do
         concat header
         concat nav_body
@@ -78,17 +107,21 @@ module UI
       content_tag(:button, type: "button",
         class: TOGGLE_CLS,
         "aria-label": I18n.t("modelrails_ui.sidebar.toggle", default: "Toggle sidebar"),
-        data: { action: "click->sidebar#toggle" }) { chevron_icon }
+        "aria-expanded": (!@collapsed).to_s,
+        "aria-controls": nav_id,
+        data: { sidebar_target: "toggle", action: "click->sidebar#toggle" }) { chevron_icon }
     end
 
     def nav_body
-      content_tag(:nav, class: NAV_CLS,
+      content_tag(:nav, id: nav_id, class: NAV_CLS,
         "aria-label": @label || I18n.t("modelrails_ui.sidebar.nav_label", default: "Sidebar")) do
         concat safe_join(groups) if groups.any?
         concat content_tag(:div, safe_join(items), class: "space-y-0.5") if items.any?
         concat content if content?
       end
     end
+
+    def nav_id = "#{@id}-nav"
 
     def chevron_icon
       content_tag(:svg,
@@ -132,6 +165,7 @@ module UI
       }.freeze
 
       def initialize(label:, href: "#", active: false, icon: nil, **html_attrs)
+        @anchor     = "--sb-item-#{SecureRandom.hex(4)}"
         @label      = label
         @href       = href
         @active     = active
@@ -143,14 +177,24 @@ module UI
         content_tag(:a,
           href: @href,
           class: SidebarComponent::ITEM_CLS,
+          style: "anchor-name: #{@anchor}",
           "aria-current": (@active ? "page" : nil),
           **@html_attrs) do
           concat icon_or_fallback
           concat content_tag(:span, @label, class: SidebarComponent::ITEM_LABEL)
+          concat rail_tooltip
         end
       end
 
       private
+
+      def rail_tooltip
+        content_tag(:span, @label,
+          class: SidebarComponent::RAIL_TOOLTIP,
+          style: "position-anchor: #{@anchor}",
+          data: { slot: "rail-tooltip" },
+          "aria-hidden": "true")
+      end
 
       def icon_or_fallback
         path = @icon && ICONS[@icon.to_sym]

@@ -14,8 +14,9 @@ module UI
   # - It's a real action — use `UI::ButtonComponent` (or `button_to` for non-GET).
   #
   # ## Accessibility contract
-  # - **Guarantees:** AAA-contrast text on every variant, including the adaptive
-  #   signal treatments (`danger`/`success`/`info`/`warning`) that stay legible in dark mode.
+  # - **Guarantees:** AAA-contrast text on 9 of the 10 shipped cells (`soft`/`neutral`
+  #   pending this app's 0b axe row), including the adaptive signal treatments
+  #   (`danger`/`success`/`info`/`warning`) that stay legible in dark mode.
   # - **You supply:** an accessible name when the badge conveys status not already in
   #   the surrounding text, and a valid `variant` (an unknown one raises in development).
   #
@@ -30,7 +31,7 @@ module UI
 
     # @!group Overview
 
-    # Every AAA-proven variant × tone cell on one screen.
+    # Every shipped variant × tone cell on one screen — 9 AAA-proven, soft/neutral pending.
     def showcase
     end
 
@@ -44,6 +45,11 @@ module UI
 
     # Neutral / lower-emphasis label.
     def secondary
+    end
+
+    # Muted chip for draft-style pills — the two-axis `[:soft, :neutral]` cell, pending
+    # this app's 0b axe row (see the class docblock).
+    def neutral
     end
 
     # Informational signal — tinted info chip.
@@ -86,11 +92,12 @@ module UI
 
     # @!group Reference
 
-    # Edit `label` and the two-axis `variant`/`tone` cell live. Only the 9 AAA-proven
-    # cells are offered (signals live on the SOFT variant as tinted chips; an unproven
-    # pairing raises in dev).
+    # Edit `label` and the two-axis `variant`/`tone` cell live. Only the 10 shipped
+    # cells are offered — 9 AAA-proven, plus `soft/neutral` pending this app's
+    # 0b axe row (signals live on the SOFT variant as tinted chips; an unproven pairing
+    # raises in dev).
     # @param label text
-    # @param cell select [solid/primary, soft/primary, soft/info, soft/success, soft/warning, soft/danger, outline/neutral, ghost/neutral, link/primary]
+    # @param cell select [solid/primary, soft/primary, soft/info, soft/success, soft/warning, soft/danger, soft/neutral, outline/neutral, ghost/neutral, link/primary]
     def playground(label: "Badge", cell: "soft/primary")
       variant, tone = cell.split("/")
       ui :badge, label, variant: variant.to_sym, tone: tone.to_sym

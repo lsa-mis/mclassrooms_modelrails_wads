@@ -1,5 +1,7 @@
 module Settings
   class SessionsController < ApplicationController
+    layout "settings"
+
     def index
       @sessions = Current.user.sessions.active.order(last_active_at: :desc)
     end

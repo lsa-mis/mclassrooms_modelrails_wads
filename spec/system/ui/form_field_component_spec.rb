@@ -45,7 +45,11 @@ RSpec.describe "FormField component accessibility", type: :system do
   it "with_error: the control is aria-invalid and describedby the error id; AAA in both themes" do
     visit "/rails/view_components/ui/form_field_component/with_error"
 
-    expect(page).to have_css("p#preview_email-error[role='alert'][data-slot='description']")
+    # Plain markup, not role=alert — a field-level live region never fires on a
+    # server-rendered response. UI::ErrorSummaryComponent is the real, focused
+    # announcement mechanism (see the class header on FormFieldComponent).
+    expect(page).to have_css("p#preview_email-error[data-slot='description']")
+    expect(page).to have_no_css("p#preview_email-error[role='alert']")
     expect(page).to have_css("input#preview_email[aria-invalid='true'][aria-describedby~='preview_email-error']")
     expect_aaa_in_both_themes
   end

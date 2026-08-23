@@ -2,7 +2,7 @@
   <div data-controller="modal" class="inline-block">
     <button type="button"
             data-action="click->modal#open"
-            class="min-h-[44px] inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus-ring">
+            class="btn-secondary text-sm">
       <%= t("notifications.index.mark_all_read.action") %>
     </button>
 
@@ -18,7 +18,7 @@
   <div data-controller="modal" class="inline-block">
     <button type="button"
             data-action="click->modal#open"
-            class="min-h-[44px] inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-surface-raised text-danger border border-border transition-colors hover:bg-danger-surface focus-ring">
+            class="btn-secondary text-sm text-danger hover:bg-danger-surface">
       <%= t("notifications.index.destroy_all_read.action") %>
     </button>
 

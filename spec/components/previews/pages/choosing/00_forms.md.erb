@@ -66,8 +66,10 @@ primitive directly when you're outside a form or building something custom.
 | Component    | Reach for it when                                                            | Otherwise →               |
 |--------------|-------------------------------------------------------------------------------|---------------------------|
 | `label`      | captioning a control via `for:` (self-labelling `checkbox`/`radio_group` don't need it) | —              |
+| `form_builder` | the default form builder for any `form_with model:` — labels, hints, errors, and ARIA wiring, all built in | `form_field` (outside a model-backed form) |
 | `form_field` | hand-composing a one-off labelled field with hint/error ARIA wiring           | `form_with` (the Rails form builder) |
 | `file_input` | an upload control with AAA styling + ARIA (inside `form_with`: `f.file_field`) | —                        |
 | `form_draft` | recovering unsaved form input after crashes or timeouts                       | —                        |
+| `error_summary` | announcing every validation error together, focused on submit (`f.error_summary`) | the field-level error paragraph alone |
 
 <%= embed UI::FormFieldComponentPreview %>

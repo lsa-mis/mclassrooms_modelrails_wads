@@ -13,7 +13,7 @@ module UI
   #   forms that slide in from a screen edge.
   #
   # ## Don't use when
-  # - A centered confirm gate is needed — use `alert_dialog`.
+  # - A centered confirm gate is needed — use `dialog` with `role: :alertdialog`.
   # - A bottom sheet is the right pattern — use `drawer`.
   #
   # ## Accessibility contract
@@ -57,7 +57,7 @@ module UI
     # Edit `side` live to slide the panel in from any edge.
     # @param side select [top, right, bottom, left]
     def playground(side: :right)
-      render(UI::SheetComponent.new(title: "Filters", side: side.to_sym)) do |c|
+      render(UI::SheetComponent.new(id: "preview-sheet-playground", title: "Filters", side: side.to_sym)) do |c|
         c.with_trigger { "Open sheet" }
         "Panel slides in from the #{side} edge. Change the param to explore placement."
       end

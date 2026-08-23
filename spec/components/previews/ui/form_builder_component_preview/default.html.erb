@@ -1,0 +1,9 @@
+<%= form_with model: UI::FormBuilderComponentPreview::Article.new, url: "#",
+      builder: UI::FormBuilder, scope: :article do |f| %>
+  <div class="space-y-6 max-w-md">
+    <%= f.text_field :title, help: "Shown in the list view", required: true %>
+    <%= f.text_area :body %>
+    <%= f.checkbox :terms, label: "I accept the terms" %>
+    <%= f.submit "Save" %>
+  </div>
+<% end %>

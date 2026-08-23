@@ -57,15 +57,24 @@ export function expired(draft, expiresInHours) {
 // snapshot / session-replay leak surface).
 
 let keyPromise = null
+let keyDigest = null
 
-function resolveKey() {
+function resolveKey(scopeDigest) {
   const meta = document.querySelector('meta[name="form-draft-key"]')
   if (meta) {
     const b64 = meta.content
     meta.remove()
-    if (!keyPromise) keyPromise = importKey(b64)
+    // Re-import on a scope-digest change (key rotation): the cached key
+    // belongs to the OLD digest, and encrypting new-digest drafts with it
+    // would strand them — no fresh page load could ever decrypt them.
+    if (!keyPromise || keyDigest !== scopeDigest) {
+      keyPromise = importKey(b64)
+      keyDigest = scopeDigest
+    }
   }
-  return keyPromise
+  // Digest changed but no fresh key meta: fail closed (feature off) rather
+  // than encrypt under a key the next page load won't have.
+  return keyDigest === scopeDigest ? keyPromise : null
 }
 
 async function importKey(b64) {
@@ -107,7 +116,7 @@ export default class extends Controller {
     this.disarmed = false
     this.pendingSave = null
     this.scopeDigest = document.querySelector('meta[name="form-draft-scope"]')?.content
-    resolveKey() // scrub + warm the key cache even if this instance no-ops
+    resolveKey(this.scopeDigest) // scrub + warm the key cache even if this instance no-ops
 
     this.boundStorage = this.onStorage.bind(this)
     this.boundFlush = this.flush.bind(this)
@@ -127,6 +136,7 @@ export default class extends Controller {
 
   disconnect() {
     this.cancelPendingSave()
+    this.cancelPendingAnnounce()
     window.removeEventListener("storage", this.boundStorage)
     document.removeEventListener("turbo:before-visit", this.boundFlush)
     document.removeEventListener("visibilitychange", this.boundVisibility)
@@ -268,7 +278,7 @@ export default class extends Controller {
 
   async persist() {
     this.pendingSave = null
-    const key = await resolveKey()
+    const key = await resolveKey(this.scopeDigest)
     if (!key || this.disarmed) return
     const payload = JSON.stringify({ savedAt: Date.now(), data: serializeForm(this.element) })
     const blob = await this.encrypt(key, payload)
@@ -292,7 +302,7 @@ export default class extends Controller {
   }
 
   async readDraft() {
-    const key = await resolveKey()
+    const key = await resolveKey(this.scopeDigest)
     if (!key) return null
     const blob = this.safely(() => localStorage.getItem(this.storageKey))
     if (!blob) return null
@@ -395,11 +405,26 @@ export default class extends Controller {
   }
 
   // Small delay so the polite message isn't swallowed by page-load speech.
+  // The rAF/timer ids are kept so disconnect() can cancel the chain — a write
+  // landing after disconnect hits a detached node, or worse, announces stale
+  // text into a Turbo-cache-restored copy of this element.
   announce(message) {
     if (!this.hasStatusTarget || !message) return
-    requestAnimationFrame(() => {
-      setTimeout(() => { this.statusTarget.textContent = message }, 100)
+    this.cancelPendingAnnounce()
+    this.announceFrame = requestAnimationFrame(() => {
+      this.announceFrame = null
+      this.announceTimer = setTimeout(() => {
+        this.announceTimer = null
+        this.statusTarget.textContent = message
+      }, 100)
     })
+  }
+
+  cancelPendingAnnounce() {
+    if (this.announceFrame) cancelAnimationFrame(this.announceFrame)
+    if (this.announceTimer) clearTimeout(this.announceTimer)
+    this.announceFrame = null
+    this.announceTimer = null
   }
 
   focusFirstField() {

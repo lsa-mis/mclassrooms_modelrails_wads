@@ -16,7 +16,7 @@ module UI
   #   tied to a trigger that does NOT need to block the page.
   #
   # ## Don't use when
-  # - The content must block interaction until dismissed — use `dialog`/`alert_dialog`.
+  # - The content must block interaction until dismissed — use `dialog` (`role: :alertdialog` for a confirm gate).
   # - You only need a hint describing a control — use `tooltip`.
   #
   # ## Accessibility contract
@@ -28,6 +28,14 @@ module UI
   #   slot (the button's visible content).
   class PopoverComponent < ApplicationComponent
     renders_one :trigger
+
+    # The trigger's accessibility floor — always applied, never replaceable. `trigger_class:`
+    # is merged OVER this rather than replacing it: a caller restyling the trigger was
+    # otherwise able to delete the focus indicator (WCAG 2.4.11) and the 44px target-size
+    # floor (2.5.5 AAA) from the one element this component guarantees is "a real <button>".
+    # Utilities rather than `.btn-touch-target`, so they sit in Tailwind's utilities layer
+    # and merge predictably instead of racing a component class on source order.
+    TRIGGER_BASE = "focus-ring min-h-[var(--form-input-height)]"
 
     PANEL_BASE = "z-50 w-72 rounded-md border border-border bg-surface-overlay p-4 " \
                  "text-sm text-text-body shadow-md outline-none"
@@ -63,7 +71,9 @@ module UI
     # id:            panel id (auto-generated if omitted; wired to aria-controls)
     # align:         :start | :center | :end
     # side:          :bottom | :top | :left | :right
-    # trigger_class: CSS for the trigger button (default canonical .btn-secondary)
+    # trigger_class: CSS ADDED to the trigger's accessibility floor (TRIGGER_BASE);
+    #                defaults to the canonical .btn-secondary. Your classes are merged
+    #                over the floor, so the focus ring and target size cannot be lost.
     def initialize(label:, id: nil, align: :start, side: :bottom, trigger_class: "btn-secondary", **html_attrs)
       @label         = label
       @id            = id || "popover-#{SecureRandom.hex(4)}"
@@ -102,7 +112,7 @@ module UI
         "aria-expanded": "false",
         "aria-controls": @id,
         data: { floating_target: "trigger", action: "click->floating#toggle" },
-        class: @trigger_class)
+        class: cn(TRIGGER_BASE, @trigger_class))
     end
 
     def panel

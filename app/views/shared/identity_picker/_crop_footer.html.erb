@@ -3,25 +3,19 @@
   <div class="flex items-center justify-end gap-3">
     <button type="button"
             data-action="click->identity-picker#backToHub"
-            class="inline-flex items-center justify-center px-4 py-2
-                   text-sm font-medium text-text-body
-                   border border-border rounded-lg
-                   hover:bg-surface-sunken
-                   focus-ring
-                   min-h-[var(--form-input-height)]">
+            class="btn-secondary text-sm">
       <%= t("identity_picker.cancel") %>
     </button>
     <button type="button"
             data-action="click->identity-picker#saveCrop"
-            class="inline-flex items-center gap-2 px-5 py-2 rounded-lg
-                   bg-interactive text-text-on-interactive font-medium text-sm
-                   hover:bg-interactive-hover
-                   focus-ring
-                   min-h-[var(--form-input-height)]">
+            class="btn-primary text-sm">
       <%= t("identity_picker.save_crop") %>
     </button>
   </div>
   <div class="flex items-center justify-between">
+    <%# NOT .btn-text — deliberate (#760): its underline would run under the icon
+        and replace the color-fade hover. Converts when an icon-aware text-button
+        treatment ships. %>
     <button type="button"
             data-action="click->identity-picker#openFilePicker"
             class="inline-flex items-center gap-1.5 text-sm text-interactive
@@ -31,6 +25,9 @@
       <%= icon(:arrow_up_tray, size: :sm) %>
       <%= t("identity_picker.upload_new") %>
     </button>
+    <%# NOT .btn-text — deliberate (#760): its underline would run under the icon
+        and replace the color-fade hover. Converts when an icon-aware text-button
+        treatment ships. %>
     <%= button_to form_url,
           method: :delete,
           class: "inline-flex items-center gap-1.5 text-sm text-danger

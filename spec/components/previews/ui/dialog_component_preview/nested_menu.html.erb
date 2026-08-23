@@ -3,6 +3,7 @@
     closes, the dialog stays open. Without a shared layer stack each controller answers
     Escape independently and both close together. %>
 <%= render "shared/modal",
+      id: "preview-dialog-menu",
       title: "Assign reviewer",
       description: "Pick a reviewer, then confirm.",
       trigger: "Open dialog",

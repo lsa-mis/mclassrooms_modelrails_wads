@@ -10,6 +10,8 @@ pin_all_from "app/javascript/controllers", under: "controllers"
 # than controllers, because the dismissal stack must be a single instance shared by
 # every overlay controller.
 pin_all_from "app/javascript/overlays", under: "overlays"
+# Vendored third-party scoring (cmdk's command-score, MIT — see the file header).
+pin_all_from "app/javascript/search", under: "search"
 pin "lexxy", to: "lexxy.js"
 
 # ActiveStorage direct upload (MiClassrooms Phase 4 Task 11, Brief §5.3):

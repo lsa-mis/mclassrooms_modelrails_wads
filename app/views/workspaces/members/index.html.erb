@@ -61,7 +61,14 @@
 
     <% if @rows.any? %>
       <div class="mt-6 bg-surface-raised rounded-lg border border-border shadow-sm overflow-hidden">
-        <table class="w-full" aria-label="<%= t('workspaces.members.index.table_label') %>">
+        <%# Scroll region wraps ONLY the table — pagination must stay put while
+            the table scrolls, and the region is a named keyboard tab stop (the
+            UI::ScrollArea a11y contract carries the name, so the table needs no
+            second aria-label). NB: absolutely-positioned content in a cell
+            (e.g. a future dropdown menu) would be clipped by this container. %>
+        <%= ui :scroll_area, orientation: :horizontal, max_h: nil,
+              aria_label: t("workspaces.members.index.table_label") do %>
+        <table class="w-full">
           <thead>
             <tr class="border-b border-border bg-surface">
               <%= render "shared/sortable_header",
@@ -103,6 +110,7 @@
             <% end %>
           </tbody>
         </table>
+        <% end %>
 
         <%= render "shared/pagination", pagy: @pagy %>
       </div>

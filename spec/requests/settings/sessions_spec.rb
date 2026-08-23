@@ -30,6 +30,27 @@ RSpec.describe "Settings::Sessions", type: :request do
       get settings_sessions_path
       expect(response.body).not_to include("10.9.9.9")
     end
+
+    it "renders inside the settings shell with the identity sidebar" do
+      get settings_sessions_path
+      aside = Nokogiri::HTML(response.body).at_css(
+        %(aside[aria-label="#{I18n.t("settings.sidebar.aria_label")}"])
+      )
+      expect(aside).not_to be_nil
+      expect(aside.at_css(%(a[href="#{settings_sessions_path}"]))).not_to be_nil
+    end
+
+    it "renders the current-device pill through UI::Badge, preserving the aria-hidden/sr-only pairing" do
+      get settings_sessions_path
+
+      html = Capybara.string(response.body)
+      expect(html).to have_css("span[data-variant='soft'][data-tone='success'][aria-hidden='true']",
+        exact_text: I18n.t("settings.sessions.index.current_device"))
+      # Guard (green before and after): the visible pill is decorative; the sr-only
+      # sibling carries the announcement.
+      expect(html).to have_css("span.sr-only",
+        text: I18n.t("settings.sessions.index.current_device"), visible: :all)
+    end
   end
 
   describe "DELETE /settings/sessions/:id" do
