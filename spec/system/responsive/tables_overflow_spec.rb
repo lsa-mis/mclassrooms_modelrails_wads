@@ -77,5 +77,4 @@ RSpec.describe "Tables at narrow viewports", type: :system, skip_axe_hook: true 
       end
     end
   end
-
 end
