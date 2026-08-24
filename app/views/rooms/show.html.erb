@@ -63,7 +63,9 @@
                       rails_blob_path(@room.seating_chart, disposition: :inline),
                       class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
               <% else %>
-                <%= ui :dialog, title: @room.display_name do |dialog| %>
+                <%# id: required by ModalChrome (v0.11.0) — a stable id keeps the
+                    body targetable; nothing streams into this dialog today. %>
+                <%= ui :dialog, id: "seating-chart-dialog", title: @room.display_name do |dialog| %>
                   <% dialog.with_trigger do %>
                     <button type="button" data-testid="seating-chart-thumb"
                             class="block overflow-hidden rounded-md cursor-zoom-in focus-ring">

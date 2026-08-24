@@ -53,10 +53,7 @@
         <%= workspace.name %>
       </p>
       <% if current %>
-        <span class="shrink-0 text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded
-                     bg-interactive text-text-on-interactive">
-          <%= t("workspaces.index.current_badge") %>
-        </span>
+        <%= ui :badge, t("workspaces.index.current_badge"), variant: :solid, tone: :primary %>
       <% end %>
     </div>
     <%# One metadata line (was three) — plan · role · members · recency. %>

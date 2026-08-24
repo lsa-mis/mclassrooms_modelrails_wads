@@ -12,6 +12,9 @@ RSpec.describe "Passkey enrollment prompt", type: :request do
     user.update!(passkey_prompt_seen_at: nil)
     get root_path
     expect(response.body).to include('id="passkey-banner"')
+    # Discriminator: `info-border` (a phantom — no compiled selector) shipped here
+    # until Panel CP3; the real utility is border-info-border.
+    expect(Capybara.string(response.body)).to have_css("#passkey-banner.border-info-border")
     patch passkey_prompt_path # dismiss (×) — stamps passkey_prompt_seen_at
     get root_path
     expect(response.body).not_to include('id="passkey-banner"')

@@ -43,9 +43,9 @@
               <% end %>
             </p>
             <% if authentication.verified? %>
-              <span class="inline-flex items-center px-2.5 py-1 rounded bg-success-surface text-xs font-medium text-success">
-                <%= t("settings.connected_accounts.index.verified") %>
-              </span>
+              <%# aria-hidden: the sr-only verified_state_sr above already announces it. %>
+              <%= ui :badge, t("settings.connected_accounts.index.verified"),
+                    variant: :soft, tone: :success, "aria-hidden": "true" %>
             <% end %>
           <% end %>
         </div>

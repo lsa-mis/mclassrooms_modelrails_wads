@@ -18,10 +18,10 @@
 
   <div class="mt-8 flex flex-col gap-3">
     <%= button_to t("email_verifications.new.resend"), email_verification_resend_path,
-          class: "btn-outline btn-neutral w-full" %>
+          class: "btn-secondary w-full" %>
 
     <%= link_to t("email_verifications.new.continue"), root_path,
-          class: "btn-solid btn-primary w-full" %>
+          class: "btn-primary w-full" %>
   </div>
 
   <% if Rails.env.development? %>

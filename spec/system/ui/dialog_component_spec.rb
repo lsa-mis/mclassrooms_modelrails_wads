@@ -47,4 +47,31 @@ RSpec.describe "Dialog component accessibility", type: :system do
 
     expect(page).to have_no_css("dialog[open]")
   end
+
+  describe "role: :alertdialog scenario" do
+    it "announces as an alert dialog and passes axe when open" do
+      visit "/rails/view_components/ui/dialog_component/alertdialog"
+
+      expect(page).to have_css("dialog[role='alertdialog'][aria-modal='true']", visible: :all)
+      expect(page).to have_no_css("dialog[open]")
+
+      click_button "Delete project…"
+      expect(page).to have_css("dialog[role='alertdialog'][open]")
+
+      scope = [ "dialog[open]" ]
+      expect(axe_clean_in_both_themes?(include: scope)).to(
+        be(true),
+        axe_violations_in_both_themes(include: scope).join("\n")
+      )
+    end
+
+    it "closes on the native Escape (cancel) path" do
+      visit "/rails/view_components/ui/dialog_component/alertdialog"
+      open_modal
+
+      page.send_keys(:escape)
+
+      expect(page).to have_no_css("dialog[open]")
+    end
+  end
 end

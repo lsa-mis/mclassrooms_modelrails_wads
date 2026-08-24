@@ -6,7 +6,7 @@ require "rails_helper"
 # An <aside> rail with a named <nav> landmark; toggle + items carry the focus-ring.
 # Scoped to the <aside> subtree (no color-contrast exclude).
 RSpec.describe "Sidebar component accessibility", type: :system do
-  %w[default collapsed].each do |scenario|
+  %w[default collapsed not_remembered].each do |scenario|
     it "#{scenario} renders a named-nav rail and passes AAA in both themes" do
       visit "/rails/view_components/ui/sidebar_component/#{scenario}"
 

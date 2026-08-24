@@ -34,7 +34,6 @@ module UI
     # `position-area` value + `position-try-fallbacks` to keep it on-screen), and the
     # pre-Baseline `absolute` fallback offsets (`not-supports-`). A Tailwind class table —
     # one line per placement keeps it scannable.
-    # rubocop:disable Layout/LineLength
     POSITIONS = {
       bottom:       "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_center] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-1/2 not-supports-[position-area:bottom]:-translate-x-1/2",
       top:          "mb-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_center] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:left-1/2 not-supports-[position-area:bottom]:-translate-x-1/2",
@@ -45,7 +44,6 @@ module UI
       bottom_left:  "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_left] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0",
       bottom_right: "mt-2 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:right-0"
     }.freeze
-    # rubocop:enable Layout/LineLength
 
     # id: card id; label: optional accessible name (→ role=group + aria-label);
     # side: edge :bottom | :top | :left | :right, or corner :top_left | :top_right | :bottom_left | :bottom_right

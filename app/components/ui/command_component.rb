@@ -30,7 +30,9 @@ module UI
   # - **You supply:** an optional `with_trigger` slot and the grouped item markup
   #   (use the exposed `GROUP_WRAPPER` / `GROUP` / `ITEM` / `SHORTCUT` /
   #   `SEPARATOR` constants). Each actionable item must carry a
-  #   `data-command-value` (the text the filter matches on).
+  #   `data-command-value` (the text the filter scores against). Optional
+  #   `data-command-keywords` adds synonyms an item can be found by without
+  #   showing them in its label ("configuration" finding Settings).
   #
   # ## Sizes
   # `sm` · `md` · `lg` — the centered panel's max width.
@@ -162,7 +164,7 @@ module UI
     end
 
     def search_icon
-      raw('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-text-muted" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>') # rubocop:disable Layout/LineLength
+      raw('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-text-muted" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>')
     end
 
     # Fail loud on an unknown size in development/test so misuse is caught

@@ -2,10 +2,15 @@
 
 module UI
   class FileInputComponent < ApplicationComponent
-    # Applies the app's `.form-file` class (file:* styling + aria-invalid error
-    # utilities, defined in application.css). a11y params added so the builder
-    # can wire aria-invalid/describedby — closing the gap where the app's plain
-    # file_field skipped ARIA.
+    # Matches the host app's FILE_FIELD_CLASSES (state-independent). a11y params
+    # added so the builder can wire aria-invalid/describedby — closing the gap
+    # where the app's plain file_field skipped ARIA.
+    BASE = "block w-full text-sm text-text-body " \
+           "file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium " \
+           "file:bg-interactive file:text-text-on-interactive hover:file:bg-interactive-hover " \
+           "file:cursor-pointer file:min-h-[var(--form-input-height)] " \
+           "disabled:cursor-not-allowed disabled:opacity-50 " \
+           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger"
 
     # Per-file pill for the show_selection list: the badge chip shape plus the
     # proven [:soft, :primary] color cell (bg-interactive-subtle + text-interactive
@@ -15,6 +20,14 @@ module UI
            "border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap " \
            "bg-interactive-subtle text-interactive"
 
+    # English fallbacks for the selection strings; hosts pass translated strings
+    # via `selection_labels:` (i18n lives in the host app, not the gem).
+    DEFAULT_SELECTION_LABELS = {
+      one: "1 file selected: %{names}",
+      many: "%{count} files selected: %{names}",
+      none: "No files selected"
+    }.freeze
+
     # accept:   MIME types or extensions, e.g. "image/*" or ".pdf,.docx"
     # multiple: allow selecting multiple files
     # required/invalid/describedby: form + a11y wiring (see UI::InputComponent)
@@ -22,8 +35,9 @@ module UI
     #                   live-region announcement, synced by the `file-input` Stimulus
     #                   controller (default false = bare input, byte-unchanged) —
     #                   the native control alone only shows a count ("3 files")
-    # selection_labels: strings merged over the defaults, with `%{count}`/`%{names}`
-    #                   placeholders substituted client-side
+    # selection_labels: host-supplied strings merged over DEFAULT_SELECTION_LABELS
+    #                   (i18n; e.g. `{ many: t("uploads.many_selected") }` with
+    #                   `%{count}`/`%{names}` placeholders)
     def initialize(accept: nil, multiple: false, required: false, invalid: false, describedby: nil,
                    show_selection: false, selection_labels: {}, **html_attrs)
       @accept = accept
@@ -32,7 +46,7 @@ module UI
       @invalid = invalid
       @describedby = describedby
       @show_selection = show_selection
-      @selection_labels = default_selection_labels.merge(selection_labels.transform_keys(&:to_sym))
+      @selection_labels = DEFAULT_SELECTION_LABELS.merge(selection_labels.transform_keys(&:to_sym))
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
@@ -55,19 +69,8 @@ module UI
 
     private
 
-    # Gem parity note: the gem ships hardcoded English defaults ("i18n lives in the
-    # host app, not the gem"); this app IS the host, so the defaults resolve through
-    # I18n like the other vendored components' strings (combobox, data_table).
-    def default_selection_labels
-      {
-        one: I18n.t("modelrails_ui.file_input.one_selected", default: "1 file selected: %{names}"),
-        many: I18n.t("modelrails_ui.file_input.many_selected", default: "%{count} files selected: %{names}"),
-        none: I18n.t("modelrails_ui.file_input.none_selected", default: "No files selected")
-      }
-    end
-
     def input_attrs
-      attrs = { type: "file", class: cn("form-file", @extra_class) }
+      attrs = { type: "file", class: cn(BASE, @extra_class) }
       attrs[:accept] = @accept if @accept
       attrs[:multiple] = true if @multiple
       if @required

@@ -1,0 +1,20 @@
+<%# Items chosen to discriminate fuzzy matching from substring: "nd" appears as a
+    substring in none of them, but subsequence-matches "New document". "Group Policy"
+    and "Groups" separate ranking from mere matching — a palette that lists them in the
+    wrong order for "gp" feels wrong even though both match. %>
+<%= ui :command do |cmd| %>
+  <% cmd.with_trigger { ui :button, "⌘K", variant: :outline, tone: :neutral } %>
+
+  <div class="<%= UI::CommandComponent::GROUP_WRAPPER %>" data-command-group>
+    <p class="<%= UI::CommandComponent::GROUP %>">Pages</p>
+    <button type="button" class="<%= UI::CommandComponent::ITEM %>" data-command-value="Groups">Groups</button>
+    <button type="button" class="<%= UI::CommandComponent::ITEM %>" data-command-value="Group Policy">Group Policy</button>
+    <button type="button" class="<%= UI::CommandComponent::ITEM %>"
+            data-command-value="Settings" data-command-keywords="preferences configuration">Settings</button>
+  </div>
+
+  <div class="<%= UI::CommandComponent::GROUP_WRAPPER %>" data-command-group>
+    <p class="<%= UI::CommandComponent::GROUP %>">Actions</p>
+    <button type="button" class="<%= UI::CommandComponent::ITEM %>" data-command-value="New document">New document</button>
+  </div>
+<% end %>

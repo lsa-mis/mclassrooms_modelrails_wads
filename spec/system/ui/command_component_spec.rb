@@ -143,4 +143,18 @@ RSpec.describe "Command component accessibility and keyboard operation", type: :
 
     expect(page).to have_css("#{input_selector}[aria-expanded='true']")
   end
+
+  # #677 item 3 — invariant pin: command's input lives INSIDE the panel, so
+  # once Escape closes it no keyboard path reaches navigate and ArrowUp must
+  # NOT reopen. Its ArrowUp entry guard is parity with combobox, deliberately
+  # unreachable; this example catches any refactor that turns it live.
+  it "stays closed on ArrowUp after Escape (input lives inside the panel)" do
+    visit preview
+    open_palette
+    cdp_press("Escape")
+
+    cdp_press(:up)
+
+    expect(page).to have_css("#{input_selector}[aria-expanded='false']", visible: :all)
+  end
 end

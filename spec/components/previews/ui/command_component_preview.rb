@@ -41,6 +41,11 @@ module UI
     def large
     end
 
+    # Fuzzy ranking: subsequence matching with cmdk's scorer, plus `data-command-keywords`
+    # so an item can be found by a synonym it does not display.
+    def fuzzy_ranking
+    end
+
     # Two instances on one page — the case shared element ids collide in.
     def two_on_a_page
     end

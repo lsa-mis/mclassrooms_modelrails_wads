@@ -4,6 +4,9 @@
     <%= t("identity_picker.preview") %>
   </span>
   <div class="flex items-center gap-3">
+    <%# NOT ui :avatar — deliberate. The inner <img> carries a Stimulus target the
+        identity_picker controller writes canvas.toDataURL() into; UI::Avatar owns
+        its own <img>, so converting this silently breaks the live crop preview. %>
     <div class="w-16 h-16 rounded-full bg-surface-sunken overflow-hidden shrink-0"
          aria-hidden="true">
       <%# src omitted intentionally — identity_picker_controller#updateCropPreview

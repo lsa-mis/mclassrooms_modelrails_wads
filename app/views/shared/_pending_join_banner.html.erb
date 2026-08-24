@@ -1,18 +1,18 @@
 <% if (workspace = pending_join_workspace) %>
   <div id="pending-join-banner"
        role="status"
-       class="bg-info-surface text-info info-border border-b">
+       class="bg-info-surface text-info border-info-border border-b">
     <div class="max-w-5xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
       <%= icon(:user_group, class: "w-4 h-4 shrink-0") %>
       <span><%= t("workspaces.pending_join_banner.message", workspace: workspace.name) %></span>
+      <%# text-info/border-info-border override btn-secondary's text-text-body — the
+          banner's info signal pairing on bg-info-surface (panel CP3). %>
       <%= button_to t("workspaces.pending_join_banner.join", workspace: workspace.name), pending_join_path,
             method: :post,
-            class: "btn-touch-target inline-flex items-center px-3 py-1 rounded-md font-semibold
-                    border border-info-border hover:bg-surface-sunken focus-ring" %>
+            class: "btn-secondary text-info border-info-border" %>
       <%= button_to t("workspaces.pending_join_banner.dismiss"), pending_join_path,
             method: :delete,
-            class: "btn-touch-target inline-flex items-center px-3 py-1 rounded-md
-                    underline hover:no-underline focus-ring" %>
+            class: "btn-text" %>
     </div>
   </div>
 <% end %>

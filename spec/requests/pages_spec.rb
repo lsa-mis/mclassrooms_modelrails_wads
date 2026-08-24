@@ -32,6 +32,12 @@ RSpec.describe "Pages", type: :request do
         expect(response.body).to include(I18n.t("pages.home.cta.button"))
         expect(response.body).to include(new_session_path)
       end
+
+      it "renders the secondary hero CTA as a brand-outline button" do
+        get root_path
+        expect(Capybara.string(response.body)).to have_css("a.btn-outline-primary",
+          text: I18n.t("pages.home.hero.cta_secondary"))
+      end
     end
 
     context "when SIGNUP_MODE is :invite_only without a token" do
@@ -42,6 +48,49 @@ RSpec.describe "Pages", type: :request do
         expect(response.body).to include(I18n.t("pages.home.cta.button"))
         expect(response.body).to include(new_session_path)
       end
+    end
+  end
+
+  describe "landing page for a signed-in user" do
+    let(:user) { create(:user) }
+
+    before do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
+      sign_in(user)
+    end
+
+    # Fork behavior (differs from the template's workspaces-link version):
+    # a signed-in visitor's CTAs point at the product — Find a Room — and the
+    # bottom CTA keeps its shared title, swapping only subtitle + button
+    # (pages.home.cta.*_signed_in keys; see app/views/pages/home.html.erb).
+    it "swaps the hero CTA for a Find-a-Room link" do
+      get root_path
+      expect(Capybara.string(response.body)).to have_link(
+        I18n.t("pages.home.hero.cta_primary_signed_in"), href: find_a_room_path
+      )
+    end
+
+    it "softens the bottom CTA section and links to Find a Room" do
+      get root_path
+      page = Capybara.string(response.body)
+      expect(response.body).to include(I18n.t("pages.home.cta.title"))
+      expect(response.body).to include(I18n.t("pages.home.cta.subtitle_signed_in"))
+      expect(page).to have_link(I18n.t("pages.home.cta.button_signed_in"), href: find_a_room_path)
+    end
+
+    it "does not render a sign-in link CTA" do
+      get root_path
+      expect(Capybara.string(response.body)).to have_no_link(
+        I18n.t("pages.home.hero.cta_primary"), href: new_session_path
+      )
+    end
+
+    it "shows the Find-a-Room CTA even when signups are closed" do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+      get root_path
+      expect(Capybara.string(response.body)).to have_link(
+        I18n.t("pages.home.cta.button_signed_in"), href: find_a_room_path
+      )
     end
   end
 

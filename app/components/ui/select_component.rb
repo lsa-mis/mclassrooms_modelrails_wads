@@ -28,13 +28,13 @@ module UI
   # `.ui-select` hook restyles the OPEN picker to match the design system — the same
   # overlay/border/shadow as the combobox, a tinted checkmark on the selected row,
   # and a flipping picker-icon. Everywhere else it falls back to the untouched native
-  # control. Pure CSS + one class; no JS, no markup change. See `application.css`.
+  # control. Pure CSS + one class; no JS, no markup change. See `modelrails_ui.css`.
   #
   # No fail-loud guard — there's no enum axis to validate.
   class SelectComponent < ApplicationComponent
     BASE = "flex min-h-[var(--form-input-height)] w-full rounded-md border border-border-strong bg-transparent px-3 py-1 text-sm shadow-sm " \
            "outline-none focus-visible:border-border-focus focus-ring " \
-           "aria-invalid:border-danger-border aria-invalid:ring-danger " \
+           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger " \
            "disabled:cursor-not-allowed disabled:opacity-50"
 
     # options: array of strings, or [value, label] pairs, or { value: label } hash

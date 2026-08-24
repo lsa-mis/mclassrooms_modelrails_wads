@@ -9,13 +9,9 @@
   </td>
   <td class="py-3 px-2">
     <% if membership.discarded? %>
-      <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-danger-surface text-danger">
-        <%= t("workspaces.members.index.deactivated") %>
-      </span>
+      <%= ui :badge, t("workspaces.members.index.deactivated"), variant: :soft, tone: :danger %>
     <% else %>
-      <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-success-surface text-success">
-        <%= t("workspaces.members.index.active") %>
-      </span>
+      <%= ui :badge, t("workspaces.members.index.active"), variant: :soft, tone: :success %>
     <% end %>
   </td>
   <td class="py-3 px-2 space-x-2">

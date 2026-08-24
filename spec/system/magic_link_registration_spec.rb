@@ -67,9 +67,50 @@ RSpec.describe "Magic link registration", type: :system do
       expect(page).to have_text(I18n.t("magic_link_callbacks.new_registration.title"))
       expect(User.find_by(email_address: "noname@example.com")).to be_nil
 
-      expect(page).to have_selector("[role='alert']", text: I18n.t("errors.form_errors", count: 2))
+      # role='alert' now uniquely matches the error summary — field-level errors are
+      # plain paragraphs (see app/components/ui/form_field_component.rb), not
+      # individually live-announced.
+      expect(page).to have_selector("[role='alert']", text: I18n.t("modelrails_ui.error_summary.heading", count: 2))
       expect(page).to have_text("#{User.human_attribute_name(:first_name)} #{I18n.t('errors.messages.blank')}")
       expect(page).to have_text("#{User.human_attribute_name(:last_name)} #{I18n.t('errors.messages.blank')}")
+    end
+
+    # #683's form leg: UI::ErrorSummaryComponent renders `role="alert"
+    # tabindex="-1" autofocus`. Turbo Drive re-honours `[autofocus]` on every
+    # 422 re-render (its own restoreFocus step only fires on visits it
+    # navigates, not on frame/form-submission re-renders), so the browser's
+    # native autofocus processing model is the entire mechanism here — no
+    # custom JS to test. Proven end-to-end in Cuprite, not asserted from
+    # markup alone, because a `role="alert"`/`tabindex="-1"`/`autofocus`
+    # triple that never actually receives focus would pass every markup-only
+    # check while leaving assistive tech and keyboard users stranded. Assert
+    # by element identity, not role attribute, so this stays strong even if
+    # a second role=alert element ever appears on the page.
+    it "moves focus to the error summary after a failed submit (422 re-render)" do
+      token = MagicLinkToken.create_for_email("focus-noname@example.com")
+      visit magic_link_callback_path(token: token)
+
+      click_button I18n.t("magic_link_callbacks.new_registration.submit")
+
+      expect(page).to have_css("[role='alert'][tabindex='-1']")
+      expect(page.evaluate_script(
+        "document.activeElement === document.querySelector('[role=\"alert\"]')"
+      )).to be(true)
+    end
+
+    it "links each error summary item to its field, and the field exists on the page" do
+      token = MagicLinkToken.create_for_email("focus-links-noname@example.com")
+      visit magic_link_callback_path(token: token)
+
+      click_button I18n.t("magic_link_callbacks.new_registration.submit")
+
+      expect(page).to have_css("[role='alert'] a[href^='#']")
+
+      # Close the loop (#683): follow one anchor's href to a real element id
+      # on the page, rather than trusting the href string alone.
+      href = page.first("[role='alert'] a[href^='#']")[:href]
+      target_id = href.split("#").last
+      expect(page).to have_css("##{target_id}")
     end
   end
 end

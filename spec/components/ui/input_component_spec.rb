@@ -35,9 +35,17 @@ RSpec.describe UI::InputComponent, type: :component do
     expect(input["aria-required"]).to be_nil
   end
 
-  it "applies the .form-field class" do
+  it "applies the gem's field chrome — the old app-only .form-field class is gone" do
     render_inline(described_class.new(name: "q"))
 
-    expect(page.find("input")[:class]).to eq("form-field")
+    input = page.find("input")
+    expect(input[:class]).to include("rounded-md", "border")
+    expect(input[:class]).not_to include("form-field")
+  end
+
+  it "swaps the border/background token classes to the error variant when invalid" do
+    render_inline(described_class.new(name: "q", invalid: true))
+
+    expect(page.find("input")[:class]).to include("border-danger")
   end
 end

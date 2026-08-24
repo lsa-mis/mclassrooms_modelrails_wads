@@ -43,13 +43,11 @@ export default class extends Controller {
     }
   }
 
+  // Stacking is supported and needs no help: a second showModal() puts that dialog above
+  // this one in the top layer, moves the focus trap, and gives it Escape. This used to
+  // warn that stacked modals were unsupported and then stack them anyway.
   open() {
     if (this.dialogTarget.open) return
-
-    const openDialogs = document.querySelectorAll("dialog[open]")
-    if (openDialogs.length > 0) {
-      console.warn("Modal: another dialog is already open. Stacked modals are not supported.")
-    }
 
     this.previouslyFocused = document.activeElement
     this.dialogTarget.showModal()

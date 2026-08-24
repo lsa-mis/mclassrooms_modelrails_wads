@@ -1,0 +1,96 @@
+# Every `modelrails_ui.*` I18n key the gem's templates call, in one place —
+# the delegate-file pattern: gem-shipped, host-owned, host-edited. Components
+# carry inline English defaults, so deleting a key (or this file) degrades to
+# English, never to "translation missing".
+#
+# Three off-namespace legacy keys (`ui.toaster.*`, `ui.resizable.*`,
+# `modals.close`) are NOT in this file — they predate the `modelrails_ui.*`
+# convention and stay put; a separate issue tracks migrating them onto it.
+en:
+  modelrails_ui:
+    modal:
+      close: "Close dialog"
+    resizable:
+      handle: "Resize panels"
+    toaster:
+      label: "Notifications"
+      dismiss: "Dismiss"
+    bottom_nav:
+      nav_label: "Bottom navigation"
+    calendar:
+      prev_month: "Previous month"
+      next_month: "Next month"
+      # The default is the fully-formatted date itself (computed per-call, not
+      # a static string) — %{date} carries that same value through the key.
+      day: "%{date}"
+    chart:
+      label: "Chart"
+    chat_bubble:
+      sent: "You said"
+      received: "They said"
+    combobox:
+      label: "Search and select an option"
+      placeholder: "Select…"
+      empty: "No results found."
+    command:
+      dialog_label: "Command palette"
+      list_label: "Commands"
+      empty: "No results found."
+      placeholder: "Type a command or search…"
+      input_label: "Search commands"
+    data_table:
+      results: "%{count} results"
+      page: "Page %{page} of %{pages} (%{rows} rows)"
+      search_label: "Search"
+      search_placeholder: "Search…"
+      prev_page: "Previous page"
+      next_page: "Next page"
+    date_picker:
+      label: "Choose date"
+      placeholder: "Pick a date"
+      hint: "Date format: %{pattern}"
+    error_summary:
+      heading:
+        one: "1 error prevented this form from being saved:"
+        other: "%{count} errors prevented this form from being saved:"
+    input_otp:
+      label: "One-time passcode"
+      digit: "Digit %{index} of %{total}"
+    navigation_menu:
+      nav_label: "Main"
+    qr_code:
+      label: "QR code"
+    rating:
+      label: "%{value} out of %{max} stars"
+    rating_input:
+      label: "Rating"
+      star: "Rate %{index} of %{max}"
+    search_input:
+      placeholder: "Search…"
+      label: "Search"
+    sidebar:
+      toggle: "Toggle sidebar"
+      nav_label: "Sidebar"
+    speed_dial:
+      open: "Open actions"
+    spinner:
+      loading: "Loading…"
+    stepper:
+      progress: "Progress"
+      completed: "Completed"
+      pending: "Pending"
+    timepicker:
+      label: "Pick time"
+      hint: "Time format: %{pattern}"
+      hour: "Hour"
+      minute: "Minute"
+      meridiem: "AM or PM"
+    wysiwyg:
+      label: "Rich text editor"
+      toolbar: "Formatting"
+      bold: "Bold"
+      italic: "Italic"
+      strike: "Strikethrough"
+      link: "Link"
+      bullet: "Bulleted list"
+      number: "Numbered list"

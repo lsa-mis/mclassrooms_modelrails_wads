@@ -34,7 +34,7 @@ module UI
            "data-[state=off]:hover:bg-surface-sunken data-[state=off]:hover:text-text-body " \
            "focus-ring " \
            "disabled:pointer-events-none disabled:opacity-50 " \
-           "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
+           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger  " \
            "data-[state=on]:bg-interactive-subtle data-[state=on]:text-interactive " \
            "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 

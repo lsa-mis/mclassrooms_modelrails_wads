@@ -15,6 +15,87 @@ RSpec.describe WorkspaceHelper, type: :helper do
 
       expect(result).to have_css("img.w-8.h-8")
     end
+
+    it "renders an uploaded logo with broken-image recovery wiring (component path)" do
+      workspace = create(:workspace, name: "Acme Co")
+      workspace.identity  # ensure identity exists per the model's accessor
+      workspace.logo.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+        filename: "logo.png",
+        content_type: "image/png"
+      )
+
+      result = helper.workspace_icon_for(workspace, size: :md)
+
+      expect(result).to have_css("[data-controller='avatar'] img.w-10.h-10[data-avatar-target='image'][aria-hidden='true']")
+      # The action wiring is what makes the pair recoverable; a target without it
+      # never swaps. The standby span must be hidden (visible: :all would pass with
+      # both nodes exposed) and must carry the workspace's hue so the recovered
+      # initials keep the brand color.
+      expect(result).to have_css("[data-controller='avatar'] img[data-action='error->avatar#showFallback']")
+      expect(result).to have_css(
+        "[data-controller='avatar'] span[data-avatar-target='fallback'][style='--hue: #{workspace.identity.hue}']",
+        visible: :hidden
+      )
+    end
+
+    it "renders hue-tinted initials through the component when no image exists" do
+      workspace = create(:workspace, name: "Acme Co")
+
+      result = helper.workspace_icon_for(workspace, size: :sm)
+
+      expect(result).to have_css("span.w-8.h-8.bg-hue-initials[aria-hidden='true']", text: workspace.identity.initials)
+      expect(result).to have_css("span[style='--hue: #{workspace.identity.hue}']")
+    end
+
+    it "renders :lg initials at the component's text-lg (licensed delta from the old text-xl)" do
+      workspace = create(:workspace, name: "Acme Co")
+
+      result = helper.workspace_icon_for(workspace, size: :lg)
+
+      expect(result).to have_css("span.w-16.h-16.text-lg", text: workspace.identity.initials)
+      expect(result).to have_no_css("span.text-xl")
+    end
+  end
+
+  describe "#switcher_current_workspace" do
+    # first_name pinned so the personal workspace ("Zed's Workspace") sorts
+    # after the org workspaces in the alphabetical cold-start test below.
+    let(:user) { create(:user, first_name: "Zed") }
+
+    before do
+      allow(Current).to receive(:user).and_return(user)
+      allow(Current).to receive(:workspace).and_return(nil)
+    end
+
+    it "falls back to the most-recently-accessed workspace when neither an active workspace nor session memory exists" do
+      recent = create(:workspace, name: "Recent Org")
+      stale = create(:workspace, name: "Stale Org")
+      create(:membership, :owner, user: user, workspace: recent, last_accessed_at: 1.minute.ago)
+      create(:membership, :owner, user: user, workspace: stale, last_accessed_at: 1.week.ago)
+
+      expect(helper.switcher_current_workspace).to eq(recent)
+    end
+
+    it "falls back to the alphabetically-first workspace when no membership has been accessed yet" do
+      zeta = create(:workspace, name: "Zeta Org")
+      acme = create(:workspace, name: "Acme Org")
+      create(:membership, :owner, user: user, workspace: zeta)
+      create(:membership, :owner, user: user, workspace: acme)
+      user.memberships.update_all(last_accessed_at: nil)
+
+      expect(helper.switcher_current_workspace).to eq(acme)
+    end
+
+    it "prefers the session-remembered workspace over recency" do
+      remembered = create(:workspace, name: "Remembered Org")
+      recent = create(:workspace, name: "Recent Org")
+      create(:membership, :owner, user: user, workspace: remembered, last_accessed_at: 1.week.ago)
+      create(:membership, :owner, user: user, workspace: recent, last_accessed_at: 1.minute.ago)
+      session[:current_workspace_id] = remembered.id
+
+      expect(helper.switcher_current_workspace).to eq(remembered)
+    end
   end
 
   describe "#current_workspace_section" do

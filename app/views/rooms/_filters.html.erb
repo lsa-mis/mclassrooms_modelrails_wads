@@ -69,13 +69,13 @@
         <label class="sr-only" for="filter_capacity_min"><%= t("rooms.filters.capacity_min_label") %></label>
         <%= number_field_tag :capacity_min, params[:capacity_min], min: 0,
               id: "filter_capacity_min", placeholder: t("rooms.filters.capacity_min_short"),
-              class: "form-field w-20",
+              class: "block w-20 rounded-md border border-border-strong bg-surface-raised text-text-heading px-3 py-2 placeholder:text-text-muted focus-ring min-h-input",
               data: { action: "input->filter-form#submit" } %>
         <span aria-hidden="true" class="text-text-muted">–</span>
         <label class="sr-only" for="filter_capacity_max"><%= t("rooms.filters.capacity_max_label") %></label>
         <%= number_field_tag :capacity_max, params[:capacity_max], min: 0,
               id: "filter_capacity_max", placeholder: t("rooms.filters.capacity_max_short"),
-              class: "form-field w-20",
+              class: "block w-20 rounded-md border border-border-strong bg-surface-raised text-text-heading px-3 py-2 placeholder:text-text-muted focus-ring min-h-input",
               data: { action: "input->filter-form#submit" } %>
       </div>
     </fieldset>

@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { commandScore } from "search/command_score"
 
 // Command palette behavior. Owns the WAI-ARIA APG combobox + listbox contract:
 // the input is the combobox (keeps DOM focus), the list is the listbox, and each
@@ -28,6 +29,7 @@ export default class extends Controller {
   }
 
   open() {
+    this._captureAuthoredOrder()
     this.panelTarget.hidden = false
     document.body.style.overflow = "hidden"
     this.inputTarget.value = ""
@@ -44,12 +46,55 @@ export default class extends Controller {
     this._setActive(null)
   }
 
-  filter() {
-    const query = this.inputTarget.value.toLowerCase().trim()
-    const items = this.options
-    items.forEach(item => {
-      item.hidden = query.length > 0 && !item.dataset.commandValue.toLowerCase().includes(query)
+  // The authored order is captured once, because sorting is destructive: after the first
+  // ranked query the DOM no longer knows what the caller wrote.
+  _captureAuthoredOrder() {
+    this._authored ||= this.options.map(item => [item, item.parentElement, Array.from(item.parentElement.children).indexOf(item)])
+  }
+
+  _restoreAuthoredOrder() {
+    if (!this._authored) return
+    this._authored.forEach(([item, parent, index]) => {
+      const at = parent.children[index]
+      if (at !== item) parent.insertBefore(item, at || null)
     })
+  }
+
+  // Rank WITHIN each group only. Group order is authored intent — a caller who put
+  // "Pages" above "Actions" meant that — and reordering groups by best score makes the
+  // palette's shape move under the user between keystrokes.
+  _rankWithinGroups(scored) {
+    const byGroup = new Map()
+    scored.forEach(entry => {
+      const group = entry.item.parentElement
+      if (!byGroup.has(group)) byGroup.set(group, [])
+      byGroup.get(group).push(entry)
+    })
+
+    byGroup.forEach((entries, group) => {
+      entries.sort((a, b) => b.score - a.score).forEach(({ item }) => group.appendChild(item))
+    })
+  }
+
+  filter() {
+    const query = this.inputTarget.value.trim()
+    const items = this.options
+
+    if (query.length === 0) {
+      // Restore the order the author wrote. Ranking is only meaningful against a query;
+      // with none, the caller's grouping is the intended reading order.
+      items.forEach(item => { item.hidden = false })
+      this._restoreAuthoredOrder()
+    } else {
+      // `data-command-keywords` lets an item be found by a synonym it does not display
+      // ("configuration" finding Settings) without polluting its visible label.
+      const scored = items.map(item => ({
+        item,
+        score: commandScore(item.dataset.commandValue, query, [item.dataset.commandKeywords || ""])
+      }))
+      scored.forEach(({ item, score }) => { item.hidden = score === 0 })
+      this._rankWithinGroups(scored.filter(s => s.score > 0))
+    }
 
     this.listTarget.querySelectorAll("[data-command-group]").forEach(group => {
       const hasVisible = Array.from(group.querySelectorAll("[data-command-value]")).some(i => !i.hidden)

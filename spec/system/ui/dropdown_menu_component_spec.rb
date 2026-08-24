@@ -55,6 +55,20 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     expect(focused_text).to eq("Open docs")
   end
 
+  # #677 bug 1: the panel carries tabindex="-1", so clicking its padding or a
+  # separator focuses the PANEL — no item active, indexOf(activeElement) = -1 —
+  # and the unguarded ArrowUp modulo landed on items[n-2], silently skipping
+  # the last item. APG: entry from no-active goes to the LAST item. (Focus set
+  # via JS — a deterministic stand-in for the padding click, same state.)
+  it "ArrowUp with focus on the panel itself enters at the LAST item" do
+    visit "/rails/view_components/ui/dropdown_menu_component/basic"
+    open_menu
+    page.execute_script("document.querySelector('[data-menu-target=\"menu\"]').focus()")
+    cdp_press(:up)
+
+    expect(focused_text).to eq("Open docs")
+  end
+
   it "ArrowDown wraps and SKIPS the disabled item" do
     visit "/rails/view_components/ui/dropdown_menu_component/basic"
     open_menu # focus on "Edit"
