@@ -27,20 +27,20 @@
             method: :patch,
             autofocus: focus_after_replace,
             aria: { label: t("notifications.index.item.mark_unread_aria", summary: notification.message) },
-            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus-ring" %>
+            class: "btn-secondary text-sm" %>
     <% else %>
       <%= button_to t("notifications.index.item.mark_read"),
             settings_notification_path(notification, read_at: "now"),
             method: :patch,
             autofocus: focus_after_replace,
             aria: { label: t("notifications.index.item.mark_read_aria", summary: notification.message) },
-            class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-text-body border border-border transition-colors hover:bg-surface-sunken focus-ring" %>
+            class: "btn-secondary text-sm" %>
     <% end %>
 
     <%= button_to t("notifications.index.item.delete"),
           settings_notification_path(notification),
           method: :delete,
           aria: { label: t("notifications.index.item.delete_aria", summary: notification.message) },
-          class: "min-h-[44px] inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-surface-raised text-danger border border-border transition-colors hover:bg-danger-surface focus-ring" %>
+          class: "btn-secondary text-sm text-danger hover:bg-danger-surface" %>
   </div>
 </li>

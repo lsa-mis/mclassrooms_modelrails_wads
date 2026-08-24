@@ -25,7 +25,9 @@ module UI
     # items: [{ label:, href: }, ..., { label: }] — last item is the current page (no href).
     # separator: the visual divider between crumbs (decorative). label: the <nav> accessible
     # name (i18n; default t("ui.breadcrumb.label", default: "Breadcrumb")).
-    def initialize(items: [], separator: "/", label: nil, max_items: nil, **html_attrs)
+    # list_class: extra classes merged onto the <ol> (class: targets the <nav> root like every
+    # other passthrough attribute — precedent: tabs' tablist_class:).
+    def initialize(items: [], separator: "/", label: nil, max_items: nil, list_class: nil, **html_attrs)
       if max_items && max_items < 2
         raise ArgumentError, "UI::Breadcrumb max_items must be at least 2 (got #{max_items.inspect})"
       end
@@ -34,12 +36,13 @@ module UI
       @items = items
       @separator = separator
       @label = label
+      @list_class = list_class
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
 
     def call
-      content_tag(:nav, ordered_list, "aria-label": nav_label, **@html_attrs)
+      content_tag(:nav, ordered_list, "aria-label": nav_label, class: @extra_class, **@html_attrs)
     end
 
     private
@@ -66,7 +69,7 @@ module UI
         safe_join(shown.each_with_index.map { |item, i|
           item == :ellipsis ? ellipsis : crumb(item, i == shown.size - 1)
         }),
-        class: cn("flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5", @extra_class))
+        class: cn("flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5", @list_class))
     end
 
     def ellipsis

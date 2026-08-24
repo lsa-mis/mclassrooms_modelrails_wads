@@ -11,6 +11,12 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(response.body).to include(CGI.escapeHTML(workspace.name))
     end
 
+    it "renders the register link as a brand-outline button" do
+      get accept_invitation_path(token: invitation.token)
+      expect(Capybara.string(response.body)).to have_css("a.btn-outline-primary.w-full",
+        text: I18n.t("invitation_accepts.show.register"))
+    end
+
     it "shows error for expired invitation" do
       invitation.update!(expires_at: 1.day.ago)
       get accept_invitation_path(token: invitation.token)

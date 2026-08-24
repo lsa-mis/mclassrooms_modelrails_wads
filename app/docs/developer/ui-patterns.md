@@ -118,17 +118,23 @@ color-strategy unification; the default (`210`, sky) always meets AAA.
 
 ## Form Builder
 
-ModelRails includes a custom `TailwindFormBuilder` set as the default form builder. It provides:
+ModelRails includes `TailwindFormBuilder`, set as the default form builder — a fork
+seam over `UI::FormBuilder` (the vendored, regenerable parent). It provides:
 
 - **Automatic labels** with required indicators
-- **Error display** inline below fields with `role="alert"`
-- **Help text** linked via `aria-describedby`
-- **ARIA attributes** — `aria-required`, `aria-invalid`, `aria-describedby` are set automatically
-- **Consistent styling** — all fields use token-backed border, focus ring, and error states
+- **Error display** inline below fields as plain text — the focused `error_summary`
+  (below) is the actual live-region announcement, not the inline message
+- **Hint text** below the control, linked via `aria-describedby` (error-first when
+  both a hint and an error are present)
+- **ARIA attributes** — `aria-required`, `aria-invalid`, `aria-describedby` are set
+  automatically; native HTML `required` is never emitted, so a failed submit always
+  reaches the server and gets a real error response
+- **Consistent styling** — all fields use token-backed border, focus ring, and error
+  states
 
 ### Available Methods
 
-`text_field`, `email_field`, `password_field`, `url_field`, `tel_field`, `number_field`, `date_field`, `search_field`, `text_area`, `select`, `check_box`, `collection_check_boxes`, `collection_radio_buttons`, `file_field`, `submit`, `error_summary`
+`text_field`, `email_field`, `password_field`, `url_field`, `tel_field`, `number_field`, `date_field`, `search_field`, `text_area`, `select`, `checkbox` (canonical; `check_box` is an alias), `collection_checkboxes` (alias `collection_check_boxes`), `collection_radio_buttons`, `file_field`, `submit`, `error_summary`
 
 ### Field Options
 
@@ -143,7 +149,9 @@ ModelRails includes a custom `TailwindFormBuilder` set as the default form build
 When a field has validation errors, the builder automatically:
 - Switches border to `border-danger`
 - Adds `aria-invalid="true"`
-- Renders error messages with `role="alert"` below the field
+- Renders a plain error paragraph below the field (no `role="alert"` — a field-level
+  live region never fires on a server-rendered response). Call `f.error_summary` once
+  per form for the real, focused announcement mechanism.
 
 ## Icon System
 

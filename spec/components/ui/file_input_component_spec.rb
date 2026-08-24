@@ -13,7 +13,8 @@ RSpec.describe UI::FileInputComponent, type: :component do
     expect(inp[:accept]).to eq("image/*")
     expect(inp["aria-invalid"]).to eq("true")
     expect(inp["aria-describedby"]).to eq("user_avatar-error")
-    expect(inp[:class]).to eq("form-file")
+    expect(inp[:class]).to include("file:rounded-md")
+    expect(inp[:class]).not_to eq("form-file")
   end
 
   describe "default mode (show_selection omitted)" do
@@ -106,11 +107,12 @@ RSpec.describe UI::FileInputComponent, type: :component do
       )
     end
 
-    it "keeps the app's form-file styling on the input" do
+    it "keeps the gem's file-input chrome on the input — the old app-only form-file class is gone" do
       render_inline(described_class.new(show_selection: true))
 
       inp = page.find("div[data-controller='file-input'] input[type='file']")
-      expect(inp[:class]).to eq("form-file")
+      expect(inp[:class]).to include("file:rounded-md")
+      expect(inp[:class]).not_to eq("form-file")
     end
   end
 end

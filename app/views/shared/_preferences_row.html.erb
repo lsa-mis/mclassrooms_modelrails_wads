@@ -2,7 +2,10 @@
 <%# Reusable row inside a preferences card. Sample-faithful icon-tile-left,
     title+description-middle, control-right layout. `icon_color` accepts one
     of :info / :success / :warning / :danger and maps to the matching
-    semantic-tile classes; anything else falls back to a neutral surface. -%>
+    semantic-tile classes; anything else falls back to a neutral surface.
+    A shared/toggle passed as `control:` must set `visible_label: false` —
+    this row already renders `title:` visibly, and a visible toggle label
+    duplicates it (W1-3 collision at phone widths). -%>
 <%
   icon_classes = case icon_color
                  when :info    then "bg-info-surface text-info-icon"
@@ -18,7 +21,7 @@
     <%= icon(icon_name, size: :md) %>
   </div>
   <div class="flex-1 min-w-0">
-    <p class="text-sm font-semibold text-text-heading"><%= title %></p>
+    <p data-preferences-row-title class="text-sm font-semibold text-text-heading"><%= title %></p>
     <p class="mt-1 text-sm text-text-body"><%= description %></p>
   </div>
   <div class="shrink-0">

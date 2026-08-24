@@ -19,7 +19,7 @@
           required: true,
           autocomplete: "new-password" %>
 
-    <%= form.submit t("settings.passwords.edit.submit"), class: "w-full" %>
+    <%= form.submit t("settings.passwords.edit.submit"), class: "btn-primary w-full" %>
   <% end %>
 
   <%= button_to t("settings.passwords.edit.remove"), settings_password_path,

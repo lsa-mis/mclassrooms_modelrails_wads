@@ -63,7 +63,10 @@
       <span class="shrink-0 w-8 h-8 flex items-center justify-center <%= current&.personal? ? "rounded-full" : "rounded-md overflow-hidden" %>">
         <%= workspace_icon_for(current, size: :sm) if current %>
       </span>
-      <span class="hidden lg:block max-w-[12ch] truncate font-medium">
+      <%# sr-only below lg (not hidden): the workspace name is this button's
+          only accessible name — icon-only at md..lg left it nameless (axe
+          button-name, caught by the responsive lane at 768px). %>
+      <span class="sr-only lg:not-sr-only lg:block lg:max-w-[12ch] lg:truncate font-medium">
         <%= current&.name || t("workspaces.switcher.label") %>
       </span>
       <span aria-hidden="true">&#9662;</span> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>

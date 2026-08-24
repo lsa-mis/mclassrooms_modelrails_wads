@@ -29,4 +29,15 @@ RSpec.describe "Workspaces index filter", type: :request do
     expect(doc.at_css("input#workspace-filter")).to be_nil
     expect(doc.at_css("[data-controller='workspace-filter']")).to be_nil
   end
+
+  it "renders the CURRENT pill through UI::Badge (solid primary, canonical chip look)" do
+    create(:membership, :owner, user: user, workspace: create(:workspace))
+
+    get workspaces_path
+
+    html = Capybara.string(response.body)
+    expect(html).to have_css("span[data-variant='solid'][data-tone='primary']",
+      exact_text: I18n.t("workspaces.index.current_badge"))
+    expect(html).to have_no_css("span.uppercase", text: I18n.t("workspaces.index.current_badge"))
+  end
 end

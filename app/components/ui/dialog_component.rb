@@ -10,6 +10,9 @@ module UI
   #
   # ## Use when
   # - You need a focus-trapped modal for a confirmation, form, or detail overlay.
+  # - A choice must be confirmed before proceeding — pass `role: :alertdialog` for an
+  #   assertive confirm gate that screen readers announce immediately (destructive or
+  #   irreversible actions: delete, reset, revoke access).
   # - You are building a custom wrapper (pass `wrapper: false` and own the
   #   `data-controller="modal"` element + trigger).
   #
@@ -26,11 +29,14 @@ module UI
   # - **You supply:** a `title:` (required — it is the accessible name). With
   #   `wrapper: true` (default) the `trigger` slot is the open button; `wrapper: false`
   #   requires you to wire `data-controller="modal"` and a trigger yourself.
+  #
+  # Chrome lives in UI::ModalChrome — single owner.
   class DialogComponent < ApplicationComponent
-    renders_one :trigger
-    renders_one :footer
+    include UI::ModalChrome
 
     SIZES = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", full: "max-w-4xl" }.freeze
+
+    ROLES = %i[dialog alertdialog].freeze
 
     # No `scale-95` rest class: TW4 compiles it to the separate scale:
     # property, which COMPOSES with the modal controller's inline
@@ -51,49 +57,24 @@ module UI
     #              apps that already own the wrapper/trigger).
     # body_id:     id of the scrollable body element (defaults unique; pass a fixed id
     #              when Turbo Streams target it, e.g. "modal-body").
+    # role:        :dialog (default) | :alertdialog — an assertive confirm gate that
+    #              screen readers announce immediately, capped at max-w-md regardless
+    #              of size: (v0.11.0 folded the standalone confirm-dialog component
+    #              into this role).
     def initialize(title:, id: nil, size: :md, description: nil, open: false,
-                   wrapper: true, body_id: nil, **html_attrs)
-      @title = title
-      @id = id || "modal-#{SecureRandom.hex(4)}"
+                   wrapper: true, body_id: nil, role: :dialog, **html_attrs)
       @size = size.to_sym
-      @description = description
-      @open = open
-      @wrapper = wrapper
-      @body_id = body_id || "#{@id}-body"
-      @extra_class = html_attrs.delete(:class)
-      @html_attrs = html_attrs
-    end
-
-    def call
-      return dialog_tag unless @wrapper
-
-      content_tag(:div, **wrapper_attrs) do
-        safe_join([ trigger_area, dialog_tag ].compact)
-      end
+      @role = coerce_role(role.to_sym)
+      setup_modal_chrome(title: title, id: id, description: description, open: open,
+        wrapper: wrapper, body_id: body_id, html_attrs: html_attrs)
     end
 
     private
 
-    def wrapper_attrs
-      data = { controller: "modal" }
-      data[:modal_open_value] = "true" if @open
-      { data: data, class: cn("inline", @extra_class) }.merge(@html_attrs)
-    end
-
-    def trigger_area
-      return unless trigger?
-
-      content_tag(:span, trigger, class: "contents", data: { action: "click->modal#open" })
-    end
-
-    def dialog_tag
-      content_tag(:dialog, panel, **dialog_attrs)
-    end
-
     def dialog_attrs
       attrs = {
         id: @id,
-        role: "dialog",
+        role: @role.to_s,
         "aria-modal": "true",
         "aria-labelledby": "#{@id}-title",
         data: { modal_target: "dialog" },
@@ -106,55 +87,23 @@ module UI
     def panel
       content_tag(:div, safe_join([ header, body, footer_area ].compact),
         data: { modal_target: "panel" },
-        class: cn(PANEL, SIZES.fetch(@size, SIZES[:md])))
+        class: @role == :alertdialog ? cn(PANEL, "max-w-md") : cn(PANEL, SIZES.fetch(@size, SIZES[:md])))
     end
 
-    def header
-      content_tag(:header, class: "flex items-center justify-between px-6 py-4 border-b border-border shrink-0") do
-        safe_join([
-          content_tag(:h2, @title, id: "#{@id}-title", class: "text-lg font-semibold text-text-heading"),
-          close_button
-        ])
+    # Fail loud on an unknown role in development/test so misuse is caught
+    # immediately; fall back to :dialog in production so a bad role never
+    # 500s a page. Same shape as sheet's coerce_side — see its comment for the
+    # Rails.respond_to?(:env) guard rationale.
+    def coerce_role(role)
+      return role if ROLES.include?(role)
+
+      unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
+        raise ArgumentError,
+          "UI::DialogComponent: unknown role #{role.inspect}. " \
+          "Expected one of: #{ROLES.join(", ")}."
       end
-    end
 
-    def close_button
-      content_tag(:button, close_icon,
-        type: "button",
-        "aria-label": close_label,
-        data: { action: "click->modal#close" },
-        class: "btn-touch-target rounded-md -m-2 hover:bg-surface-sunken text-text-muted hover:text-text-body focus-ring")
-    end
-
-    def body
-      content_tag(:div, safe_join([ description_tag, content ].compact),
-        id: @body_id, class: "px-6 py-4 overflow-y-auto flex-1")
-    end
-
-    def description_tag
-      return unless @description
-
-      content_tag(:p, @description, id: "#{@id}-description", class: "text-sm text-text-muted mb-4")
-    end
-
-    def footer_area
-      return unless footer?
-
-      content_tag(:div, footer, class: "flex justify-end gap-2 px-6 py-4 border-t border-border shrink-0")
-    end
-
-    def close_label
-      I18n.t("modals.close", default: "Close")
-    end
-
-    def close_icon
-      if helpers.respond_to?(:icon)
-        helpers.icon(:x_mark, size: :md)
-      else
-        raw('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" ' \
-            'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' \
-            '<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>')
-      end
+      :dialog
     end
   end
 end

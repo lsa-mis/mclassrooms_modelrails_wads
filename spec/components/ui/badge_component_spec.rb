@@ -19,12 +19,14 @@ RSpec.describe UI::BadgeComponent, type: :component do
   # The canonical `danger` signal uses the TINTED treatment (soft danger-surface +
   # saturated text-danger + danger-border), not a solid fill. text-danger on
   # bg-danger-surface is AAA-proven on the toast cards; never raw palette / text-white.
-  # Focus is the uniform focus-ring outline (B5) — no per-tone danger ring.
+  # A bare span is non-focusable — focus-ring lives only on the href (link) path,
+  # never baked into BASE (gem #147: a focus-ring on a non-focusable span is the
+  # box-shadow/focus-affordance-on-a-non-focusable construct .modelrails_ui/agent-rules.md forbids).
   it "renders danger as a tinted danger surface (not text-white)" do
     render_inline(described_class.new("Error", variant: :danger))
 
     expect(page).to have_css("span.bg-danger-surface.text-danger.border-danger-border")
-    expect(page).to have_css("span.focus-ring")
+    expect(page).not_to have_css("span.focus-ring")
     expect(page).not_to have_css("span.text-white")
   end
 
@@ -76,7 +78,6 @@ RSpec.describe UI::BadgeComponent, type: :component do
   it "renders the legacy ghost flat value" do
     render_inline(described_class.new("Tag", variant: :ghost))
 
-    expect(page).to have_css("span.focus-ring")
     expect(page).not_to have_css("span.bg-interactive")
   end
 
@@ -97,6 +98,22 @@ RSpec.describe UI::BadgeComponent, type: :component do
     render_inline(described_class.new("Docs", href: "/docs"))
 
     expect(page).to have_css("a[href='/docs']", text: "Docs")
+  end
+
+  # Anchors are the one focusable badge path — focus-ring must render there (WCAG 2.4.7);
+  # BASE no longer carries it (see the span assertions above), so only the href branch does.
+  it "renders a focus-ring on a linked (anchor) badge" do
+    render_inline(described_class.new("Docs", href: "/docs"))
+
+    expect(page).to have_css("a.focus-ring.min-h-11")
+  end
+
+  # data-variant/data-tone are a stable hook for callers (JS, specs, CSS) to target a
+  # cell without parsing the Tailwind class list.
+  it "emits data-variant and data-tone attributes" do
+    render_inline(described_class.new("Done", variant: :soft, tone: :success))
+
+    expect(page).to have_css("span[data-variant='soft'][data-tone='success']")
   end
 
   # Fail-loud cell guard: an unproven (variant, tone) cell raises in development/test.

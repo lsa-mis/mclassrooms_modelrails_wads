@@ -69,6 +69,14 @@ module UI
       content_tag(tag_name, capture(&block), **attrs, **el)
     end
 
+    # The trigger's accessibility floor — always applied, never replaceable. `trigger_class:`
+    # is merged OVER this rather than replacing it: a caller restyling the trigger was
+    # otherwise able to delete the focus indicator (WCAG 2.4.11) and the 44px target-size
+    # floor (2.5.5 AAA) from the one element this component guarantees is "a real <button>".
+    # Utilities rather than `.btn-touch-target`, so they sit in Tailwind's utilities layer
+    # and merge predictably instead of racing a component class on source order.
+    TRIGGER_BASE = "focus-ring min-h-[var(--form-input-height)]"
+
     PANEL_BASE = "z-50 min-w-[8rem] overflow-hidden rounded-md border border-border " \
                  "bg-surface-overlay p-1 text-text-body shadow-md outline-none"
 
@@ -200,20 +208,20 @@ module UI
     # `position-area` cell + `position-try-fallbacks: flip-block` to stay on-screen) and
     # the pre-Baseline `absolute` fallback offsets. `span-right`/`span-left` edge-align the
     # menu to the trigger (unlike a tooltip, which centres). One line per placement.
-    # rubocop:disable Layout/LineLength
     PLACEMENTS = {
       bottom_start: "mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0",
       bottom_end: "mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-left] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:right-0",
       top_start: "mb-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:left-0",
       top_end: "mb-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:top_span-left] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:bottom-full not-supports-[position-area:bottom]:right-0"
     }.freeze
-    # rubocop:enable Layout/LineLength
 
     # side:          :bottom | :top
     # align:         :start | :end (edge-aligned to the trigger)
     # id:            menu id (auto-generated if omitted; → aria-controls + anchor name)
     # aria_label:    trigger accessible name (REQUIRED for icon-only triggers)
-    # trigger_class: CSS for the trigger button (default canonical .btn-secondary)
+    # trigger_class: CSS ADDED to the trigger's accessibility floor (TRIGGER_BASE);
+    #                defaults to the canonical .btn-secondary. Your classes are merged
+    #                over the floor, so the focus ring and target size cannot be lost.
     def initialize(side: :bottom, align: :start, id: nil, aria_label: nil,
       trigger_class: "btn-secondary", **html_attrs)
       @id = id || "menu-#{SecureRandom.hex(4)}"
@@ -255,7 +263,7 @@ module UI
         "aria-controls": @id,
         "aria-label": @aria_label,
         data: { menu_target: "trigger", action: "click->menu#toggle keydown->menu#triggerKeydown" },
-        class: @trigger_class)
+        class: cn(TRIGGER_BASE, @trigger_class))
     end
 
     def menu_panel

@@ -33,10 +33,7 @@ module UI
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
-
-    # rubocop:disable Layout/LineLength
     NAV = "sticky top-0 z-50 w-full border-b bg-surface-raised/95 backdrop-blur supports-[backdrop-filter]:bg-surface-raised/60"
-    # rubocop:enable Layout/LineLength
 
     def call
       caller_data = @html_attrs.delete(:data) || {}

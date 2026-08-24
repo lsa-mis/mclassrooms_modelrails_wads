@@ -97,7 +97,7 @@ module UI
         "data-direction": @direction,
         tabindex: "0",
         role: "separator",
-        "aria-label": @aria_label || I18n.t("ui.resizable.handle", default: "Resize panels"),
+        "aria-label": @aria_label || I18n.t("modelrails_ui.resizable.handle", default: [ :"ui.resizable.handle", "Resize panels" ]),
         "aria-orientation": spec[:orientation],
         "aria-valuenow": now,
         "aria-valuemin": leading_panel.min,

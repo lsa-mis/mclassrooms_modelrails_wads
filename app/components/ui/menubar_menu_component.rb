@@ -41,9 +41,7 @@ module UI
 
     # Submenu panel — CSS anchor positioning (bottom_start, below the bar item, start-aligned,
     # flip-to-stay-on-screen), the same shape as dropdown_menu's bottom_start placement.
-    # rubocop:disable Layout/LineLength
     PANEL = "z-50 min-w-[12rem] overflow-hidden rounded-md border border-border bg-surface-overlay p-1 text-text-body shadow-md outline-none mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
-    # rubocop:enable Layout/LineLength
 
     # Submenu item — identical to dropdown_menu's ITEM (focus-visible highlight + aria-disabled
     # treatment + SVG normalisation).

@@ -13,7 +13,7 @@ module UI
   #   or content that slides in from the bottom edge.
   #
   # ## Don't use when
-  # - A centered confirm gate is needed — use `alert_dialog`.
+  # - A centered confirm gate is needed — use `dialog` with `role: :alertdialog`.
   # - A side panel is needed — use `sheet`.
   #
   # ## Accessibility contract

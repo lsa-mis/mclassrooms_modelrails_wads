@@ -16,7 +16,8 @@ module UI
   #   A badge is presentational; `href:` is for navigation/filtering, not actions.
   #
   # ## Accessibility contract
-  # - **Guarantees:** AAA-contrast text on every shipped cell's surface, including the
+  # - **Guarantees:** AAA-contrast text on 9 of the 10 shipped cells' surfaces
+  #   (`soft`/`neutral` pending this app's 0b axe row), including the
   #   adaptive signal treatments (`danger`/`success`/`info`/`warning`) which stay
   #   legible in dark mode.
   # - **You supply:** if the badge conveys status that isn't already in the
@@ -29,9 +30,12 @@ module UI
   # - `variant: :solid | :soft | :outline | :ghost | :link` (default `:solid`)
   # - `tone: :primary | :neutral | :info | :success | :warning | :danger` (default `:primary`)
   #
-  # Only the 9 AAA-proven cells ship (see `COMBOS`). Every signal lives on the SOFT
-  # variant as a TINTED chip — note `[:soft, :danger]` is the badge "danger" (there is
-  # NO solid-danger badge fill; `variant: :solid, tone: :danger` is unproven and raises).
+  # Only the 10 cells in `COMBOS` ship — 9 are AAA-proven; the 10th, `[:soft, :neutral]`
+  # (a muted chip for draft-style pills, no colored border/text), whose AAA proof lands
+  # with this app's 0b axe row (gem CI disables `color-contrast`; see
+  # `docs/testing.md`). Every signal lives on the SOFT variant as a TINTED chip — note
+  # `[:soft, :danger]` is the badge "danger" (there is NO solid-danger badge fill;
+  # `variant: :solid, tone: :danger` is unproven and raises).
   #
   # ## Legacy shim (deprecated flat `variant:` → `[variant, tone]`)
   # The historical flat values still work, byte-identically, via `SHIM`:
@@ -42,12 +46,12 @@ module UI
   class BadgeComponent < ApplicationComponent
     BASE = "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full " \
            "border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap " \
-           "transition-[color,box-shadow] " \
-           "focus-ring " \
-           "aria-invalid:border-danger-border aria-invalid:ring-danger  " \
+           "transition-colors " \
+           "aria-invalid:border-danger-border " \
            "[&>svg]:pointer-events-none [&>svg]:size-3"
 
-    # The 9 AAA-proven cells, keyed `[variant, tone]`. Signal tones use the TINTED
+    # The 10 shipped cells, keyed `[variant, tone]` — 9 AAA-proven, plus `[:soft, :neutral]`
+    # pending this app's 0b axe row (see the class docblock). Signal tones use the TINTED
     # treatment (soft `*-surface` background + saturated `text-<level>` + `*-border`),
     # matching the alert + toast cards. The `--color-<level>` base tokens are TEXT
     # colors (dark in light mode for AAA-on-light readability), so using them as solid
@@ -62,6 +66,7 @@ module UI
       [ :soft, :success ] => "bg-success-surface text-success border-success-border [a&]:hover:bg-success-hover",
       [ :soft, :warning ] => "bg-warning-surface text-warning border-warning-border [a&]:hover:bg-warning-hover",
       [ :soft, :danger ] => "bg-danger-surface text-danger border-danger-border [a&]:hover:bg-danger-hover",
+      [ :soft, :neutral ] => "bg-surface text-text-muted border-border [a&]:hover:bg-surface-sunken [a&]:hover:text-text-heading",
       [ :outline, :neutral ] => "border-border text-text-heading [a&]:hover:bg-surface-sunken [a&]:hover:text-text-heading",
       [ :ghost, :neutral ] => "[a&]:hover:bg-surface-sunken [a&]:hover:text-text-heading",
       [ :link, :primary ] => "text-interactive underline-offset-4 [a&]:hover:underline"
@@ -93,14 +98,16 @@ module UI
         @html_attrs[:href] = href
         @tag ||= :a
         # A LINK badge is a pointer target — the 44px AAA floor applies
-        # (2026-07-13 gate). Static badges stay compact pills.
-        @extra_class = [ @extra_class, "min-h-11" ].compact.join(" ")
+        # (2026-07-13 gate). Static badges stay compact pills. focus-ring
+        # rides here too now that BASE dropped it (only links are focusable).
+        @extra_class = [ @extra_class, "min-h-11 focus-ring" ].compact.join(" ")
       end
     end
 
     def call
       content_tag(@tag || :span, content.presence || @label,
         class: cn(BASE, COMBOS.fetch([ @variant, @tone ], COMBOS[[ :solid, :primary ]]), @extra_class),
+        "data-variant": @variant, "data-tone": @tone,
         **@html_attrs)
     end
 

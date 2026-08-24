@@ -1,6 +1,6 @@
 <%# locals: () -%>
 <%# Edit-modal pattern: form inside a dialog; TailwindFormBuilder is the global default (no explicit builder: needed). %>
-<%= render "shared/modal", title: "Edit profile", size: :lg,
+<%= render "shared/modal", id: "preview-dialog-form", title: "Edit profile", size: :lg,
       description: "Update your display name.",
       trigger: "Edit profile", trigger_class: "btn-secondary" do %>
   <%= form_with url: "#", method: :patch do |f| %>

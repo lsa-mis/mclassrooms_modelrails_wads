@@ -15,7 +15,7 @@ module UI
   #   bottom edge of the viewport.
   #
   # ## Don't use when
-  # - A centered confirm gate is needed — use `alert_dialog`.
+  # - A centered confirm gate is needed — use `dialog` with `role: :alertdialog`.
   # - A bottom sheet is the right pattern — use `drawer`.
   #
   # ## Accessibility contract
@@ -28,9 +28,10 @@ module UI
   #   the accessible name). Actions belong in the `footer` slot. With `wrapper: true`
   #   (default) the `trigger` slot is the open button; `wrapper: false` renders ONLY
   #   the `<dialog>` for embedding in an existing `data-controller="modal"` structure.
+  #
+  # Chrome lives in UI::ModalChrome — single owner.
   class SheetComponent < ApplicationComponent
-    renders_one :trigger
-    renders_one :footer
+    include UI::ModalChrome
 
     SIDES = {
       right:  "inset-y-0 right-0 ml-auto h-full w-3/4 max-w-sm rounded-l-lg border-l",
@@ -61,49 +62,22 @@ module UI
     #              when Turbo Streams target it, e.g. "sheet-body").
     def initialize(title:, id: nil, description: nil, side: :right, open: false,
                    wrapper: true, body_id: nil, **html_attrs)
-      @title = title
-      @id = id || "sheet-#{SecureRandom.hex(4)}"
-      @description = description
       @side = coerce_side(side.to_sym)
-      @open = open
-      @wrapper = wrapper
-      @body_id = body_id || "#{@id}-body"
-      @extra_class = html_attrs.delete(:class)
-      @html_attrs = html_attrs
-    end
-
-    def call
-      return dialog_tag unless @wrapper
-
-      content_tag(:div, **wrapper_attrs) do
-        safe_join([ trigger_area, dialog_tag ].compact)
-      end
+      setup_modal_chrome(title: title, id: id, description: description, open: open,
+        wrapper: wrapper, body_id: body_id, html_attrs: html_attrs)
     end
 
     private
 
     def wrapper_attrs
-      data = {
-        controller: "modal",
-        modal_enter_transform_value: enter_transform,
-        modal_leave_transform_value: LEAVE_TRANSFORMS.fetch(@side)
-      }
-      data[:modal_open_value] = "true" if @open
-      { data: data, class: cn("inline", @extra_class) }.merge(@html_attrs)
+      base = super
+      base[:data][:modal_enter_transform_value] = enter_transform
+      base[:data][:modal_leave_transform_value] = LEAVE_TRANSFORMS.fetch(@side)
+      base
     end
 
     def enter_transform
       %i[left right].include?(@side) ? "translateX(0)" : "translateY(0)"
-    end
-
-    def trigger_area
-      return unless trigger?
-
-      content_tag(:span, trigger, class: "contents", data: { action: "click->modal#open" })
-    end
-
-    def dialog_tag
-      content_tag(:dialog, panel, **dialog_attrs)
     end
 
     def dialog_attrs
@@ -122,55 +96,7 @@ module UI
     def panel
       content_tag(:div, safe_join([ header, body, footer_area ].compact),
         data: { modal_target: "panel" },
-        class: cn(PANEL_BASE, SIDES.fetch(@side), @extra_class))
-    end
-
-    def header
-      content_tag(:header, class: "flex items-center justify-between px-6 py-4 border-b border-border shrink-0") do
-        safe_join([
-          content_tag(:h2, @title, id: "#{@id}-title", class: "text-lg font-semibold text-text-heading"),
-          close_button
-        ])
-      end
-    end
-
-    def close_button
-      content_tag(:button, close_icon,
-        type: "button",
-        "aria-label": close_label,
-        data: { action: "click->modal#close" },
-        class: "btn-touch-target rounded-md -m-2 hover:bg-surface-sunken text-text-muted hover:text-text-body focus-ring")
-    end
-
-    def body
-      content_tag(:div, safe_join([ description_tag, content ].compact),
-        id: @body_id, class: "px-6 py-4 overflow-y-auto flex-1")
-    end
-
-    def description_tag
-      return unless @description
-
-      content_tag(:p, @description, id: "#{@id}-description", class: "text-sm text-text-muted mb-4")
-    end
-
-    def footer_area
-      return unless footer?
-
-      content_tag(:div, footer, class: "flex justify-end gap-2 px-6 py-4 border-t border-border shrink-0")
-    end
-
-    def close_label
-      I18n.t("modals.close", default: "Close")
-    end
-
-    def close_icon
-      if helpers.respond_to?(:icon)
-        helpers.icon(:x_mark, size: :md)
-      else
-        raw('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" ' \
-            'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' \
-            '<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>')
-      end
+        class: cn(PANEL_BASE, SIDES.fetch(@side)))
     end
 
     # Fail loud on an unknown side in development/test so misuse is caught

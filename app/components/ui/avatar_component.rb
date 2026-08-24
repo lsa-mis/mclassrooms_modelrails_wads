@@ -65,7 +65,10 @@ module UI
     # Both nodes ship together so the swap needs no network round trip. BOTH carry the
     # accessible name: the <img> is removed on failure, so initials that were unnamed
     # would leave the avatar absent from the accessibility tree entirely. Only one is ever
-    # exposed, because `hidden` keeps the other out.
+    # exposed, because `hidden` keeps the other out. Caller @html_attrs ride the <img>
+    # only — mirroring them onto the standby span would duplicate any caller id while
+    # both nodes are in the DOM. The --hue style IS mirrored: the recovered initials
+    # must render in the caller's hue, not the default.
     def recoverable_image
       content_tag(:span, class: "contents", data: { controller: "avatar" }) do
         concat content_tag(:img, nil, **recoverable_image_attrs)
@@ -73,6 +76,7 @@ module UI
           class: cn(config[:css], config[:text],
             "rounded-full flex items-center justify-center font-semibold", color_classes, @extra_class),
           hidden: true,
+          style: (@hue ? "--hue: #{@hue}" : nil),
           **aria_attrs,
           data: { avatar_target: "fallback" })
       end

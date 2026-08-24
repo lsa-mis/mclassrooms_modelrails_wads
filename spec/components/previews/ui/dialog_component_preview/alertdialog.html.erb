@@ -1,0 +1,14 @@
+<%# locals: () -%>
+<%# Destructive confirm: role: :alertdialog announces as an alert dialog and caps the panel at max-w-md. %>
+<%= render UI::DialogComponent.new(
+      title: "Delete project?", id: "preview-dialog-alert",
+      description: "This cannot be undone.", role: :alertdialog) do |d| %>
+  <% d.with_trigger do %>
+    <button type="button" class="btn-danger">Delete project…</button>
+  <% end %>
+  <p class="text-text-body leading-relaxed">The project and all of its data will be permanently removed.</p>
+  <% d.with_footer do %>
+    <button type="button" class="btn-danger">Delete</button>
+    <button type="button" class="btn-secondary" data-action="click->modal#close">Cancel</button>
+  <% end %>
+<% end %>

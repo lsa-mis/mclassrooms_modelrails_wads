@@ -1,9 +1,0 @@
-<%= render(UI::AlertDialogComponent.new(
-      title: "Delete?",
-      description: "This item will be permanently deleted. This action cannot be reversed.")) do |c| %>
-  <% c.with_trigger { "Delete item" } %>
-  <% c.with_footer do %>
-    <button type="button" class="btn-secondary" data-action="click->modal#close">Cancel</button>
-    <button type="button" class="btn-danger">Delete</button>
-  <% end %>
-<% end %>
