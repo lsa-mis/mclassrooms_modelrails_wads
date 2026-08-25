@@ -130,7 +130,8 @@ RSpec.describe "Product navigation", type: :system do
       visit root_path
 
       click_button I18n.t("navigation.admin.label")
-      expect(page).to have_css("#admin-nav-panel:not(.hidden)")
+      # The APG menu controller drives the `hidden` ATTRIBUTE (not the class).
+      expect(page).to have_css("#admin-nav-panel:not([hidden])")
 
       expect(axe_clean_in_both_themes?(axe_options, include: "header")).to be(true),
         "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options, include: "header").join("\n")}"
