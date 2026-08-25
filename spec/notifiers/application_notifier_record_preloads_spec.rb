@@ -45,31 +45,33 @@ RSpec.describe ApplicationNotifier, "record preloads" do
     end
 
     it "preloads each declared association on the polymorphic records" do
+      # Fork: Membership via WorkspaceMemberAddedNotifier (record_preloads
+      # :user, :workspace) — the plain-association shape.
       2.times do
-        membership = create(:project_membership, user: recipient)
-        ProjectMembershipChangedNotifier.with(record: membership).deliver(recipient)
+        membership = create(:membership, user: create(:user))
+        WorkspaceMemberAddedNotifier.with(record: membership).deliver(recipient)
       end
       notifications = reloaded_notifications_for(recipient)
 
       ApplicationNotifier.preload_records(notifications)
 
       records = notifications.map { _1.event.record }
-      expect(records).to all(satisfy { _1.association(:project).loaded? })
+      expect(records).to all(satisfy { _1.association(:user).loaded? })
+      expect(records).to all(satisfy { _1.association(:workspace).loaded? })
     end
 
-    it "walks nested declarations per concrete class, skipping classes without the association" do
+    it "walks nested declarations, skipping invitable classes without the association" do
+      # Fork: invitable is always a Workspace, which has no :workspace
+      # association — so one invitation exercises both halves of the
+      # declaration (invitable: :workspace): the invitable hop loads, the
+      # nested hop is skipped without raising.
       workspace_invitation = create(:invitation, invitable: create(:workspace), email: recipient.email_address)
-      project_invitation = create(:invitation, :client, email: recipient.email_address)
       WorkspaceInvitationExpiringSoonNotifier.with(record: workspace_invitation).deliver(recipient)
-      WorkspaceInvitationExpiringSoonNotifier.with(record: project_invitation).deliver(recipient)
       notifications = reloaded_notifications_for(recipient)
 
-      ApplicationNotifier.preload_records(notifications)
+      expect { ApplicationNotifier.preload_records(notifications) }.not_to raise_error
 
-      invitables = notifications.map { _1.event.record.invitable }
-      project_invitable = invitables.find { _1.is_a?(Project) }
       expect(notifications.map(&:event).map(&:record)).to all(satisfy { _1.association(:invitable).loaded? })
-      expect(project_invitable.association(:workspace)).to be_loaded
     end
 
     it "is a no-op for notifiers with no declaration" do
@@ -84,8 +86,8 @@ RSpec.describe ApplicationNotifier, "record preloads" do
 
     it "tolerates a mixed page of declared and undeclared notifier types" do
       PasswordChangedNotifier.with(record: recipient).deliver(recipient)
-      membership = create(:project_membership, user: recipient)
-      ProjectMembershipChangedNotifier.with(record: membership).deliver(recipient)
+      membership = create(:membership, user: create(:user))
+      WorkspaceMemberAddedNotifier.with(record: membership).deliver(recipient)
       notifications = reloaded_notifications_for(recipient)
 
       ApplicationNotifier.preload_records(notifications)
@@ -93,8 +95,8 @@ RSpec.describe ApplicationNotifier, "record preloads" do
       # Bullet judges the eager loads as used — mirrors the real index.
       notifications.each { _1.event.record }
 
-      changed = notifications.find { _1.event.type == "ProjectMembershipChangedNotifier" }
-      expect(changed.event.record.association(:project)).to be_loaded
+      added = notifications.find { _1.event.type == "WorkspaceMemberAddedNotifier" }
+      expect(added.event.record.association(:workspace)).to be_loaded
     end
   end
 end

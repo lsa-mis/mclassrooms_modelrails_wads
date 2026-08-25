@@ -5,7 +5,7 @@
     Navigation phase (product nav): the panel is now populated with the
     admin section links (Buildings, Announcements, Editor assignments, Bulk
     upload, and the three reference-data screens). Desktop gets an
-    interactive disclosure (reuses the existing `dropdown` Stimulus
+    interactive disclosure (reuses the APG `menu` Stimulus
     controller for the click/outside-click/Escape wiring already proven by
     shared/_workspace_switcher and shared/_user_menu — no new JS). It
     previously deliberately avoided role="menu"/"menuitem" while the panel
@@ -69,9 +69,9 @@
   </nav>
 <% else %>
   <nav aria-label="<%= t("navigation.admin.aria_label") %>"
-       data-controller="dropdown"
+       data-controller="menu" data-action="click@document->menu#closeOnClickOutside"
        class="relative hidden md:block">
-    <button data-dropdown-target="button" data-action="click->dropdown#toggle"
+    <button data-menu-target="trigger" data-action="click->menu#toggle keydown->menu#triggerKeydown"
             id="admin-nav-button" type="button"
             aria-expanded="false" aria-controls="admin-nav-panel"
             class="min-h-[44px] flex items-center gap-2 px-3 rounded-lg text-text-body
@@ -80,13 +80,14 @@
       <span aria-hidden="true">&#9662;</span> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
     </button>
 
-    <div data-dropdown-target="menu" id="admin-nav-panel"
-         role="menu"
+    <div data-menu-target="menu" id="admin-nav-panel"
+         role="menu" data-action="keydown->menu#navigate"
          aria-labelledby="admin-nav-button"
          class="hidden absolute right-0 mt-2 w-64 rounded-lg bg-surface-raised
                 border border-border shadow-lg z-50">
       <%= link_to t("navigation.admin.buildings"), main_app.buildings_path,
             role: "menuitem", tabindex: "-1",
+            data: { menu_target: "item", action: "click->menu#activate" },
             class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                     text-sm text-text-body
                     hover:bg-surface hover:text-interactive
@@ -94,6 +95,7 @@
       <div class="border-t border-border">
         <%= link_to t("navigation.admin.announcements"), main_app.admin_announcements_path,
               role: "menuitem", tabindex: "-1",
+            data: { menu_target: "item", action: "click->menu#activate" },
               class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
@@ -102,6 +104,7 @@
       <div class="border-t border-border">
         <%= link_to t("navigation.admin.editor_assignments"), main_app.admin_editor_assignments_path,
               role: "menuitem", tabindex: "-1",
+            data: { menu_target: "item", action: "click->menu#activate" },
               class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
@@ -110,6 +113,7 @@
       <div class="border-t border-border">
         <%= link_to t("navigation.admin.bulk_upload"), main_app.new_admin_bulk_upload_path,
               role: "menuitem", tabindex: "-1",
+            data: { menu_target: "item", action: "click->menu#activate" },
               class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
@@ -118,6 +122,7 @@
       <div class="border-t border-border">
         <%= link_to t("navigation.admin.characteristic_display_rules"), main_app.admin_characteristic_display_rules_path,
               role: "menuitem", tabindex: "-1",
+            data: { menu_target: "item", action: "click->menu#activate" },
               class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
@@ -126,6 +131,7 @@
       <div class="border-t border-border">
         <%= link_to t("navigation.admin.unit_display_names"), main_app.admin_unit_display_names_path,
               role: "menuitem", tabindex: "-1",
+            data: { menu_target: "item", action: "click->menu#activate" },
               class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
@@ -134,6 +140,7 @@
       <div class="border-t border-border">
         <%= link_to t("navigation.admin.sync_scope_rules"), main_app.admin_sync_scope_rules_path,
               role: "menuitem", tabindex: "-1",
+            data: { menu_target: "item", action: "click->menu#activate" },
               class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
