@@ -82,8 +82,9 @@
 
     <div data-menu-target="menu" id="admin-nav-panel"
          role="menu" data-action="keydown->menu#navigate"
+         tabindex="-1" hidden
          aria-labelledby="admin-nav-button"
-         class="hidden absolute right-0 mt-2 w-64 rounded-lg bg-surface-raised
+         class="absolute right-0 mt-2 w-64 rounded-lg bg-surface-raised
                 border border-border shadow-lg z-50">
       <%= link_to t("navigation.admin.buildings"), main_app.buildings_path,
             role: "menuitem", tabindex: "-1",
