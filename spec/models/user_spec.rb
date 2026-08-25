@@ -116,6 +116,44 @@ RSpec.describe User, type: :model do
     end
   end
 
+  # #674: the range check is network I/O; run via precheck it happens OUTSIDE
+  # the write transaction and the validation consumes the memo instead of
+  # calling out again from inside BEGIN IMMEDIATE.
+  describe "#precheck_password_pwned!" do
+    let(:pwned) { instance_double(Pwned::Password) }
+
+    before { allow(Pwned::Password).to receive(:new).and_return(pwned) }
+
+    it "memoizes the result so validation does no second network call" do
+      allow(pwned).to receive(:pwned?).and_return(true)
+      user = build(:user, password: "SecureP@ssw0rd123!")
+      user.precheck_password_pwned!
+
+      expect(user).not_to be_valid
+      expect(user.errors[:password]).to be_present
+      expect(pwned).to have_received(:pwned?).once
+    end
+
+    it "re-checks live when the password changes after the precheck (no stale memo)" do
+      allow(pwned).to receive(:pwned?).and_return(true, false)
+      user = build(:user, password: "SecureP@ssw0rd123!")
+      user.precheck_password_pwned!
+      user.password = user.password_confirmation = "Different@Passw0rd!"
+
+      expect(user).to be_valid
+      expect(pwned).to have_received(:pwned?).twice
+    end
+
+    it "fails open when the precheck hits a Pwned::Error" do
+      allow(pwned).to receive(:pwned?).and_raise(Pwned::Error.new("timeout"))
+      user = build(:user, password: "SecureP@ssw0rd123!")
+      user.precheck_password_pwned!
+
+      expect(user).to be_valid
+      expect(pwned).to have_received(:pwned?).once
+    end
+  end
+
   describe "email normalization" do
     it "strips whitespace from email" do
       user = create(:user, email_address: "  test@example.com  ")

@@ -8,8 +8,10 @@ require "rails_helper"
 # finding IT, the probe is broken, not the code.
 # CI is authoritative: builds/ is gitignored, so a stale local build can pass
 # this vacuously — only CI's fresh assets:precompile proves a negative. Scope
-# is the btn-* family only; other utility families (e.g. signal borders) are
-# not covered here.
+# is the btn-* family plus the signal utility families (#774) — the two
+# families where hand-typing has actually shipped phantoms; a general
+# "every class resolves" check would need an arbitrary-variant allowlist and
+# stays a deliberate non-goal.
 RSpec.describe "button utilities in compiled Tailwind" do
   before do
     skip "run bin/rails tailwind:build first" unless build_css_path.exist?
@@ -50,6 +52,57 @@ RSpec.describe "button utilities in compiled Tailwind" do
   def declarations_for(class_name)
     css.scan(/[^{};]*\.#{Regexp.escape(class_name)}(?![\w-])[^{};]*\{([^{}]*)\}/)
       .flatten.join(";")
+  end
+
+  def markup_files
+    Dir[Rails.root.join("app/views/**/*.erb")] +
+      Dir[Rails.root.join("app/components/**/*.{rb,erb}")]
+  end
+
+  # Signal-family tokens (#774): both the legitimate spelling (prefix-form,
+  # `bg-danger-surface`) and the bug-class spelling (signal-first, `info-border`
+  # — the typo that shipped border-less twice in one day). A used token resolves
+  # if the compiled build has it bare or under any variant prefix
+  # (`hover:bg-danger-surface` compiles only the prefixed class name).
+  # (A method, not a bare constant — the no-Object-level-spec-constants guard.)
+  def signal_token_pattern
+    /
+      (?<![\w:-])
+      (?:
+        (?:border|bg|text|ring|outline|divide|decoration|fill|stroke)-(?:info|success|warning|danger)(?:-[a-z][a-z-]*)?
+        |
+        (?:info|success|warning|danger)-(?:border|surface|hover|icon|strong|progress)
+      )
+      (?![\w-])
+    /x
+  end
+
+  # Comments are prose, not markup — "the semantic warning-icon token" must not
+  # trip the guard. Ruby line comments (never `#{` interpolation) and ERB
+  # comment tags are stripped before scanning.
+  def strip_comments(source)
+    source.gsub(/(?:^|\s)#(?!\{).*$/, "").gsub(/<%#.*?%>/m, "")
+  end
+
+  def signal_tokens_by_file
+    markup_files.each_with_object(Hash.new { |h, k| h[k] = [] }) do |f, map|
+      strip_comments(File.read(f)).scan(signal_token_pattern).uniq.each do |token|
+        map[token] << Pathname(f).relative_path_from(Rails.root).to_s
+      end
+    end
+  end
+
+  it "finds no phantom signal-utility tokens in views or components" do
+    used = signal_tokens_by_file
+    expect(used.keys).to include("text-danger") # positive control: extractor
+    expect(compiled_selector_classes).to include("text-danger") # positive control: parser
+
+    phantoms = used.reject do |token, _files|
+      compiled_selector_classes.any? { |c| c == token || c.end_with?(":#{token}") }
+    end
+    expect(phantoms).to be_empty,
+      "signal-family classes used in markup but absent from the compiled build:\n" +
+        phantoms.map { |token, files| "  #{token} (#{files.join(', ')})" }.join("\n")
   end
 
   it "finds no phantom btn-* tokens in views or components" do

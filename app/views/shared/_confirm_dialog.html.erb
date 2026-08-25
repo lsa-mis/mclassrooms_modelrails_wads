@@ -18,7 +18,10 @@
   end
   input_field_id = "confirm-input-#{id || confirm_input.hash.abs}" if confirm_input
 %>
-<%= render "shared/modal", title: title, id: id, size: :sm do %>
+<%# body_id: unique per render (#685) — confirm dialogs render per row on
+    list pages and are never Turbo-Stream targets, so they must not share the
+    surface-only default "modal-body". %>
+<%= render "shared/modal", title: title, id: id, size: :sm, body_id: "confirm-#{id || SecureRandom.hex(4)}-body" do %>
   <%= tag.div data: wrapper_data do %>
     <div class="flex gap-4">
       <div class="shrink-0 mt-0.5 <%= icon_color %>">

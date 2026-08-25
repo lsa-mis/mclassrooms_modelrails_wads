@@ -1,7 +1,8 @@
 <% content_for(:title) { t("settings.reauthentications.new.title") } %>
-<div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-2xl font-semibold text-text-heading"><%= t("settings.reauthentications.new.title") %></h1>
-  <p class="mt-2 text-text-body"><%= t("settings.reauthentications.new.explanation") %></p>
+<div class="page-container">
+  <%= render "shared/settings_page_header",
+        title: t("settings.reauthentications.new.title"),
+        description: t("settings.reauthentications.new.explanation") %>
 
   <div role="group" aria-labelledby="reauth-choose-heading" class="mt-8 space-y-6">
     <h2 id="reauth-choose-heading" class="text-sm font-medium text-text-heading">
@@ -13,7 +14,7 @@
         <%= form.password_field :password,
               label: t("settings.reauthentications.new.password_label"),
               autocomplete: "current-password", required: true %>
-        <%= form.submit t("settings.reauthentications.new.password_submit"), class: "btn-primary" %>
+        <%= form.submit t("settings.reauthentications.new.password_submit") %>
       <% end %>
     <% end %>
 
@@ -36,7 +37,7 @@
           <%= form.text_field :code,
                 label: t("settings.reauthentications.new.code_label"),
                 inputmode: "numeric", autocomplete: "one-time-code", required: true %>
-          <%= form.submit t("settings.reauthentications.new.code_submit"), class: "btn-primary" %>
+          <%= form.submit t("settings.reauthentications.new.code_submit") %>
         <% end %>
       <% else %>
         <%= form_with url: settings_reauthentication_code_path, method: :post do |form| %>

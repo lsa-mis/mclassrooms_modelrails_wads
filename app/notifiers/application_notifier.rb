@@ -28,6 +28,10 @@ class ApplicationNotifier < Noticed::Event
   class_attribute :dedup_bucket_granularity, instance_accessor: false, default: :minute
   class_attribute :dedup_seed_block, instance_accessor: false, default: nil
 
+  # Declared via `record_preloads`; consumed by `.preload_records` (the
+  # notifications-index pipeline). See that method for why this exists.
+  class_attribute :record_preload_spec, instance_accessor: false, default: [].freeze
+
   def self.category(name)
     self.category_name = name.to_s
   end
@@ -65,6 +69,62 @@ class ApplicationNotifier < Noticed::Event
   def self.dedup_seed(&block)
     self.dedup_seed_block = block
   end
+
+  # Declares the associations this notifier's `#message` traverses off the
+  # polymorphic `event.record`, e.g. `record_preloads :project` or the nested
+  # form `record_preloads :accepted_by, invitable: :workspace`. Rails'
+  # `includes(event: :record)` stops at the polymorphic record itself, so
+  # without this the notifications index N+1s one level down. Keep the
+  # declaration in sync with what `#message` reads — the index guard spec
+  # (notifications_record_preloads_spec) renders every notifier type under
+  # Bullet's raise and fails on both a missing and a superfluous entry.
+  def self.record_preloads(*associations)
+    self.record_preload_spec = associations.freeze
+  end
+
+  # The per-subtype preload pipeline for a mixed page of notifications.
+  # Groups by notifier type, then batch-loads each type's declared
+  # associations, re-grouping by concrete record class at every level of a
+  # nested declaration — a class that lacks the association is skipped, which
+  # is what makes polymorphic hops (Invitation#invitable → Project#workspace,
+  # where a Workspace invitable has no `workspace`) expressible at all.
+  def self.preload_records(notifications)
+    notifications.group_by { |notification| notification.event.type }.each_value do |group|
+      event_class = group.first.event.class
+      next unless event_class.respond_to?(:record_preload_spec)
+
+      spec = event_class.record_preload_spec
+      next if spec.empty?
+
+      preload_tree(group.map { |notification| notification.event.record }.compact, spec)
+    end
+  end
+
+  def self.preload_tree(records, spec)
+    records.group_by(&:class).each do |klass, group|
+      Array(spec).each do |entry|
+        case entry
+        when Hash
+          entry.each do |association, nested|
+            next unless preload_association(klass, group, association)
+
+            preload_tree(group.flat_map { |record| Array(record.public_send(association)) }.compact, nested)
+          end
+        else
+          preload_association(klass, group, entry)
+        end
+      end
+    end
+  end
+  private_class_method :preload_tree
+
+  def self.preload_association(klass, records, association)
+    return false unless klass.reflect_on_association(association)
+
+    ActiveRecord::Associations::Preloader.new(records: records, associations: association).call
+    true
+  end
+  private_class_method :preload_association
 
   before_create :populate_idempotency_key
 

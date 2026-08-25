@@ -9,43 +9,36 @@ module AvatarHelper
     xl: { css: "w-32 h-32", px: 128, text: "text-3xl" }
   }.freeze
 
-  # Renders through the Identity read surface (PR 3 of the CTRL-1 arc) so the
-  # source dispatch, gravatar availability rule, and hue default live in ONE
-  # place — then hands presentation to the gem-maintained UI::AvatarComponent
-  # (sizing, rounded-full, hue initials, ARIA semantics).
+  # Renders through the Identity read surface: the helper asks ONE question —
+  # Identity#image_url, where the case-on-source lives (#653) — and hands
+  # presentation to the gem-maintained UI::AvatarComponent. nil URL means
+  # initials.
   def avatar_for(user, size: :md, aria_label: nil)
     identity = user.identity
     px = AVATAR_SIZES.fetch(size)[:px]
 
-    case identity.source
-    when "upload"
-      return render_initials_avatar(identity, size, aria_label) unless identity.image?
+    # main_app.url_for keeps upload variant URLs engine-context-safe (the
+    # shared header also renders inside the markdowndocs engine layout, where
+    # AS routes aren't mounted).
+    url = identity.image_url(size: px) { |variant| main_app.url_for(variant) }
+    return render_initials_avatar(identity, size, aria_label) unless url
 
-      # main_app.url_for keeps the URL engine-context-safe (the shared header also
-      # renders inside the markdowndocs engine layout, where AS routes aren't mounted).
-      src = main_app.url_for(identity.image.variant(resize_to_fill: [ px, px ]))
-      render UI::AvatarComponent.new(src: src, size: size, aria_label: aria_label)
-    when "gravatar"
-      # Identity#gravatar_url is consistency-gated: nil when "gravatar" left
-      # available_sources (CheckGravatarJob flipped it off), so a stale source
-      # renders initials instead of a permanently broken ?d=404 image.
-      url = identity.gravatar_url(size: px)
-      return render_initials_avatar(identity, size, aria_label) if url.nil?
-
-      render UI::AvatarComponent.new(src: url, size: size, aria_label: aria_label, loading: "lazy")
-    else
-      render_initials_avatar(identity, size, aria_label)
-    end
+    # fallback: arms the component's broken-image recovery (#756) — a 404ing
+    # image swaps to initials instead of the browser glyph.
+    render UI::AvatarComponent.new(
+      src: url, fallback: identity.initials, hue: identity.custom_hue,
+      size: size, aria_label: aria_label,
+      loading: ("lazy" if identity.remote_image?)
+    )
   end
 
   private
 
   def render_initials_avatar(identity, size, aria_label)
-    custom_color = identity.primary_color.present? && identity.primary_color != Identity::DEFAULT_HUE
     render UI::AvatarComponent.new(
       fallback: identity.initials,
       size: size,
-      hue: (custom_color ? identity.primary_color : nil),
+      hue: identity.custom_hue,
       aria_label: aria_label
     )
   end

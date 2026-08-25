@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { nextActive } from "keyboard/keyboard_nav"
 import { commandScore } from "search/command_score"
 
 // Command palette behavior. Owns the WAI-ARIA APG combobox + listbox contract:
@@ -118,20 +119,14 @@ export default class extends Controller {
 
     switch (event.key) {
       case "ArrowDown":
-        next = visible[(current + 1) % visible.length]
-        break
       case "ArrowUp":
-        // Same #661 correction as combobox_controller (the duplicated pair
-        // #659 tracks): with no active option, enter at the LAST item. Not
-        // keyboard-reachable here today (filter() re-seeds the active option
-        // on every open and input), so this is parity, not a live bug.
-        next = current === -1 ? visible[visible.length - 1] : visible[(current - 1 + visible.length) % visible.length]
-        break
       case "Home":
-        next = visible[0]
-        break
       case "End":
-        next = visible[visible.length - 1]
+        // ArrowUp's no-active-option entry is parity with combobox, not a live path
+        // here: filter() re-seeds the active option on every open and input, and the
+        // input lives inside the panel. test_stays_closed_on_arrow_up_after_escape
+        // pins that. Sharing the movement keeps the pair from drifting again.
+        next = nextActive(visible, current, event.key)
         break
       case "Enter": {
         const active = visible[current]
@@ -168,11 +163,11 @@ export default class extends Controller {
       item.setAttribute("role", "option")
       if (!item.id) item.id = `${this._idPrefix}-option-${this._optionId++}`
     })
+
     // An <hr> separator's implicit role="separator" is an illegal child of
-    // role="listbox" (axe aria-required-children, critical — caught by the
-    // open-state audit, #463). Neutralize caller-supplied separators the same
-    // way options are promoted: the contract is applied here so markup can't
-    // break it.
+    // role="listbox" (axe aria-required-children, critical). SEPARATOR and the
+    // docs example both hand callers exactly this markup, so the contract is
+    // applied here — where markup cannot break it — rather than asked for.
     this.listTarget.querySelectorAll("hr").forEach(hr => {
       hr.setAttribute("role", "presentation")
       hr.setAttribute("aria-hidden", "true")

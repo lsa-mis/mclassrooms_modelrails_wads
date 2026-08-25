@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { nextActive } from "keyboard/keyboard_nav"
 import * as topLayer from "overlays/top_layer"
 
 // Autocomplete-select behavior. Owns the WAI-ARIA APG combobox + listbox
@@ -60,10 +61,9 @@ export default class extends Controller {
     // Reopen handling runs BEFORE the visible set is computed: after Escape
     // on a zero-match filter the stale option.hidden states would leave
     // `visible` empty, and an early return here locked the keyboard out of
-    // ever reopening (only a printable keystroke recovered — #677). open()
-    // re-runs filter() against the restored committed label; entry then
-    // follows APG — ArrowDown activates the FIRST visible option, ArrowUp
-    // the LAST.
+    // ever reopening (only a printable keystroke recovered). open() re-runs
+    // filter() against the restored committed label; entry then follows APG —
+    // ArrowDown activates the FIRST visible option, ArrowUp the LAST.
     if ((event.key === "ArrowDown" || event.key === "ArrowUp") && this.panelTarget.hidden) {
       event.preventDefault()
       this.open()
@@ -81,18 +81,10 @@ export default class extends Controller {
 
     switch (event.key) {
       case "ArrowDown":
-        next = visible[(current + 1) % visible.length]
-        break
       case "ArrowUp":
-        // No active option (current === -1): APG says ArrowUp enters at the
-        // LAST option — the modulo alone lands one short of it (#661).
-        next = current === -1 ? visible[visible.length - 1] : visible[(current - 1 + visible.length) % visible.length]
-        break
       case "Home":
-        next = visible[0]
-        break
       case "End":
-        next = visible[visible.length - 1]
+        next = nextActive(visible, current, event.key)
         break
       case "Enter": {
         const active = visible[current]

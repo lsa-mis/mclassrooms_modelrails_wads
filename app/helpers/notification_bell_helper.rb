@@ -21,8 +21,11 @@ module NotificationBellHelper
     success: { bg: "bg-success",       pulse: false }
   }.freeze
 
+  # Memoized per render pass: the header, user menu, and avatar-button
+  # partials each ask for the same user's summary on every authenticated page.
   def unread_notification_summary(user)
-    UnreadNotificationSummary.new(user).to_h
+    @unread_notification_summaries ||= {}
+    @unread_notification_summaries[user.id] ||= UnreadNotificationSummary.new(user).to_h
   end
 
   def notification_bell_classes(severity, variant: :icon)

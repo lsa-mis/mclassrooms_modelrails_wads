@@ -494,4 +494,45 @@ RSpec.describe Workspace, type: :model do
       expect(workspace.at_capacity?).to be false
     end
   end
+
+  # #676: workspace INSERT + owner membership commit or roll back TOGETHER —
+  # the two-write controller shape could strand a committed, ownerless
+  # workspace (no membership → unreachable and undeletable through the UI)
+  # when the owner-role lookup raised after the commit.
+  describe ".create_owned" do
+    let(:user) { create(:user) }
+
+    it "creates the workspace with its owner membership" do
+      workspace = Workspace.create_owned({ name: "Acme" }, owner: user)
+
+      expect(workspace).to be_persisted
+      membership = workspace.memberships.sole
+      expect(membership.user).to eq(user)
+      expect(membership.role.slug).to eq("owner")
+    end
+
+    it "resolves the owner role through the self-healing Role.system_default!, not find_by!" do
+      allow(Role).to receive(:system_default!).and_call_original
+
+      Workspace.create_owned({ name: "Acme" }, owner: user)
+
+      expect(Role).to have_received(:system_default!).with("owner").at_least(:once)
+    end
+
+    it "rolls back the workspace INSERT when the owner membership cannot be created" do
+      allow(Role).to receive(:system_default!).and_raise(ActiveRecord::RecordNotFound)
+
+      expect {
+        expect { Workspace.create_owned({ name: "Acme" }, owner: user) }
+          .to raise_error(ActiveRecord::RecordNotFound)
+      }.not_to change(Workspace, :count)
+    end
+
+    it "returns the unsaved workspace with errors on validation failure (form re-render contract)" do
+      workspace = Workspace.create_owned({ name: nil }, owner: user)
+
+      expect(workspace).not_to be_persisted
+      expect(workspace.errors[:name]).to be_present
+    end
+  end
 end

@@ -14,33 +14,58 @@ require "rails_helper"
 RSpec.describe "User menu dropdown", type: :system do
   let(:user) { create(:user, first_name: "Jane", last_name: "Doe") }
 
-  def sign_in_via_form(user)
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-    visit root_path
-  end
-
-  # Invoke a keyboard event on the dropdown controller directly. Programmatic
+  # Invoke a keyboard event on the menu controller directly. Programmatic
   # KeyboardEvent dispatch does not reliably reach Stimulus listeners through
   # the driver's isolated evaluation context, so we call the handler directly.
   def send_dropdown_key(key)
     cdp_execute(<<~JS)
       (function() {
-        var el = document.querySelector('[data-controller~="dropdown"]');
-        var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'dropdown');
-        if (c) c.handleKeydown(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
+        var el = document.querySelector('[data-controller~="menu"]');
+        var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'menu');
+        if (c) c.navigate(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
       })()
     JS
   end
 
   before do
     sign_in_via_form(user)
+    visit root_path # this file's old helper copy baked this in; the examples assume it
+  end
+
+  # #685: the user menu runs on the menu-pattern controller (APG menu-button),
+  # not the legacy dropdown — type-ahead works and outside-click dismissal
+  # leaves focus where the user clicked instead of yanking it to the trigger
+  # (WCAG 3.2.1/2.4.3).
+  describe "menu-pattern behaviors (#685)" do
+    def send_menu_key(key)
+      cdp_execute(<<~JS)
+        (function() {
+          var el = document.querySelector('[data-controller~="menu"]');
+          var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'menu');
+          if (c) c.navigate(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
+        })()
+      JS
+    end
+
+    it "type-ahead focuses the item matching typed characters" do
+      find("#user-menu-button").click
+      expect(page).to have_css("#user-menu", visible: :visible)
+
+      send_menu_key("s")
+
+      focused = page.evaluate_script("document.activeElement.textContent.trim()")
+      expect(focused).to eq(I18n.t("navigation.sign_out"))
+    end
+
+    it "outside click closes without stealing focus back to the trigger" do
+      find("#user-menu-button").click
+      expect(page).to have_css("#user-menu", visible: :visible)
+
+      find("h1", match: :first).click
+      expect(page).to have_no_css("#user-menu", visible: :visible)
+
+      expect(page.evaluate_script("document.activeElement.id")).not_to eq("user-menu-button")
+    end
   end
 
   describe "opening and closing" do
@@ -181,14 +206,17 @@ RSpec.describe "User menu dropdown", type: :system do
       expect(focused_id).to eq("user-menu-button")
     end
 
-    it "Space key activates focused identity link" do
-      send_dropdown_key(" ")
+    # The menu controller activates natively (real Enter/Space on the focused
+    # <a>/<button> — no synthetic click), so these drive real key input.
+    # Native semantics: Enter follows links; Space activates BUTTONS only.
+    it "Enter key activates the focused identity link" do
+      find("#user-menu a[href='#{edit_settings_profile_path}']").send_keys(:enter)
       expect(page).to have_current_path(edit_settings_profile_path)
     end
 
-    it "Enter key activates focused identity link" do
-      send_dropdown_key("Enter")
-      expect(page).to have_current_path(edit_settings_profile_path)
+    it "Space key activates the focused sign-out button" do
+      find("#user-menu button", text: I18n.t("navigation.sign_out")).send_keys(:space)
+      expect(page).to have_current_path(new_session_path)
     end
   end
 

@@ -6,13 +6,15 @@
     <%= avatar_for(Current.user, size: :md) %>
     <span class="text-sm font-medium text-text-body truncate"><%= Current.user.full_name %></span>
   </div>
-  <div class="flex items-center justify-between">
+  <%# #769: header stacks at mobile so the action label never wraps inside
+      its own button. %>
+  <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <h1 class="text-3xl font-bold text-text-heading">
       <%= t("workspaces.index.title") %>
     </h1>
     <% if TenancyConfig.workspace_creation_enabled? %>
       <%= link_to t("workspaces.index.new_workspace"), new_workspace_path,
-            class: "btn-primary" %>
+            class: "btn-primary whitespace-nowrap" %>
     <% end %>
   </div>
 
@@ -73,12 +75,14 @@
       <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
         <%= t("workspaces.index.archived_heading") %>
       </h2>
-      <ul class="flex flex-col gap-2">
+      <%# UI::ListGroup (#735): one divided container; locked_row renders as a
+          plain li inside it (the group owns border and dividers). %>
+      <%= ui :list_group do %>
         <% @archived_memberships.each do |membership| %>
           <% if membership.workspace.suspended? %>
             <%= render "workspaces/locked_row", workspace: membership.workspace %>
           <% else %>
-            <li class="flex items-center justify-between gap-4 p-4 border border-border rounded-lg bg-surface">
+            <%= ui :list_group_item, class: "gap-4" do %>
               <div class="min-w-0">
                 <p class="font-medium text-text-heading truncate"><%= membership.workspace.name %></p>
                 <p class="text-sm text-text-muted"><%= lifecycle_status_label(membership.workspace) %></p>
@@ -86,10 +90,10 @@
               <%= button_to t("lifecycle.restore"), unarchive_workspace_path(membership.workspace),
                     method: :patch,
                     class: "btn-touch-target btn-text btn-text-interactive text-sm shrink-0" %>
-            </li>
+            <% end %>
           <% end %>
         <% end %>
-      </ul>
+      <% end %>
     </section>
   <% end %>
 

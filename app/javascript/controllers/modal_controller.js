@@ -39,7 +39,11 @@ export default class extends Controller {
     }
 
     if (this.dialogTarget.open) {
+      // A dialog torn out of the DOM while open (Turbo replaced the page or a
+      // stream removed the row) closes with NO native focus restore — restore
+      // explicitly or focus silently lands on <body>.
       this.dialogTarget.close()
+      this.restoreFocus()
     }
   }
 
@@ -61,6 +65,18 @@ export default class extends Controller {
       }
       this.restoreFocus()
     })
+  }
+
+  // Focus the opener again — unless it left the DOM while the dialog was open
+  // (a detached node's focus() is a silent no-op and focus falls to <body>, a
+  // 2.4.3 loss). Fall back to the page's stable focus anchor: the skip-link
+  // <main tabindex="-1"> every host layout carries.
+  restoreFocus() {
+    const target = this.previouslyFocused?.isConnected
+      ? this.previouslyFocused
+      : document.querySelector('main[tabindex="-1"]')
+    target?.focus()
+    this.previouslyFocused = null
   }
 
   handleEscOnPage() {

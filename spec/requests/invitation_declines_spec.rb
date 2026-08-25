@@ -9,10 +9,10 @@ RSpec.describe "Invitation Declines", type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    it "renders the decline confirm on the button base with the outline-red overrides" do
+    it "renders the decline confirm on the consolidated outline-danger button (#766)" do
       get decline_invitation_path(token: invitation.token)
       html = Capybara.string(response.body)
-      expect(html).to have_css("button.btn-secondary.border-danger.text-danger[type='submit']")
+      expect(html).to have_css("button.btn-outline-danger[type='submit']")
     end
 
     it "shows error for invalid token" do

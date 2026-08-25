@@ -1,10 +1,17 @@
+<%# UI::Banner (#731): labelled region wrapping the re-consent offer. The
+    live announcement is scoped to the MESSAGE span only (#770) — a live
+    region announces information, never interactive content, so the Join and
+    Dismiss forms sit outside the status subtree. %>
 <% if (workspace = pending_join_workspace) %>
-  <div id="pending-join-banner"
-       role="status"
-       class="bg-info-surface text-info border-info-border border-b">
+  <%= render UI::BannerComponent.new(
+        variant: :info,
+        label: t("workspaces.pending_join_banner.label"),
+        id: "pending-join-banner",
+        class: "rounded-none border-x-0 border-t-0 border-b"
+      ) do %>
     <div class="max-w-5xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-      <%= icon(:user_group, class: "w-4 h-4 shrink-0") %>
-      <span><%= t("workspaces.pending_join_banner.message", workspace: workspace.name) %></span>
+      <%= icon(:user_group, size: :sm, class: "shrink-0") %>
+      <span role="status"><%= t("workspaces.pending_join_banner.message", workspace: workspace.name) %></span>
       <%# text-info/border-info-border override btn-secondary's text-text-body — the
           banner's info signal pairing on bg-info-surface (panel CP3). %>
       <%= button_to t("workspaces.pending_join_banner.join", workspace: workspace.name), pending_join_path,
@@ -14,5 +21,5 @@
             method: :delete,
             class: "btn-text" %>
     </div>
-  </div>
+  <% end %>
 <% end %>

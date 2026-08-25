@@ -7,7 +7,7 @@ require "rails_helper"
 # The switcher is `hidden md:block` — visible only at the md breakpoint and above.
 # Playwright's default viewport (1280×720) satisfies this; no resize is needed.
 #
-# Escape is dispatched via the dropdown controller's handleKeydown directly,
+# Escape is dispatched via the menu controller's navigate handler directly,
 # matching the pattern in user_menu_spec.rb — programmatic KeyboardEvent dispatch
 # does not reach main-world Stimulus listeners in Playwright's isolated context.
 #
@@ -22,14 +22,14 @@ RSpec.describe "Workspace switcher (header)", type: :system do
     ws
   end
 
-  # Dispatch a KeyboardEvent directly to the dropdown Stimulus controller.
+  # Dispatch a KeyboardEvent directly to the menu Stimulus controller.
   # Reuses the same technique as user_menu_spec.rb.
   def send_switcher_key(key)
     cdp_execute(<<~JS)
       (function() {
-        var el = document.querySelector('#workspace-switcher-button').closest('[data-controller~="dropdown"]');
-        var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'dropdown');
-        if (c) c.handleKeydown(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
+        var el = document.querySelector('#workspace-switcher-button').closest('[data-controller~="menu"]');
+        var c = window.Stimulus.getControllerForElementAndIdentifier(el, 'menu');
+        if (c) c.navigate(new KeyboardEvent('keydown', { key: '#{key}', bubbles: true }));
       })()
     JS
   end

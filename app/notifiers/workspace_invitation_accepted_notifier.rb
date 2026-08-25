@@ -3,6 +3,7 @@
 class WorkspaceInvitationAcceptedNotifier < ApplicationNotifier
   category :workspace_activity
   severity :success
+  record_preloads :accepted_by, invitable: :workspace
 
   notification_methods do
     def message

@@ -4,17 +4,6 @@ RSpec.describe "Notifications index page", type: :system do
   let(:password) { "SecureP@ssw0rd123!" }
   let(:user) { create(:user, password: password) }
 
-  def sign_in_via_form(user)
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-  end
-
   # Monotonic per-example offset: every dispatch lands 5 minutes after the
   # previous one, so each notification gets a distinct idempotency bucket
   # without relying on rand. Same pattern as
@@ -127,16 +116,17 @@ RSpec.describe "Notifications index page", type: :system do
     end
 
     describe "button styling (btn utilities)" do
-      it "renders bulk and per-item actions as secondary buttons (danger tones retained)" do
+      it "renders neutral actions as secondary and destructive ones as outline-danger (#766)" do
         notification = deliver_security_notification
 
         visit settings_notifications_path
 
         expect(page).to have_css("button.btn-secondary", text: I18n.t("notifications.index.mark_all_read.action"))
-        expect(page).to have_css("button.btn-secondary.text-danger", text: I18n.t("notifications.index.destroy_all_read.action"))
-        # One unread row -> mark_read + delete = 2 per-item action buttons.
+        expect(page).to have_css("button.btn-outline-danger", text: I18n.t("notifications.index.destroy_all_read.action"))
+        # One unread row -> mark_read (secondary) + delete (outline-danger).
         within "##{ActionView::RecordIdentifier.dom_id(notification)}" do
-          expect(page).to have_css("button.btn-secondary[type='submit']", count: 2)
+          expect(page).to have_css("button.btn-secondary[type='submit']", count: 1)
+          expect(page).to have_css("button.btn-outline-danger[type='submit']", count: 1)
         end
       end
     end

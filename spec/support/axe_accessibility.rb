@@ -214,11 +214,15 @@ module AxeAccessibility
           for (const el of focusables) {
             const cs = getComputedStyle(el);
             if (cs.display === "inline" && el.matches("a[href]")) continue; // in-text link exception
-            // sr-only bypass links (skip-to-content) are clipped to ~1px while
+            // sr-only bypass LINKS (skip-to-content) are clipped to ~1px while
             // blurred BY DESIGN and expand on focus — measuring the blurred
-            // rect is a false positive.
+            // rect is a false positive. a[href] ONLY (#742): a visually-hidden
+            // <input> behind a styled control (toggle, custom checkbox) must
+            // NOT ride this exemption — its real target is the wrapping
+            // label, and the label-union measurement below is exactly what
+            // holds that to the 44px floor.
             const blurredRect = el.getBoundingClientRect();
-            if (blurredRect.width <= 2 && blurredRect.height <= 2 && cs.position === "absolute") continue;
+            if (blurredRect.width <= 2 && blurredRect.height <= 2 && cs.position === "absolute" && el.matches("a[href]")) continue;
             // Composite-widget interiors (panel call, 2026-07-13): menu and
             // listbox items keep desktop density — 2.5.5 is NOT CLAIMED for
             // them on fine pointers (documented conformance deviation). They

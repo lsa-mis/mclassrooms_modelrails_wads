@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { TypeAhead } from "keyboard/keyboard_nav"
 
 // Coordinator for the WAI-ARIA APG menubar. Each menubar item's submenu is its OWN `menu`
 // controller (reused via EXTRA_STIMULUS, like dropdown_menu/context_menu); THIS controller
@@ -15,14 +16,15 @@ export default class extends Controller {
   static outlets = ["menu"]   // the per-item submenu `menu` controllers (one per item)
 
   connect() {
-    this.typeBuffer = ""
-    this.typeTimer = null
+    this._typeAhead = new TypeAhead()
     this.resetRovingTabindex()
   }
 
   disconnect() {
-    if (this.typeTimer) clearTimeout(this.typeTimer)
+    this._typeAhead.cancel()
   }
+
+  // --- roving tabindex across bar items -----------------------------------
 
   get enabledIndexes() {
     return this.itemTargets
@@ -56,6 +58,8 @@ export default class extends Controller {
     const focused = this.itemTargets.indexOf(document.activeElement)
     return focused >= 0 ? focused : (this.enabledIndexes[0] ?? 0)
   }
+
+  // --- horizontal navigation (bar level) ----------------------------------
 
   navigate(event) {
     if (event.defaultPrevented) return // the open submenu's menu#navigate already handled it
@@ -110,19 +114,14 @@ export default class extends Controller {
   }
 
   typeAhead(char) {
-    this.typeBuffer += char.toLowerCase()
-    if (this.typeTimer) clearTimeout(this.typeTimer)
-    this.typeTimer = setTimeout(() => { this.typeBuffer = "" }, 1000)
-    const n = this.itemTargets.length
-    const start = Math.max(0, this.itemTargets.indexOf(document.activeElement))
-    for (let k = 1; k <= n; k++) {
-      const i = (start + k) % n
-      const el = this.itemTargets[i]
-      if (el.getAttribute("aria-disabled") === "true") continue
-      if (el.textContent.trim().toLowerCase().startsWith(this.typeBuffer)) {
-        this.focusItem(i)
-        return
-      }
-    }
+    this._typeAhead.push(char)
+
+    // Unfiltered + inline skip: focusItem takes an INDEX into itemTargets, which is
+    // co-indexed with menuOutlets. Filtering first would shift those indices apart.
+    const items = this.itemTargets
+    const i = this._typeAhead.match(items, Math.max(0, items.indexOf(document.activeElement)), {
+      skip: (el) => el.getAttribute("aria-disabled") === "true"
+    })
+    if (i !== -1) this.focusItem(i)
   }
 }

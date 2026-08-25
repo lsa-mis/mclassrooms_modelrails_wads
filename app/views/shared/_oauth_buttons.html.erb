@@ -1,5 +1,11 @@
+<%# OAuth buttons are text-only ("Sign in with Google/GitHub") — a deliberate
+    template-minimalism ruling (#773 item 4): provider brand marks mean per-provider
+    SVG assets and brand-guideline upkeep the fork-first template shouldn't carry.
+    Forks that want the marks add them per their own brand review. %>
 <% if oauth_enabled? %>
-  <div class="space-y-3">
+  <%# mt-8 matches the page stack's section gap (#773 item 1) so the heading
+      reads as the card's title, not a label on the first provider button. %>
+  <div class="mt-8 space-y-3">
     <% enabled_oauth_providers.each do |provider_key, config| %>
       <%= button_to "/auth/#{provider_key}",
             method: :post,

@@ -113,7 +113,7 @@ module UI
     end
 
     def color_classes
-      @hue ? "bg-hue-initials text-white" : "bg-interactive text-text-on-interactive"
+      @hue ? "bg-hue-initials text-text-on-hue-initials" : "bg-interactive text-text-on-interactive"
     end
 
     def aria_attrs

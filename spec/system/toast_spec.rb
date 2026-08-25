@@ -3,17 +3,6 @@ require "rails_helper"
 RSpec.describe "Toast notification system", type: :system do
   let(:user) { create(:user) }
 
-  def sign_in_via_form
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-  end
-
   def trigger_login_failure
     # The lookup action now sends a magic link; reach the password form directly.
     visit session_password_form_path(email_address: user.email_address)
@@ -27,33 +16,45 @@ RSpec.describe "Toast notification system", type: :system do
     JS
   end
 
+  # #683: a live region must exist and be registered BEFORE content arrives —
+  # a region inserted WITH its content (the appended toast carrying its own
+  # aria-live) is silently dropped by AT. The STABLE containers own the
+  # announcement semantics.
+  describe "stable live-region containers (#683)" do
+    it "both toast containers are live regions before any toast exists" do
+      sign_in_via_form(user)
+      expect(page.find("#toast-pills", visible: :all)["aria-live"]).to eq("polite")
+      expect(page.find("#toast-cards", visible: :all)["aria-live"]).to eq("assertive")
+    end
+  end
+
   describe "pill toasts (success/info)" do
     it "appears as a pill in the top-center container" do
-      sign_in_via_form
+      sign_in_via_form(user)
       expect(page).to have_css("#toast-pills [data-controller='toast-pill']")
     end
 
-    it "has role=status and aria-live=polite" do
-      sign_in_via_form
+    it "keeps role=status but no own live attrs — the container announces (#683)" do
+      sign_in_via_form(user)
       pill = find("[data-controller='toast-pill']")
       expect(pill["role"]).to eq("status")
-      expect(pill["aria-live"]).to eq("polite")
+      expect(pill["aria-live"]).to be_nil
     end
 
     it "includes a progress bar" do
-      sign_in_via_form
+      sign_in_via_form(user)
       expect(page).to have_css("[data-toast-pill-target='progress']")
     end
 
     it "auto-dismisses after timeout" do
-      sign_in_via_form
+      sign_in_via_form(user)
       expect(page).to have_css("[data-controller='toast-pill']")
       # Default minimum timeout is 5 seconds; wait up to 18 to account for max
       expect(page).to have_no_css("[data-controller='toast-pill']", wait: 18)
     end
 
     it "does not overlap the user menu dropdown" do
-      sign_in_via_form
+      sign_in_via_form(user)
       expect(page).to have_css("[data-controller='toast-pill']")
 
       # Open user menu
@@ -74,11 +75,11 @@ RSpec.describe "Toast notification system", type: :system do
       expect(page).to have_css("#toast-cards [data-controller='toast-card']")
     end
 
-    it "has role=alert and aria-live=assertive" do
+    it "keeps role=alert but no own live attrs — the container announces (#683)" do
       trigger_login_failure
       card = find("[data-controller='toast-card']")
       expect(card["role"]).to eq("alert")
-      expect(card["aria-live"]).to eq("assertive")
+      expect(card["aria-live"]).to be_nil
     end
 
     it "persists until manually dismissed" do

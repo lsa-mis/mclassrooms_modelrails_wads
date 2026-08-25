@@ -38,18 +38,14 @@ RSpec.describe "Preferences toggle label at narrow viewports", type: :system, sk
   # semantics and are the first thing a fork restyles.
   def assert_title_rendered_once_visually(title)
     row_title = find("[data-preferences-row-title]", text: title, visible: :all)
-    toggle_label = find("[data-toggle-label]", text: title, visible: :all)
-
-    # Token match, not substring: String#include? would pass on `not-sr-only`
-    # or a breakpoint-scoped `sm:sr-only`.
     expect(row_title[:class].split).not_to include("sr-only")
-    expect(toggle_label[:class].split).to include("sr-only"),
-      "expected the toggle's label span to carry sr-only, got class=#{toggle_label[:class].inspect}"
 
-    # Behavioral prong: any correct visually-hidden technique collapses the
-    # box to ~1px, whatever class produces it.
-    label_width = page.evaluate_script("arguments[0].getBoundingClientRect().width", toggle_label)
-    expect(label_width).to be <= 1
+    # Post-#736/#745 contract: the toggle contributes NO second text node at
+    # all — with visible_label: false its accessible name is aria-label on
+    # the switch input, so the title structurally cannot collide with the
+    # row title at any viewport.
+    find("input[role='switch'][aria-label='#{title}']", visible: :all)
+    expect(page).to have_css("[data-preferences-row-title]", text: title, visible: :all, count: 1)
   end
 
   # Unparenthesized reverse-axis predicate = NEAREST ancestor section (the

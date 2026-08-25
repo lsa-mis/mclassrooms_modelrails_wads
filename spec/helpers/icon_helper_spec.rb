@@ -41,6 +41,11 @@ RSpec.describe IconHelper do
         result = helper.icon(:check_circle, size: :lg)
         expect(result).to have_css("svg.w-6.h-6")
       end
+
+      it "applies xl size classes (#692: two views invented w-8 h-8 independently)" do
+        result = helper.icon(:check_circle, size: :xl)
+        expect(result).to have_css("svg.w-8.h-8")
+      end
     end
 
     describe "styles" do

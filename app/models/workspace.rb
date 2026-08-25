@@ -132,9 +132,13 @@ class Workspace < ApplicationRecord
   def owner
     # Uses detect (not joins + find_by) so it works from preloaded
     # memberships without firing a per-row query in list views. When nothing
-    # is preloaded, load roles alongside so the detect doesn't N+1 the role
-    # lookup (Bullet, first seen via the personal-workspace icon fallback).
-    ms = memberships.loaded? ? memberships : memberships.includes(:role)
+    # is preloaded, load roles and users alongside so neither the detect nor
+    # the `.user` read N+1s (Bullet — :role first seen via the personal-
+    # workspace icon fallback, :user via the workspace identity bar once the
+    # global Membership safelist entry was retired for the record_preloads
+    # pipeline). The unused-:user legs on non-owner rows are covered by the
+    # intentionally-pessimistic safelist in lib/bullet_safelists.rb.
+    ms = memberships.loaded? ? memberships : memberships.includes(:role, :user)
     ms.detect(&:owner?)&.user
   end
 
@@ -231,6 +235,23 @@ class Workspace < ApplicationRecord
         memberships.create!(user: user, role: role, granted_by: granted_by)
       end
     end
+  end
+
+  # Atomic workspace + owner-membership creation (#676) — closes the bug class where the
+  # two-write controller shape committed the workspace, then resolved the
+  # owner role outside any transaction, so an unseeded fork stranded a
+  # committed, OWNERLESS workspace (no membership → unreachable and
+  # undeletable through the UI). Role resolution is the self-healing
+  # Role.system_default!, and the two writes commit or roll back together.
+  # Returns the possibly-invalid workspace — form callers render its errors.
+  def self.create_owned(attrs, owner:)
+    workspace = new(attrs)
+    transaction do
+      if workspace.save
+        workspace.memberships.create!(user: owner, role: Role.system_default!("owner"))
+      end
+    end
+    workspace
   end
 
   private

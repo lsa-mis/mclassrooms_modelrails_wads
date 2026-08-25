@@ -11,6 +11,9 @@ en:
   errors:
     not_authorized: "You don't have permission to do that."
     not_found: "The requested record could not be found."
+    page_title_prefix:
+      one: "1 error — %{title}"
+      other: "%{count} errors — %{title}"
   navigation:
     aria_label: "Main navigation"
     find_a_room: "Find a Room"

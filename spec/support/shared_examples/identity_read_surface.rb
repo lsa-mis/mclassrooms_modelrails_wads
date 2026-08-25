@@ -46,6 +46,37 @@ RSpec.shared_examples "an identity read surface" do
     end
   end
 
+  # #653: the case-on-source lives on Identity, not in view helpers. nil means
+  # "render initials". Upload variants need a URL resolver with route context
+  # (main_app.url_for), supplied by the caller as the block.
+  describe "#image_url" do
+    it "is nil when the identity renders initials (resolver never runs)" do
+      expect(identity.image_url(size: 40) { raise "resolver must not run" }).to be_nil
+    end
+
+    it "yields the sized variant to the resolver for an uploaded image" do
+      url = identity_with_image.image_url(size: 40) do |variant|
+        "resolved:#{variant.variation.transformations[:resize_to_fill].join('x')}"
+      end
+      expect(url).to eq("resolved:40x40")
+    end
+  end
+
+  describe "#uploaded_image?" do
+    it "is true only for an upload source with an attached image" do
+      expect(identity_with_image.uploaded_image?).to be(true)
+      expect(identity.uploaded_image?).to be(false)
+    end
+  end
+
+  # #755: one hue rule for every initials render — nil at the default so the
+  # component's bg-interactive branch applies; the custom hue otherwise.
+  describe "#custom_hue" do
+    it "is nil at the default color" do
+      expect(identity.custom_hue).to be_nil
+    end
+  end
+
   describe "#resolve_source" do
     it "returns the requested source when it is available" do
       available = identity.available_sources.first

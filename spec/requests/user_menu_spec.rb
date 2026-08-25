@@ -8,7 +8,7 @@ RSpec.describe "User menu", type: :request do
     it "renders the user menu trigger with avatar initials" do
       get root_path
       expect(response.body).to include("JD")
-      expect(response.body).to include('aria-haspopup="true"')
+      expect(response.body).to include('aria-haspopup="menu"')
     end
 
     it "includes a profile link in the user menu" do

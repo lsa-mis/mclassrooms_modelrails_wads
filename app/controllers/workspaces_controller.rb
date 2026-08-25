@@ -53,10 +53,8 @@ class WorkspacesController < ApplicationController
 
   def create
     authorize Workspace
-    @workspace = Workspace.new(create_params)
-    if @workspace.save
-      owner_role = Role.find_by!(slug: "owner", workspace_id: nil)
-      @workspace.memberships.create!(user: Current.user, role: owner_role)
+    @workspace = Workspace.create_owned(create_params, owner: Current.user)
+    if @workspace.persisted?
       redirect_to workspace_path(@workspace), notice: t(".success")
     else
       render :new, status: :unprocessable_entity

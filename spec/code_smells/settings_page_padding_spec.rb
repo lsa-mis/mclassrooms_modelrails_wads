@@ -44,4 +44,22 @@ RSpec.describe "Settings page top-level padding" do
       "source (the page-container/-wide class, or its own py-*/pt-* if the page's width " \
       "doesn't match either class). Found:\n#{violations.join("\n")}"
   end
+
+  # #692: the settings column must hold ONE width across the sidebar
+  # click-through — hand-rolled max-w-* wrappers made it jump 448→672→768px
+  # per click. Width comes from the shared container classes only.
+  it "takes page width from page-container/-wide, never a hand-rolled max-w-*" do
+    violations = settings_view_files.filter_map do |file|
+      wrapper = top_level_wrapper(File.read(file))
+      next unless wrapper
+
+      classes = wrapper[/class="[^"]*"/]
+      next if classes.match?(/\bpage-container(?:-wide)?\b/)
+
+      "#{file.delete_prefix("#{Rails.root}/")}: #{classes}" if classes.match?(/\bmax-w-\w+\b/)
+    end
+
+    expect(violations).to be_empty,
+      "settings pages sizing themselves outside .page-container/-wide:\n#{violations.join("\n")}"
+  end
 end
