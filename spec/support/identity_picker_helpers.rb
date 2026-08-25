@@ -52,7 +52,7 @@ module IdentityPickerHelpers
   # so the Stimulus controller re-renders the preview and updates the hidden field.
   def set_identity_color_hue(hue)
     page.execute_script(<<~JS)
-      const slider = document.querySelector("[data-identity-picker-target='colorSlider']")
+      const slider = document.querySelector("[data-identity-picker-target~='colorSlider']")
       slider.value = #{hue}
       slider.dispatchEvent(new Event('input', { bubbles: true }))
     JS
@@ -137,11 +137,11 @@ module IdentityPickerHelpers
   # The color picker panel is server-rendered only for sources that support
   # it (initials); other sources omit it entirely.
   def expect_color_picker_visible
-    expect(page).to have_css("[data-identity-picker-target='colorSlider']", wait: 3)
+    expect(page).to have_css("[data-identity-picker-target~='colorSlider']", wait: 3)
   end
 
   def expect_no_color_picker
-    expect(page).to have_no_css("[data-identity-picker-target='colorSlider']", wait: 2)
+    expect(page).to have_no_css("[data-identity-picker-target~='colorSlider']", wait: 2)
   end
 
   # Reload the record and assert its persisted avatar source

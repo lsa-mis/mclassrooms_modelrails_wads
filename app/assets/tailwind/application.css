@@ -432,6 +432,30 @@ body:has([data-biscuit-target="banner"]:not([hidden])) {
     oklch(var(--hue-initials-l) var(--hue-initials-c) 360));
 }
 
+/* The thumb is a loupe: filled with the exact color the pending hue produces —
+   the same oklch(var(--hue-initials-*)) formula as the discs, reading --hue off
+   the input (the identity-picker controller moves it on drag). Sized up from the
+   component's 20px; the surface-raised rim is what separates it from the track,
+   which at the thumb's own position is necessarily the same color. Webkit
+   margin-top re-centers on the 8px track: -(28-8)/2 = -10px. */
+
+.hue-range::-webkit-slider-thumb {
+  width: 28px;
+  height: 28px;
+  margin-top: -10px;
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+  border: 3px solid var(--color-surface-raised);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+}
+
+.hue-range::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+  border: 3px solid var(--color-surface-raised);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+}
+
 /* Dialog backdrop (animated via @starting-style). */
 
 dialog::backdrop {

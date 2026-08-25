@@ -42,7 +42,7 @@
     <% else %>
       <%# Initials preview (also fallback for upload with no image) %>
       <div class="w-32 h-32 rounded-full flex items-center justify-center text-3xl font-semibold text-text-on-hue-initials bg-hue-initials"
-           data-identity-picker-target="initialsPreview"
+           data-identity-picker-target="initialsPreview hueSwatch"
            style="--hue: <%= identity.hue %>">
         <%= identity.initials %>
       </div>
@@ -84,6 +84,7 @@
     <% if identity.available_sources.include?("initials") %>
       <% initials_visual = capture do %>
         <span class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold text-text-on-hue-initials shrink-0 bg-hue-initials"
+              data-identity-picker-target="hueSwatch"
               style="--hue: <%= identity.hue %>">
           <%= identity.initials %>
         </span>
@@ -112,13 +113,17 @@
           thumb). The hue gradient rides `.hue-range` (application.css), which
           targets the track pseudo-elements — an inline background on the input
           cannot reach them and painted UNDER the component's sunken track bar. %>
+      <%# The slider rides hueSwatch too: its --hue feeds the loupe thumb
+          (.hue-range::-*-thumb reads it), so the thumb previews the pending
+          color exactly as the discs do. %>
       <%= render UI::RangeComponent.new(
             min: 0, max: 360, step: 1, value: identity.hue,
             class: "hue-range w-full min-h-11",
             autocomplete: "off",
             "aria-label": t("identity_picker.color_aria_label"),
+            style: "--hue: #{identity.hue}",
             data: {
-              "identity-picker-target": "colorSlider",
+              "identity-picker-target": "colorSlider hueSwatch",
               action: "input->identity-picker#handleColorChange"
             }
           ) %>
