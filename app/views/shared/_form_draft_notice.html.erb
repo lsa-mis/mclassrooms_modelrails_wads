@@ -6,6 +6,9 @@
   always-present sr-only status region (un-hiding a populated live region
   announces unreliably), and the strings ride data attributes because
   Stimulus has no I18n. `revealed:` is for previews/render-tests only.
+  DELIBERATELY NOT UI::Alert (#731): Alert bakes role=status + aria-live onto
+  the chip, recreating exactly the unreliable-reveal announcement this
+  split-region design exists to avoid.
 -%>
 <%= tag.div data: { form_draft_target: "notice" },
       hidden: !revealed,

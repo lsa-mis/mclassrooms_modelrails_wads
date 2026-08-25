@@ -3,6 +3,7 @@
 class WorkspaceInvitationDeclinedNotifier < ApplicationNotifier
   category :workspace_activity
   severity :info
+  record_preloads invitable: :workspace
 
   notification_methods do
     def message

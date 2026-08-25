@@ -3,6 +3,7 @@
 class WorkspaceInvitationReceivedNotifier < ApplicationNotifier
   category :account_access
   severity :info
+  record_preloads :invitable, :invited_by
 
   notification_methods do
     def message

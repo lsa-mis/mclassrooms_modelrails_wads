@@ -3,6 +3,7 @@
 class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
   category :account_access
   severity :warning
+  record_preloads invitable: :workspace
   # Dispatched by WorkspaceInvitationExpiringSweepJob, which scans the
   # 24-hour expiring window every 6 hours. With the default minute bucket,
   # each invitation in the window would receive ~4 dispatches per day (one

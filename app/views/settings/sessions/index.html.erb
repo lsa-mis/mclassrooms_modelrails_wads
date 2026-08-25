@@ -7,8 +7,13 @@
   <ul role="list" class="mt-8 space-y-4">
     <% @sessions.each do |session| %>
       <% current = session.id == Current.session.id %>
-      <li class="flex items-center justify-between p-4 border border-border rounded-lg">
-        <div>
+      <%# Single-column stack below lg (#768): the settings sidebar appears at
+          md, leaving ~470px of content at 768 — side-by-side there crushed
+          the title to one word per line. Columns only from lg (~730px of
+          content), with gap-x-6 as the real gutter; nothing is shrink-0, so
+          the helper text wraps instead of squeezing its neighbor. %>
+      <li class="flex flex-col gap-3 p-4 border border-border rounded-lg lg:flex-row lg:items-center lg:justify-between lg:gap-x-6">
+        <div class="min-w-0">
           <p class="font-medium text-text-heading">
             <%= session.device_label %>
             <% if current %>

@@ -2,18 +2,25 @@
   Passkey enrollment nudge — a non-blocking, dismissible BANNER (not a modal);
   see /docs/developer/passkeys. Hidden on browsers without WebAuthn: the
   webauthn Stimulus controller adds .passkeys-unsupported in connect().
+  UI::Banner (#731) owns the region+label; the controller wiring rides
+  string-keyed data attrs because the component owns the symbol :data slot
+  on its root. The banner's own dismiss control (a PATCH that records the
+  prompt as seen) stays hand-rolled — the component's dismissible: is
+  client-side only.
 -%>
 <% if authenticated? && Current.user.passkey_prompt_eligible? %>
-  <div id="passkey-banner"
-       role="region"
-       aria-label="<%= t("passkeys.banner.heading") %>"
-       data-controller="webauthn"
-       class="bg-info-surface text-info border-info-border border-b [&.passkeys-unsupported]:hidden">
+  <%= render UI::BannerComponent.new(
+        variant: :info,
+        label: t("passkeys.banner.heading"),
+        id: "passkey-banner",
+        "data-controller": "webauthn",
+        class: "rounded-none border-x-0 border-t-0 border-b [&.passkeys-unsupported]:hidden"
+      ) do %>
     <div class="max-w-5xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-      <%= icon(:finger_print, class: "w-4 h-4 shrink-0") %>
-      <%# The full nudge wrapped across ~3 min-h-11 rows on a phone (~185px, the
-          whole first screen — 2026-07-15 panel). On mobile keep it for screen
-          readers but drop it visually: the fingerprint icon + the "Add a
+      <%= icon(:finger_print, size: :sm, class: "shrink-0") %>
+      <%# Fork (2026-07-15 panel): the full nudge wrapped across ~3 min-h-11 rows
+          on a phone (~185px, the whole first screen). On mobile keep it for
+          screen readers but drop it visually: the fingerprint icon + the "Add a
           passkey" link carry the intent in a one-line bar. Full text from sm up. %>
       <span class="sr-only sm:not-sr-only"><%= t("passkeys.banner.message") %></span>
       <%= link_to t("passkeys.banner.add"), settings_passkeys_path,
@@ -23,8 +30,8 @@
             form: { class: "ml-auto inline" },
             class: "inline-flex min-h-11 min-w-11 items-center justify-center font-semibold underline hover:no-underline focus-ring rounded",
             aria: { label: t("passkeys.banner.dismiss") } do %>
-        <%= icon(:x_mark, class: "w-4 h-4") %>
+        <%= icon(:x_mark, size: :sm) %>
       <% end %>
     </div>
-  </div>
+  <% end %>
 <% end %>

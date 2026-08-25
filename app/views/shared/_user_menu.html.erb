@@ -10,19 +10,25 @@
 <% if authenticated? %>
   <% if context == :desktop %>
   <div class="hidden md:flex items-center gap-2">
-    <div data-controller="dropdown" class="relative">
+    <%# menu (not the legacy dropdown) — the APG menu-button controller: aria-disabled
+        filtering, type-ahead, and outside-click dismissal without stealing focus (#685).
+        The panel stays absolute-positioned (top_layer no-ops on non-fixed panels). %>
+    <div data-controller="menu" data-action="click@document->menu#closeOnClickOutside" class="relative">
       <%= render "shared/user_menu_avatar_button", user: Current.user %>
 
-      <div data-dropdown-target="menu"
+      <div data-menu-target="menu"
+           data-action="keydown->menu#navigate"
            id="user-menu"
            role="menu"
+           tabindex="-1"
+           hidden
            aria-orientation="vertical"
            aria-labelledby="user-menu-button"
-           class="hidden absolute right-0 mt-2 w-64 rounded-lg
+           class="absolute right-0 mt-2 w-64 rounded-lg
                   bg-surface-raised border border-border shadow-lg z-50">
         <%= link_to main_app.edit_settings_profile_path,
               role: "menuitem", tabindex: "-1",
-              data: { turbo_prefetch: "true" },
+              data: { turbo_prefetch: "true", menu_target: "item", action: "click->menu#activate" },
               class: "flex items-center gap-3 px-4 py-3 rounded-t-lg
                       hover:bg-surface focus:outline-none
                       focus-visible:bg-surface-sunken focus-visible:text-text-heading" do %>
@@ -61,7 +67,7 @@
           <div class="border-t border-border">
             <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,
                   role: "menuitem", tabindex: "-1",
-                  data: { turbo_prefetch: "true" },
+                  data: { turbo_prefetch: "true", menu_target: "item", action: "click->menu#activate" },
                   class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
                           text-sm text-text-body
                           hover:bg-surface hover:text-interactive
@@ -72,6 +78,7 @@
         <div class="border-t border-border">
           <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,
                 role: "menuitem", tabindex: "-1",
+                data: { menu_target: "item", action: "click->menu#activate" },
                 class: "w-full flex items-center min-h-[var(--form-input-height)] px-4 py-2
                         text-sm text-text-body
                         hover:bg-surface hover:text-interactive
@@ -116,8 +123,10 @@
         <%= t("navigation.notifications") %>
       </span>
       <% if summary[:count]&.positive? %>
+        <%# No aria-live: this subtree is display:none until the menu opens, so a
+            region here never fires — arrival announcements go through
+            #notifications-live (#683). %>
         <span class="text-xs font-medium text-text-muted"
-              aria-live="polite"
               aria-label="<%= t("navigation.notifications_count_aria", count: summary[:count]) %>">
           <%= t("navigation.notifications_count", count: summary[:count]) %>
         </span>

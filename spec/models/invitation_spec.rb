@@ -276,6 +276,38 @@ RSpec.describe Invitation, type: :model do
     end
   end
 
+  # #675: the guards must re-read state INSIDE the transaction (accept!'s
+  # lock! shape) — a stale in-memory pending? passing the guard would write
+  # revoked/declined OVER a committed acceptance, leaving a revoked invitation
+  # with a live membership and an audit trail that lies.
+  describe "check-then-act races (#675)" do
+    let(:invitation) { create(:invitation, invitable: create(:workspace)) }
+
+    it "revoke! on a stale instance cannot overwrite a committed acceptance" do
+      stale = Invitation.find(invitation.id)
+      invitation.accept!(create(:user))
+
+      expect { stale.revoke! }.to raise_error(ActiveRecord::RecordInvalid)
+      expect(invitation.reload.status).to eq("accepted")
+    end
+
+    it "decline! on a stale instance cannot overwrite a committed acceptance" do
+      stale = Invitation.find(invitation.id)
+      invitation.accept!(create(:user))
+
+      expect { stale.decline! }.to raise_error(ActiveRecord::RecordInvalid)
+      expect(invitation.reload.status).to eq("accepted")
+    end
+
+    it "resend! refuses a non-pending invitation instead of rotating its token" do
+      invitation.accept!(create(:user))
+      original_token = invitation.reload.token
+
+      expect { invitation.resend! }.to raise_error(ActiveRecord::RecordInvalid)
+      expect(invitation.reload.token).to eq(original_token)
+    end
+  end
+
   describe "#resend!" do
     let(:invitation) { create(:invitation) }
 

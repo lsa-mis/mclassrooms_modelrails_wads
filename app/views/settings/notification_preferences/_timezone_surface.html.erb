@@ -32,6 +32,9 @@
     <%= f.label :timezone,
           t("notifications.preferences.timezone.picker_label"),
           class: "block text-sm font-medium text-text-heading mb-1" %>
+      <%# Stays a bare f.select (#732, deliberate): grouped_options_for_select
+          has no UI::Select options shape yet — optgroup support is
+          modelrails_ui#162; convert both timezone selects when it lands. %>
     <%= f.select :timezone,
           grouped_options_for_select(
             timezone_options_for_select,
@@ -39,6 +42,6 @@
           ),
           {},
           class: "form-input" %>
-    <%= f.submit t("notifications.preferences.timezone.save"), class: "btn-primary" %>
+    <%= f.submit t("notifications.preferences.timezone.save") %>
   <% end %>
 </details>

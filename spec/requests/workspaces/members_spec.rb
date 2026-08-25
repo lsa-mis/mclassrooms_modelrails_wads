@@ -37,6 +37,28 @@ RSpec.describe "Workspace Members", type: :request do
         expect(response.body).to include("Owner")
       end
 
+      # #764 (2.4.6/2.4.9): the buttons-list rotor reads action buttons out of
+      # row context — without a subject in the accessible name every row's
+      # buttons announce identically ("Deactivate, Deactivate, …").
+      it "gives every per-row action button an accessible name carrying its subject, no two alike" do
+        alice = add_member(user: create(:user, first_name: "Alice", last_name: "Ames"))
+        bob = add_member(user: create(:user, first_name: "Bob", last_name: "Berg"))
+        invitation = create(:invitation, invitable: workspace, email: "carol@example.com", invited_by: user)
+
+        get workspace_members_path(workspace)
+        page = Capybara.string(response.body)
+
+        [ alice.user.full_name, bob.user.full_name ].each do |name|
+          expect(page).to have_css("[aria-label*='#{name}']", minimum: 1)
+        end
+        expect(page).to have_css("[aria-label*='#{invitation.email}']", minimum: 2) # resend + revoke
+
+        labels = page.all("button[aria-label], a[aria-label]", visible: :all)
+          .map { |el| el["aria-label"] }
+          .select { |l| l.include?(alice.user.full_name) || l.include?(bob.user.full_name) || l.include?(invitation.email) }
+        expect(labels.size).to eq(labels.uniq.size), "duplicate accessible names: #{labels.tally.select { |_, c| c > 1 }.keys.inspect}"
+      end
+
       it "renders member and invitation status pills through UI::Badge (canonical chip look)" do
         deactivated_membership = add_member
         deactivated_membership.discard!

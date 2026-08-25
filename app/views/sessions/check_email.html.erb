@@ -1,7 +1,7 @@
 <%= turbo_frame_tag "sign_in_form" do %>
   <div class="mt-8 text-center" role="status" aria-live="polite">
     <div class="mx-auto w-16 h-16 rounded-full bg-info-surface flex items-center justify-center mb-6">
-      <%= icon(:envelope, class: "w-8 h-8 text-info") %>
+      <%= icon(:envelope, size: :xl, class: "text-info") %>
     </div>
 
     <% if Rails.env.development? %>

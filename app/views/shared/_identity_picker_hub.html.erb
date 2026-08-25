@@ -41,8 +41,8 @@
             loading: "lazy" %>
     <% else %>
       <%# Initials preview (also fallback for upload with no image) %>
-      <div class="w-32 h-32 rounded-full flex items-center justify-center text-3xl font-semibold text-white bg-hue-initials"
-           data-identity-picker-target="initialsPreview"
+      <div class="w-32 h-32 rounded-full flex items-center justify-center text-3xl font-semibold text-text-on-hue-initials bg-hue-initials"
+           data-identity-picker-target="initialsPreview hueSwatch"
            style="--hue: <%= identity.hue %>">
         <%= identity.initials %>
       </div>
@@ -83,7 +83,8 @@
 
     <% if identity.available_sources.include?("initials") %>
       <% initials_visual = capture do %>
-        <span class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0 bg-hue-initials"
+        <span class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold text-text-on-hue-initials shrink-0 bg-hue-initials"
+              data-identity-picker-target="hueSwatch"
               style="--hue: <%= identity.hue %>">
           <%= identity.initials %>
         </span>
@@ -108,34 +109,24 @@
           <%= t("identity_picker.initial_color_name") %>
         </span>
       </div>
-      <%# No explicit aria-valuemin/max/now: a native <input type=range>
-          exposes value/min/max to AT on its own AND keeps them current as
-          the user drags. An author-supplied aria-valuenow OVERRIDES the
-          implicit value and went stale on drag (handleColorChange never
-          updated it), so AT kept announcing the SSR hue (WCAG 4.1.2,
-          2026-07-13 review). min/max/step attributes stay — they are real. %>
-      <input type="range" min="0" max="360" step="1"
-             value="<%= identity.hue %>"
-             autocomplete="off"
-             data-identity-picker-target="colorSlider"
-             data-action="input->identity-picker#handleColorChange"
-             aria-label="<%= t('identity_picker.color_aria_label') %>"
-             class="w-full min-h-11 rounded-full appearance-none cursor-pointer
-                    [&::-webkit-slider-thumb]:appearance-none
-                    [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-                    [&::-webkit-slider-thumb]:rounded-full
-                    [&::-webkit-slider-thumb]:bg-white
-                    [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-border-strong
-                    [&::-webkit-slider-thumb]:shadow-md
-                    [&::-webkit-slider-thumb]:cursor-pointer"
-             style="background: linear-gradient(to right,
-               oklch(0.35 0.2 0),
-               oklch(0.35 0.2 60),
-               oklch(0.35 0.2 120),
-               oklch(0.35 0.2 180),
-               oklch(0.35 0.2 240),
-               oklch(0.35 0.2 300),
-               oklch(0.35 0.2 360));">
+      <%# UI::Range (#733): component thumb/track chrome (cross-browser, ≥24px
+          thumb). The hue gradient rides `.hue-range` (application.css), which
+          targets the track pseudo-elements — an inline background on the input
+          cannot reach them and painted UNDER the component's sunken track bar. %>
+      <%# The slider rides hueSwatch too: its --hue feeds the loupe thumb
+          (.hue-range::-*-thumb reads it), so the thumb previews the pending
+          color exactly as the discs do. %>
+      <%= render UI::RangeComponent.new(
+            min: 0, max: 360, step: 1, value: identity.hue,
+            class: "hue-range w-full min-h-11",
+            autocomplete: "off",
+            "aria-label": t("identity_picker.color_aria_label"),
+            style: "--hue: #{identity.hue}",
+            data: {
+              "identity-picker-target": "colorSlider hueSwatch",
+              action: "input->identity-picker#handleColorChange"
+            }
+          ) %>
     </div>
   <% end %>
 

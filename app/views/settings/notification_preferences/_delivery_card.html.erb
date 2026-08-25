@@ -40,21 +40,19 @@
             method: :patch,
             data: { controller: "auto-submit" },
             class: "inline-block" do |f| %>
-        <label for="email-frequency" class="sr-only">
-          <%= t("notifications.preferences.delivery_methods.frequency.label") %>
-        </label>
-        <select id="email-frequency"
-                name="notification_preferences[delivery_methods][email][frequency]"
-                autocomplete="off"
-                data-action="change->auto-submit#submit"
-                class="form-input ui-select">
-          <% NotificationPreferences::EMAIL_FREQUENCIES.each do |freq| %>
-            <option value="<%= freq %>"
-                    <% if prefs.dig("delivery_methods", "email", "frequency") == freq %>selected<% end %>>
-              <%= t("notifications.preferences.delivery_methods.frequency.options.#{freq}") %>
-            </option>
-          <% end %>
-        </select>
+        <%# form.select (#732): builder label association + ui-select chrome;
+            the deeply nested param name rides an explicit name: override. %>
+        <%= f.select :frequency,
+              options_for_select(
+                NotificationPreferences::EMAIL_FREQUENCIES.map { |freq| [ t("notifications.preferences.delivery_methods.frequency.options.#{freq}"), freq ] },
+                prefs.dig("delivery_methods", "email", "frequency")
+              ),
+              {},
+              id: "email-frequency",
+              name: "notification_preferences[delivery_methods][email][frequency]",
+              "aria-label": t("notifications.preferences.delivery_methods.frequency.label"),
+              autocomplete: "off",
+              data: { action: "change->auto-submit#submit" } %>
       <% end %>
     </div>
   <% end %>

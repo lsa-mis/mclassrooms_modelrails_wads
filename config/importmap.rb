@@ -12,6 +12,9 @@ pin_all_from "app/javascript/controllers", under: "controllers"
 pin_all_from "app/javascript/overlays", under: "overlays"
 # Vendored third-party scoring (cmdk's command-score, MIT — see the file header).
 pin_all_from "app/javascript/search", under: "search"
+# Shared menu-family movement (modelrails_ui v0.14.0) — menu/menubar/combobox/command
+# import it by bare specifier; without this pin all four throw on connect.
+pin_all_from "app/javascript/keyboard", under: "keyboard"
 pin "lexxy", to: "lexxy.js"
 
 # ActiveStorage direct upload (MiClassrooms Phase 4 Task 11, Brief §5.3):

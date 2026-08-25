@@ -62,6 +62,8 @@ end
 
 `@workspace.milestones` is the load-bearing isolation boundary; `Current.workspace` (set by `WorkspaceScoped`) is the defense-in-depth backstop that policies and `for_current_workspace` rely on.
 
+> **The moment a create involves a second row** — a membership, a join record, anything that must exist for the first row to be usable — move the assembly onto the tenant root as a verb: `Workspace#create_milestone(attrs, creator:)` in the `Workspace#create_project` shape (one transaction, `lock!` + guard, both writes, returns the possibly-invalid record for form re-render). Committing the first row and then writing the second outside the transaction is the orphaned-record bug class #660 and #676 closed — a raise between the writes strands a committed record its own creator can't see. See the creation-verb shape under Concurrency in [Architecture](architecture).
+
 ### 4. Authorize with a Pundit policy
 
 Every controller action calls `authorize`. Add a policy that extends `ApplicationPolicy`, which provides `membership` (the current user's membership in `Current.workspace`) and `can?("permission")` (reads that member's role-permission flags):

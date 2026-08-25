@@ -1,4 +1,23 @@
 module AuthenticationHelpers
+  # Sign in a user via the real magic-link flow (email → Continue → token
+  # lookup → callback). For system specs, where the session cookie must live
+  # in the driven browser, not the Rack::Test cookie jar. Canonical home
+  # (#743) — twelve spec-local copies of this once drifted independently.
+  def sign_in_via_form(user)
+    visit new_session_path
+    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
+    click_button I18n.t("sessions.new.continue")
+    expect(page).to have_text(I18n.t("sessions.check_email.title"))
+    token = MagicLinkToken.create_for_email(user.email_address)
+    visit magic_link_callback_path(token: token)
+    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
+    # wait: 10 — the confirm POST → redirect → render round-trip outlasts the
+    # default wait on loaded CI shards; two unrelated specs flaked here in two
+    # days (#796). This helper is the one funnel, so the bump covers every
+    # caller without loosening any other wait.
+    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"), wait: 10)
+  end
+
   def sign_in(user)
     if user.has_password?
       post session_path, params: {

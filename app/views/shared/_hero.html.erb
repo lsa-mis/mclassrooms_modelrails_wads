@@ -9,12 +9,15 @@
     </p>
   <% end %>
   <% if cta_primary %>
+    <%# #769: stacked CTAs share one width (w-full capped at max-w-xs) so the
+        shorter label doesn't render a visibly narrower button; side-by-side
+        at sm+ they revert to content width. %>
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
       <%= link_to cta_primary, cta_primary_path,
-            class: "btn-primary px-6 py-3 text-lg" %>
+            class: "btn-primary px-6 py-3 text-lg whitespace-nowrap w-full max-w-xs sm:w-auto sm:max-w-none" %>
       <% if cta_secondary %>
         <%= link_to cta_secondary, cta_secondary_path,
-              class: "btn-outline-primary px-6 py-3 text-lg" %>
+              class: "btn-outline-primary px-6 py-3 text-lg whitespace-nowrap w-full max-w-xs sm:w-auto sm:max-w-none" %>
       <% end %>
     </div>
   <% end %>

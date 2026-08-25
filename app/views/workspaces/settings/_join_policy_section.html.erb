@@ -83,9 +83,7 @@
                 workspace_join_link_path(workspace, active_link),
                 method: :delete,
                 form: { data: { turbo_confirm: t("workspaces.settings.join_policy.revoke_confirm") } },
-                class: "btn-touch-target inline-flex items-center px-3 py-2 rounded-md text-sm
-                        text-danger border border-danger-border hover:bg-danger-surface
-                        focus-ring" %>
+                class: "btn-outline-danger text-sm" %>
         </div>
 
       <% elsif active_link %>
@@ -112,9 +110,7 @@
                 workspace_join_link_path(workspace, active_link),
                 method: :delete,
                 form: { data: { turbo_confirm: t("workspaces.settings.join_policy.revoke_confirm") } },
-                class: "btn-touch-target inline-flex items-center px-3 py-2 rounded-md text-sm
-                        text-danger border border-danger-border hover:bg-danger-surface
-                        focus-ring" %>
+                class: "btn-outline-danger text-sm" %>
         </div>
 
       <% else %>

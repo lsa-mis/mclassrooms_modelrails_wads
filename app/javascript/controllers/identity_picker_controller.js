@@ -4,7 +4,7 @@ export default class extends Controller {
   static targets = [
     "fileInput", "cropPreview", "cropSection",
     "colorField", "colorSlider", "colorHex",
-    "initialsPreview", "gifWarning"
+    "initialsPreview", "hueSwatch", "gifWarning"
   ]
 
   static values = {
@@ -224,9 +224,12 @@ export default class extends Controller {
   handleColorChange() {
     const hue = parseInt(this.colorSliderTarget.value, 10)
     this.colorFieldTarget.value = hue
-    if (this.hasInitialsPreviewTarget) {
-      this.initialsPreviewTarget.style.backgroundColor = `oklch(0.35 0.2 ${hue})`
-    }
+    // Preview by moving --hue only — the discs are .bg-hue-initials, which reads
+    // the theme's own L/C tokens. Writing a literal oklch() here is theme-blind:
+    // it previewed the light-mode disc in dark mode while save produced the
+    // re-lit one. hueSwatchTargets covers every disc in the picker (big preview
+    // + the Initials card swatch), so they preview the pending hue together.
+    this.hueSwatchTargets.forEach((el) => el.style.setProperty("--hue", hue))
     if (this.hasColorHexTarget) {
       this.colorHexTarget.textContent = this._hueToColorName(hue)
     }

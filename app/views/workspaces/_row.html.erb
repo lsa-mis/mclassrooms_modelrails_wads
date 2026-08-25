@@ -11,13 +11,14 @@
     link. Action buttons re-enable interactivity via `pointer-events-auto`
     (plus `relative z-10` so they paint above the overlay).
 
-    A11y: the overlay link's accessible name is the workspace name (via
-    an sr-only span) so screen readers announce "Older, link" rather
-    than a generic "link". The visible name in the body is the same
-    string; AT users hear it only once because the body text isn't
-    inside a link or other nameable element. The explicit "Switch"
-    button still exists in the action area for users who scan for an
-    explicit verb. -%>
+    A11y (#765): the overlay link names itself from the VISIBLE title via
+    aria-labelledby — one text node in the accessibility tree carries the
+    name, so browse mode reads it once and the link still announces as
+    "<name>, link". The link carries its own focus-ring (offset outline —
+    survives forced-colors); the li paints no shared focus-within ring, so
+    each of the row's three controls shows its own distinct indicator. The
+    explicit "Switch" button still exists in the action area for users who
+    scan for an explicit verb. -%>
 <%
   workspace = membership.workspace
   user_role = membership.role
@@ -35,12 +36,10 @@
     has no filter controller). -%>
 <li data-workspace-filter-target="item" data-name="<%= workspace.name.downcase %>"
     class="relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-border
-           hover:border-interactive
-           focus-within:ring-2 focus-within:ring-interactive-focus">
-  <%= link_to workspace_path(workspace),
-        class: "absolute inset-0 z-0 rounded-lg focus:outline-none" do %>
-    <span class="sr-only"><%= workspace.name %></span>
-  <% end %>
+           hover:border-interactive">
+  <%= link_to "", workspace_path(workspace),
+        class: "absolute inset-0 z-0 rounded-lg focus-ring",
+        "aria-labelledby": dom_id(workspace, :row_name) %>
 
   <%# Icon + identity. The logo sits inline with the name at a shared height
       (sm ≈ the name line) so they read as one lockup; the metadata indents
@@ -49,7 +48,7 @@
   <div class="relative min-w-0 flex-1 pointer-events-none">
     <div class="flex items-center gap-3 min-w-0">
       <span class="shrink-0"><%= workspace_icon_for(workspace, size: :sm) %></span>
-      <p class="font-medium text-text-heading truncate" title="<%= workspace.name %>">
+      <p id="<%= dom_id(workspace, :row_name) %>" class="font-medium text-text-heading truncate" title="<%= workspace.name %>">
         <%= workspace.name %>
       </p>
       <% if current %>

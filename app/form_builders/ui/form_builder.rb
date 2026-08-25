@@ -190,7 +190,9 @@ module UI
     # surface (and the announcement mechanism; see its header). The shim adds
     # what only the builder knows: each error's field anchor via field_id.
     def error_summary(options = {})
-      return if object.nil? || object.errors.empty?
+      # respond_to? guard: an object-less builder (form_with url: sets object
+      # to FALSE) has no errors surface — the summary is simply absent.
+      return unless object.respond_to?(:errors) && object.errors.any?
 
       options = options.dup
       # Anchors are DERIVED default ids (Rails' field_id) — the summary renders
@@ -317,7 +319,11 @@ module UI
     end
 
     def error_for(method)
-      object&.errors&.[](method)&.first
+      # respond_to?, not `&.`: form_with without a model sets object to FALSE
+      # (not nil), which survives safe navigation and then raises on .errors.
+      return nil unless object.respond_to?(:errors)
+
+      object.errors[method]&.first
     end
 
     # Matches the wording ErrorSummary's full_messages use, so the name a user

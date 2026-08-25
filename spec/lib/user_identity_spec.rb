@@ -50,4 +50,39 @@ RSpec.describe UserIdentity do
       expect(identity.available_sources).to eq(%w[upload initials])
     end
   end
+
+  describe "#image_url (source-specific cases)" do
+    it "returns the gravatar URL at the requested size when gravatar is available" do
+      gravatar_user = create(:user, :with_gravatar)
+      gravatar_user.update_columns(avatar_source: "gravatar")
+      url = gravatar_user.identity.image_url(size: 64) { raise "resolver must not run for gravatar" }
+      expect(url).to include("gravatar.com").and include("s=64")
+    end
+
+    it "is nil for a gravatar source that is no longer available (consistency gate)" do
+      user.update_columns(avatar_source: "gravatar", has_gravatar: false)
+      expect(user.identity.image_url(size: 64) { raise "resolver must not run" }).to be_nil
+    end
+
+    it "is nil for an upload source whose image was purged" do
+      user.update_columns(avatar_source: "upload")
+      expect(user.identity.image_url(size: 64) { raise "resolver must not run" }).to be_nil
+    end
+  end
+
+  describe "#remote_image?" do
+    it "is true only for the gravatar source (remote fetches render lazily)" do
+      gravatar_user = create(:user, :with_gravatar)
+      gravatar_user.update_columns(avatar_source: "gravatar")
+      expect(gravatar_user.identity.remote_image?).to be(true)
+      expect(identity.remote_image?).to be(false)
+    end
+  end
+
+  describe "#custom_hue (custom value)" do
+    it "returns the custom hue when primary_color differs from the default" do
+      user.update!(primary_color: 270)
+      expect(user.identity.custom_hue).to eq(270)
+    end
+  end
 end

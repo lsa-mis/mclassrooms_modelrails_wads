@@ -18,7 +18,32 @@ class Identity
   def initials = model.initials
   def primary_color = model.primary_color
   def hue = primary_color || DEFAULT_HUE
+  # The hue an initials render should carry: nil at the default so
+  # UI::AvatarComponent's bg-interactive branch applies (#755 — one rule for
+  # user avatars and workspace icons alike), the custom hue otherwise.
+  def custom_hue = (primary_color if primary_color.present? && primary_color != DEFAULT_HUE)
   def image? = image.attached?
+  def uploaded_image? = source == "upload" && image?
+  # Remote-host images (gravatar) render with loading: "lazy"; same-origin
+  # variants don't.
+  def remote_image? = source == "gravatar"
+
+  # The image URL this identity shows at the given pixel size — nil means
+  # "render initials". The case-on-source lives here, on the object that owns
+  # source, not in view helpers (#653). Upload variants need a URL resolver
+  # with route context (the engine-context-safe main_app.url_for), which the
+  # caller supplies as the block; gravatar URLs are absolute and bypass it.
+  def image_url(size:, &variant_url)
+    case source
+    when "upload"
+      variant_url.call(image.variant(resize_to_fill: [ size, size ])) if image?
+    when "gravatar"
+      # Consistency-gated (see UserIdentity#gravatar_url): nil when gravatar
+      # left available_sources, so a stale source renders initials instead of
+      # a permanently broken ?d=404 image.
+      gravatar_url(size: size)
+    end
+  end
 
   def image_updated_at
     image? ? image.blob.created_at : nil

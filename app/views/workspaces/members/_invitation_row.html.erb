@@ -22,11 +22,13 @@
     <%= ui :badge, t("workspaces.members.index.pending_invitations.pending"),
           variant: :soft, tone: :warning %>
   </td>
-  <td class="py-3 px-2 space-x-2">
+  <td class="py-3 px-2">
+    <div class="action-group">
     <% if policy(invitation).resend? %>
       <%= button_to t("workspaces.members.index.pending_invitations.resend"),
             resend_workspace_invitation_path(workspace, invitation),
             method: :post,
+            aria: { label: t("workspaces.members.index.pending_invitations.resend_aria", email: invitation.email) },
             class: "text-sm text-interactive hover:text-interactive-hover bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
@@ -34,8 +36,10 @@
       <%= button_to t("workspaces.members.index.pending_invitations.revoke"),
             workspace_invitation_path(workspace, invitation),
             method: :delete,
+            aria: { label: t("workspaces.members.index.pending_invitations.revoke_aria", email: invitation.email) },
             class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
+  </div>
   </td>
 </tr>

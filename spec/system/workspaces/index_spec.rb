@@ -81,7 +81,11 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
     it "navigates to the workspace overview when the row is clicked" do
       visit workspaces_path
       within(page.find("[data-test='other-workspaces-list']")) do
-        click_link "Older"
+        # The overlay link is empty and named via aria-labelledby (#765);
+        # Capybara's text locator can't see a labelledby name, so click the
+        # row's overlay directly. The labelledby→name wiring is asserted in
+        # spec/requests/workspaces_spec.rb.
+        find("li[data-name='older'] a[aria-labelledby]").click
       end
       expect(page).to have_current_path(workspace_path(older_workspace))
     end

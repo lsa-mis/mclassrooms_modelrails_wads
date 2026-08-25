@@ -55,4 +55,17 @@ RSpec.describe UI::BreadcrumbComponent, type: :component do
   it "rejects a limit too small to show a trail" do
     expect { breadcrumb(max_items: 1) }.to raise_error(ArgumentError, /max_items/)
   end
+
+  # #778: gem-template parity — an href-less NON-last crumb (e.g. a policy-gated
+  # middle item) renders as muted plain text, never a degenerate <a> with no href.
+  it "renders an href-less middle item as a muted span, not an anchor" do
+    render_inline(described_class.new(items: [
+      { label: "Home", href: "/" },
+      { label: "Restricted" },
+      { label: "Write the spec" }
+    ]))
+
+    expect(page).to have_css("span.text-text-muted", text: "Restricted")
+    expect(page).to have_no_css("a", text: "Restricted")
+  end
 end

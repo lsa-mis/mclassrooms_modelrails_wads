@@ -331,7 +331,8 @@ following, **in this order**:
    get wrong. It is deliberately **not** vendored here while nothing calls it
    (an unexercised security primitive invites unpinned callers that are
    exactly as vulnerable as no check, while believing otherwise). The port
-   checklist lives in the template repo's issue tracker.
+   plan and its trigger — first user-controlled outbound host — are recorded
+   on template issue #658.
 
 4. **Redirects: re-resolve, re-check, and re-pin on every hop — or refuse to
    follow them.** Pinning hop 1 and following a redirect unpinned is fully

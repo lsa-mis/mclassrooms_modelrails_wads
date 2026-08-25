@@ -53,6 +53,19 @@ RSpec.describe "Settings::Sessions", type: :request do
     end
   end
 
+  describe "modal id uniqueness (#685)" do
+    it "renders per-row confirm dialogs without duplicate element ids" do
+      3.times { |n| user.sessions.create!(user_agent: "Agent #{n}", ip_address: "10.0.0.#{n}") }
+
+      get settings_sessions_path
+
+      ids = Nokogiri::HTML(response.body).css("[id]").map { |el| el["id"] }
+      duplicates = ids.tally.select { |_id, count| count > 1 }.keys
+      expect(duplicates).to be_empty,
+        "duplicate element ids on sessions index: #{duplicates.inspect}"
+    end
+  end
+
   describe "DELETE /settings/sessions/:id" do
     it "revokes a chosen other session" do
       other = user.sessions.create!(user_agent: "Other", ip_address: "10.0.0.2")

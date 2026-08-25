@@ -211,6 +211,18 @@ class User < ApplicationRecord
     reload.webauthn_handle
   end
 
+  # Runs the HIBP range check NOW — outside any transaction — and memoizes the
+  # result per password value; the validation then consumes the memo instead of
+  # doing network I/O inside BEGIN IMMEDIATE (SQLite's database-wide write
+  # lock — #674). Controllers that accept a password call this between
+  # assign_attributes and save. An unprechecked save still checks live as a
+  # fallback, bounded by the initializer timeouts.
+  def precheck_password_pwned!
+    return if password.blank?
+    @pwned_precheck = [ password, password_pwned_now? ]
+    nil
+  end
+
   private
 
   def check_gravatar_later
@@ -271,11 +283,20 @@ class User < ApplicationRecord
 
   def password_not_pwned
     return if password.blank?
-    if Pwned::Password.new(password).pwned?
-      errors.add(:password, :pwned)
-    end
+    pwned =
+      if @pwned_precheck && @pwned_precheck[0] == password
+        @pwned_precheck[1]
+      else
+        password_pwned_now?
+      end
+    errors.add(:password, :pwned) if pwned
+  end
+
+  def password_pwned_now?
+    Pwned::Password.new(password).pwned?
   rescue Pwned::Error
     # Network error — allow password (don't block registration on external service failure)
+    false
   end
 
   def pending_email_not_taken

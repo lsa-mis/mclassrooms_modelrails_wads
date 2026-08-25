@@ -38,13 +38,23 @@ module UI
     # inside it so the input is the `peer` and TRACK/THUMB are its LATER SIBLINGS —
     # the only DOM order in which Tailwind peer-* (`.peer:checked ~ .x`) matches.
     WRAPPER = "relative inline-flex h-[1.15rem] w-8 shrink-0"
-    TRACK   = "pointer-events-none absolute inset-0 rounded-full border border-transparent shadow-xs " \
-              "transition-all bg-surface-sunken peer-checked:bg-interactive " \
+    # Focus is the peer-projected EXCEPTION to the `focus-ring` utility: the real input is
+    # `sr-only`, so the AAA outline must render on the TRACK when the peer is focus-visible.
+    # `focus-ring` bakes `:focus-visible` into its own selector and can't be peer-projected,
+    # so we emit the same `outline: 2px solid var(--color-interactive-focus)` via an arbitrary
+    # property under `peer-focus-visible:` (a utility class here would be a phantom — no CSS).
+    # Off-state presence: bg-surface-sunken barely separates from a raised
+    # card in either theme, so the unchecked track carries a real border
+    # (transparent again once checked — the interactive fill needs no edge).
+    TRACK   = "pointer-events-none absolute inset-0 rounded-full border border-border-strong shadow-xs " \
+              "transition-all bg-surface-sunken peer-checked:bg-interactive peer-checked:border-transparent " \
               "peer-focus-visible:[outline:2px_solid_var(--color-interactive-focus)] peer-focus-visible:[outline-offset:2px] " \
               "peer-aria-invalid:ring-2 peer-aria-invalid:ring-danger " \
               "peer-disabled:opacity-50"
+    # shadow-sm: the thumb is the card's own surface color, so without an
+    # edge it vanishes against the unchecked track in both themes.
     THUMB   = "pointer-events-none absolute inset-y-0 left-px my-auto z-10 block size-4 rounded-full " \
-              "bg-surface-raised ring-0 transition-transform " \
+              "bg-surface-raised shadow-sm ring-0 transition-transform " \
               "translate-x-0 peer-checked:translate-x-[calc(100%-2px)]"
 
     def initialize(label: nil, checked: false, invalid: false, describedby: nil, **html_attrs)

@@ -36,6 +36,7 @@
   --color-text-body: var(--color-text-body);
   --color-text-muted: var(--color-text-muted);
   --color-text-on-interactive: var(--color-text-on-interactive);
+  --color-text-on-hue-initials: var(--color-text-on-hue-initials);
 
   /* Interactive */
   --color-interactive: var(--color-interactive);
@@ -101,6 +102,19 @@
      (WCAG 2.2 AAA target size). Prefer it over `min-h-11` or
      `min-h-[var(--form-input-height)]` so the invariant has ONE spelling. */
   --min-height-input: var(--form-input-height);
+}
+
+/* #719: when the cookie-consent banner is visible it owns the viewport's
+   bottom edge — bottom-anchored toasts lift above it instead of rendering
+   half-hidden behind it. The banner is taller at phone widths (stacked
+   action buttons). */
+body:has([data-biscuit-target="banner"]:not([hidden])) {
+  --toast-card-bottom: 13rem;
+}
+@media (min-width: 640px) {
+  body:has([data-biscuit-target="banner"]:not([hidden])) {
+    --toast-card-bottom: 7.5rem;
+  }
 }
 
 /* AAA focus indicator (converged-conventions B5): an OFFSET OUTLINE, not a ring.
@@ -203,8 +217,27 @@ summary::-webkit-details-marker { display: none; }
        (a11y gate, 2026-07-13). justify-center so a short label sits centered
        in the 44px box rather than left-aligned with a trailing gap. */
     @apply inline-flex min-h-11 min-w-11 items-center justify-center font-medium underline rounded;
-    @apply focus-ring;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
     @apply hover:no-underline;
+  }
+
+  /* Icon+label text action (#760 ruling): with a glyph in the box the
+     underline would run beneath the icon, so this variant skips the underline
+     entirely. The hover cue is a tinted background per tone (below) — not a
+     text-color shift, because danger has no AAA-safe darker text token
+     (danger-strong is graphics-only in dark mode) and an opacity fade reads
+     as disabled. Same 44px floor and focus contract as .btn-text. */
+  .btn-text-icon {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 font-medium rounded;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-text-icon.btn-text-interactive {
+    @apply hover:bg-interactive-subtle;
+  }
+
+  .btn-text-icon.btn-text-danger {
+    @apply hover:bg-danger-surface;
   }
 
   /* Color variants of .btn-text. Apply alongside .btn-text. */
@@ -222,9 +255,12 @@ summary::-webkit-details-marker { display: none; }
     @apply text-interactive underline hover:no-underline min-h-11 inline-flex items-center focus-ring rounded;
   }
 
-  /* Trailing button-group container; --space-action-group-gap keeps inline spacing consistent. */
+    /* Trailing button-group container; --space-action-group-gap keeps inline spacing
+     consistent. whitespace-nowrap: in width-constrained containers (an overflowing
+     table cell) flex children otherwise shrink below content width and wrap their
+     own labels — the #769 bug class, and a 2.5.5 target-size loss (#692). */
   .action-group {
-    @apply inline-flex items-center;
+    @apply inline-flex items-center whitespace-nowrap;
     gap: var(--space-action-group-gap);
   }
 
@@ -246,24 +282,24 @@ summary::-webkit-details-marker { display: none; }
   /* Filled button family (primary/secondary/danger) — canonical button styling.
      Usage + variant guidance: Lookbook / UI::ButtonComponent / .modelrails_ui/agent-rules.md. */
   .btn-primary {
-    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer transition-colors;
-    @apply focus-ring;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
     @apply bg-interactive hover:bg-interactive-hover text-text-on-interactive;
     min-height: var(--form-input-height);
     min-width: var(--form-input-height);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer transition-colors;
-    @apply focus-ring;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
     @apply border border-border text-text-body hover:bg-surface-sunken;
     min-height: var(--form-input-height);
     min-width: var(--form-input-height);
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer transition-colors;
-    @apply focus-ring;
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
     @apply bg-danger hover:bg-danger/90 text-text-on-interactive;
     min-height: var(--form-input-height);
     min-width: var(--form-input-height);
@@ -274,8 +310,19 @@ summary::-webkit-details-marker { display: none; }
      token; hover fills with the subtle brand tint. */
   .btn-outline-primary {
     @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
-    @apply focus-ring;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
     @apply border border-interactive text-interactive hover:bg-interactive-subtle;
+    min-height: var(--form-input-height);
+    min-width: var(--form-input-height);
+  }
+
+  /* Outline button, danger tone (#766) — variant :outline x tone :danger,
+     consolidating the two hand-derived recipes. Hover is the TINTED danger
+     surface (chips are tinted; fills are solid — the signal doctrine). */
+  .btn-outline-danger {
+    @apply inline-flex items-center justify-center px-4 rounded-md font-medium cursor-pointer;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
+    @apply border border-danger-border text-danger hover:bg-danger-surface;
     min-height: var(--form-input-height);
     min-width: var(--form-input-height);
   }
@@ -398,10 +445,64 @@ summary::-webkit-details-marker { display: none; }
 }
 
 /* bg-hue-initials: per-workspace dynamic color via style="--hue: N" (avoids inline
-   background-color → CSP-safer). L=0.35 C=0.20 = AAA with white text. */
+   background-color → CSP-safer). Theme-aware via --hue-initials-l/-c (defined in
+   tokens/_semantic.css, re-lit under .dark); pair with text-text-on-hue-initials,
+   never a hardcoded text color. */
 
 .bg-hue-initials {
-  background-color: oklch(0.35 0.2 var(--hue, 210));
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+}
+
+/* Hue slider track (identity picker). The gradient must live on the track
+   pseudo-elements — an inline background on the <input> cannot reach them, so it
+   painted UNDER RangeComponent's surface-sunken track bar instead of replacing it.
+   Built from the hue-initials tokens, so the swatches preview the disc each hue
+   actually produces in the current theme (re-lit under .dark). */
+
+.hue-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to right,
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 0),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 60),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 120),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 180),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 240),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 300),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 360));
+}
+
+.hue-range::-moz-range-track {
+  background: linear-gradient(to right,
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 0),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 60),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 120),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 180),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 240),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 300),
+    oklch(var(--hue-initials-l) var(--hue-initials-c) 360));
+}
+
+/* The thumb is a loupe: filled with the exact color the pending hue produces —
+   the same oklch(var(--hue-initials-*)) formula as the discs, reading --hue off
+   the input (the identity-picker controller moves it on drag). Sized up from the
+   component's 20px; the surface-raised rim is what separates it from the track,
+   which at the thumb's own position is necessarily the same color. Webkit
+   margin-top re-centers on the 8px track: -(28-8)/2 = -10px. */
+
+.hue-range::-webkit-slider-thumb {
+  width: 28px;
+  height: 28px;
+  margin-top: -10px;
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+  border: 3px solid var(--color-surface-raised);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+}
+
+.hue-range::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+  border: 3px solid var(--color-surface-raised);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
 }
 
 /* Dialog backdrop (animated via @starting-style). */

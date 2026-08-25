@@ -1,9 +1,14 @@
 <%# Slim workspace-context strip — shown only when the user belongs to 2+
-    workspaces (the header switcher is present then too). Keep it subtle. %>
+    workspaces (the header switcher is present then too). UI::Banner (#731):
+    a labelled region — the old role=status risked re-announcing this
+    rarely-changing text on every Turbo re-render. Subtle look overrides the
+    component's raised surface. %>
 <% if Current.workspace && switcher_workspaces.size > 1 %>
-  <div id="workspace-context-banner" role="status"
-       class="bg-surface-sunken border-b border-border px-4 py-1.5 text-xs text-text-body">
-    <%= t("workspaces.context_banner.in_workspace_html",
-          name: Current.workspace.name) %>
-  </div>
+  <%= render UI::BannerComponent.new(
+        label: t("workspaces.context_banner.label"),
+        id: "workspace-context-banner",
+        class: "rounded-none border-x-0 border-t-0 border-b border-border bg-surface-sunken px-4 py-1.5 text-xs text-text-body"
+      ) do %>
+    <%= t("workspaces.context_banner.in_workspace_html", name: Current.workspace.name) %>
+  <% end %>
 <% end %>

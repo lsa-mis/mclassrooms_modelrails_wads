@@ -6,10 +6,14 @@
     prohibited on a role-less (generic) div, and these fixed containers sit
     outside <main>/<header>/<footer>, so any non-landmark role would leave
     their content outside every landmark (axe: aria-prohibited-attr + region —
-    role="group" clears only the first). Announcement semantics live on the
-    per-toast role="status" elements; do not add aria-live here. %>
+    role="group" clears only the first).
+    aria-live lives HERE, on the stable containers (#683): a live region must
+    be registered BEFORE content arrives, and appended toasts that carry their
+    own aria-live are inserted-with-content — AT silently drops them. The
+    per-toast role (status/alert) stays for page-load flashes. %>
 <div id="toast-pills"
      role="region"
+     aria-live="polite"
      aria-label="<%= t('toasts.pill_aria_label') %>"
      class="fixed top-[var(--toast-pill-top)] left-1/2 -translate-x-1/2 z-[var(--toast-z)]
             flex flex-col items-center gap-2
@@ -23,6 +27,7 @@
 <%# Bottom-center: warning/error cards %>
 <div id="toast-cards"
      role="region"
+     aria-live="assertive"
      aria-label="<%= t('toasts.card_aria_label') %>"
      class="fixed bottom-[var(--toast-card-bottom)] left-1/2 -translate-x-1/2 z-[var(--toast-z)]
             flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]

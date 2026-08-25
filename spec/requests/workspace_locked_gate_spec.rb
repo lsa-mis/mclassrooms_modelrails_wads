@@ -21,6 +21,19 @@ RSpec.describe "Locked workspace gate", type: :request do
     expect(response).to redirect_to(workspaces_path)
   end
 
+  # #688: the gate must hold for mutations, not just reads — the model-level
+  # suspension raises stay HTTP-unreachable precisely because this
+  # before_action fires first; this example is what proves that. (Fork: the
+  # template proved it on projects#create; this fork's workspace-scoped
+  # mutation is the member-role update.)
+  it "gates a mutating action on a locked workspace (the model raise stays HTTP-unreachable)" do
+    member = create(:membership, workspace: workspace)
+    patch workspace_member_path(workspace, member),
+      params: { membership: { role_id: member.role_id } }
+    expect(response).to redirect_to(workspaces_path)
+    expect(flash[:alert]).to eq(I18n.t("workspaces.locked_notice"))
+  end
+
   it "renders the index fine with a locked workspace present (nil-gate regression)" do
     get workspaces_path
     expect(response).to have_http_status(:ok)

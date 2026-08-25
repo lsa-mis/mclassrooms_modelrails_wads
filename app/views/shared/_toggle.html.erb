@@ -1,62 +1,42 @@
 <%# locals: (name:, label:, checked: false, disabled: false, value: "true", help: nil, hidden_value: nil, visible_label: true) -%>
-<%# Switch-style toggle. Wraps a hidden checkbox inside a styled label so
-    screen readers get the proper input semantics + the visual is a sliding
-    pill. The pill's visual state is driven entirely by CSS via Tailwind's
-    group-has-[:checked]: and group-has-[:disabled]: variants — clicks
-    update the visual instantly without waiting for the auto-submit
-    round-trip. The server remains the source of truth on next render.
-
-    `visible_label: false` renders the label text sr-only (the text stays in
-    the DOM — it is the checkbox's accessible name). Pass it whenever this
-    toggle is the `control:` of shared/_preferences_row, which already shows
-    the same string as the row title; a visible toggle label duplicates it
-    and collides with the title at phone widths (W1-3). Standalone toggles
-    keep the default visible label. %>
+<%# App-side seam over UI::SwitchComponent (#736): call sites keep this
+    partial's locals contract; the switch chrome, 44px label target and
+    role="switch" semantics come from the gem component. Two behaviors are
+    deliberately COMPOSED here rather than component options (the gem has
+    neither; composition is the sanctioned shape):
+    - `help` renders as a SIBLING span referenced by aria-describedby — never
+      inside a label — so it describes the control without doubling into its
+      accessible name (#745);
+    - a disabled row stays DISCOVERABLE: aria-disabled + the auto-submit
+      controller's click guard instead of native `disabled` (which removes
+      the row from the tab order entirely), with the hidden field still
+      asserting the always-on value server-side (#745).
+    `visible_label: false` swaps the text label for aria-label, so the name
+    equals the row title exactly (2.5.3 label-in-name) — pass it whenever the
+    toggle is the `control:` of shared/_preferences_row. %>
 <%
-  toggle_id = "toggle-#{name.to_s.parameterize.tr('_', '-')}-#{SecureRandom.hex(2)}"
-  hint_id = "#{toggle_id}-hint" if help.present?
+  hint_id = "toggle-#{name.to_s.parameterize.tr('_', '-')}-#{SecureRandom.hex(2)}-hint" if help.present?
+  input_attrs = { name: name, value: value }
+  input_attrs["aria-label"] = label unless visible_label
+  if disabled
+    input_attrs["aria-disabled"] = "true"
+    input_attrs[:data] = { action: "click->auto-submit#guardDisabled change->auto-submit#submit" }
+  else
+    input_attrs[:data] = { action: "change->auto-submit#submit" }
+  end
 %>
-<%# min-h-11: the label is the pointer target; with the text sr-only it would
-    otherwise collapse to the 44x24 pill, under the 44px AAA floor (2.5.5).
-    gap-3 only when visible text follows the pill — an sr-only label is
-    absolutely positioned, and gap against its empty wrapper leaves 12px of
-    dead space trailing the pill. %>
-<label for="<%= toggle_id %>"
-       class="<%= class_names("inline-flex min-h-11 items-center cursor-pointer group has-[:disabled]:cursor-not-allowed",
-                              "gap-3" => visible_label || help.present?) %>">
-  <input type="checkbox"
-         id="<%= toggle_id %>"
-         name="<%= name %>"
-         value="<%= value %>"
-         <% if checked %>checked<% end %>
-         <% if disabled %>disabled<% end %>
-         <% if hint_id %>aria-describedby="<%= hint_id %>"<% end %>
-         data-action="change->auto-submit#submit"
-         class="sr-only peer">
-  <%# A `disabled` checkbox doesn't submit a value, so when the security
-      row needs to assert "true" server-side we attach a hidden field with
-      the same name. Caller passes `hidden_value` for that case. %>
+<div class="inline-flex flex-col">
+  <%= render UI::SwitchComponent.new(
+        label: (label if visible_label),
+        checked: checked,
+        describedby: hint_id,
+        class: ("opacity-50" if disabled),
+        **input_attrs
+      ) %>
   <% if hidden_value && disabled %>
     <input type="hidden" name="<%= name %>" value="<%= hidden_value %>">
   <% end %>
-  <span aria-hidden="true"
-        class="relative inline-block w-11 h-6 rounded-full transition-colors
-               bg-surface-sunken group-has-[:checked]:bg-interactive
-               group-has-[:disabled]:opacity-50
-               peer-focus-visible:[outline:2px_solid_var(--color-interactive-focus)] peer-focus-visible:[outline-offset:2px]">
-    <span class="absolute top-0.5 left-0.5 inline-block w-5 h-5 rounded-full shadow
-                 bg-surface-raised transition-transform
-                 translate-x-0 group-has-[:checked]:translate-x-5"></span>
-  </span>
-  <span class="flex flex-col">
-    <span data-toggle-label
-          class="<%= class_names("text-sm text-text-body group-has-[:disabled]:text-text-muted", "sr-only" => !visible_label) %>">
-      <%= label %>
-    </span>
-    <% if help.present? %>
-      <span id="<%= hint_id %>" class="text-xs text-text-muted">
-        <%= help %>
-      </span>
-    <% end %>
-  </span>
-</label>
+  <% if help.present? %>
+    <span id="<%= hint_id %>" class="text-xs text-text-muted"><%= help %></span>
+  <% end %>
+</div>

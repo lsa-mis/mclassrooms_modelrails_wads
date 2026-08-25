@@ -48,11 +48,14 @@
     <% end %>
 
     <div class="mt-4 text-center">
+      <%# .btn-text-icon (#760/#773): glyph and label share the interactive
+          color, so the fingerprint no longer reads as a faint smudge next to
+          underlined text. %>
       <button type="button"
-              class="btn-touch-target btn-text text-text-body text-sm focus-ring inline-flex items-center gap-1.5"
+              class="btn-text-icon btn-text-interactive text-sm px-2"
               data-action="webauthn#authenticate"
               data-webauthn-target="button">
-        <%= icon(:finger_print, class: "w-4 h-4") %>
+        <%= icon(:finger_print, size: :sm) %>
         <%= t("sessions.new.passkey_button") %>
       </button>
     </div>

@@ -7,6 +7,7 @@
 class WorkspaceMemberAddedNotifier < ApplicationNotifier
   category :workspace_activity
   severity :success
+  record_preloads :user, :workspace
 
   recipients do
     added_user = record.user
