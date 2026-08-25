@@ -20,18 +20,17 @@ module WorkspaceNavHelper
     nil
   end
 
-  # Workspace-shell nav items (Overview, Projects, and Settings for org
-  # workspaces). Settings is active whenever the current page is a
-  # workspace-settings-section page (see #current_workspace_section), so the
-  # primary nav highlights correctly on every sub-page — Profile, Members,
-  # Invitations, Limits & Plan — not just the Profile landing.
+  # Workspace-shell nav items (Overview, and Settings for org workspaces —
+  # no Projects item: this fork removed the Project domain). Settings is
+  # active whenever the current page is a workspace-settings-section page
+  # (see #current_workspace_section), so the primary nav highlights correctly
+  # on every sub-page — Profile, Members, Invitations, Limits & Plan — not
+  # just the Profile landing.
   def workspace_shell_nav_items
     workspace = Current.workspace
     items = [
       { label: t("workspaces.sidebar.overview"), href: workspace_path(workspace),
-        icon: :home, active: current_page?(workspace_path(workspace)) },
-      { label: t("workspaces.sidebar.projects"), href: workspace_projects_path(workspace),
-        icon: :folder, active: current_page?(workspace_projects_path(workspace)) }
+        icon: :home, active: current_page?(workspace_path(workspace)) }
     ]
     unless workspace.personal?
       items << { label: t("workspaces.sidebar.settings"), href: edit_workspace_path(workspace),
