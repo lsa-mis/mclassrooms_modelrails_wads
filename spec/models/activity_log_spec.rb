@@ -75,5 +75,4 @@ RSpec.describe ActivityLog, type: :model do
       expect(recent_logs.index(new_log)).to be < recent_logs.index(old)
     end
   end
-
 end
