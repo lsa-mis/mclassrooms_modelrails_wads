@@ -20,7 +20,6 @@ RSpec.describe "Settings::Notifications record-preload guard", type: :request do
       WorkspaceCapacityApproachingNotifier
       WorkspaceMemberAddedNotifier
       WorkspaceRoleChangedNotifier
-      ProjectMembershipChangedNotifier
       WorkspaceInvitationReceivedNotifier
       WorkspaceInvitationAcceptedNotifier
       WorkspaceInvitationDeclinedNotifier
@@ -40,21 +39,19 @@ RSpec.describe "Settings::Notifications record-preload guard", type: :request do
     travel_to(Time.current + @notification_offset.minutes, &block)
   end
 
-  def project_invitation(overrides = {})
-    create(:invitation, :client, { email: "guard-#{SecureRandom.hex(4)}@example.test" }.merge(overrides))
+  # Fork: plain workspace invitations (no client invitations here).
+  def roster_invitation(overrides = {})
+    create(:invitation, { email: "guard-#{SecureRandom.hex(4)}@example.test" }.merge(overrides))
   end
 
   def owner_role
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
       r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
+      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
     end
   end
 
-  # One notification of every type per call. ProjectMembership creation
-  # dispatches its notifier via model callback — the creation IS that
-  # delivery; an extra explicit dispatch would inflate the page past the
-  # 25-row cap.
+  # One notification of every type per call.
   def deliver_roster_to(user, round:)
     in_distinct_idempotency_bucket do
       PasskeyAddedNotifier.with(record: user).deliver(user)
@@ -71,14 +68,12 @@ RSpec.describe "Settings::Notifications record-preload guard", type: :request do
         .with(record: workspace, metric: :members, current: 8, limit: 10).deliver(user)
       WorkspaceRoleChangedNotifier.with(record: membership).deliver(user)
 
-      create(:project_membership, user: user)
-
-      WorkspaceInvitationReceivedNotifier.with(record: project_invitation).deliver(user)
+      WorkspaceInvitationReceivedNotifier.with(record: roster_invitation).deliver(user)
       WorkspaceInvitationAcceptedNotifier
-        .with(record: project_invitation(accepted_by: create(:user))).deliver(user)
-      WorkspaceInvitationDeclinedNotifier.with(record: project_invitation).deliver(user)
-      WorkspaceInvitationExpiringSoonNotifier.with(record: project_invitation).deliver(user)
-      WorkspaceInvitationResentNotifier.with(record: project_invitation).deliver(user)
+        .with(record: roster_invitation(accepted_by: create(:user))).deliver(user)
+      WorkspaceInvitationDeclinedNotifier.with(record: roster_invitation).deliver(user)
+      WorkspaceInvitationExpiringSoonNotifier.with(record: roster_invitation).deliver(user)
+      WorkspaceInvitationResentNotifier.with(record: roster_invitation).deliver(user)
     end
   end
 
