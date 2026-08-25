@@ -76,7 +76,9 @@ RSpec.describe "Admin editor assignments", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(unit.display_name)
-      expect(response.body).to include(member.full_name)
+      # HTML-escaped: Faker names can carry an apostrophe ("O'Hara" renders
+      # as O&#39;Hara), which made this assertion seed-dependent.
+      expect(response.body).to include(ERB::Util.html_escape(member.full_name))
     end
   end
 
@@ -98,7 +100,9 @@ RSpec.describe "Admin editor assignments", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(unit.display_name)
-      expect(response.body).to include(member.full_name)
+      # HTML-escaped: Faker names can carry an apostrophe ("O'Hara" renders
+      # as O&#39;Hara), which made this assertion seed-dependent.
+      expect(response.body).to include(ERB::Util.html_escape(member.full_name))
     end
   end
 
