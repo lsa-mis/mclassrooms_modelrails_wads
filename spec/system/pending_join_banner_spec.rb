@@ -32,6 +32,18 @@ RSpec.describe "Pending join banner (drive-by re-consent)", type: :system do
     expect(existing_user.memberships.kept.where(workspace: join_workspace)).not_to exist
   end
 
+  # #770: a live region announces information, not interactive content —
+  # role=status wrapping the buttons flattened their labels into narration.
+  # The status scope is the MESSAGE only; the banner itself is a labelled
+  # region (UI::Banner, #731) and both buttons live outside the status subtree.
+  it "scopes role=status to the message, with both buttons outside the live region" do
+    banner = find("#pending-join-banner")
+    expect(banner["role"]).to eq("region")
+    expect(banner).to have_css("[role='status']", text: I18n.t("workspaces.pending_join_banner.message", workspace: join_workspace.name))
+    expect(banner).to have_no_css("[role='status'] button")
+    expect(banner).to have_no_css("[role='status'] form")
+  end
+
   it "Join admits the user and clears the banner" do
     within "#pending-join-banner" do
       click_button I18n.t("workspaces.pending_join_banner.join", workspace: join_workspace.name)

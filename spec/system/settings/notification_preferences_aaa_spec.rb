@@ -16,17 +16,6 @@ RSpec.describe "Account Notification Preferences — AAA accessibility", type: :
     sign_in_via_form(user)
   end
 
-  def sign_in_via_form(user)
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-  end
-
   it "passes AAA audit on the preferences edit page in both light + dark modes" do
     visit edit_settings_notification_preferences_path
     expect(page).to have_text(I18n.t("settings.pages.notifications.h1"))

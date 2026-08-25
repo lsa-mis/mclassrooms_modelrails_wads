@@ -85,19 +85,8 @@ RSpec.describe "Static pages", type: :system do
   describe "toast notifications" do
     let(:user) { create(:user) }
 
-    def sign_in_via_form
-      visit new_session_path
-      fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-      click_button I18n.t("sessions.new.continue")
-      expect(page).to have_text(I18n.t("sessions.check_email.title"))
-      token = MagicLinkToken.create_for_email(user.email_address)
-      visit magic_link_callback_path(token: token)
-      click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-      expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-    end
-
     it "shows a pill toast with progress bar on successful sign-in" do
-      sign_in_via_form
+      sign_in_via_form(user)
       expect(page).to have_css("[data-controller='toast-pill']")
       expect(page).to have_css("[data-toast-pill-target='progress']")
     end

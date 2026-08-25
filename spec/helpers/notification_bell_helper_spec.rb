@@ -49,6 +49,20 @@ RSpec.describe NotificationBellHelper, type: :helper do
       expect(result[:severity]).to eq(:warning)
     end
 
+    it "memoizes the summary so repeated calls in one render pass hit the DB once" do
+      expect(UnreadNotificationSummary).to receive(:new).once.and_call_original
+
+      2.times { helper.unread_notification_summary(user) }
+    end
+
+    it "keys the memo by user, not globally" do
+      other_user = create(:user)
+      PasswordChangedNotifier.with(record: user).deliver(user)
+
+      expect(helper.unread_notification_summary(user)[:count]).to eq(1)
+      expect(helper.unread_notification_summary(other_user)[:count]).to eq(0)
+    end
+
     it "defaults to :info severity when a notifier class is missing" do
       # Simulate orphaned notifier row by stubbing the breakdown directly.
       allow(user).to receive(:unread_notification_breakdown).and_return("DeletedNotifier" => 1)

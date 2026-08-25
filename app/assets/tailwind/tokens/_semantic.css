@@ -19,6 +19,15 @@
   --color-text-muted:          var(--neutral-700); /* AAA 7:1 on white surface — same darkness as body; visual hierarchy is now via font-size/weight, not lightness */
   --color-text-on-interactive: oklch(100% 0 0);  /* white */
 
+  /* --- Hue ramp (workspace/org initials; caller supplies --hue) ---
+   * A fill, so it follows the fills rule: solid background + adaptive on-color.
+   * Light is a dark disc with white text; .dark re-lights it and flips the
+   * on-color, exactly as interactive does. AAA proven for all 360 hues in both
+   * themes (modelrails_ui v0.14.0, gem test_hue_ramp_contrast.rb). */
+  --hue-initials-l: 0.35;
+  --hue-initials-c: 0.20;
+  --color-text-on-hue-initials: oklch(100% 0 0);  /* white */
+
   /* --- Interactive (buttons, links, focus rings) ---
    *
    * NOTE on choosing between `interactive` and `interactive-hover`:
@@ -97,6 +106,15 @@
   --color-text-body:           var(--neutral-300);
   --color-text-muted:          var(--neutral-300); /* AAA 7:1 on dark surface — same as body; visual hierarchy via font-size/weight, not lightness (matches light-mode policy) */
   --color-text-on-interactive: var(--neutral-900);  /* dark text on light interactive bg */
+
+  /* --- Hue ramp ---
+   * L/C mirror the palette's own dark interactive shade (primary-300 is L .828
+   * C .111), so a hue disc reads as the same family as its neighbours. 0.80/0.10
+   * stays IN sRGB gamut at every hue, so its 9.14:1 worst case is what renders
+   * rather than an estimate of the browser's gamut mapping. */
+  --hue-initials-l: 0.80;
+  --hue-initials-c: 0.10;
+  --color-text-on-hue-initials: var(--neutral-900);  /* dark text on the re-lit fill */
 
   /* --- Interactive --- */
   --color-interactive:       var(--primary-300); /* was primary-400 (6.7:1 on slate-800) — primary-300 reaches AAA 7:1 */

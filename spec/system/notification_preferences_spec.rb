@@ -4,17 +4,6 @@ RSpec.describe "Notification preferences", type: :system do
   let(:password) { "SecureP@ssw0rd123!" }
   let(:user) { create(:user, password: password) }
 
-  def sign_in_via_form(user)
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-  end
-
   before do
     sign_in_via_form(user)
     user.create_preferences!(timezone: "America/New_York") unless user.preferences
@@ -37,7 +26,7 @@ RSpec.describe "Notification preferences", type: :system do
       expect(checkboxes.size).to eq(4)
       # Security row is disabled and shows the always-on reassurance.
       expect(page).to have_css(
-        'input[type="checkbox"][name="notification_preferences[notification_types][security]"][disabled]',
+        'input[type="checkbox"][name="notification_preferences[notification_types][security]"][aria-disabled="true"]',
         visible: :all
       )
       expect(page).to have_text(I18n.t("notifications.preferences.notification_types.always_on"))
@@ -123,7 +112,8 @@ RSpec.describe "Notification preferences", type: :system do
 
       expect(user.preferences.notification_preferences.dig("quiet_hours", "enabled")).to eq(false)
 
-      find('label[for^="toggle-notification-preferences-quiet-hours-enabled"]', visible: :all).click
+      quiet_hours_input = find("input[name='notification_preferences[quiet_hours][enabled]']", visible: :all)
+      find("label[for='#{quiet_hours_input[:id]}']", match: :first, visible: :all).click
 
       # Wait for the auto-submit round-trip to complete by polling DB state.
       Timeout.timeout(5) do
@@ -142,16 +132,13 @@ RSpec.describe "Notification preferences", type: :system do
     it "moves the pill's knob horizontally when the toggle is clicked" do
       visit edit_settings_notification_preferences_path
 
-      toggle_label = find(
-        'label[for^="toggle-notification-preferences-quiet-hours-enabled"]',
-        visible: :all
-      )
-      toggle_id = toggle_label[:for]
+      toggle_id = find("input[name='notification_preferences[quiet_hours][enabled]']", visible: :all)[:id]
+      toggle_label = find("label[for='#{toggle_id}']", match: :first, visible: :all)
 
       knob_left_js = <<~JS
         document.getElementById('#{toggle_id}')
                 .closest('label')
-                .querySelector('span > span')
+                .querySelector('span > span:last-of-type')
                 .getBoundingClientRect().left
       JS
 
@@ -258,7 +245,7 @@ RSpec.describe "Notification preferences", type: :system do
       visit edit_settings_notification_preferences_path
 
       security_checkbox = find(
-        'input[type="checkbox"][name="notification_preferences[notification_types][security]"][disabled]',
+        'input[type="checkbox"][name="notification_preferences[notification_types][security]"][aria-disabled="true"]',
         visible: :all
       )
       described_by_id = security_checkbox["aria-describedby"]

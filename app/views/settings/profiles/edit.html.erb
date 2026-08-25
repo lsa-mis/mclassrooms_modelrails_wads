@@ -1,5 +1,5 @@
 <% content_for(:title) { t("settings.profiles.edit.title") } %>
-<div class="max-w-md mx-auto px-4 py-8">
+<div class="page-container">
   <%= render "shared/settings_page_header",
         title: t("settings.pages.profile_personal.h1"),
         description: t("settings.pages.profile_personal.description") %>
@@ -62,22 +62,19 @@
           autocomplete: "email" %>
 
     <% if @user.pending_email.present? %>
-      <div class="rounded-lg border border-info-border bg-info-surface p-4">
-        <div class="flex items-start gap-3">
-          <%= icon(:information_circle, size: :md, class: "text-info-icon shrink-0 mt-0.5") %>
-          <div>
-            <p class="text-sm text-info">
-              <%= t("settings.profiles.edit.pending_email_notice", email: @user.pending_email) %>
-            </p>
-            <p class="mt-2">
-              <%= link_to t("settings.profiles.edit.cancel_email_change"),
-                    settings_email_confirmation_path,
-                    data: { turbo_method: :delete },
-                    class: "text-sm text-interactive underline hover:no-underline" %>
-            </p>
-          </div>
-        </div>
-      </div>
+      <%# UI::Alert (#731): the component supplies the tinted chip, icon and
+          role=status; the cancel action rides the description slot. %>
+      <%= render UI::AlertComponent.new(tone: :info) do |alert| %>
+        <% alert.with_alert_description do %>
+          <%= t("settings.profiles.edit.pending_email_notice", email: @user.pending_email) %>
+          <p class="mt-2">
+            <%= link_to t("settings.profiles.edit.cancel_email_change"),
+                  settings_email_confirmation_path,
+                  data: { turbo_method: :delete },
+                  class: "text-sm text-interactive underline hover:no-underline" %>
+          </p>
+        <% end %>
+      <% end %>
     <% end %>
 
     <%= form.submit t("settings.profiles.edit.submit"), class: "btn-primary w-full" %>

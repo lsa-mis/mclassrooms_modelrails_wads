@@ -1,7 +1,17 @@
 <%# locals: (message:, restore_path:) %>
-<div class="mb-6 rounded-lg border border-info-border bg-info-surface p-4 flex items-center justify-between gap-4"
-     role="status" data-test="archived-banner">
-  <p class="text-sm text-info"><%= message %></p>
-  <%= button_to t("lifecycle.restore"), restore_path, method: :patch,
-        class: "btn-touch-target btn-text btn-text-interactive text-sm shrink-0" %>
-</div>
+<%# UI::Banner (#731): a labelled region — present on load via full
+    navigation, so it carries no live role; the restore control therefore
+    never sits inside a live region (the #770 defect class). String-keyed
+    data attr: the component owns the symbol :data slot on its root. %>
+<%= render UI::BannerComponent.new(
+      variant: :info,
+      label: t("lifecycle.archived_banner_label"),
+      class: "mb-6 rounded-lg p-4",
+      "data-test": "archived-banner"
+    ) do %>
+  <div class="flex items-center justify-between gap-4">
+    <p class="text-sm text-info"><%= message %></p>
+    <%= button_to t("lifecycle.restore"), restore_path, method: :patch,
+          class: "btn-touch-target btn-text btn-text-interactive text-sm shrink-0" %>
+  </div>
+<% end %>

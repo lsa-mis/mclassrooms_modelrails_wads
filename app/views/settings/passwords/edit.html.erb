@@ -1,9 +1,7 @@
 <% content_for(:title) { t("settings.passwords.edit.title") } %>
 
-<div class="max-w-md mx-auto px-4 py-8">
-  <h1 class="text-3xl font-bold text-text-heading">
-    <%= t("settings.passwords.edit.title") %>
-  </h1>
+<div class="page-container">
+  <%= render "shared/settings_page_header", title: t("settings.passwords.edit.title") %>
 
   <%= form_with model: Current.user, url: settings_password_path, method: :patch, class: "mt-8 space-y-6" do |form| %>
     <%= form.error_summary %>

@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { TypeAhead } from "keyboard/keyboard_nav"
 import * as topLayer from "overlays/top_layer"
 
 // Behavior for the menu-pattern band. dropdown_menu is the exemplar/home; context_menu
@@ -13,13 +14,14 @@ export default class extends Controller {
   static values = { open: { type: Boolean, default: false } }
 
   connect() {
-    this.typeBuffer = ""
-    this.typeTimer = null
+    this._typeAhead = new TypeAhead()
   }
 
   disconnect() {
-    if (this.typeTimer) clearTimeout(this.typeTimer)
+    this._typeAhead.cancel()
   }
+
+  // --- open / close -------------------------------------------------------
 
   toggle(event) {
     if (event) event.preventDefault()
@@ -74,6 +76,8 @@ export default class extends Controller {
       this.close({ restoreFocus: false })
     }
   }
+
+  // --- roving navigation --------------------------------------------------
 
   get enabledItems() {
     return this.itemTargets.filter((el) => el.getAttribute("aria-disabled") !== "true")
@@ -140,20 +144,15 @@ export default class extends Controller {
   }
 
   typeAhead(char) {
-    this.typeBuffer += char.toLowerCase()
-    if (this.typeTimer) clearTimeout(this.typeTimer)
-    this.typeTimer = setTimeout(() => { this.typeBuffer = "" }, 1000)
+    this._typeAhead.push(char)
 
+    // Pre-filtered: menu focuses by element, so disabled items can leave the set.
     const items = this.enabledItems
-    const start = Math.max(0, items.indexOf(document.activeElement))
-    for (let n = 1; n <= items.length; n++) {
-      const item = items[(start + n) % items.length]
-      if (item.textContent.trim().toLowerCase().startsWith(this.typeBuffer)) {
-        this.focusItem(item)
-        return
-      }
-    }
+    const i = this._typeAhead.match(items, Math.max(0, items.indexOf(document.activeElement)))
+    if (i !== -1) this.focusItem(items[i])
   }
+
+  // --- activation ---------------------------------------------------------
 
   activate(event) {
     const item = event.currentTarget
@@ -180,7 +179,8 @@ export default class extends Controller {
     this.close()
   }
 
-  // Positioning below is used by context_menu via EXTRA_STIMULUS; dropdown_menu never wires these.
+  // --- context_menu: pointer / keyboard positioning -----------------------
+  // (used by context_menu via EXTRA_STIMULUS; dropdown_menu never wires these)
 
   // Right-click: open the menu at the pointer. Re-opens at the new point if
   // already open (a second right-click moves the menu).

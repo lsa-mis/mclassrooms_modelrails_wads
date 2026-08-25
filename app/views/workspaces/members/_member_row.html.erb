@@ -14,10 +14,12 @@
       <%= ui :badge, t("workspaces.members.index.active"), variant: :soft, tone: :success %>
     <% end %>
   </td>
-  <td class="py-3 px-2 space-x-2">
+  <td class="py-3 px-2">
+    <div class="action-group">
     <% if policy(membership).update? %>
       <%= link_to t("workspaces.members.index.edit_role"),
             edit_workspace_member_path(workspace, membership),
+            aria: { label: t("workspaces.members.index.edit_role_aria", name: membership.user.full_name) },
             data: {
               turbo_frame: dom_id(membership, :role),
               "focus-return-target": "restoreTo"
@@ -29,6 +31,7 @@
       <%= button_to t("workspaces.members.index.deactivate"),
             workspace_member_path(workspace, membership),
             method: :delete,
+            aria: { label: t("workspaces.members.index.deactivate_aria", name: membership.user.full_name) },
             class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
@@ -36,6 +39,7 @@
       <%= button_to t("workspaces.members.index.reactivate"),
             reactivate_workspace_member_path(workspace, membership),
             method: :patch,
+            aria: { label: t("workspaces.members.index.reactivate_aria", name: membership.user.full_name) },
             class: "text-sm text-success hover:opacity-80 bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
@@ -43,8 +47,10 @@
       <%= button_to t("workspaces.members.index.transfer_ownership"),
             transfer_ownership_workspace_member_path(workspace, membership),
             method: :patch,
+            aria: { label: t("workspaces.members.index.transfer_ownership_aria", name: membership.user.full_name) },
             class: "text-sm text-text-muted hover:text-interactive-hover bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
+  </div>
   </td>
 </tr>

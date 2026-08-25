@@ -10,6 +10,8 @@ All notable changes to ModelRails are documented here, organized by phase.
 - **BMP, ICO and PSD attachments no longer generate variants** — `config/initializers/active_storage.rb` drops them from `variable_content_types` so they render as a file chip, rather than an image whose representation URL raises `Vips::Error` when fetched. Forks that legitimately transform those formats can re-enable the specific libvips operation in an initializer.
 - **Forks that ran an affected Rails version with untrusted uploads should rotate their secrets** — see "Responding to a Secret Exposure" in `/docs/developer/security`.
 - **Fork invariant — your top role must stay a permission superset.** A role can now be granted only by someone who already holds every permission it confers, so any custom permission you add (e.g. `manage_billing`) must also be granted to the **Owner** role. If it isn't, no one — not even an Owner — can assign the role that uses it, and it silently drops out of every role picker. Backfill existing Owner rows with a data migration (`seeds.rb` won't touch already-seeded workspaces). See [Extending](/docs/developer/extending).
+- **`RAILS_HOST` is now required to boot in production.** A preflight initializer raises when it is unset or a placeholder, and `config.hosts` (DNS-rebinding protection) is derived from it. Previously a missing host silently pointed every mailer link (magic links, invitations, resets) at `example.com` — killing passwordless sign-in — while the app booted green. Set `RAILS_HOST` in your deploy env before upgrading (#601).
+- **Fork invariant — every external GitHub Action must be SHA-pinned.** All 35 `uses:` refs are pinned as `owner/repo@<40-hex-sha> # <tag>`, a zizmor workflow audit runs in CI, and a template invariant fails the suite on any unpinned external ref — **including a fork's own workflows** (`.github` is not `merge=ours`, so the invariant arrives on sync). The `# <tag>` trailer is load-bearing (Dependabot reads it to bump pins); action bumps now arrive as one grouped weekly PR to keep the pin churn tolerable (#663).
 
 ### Added
 
@@ -21,6 +23,20 @@ All notable changes to ModelRails are documented here, organized by phase.
 - Cancel superseded CI runs on new pushes to the same branch/PR (#489).
 - `i18n-tasks` gate — `spec/i18n_spec.rb` fails the suite on missing keys and inconsistent interpolations, so CI and Lefthook both cover it with no separate step to keep in sync.
 - `/docs/developer/i18n` — where locale keys live, the two gates, the lazy-key rule for private controller methods, the `date.formats` seam, and how to add a language.
+- `Current.workspace!` — fail-loud workspace accessor for non-request entry points (jobs, rake, console); nil context raises instead of leaking cross-tenant reads (#603).
+- **Activity-log rows are immutable once persisted** — updates and deletes raise; sanctioned sweeps go through a documented `allowed_bypasses` door (#604).
+- Daily unattached-blob sweep — direct-upload blobs that never attach are purged after a 2-day grace, protecting the shared SQLite/storage volume from silent fill (#596).
+- Stale WebAuthn challenges are swept on a schedule instead of accumulating forever (#612).
+- i18n unused-key gate — the suite fails on locale keys nothing reads (120 dead keys removed); scanner-invisible consumers are ignored by name, and locale files route per-namespace (#614).
+- File inputs display the selected file name(s) instead of the browser's default text (#627).
+- Menu band: checkable menu items and a destructive item tone (#702), and nested submenus (#703).
+- Vertical tabs and manual (arrow-then-Enter) tab activation (#705).
+- Checkbox indeterminate state, disabled collapsible, breadcrumb ellipsis collapse, and avatar error fallback (#706).
+- Command palette ranks matches fuzzily (#710); drawers support drag-to-dismiss (#711).
+- Sidebar collapse state is exposed to assistive tech and no longer traps keyboard navigation (#712).
+- `/docs/developer/security` outbound-request (SSRF) guidance for the first URL-accepting feature a fork adds (#664).
+- `/docs/developer/extending` documents the sanctioned cross-workspace query patterns (#695) and the commenting hierarchy (#699).
+- `/docs/developer/machine-clients` — the map for a fork's first non-browser entry point (MCP, API, webhooks): reproducing the tenancy boundary outside a controller, per-request MCP server construction, token-comparison guidance, and Host/Origin posture for a second exposed service.
 
 ### Changed
 
@@ -33,6 +49,19 @@ All notable changes to ModelRails are documented here, organized by phase.
 - Bumped `active_storage_validations` to 4.0.0 (major, #560) — it governs the avatar/logo upload allowlists (`content_type`/`size`); forks with custom validators or matchers should skim its 4.0 changelog for API changes. `solid_queue` moved to 1.6.0 (#559).
 - **Locale keys moved** — forks that overrode any of these need to move their override: `invitation_accepts.create.invalid_token` → `invitation_accepts.invalid_token`, `invitation_accepts.create.expired_or_used` → `invitation_accepts.expired_or_used`, `invitation_declines.create.invalid` → `invitation_declines.invalid`. They are emitted by a filter shared across two actions, so they now sit at controller scope. An override left at the old key silently reverts to upstream English.
 - `t(".key")` is now used only inside controller actions; private helpers use absolute keys, so `i18n-tasks` can verify them statically.
+- **Floating overlays (menus, popovers, tooltips) render in the browser top layer and place via CSS anchor positioning** — no more clipping by `overflow:hidden` ancestors (#700, #701).
+- **Forms render through `UI::FormBuilder`** — the gem's one-field-wrapper builder wired to `ActiveModel::Errors`; `TailwindFormBuilder` shrinks to the app-specific seam subclass (#718).
+- **UI consolidation** — avatars, workspace icons and project logos render through `UI::Avatar` (#749); status pills through `UI::Badge` (#759); buttons on the `.btn-*` family with a new `.btn-outline` (#761); the docs breadcrumb through `UI::Breadcrumb` (#762).
+- Vendored `modelrails_ui` adopted through v0.13.0 — ModalChrome modal family, soft/neutral badge, form-contract fix, `form_draft` lifecycle, `min-h-input` token, data hooks (#720, #721, #777, #780).
+- **Sandi-review refactor arc** — named model rules (capacity, ownership, activity workspace), `OauthLink` PORO with a unified `PendingClaims` matrix, notification predicates + dedup DSL + one timezone rule, and controller silent-failure mechanics named and declared (#632, #634, #635, #636). Forks calling the old `Signupable` claim helpers (`accept_pending_join_link!` and kin) follow them to their new homes.
+- **Comment audit** — stale, wrong and dead-pointer comments removed; essay comments relocated into developer docs; comment-compensated structure dissolved into named guards, locals and partials (#616–#622, #626).
+- Project resolution has one home — the `ProjectScoped` controller concern (#631).
+- Activity logs are retained 12 months by a sweep job — the trail is best-effort by design, so bounded retention is the honest guarantee; a regulated fork changes one named constant (and the comment names the other line that must change with it) (#612).
+- Shipped data migrations are frozen (inline models, literal backfills) with a code-smell guard, and the CSP `form-action` list is derived from the OAuth provider registry instead of hand-maintained (#611).
+- The tenancy lint now catches where-chained loads and scans helpers and views (#593); system specs fail on any runtime CSP violation, so a CSP block silently killing a feature is red on first run (#613).
+- CI's test job is sharded across two free runners (#615).
+- The docs truth pass — the extending guide's create example now teaches the atomic creation-verb shape instead of the pre-#660 two-write anti-pattern; ghost method pointers resolve again; the README describes the actual multi-tenant kit.
+- Dependency bumps: mdl 0.18.1, image_processing 2.0.3, bootsnap 1.25.0, lexxy 0.9.29 (#586–#589); tailwind_merge 1.5.4 (#666), thruster 0.1.25 (#669), brakeman 8.0.6 (#671), GitHub-Actions group bumps (#668, #696). **axe-core-rspec 4.13.0** — the a11y gate's rule stack moves, so a previously green fork can newly fail AAA (#670). **SimpleCov 1.1.1** — forks with their own coverage config should skim its changelog; SimpleCov majors have broken this template's coverage spec before (#672).
 
 ### Security
 
@@ -44,6 +73,15 @@ All notable changes to ModelRails are documented here, organized by phase.
 - **Re-authentication for sensitive account changes (SEC-2b).** Changing or removing your password, enrolling or deleting a passkey, changing your email, or unlinking an OAuth account now requires a recent "confirm it's you" — so a borrowed session cookie can't be converted into a permanent takeover. Confirmation uses whatever factor you have: your password, a passkey (bound to your account — someone else's passkey can't confirm your session), or a one-time code emailed and entered in-page. The window is 15 minutes, tunable in `config/initializers/sessions.rb`, where `reauth_enabled` also turns the whole feature off for forks that don't want the friction. **This also fixes a real bug:** email changes were gated on having a password, so passwordless (magic-link / OAuth) users could never change their email — that gate is now re-authentication, which every user can satisfy.
 - **Sessions now expire (SEC-2a).** Previously a session was valid forever (a 20-year `permanent` cookie, no server-side lifetime), so a stolen cookie never went stale. Sessions are now signed out after an idle window (default 30 days) or an absolute lifetime (default 90 days) — both tunable in `config/initializers/sessions.rb` — enforced fail-closed at request time, with an announced "your session has ended" flash rather than a silent bounce to sign-in. `last_active_at` is refreshed off the SQLite writer-lock hot path via an in-memory throttle. Expired rows are swept daily (`ExpiredSessionsSweepJob`). Changing or removing your password now signs out every *other* device. **Rollout:** existing sessions get a fresh idle window on deploy (they are not retroactively expired); sessions older than the absolute timeout will be signed out. Forks that customized `Authenticatable#start_new_session_for` / `find_session_by_cookie` should expect a merge here.
 - **Role grants are permission-gated (SEC-1).** An actor may grant or assign a workspace role only if they already hold every permission it confers — closing an Admin→Owner privilege-escalation path where an admin could promote a member, mint an invitation or magic link, or reactivate a deactivated owner, and inherit `manage_workspace`. Enforced server-side in `ApplicationPolicy#may_grant?` across member role changes, reactivations, email and magic-link invitations, and onboarding invites; role pickers render only assignable roles as defence-in-depth. `MembershipPolicy#update?`/`#reactivate?` additionally refuse to manage a membership whose role the actor couldn't grant, so an Admin can no longer edit or restore an Owner's row. Invitation acceptance (`Workspace#admit`) stays safe because the role is gated at invitation-creation time, not at redemption. Role changes are now recorded in the admin-only activity feed with the role slugs by value (not the mutable `role_id`). See [Extending](/docs/developer/extending) and [Workspace Administration](/docs/user/workspaces).
+- Magic-link sends are recipient-throttled across every send path (SEC-9, #584); `workspaces#update` and `avatars#destroy` are rate-limited (#585).
+- `Project#logo` uploads validate content type and size (SEC-8, #590).
+- Global error handlers filter the referer through `url_from` — no open-redirect via a crafted Referer (SEC-10, #591).
+- cropperjs is vendored; jsdelivr is dropped from the non-development CSP (SEC-6, #594).
+- Action Text direct uploads are authenticated and gated (SEC-7, #595).
+- Audit-trail gaps closed: blocked role escalations are logged, `membership.created` records the role and `granted_by`, and the ownership-transfer demote is audited (SEC-1 follow-up, #597); project-invite memberships record `granted_by` via `Workspace#admit` adoption (#629).
+- Documented that account lockout scopes to password sign-in only, by design (SEC-12, #592).
+- sqlite3 bumped to 2.9.6 for GHSA-mwm8-39rw-8826 (#599).
+- CI/workflow hardening — the Dependabot-checksums job checks out the exact SHA the author gate evaluated (TOCTOU), a shard secret race is closed, and a throttle-store leak is fixed (#783).
 
 ### Fixed
 
@@ -58,6 +96,22 @@ All notable changes to ModelRails are documented here, organized by phase.
 - **Notification bell returned a 500 in production for any user whose saved locale was not `en`.** `I18n.available_locales` was derived from the load path, so `faker` (development/test only, ~350 locale files) made it ~60 entries under test and `[:en]` in production — the notifier specs passed while the same code raised `I18n::InvalidLocale` for real users. `config.i18n.available_locales` is now pinned in `config/application.rb`, `UserPreferences#locale` validates against it, and `recipient_locale` falls back to the default for rows written before the validation existed.
 - Six locale keys that silently rendered `translation missing` to users — the flash after saving notification preferences, the invalid/expired flashes on the invitation accept and decline pages, and an Invitation validation message. Enabling `config.i18n.raise_on_missing_translations` in test surfaced all of them; the invitation flashes were defined only under `create` while a shared filter also served `show`.
 - Digest email's per-notification link read from a `notifications.bell.see_all` key that never existed, falling back to an inline default.
+- **Project creation is atomic** — project INSERT and creator membership commit or roll back together via `Workspace#create_project`; a failed membership insert no longer strands a committed project that is invisible to its own creator and permanently consumes a capacity slot (#660).
+- **Combobox ArrowUp with no active option enters at the last option**, per the APG keyboard contract (#673).
+- **Write-path integrity** — the pwned-password check runs before the write transaction with bounded HIBP timeouts (an outbound HTTP call inside the SQLite write lock was an externally-triggerable app-wide write stall), invitation decline/revoke/resend adopt `accept!`'s guarded transaction shape, and workspace creation is atomic via `Workspace.create_owned` — the #660 bug class, closed for its twin (#782).
+- Tenant-query correctness and REST honesty — the project activity feed rides an indexed `ActivityLog.for_project` scope instead of scanning the global table, `ProjectPolicy::Scope` ends the listed-but-bounced project rows, notification-open and project-pin become idempotent noun routes (forks linking the old `GET :open` / `PATCH :toggle_pin` paths must move), and Stimulus controllers lazy-load (#784).
+- Seven shipped accessibility violations the audit was blind to — post-navigation focus lands on the main landmark, the consent-banner exclusion is retired, keyboard contracts and honest live announcements (#610).
+- Header workspace switcher rendered a blank chip after a fresh login — it now falls back to the most-recently-accessed workspace (#776).
+- Landing CTAs adapt for signed-in visitors instead of dead-looping into the sign-in redirect (#779).
+- Menu-family keyboard entry — panel-focus ArrowUp guard, and the combobox reopens on zero-filter (#781).
+- Three responsive defects — members table clip, project nav overflow, toggle label collision (#741).
+- Resource forms go through `UI::FormBuilder`, so server-rendered errors replace browser validation bubbles (#748).
+- "Active devices" renders inside the settings shell instead of a bare page (#723).
+- Component fixes: every instance gets its own element ids (#704); a submenu left open by its parent and an avatar lost after a swap (#707); avatar fallback when the image fails before the controller connects (#708); `trigger_class` merges over the a11y floor instead of replacing it (#709).
+- Panel-checkpoint blockers: avatar recovery hue and card-scoped spec integrity (#750); target-floor parity, a suite-wide phantom-class guard, and the outline rename (#775).
+- The invitations sort control sorts by the key it displays (#613).
+- Notifier recipient resolution no longer N+1s on preferences (#630).
+- Deployment docs' SSL section matches the shipped config and documents the green-healthcheck/dead-app trap (#600).
 
 ## v2.0.0 — Passwordless Auth, Workspace Lifecycle & Navigation IA (2026-07-06)
 

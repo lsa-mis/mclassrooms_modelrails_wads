@@ -12,7 +12,7 @@
     and the index response has no matching frame → Turbo "Content missing". -%>
 <%= link_to main_app.settings_notifications_path,
       role: "menuitem", tabindex: "-1",
-      data: { turbo_prefetch: "true", turbo_frame: "_top" },
+      data: { turbo_prefetch: "true", turbo_frame: "_top", menu_target: "item", action: "click->menu#activate" },
       class: "flex items-center justify-between gap-3 min-h-[var(--form-input-height)] px-4 py-2
               text-sm text-text-body
               hover:bg-surface hover:text-interactive

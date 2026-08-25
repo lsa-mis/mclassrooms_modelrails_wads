@@ -6,3 +6,4 @@ en:
     discarded: "Deleted"
   lifecycle:
     restore: "Restore"
+    archived_banner_label: "Archived notice"

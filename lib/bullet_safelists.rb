@@ -107,15 +107,11 @@ module BulletSafelists
     Bullet.add_safelist(type: :n_plus_one_query, class_name: "WorkspaceMemberAddedNotifier::Notification", association: :recipient)
     Bullet.add_safelist(type: :n_plus_one_query, class_name: "WorkspaceCapacityApproachingNotifier::Notification", association: :recipient)
 
-    # The notifications index renders a mixed page of notifier subtypes whose `#message`
-    # traverses deep off the polymorphic `event.record` — Membership's user/workspace
-    # (WorkspaceMemberAdded/RoleChanged) and Invitation's accepted_by/invitable
-    # (WorkspaceInvitation*). Rails' polymorphic `includes(event: :record)` can't
-    # transitively eager-load these without a per-subtype preload pipeline; accepting
-    # the N+1 on this page is the trade-off.
-    Bullet.add_safelist(type: :n_plus_one_query, class_name: "Membership", association: :user)
-    Bullet.add_safelist(type: :n_plus_one_query, class_name: "Membership", association: :workspace)
-    Bullet.add_safelist(type: :n_plus_one_query, class_name: "Invitation", association: :accepted_by)
-    Bullet.add_safelist(type: :n_plus_one_query, class_name: "Invitation", association: :invitable)
+    # The notifications index's second-level traversals off the polymorphic
+    # `event.record` are handled by the `record_preloads` pipeline
+    # (ApplicationNotifier.preload_records), not safelists: Bullet safelists
+    # are GLOBAL (class + association, app-wide), so a "this page accepts it"
+    # entry would also blind Bullet to genuine N+1s on every other surface.
+    # Guard spec: spec/requests/settings/notifications_record_preloads_spec.rb.
   end
 end

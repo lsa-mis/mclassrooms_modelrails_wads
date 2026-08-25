@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/dschmura/modelrails_ui.git
-  revision: 821b241324ec403d73f48fde65b03c43ae58c7f5
-  tag: v0.13.0
+  revision: e173c463dde628a4adbb66a071196c3aed03f049
+  tag: v0.14.0
   specs:
-    modelrails_ui (0.13.0)
+    modelrails_ui (0.14.0)
       railties (>= 8.0)
       view_component (>= 4.0)
 
@@ -922,7 +922,7 @@ CHECKSUMS
   mixlib-cli (2.1.8) sha256=e6f27be34d580f6ed71731ca46b967e57793a627131c1f6e1ed2dad39ea3bdf9
   mixlib-config (3.0.27) sha256=d7748b1898e4f16502afec1de00b5ad65c6de405114b1b0c65ec61b1a9100148
   mixlib-shellout (3.4.10) sha256=7c8a6c5a6c90922a8871ed682129c19c9b1a514eedea2e867077229e6a415f0c
-  modelrails_ui (0.13.0)
+  modelrails_ui (0.14.0)
   msgpack (1.8.4) sha256=4411c22d350dd1c20250f7eada3cca2695438c2f769cf0782f0cd065d90a3e7b
   multi_xml (0.9.1) sha256=7ce766b59c17241ed62976caeae1fae9b2431b263398c35396239a68c4a64e57
   net-http (0.9.1) sha256=25ba0b67c63e89df626ed8fac771d0ad24ad151a858af2cc8e6a716ca4336996

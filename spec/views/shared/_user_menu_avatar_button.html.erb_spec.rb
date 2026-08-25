@@ -6,7 +6,7 @@ RSpec.describe "shared/_user_menu_avatar_button.html.erb", type: :view do
   it "renders a button with id #user-menu-button (stable test hook)" do
     render partial: "shared/user_menu_avatar_button", locals: { user: user }
     expect(rendered).to include('id="user-menu-button"')
-    expect(rendered).to include('aria-haspopup="true"')
+    expect(rendered).to include('aria-haspopup="menu"')
     expect(rendered).to include('aria-expanded="false"')
     expect(rendered).to include('aria-controls="user-menu"')
   end

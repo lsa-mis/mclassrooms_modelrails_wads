@@ -423,3 +423,11 @@ Three guardrails before you open the PR:
   future conflict has one obvious resolution.
 - **When you must edit any template file** (an initializer, `application.rb`),
   make the edit additive — append rather than rewrite.
+- **`.github/` is template-owned and churns weekly** — 33+ action refs are
+  SHA-pinned and bumped by grouped Dependabot PRs, and the suite's pin
+  invariant fails on ANY unpinned `uses:` (yours included). Add fork CI as
+  new workflow files, SHA-pinned with the `# <tag>` trailer the invariant
+  reads; never edit the template's workflows in place.
+- **Fetching a URL a user typed?** Read the outbound-request (SSRF) posture
+  in [Security](security) first — the template deliberately ships no
+  fetch-by-URL feature, and the first fork that adds one owns the pinning.

@@ -1,5 +1,7 @@
 <%# locals: (workspace:) %>
-<li class="p-4 border border-border rounded-lg bg-surface" data-test="locked-workspace-row">
+<%# Rendered inside the archived UI::ListGroup (#735): the group owns the
+    border, rounding and dividers — this row carries only its padding. %>
+<li class="p-4" data-test="locked-workspace-row">
   <p class="font-medium text-text-heading"><%= t("workspaces.locked_row.heading") %></p>
   <p class="mt-1 text-sm text-text-body"><%= t("workspaces.locked_row.body", name: workspace.name) %></p>
   <%= link_to t("workspaces.locked_row.contact"), contact_path,

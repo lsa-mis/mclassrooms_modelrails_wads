@@ -13,28 +13,15 @@
     </button>
   </div>
   <div class="flex items-center justify-between">
-    <%# NOT .btn-text — deliberate (#760): its underline would run under the icon
-        and replace the color-fade hover. Converts when an icon-aware text-button
-        treatment ships. %>
     <button type="button"
             data-action="click->identity-picker#openFilePicker"
-            class="inline-flex items-center gap-1.5 text-sm text-interactive
-                   hover:text-interactive-hover
-                   min-h-[var(--form-input-height)] px-2 rounded
-                   focus-ring">
+            class="btn-text-icon btn-text-interactive text-sm px-2">
       <%= icon(:arrow_up_tray, size: :sm) %>
       <%= t("identity_picker.upload_new") %>
     </button>
-    <%# NOT .btn-text — deliberate (#760): its underline would run under the icon
-        and replace the color-fade hover. Converts when an icon-aware text-button
-        treatment ships. %>
     <%= button_to form_url,
           method: :delete,
-          class: "inline-flex items-center gap-1.5 text-sm text-danger
-                  hover:text-danger/80
-                  min-h-[var(--form-input-height)] px-2 rounded
-                  focus-ring
-                  bg-transparent border-0 cursor-pointer",
+          class: "btn-text-icon btn-text-danger text-sm px-2 bg-transparent border-0 cursor-pointer",
           data: { turbo_frame: "_top" } do %>
       <%= icon(:trash, size: :sm) %>
       <%= t("identity_picker.remove_photo") %>

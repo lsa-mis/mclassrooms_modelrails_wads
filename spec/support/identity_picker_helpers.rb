@@ -4,20 +4,6 @@
 # Tests hit the real rendered pages. Cropper.js gestures are simulated via the
 # controller's JS API rather than synthetic pointer events (flakier and slower).
 module IdentityPickerHelpers
-  # Sign in a user via magic-link (email → Continue → token lookup → callback).
-  # Works in system specs where the session cookie must live in the Playwright browser,
-  # not the Rack::Test cookie jar.
-  def sign_in_via_form(user)
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-  end
-
   # Open the identity picker modal from a profile or branding edit page.
   # Both pages place the trigger inside a [data-controller="modal"] container.
   # The hub is loaded via a lazy turbo frame, so we wait for content to appear.
@@ -66,7 +52,7 @@ module IdentityPickerHelpers
   # so the Stimulus controller re-renders the preview and updates the hidden field.
   def set_identity_color_hue(hue)
     page.execute_script(<<~JS)
-      const slider = document.querySelector("[data-identity-picker-target='colorSlider']")
+      const slider = document.querySelector("[data-identity-picker-target~='colorSlider']")
       slider.value = #{hue}
       slider.dispatchEvent(new Event('input', { bubbles: true }))
     JS
@@ -151,11 +137,11 @@ module IdentityPickerHelpers
   # The color picker panel is server-rendered only for sources that support
   # it (initials); other sources omit it entirely.
   def expect_color_picker_visible
-    expect(page).to have_css("[data-identity-picker-target='colorSlider']", wait: 3)
+    expect(page).to have_css("[data-identity-picker-target~='colorSlider']", wait: 3)
   end
 
   def expect_no_color_picker
-    expect(page).to have_no_css("[data-identity-picker-target='colorSlider']", wait: 2)
+    expect(page).to have_no_css("[data-identity-picker-target~='colorSlider']", wait: 2)
   end
 
   # Reload the record and assert its persisted avatar source

@@ -341,17 +341,33 @@ Per-user retention enforcement. For each user with non-`nil` `retention_days`:
 
 Uses `delete_all` (not `destroy_all`) because `Noticed::Notification` has no destroy callbacks and no outgoing `dependent:` cascades (the only cascade is *inbound* from `noticed_events`) — `destroy_all` would instantiate every doomed row, fire nonexistent callbacks, and DELETE row-by-row: slower with no behavioral difference. Single DELETE per batch, no row instantiation. The `noticed_events` row remains; `Noticed::Event#has_many :notifications, dependent: :delete_all` handles cascade in the reverse direction.
 
-## Bullet safelists (test env)
+## Record preloads (index N+1 prevention)
 
-`config/environments/test.rb` has several Bullet safelist entries specific to the notifications surface. They're not "ignored warnings" — each documents a deliberate trade-off on the `/account/notifications` index page (which eager-loads `includes(:recipient, event: :record)` for every row):
+The `/account/notifications` index eager-loads `includes(:recipient, event: :record)` for every row, but `includes` stops at the polymorphic `event.record` — it cannot reach the subtype-specific associations a notifier's `#message` traverses (a `ProjectMembership`'s `project`, an `Invitation`'s `invitable`). Each notifier therefore declares what its `#message` reads:
+
+```ruby
+class ProjectMembershipChangedNotifier < ApplicationNotifier
+  record_preloads :project
+end
+
+class WorkspaceInvitationAcceptedNotifier < ApplicationNotifier
+  # Nested form for polymorphic hops: only Project invitables have a
+  # workspace; the pipeline skips classes lacking the association.
+  record_preloads :accepted_by, invitable: :workspace
+end
+```
+
+After pagination the controller calls `ApplicationNotifier.preload_records(@notifications)`, which groups the page by notifier type and batch-loads each type's declared associations — re-grouping by concrete record class at every level of a nested declaration, so polymorphic hops load only where they exist.
+
+These traversals are deliberately **not** Bullet-safelisted: safelist entries are global (class + association, app-wide), so an entry "accepting" an N+1 on this page would also blind Bullet to genuine N+1s on every other surface. The guard is `spec/requests/settings/notifications_record_preloads_spec.rb`, which renders two notifications of every type in one request under Bullet's raise — a missing declaration fails as an N+1, a superfluous one as unused eager loading.
+
+## Bullet safelists
+
+`lib/bullet_safelists.rb` (shared by the development and test configs) keeps a small set of entries specific to this surface. They're not "ignored warnings" — each documents a constraint:
 
 - **`WorkspaceMemberAddedNotifier::Notification` n_plus_one_query on `:recipient`** — Noticed v2's `EventJob` iterates `event.notifications.each` and accesses each notification's `recipient` (for the `deliver_by :email` lambda's `recipient_pref` check). The library doesn't expose a hook to eager-load `:recipient` on the notifications relation, so this is a structural constraint of the gem. Covers WorkspaceMemberAdded's fan-out to every workspace owner.
 - **`WorkspaceCapacityApproachingNotifier::Notification` n_plus_one_query on `:recipient`** — same delivery-layer rationale as above; capacity alerts dispatch to all workspace owners.
 - **`SignInFromNewDeviceNotifier` unused_eager_loading on `:record`** — the index page eager-loads `event.record` for every row because every other notifier's `#message` interpolates `event.record.<attr>`. SignInFromNewDevice reads only `event.params`, so when it's the only subtype in a result the include looks wasted. The safelist documents the deliberate trade-off rather than dropping eager-load for all rows.
-- **`Membership :user` / `:workspace` n_plus_one_query** — `WorkspaceMemberAddedNotifier#message` traverses `event.record.user.first_name` (record is a Membership). Rails' polymorphic `includes(event: :record)` can't transitively eager-load grandchild associations without a per-subtype preload step.
-- **`Invitation :accepted_by` / `:invitable` n_plus_one_query** — `WorkspaceInvitationAcceptedNotifier#message` traverses both (record is an Invitation). Same polymorphic-deep-include limit.
-
-Accepting the per-row traversal cost is the right trade-off versus building a per-subtype preload pipeline for what is fundamentally a polymorphic STI tree.
 
 ## Operational concerns
 
@@ -377,7 +393,7 @@ Watch for:
 4. Define `notification_methods do; def message; def url; end` (use `event.record.*` for context)
 5. Add `deliver_by :email, ... if:` guards if you want email
 6. Add I18n keys under `notifications.<notifier_snake_case>.message`
-7. If the notifier's `#message` traverses deep polymorphic associations, expect Bullet flags — safelist entries match the pattern above
+7. If `#message` traverses associations off `event.record`, declare them: `record_preloads :project` (nested form for polymorphic hops: `record_preloads invitable: :workspace`). Then add the notifier's delivery to the roster in `spec/requests/settings/notifications_record_preloads_spec.rb` — that spec fails until you do, and it is what proves the declaration right (missing → N+1, superfluous → unused eager loading)
 8. Dispatch with `NotifierClass.with(record: ...).deliver(recipients)` from wherever the triggering event happens
 
 The `category` + `severity` macros and the `with` parameter are enough to route the new notifier through the existing preference gates, bell-indicator severity selection, idempotency, broadcasts, retention, and digest pipeline. No controller or view changes needed.

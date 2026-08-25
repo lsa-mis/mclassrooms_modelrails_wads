@@ -11,7 +11,5 @@
   <%= button_to t("invitation_declines.show.confirm"),
         decline_invitation_path(token: @invitation.token),
         method: :post,
-        class: "btn-secondary mt-8 w-full
-                border-danger text-danger dark:border-danger-strong
-                hover:bg-danger-hover" %>
+        class: "btn-outline-danger mt-8 w-full" %>
 </div>

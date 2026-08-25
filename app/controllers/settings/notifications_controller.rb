@@ -1,9 +1,14 @@
 # frozen_string_literal: true
 
 module Settings
+  # Deliberately NOT `layout "settings"` (#722 ruling): the inbox is a
+  # full-width triage surface reached from the user-menu bell, not a sidebar
+  # destination — the sidebar's "Notifications" item points at notification
+  # PREFERENCES, which does carry the shell. Recorded in the
+  # settings_layout_opt_in code-smell spec's rulings.
   class NotificationsController < ApplicationController
-    before_action :set_notification, only: [ :update, :destroy, :open ]
-    before_action :authorize_notification, only: [ :update, :destroy, :open ]
+    before_action :set_notification, only: [ :update, :destroy ]
+    before_action :authorize_notification, only: [ :update, :destroy ]
 
     def index
       authorize Noticed::Notification, :index?, policy_class: NotificationPolicy
@@ -11,7 +16,7 @@ module Settings
       # interpolates into its locale string. Eager-loaded across all subtypes
       # because the common case interpolates record. SignInFromNewDeviceNotifier
       # is the lone exception (reads only `event.params`); its unused `:record`
-      # is safelisted in `config/environments/test.rb` to keep Bullet quiet.
+      # is safelisted in `lib/bullet_safelists.rb` to keep Bullet quiet.
       scope = policy_scope(Noticed::Notification, policy_scope_class: NotificationPolicy::Scope)
                 .includes(:recipient, event: :record)
                 .order(created_at: :desc)
@@ -21,6 +26,10 @@ module Settings
       end
       @current_filter = current_filter_key
       @pagy, @notifications = pagy(scope, limit: 25)
+      # Second stage of the eager load: `includes` stops at the polymorphic
+      # record, so each notifier declares what its `#message` traverses
+      # (`record_preloads`) and this batch-loads those per subtype.
+      ApplicationNotifier.preload_records(@notifications)
     end
 
     def update
@@ -41,17 +50,6 @@ module Settings
       @notification.destroy!
       broadcast_bell_refresh if was_unread
       redirect_to settings_notifications_path, notice: t("notifications.destroy.success")
-    end
-
-    # Bell-dropdown click handler: marks the notification as read (idempotent)
-    # and redirects to the notifier's `#url`. Each notifier subclass owns its
-    # destination via `notification_methods do; def url; ...; end; end`.
-    def open
-      if @notification.read_at.nil?
-        @notification.update!(read_at: Time.current)
-        broadcast_bell_refresh
-      end
-      redirect_to @notification.url
     end
 
     def mark_all_read

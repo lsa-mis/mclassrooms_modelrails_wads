@@ -4,6 +4,9 @@
     autofocuses the opposite-state toggle so keyboard/SR users land on the
     same logical control after the row swaps in. Default false on initial
     page render — autofocus on first paint would scroll-jump unexpectedly. -%>
+<%# `#message` renders I18n through the notifier subclass each call — compute
+    once for the body copy and the three action aria-labels. -%>
+<% message = notification.message %>
 <li id="<%= dom_id(notification) %>"
     data-notification-type="<%= notification.type %>"
     class="px-4 py-4 flex flex-col gap-3
@@ -11,11 +14,17 @@
            sm:flex-row sm:items-start sm:justify-between">
   <div class="min-w-0 flex-1">
     <p class="text-sm <%= notification.read_at? ? "text-text-body" : "text-text-heading font-medium" %>">
-      <%= notification.message %>
+      <%# Read state reaches AT as text (#763) — the font-weight swap above is
+          visual-only, and inferring state from which action button renders
+          put the burden on the listener. %>
+      <span class="sr-only"><%= notification.read_at? ? t("notifications.index.item.status_read") : t("notifications.index.item.status_unread") %></span>
+      <%= message %>
     </p>
     <p class="mt-1 text-xs text-text-muted">
+      <%# Wrapped "ago" form (#763): <time datetime> is not announced, so the
+          bare time_ago_in_words read as "…3 hours." %>
       <time datetime="<%= notification.created_at.iso8601 %>">
-        <%= time_ago_in_words(notification.created_at) %>
+        <%= t("notifications.index.item.time_ago", time: time_ago_in_words(notification.created_at)) %>
       </time>
     </p>
   </div>
@@ -26,21 +35,21 @@
             settings_notification_path(notification),
             method: :patch,
             autofocus: focus_after_replace,
-            aria: { label: t("notifications.index.item.mark_unread_aria", summary: notification.message) },
+            aria: { label: t("notifications.index.item.mark_unread_aria", summary: message) },
             class: "btn-secondary text-sm" %>
     <% else %>
       <%= button_to t("notifications.index.item.mark_read"),
             settings_notification_path(notification, read_at: "now"),
             method: :patch,
             autofocus: focus_after_replace,
-            aria: { label: t("notifications.index.item.mark_read_aria", summary: notification.message) },
+            aria: { label: t("notifications.index.item.mark_read_aria", summary: message) },
             class: "btn-secondary text-sm" %>
     <% end %>
 
     <%= button_to t("notifications.index.item.delete"),
           settings_notification_path(notification),
           method: :delete,
-          aria: { label: t("notifications.index.item.delete_aria", summary: notification.message) },
-          class: "btn-secondary text-sm text-danger hover:bg-danger-surface" %>
+          aria: { label: t("notifications.index.item.delete_aria", summary: message) },
+          class: "btn-outline-danger text-sm" %>
   </div>
 </li>

@@ -21,6 +21,15 @@ RSpec.describe "Locked workspace gate", type: :request do
     expect(response).to redirect_to(workspaces_path)
   end
 
+  # #688: the gate must hold for mutations, not just reads —
+  # Workspace#create_project's SuspendedError is HTTP-unreachable precisely
+  # because this before_action fires first; this example is what proves that.
+  it "gates POST create on a locked workspace (the model raise stays HTTP-unreachable)" do
+    post workspace_projects_path(workspace), params: { project: { name: "Atlas" } }
+    expect(response).to redirect_to(workspaces_path)
+    expect(flash[:alert]).to eq(I18n.t("workspaces.locked_notice"))
+  end
+
   it "renders the index fine with a locked workspace present (nil-gate regression)" do
     get workspaces_path
     expect(response).to have_http_status(:ok)

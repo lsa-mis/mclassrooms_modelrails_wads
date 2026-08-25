@@ -34,6 +34,26 @@ RSpec.describe AvatarHelper, type: :helper do
         expect(result).to have_css("img[role='img'][aria-label='Jane Doe']")
         expect(result).not_to have_css("img[aria-hidden]")
       end
+
+      # #756: the recovery pair the component already gives workspace/project
+      # logos — a 404ing avatar swaps to initials instead of the broken-image glyph.
+      it "arms broken-image recovery with hidden initials fallback" do
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css("[data-controller='avatar'] img[data-action='error->avatar#showFallback']")
+        expect(result).to have_css(
+          "[data-controller='avatar'] span[data-avatar-target='fallback'].bg-interactive",
+          text: "JD", visible: :hidden
+        )
+      end
+
+      it "keeps a custom hue on the recovery initials" do
+        user.update_columns(primary_color: 270)
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css(
+          "span[data-avatar-target='fallback'].bg-hue-initials[style='--hue: 270']",
+          visible: :hidden
+        )
+      end
     end
 
     context "with gravatar source" do
@@ -65,6 +85,15 @@ RSpec.describe AvatarHelper, type: :helper do
       it "includes loading=lazy for performance" do
         result = helper.avatar_for(user, size: :md)
         expect(result).to have_css("img[loading='lazy']")
+      end
+
+      it "arms broken-image recovery with hidden initials fallback (#756)" do
+        result = helper.avatar_for(user, size: :md)
+        expect(result).to have_css("[data-controller='avatar'] img[data-action='error->avatar#showFallback']")
+        expect(result).to have_css(
+          "[data-controller='avatar'] span[data-avatar-target='fallback']",
+          text: "JD", visible: :hidden
+        )
       end
     end
 

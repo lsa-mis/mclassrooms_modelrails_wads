@@ -12,9 +12,10 @@
   <% if @notifications.empty? %>
     <%= render "shared/empty_state", message: t("notifications.index.empty_all") %>
   <% else %>
-    <ul class="bg-surface-raised border border-border rounded-lg divide-y divide-border overflow-hidden"
-        aria-label="<%= t("notifications.index.heading") %>">
+    <%# UI::ListGroup (#735): the component IS this container's recipe
+        (divide-y, border, rounding); the raised surface stays as an override. %>
+    <%= ui :list_group, class: "bg-surface-raised", "aria-label": t("notifications.index.heading") do %>
       <%= render partial: "item", collection: @notifications, as: :notification %>
-    </ul>
+    <% end %>
   <% end %>
 </section>

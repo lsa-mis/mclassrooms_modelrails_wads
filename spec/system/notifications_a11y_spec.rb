@@ -4,17 +4,6 @@ RSpec.describe "Notifications a11y plumbing", type: :system do
   let(:password) { "SecureP@ssw0rd123!" }
   let(:user) { create(:user, password: password) }
 
-  def sign_in_via_form(user)
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-  end
-
   describe "aria-live region" do
     it "renders an empty polite-atomic live region for announcement updates" do
       sign_in_via_form(user)

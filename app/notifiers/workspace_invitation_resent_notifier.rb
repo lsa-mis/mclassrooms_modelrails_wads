@@ -12,6 +12,7 @@
 class WorkspaceInvitationResentNotifier < ApplicationNotifier
   category :account_access
   severity :info
+  record_preloads invitable: :workspace
 
   notification_methods do
     def message

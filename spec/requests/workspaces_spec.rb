@@ -27,6 +27,26 @@ RSpec.describe "Workspaces", type: :request do
         expect(response.body).not_to include("Secret Workspace")
       end
 
+      # #765: the row's overlay link must carry its own offset outline
+      # (focus-ring — survives forced-colors), never suppress it, and the li
+      # must not paint one shared focus-within ring over three distinct
+      # controls. The link names itself from the visible title
+      # (aria-labelledby), so browse mode hears the name once.
+      it "gives the workspace row's overlay link the focus contract and a labelledby name" do
+        workspace = create(:workspace, name: "Focusable Co")
+        create(:membership, :owner, user: user, workspace: workspace)
+        get workspaces_path
+        page = Capybara.string(response.body)
+
+        row = page.find("li[data-name='focusable co']")
+        expect(row[:class]).not_to include("focus-within:ring")
+        overlay = row.find("a[href='#{workspace_path(workspace)}']", match: :first)
+        expect(overlay[:class].split).to include("focus-ring")
+        expect(overlay[:class]).not_to include("outline-none")
+        expect(overlay["aria-labelledby"]).to be_present
+        expect(row.find("##{overlay["aria-labelledby"]}").text.strip).to eq("Focusable Co")
+      end
+
       it "does not show discarded workspaces" do
         workspace = create(:workspace)
         create(:membership, :owner, user: user, workspace: workspace)
