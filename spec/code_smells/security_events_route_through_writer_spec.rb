@@ -36,7 +36,12 @@ RSpec.describe "Code smell: security events route through record_security_event!
       "update_all, so the concern's callbacks cannot fire for it",
     "app/controllers/application_controller.rb" =>
       "log_blocked_role_grant, which records a REFUSAL — there is no persisted " \
-      "record to track, so Trackable has nothing to hang off"
+      "record to track, so Trackable has nothing to hang off",
+    "app/lib/curation/apply.rb" =>
+      "fork: the admin-curation writer — workspace-tier before/after rows " \
+      "written INSIDE the curated change's transaction (deliberately not " \
+      "best-effort; the audit row and the change commit together). Curation " \
+      "actions are never SECURITY_ACTIONS"
   }.freeze
 
   # Files allowed to mention a security-action literal without routing it
