@@ -225,10 +225,14 @@ security-relevant value.
 
 ### Activity Tracking
 
-The `Trackable` concern logs all model changes to `ActivityLog`. Sensitive attributes are automatically stripped from metadata:
+The `Trackable` concern logs workspace-domain model changes to `ActivityLog` on a **best-effort** guarantee — the write rescues rather than failing the operation it describes. Sensitive attributes are automatically stripped from metadata:
 
 - `token`, `password_digest`
 - `oauth_token`, `oauth_refresh_token`
+
+**Account-security events are a separate, stricter tier.** Password set/change/removal, passkey enrollment/removal, and sign-in from a new device write rows named in `ActivityLog::SECURITY_ACTIONS`, through `ActivityLog.record_security_event!`. The credential events are written **in the same transaction as the mutation they record, with no rescue** — a failed audit write fails the credential write. Sign-in detection stays best-effort, because the `Session` row is already the primary record of a sign-in.
+
+These rows are retained on their own floor (`ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR`, 365 days) rather than the general 12-month window, and are readable by their owner on `/settings/sessions`. Full per-event table, including what corroborates each row: [Notifications § Security event audit coverage](/docs/developer/notifications).
 
 ### Image Processing (Active Storage + libvips)
 

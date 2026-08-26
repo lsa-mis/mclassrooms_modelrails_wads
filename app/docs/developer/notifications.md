@@ -1,7 +1,7 @@
 ---
 title: Notifications — Technical Reference
 description: Architecture, broadcast pipeline, persistence schema, and operational concerns for the notifications system
-keywords: notifications architecture noticed gem turbo streams broadcasts broadcaster indicator recipients gating idempotency value object pundit cleanup retention digest mailer seen_at quiet hours placeholder deleted record schema bullet
+keywords: notifications architecture noticed gem turbo streams broadcasts broadcaster indicator recipients gating idempotency value object pundit cleanup retention digest mailer seen_at quiet hours placeholder deleted record schema bullet audit trail activity log security event password passkey new device sign-in retention floor strict best-effort account activity
 ---
 
 # Notifications — Technical Reference
@@ -340,6 +340,20 @@ Per-user retention enforcement. For each user with non-`nil` `retention_days`:
 **Batched deletion**: rows go out via `in_batches(of: 100, &:delete_all)`. SQLite serializes write transactions, so a 10k-row delete in one statement could block incoming notification writes for seconds; per-batch transactions release the write lock between rounds, capping any single block at roughly 10 ms.
 
 Uses `delete_all` (not `destroy_all`) because `Noticed::Notification` has no destroy callbacks and no outgoing `dependent:` cascades (the only cascade is *inbound* from `noticed_events`) — `destroy_all` would instantiate every doomed row, fire nonexistent callbacks, and DELETE row-by-row: slower with no behavioral difference. Single DELETE per batch, no row instantiation. The `noticed_events` row remains; `Noticed::Event#has_many :notifications, dependent: :delete_all` handles cascade in the reverse direction.
+
+## Security event audit coverage
+
+The three security notifiers above each pair with a row in `ActivityLog` — a separate table from `noticed_events`/`noticed_notifications`, with its own write guarantee and its own retention. `ActivityLog::SECURITY_ACTIONS` is the single membership set naming these events (`user.password_changed`, `user.password_removed`, `user.signed_in_new_device`, `user.passkey_added`, `user.passkey_removed`); `ActivityLogRetentionSweepJob` keys its retention exemption off `action` membership in that set, never off `visibility` — the `personal` visibility tier is a coincidence of who these rows are scoped to, not the test the sweep uses, so a fork adding an unrelated `personal`-visibility action doesn't silently inherit the security floor. Every row in that set is written through `ActivityLog.record_security_event!`, which owns the row shape and raises on an action outside the set — a drifted action literal fails loudly instead of writing a row that quietly misses the floor.
+
+| Event | ActivityLog write | Guarantee | Other corroborating record |
+|---|---|---|---|
+| Password set / changed / removed | `User#audit_password_digest_change` (`after_update`) | **Strict** — same transaction as the `password_digest` write, no rescue; a failed audit row fails the credential write. Note the consequence when the credential change *is* a compromise response: the rollback also leaves the user's other sessions alive, since revocation commits with the rotation — they die when the rotation is retried successfully | — |
+| Passkey added / removed | `WebauthnCredential#audit_added` (`after_create`) / `#discard!` | **Strict** — same transaction as the credential row; removal is a `Discardable` soft delete, not a destroy. Removal is deliberately *not* a callback: `discard!` claims the kept → discarded transition with a compare-and-swap and audits only if it won, because a callback cannot see another request's commit and two concurrent removals would each write a row. Enrollment stays a callback — the `external_id` unique index makes a duplicate create impossible | The soft-deleted `webauthn_credentials` row itself (`discarded_at` set, row not gone) |
+| Sign-in from a new device | `Authenticatable#detect_and_record_new_device` | **Best-effort** — inside that method's own `rescue ActiveRecord::ActiveRecordError`; a failed audit write must never fail a sign-in | The `Session` row created moments earlier (the primary sign-in record; retained up to `absolute_timeout`, 90 days), and the user's `last_known_browsers` JSON column (a bounded LRU used only to decide "is this browser new?" — a fingerprint cache, not itself durable evidence) |
+
+Passkey removal has no notifier of its own — only enrollment does, via `PasskeyAddedNotifier`; the ActivityLog row above is the only record that a passkey was removed.
+
+Retention for this tier is governed by `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR` (365 days) rather than the job's 12-month `RETENTION_WINDOW`. **The two are numerically the same today** — `12.months.ago` and `365.days.ago` land on the same date in an ordinary year — so this is a *decoupling*, not an extension: security rows do not currently outlive ordinary ones. The floor only starts to bite if a fork shortens `RETENTION_WINDOW`, at which point credential-event history keeps its 365 days regardless. The sweep deletes security rows past the **earlier** of the two cutoffs, so the floor can only ever hold a row longer than the general window, never less (`12.months.ago` reaches one day further back than `365.days.ago` when the window spans a Feb 29 — without that guard the "floor" would invert for roughly one year in four). This ActivityLog row is now the durable record of these events; `NotificationPreferences::RETENTION_FLOORS` above still governs the separate `noticed_notifications` row today, but exists only to protect that UI-facing copy — a future change may retire it now that this floor covers the underlying event.
 
 ## Record preloads (index N+1 prevention)
 

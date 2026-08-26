@@ -113,6 +113,8 @@ en:
       message: "A new passkey was added to your account, %{user_name}. If this wasn't you, review your passkeys now."
     password_changed:
       message: "Your password was changed for your account, %{user_name}."
+    password_removed:
+      message: "Your password was removed from your account, %{user_name}."
     sign_in_from_new_device:
       message: "We noticed a new sign-in from %{os}. If this wasn't you, please review your account."
     index:

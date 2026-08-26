@@ -115,4 +115,117 @@ RSpec.describe "Settings::Sessions", type: :request do
       expect(Session.exists?(@current.id)).to be(true)
     end
   end
+
+  describe "recent account activity card" do
+    # sign_in above goes through the real controller (`user` has a password),
+    # which itself writes a "user.signed_in_new_device" personal row (every
+    # request-spec sign-in looks like a new device with no prior cookie).
+    # Clear it so each example's fixtures are the only personal rows in play.
+    before { ActivityLog.delete_all }
+
+    def activity_items(body)
+      Nokogiri::HTML(body).css("[data-testid='account-activity-item']")
+    end
+
+    it "lists the user's personal rows newest first, capped at 10" do
+      # 12 rows an hour apart: the oldest 2 must be excluded, and the
+      # remaining 10 must render in descending time order — not merely
+      # "10 rows", which a bug like `.limit(10)` without `.order` would
+      # also satisfy.
+      timestamps = 12.times.map { |i| (12 - i).hours.ago }
+      timestamps.each do |t|
+        travel_to(t) do
+          create(:activity_log, action: "user.password_changed", actor: user,
+                                 trackable: user, visibility: "personal")
+        end
+      end
+
+      get settings_sessions_path
+
+      rows = activity_items(response.body)
+      expect(rows.length).to eq(10)
+
+      # iso8601 with no explicit precision renders whole seconds, so compare
+      # at that grain rather than against the fixtures' sub-second `Time`s.
+      rendered_epochs = rows.css("time").map { |el| Time.iso8601(el["datetime"]).to_i }
+      expect(rendered_epochs).to eq(timestamps.sort.reverse.first(10).map(&:to_i))
+      expect(rows.first.text).to include(I18n.t("settings.sessions.activity.user.password_changed"))
+    end
+
+    it "excludes another user's personal rows" do
+      other_user = create(:user)
+      create(:activity_log, action: "user.password_changed", actor: other_user,
+                             trackable: other_user, visibility: "personal")
+
+      get settings_sessions_path
+
+      expect(activity_items(response.body)).to be_empty
+    end
+
+    # The card keys off SECURITY_ACTIONS membership, never off `personal`
+    # visibility (#827). `Trackable#activity_visibility` is an overridable
+    # seam — Membership already returns "admin" through it — so a fork
+    # returning "personal" for a domain event would otherwise render arbitrary
+    # rows under a heading whose empty state reads "No security events
+    # recorded yet".
+    it "excludes personal-visibility rows whose action is not a security action" do
+      create(:activity_log, action: "workspace.updated", actor: user,
+                             trackable: user, visibility: "personal")
+
+      get settings_sessions_path
+
+      expect(activity_items(response.body)).to be_empty
+    end
+
+    it "excludes workspace-visibility rows, even ones tracking the signed-in user" do
+      create(:activity_log, action: "workspace.updated", trackable: user.personal_workspace,
+                             workspace: user.personal_workspace, visibility: "workspace")
+      create(:activity_log, action: "user.password_changed", actor: user,
+                             trackable: user, visibility: "workspace")
+
+      get settings_sessions_path
+
+      expect(activity_items(response.body)).to be_empty
+    end
+
+    it "shows the empty state when the user has no personal rows" do
+      get settings_sessions_path
+
+      expect(activity_items(response.body)).to be_empty
+      expect(response.body).to include(I18n.t("settings.sessions.activity.empty"))
+    end
+
+    # The fallback's real case is a NEW MEMBER of SECURITY_ACTIONS shipped
+    # without a locale key — a non-member no longer reaches the card at all
+    # now that membership is the filter (#827). stub_const puts the action in
+    # the set the way a later PR in this arc would.
+    it "degrades a future security action without a label to a humanized fallback" do
+      stub_const("ActivityLog::SECURITY_ACTIONS", ActivityLog::SECURITY_ACTIONS + [ "user.mystery_action" ])
+      create(:activity_log, action: "user.mystery_action", actor: user,
+                             trackable: user, visibility: "personal")
+
+      get settings_sessions_path
+
+      row = activity_items(response.body).first
+      expect(row.text).to include("Mystery action")
+      expect(row.text).not_to include("translation missing")
+    end
+
+    it "never renders metadata" do
+      create(:activity_log, action: "user.passkey_added", actor: user, trackable: user,
+                             visibility: "personal", metadata: { os: "macOS", nickname: "Dave's laptop" })
+
+      get settings_sessions_path
+
+      # Through the parsed row, not the raw body: ERB escapes the apostrophe to
+      # &#39;, so a raw-body include("Dave's laptop") could never fail even if
+      # the view did render the nickname — and nickname is the more sensitive
+      # half, being user-supplied free text. The label assertion keeps this
+      # honest: it proves the row rendered at all.
+      row = activity_items(response.body).first
+      expect(row.text).to include(I18n.t("settings.sessions.activity.user.passkey_added"))
+      expect(row.text).not_to include("macOS")
+      expect(row.text).not_to include("Dave's laptop")
+    end
+  end
 end

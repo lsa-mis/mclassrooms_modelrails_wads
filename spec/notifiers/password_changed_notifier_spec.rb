@@ -32,6 +32,46 @@ RSpec.describe PasswordChangedNotifier, type: :notifier do
         expect(result).to eq :deduplicated
       end
     end
+
+    # Regression guard for the dedup_seed fix: without it, a change followed
+    # by a removal for the same user inside one minute would share the base
+    # (class, record.id, minute) key — the removal's #deliver would hit
+    # RecordNotUnique and the more consequential alert would be silently
+    # dropped. Pinned to one instant so the minute bucket can't roll over
+    # between the two deliveries and mask the collision.
+    it "delivers both a change and a removal within the same minute bucket, each with its own copy" do
+      freeze_time do
+        changed_result = described_class.with(record: user, removed: false).deliver(user)
+        removed_result = described_class.with(record: user, removed: true).deliver(user)
+
+        expect(changed_result).to eq :delivered
+        expect(removed_result).to eq :delivered
+        expect(user.notifications.count).to eq 2
+
+        expect(user.notifications.includes(:event).map(&:message)).to contain_exactly(
+          I18n.t("notifications.password_changed.message", user_name: user.first_name),
+          I18n.t("notifications.password_removed.message", user_name: user.first_name)
+        )
+      end
+    end
+  end
+
+  describe "#message" do
+    it "renders the password_changed copy when removed is absent (backward compatible)" do
+      described_class.with(record: user).deliver(user)
+      notification = user.notifications.last
+      expect(notification.message).to eq(
+        I18n.t("notifications.password_changed.message", user_name: user.first_name)
+      )
+    end
+
+    it "renders the password_removed copy when removed: true" do
+      described_class.with(record: user, removed: true).deliver(user)
+      notification = user.notifications.last
+      expect(notification.message).to eq(
+        I18n.t("notifications.password_removed.message", user_name: user.first_name)
+      )
+    end
   end
 
   describe "security category bypasses DND" do

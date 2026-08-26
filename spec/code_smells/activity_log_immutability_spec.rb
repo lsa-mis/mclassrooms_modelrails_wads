@@ -22,9 +22,10 @@ RSpec.describe "Code smell: activity log immutability" do
   # is meant to be exercised (#438): reason attached, in the guard's own file.
   allowed_bypasses = {
     "app/jobs/activity_log_retention_sweep_job.rb" =>
-      "the panel-decided 12-month retention sweep (#438): the trail is " \
-      "best-effort by design (deviation #4), so bounded retention is the " \
-      "honest guarantee — see the job's header for the full rationale"
+      "the panel-decided retention sweep (#438), now two-grade: 12-month " \
+      "window for best-effort workspace rows, SECURITY_RETENTION_FLOOR for " \
+      "strict account-security rows (notifications lifecycle arc) — see the " \
+      "job's header"
   }.freeze
 
   it "no app or lib code rewrites or deletes activity log rows" do

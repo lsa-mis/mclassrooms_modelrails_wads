@@ -638,4 +638,81 @@ RSpec.describe User, type: :model do
       expect(user.webauthn_handle!).to eq(handle) # stable on second call
     end
   end
+
+  describe "password digest audit trail" do
+    let(:user) { create(:user, password: "0riginal-Passw0rd!") }
+
+    it "writes user.password_changed in the same transaction as the digest write" do
+      expect {
+        user.update!(password: "n3w-Sekure-Passw0rd!")
+      }.to change { ActivityLog.where(action: "user.password_changed", trackable: user, visibility: "personal").count }.by(1)
+    end
+
+    it "writes user.password_removed when the digest is cleared" do
+      expect {
+        user.update!(password_digest: nil)
+      }.to change { ActivityLog.where(action: "user.password_removed", trackable: user).count }.by(1)
+    end
+
+    it "writes exactly one user.password_changed row on the first password set (passwordless -> password)" do
+      passwordless_user = create(:user, password: nil)
+      expect {
+        passwordless_user.update!(password: "First-Setup-Pass1!")
+      }.to change {
+        ActivityLog.where(action: "user.password_changed", trackable: passwordless_user, visibility: "personal").count
+      }.by(1)
+    end
+
+    it "rolls back the credential write when the audit write fails (strict tier)" do
+      # Ruling R7: materialize `user` BEFORE installing the stub. If the stub
+      # were live already, the lazy `let(:user)` would create the user under
+      # it — onboard_workspace drives audit writes through other paths, and
+      # this example would pass for the wrong reason instead of proving the
+      # rollback.
+      original_digest = user.password_digest
+      allow(ActivityLog).to receive(:create!).and_raise(ActiveRecord::StatementInvalid, "boom")
+      expect { user.update!(password: "n3w-Sekure-Passw0rd!") }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(user.reload.password_digest).to eq(original_digest)
+    end
+
+    # The controller-level guard for the concurrent double-submit: a second
+    # request holding a stale in-memory digest would otherwise issue its own
+    # UPDATE, satisfy saved_change_to_password_digest?, and write a second
+    # removal row (#826). remove_password! re-reads inside the transaction,
+    # where the write lock is already held, so the read is current.
+    it "writes one removal row when two separately-loaded instances both remove" do
+      user # Ruling R7: materialize before the count block.
+      first = User.find(user.id)
+      second = User.find(user.id)
+
+      expect {
+        first.remove_password!
+        second.remove_password!
+      }.to change { ActivityLog.where(action: "user.password_removed").count }.by(1)
+    end
+
+    it "reports whether it won the removal" do
+      user
+      first = User.find(user.id)
+      second = User.find(user.id)
+
+      expect(first.remove_password!).to be(true)
+      expect(second.remove_password!).to be(false)
+    end
+
+    it "runs the caller's block inside the same transaction as the removal" do
+      user
+      observed = nil
+      user.remove_password! { observed = User.find(user.id).password_digest }
+
+      # The block sees the cleared digest, so it is inside the transaction
+      # rather than after it — which is what keeps session revocation atomic
+      # with the credential teardown.
+      expect(observed).to be_nil
+    end
+
+    it "audits with actions that are members of the security set" do
+      expect(ActivityLog::SECURITY_ACTIONS).to include("user.password_changed", "user.password_removed")
+    end
+  end
 end
