@@ -167,4 +167,105 @@ RSpec.describe "Sessions new-device detection", type: :request do
       }.to raise_error(NoMethodError)
     end
   end
+
+  describe "POST /session — new-device audit trail" do
+    let(:mac_ua) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15" }
+
+    it "writes user.signed_in_new_device on first sign-in from a new browser" do
+      expect {
+        post session_path,
+          params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" },
+          headers: { "User-Agent" => mac_ua }
+      }.to change {
+        ActivityLog.where(action: "user.signed_in_new_device", trackable: user).count
+      }.by(1)
+    end
+
+    it "writes the audit row even when the alert flag is off" do
+      allow(Rails.configuration.x.session).to receive(:new_device_notification).and_return(false)
+
+      expect {
+        post session_path,
+          params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" },
+          headers: { "User-Agent" => mac_ua }
+      }.to change {
+        ActivityLog.where(action: "user.signed_in_new_device", trackable: user).count
+      }.by(1)
+
+      expect(Noticed::Event.where(type: "SignInFromNewDeviceNotifier").count).to eq(0)
+    end
+
+    it "does not write a second row for a known browser" do
+      post session_path,
+        params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" },
+        headers: { "User-Agent" => mac_ua }
+      delete session_path
+
+      expect {
+        post session_path,
+          params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" },
+          headers: { "User-Agent" => mac_ua }
+      }.not_to change { ActivityLog.where(action: "user.signed_in_new_device").count }
+    end
+
+    # Mirrors the "device-detection error handling" group above, but pins the
+    # contract for the audit write specifically: it shares the method's
+    # best-effort rescue, so a DB hiccup on the ActivityLog write must not
+    # break sign-in — the one behavior that sets this event apart from the
+    # strict, in-transaction password/passkey audit rows. It also pins the
+    # ordering that keeps a persistent audit-write failure bounded to one
+    # sign-in: record_browser! runs before the raising call, so the browser
+    # is marked seen regardless, and a same-browser sign-in afterward does
+    # not re-enter detection (no repeat row attempt, no repeat alert).
+    it "swallows an ActiveRecord error from the audit write, still records the browser, and does not re-detect on the next sign-in" do
+      # Narrowed to the new-device action specifically (`.and_call_original`
+      # for everything else) — user onboarding writes its own unrelated
+      # ActivityLog rows (workspace.created, membership.created) during the
+      # factory build below, and a blanket stub would raise on those too.
+      allow(ActivityLog).to receive(:create!).and_call_original
+      allow(ActivityLog).to receive(:create!)
+        .with(hash_including(action: "user.signed_in_new_device"))
+        .and_raise(ActiveRecord::StatementInvalid.new("simulated DB hiccup"))
+
+      post session_path,
+        params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" },
+        headers: { "User-Agent" => mac_ua }
+
+      expect(response).to have_http_status(:redirect)
+      expect(user.sessions.count).to eq(1)
+      expect(user.reload.last_known_browsers).not_to be_empty
+      delete session_path
+
+      post session_path,
+        params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" },
+        headers: { "User-Agent" => mac_ua }
+
+      expect(response).to have_http_status(:redirect)
+      expect(ActivityLog).to have_received(:create!)
+        .with(hash_including(action: "user.signed_in_new_device")).once
+    end
+
+    # The counterpart to the example above, and the reason
+    # ActivityLog.record_security_event! raises ArgumentError rather than an
+    # ActiveRecord error: an action outside SECURITY_ACTIONS is a PROGRAMMER
+    # error, so it must escape this method's best-effort rescue instead of
+    # being swallowed like a DB hiccup. Swallowing it would recreate exactly
+    # the silent audit-loss the guard exists to prevent — the row would simply
+    # never be written, with every spec still green.
+    #
+    # Shrinking SECURITY_ACTIONS reproduces a drifted action literal from the
+    # other side of the same membership test, without editing production code.
+    # This fails if the rescue is widened to StandardError, if the guard raises
+    # an ActiveRecord error instead, or if the guard is removed.
+    it "lets a drifted action literal escape the best-effort rescue instead of swallowing it" do
+      user # materialize before the stub: onboarding writes non-security rows of its own.
+      stub_const("ActivityLog::SECURITY_ACTIONS", %w[user.password_changed])
+
+      expect {
+        post session_path,
+          params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" },
+          headers: { "User-Agent" => mac_ua }
+      }.to raise_error(ArgumentError, /SECURITY_ACTIONS/)
+    end
+  end
 end

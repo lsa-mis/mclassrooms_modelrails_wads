@@ -19,6 +19,14 @@ class User < ApplicationRecord
   # Model-level so every digest-touching path notifies (settings change, reset,
   # removal) — the behavior app/docs/developer/notifications.md documents.
   after_update_commit :notify_password_changed, if: :saved_change_to_password_digest?
+  # Strict tier (notifications lifecycle arc): the audit row commits or the
+  # credential write doesn't — deliberate evidence-over-availability trade
+  # (a rollback here also leaves other sessions alive; they die with the
+  # retried rotation). notify_password_changed above stays after_update_COMMIT
+  # — it enqueues into the Solid Queue SQLite file, and pulling that inside
+  # the primary write lock is a cross-database lock-ordering hazard against
+  # queue workers.
+  after_update :audit_password_digest_change, if: :saved_change_to_password_digest?
 
   # Canonical email storage and lookup: NFC + downcase + strip via EmailNormalizer.
   # Rails 7.1+ also applies these normalizers to `find_by(email_address:)` and
@@ -107,6 +115,32 @@ class User < ApplicationRecord
 
   def register_successful_login!
     update!(failed_login_attempts: 0, locked_at: nil)
+  end
+
+  # Tears down password authentication as one unit: email authentications, the
+  # digest itself, and whatever the caller needs committed with them (session
+  # revocation). Returns whether this caller performed the removal.
+  #
+  # The reload is the concurrency guard (#826). A second request that loaded
+  # this user before the first removal committed still holds the old digest in
+  # memory, so its update! issues a real UPDATE, satisfies
+  # saved_change_to_password_digest?, and writes a second user.password_removed
+  # row. Re-reading inside the transaction — where the write lock is already
+  # held, so the read is current — makes the second caller a no-op instead.
+  #
+  # update! rather than update_columns: the strict audit callback and the
+  # post-commit notifier both have to fire, and update_columns silently skipped
+  # both (#813).
+  def remove_password!
+    transaction do
+      reload
+      next false if password_digest.nil?
+
+      authentications.email.destroy_all
+      update!(password_digest: nil)
+      yield if block_given?
+      true
+    end
   end
 
   def has_password?
@@ -229,10 +263,17 @@ class User < ApplicationRecord
     CheckGravatarJob.perform_later(self)
   end
 
+  def audit_password_digest_change
+    ActivityLog.record_security_event!(
+      action: password_digest.nil? ? "user.password_removed" : "user.password_changed",
+      user: self
+    )
+  end
+
   # Best-effort: the security alert must never fail the credential write
   # itself (same contract as the new-device hook in Authenticatable).
   def notify_password_changed
-    PasswordChangedNotifier.with(record: self).deliver(self)
+    PasswordChangedNotifier.with(record: self, removed: password_digest.nil?).deliver(self)
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.warn("[password-changed] swallowed error for user=#{id}: #{e.class}: #{e.message}")
   end

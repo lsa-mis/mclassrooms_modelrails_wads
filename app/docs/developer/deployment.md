@@ -253,6 +253,7 @@ bin/kamal dbc               # = bin/rails dbconsole with credentials
 | Jobs disappear mid-deploy | `stop_wait_time` too short for Solid Queue drain | `config/deploy.yml` `stop_wait_time: 45` or higher |
 | `kamal deploy` from devcontainer fails with "docker: command not found" | `docker-outside-of-docker` feature not active | `.devcontainer/devcontainer.json` features; rebuild container |
 | Two containers visible during deploy | `max-replicas: 1` missing on `servers.web.options` | Restore the setting; SQLite cannot tolerate this |
+| Deploy takes unusually long with no error, on a release carrying an `activity_logs` migration | SQLite has no `ALTER TABLE ADD CONSTRAINT`, so Rails implements constraint changes as a full table rebuild (`CREATE` / `INSERT … SELECT` / `DROP` / `RENAME`). On a large `activity_logs` that copy runs inside `db:prepare` at boot — and because deploys are stop-then-start, boot time *is* your outage window | Check the row count before deploying (`bin/kamal app exec 'bin/rails runner "puts ActivityLog.count"'`). If it is large, run `ActivityLogRetentionSweepJob` first to shrink the table, or accept the longer window deliberately |
 | Deploy fails "container not healthy" on a slow boot | Health-check window too tight for the app's boot time | Raise `proxy.healthcheck.timeout` / boot limit in `config/deploy.yml`; with SQLite's stop-then-start deploys, boot time is also your per-deploy downtime — measure it once with a stopwatch |
 
 ## Deploying without Kamal

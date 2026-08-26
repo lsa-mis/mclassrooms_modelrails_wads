@@ -71,4 +71,41 @@
                 variant: :danger %>
     </div>
   <% end %>
+
+  <div class="mt-8">
+    <%# shared/preferences_card wraps yielded content in its own
+        `divide-y divide-border` div, but that's inert here — the <ol> below
+        is that div's single child, so the dividers you see are the <ol>'s
+        own `divide-y`, not the wrapper's. Don't delete either as a
+        "duplicate": removing the <ol>'s class drops the row dividers. -%>
+    <%= render layout: "shared/preferences_card",
+          locals: { title: t("settings.sessions.activity.heading") } do %>
+      <% if @recent_activity.any? %>
+        <%# A reverse-chronological sequence, hence <ol>. role="list" restores
+            the announced list semantics that Tailwind's preflight
+            `list-style: none` reset otherwise drops in Safari/VoiceOver —
+            matching the device list above. %>
+        <ol role="list" class="divide-y divide-border">
+          <% @recent_activity.each do |entry| %>
+            <%# Label plus relative time only — metadata (device OS, passkey
+                nickname) stays unrendered by design. A future security
+                action added without a matching label here still renders,
+                humanized, rather than a raw "translation missing" string. -%>
+            <li data-testid="account-activity-item"
+                class="flex items-center justify-between gap-4 px-6 py-4 text-sm">
+              <span class="text-text-body">
+                <%= t("settings.sessions.activity.#{entry.action}",
+                      default: entry.action.delete_prefix("user.").humanize) %>
+              </span>
+              <time datetime="<%= entry.created_at.iso8601 %>" class="text-xs text-text-muted shrink-0">
+                <%= t("settings.sessions.activity.time_ago", time: time_ago_in_words(entry.created_at)) %>
+              </time>
+            </li>
+          <% end %>
+        </ol>
+      <% else %>
+        <p class="px-6 py-5 text-sm text-text-body"><%= t("settings.sessions.activity.empty") %></p>
+      <% end %>
+    <% end %>
+  </div>
 </div>

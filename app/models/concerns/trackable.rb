@@ -10,6 +10,26 @@
 # rows past 12 months (#438). If a fork promotes this trail to
 # compliance-grade, the write moves inside the business transaction AND the
 # retention window becomes a compliance decision, together.
+#
+# Exactly two ActivityLog write GUARANTEES exist — do not add a third. The
+# tier is the contract, not the call site: several writers share this one.
+#
+#   BEST-EFFORT (rescues; never fails the operation it records) — this
+#   concern, plus three writers that live outside it because their events
+#   never reach these callbacks: Membership#record_ownership_demotion (a
+#   callback-skipping CAS update_all), ApplicationController#log_blocked_role_grant
+#   (a refusal, so there is no record to track), and
+#   Authenticatable#detect_and_record_new_device (a sign-in, corroborated by
+#   the Session row).
+#
+#   STRICT (no rescue; the audit row commits with the credential mutation or
+#   neither does) — User#audit_password_digest_change and
+#   WebauthnCredential#audit_added/#audit_removed.
+#
+# Tier and retention are independent axes: the new-device row is best-effort
+# yet still an ActivityLog::SECURITY_ACTIONS member, so it keeps the security
+# retention floor. Every SECURITY_ACTIONS row, either tier, is written through
+# ActivityLog.record_security_event! — which owns that row shape.
 module Trackable
   extend ActiveSupport::Concern
 
