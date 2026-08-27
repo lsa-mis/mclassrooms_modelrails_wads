@@ -13,7 +13,7 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "enforces unique provider per user" do
-      user = create(:user)
+      user = create(:user, :no_authentications)
       create(:authentication, user: user, provider: "google", uid: "123")
       duplicate = build(:authentication, user: user, provider: "google", uid: "456")
       expect(duplicate).not_to be_valid
@@ -199,7 +199,7 @@ RSpec.describe Authentication, type: :model do
   end
 
   describe "#only_verified_remaining?" do
-    let(:user) { create(:user) }
+    let(:user) { create(:user, :no_authentications) }
 
     context "when this is the only verified auth for the user" do
       let!(:auth) { user.authentications.create!(provider: "email", uid: user.email_address, email: user.email_address, verified_at: Time.current) }
@@ -228,7 +228,7 @@ RSpec.describe Authentication, type: :model do
   end
 
   describe "#claim_pending!" do
-    let(:user) { create(:user) }
+    let(:user) { create(:user, :no_authentications) }
     let(:authentication) { create(:authentication, user: user, pending_invitation_token: nil) }
     let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
     let!(:member_role) {
@@ -359,7 +359,7 @@ RSpec.describe Authentication, type: :model do
   end
 
   describe "broadcasting" do
-    let(:user) { create(:user) }
+    let(:user) { create(:user, :no_authentications) }
     # Turbo broadcasts to the stream name computed by stream_name_from([user, :authentications]),
     # which concatenates each element's to_gid_param (or to_param) with ":".
     let(:stream_name) { [ user, :authentications ].map { |s| s.try(:to_gid_param) || s.to_param }.join(":") }

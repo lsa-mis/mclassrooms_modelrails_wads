@@ -1,9 +1,11 @@
 en:
+  invitations:
+    unverified_sender: "Verify your email address before sending invitations."
   invitation_mailer:
     invite:
-      subject: "You've been invited to %{workspace}"
+      subject: "You've been invited to a workspace on %{app_name}"
       greeting: "Hello,"
-      body: "%{inviter} has invited you to join %{workspace} as a %{role}."
+      body: "%{inviter} has invited you to join a workspace on %{app_name} as a %{role}. The workspace is named on the page you land on when you accept or decline."
       accept_action: "Accept invitation"
       decline_action: "Decline invitation"
       expiry_note: "This invitation expires in 7 days."
@@ -24,6 +26,7 @@ en:
         no_assignable_roles: "You don't have permission to assign any of this workspace's roles, so you can't send invitations."
       create:
         sent: "%{sent} invitation(s) sent. %{skipped} skipped."
+        capped: "Only the first %{cap} addresses were invited — send the rest in another batch."
         magic_link_created: "Magic link created."
       destroy:
         revoked: "Invitation revoked."

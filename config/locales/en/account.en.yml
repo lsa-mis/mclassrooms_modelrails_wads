@@ -27,6 +27,7 @@ en:
       destroy:
         cancelled: "Email change cancelled."
     passwords:
+      rate_limited: "Too many password changes. Please wait a few minutes and try again."
       new:
         title: "Set a password"
         instructions: "Add email and password sign-in to your account."
@@ -105,6 +106,7 @@ en:
           password_changed: "Password changed"
           password_removed: "Password removed"
           signed_in_new_device: "Signed in from a new device"
+          signed_in_new_device_with_os: "Signed in from a new device (%{os})"
           passkey_added: "Passkey added"
           passkey_removed: "Passkey removed"
     other_sessions:

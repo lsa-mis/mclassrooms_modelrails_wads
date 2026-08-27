@@ -49,15 +49,12 @@ RSpec.describe "Passwordless join-link signup", type: :system do
   end
 
   # Shared helper: navigate to the session entry page, enter email to request a
-  # magic link, then complete signup via the token extracted from the database.
+  # magic link, then complete signup via the token from the delivered mail.
   def complete_magic_link_signup(email:, first_name:, last_name:)
     visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: email
-    click_button I18n.t("sessions.new.continue")
+    token = request_magic_link(email)
 
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-
-    visit magic_link_callback_path(token: MagicLinkToken.create_for_email(email))
+    visit magic_link_callback_path(token: token)
 
     fill_in I18n.t("magic_link_callbacks.new_registration.first_name_label"), with: first_name
     fill_in I18n.t("magic_link_callbacks.new_registration.last_name_label"), with: last_name

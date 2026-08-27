@@ -11,13 +11,9 @@ RSpec.describe "Magic link sign-in", type: :system do
     it "sends a magic link and signs the user in when they click it" do
       visit new_session_path
 
-      fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-      click_button I18n.t("sessions.new.continue")
-
-      expect(page).to have_text(I18n.t("sessions.check_email.title"))
+      token = request_magic_link(user.email_address)
       expect(page).to have_text(user.email_address)
 
-      token = MagicLinkToken.create_for_email(user.email_address)
       visit magic_link_callback_path(token: token)
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
 
@@ -31,18 +27,14 @@ RSpec.describe "Magic link sign-in", type: :system do
     it "sends a magic link and shows a 'use password instead' link" do
       visit new_session_path
 
-      fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-      click_button I18n.t("sessions.new.continue")
-
       # Magic-link is now the default for ALL users; password-holders also land here
-      expect(page).to have_text(I18n.t("sessions.check_email.title"))
+      token = request_magic_link(user.email_address)
       expect(page).to have_text(user.email_address)
 
       # The 'use password instead' escape hatch is present for password-holders
       expect(page).to have_link(I18n.t("sessions.check_email.use_password"),
                                 href: session_password_form_path(email_address: user.email_address))
 
-      token = MagicLinkToken.create_for_email(user.email_address)
       visit magic_link_callback_path(token: token)
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
 

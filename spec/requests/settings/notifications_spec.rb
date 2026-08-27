@@ -3,6 +3,37 @@
 require "rails_helper"
 
 RSpec.describe "Account Notifications", type: :request do
+  # D11: an unread item is the only one that needs attention, so it should not
+  # be pushed off the page by newer read ones.
+  describe "GET /settings/notifications ordering" do
+    let(:reader) { create(:user) }
+
+    def deliver_to(reader)
+      before = reader.notifications.pluck(:id)
+      PasswordChangedNotifier.with(record: reader, idempotency_key: SecureRandom.hex(8)).deliver(reader)
+      reader.notifications.where.not(id: before).sole
+    end
+
+    it "orders unread first, then newest, so an older unread outranks a newer read one" do
+      # Sign in first: the sign-in itself writes a new-device notification, and
+      # creating fixtures after it keeps that row out of the ids under test.
+      sign_in(reader)
+      older_unread = travel_to(2.hours.ago) { deliver_to(reader) }
+      newer_read   = travel_to(1.hour.ago)  { deliver_to(reader) }
+      newer_read.update!(read_at: Time.current)
+
+      get settings_notifications_path
+
+      rendered = Nokogiri::HTML(response.body)
+        .css("li[id]").map { |el| el["id"][/_notification_(\d+)\z/, 1]&.to_i }.compact
+
+      # Relative order of the two under test — newest-first alone would put the
+      # read one ahead of the older unread one.
+      expect(rendered & [ older_unread.id, newer_read.id ])
+        .to eq([ older_unread.id, newer_read.id ])
+    end
+  end
+
   describe "unauthenticated access" do
     it "redirects GET /account/notifications to sign in" do
       get settings_notifications_path

@@ -407,7 +407,7 @@ RSpec.describe Invitation, type: :model do
           invited_by: inviter
         )
 
-        expect(result).to eq(sent: 0, skipped: 0)
+        expect(result).to eq(sent: 0, skipped: 0, over_limit: false)
       end
     end
 

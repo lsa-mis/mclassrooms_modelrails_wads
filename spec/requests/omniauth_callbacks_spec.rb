@@ -45,10 +45,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     context "existing user with matching email and verified email auth" do
       let!(:user) { create(:user, email_address: "oauth@example.com") }
 
-      before do
-        user.authentications.create!(provider: "email", uid: "oauth@example.com", verified_at: Time.current)
-      end
-
       it "links the OAuth provider to existing user" do
         expect {
           get "/auth/google_oauth2/callback"
@@ -60,10 +56,9 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "signed-in user linking a new provider" do
-    let(:user) { create(:user) }
+    let(:user) { create(:user, :unverified_email) }
 
     before do
-      create(:authentication, user: user, provider: "email", uid: user.email_address)
       sign_in(user)
       OmniAuth.config.mock_auth[:github] = OmniAuth::AuthHash.new(
         provider: "github",
@@ -99,7 +94,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "existing OAuth login updates tokens" do
-    let!(:user) { create(:user, email_address: "returning@example.com") }
+    let!(:user) { create(:user, :no_authentications, email_address: "returning@example.com") }
     let!(:auth) do
       user.authentications.create!(
         provider: "google",
@@ -125,11 +120,9 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "OAuth does not link to unverified email accounts" do
-    let!(:unverified_user) { create(:user, email_address: "unverified@example.com") }
+    let!(:unverified_user) { create(:user, :unverified_email, email_address: "unverified@example.com") }
 
     before do
-      # User has email auth but it's not verified
-      unverified_user.authentications.create!(provider: "email", uid: "unverified@example.com")
       OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
         provider: "google",
         uid: "new-oauth-123",
@@ -146,10 +139,9 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "OAuth with existing unverified account (C1: collision rescue)" do
-    let!(:unverified_user) { create(:user, email_address: "existing@example.com") }
+    let!(:unverified_user) { create(:user, :unverified_email, email_address: "existing@example.com") }
 
     before do
-      unverified_user.authentications.create!(provider: "email", uid: "existing@example.com")
       OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
         provider: "google",
         uid: "collision-123",
@@ -225,7 +217,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "re-OAuth on existing pending authentication" do
-    let(:user) { create(:user, email_address: "bob@example.com") }
+    let(:user) { create(:user, :no_authentications, email_address: "bob@example.com") }
     let!(:pending_auth) do
       user.authentications.create!(
         provider: "google", uid: "google-pending",
@@ -242,7 +234,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "enqueues a fresh verification email" do
       expect {
@@ -277,7 +268,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     # on token regeneration. The new OAuth email from the strategy is ignored.
     # If we ever decide to update email-on-re-OAuth, this test should be
     # updated rather than silently changing behavior.
-    let(:user) { create(:user, email_address: "dean@example.com") }
+    let(:user) { create(:user, :no_authentications, email_address: "dean@example.com") }
     let!(:dean_pending) do
       user.authentications.create!(
         provider: "google", uid: "dean-google-uid",
@@ -296,7 +287,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "preserves the original email on the pending row (does not adopt the new OAuth email)" do
       get "/auth/google_oauth2/callback"
@@ -310,8 +300,8 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "cross-user collision when existing auth is pending (security)" do
-    let(:alice) { create(:user, email_address: "alice@example.com") }
-    let(:eve) { create(:user, email_address: "eve@example.com") }
+    let(:alice) { create(:user, :no_authentications, email_address: "alice@example.com") }
+    let(:eve) { create(:user, :no_authentications, email_address: "eve@example.com") }
     let!(:alices_pending) do
       alice.authentications.create!(
         provider: "google", uid: "alice-google-uid",
@@ -329,7 +319,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "does NOT enqueue a verification email to Alice" do
       expect {
@@ -344,8 +333,8 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "cross-user collision" do
-    let(:alice) { create(:user, email_address: "alice@example.com") }
-    let(:eve)   { create(:user, email_address: "eve@example.com") }
+    let(:alice) { create(:user, :no_authentications, email_address: "alice@example.com") }
+    let(:eve)   { create(:user, :no_authentications, email_address: "eve@example.com") }
 
     before do
       alice.authentications.create!(provider: "google", uid: "shared-uid",
@@ -358,7 +347,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "does not transfer Alice's auth to Eve" do
       expect {
@@ -383,8 +371,8 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       Rails.cache = original
     end
 
-    let(:alice) { create(:user, email_address: "alice@example.com", first_name: "Alice") }
-    let(:eve)   { create(:user, email_address: "eve@example.com") }
+    let(:alice) { create(:user, :no_authentications, email_address: "alice@example.com", first_name: "Alice") }
+    let(:eve)   { create(:user, :no_authentications, email_address: "eve@example.com") }
 
     before do
       alice.authentications.create!(provider: "google", uid: "shared-uid",
@@ -397,7 +385,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "enqueues a collision_alert email to the legitimate owner" do
       expect {
@@ -415,7 +402,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "Google OAuth with strategy-default provider name (production behavior)" do
-    let(:user) { create(:user, email_address: "rachel@example.com") }
+    let(:user) { create(:user, :no_authentications, email_address: "rachel@example.com") }
 
     before do
       sign_in(user)
@@ -427,7 +414,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: 1.hour.from_now.to_i }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "creates the auth with the canonical 'google' provider value" do
       get "/auth/google_oauth2/callback"
@@ -444,14 +430,13 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "signed-in user linking (verified flow)" do
-    let(:user) { create(:user, email_address: "alice@home.com") }
+    let(:user) { create(:user, :no_authentications, email_address: "alice@home.com") }
 
     before do
       sign_in(user)
       OmniAuth.config.test_mode = true
     end
 
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     context "when OAuth email matches user's primary email" do
       before do
@@ -552,7 +537,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       # canonical normalization, the simple `.downcase ==` would treat them as
       # different and force the user through the "unknown email" verification
       # flow on every OAuth sign-in — bad UX for international users.
-      let(:user) { create(:user, email_address: "café@example.com") }
+      let(:user) { create(:user, :no_authentications, email_address: "café@example.com") }
       # Explicitly NFD-encode: "é" decomposes to "e" + combining acute (U+0301).
       let(:nfd_email) { "café@example.com".unicode_normalize(:nfd) }
 
@@ -604,7 +589,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
   end
 
   describe "signed-in user re-OAuthing with different OAuth account while pending exists" do
-    let(:user) { create(:user, email_address: "carol@home.com") }
+    let(:user) { create(:user, :no_authentications, email_address: "carol@home.com") }
     let!(:carols_pending) do
       user.authentications.create!(
         provider: "google", uid: "google-account-A",
@@ -623,7 +608,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "alerts about the pending link with the affected email (not 'already linked')" do
       get "/auth/google_oauth2/callback"
@@ -642,7 +626,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     # Regression: omniauth-google-oauth2 strategy emits provider: "google_oauth2"
     # in production, but our enum stores "google". The controller must normalize
     # the strategy-name to the enum value before any DB lookup or write.
-    let(:user) { create(:user, email_address: "carol@home.com") }
+    let(:user) { create(:user, :no_authentications, email_address: "carol@home.com") }
 
     before do
       sign_in(user)
@@ -654,7 +638,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: 1.hour.from_now.to_i }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "does not raise and creates a verified google authentication" do
       expect {
@@ -676,10 +659,9 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     # account-takeover where an attacker creates an unverified Google account
     # matching a victim's existing email and auto-links to them.
 
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     context "signed-in user linking, OAuth email matches primary email" do
-      let(:user) { create(:user, email_address: "linker@example.com") }
+      let(:user) { create(:user, :no_authentications, email_address: "linker@example.com") }
 
       before do
         sign_in(user)
@@ -746,11 +728,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     context "new user signup matching an existing user's email (account takeover risk)" do
       let!(:victim) { create(:user, email_address: "victim@example.com") }
-      let!(:victim_email_auth) do
-        victim.authentications.create!(
-          provider: "email", uid: "victim@example.com", verified_at: Time.current
-        )
-      end
 
       before do
         OmniAuth.config.test_mode = true
@@ -799,7 +776,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         credentials: { token: "tok", refresh_token: "rtok", expires_at: nil }
       )
     end
-    after { OmniAuth.config.mock_auth.clear; OmniAuth.config.test_mode = false }
 
     it "creates the user with an auto-verified authentication and signs them in" do
       expect {
@@ -827,10 +803,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       OmniAuth.config.mock_auth[:google_oauth2] = auth_hash
     end
 
-    after do
-      OmniAuth.config.mock_auth.clear
-      OmniAuth.config.test_mode = false
-    end
 
     context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new Google user, allowlist armed)" do
       # MiClassrooms Phase 0 Task 7: OAuth providers listed in
@@ -1044,7 +1016,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
 
     context "when SIGNUP_MODE is :invite_only and an existing user signs in via OAuth (Branch 1)" do
-      let!(:user) { create(:user) }
+      let!(:user) { create(:user, :no_authentications) }
       let!(:authentication) do
         user.authentications.create!(
           provider: "google",
@@ -1113,10 +1085,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       post workspace_join_path(workspace_slug: join_workspace.slug, token: join_link.plaintext_token)
     end
 
-    after do
-      OmniAuth.config.mock_auth[:google_oauth2] = nil
-      OmniAuth.config.test_mode = false
-    end
 
     it "creates the user, auto-verifies the authentication, and admits them as a member" do
       expect {
@@ -1130,9 +1098,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     context "when the verified email belongs to a PRE-EXISTING user (drive-by join, FU-1)" do
       let!(:existing_user) do
-        create(:user, email_address: "joinoauth@example.com").tap do |u|
-          u.authentications.create!(provider: "email", uid: u.email_address, verified_at: Time.current)
-        end
+        create(:user, email_address: "joinoauth@example.com")
       end
 
       it "signs them in but does NOT force-join them; the token stays parked for re-consent" do

@@ -44,13 +44,9 @@ RSpec.describe "Invite-only signup flow", type: :system do
     post_accept_invitation(invitation.token)
 
     expect(page).to have_field(I18n.t("sessions.new.email_label"))
-    fill_in I18n.t("sessions.new.email_label"), with: "newuser@example.com"
-    click_button I18n.t("sessions.new.continue")
+    token = request_magic_link("newuser@example.com")
 
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-
-    # Extract the magic-link token from the database and visit the callback.
-    visit magic_link_callback_path(token: MagicLinkToken.create_for_email("newuser@example.com"))
+    visit magic_link_callback_path(token: token)
 
     # New-user registration form: fill in name and submit.
     fill_in I18n.t("magic_link_callbacks.new_registration.first_name_label"), with: "Invited"

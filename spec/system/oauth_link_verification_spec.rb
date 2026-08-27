@@ -15,10 +15,6 @@ RSpec.describe "Verified OAuth account linking", type: :system do
     )
   end
 
-  after do
-    OmniAuth.config.mock_auth.clear
-    OmniAuth.config.test_mode = false
-  end
 
   it "links Google with mismatched email via email verification" do
     sign_in_via_form(user)

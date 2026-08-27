@@ -5,12 +5,7 @@ RSpec.describe "Active devices (settings/sessions)", type: :system do
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
   before do
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
+    sign_in_via_form(user)
     expect(page).to have_css("#user-menu-button")
     # A second, older "device" so the list renders the current marker AND a
     # revocable row.
@@ -45,7 +40,11 @@ RSpec.describe "Active devices (settings/sessions)", type: :system do
       click_button I18n.t("settings.sessions.index.revoke_button")
     end
     expect(page).to have_text(I18n.t("settings.sessions.destroy.signed_out", device: "Firefox on Windows"))
-    within("#main-content ul[role='list']") do
+    # Scoped to the hook that NAMES the device list, not to structure that is
+    # unique by accident — `ul[role='list']` held only until the activity card
+    # gained a list of its own, and the ambiguity pressure landed on the
+    # markup's accessibility attributes instead of on this selector (#818).
+    within("[data-testid='device-list']") do
       expect(page).not_to have_text("Firefox on Windows")
     end
   end

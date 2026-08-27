@@ -66,7 +66,10 @@ RSpec.describe ApplicationNotifier, "record preloads" do
       # declaration (invitable: :workspace): the invitable hop loads, the
       # nested hop is skipped without raising.
       workspace_invitation = create(:invitation, invitable: create(:workspace), email: recipient.email_address)
-      WorkspaceInvitationExpiringSoonNotifier.with(record: workspace_invitation).deliver(recipient)
+      # ExpiringSoon dropped its nested declaration when its copy went neutral
+      # (it no longer traverses to the workspace), so the nested-walk case needs
+      # a notifier that still declares one.
+      WorkspaceInvitationResentNotifier.with(record: workspace_invitation).deliver(recipient)
       notifications = reloaded_notifications_for(recipient)
 
       expect { ApplicationNotifier.preload_records(notifications) }.not_to raise_error

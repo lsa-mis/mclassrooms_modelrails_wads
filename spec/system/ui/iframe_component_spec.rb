@@ -52,6 +52,7 @@ RSpec.describe "Iframe component accessibility", type: :system do
     # actual title-less iframe. No axe pass here: the audit target is the iframe's
     # accessible name, and the only element on this page is a scrollable doc <pre>
     # whose scrollable-region-focusable advisory is unrelated to the component.
+    expect(page).to have_css("#if-scope pre")
     expect(page).to have_no_css("#if-scope iframe")
   end
 end

@@ -1,4 +1,10 @@
 en:
+  time:
+    formats:
+      # Absolute timestamps surfaced beside a relative one (the account
+      # activity card's `title`). Long-form on purpose: it is read once, when
+      # the relative time was not precise enough to answer the question.
+      account_activity: "%B %-d, %Y at %-l:%M %p %Z"
   application:
     skip_to_content: "Skip to main content"
   markdowndocs:

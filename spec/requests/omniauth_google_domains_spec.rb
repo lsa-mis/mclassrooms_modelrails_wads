@@ -130,9 +130,7 @@ RSpec.describe "Google OAuth domain allowlist", type: :request do
       it "creates no additional User or Authentication" do
         expect {
           get "/auth/google_oauth2/callback"
-        }.not_to change(User, :count)
-
-        expect(user.authentications.count).to eq(1)
+        }.to change(User, :count).by(0).and change(Authentication, :count).by(0)
       end
 
       it "redirects to sign-in with the domain-not-allowed alert" do

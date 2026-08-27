@@ -20,7 +20,7 @@ RSpec.describe UnreadNotificationSummary do
     it "ranks warning above info above success" do
       allow(user).to receive(:unread_notification_breakdown).and_return(
         "WorkspaceCapacityApproachingNotifier" => 1, # :warning
-        "WorkspaceInvitationReceivedNotifier"  => 1  # :info
+        "WorkspaceInvitationResentNotifier"  => 1  # :info
       )
 
       expect(described_class.new(user).to_h[:severity]).to eq(:warning)

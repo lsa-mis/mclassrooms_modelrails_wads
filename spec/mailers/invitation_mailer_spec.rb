@@ -14,9 +14,11 @@ RSpec.describe InvitationMailer, type: :mailer do
       expect(mail.body.encoded).to include(invitation.token)
     end
 
-    it "includes the workspace name" do
+    # D4: the invitee has consented to nothing yet, so the invitation does not
+    # disclose the workspace's name. It appears once, on the accept/decline page.
+    it "does not disclose the workspace name in the body" do
       mail = described_class.invite(invitation)
-      expect(mail.body.encoded).to include(invitation.invitable.name)
+      expect(mail.body.encoded).not_to include(invitation.invitable.name)
     end
   end
 
@@ -33,14 +35,17 @@ RSpec.describe InvitationMailer, type: :mailer do
   describe "#invite details" do
     let(:invitation) { create(:invitation) }
 
-    it "has a subject including workspace name" do
+    it "names the app rather than the workspace in the subject" do
       mail = described_class.invite(invitation)
-      expect(mail.subject).to include(invitation.invitable.name)
+      expect(mail.subject).not_to include(invitation.invitable.name)
+      expect(mail.subject).to include(I18n.t("application.name"))
     end
 
-    it "includes the inviter name in the body" do
+    # The inviter is identified by their verified address, not a display name
+    # they chose — the address is the part the invitee can actually judge.
+    it "identifies the inviter by their address in the body" do
       mail = described_class.invite(invitation)
-      expect(mail.body.encoded).to include(invitation.invited_by.full_name)
+      expect(mail.body.encoded).to include(invitation.invited_by.email_address)
     end
 
     it "includes the decline link" do

@@ -54,6 +54,7 @@ RSpec.describe "Timezone beacon (Stimulus + layout connect)", type: :system, js:
       # The beacon is gated by `<% if authenticated? %>` in the layout, so
       # it should NOT render its data attributes on anonymous pages.
       visit new_session_path
+      expect(page).to have_button(I18n.t("sessions.new.continue"))
       expect(page).to have_no_css('[data-controller~="timezone-beacon"]')
     end
   end

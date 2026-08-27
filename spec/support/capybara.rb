@@ -53,6 +53,20 @@ end
 Capybara.default_driver = :rack_test
 Capybara.javascript_driver = :cuprite
 
+# Capybara ships a 2-second default. Four RSpec workers per CI shard — eighteen
+# in the Lefthook pre-push run — each drive their own headless Chrome, and 2s
+# loses against that contention: the suite had accumulated 46 hand-tuned
+# `wait:` overrides working around a global nobody had set (panel audit,
+# 2026-08-26). One owned number instead of 46 private ones, so a `wait:` at a
+# call site can go back to meaning "this operation is genuinely slower than the
+# rest of the suite."
+#
+# Costs nothing on green runs — Capybara polls and returns on first success.
+# It is paid on GENUINE failures, which now take longer to report. That is the
+# trade, and it is the right one when the alternative is a re-run of an
+# eight-shard matrix. spec/code_smells/capybara_timing_defaults_spec.rb pins it.
+Capybara.default_max_wait_time = ENV["CI"].present? ? 10 : 5
+
 RSpec.configure do |config|
   config.before(:each, type: :system) do
     # Cheap stat, and it turns "132 unexplained contrast failures" into one

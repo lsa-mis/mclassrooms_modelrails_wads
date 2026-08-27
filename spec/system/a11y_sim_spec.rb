@@ -22,6 +22,7 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
   describe "outside development" do
     it "does not render the trigger" do
       visit root_path
+      expect(page).to have_css("h1", text: I18n.t("pages.home.hero.title"))
       expect(page).not_to have_content(I18n.t("a11y_sim.dev_badge"))
     end
   end
@@ -151,6 +152,7 @@ RSpec.describe "Accessibility simulation drop-up", type: :system do
         window.localStorage.setItem('a11y_sim_mode', 'not-a-real-mode');
       JS
       page.refresh
+      expect(page).to have_css("button[aria-label='#{I18n.t('a11y_sim.trigger_aria_label')}']")
       expect(page).not_to have_css("body[class*='a11y-sim-']")
     end
 

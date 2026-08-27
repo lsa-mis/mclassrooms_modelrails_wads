@@ -99,6 +99,22 @@ class NotificationPreferences
     quiet_hours_active?
   end
 
+  # Quiet hours enabled with zero days selected: the toggle reads "Enabled"
+  # while quiet_hours_active? can never be true. The settings screen warns
+  # about that state, and this is the single owner of what it means — the ERB
+  # renders the warning from here and quiet_hours_warning_controller.js
+  # maintains it live, so neither can drift into its own definition.
+  #
+  # A MISSING active_days key is legacy data meaning all seven days (see the
+  # per-weekday filter above), so only an explicitly emptied list is deceptive.
+  def quiet_hours_deceptive?
+    qh = @data["quiet_hours"] || {}
+    return false unless qh["enabled"] == true
+
+    days = qh["active_days"]
+    days.is_a?(Array) && days.empty?
+  end
+
   def email_frequency
     @data.dig("delivery_methods", "email", "frequency") || "instant"
   end

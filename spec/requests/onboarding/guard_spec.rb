@@ -12,7 +12,7 @@ RSpec.describe "Onboarding guard", type: :request do
     end
 
     it "does not redirect the email-verification screen (escape hatch)" do
-      user = create(:user, :with_zero_workspaces, :with_email_auth)
+      user = create(:user, :with_zero_workspaces, :unverified_email)
       sign_in(user)
       get new_email_verification_path
       expect(response).to have_http_status(:ok)

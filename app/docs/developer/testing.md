@@ -38,6 +38,19 @@ A cache miss is harmless: the split falls back to file size — still correct, j
 
 ## Conventions and guards
 
+#### What a `SEED=` replay does and does not reproduce
+
+`SEED=<n> bin/parallel-rspec` replays a failing interleaving: every worker runs
+the same ordering seed, and — because the live runtime log changes between runs
+— an explicit `SEED` also pins worker grouping to file size and stands the
+runtime logger down, so a replay is deterministic from the working tree alone
+and never overwrites the balance data. What it does **not** reproduce is
+Faker-derived *data* from a run under a different file-to-worker mapping: each
+worker's Faker stream position depends on which files it ran and in what order.
+A clean replay therefore rules out an ordering flake, not a data-dependent one
+— before concluding "cannot reproduce", check whether the failing assertion
+involves Faker-generated values (see #856-class collisions).
+
 ### The code-smells suite
 
 `spec/code_smells/` holds specs that enforce project conventions structurally rather than by review. Examples: `mutating_actions_are_authorized_spec.rb` fails if a POST/PATCH/PUT/DELETE action neither calls `authorize` nor sits on the reviewed allow-list, and `no_unscoped_tenant_loads_spec.rb` fails on unscoped tenant finders in controllers (see [Extending](/docs/developer/extending)).
@@ -69,13 +82,41 @@ System specs run on Capybara + Cuprite, a pure-Ruby CDP driver (the suite migrat
 
 ### Stimulus readiness gate
 
-The importmap module fetch and Stimulus boot lag behind page load, so an event dispatched before a controller connects is silently dropped. That is harmless while a warm spec always runs first, but random spec ordering can make an interactive spec the *first* to run against a cold module cache — an intermittent failure. Rather than sprinkle waits across specs, `spec/support/stimulus_ready.rb` waits once, centrally: after any system-spec `visit` to a Lookbook component preview (`/rails/view_components/`) or the form-drafts harness (`/draft_harness`, #525 — a flake that survived every local run and failed CI precisely because the gate didn't yet cover that path), it blocks until every `data-controller` element on the page has its controllers connected. It is best-effort — it proceeds after a short timeout so a preview with no controllers can't hang the suite — and other system specs are pass-through.
+The importmap module fetch and Stimulus boot lag behind page load, so anything that lands before a controller connects reads a page the controller has not touched yet — a dispatched event is silently dropped, and an element still carries the class the server rendered. That is harmless while a warm spec always runs first, but random spec ordering can make any spec the *first* to run against a cold module cache — an intermittent, load-dependent failure.
+
+Rather than sprinkle waits across specs, `spec/support/stimulus_ready.rb` waits once, centrally: **after every system-spec `visit`**, it blocks until every `data-controller` element on the page has its controllers connected. `spec/system/stimulus_ready_gate_spec.rb` pins that behavior.
+
+The gate used to be an allow-list of two paths — the Lookbook component previews (`/rails/view_components/`) and the form-drafts harness (`/draft_harness`, #525) — each added after a specific flake. That left the other ~536 `visit` calls ungated and #837 recurred a third time on one of them, so the gate was widened rather than annotated call site by call site.
+
+Two properties matter when reading it:
+
+- **It raises, it does not proceed.** A barrier that times out silently is indistinguishable from one that succeeded. The message names the identifiers still unconnected, which is what separates "module still fetching" from "identifier will never register" (a typo'd `data-controller`).
+- **A page with no controllers is ready immediately**, even with no `window.Stimulus` — a redirect target or a plain error page must not spend the budget and then raise. A still-parsing document is *not* treated that way: an empty match there means "too early", not "nothing to wait for".
+
+The race does not reproduce at ordinary local load, which is why #837 recurred three times before it was closed properly. To open the window deliberately, cold the module cache and throttle the network — the lag is the importmap module fetch, not CPU, so `Emulation.setCPUThrottlingRate` will not do it:
+
+```ruby
+cdp_command("Network.enable")
+cdp_command("Network.clearBrowserCache")
+cdp_command("Network.emulateNetworkConditions",
+            offline: false, latency: 250, downloadThroughput: 100_000, uploadThroughput: 100_000)
+page.visit(root_path)          # page.visit bypasses the gate; `visit` does not
+all_stimulus_controllers_connected?   # => false, the window an assertion can land in
+```
+
+Those numbers are machine-specific: too gentle and the page is already connected on load, too harsh and the barrier legitimately exhausts its budget and raises. Tune until `at_load` is false and the barrier still succeeds.
 
 ### CSP violation capture
 
 The Content-Security-Policy is enforced in test exactly as in dev and prod, and `spec/support/csp_violation_capture.rb` makes the browser tattle on violations. The source-level scan (`spec/code_smells/no_inline_event_handlers_spec.rb`) catches inline handlers, but the suite once shipped two CSP bugs it was structurally blind to: a blank-nonce generator that emitted an invalid `'nonce-'` and silently blocked every inline script for first-time visitors (#499), and an initializer override that un-enforced CSP in test (#500 follow-up). CDP-driven specs dispatch events at protocol level, so they never needed the blocked scripts — but the browser knows, and fires `securitypolicyviolation` for every block.
 
-The support file installs one init script per browser process (the browser is reused across examples) that accumulates violations in `sessionStorage`, so same-tab navigations within an example don't lose them. An after-hook reads *and clears* the list — nothing bleeds across examples — and fails any example that produced a violation. The `ALLOWED_VIOLATIONS` list is empty by design; every future entry needs a written reason.
+The support file installs an init script on each example's fresh page — install is page-scoped, and the after-example session reset disposes the page along with its init scripts, so a per-process install would cover only the first example a worker runs (#848; `spec/system/csp_violation_capture_spec.rb` proves the listener survives that reset). The script accumulates violations in `sessionStorage`, so same-tab navigations within an example don't lose them. An after-hook reads *and clears* the list — nothing bleeds across examples — and fails any example that produced a violation. The `ALLOWED_VIOLATIONS` list is empty by design; every future entry needs a written reason.
+
+### Triage note: two cross-cutting hooks can fail any system example
+
+Every system example runs two after-hooks that can fail it for reasons unrelated to its own assertions: the WCAG 2.2 AAA axe audit (both themes, `spec/support/axe_accessibility.rb`) and the CSP-violation gate above. A failure raised inside an `after` hook is **reported against the example**, so an axe or CSP finding reads as a spec-body failure. When triaging a system-spec failure — especially an intermittent one — rule these out first: axe failures name the rule and theme (`[DARK] color-contrast: …`), CSP failures name the blocked directive. Both audit the example's *end* state, which may not be the state the example's own assertions ran against (#855).
+
+The audits are memoized per example on page state + options, so an example that already ran `axe_clean_in_both_themes?` on its final state pays nothing extra in the hook — the memo never skips an audit of state nothing has covered (`spec/system/axe_audit_memo_spec.rb` pins both properties).
 
 ### WebAuthn virtual authenticator
 

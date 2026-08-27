@@ -9,8 +9,8 @@ RSpec.describe "Email Verification Resends", type: :request do
   end
 
   context "authenticated" do
-    let(:user) { create(:user) }
-    let!(:authentication) { create(:authentication, user: user, provider: "email", uid: user.email_address) }
+    let(:user) { create(:user, :unverified_email) }
+    let(:authentication) { user.authentications.email.sole }
 
     before { sign_in(user) }
 

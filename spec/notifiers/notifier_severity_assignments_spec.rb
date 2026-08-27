@@ -7,7 +7,6 @@ RSpec.describe "Notifier severity assignments" do
     SignInFromNewDeviceNotifier          => :danger,
     WorkspaceCapacityApproachingNotifier => :warning,
     WorkspaceInvitationExpiringSoonNotifier => :warning,
-    WorkspaceInvitationReceivedNotifier  => :info,
     WorkspaceInvitationResentNotifier    => :info,
     WorkspaceRoleChangedNotifier         => :info,
     WorkspaceMemberAddedNotifier         => :success,

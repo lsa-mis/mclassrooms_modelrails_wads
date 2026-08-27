@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Email verifications", type: :request do
   describe "GET /email_verification/new" do
-    let(:user) { create(:user, :with_email_auth) }
+    let(:user) { create(:user, :unverified_email) }
 
     it "renders the check-your-email screen for a signed-in user" do
       sign_in(user)
@@ -29,7 +29,7 @@ RSpec.describe "Email verifications", type: :request do
   end
 
   describe "POST /email_verification_resend" do
-    let(:user) { create(:user, :with_email_auth) }
+    let(:user) { create(:user, :unverified_email) }
 
     it "re-enqueues the verification email and returns to the check screen" do
       sign_in(user)
@@ -40,8 +40,8 @@ RSpec.describe "Email verifications", type: :request do
     end
   end
 
-  let(:user) { create(:user) }
-  let(:authentication) { create(:authentication, user: user) }
+  let(:user) { create(:user, :unverified_email) }
+  let(:authentication) { user.authentications.email.sole }
 
   describe "GET /email_verification" do
     context "with valid token" do

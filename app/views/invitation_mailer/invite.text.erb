@@ -1,6 +1,6 @@
 <%= t("invitation_mailer.invite.greeting") %>
 
-<%= t("invitation_mailer.invite.body", inviter: @inviter.full_name, workspace: @workspace.name, role: @role.name) %>
+<%= t("invitation_mailer.invite.body", inviter: @inviter.email_address, app_name: t("application.name"), role: @role.name) %>
 
 <%= t("invitation_mailer.invite.accept_action") %>: <%= @accept_url %>
 

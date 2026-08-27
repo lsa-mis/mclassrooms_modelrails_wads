@@ -11,7 +11,9 @@
 require "parallel_tests/rspec/runtime_logger"
 
 RSpec.configure do |config|
-  unless ENV["TEST_ENV_NUMBER"].nil?
+  # Stands down under an explicit SEED replay: a diagnostic run must not
+  # overwrite the runtime data future runs balance by (#867).
+  if ENV["TEST_ENV_NUMBER"] && ENV["SEED"].to_s.empty?
     # bin/parallel-rspec passes `-f progress` explicitly, so this only adds
     # its own non-default formatter (#496).
     config.add_formatter ParallelTests::RSpec::RuntimeLogger,

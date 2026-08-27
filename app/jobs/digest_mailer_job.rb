@@ -1,9 +1,23 @@
 # frozen_string_literal: true
 
 # Emits digest emails (every 15 min) for users whose `digest_next_due_at` has
-# passed. `seen_at` is stamped at ENQUEUE, not mail delivery — the load-bearing
-# dedupe between cycles — so a downstream mail failure leaves those items
-# marked seen with no email sent (the in-app badge still shows them).
+# passed.
+#
+# The cycle window is HALF-OPEN: `cycle_started_at` is captured before the
+# SELECT, the scope takes `created_at >= floor AND created_at < cycle_started_at`,
+# and that same value becomes the next floor. No gap, no overlap — a
+# notification that arrives while this cycle's mail is being built sits above
+# the new watermark and lands in the next digest, rather than falling below a
+# watermark stamped after delivery and never being selected at all.
+#
+# What suppresses a digest item is the recipient READING it, not this job
+# marking it. Deduping against the job's own bookkeeping is what emailed people
+# things they had already read.
+#
+# The mailer receives ids, not records: an AR object serialises as a GlobalID,
+# and one row deleted by retention between enqueue and render raises
+# DeserializationError and dead-letters the whole digest. The mailer re-queries
+# those ids at delivery time, which is also the last gate on read state.
 # See /docs/developer/notifications (DigestMailerJob).
 class DigestMailerJob < ApplicationJob
   queue_as :default
@@ -32,18 +46,18 @@ class DigestMailerJob < ApplicationJob
     return if prefs.nil?
     return user.preferences.reschedule_digest! if prefs.do_not_disturb? || !prefs.digest_enabled?
 
-    notifications = digest_scope(user).to_a
+    cycle_started_at = Time.current
+    ids = digest_scope(user, cycle_started_at).pluck(:id)
 
-    if notifications.any?
-      NotificationMailer.digest(user, notifications).deliver_later
-      mark_included_seen!(notifications)
-      user.preferences.update!(digest_last_sent_at: Time.current)
+    if ids.any?
+      NotificationMailer.digest(user, ids).deliver_later
+      user.preferences.update!(digest_last_sent_at: cycle_started_at)
     end
 
     user.preferences.reschedule_digest!
   end
 
-  def digest_scope(user)
+  def digest_scope(user, cycle_started_at)
     floor = user.preferences.digest_last_sent_at || 24.hours.ago
     # v2: every category except security is digestable when the user has
     # email.frequency != "instant". Security always goes instant (per spec
@@ -54,18 +68,9 @@ class DigestMailerJob < ApplicationJob
     excluded_types = ApplicationNotifier.notification_types_for("security")
 
     user.notifications
-        .where(seen_at: nil)
+        .where(read_at: nil)
         .where.not(type: excluded_types)
         .where("noticed_notifications.created_at >= ?", floor)
-  end
-
-  # Bulk update_all is intentional: bypasses callbacks for speed since
-  # mark_seen! on an individual notification only writes the timestamp
-  # column anyway. Atomic single UPDATE; no race window.
-  def mark_included_seen!(notifications)
-    return if notifications.empty?
-    Noticed::Notification
-      .where(id: notifications.map(&:id))
-      .update_all(seen_at: Time.current)
+        .where("noticed_notifications.created_at < ?", cycle_started_at)
   end
 end

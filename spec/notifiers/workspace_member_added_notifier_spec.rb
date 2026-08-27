@@ -145,13 +145,15 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
 
   # Spec case 6: Owner notifications remain unseen post-deliver (digest pipeline eligibility).
   describe "owner — digest eligibility" do
-    it "leaves seen_at: nil on owner notifications post-deliver" do
+    # Digest eligibility is read state now (D10): seen_at is gone, and an
+    # unread notification inside the cycle window is what the digest picks up.
+    it "leaves owner notifications unread post-deliver, so the digest can pick them up" do
       add_member!
       drain_noticed_jobs
       [ owner_user_a, owner_user_b ].each do |o|
         notif = Noticed::Notification.where(recipient: o, type: "#{described_class.name}::Notification").last
         expect(notif).not_to be_nil
-        expect(notif.seen_at).to be_nil
+        expect(notif.read_at).to be_nil
       end
     end
   end

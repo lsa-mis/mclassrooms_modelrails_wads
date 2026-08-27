@@ -9,10 +9,12 @@ RSpec.describe "Account Passwords", type: :request do
   end
 
   context "authenticated" do
-    # Factory default: user has a password (password_digest present).
-    let(:user) { create(:user) }
-    # User with no password set (passwordless — signs in via magic link).
-    let(:passwordless_user) { create(:user, password: nil) }
+    # Password present (factory default); no email auth, so the controller's
+    # create branch is the one under test.
+    let(:user) { create(:user, :no_authentications) }
+    # No password and no email auth: the OAuth-only signup — the one
+    # production user for whom password-set CREATES the email authentication.
+    let(:passwordless_user) { create(:user, :oauth_only, password: nil) }
 
     # #722: the third instance of the forgot-the-layout-opt-in class — the
     # password pages are settings destinations and render inside the shell
@@ -87,6 +89,67 @@ RSpec.describe "Account Passwords", type: :request do
       end
     end
 
+    describe "POST /account/password against an existing email authentication" do
+      it "never downgrades an authentication that is already verified (#864)" do
+        # The magic-link signup: passwordless, holding the VERIFIED email row.
+        # Setting a password takes the find branch, and the promise in the
+        # controller comment -- proven control of the session says nothing
+        # about the mailbox, in either direction -- must hold.
+        magic_link_user = create(:user, password: nil)
+        sign_in(magic_link_user)
+
+        verified_at_before = magic_link_user.authentications.email.sole.verified_at
+
+        post settings_password_path, params: {
+          user: { password: "NewSecureP@ss123!", password_confirmation: "NewSecureP@ss123!" }
+        }
+
+        auth = magic_link_user.authentications.email.sole
+        expect(auth.verified_at).to eq(verified_at_before)
+        expect(magic_link_user.reload.has_password?).to be(true)
+      end
+
+      it "finds the row by provider even when its uid is stale (#865)" do
+        # The unique index is (user_id, provider); a finder keyed on uid
+        # misses the existing row after the address changed underneath it and
+        # attempts a duplicate. update_column manufactures the stale uid the
+        # way a bypassed email-change sync would.
+        stale = create(:user, :unverified_email, password: nil)
+        stale.update_column(:email_address, "moved@example.com")
+        sign_in(stale)
+
+        expect {
+          post settings_password_path, params: {
+            user: { password: "NewSecureP@ss123!", password_confirmation: "NewSecureP@ss123!" }
+          }
+        }.not_to change { stale.authentications.email.count }
+
+        expect(response).to redirect_to(settings_connected_accounts_path)
+        expect(stale.reload.has_password?).to be(true)
+      end
+
+      it "sets the password and creates the authentication atomically (#821)" do
+        # No stubs: the block's INSERT fails for real, against the GLOBAL
+        # (provider, uid) uniqueness, because another account already holds an
+        # email row under this address. A crash between the two writes must
+        # not strand a password without its authentication — so the password
+        # save rolls back with it.
+        victim = create(:user, :oauth_only, password: nil, email_address: "contested@example.com")
+        squatter = create(:user, :no_authentications)
+        squatter.authentications.create!(provider: "email", uid: "contested@example.com")
+        sign_in(victim)
+
+        post settings_password_path, params: {
+          user: { password: "NewSecureP@ss123!", password_confirmation: "NewSecureP@ss123!" }
+        }
+
+        # show_exceptions :rescuable renders RecordInvalid as 422 rather than
+        # propagating (unlike :161's StatementInvalid, which is 500-class).
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(victim.reload.has_password?).to be(false)
+      end
+    end
+
     describe "PATCH /settings/password (change)" do
       before { sign_in(user) }
 
@@ -156,6 +219,20 @@ RSpec.describe "Account Passwords", type: :request do
       # Strict tier: the audit row commits with the credential write or neither
       # does. The rollback has to take the auth teardown with it — that is what
       # proves one transaction wraps the whole unit, not just the digest write.
+      it "removes the password even when the record has drifted invalid for unrelated reasons" do
+        # A record can go invalid out from under its owner — the canonical
+        # path is an attachment allowlist tightening under a gem bump. Removal
+        # must not hold the credential hostage to an unrelated validation;
+        # update_column bypasses validation to manufacture the drifted state.
+        user.update_column(:first_name, "x" * 101)
+
+        delete settings_password_path
+
+        expect(response).to redirect_to(settings_connected_accounts_path)
+        expect(user.reload.password_digest).to be_nil
+        expect(ActivityLog.security_events_for(user).where(action: "user.password_removed")).to exist
+      end
+
       it "rolls back the removal atomically when the audit write fails" do
         # Ruling R7 (see spec/models/user_spec.rb): read the digest and build
         # the authentication BEFORE installing the stub, or setup runs under it
@@ -170,6 +247,22 @@ RSpec.describe "Account Passwords", type: :request do
 
         expect(user.reload.password_digest).to eq(original_digest)
         expect(Authentication.exists?(auth.id)).to be(true)
+      end
+    end
+
+    describe "rate limiting (#819)" do
+      before { sign_in(user) }
+
+      it "redirects with an alert once the shared credential-mutation limit is exceeded" do
+        # rate_limit counts via Rails.cache.increment; return an over-limit
+        # count so the limiter fires without a persistent cache (house pattern,
+        # see avatars_spec).
+        allow(Rails.cache).to receive(:increment).and_return(11)
+
+        delete settings_password_path
+
+        expect(response).to redirect_to(settings_connected_accounts_path)
+        expect(flash[:alert]).to eq(I18n.t("settings.passwords.rate_limited"))
       end
     end
 

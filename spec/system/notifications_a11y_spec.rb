@@ -40,6 +40,7 @@ RSpec.describe "Notifications a11y plumbing", type: :system do
     it "does NOT render the subscription on unauthenticated pages" do
       visit new_session_path
 
+      expect(page).to have_button(I18n.t("sessions.new.continue"))
       expect(page).to have_no_css("turbo-cable-stream-source")
     end
   end

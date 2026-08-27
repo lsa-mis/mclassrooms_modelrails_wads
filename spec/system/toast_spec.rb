@@ -48,9 +48,15 @@ RSpec.describe "Toast notification system", type: :system do
 
     it "auto-dismisses after timeout" do
       sign_in_via_form(user)
-      expect(page).to have_css("[data-controller='toast-pill']")
-      # Default minimum timeout is 5 seconds; wait up to 18 to account for max
-      expect(page).to have_no_css("[data-controller='toast-pill']", wait: 18)
+      toast = find("[data-controller='toast-pill']")
+      # Budget derived from the toast's own configuration — timeout + stagger
+      # Stimulus values (defaults mirror toast_pill_controller.js) + dismiss
+      # animation margin — instead of the previous guessed-ceiling wait: 18,
+      # which also billed its full 18s on any genuine failure (#857).
+      timeout_ms = (toast["data-toast-pill-timeout-value"] || 5000).to_i
+      stagger_ms = (toast["data-toast-pill-stagger-value"] || 2000).to_i
+      budget = (timeout_ms + stagger_ms) / 1000.0 + 2
+      expect(page).to have_no_css("[data-controller='toast-pill']", wait: budget)
     end
 
     it "does not overlap the user menu dropdown" do

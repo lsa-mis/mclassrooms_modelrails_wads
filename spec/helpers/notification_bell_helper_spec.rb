@@ -43,7 +43,7 @@ RSpec.describe NotificationBellHelper, type: :helper do
         .deliver(user)
 
       invitation = create(:invitation, email: user.email_address)
-      WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+      WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
 
       result = helper.unread_notification_summary(user)
       expect(result[:severity]).to eq(:warning)

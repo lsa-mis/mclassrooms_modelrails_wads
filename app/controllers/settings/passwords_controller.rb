@@ -3,6 +3,12 @@ module Settings
     layout "settings"
 
     before_action :require_reauthentication!, only: [ :create, :update, :destroy ]
+    # Every credential mutation shares one budget, matching the sibling
+    # settings controllers (#819). Each mutation writes an ActivityLog row
+    # retained under the 365-day security floor, so the endpoint has a durable
+    # side effect per request.
+    rate_limit to: 10, within: 3.minutes, only: [ :create, :update, :destroy ],
+      with: -> { redirect_to settings_connected_accounts_path, alert: t("settings.passwords.rate_limited") }
 
     def new
       redirect_to edit_settings_password_path if Current.user.has_password?
@@ -14,12 +20,10 @@ module Settings
         return
       end
 
-      if update_password_with_precheck
-        Current.user.authentications.create!(
-          provider: "email",
-          uid: Current.user.email_address,
-          verified_at: Time.current
-        )
+      # The block runs inside the password save's transaction: a first
+      # password and its email authentication commit as one unit, the same
+      # shape #destroy already has (#821).
+      if update_password_with_precheck { ensure_pending_email_authentication! }
         redirect_to settings_connected_accounts_path, notice: t(".success")
       else
         render :new, status: :unprocessable_entity
@@ -61,6 +65,22 @@ module Settings
       Current.user.sessions.where.not(id: Current.session.id).delete_all
     end
 
+    # PENDING, not verified: setting a password proves control of this
+    # session, not of the mailbox. Stamping verified_at here let password-set
+    # alone satisfy User#can_invite? with no email round trip; the user now
+    # sees the standard verify-your-email prompt, which is the truth.
+    #
+    # The finder is keyed on provider ALONE — the unique index is
+    # (user_id, provider), and a finder that also keyed on uid missed the
+    # existing row whenever the address had changed underneath it, then
+    # attempted a duplicate (#865). Finding the row never downgrades one that
+    # is already verified; uid stays whatever the email-change sync last wrote.
+    def ensure_pending_email_authentication!
+      Current.user.authentications.find_or_create_by!(provider: "email") do |auth|
+        auth.uid = Current.user.email_address
+      end
+    end
+
     def password_params
       params.require(:user).permit(:password, :password_confirmation)
     end
@@ -75,7 +95,10 @@ module Settings
       Current.user.precheck_password_pwned!
       ApplicationRecord.transaction do
         Current.user.save.tap do |saved|
-          revoke_other_sessions if saved && revoke_others
+          if saved
+            revoke_other_sessions if revoke_others
+            yield if block_given?
+          end
         end
       end
     end

@@ -12,7 +12,7 @@ class InvitationMailer < ApplicationMailer
 
     mail(
       to: invitation.email,
-      subject: t("invitation_mailer.invite.subject", workspace: @workspace.name)
+      subject: t("invitation_mailer.invite.subject", app_name: t("application.name"))
     )
   end
 end

@@ -30,20 +30,6 @@ RSpec.describe "Navigation IA (MClassrooms signed-in shell)", type: :system do
     allow(Rails.configuration.x.tenancy).to receive(:workspace_creation).and_return(:disabled)
   end
 
-  def sign_in_via_form(user)
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: user.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    # SEC-5: tokens are hashed at rest — mint a fresh one to get plaintext,
-    # and the callback is now GET-confirm/POST-sign-in (mirrors
-    # IdentityPickerHelpers#sign_in_via_form).
-    token = MagicLinkToken.create_for_email(user.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
-    expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
-  end
-
   describe "signed-in viewer" do
     let(:user) { create(:user) }
 
@@ -160,6 +146,7 @@ RSpec.describe "Navigation IA (MClassrooms signed-in shell)", type: :system do
     it "the workspaces index shows no New workspace link when visited directly" do
       sign_in_via_form(user)
       visit workspaces_path
+      expect(page).to have_content(I18n.t("workspaces.index.title"))
       expect(page).to have_no_link(I18n.t("workspaces.index.new_workspace"))
     end
   end

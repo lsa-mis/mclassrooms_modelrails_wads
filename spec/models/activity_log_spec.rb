@@ -84,8 +84,7 @@ RSpec.describe ActivityLog, type: :model do
       newest = ActivityLog.record_security_event!(action: "user.password_changed", user: user)
       # Same user, personal visibility, but not a security action — the case
       # a visibility-keyed query would wrongly include (#827).
-      ActivityLog.create!(action: "workspace.updated", actor: user,
-                          trackable: user, visibility: "personal")
+      create(:activity_log, :security, action: "workspace.updated", actor: user)
       ActivityLog.record_security_event!(action: "user.password_changed", user: create(:user))
 
       result = ActivityLog.security_events_for(user)
@@ -120,8 +119,7 @@ RSpec.describe ActivityLog, type: :model do
 
     it "is excluded from the workspace-visible scope" do
       user = create(:user)
-      ActivityLog.create!(action: "user.password_changed", actor: user,
-                          trackable: user, visibility: "personal")
+      create(:activity_log, :security, action: "user.password_changed", actor: user)
       expect(ActivityLog.visible.where(trackable: user)).to be_empty
     end
 

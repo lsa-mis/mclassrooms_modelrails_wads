@@ -37,8 +37,19 @@ RSpec.describe "Settings hub — demotion while viewing", type: :system do
     # current tab's turbo_stream_from picks up and morphs in.
     @member_ms.update!(role: @viewer_role)
 
+    # Wait for the broadcast to LAND, not for a duration: the morph re-renders
+    # this member's own role cell, so the new role name appearing there is the
+    # observable that the whole round trip (commit → Solid Cable → WebSocket →
+    # morph) completed. wait: 15 because a 5s budget lost to that trip under
+    # the 18-worker pre-push suite (#841) — an absence assertion alone cannot
+    # distinguish "morph pending" from "gating broken".
+    within("##{ActionView::RecordIdentifier.dom_id(@member_ms, :role)}") do
+      expect(page).to have_text(@viewer_role.name, wait: 15)
+    end
+
+    # Morph landed; the demoted link's absence needs no budget of its own.
     within(sidebar_selector) do
-      expect(page).not_to have_link(I18n.t("settings.sidebar.items.limits_and_plan"), wait: 5)
+      expect(page).not_to have_link(I18n.t("settings.sidebar.items.limits_and_plan"))
     end
   end
 end

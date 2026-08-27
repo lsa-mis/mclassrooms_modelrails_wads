@@ -28,6 +28,33 @@ RSpec.describe "axe gate rule coverage", type: :system do
     expect(rule_ids.length).to be > 40
   end
 
+  # The gap that let the regression back in (#829). The two examples around
+  # this one cover the CONSTANT and the DEFAULT path — neither covers the
+  # path 32 system specs actually take, which is passing their own runOnly.
+  # `options[:runOnly] ||= DEFAULT` meant a caller-supplied value REPLACED
+  # the cumulative set rather than adding to it, so those specs audited the
+  # three AAA-tagged rules and skipped the whole A/AA foundation, with this
+  # very spec green the entire time. A guard that tests the default while the
+  # callers bypass the default is not a guard.
+  it "cannot be narrowed below the cumulative stack by a caller-supplied runOnly" do
+    visit root_path
+    page.execute_script(<<~JS)
+      document.body.insertAdjacentHTML(
+        "beforeend", '<input id="a11y-narrowing-probe" type="text">'
+      )
+    JS
+
+    # "label" is wcag2a — absent from a literal ["wcag2aaa"] rule selection.
+    results = run_axe_audit(
+      { runOnly: { type: "tag", values: [ "wcag2aaa" ] } },
+      exclude: [], include: "#a11y-narrowing-probe"
+    )
+
+    expect(results["violations"].map { |v| v["id"] }).to include("label")
+  ensure
+    page.execute_script('document.getElementById("a11y-narrowing-probe")?.remove()')
+  end
+
   it "catches a seeded unlabeled input under the gate's default options" do
     visit root_path
     page.execute_script(<<~JS)

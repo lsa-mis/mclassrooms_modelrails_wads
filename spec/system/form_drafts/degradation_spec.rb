@@ -95,10 +95,10 @@ RSpec.describe "Form draft degradation", type: :system do
     expect(page).to have_no_css('meta[name="form-draft-key"]', visible: :all)
 
     fill_in "Title", with: "dark feature"
-    # Negative assertion: proving NO write happened has no condition to wait
-    # on, so wait out the controller's 300ms autosave debounce plus margin,
-    # then assert silence.
-    sleep 0.5
+    # Proving NO write happened has no condition to wait on; wait out the
+    # autosave debounce, then assert silence (window owned by the helper —
+    # #453/#857).
+    wait_out_draft_autosave_window
     expect(page.evaluate_script("Object.keys(localStorage).filter(k => k.startsWith('draft:')).length")).to eq(0)
     expect(find_field("Title").value).to eq("dark feature") # form untouched
   end
