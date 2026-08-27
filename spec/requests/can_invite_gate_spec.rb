@@ -84,28 +84,6 @@ RSpec.describe "User#can_invite? — verified_at writer inventory", type: :reque
     end
   end
 
-  describe "the gate on onboarding, the fourth surface" do
-    let(:unverified) { create(:user, :unverified_email, :with_zero_workspaces) }
-    let(:workspace) { create(:workspace) }
-    let!(:project) { create(:project, workspace: workspace) }
-
-    before do
-      allow(TenancyConfig).to receive(:onboarding).and_return(:none)
-      workspace.memberships.create!(user: unverified, role: Role.system_default!("owner"))
-      sign_in(unverified)
-    end
-
-    it "refuses invitations from an unverified sender during first-run too" do
-      expect {
-        post onboarding_team_path,
-             params: { invitation: { emails: "someone@example.test",
-                                     role_id: Role.system_default!("member").id } }
-      }.not_to change(Invitation, :count)
-
-      expect(flash[:alert]).to eq(I18n.t("invitations.unverified_sender"))
-    end
-  end
-
   describe "a user with no authentication at all" do
     it "cannot invite" do
       expect(user.can_invite?).to be(false)

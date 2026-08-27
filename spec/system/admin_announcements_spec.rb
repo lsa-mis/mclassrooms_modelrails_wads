@@ -143,6 +143,7 @@ RSpec.describe "Admin announcements CRUD", type: :system do
     expect(Announcement.find_by(slot: "home_page")).to be_nil
 
     visit root_path
+    expect(page).to have_content(I18n.t("pages.home.hero.title"))
     expect(page).to have_no_content("Updated welcome message!")
   end
 end

@@ -144,6 +144,7 @@ RSpec.describe "Find a Room", type: :system do
 
     it "hides the toggle from a viewer, and reveals the inactive room to an admin" do
       visit find_a_room_path
+      expect(page).to have_content(I18n.t("rooms.index.subtitle"))
       expect(page).to have_no_content(I18n.t("rooms.index.views.inactive_rooms"))
 
       # CORRECTION B: there is no :admin trait on the :user factory — re-role
