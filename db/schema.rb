@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_25_231433) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_022634) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -288,7 +288,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_231433) do
     t.datetime "read_at", precision: nil
     t.bigint "recipient_id", null: false
     t.string "recipient_type", null: false
-    t.datetime "seen_at", precision: nil
     t.string "type"
     t.datetime "updated_at", null: false
     t.index ["event_id"], name: "index_noticed_notifications_on_event_id"
@@ -296,7 +295,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_231433) do
     t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_on_recipient"
     t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_unread", where: "read_at IS NULL"
     t.check_constraint "recipient_type = 'User'", name: "recipient_type_user_only_v1"
-    t.check_constraint "seen_at IS NULL OR read_at IS NULL OR read_at >= seen_at", name: "seen_before_read"
   end
 
   create_table "reauthentication_challenges", force: :cascade do |t|

@@ -24,7 +24,6 @@ RSpec.describe "Settings::Notifications record-preload guard", type: :request do
       WorkspaceInvitationAcceptedNotifier
       WorkspaceInvitationDeclinedNotifier
       WorkspaceInvitationExpiringSoonNotifier
-      WorkspaceInvitationResentNotifier
     ]
   end
 

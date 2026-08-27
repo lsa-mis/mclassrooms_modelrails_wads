@@ -503,40 +503,6 @@ RSpec.describe ApplicationNotifier, type: :notifier do
     end
   end
 
-  describe "#mark_seen!" do
-    let(:user) { create(:user) }
-    let(:resource) { create(:user) }
-
-    it "sets seen_at on the underlying notification row" do
-      StubAccountAccessNotifier.with(record: resource).deliver(user)
-      notification = user.notifications.last
-      freeze_time do
-        notification.mark_seen!
-        expect(notification.reload.seen_at).to be_within(1.second).of(Time.current)
-      end
-    end
-
-    it "is idempotent (re-calls don't bump the timestamp)" do
-      StubAccountAccessNotifier.with(record: resource).deliver(user)
-      notification = user.notifications.last
-      notification.mark_seen!
-      original = notification.reload.seen_at
-      travel 1.hour do
-        notification.mark_seen!
-        expect(notification.reload.seen_at).to eq original
-      end
-    end
-
-    it "does not bump updated_at (system action, preserves cache keys)" do
-      StubAccountAccessNotifier.with(record: resource).deliver(user)
-      notification = user.notifications.last
-      notification.update_columns(updated_at: 1.hour.ago)
-      original_updated_at = notification.updated_at
-      notification.mark_seen!
-      expect(notification.reload.updated_at).to be_within(1.second).of(original_updated_at)
-    end
-  end
-
   describe "#render_safe_or_placeholder" do
     let(:user) { create(:user) }
     let(:resource) { create(:user) }

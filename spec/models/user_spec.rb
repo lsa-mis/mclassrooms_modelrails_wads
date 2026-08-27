@@ -570,18 +570,18 @@ RSpec.describe User, type: :model do
 
   describe "#email_verification_pending?" do
     it "is true when the email authentication is unverified" do
-      user = create(:user, :with_email_auth)
+      user = create(:user, :unverified_email)
       expect(user.email_verification_pending?).to be(true)
     end
 
     it "is false when the email authentication is verified" do
-      user = create(:user, :with_email_auth)
+      user = create(:user, :unverified_email)
       user.authentications.email.first.update!(verified_at: Time.current)
       expect(user.email_verification_pending?).to be(false)
     end
 
     it "is false when there is no email authentication (e.g. OAuth-only)" do
-      user = create(:user)
+      user = create(:user, :oauth_only)
       expect(user.email_verification_pending?).to be(false)
     end
   end
@@ -709,10 +709,6 @@ RSpec.describe User, type: :model do
       # rather than after it — which is what keeps session revocation atomic
       # with the credential teardown.
       expect(observed).to be_nil
-    end
-
-    it "audits with actions that are members of the security set" do
-      expect(ActivityLog::SECURITY_ACTIONS).to include("user.password_changed", "user.password_removed")
     end
   end
 end

@@ -137,7 +137,13 @@ class User < ApplicationRecord
       next false if password_digest.nil?
 
       authentications.email.destroy_all
-      update!(password_digest: nil)
+      # save! rather than update!: validate: false drops full-record
+      # validation, so a record that drifted invalid for reasons unrelated to
+      # credentials (an attachment allowlist tightening, say) cannot hold the
+      # removal hostage. Callbacks still run — the strict audit row and the
+      # post-commit notifier are the point of using the callback path (#820).
+      self.password_digest = nil
+      save!(validate: false)
       yield if block_given?
       true
     end
@@ -145,6 +151,23 @@ class User < ApplicationRecord
 
   def has_password?
     password_digest.present?
+  end
+
+  # Sending invitations requires a PROVEN address. Every authentication whose
+  # verified_at is set got there by demonstrating control of the mailbox —
+  # clicking a signed link sent to it (Authentication#verify!, magic-link
+  # callback) or a provider vouching for it (OauthLink, gated on
+  # identity.email_verified?). The one writer that proved nothing was
+  # Settings::PasswordsController#create, which stamped verified_at on a
+  # freshly-minted email authentication: setting a password demonstrates
+  # control of the SESSION, not of the address. That stamp is gone, which is
+  # what lets this predicate stay a simple existence check.
+  #
+  # If you add a verified_at writer, add it to the inventory in
+  # spec/requests/can_invite_gate_spec.rb — the gate is only as strong as the
+  # weakest path that sets the column.
+  def can_invite?
+    authentications.where.not(verified_at: nil).exists?
   end
 
   def gravatar_url(size: 128)

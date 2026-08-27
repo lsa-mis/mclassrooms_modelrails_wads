@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Authenticated home via email verification", type: :request do
   it "lands a member on root" do
-    user = create(:user, :with_email_auth)
+    user = create(:user, :unverified_email)
     sign_in(user)
     auth = user.authentications.email.first
     token = auth.generate_token_for(:email_verification)

@@ -87,14 +87,13 @@ RSpec.describe "Passkeys", type: :system do
       visit settings_passkeys_path
       expect(page).to have_text("Accessibility audit key", wait: 10)
 
-      # Scope to wcag2aaa only — the same tag used by the CI after-each hook and
-      # all other system-spec axe audits. The default ruleset includes
-      # best-practice rules (e.g. aria-prohibited-attr on the toast containers)
-      # that are deferred project-wide and unrelated to the passkeys page.
-      # Local runs use AA (4.5:1); CI enforces the full 7:1 AAA contrast check.
-      axe_options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
-      expect(axe_clean_in_both_themes?(axe_options)).to eq(true),
-        "AAA violations:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+      # Default option set: the full cumulative A/AA/AAA stack. The previous
+      # ["wcag2aaa"] narrowing here was justified by two claims that were not
+      # true — axe's best-practice rules were never in AXE_TAG_SET so the
+      # default never ran them, and the audit has run AAA locally since #542,
+      # not AA. What the narrowing did do was drop the A/AA foundation (#829).
+      expect(axe_clean_in_both_themes?).to eq(true),
+        "AAA violations:\n#{axe_violations_in_both_themes.join("\n")}"
     end
   end
 

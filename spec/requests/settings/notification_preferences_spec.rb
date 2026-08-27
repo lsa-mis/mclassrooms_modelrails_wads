@@ -41,6 +41,44 @@ RSpec.describe "Account Notification Preferences", type: :request do
         expect(response.body).to include(%Q(name="override" value="true"))
       end
 
+      # The deceptive state — quiet hours enabled, zero days selected — is
+      # knowable server-side, so the server renders the warning rather than
+      # shipping it hidden and having Stimulus correct it after boot. A user
+      # whose JS is slow or blocked saw no warning at all before this.
+      #
+      # Asserted through Nokogiri rather than a body regex: what matters is
+      # whether the element carries the `hidden` class, not where the string
+      # appears in the markup.
+      def warning_classes(body)
+        node = Nokogiri::HTML(body).at_css("#quiet-hours-empty-days-warning")
+        expect(node).to be_present, "the warning element must render in both states"
+        node["class"].to_s.split
+      end
+
+      it "renders the empty-days warning visible when quiet hours are enabled with no days" do
+        user.preferences.update!(
+          notification_preferences: user.preferences.notification_preferences.merge(
+            "quiet_hours" => { "enabled" => true, "active_days" => [] }
+          )
+        )
+
+        get edit_settings_notification_preferences_path
+
+        expect(warning_classes(response.body)).not_to include("hidden")
+      end
+
+      it "renders the empty-days warning hidden when at least one day is active" do
+        user.preferences.update!(
+          notification_preferences: user.preferences.notification_preferences.merge(
+            "quiet_hours" => { "enabled" => true, "active_days" => %w[monday] }
+          )
+        )
+
+        get edit_settings_notification_preferences_path
+
+        expect(warning_classes(response.body)).to include("hidden")
+      end
+
       it "renders the timezone select with regional optgroups (Americas, Europe, etc.)" do
         get edit_settings_notification_preferences_path
 

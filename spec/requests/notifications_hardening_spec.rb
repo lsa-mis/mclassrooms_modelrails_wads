@@ -25,26 +25,26 @@ RSpec.describe "Notifications hardening", type: :request do
 
     it "creates exactly one event when the same Notifier fires twice in the same minute" do
       freeze_time do
-        WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+        WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
         expect {
-          WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+          WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
         }.not_to change(Noticed::Event, :count)
       end
     end
 
     it "swallows RecordNotUnique silently — no exception escapes" do
       freeze_time do
-        WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+        WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
         expect {
-          WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+          WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
         }.not_to raise_error
       end
     end
 
     it "returns :deduplicated sentinel on the duplicate dispatch" do
       freeze_time do
-        first = WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
-        second = WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+        first = WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
+        second = WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
         expect(first).to eq(:delivered)
         expect(second).to eq(:deduplicated)
       end
@@ -101,7 +101,7 @@ RSpec.describe "Notifications hardening", type: :request do
       workspace = create(:workspace)
       invitation = create(:invitation, invitable: workspace,
                           email: user.email_address, invited_by: invited_by)
-      WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+      WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
       notification = user.notifications.first
 
       invitation.destroy  # tombstones the polymorphic record

@@ -22,8 +22,8 @@ RSpec.describe "Admin rake tasks" do
 
   describe "users:verify" do
     it "verifies an unverified email" do
-      user = create(:user)
-      auth = user.authentications.create!(provider: "email", uid: user.email_address)
+      user = create(:user, :unverified_email)
+      auth = user.authentications.sole
       expect(auth).not_to be_verified
 
       Rake::Task["users:verify"].reenable

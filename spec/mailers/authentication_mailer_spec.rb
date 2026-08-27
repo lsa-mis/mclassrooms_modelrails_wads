@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe AuthenticationMailer, type: :mailer do
   describe "#verification_email" do
-    let(:user) { create(:user) }
+    let(:user) { create(:user, :no_authentications) }
     let(:authentication) { create(:authentication, user: user, verified_at: nil) }
 
     it "sends to the user's email" do
@@ -17,7 +17,7 @@ RSpec.describe AuthenticationMailer, type: :mailer do
   end
 
   describe "#link_verification_email" do
-    let(:user) { create(:user, first_name: "Alice", email_address: "alice@home.com") }
+    let(:user) { create(:user, :no_authentications, first_name: "Alice", email_address: "alice@home.com") }
     let(:auth) do
       user.authentications.create!(
         provider: "google",

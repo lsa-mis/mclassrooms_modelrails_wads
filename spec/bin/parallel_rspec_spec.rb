@@ -109,6 +109,32 @@ RSpec.describe ParallelRspecRunner do
     expect(called).to eq([ :build, :suite ])
   end
 
+  describe "#run_suite! under an explicit SEED (#867)" do
+    # A replay must be deterministic from the working tree alone: the normal
+    # run groups workers by the LIVE runtime log, which changes between runs.
+    it "pins worker grouping to file size so the replay's mapping cannot drift" do
+      captured = nil
+      allow(runner).to receive(:system) { |*args| captured = args; true }
+      original = ENV["SEED"]
+      ENV["SEED"] = "12345"
+      runner.send(:run_suite!)
+      expect(captured.each_cons(2)).to include([ "--group-by", "filesize" ])
+    ensure
+      original.nil? ? ENV.delete("SEED") : ENV["SEED"] = original
+    end
+
+    it "leaves normal runs on runtime-balanced grouping" do
+      captured = nil
+      allow(runner).to receive(:system) { |*args| captured = args; true }
+      original = ENV["SEED"]
+      ENV.delete("SEED")
+      runner.send(:run_suite!)
+      expect(captured).not_to include("--group-by")
+    ensure
+      ENV["SEED"] = original unless original.nil?
+    end
+  end
+
   describe "#verify_count!" do
     it "passes silently when executed matches expected" do
       write_dry_run(10)

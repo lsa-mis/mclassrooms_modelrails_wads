@@ -115,12 +115,25 @@ class NotificationMailer < ApplicationMailer
   # directly by `DigestMailerJob`, not through Noticed's `deliver_by :email`
   # parameterized pipeline. Subject reflects the user's chosen cadence;
   # template lays out notifications grouped by category.
-  def digest(user, notifications)
+  # Takes notification IDS, not records. Two reasons, both load-bearing:
+  # serialising AR objects into deliver_later means one row deleted by
+  # retention between enqueue and render raises DeserializationError and
+  # dead-letters the entire digest; and re-querying here makes delivery time —
+  # not selection time — the moment read state is judged. A user who reads an
+  # item while the mail sits in the queue does not get emailed about it.
+  # Every id having been read since selection means there is nothing to say,
+  # so no mail goes out at all.
+  def digest(user, notification_ids)
+    @notifications = user.notifications
+                         .where(id: notification_ids, read_at: nil)
+                         .order(created_at: :desc)
+                         .to_a
+    return if @notifications.empty?
+
     @user = user
-    @notifications = notifications
     @cadence = user.preferences&.notification_preferences_object&.digest_cadence || "daily"
     @app_name = t("application.name")
-    @count = notifications.size
+    @count = @notifications.size
     @preferences_url = edit_settings_notification_preferences_url
 
     mail(

@@ -17,9 +17,21 @@ module Settings
       # because the common case interpolates record. SignInFromNewDeviceNotifier
       # is the lone exception (reads only `event.params`); its unused `:record`
       # is safelisted in `lib/bullet_safelists.rb` to keep Bullet quiet.
+      # Unread first, then newest (D11). Newest-first alone buries an older
+      # unread item under newer read ones — and unread is the only state that
+      # still needs the reader's attention. `read_at IS NULL` is 1/0 in SQLite,
+      # so DESC floats the unread rows.
+      #
+      # Measured plan, not assumed: SQLite picks
+      # index_noticed_notifications_on_recipient (the two-column one) for the
+      # recipient filter and then USE TEMP B-TREE FOR ORDER BY — it does not
+      # use the four-column recipient_read_created index, and the expression
+      # sort is not index-covered. The temp sort spans the recipient's rows,
+      # which LIMIT bounds on output but not on input. Fine at per-user
+      # notification volumes; revisit if a fork's counts grow.
       scope = policy_scope(Noticed::Notification, policy_scope_class: NotificationPolicy::Scope)
                 .includes(:recipient, event: :record)
-                .order(created_at: :desc)
+                .order(Arel.sql("noticed_notifications.read_at IS NULL DESC"), created_at: :desc)
       scope = scope.where(read_at: nil) if params[:filter] == "unread"
       if params[:category].present?
         scope = scope.where(type: ApplicationNotifier.notification_types_for(params[:category]))

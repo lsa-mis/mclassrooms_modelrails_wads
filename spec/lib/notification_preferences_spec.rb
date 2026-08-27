@@ -596,4 +596,34 @@ RSpec.describe NotificationPreferences do
       expect(prefs.digest_changed_by?({})).to eq(false)
     end
   end
+
+  describe "#quiet_hours_deceptive?" do
+    # Quiet hours enabled with zero days selected reads "Enabled" on the
+    # settings screen while quiet_hours_active? can never return true. The
+    # screen warns about it; this predicate is the single owner of what
+    # "deceptive" means, so the ERB and quiet_hours_warning_controller.js
+    # cannot drift into disagreeing about when to show that warning.
+    it "is true when enabled with an explicitly empty day list" do
+      prefs = described_class.new({ "quiet_hours" => { "enabled" => true, "active_days" => [] } })
+      expect(prefs.quiet_hours_deceptive?).to be(true)
+    end
+
+    it "is false when enabled with at least one day" do
+      prefs = described_class.new({ "quiet_hours" => { "enabled" => true, "active_days" => %w[monday] } })
+      expect(prefs.quiet_hours_deceptive?).to be(false)
+    end
+
+    it "is false when disabled, whatever the days say" do
+      prefs = described_class.new({ "quiet_hours" => { "enabled" => false, "active_days" => [] } })
+      expect(prefs.quiet_hours_deceptive?).to be(false)
+    end
+
+    # Legacy rows predate the active_days key and behave as all seven days
+    # active (documented at the top of the per-weekday filter), so a missing
+    # key is not the deceptive state — only an explicitly emptied one is.
+    it "is false when active_days is absent entirely" do
+      prefs = described_class.new({ "quiet_hours" => { "enabled" => true } })
+      expect(prefs.quiet_hours_deceptive?).to be(false)
+    end
+  end
 end

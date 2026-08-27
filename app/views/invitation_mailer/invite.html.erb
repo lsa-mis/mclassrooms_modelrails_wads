@@ -1,6 +1,6 @@
 <h1><%= t("invitation_mailer.invite.greeting") %></h1>
 
-<p><%= t("invitation_mailer.invite.body", inviter: @inviter.full_name, workspace: @workspace.name, role: @role.name) %></p>
+<p><%= t("invitation_mailer.invite.body", inviter: @inviter.email_address, app_name: t("application.name"), role: @role.name) %></p>
 
 <p><%= link_to t("invitation_mailer.invite.accept_action"), @accept_url %></p>
 

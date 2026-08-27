@@ -1,7 +1,7 @@
 ---
 title: Notifications — Technical Reference
 description: Architecture, broadcast pipeline, persistence schema, and operational concerns for the notifications system
-keywords: notifications architecture noticed gem turbo streams broadcasts broadcaster indicator recipients gating idempotency value object pundit cleanup retention digest mailer seen_at quiet hours placeholder deleted record schema bullet audit trail activity log security event password passkey new device sign-in retention floor strict best-effort account activity
+keywords: notifications architecture noticed gem turbo streams broadcasts broadcaster indicator recipients gating idempotency value object pundit cleanup retention digest mailer quiet hours placeholder deleted record schema bullet half-open watermark read state audit trail activity log security event password passkey new device sign-in retention floor strict best-effort account activity
 ---
 
 # Notifications — Technical Reference
@@ -38,7 +38,6 @@ One row per `(event, recipient)` pair. `recipient` is polymorphic (always `User`
 | `recipient_type` / `recipient_id` | Polymorphic recipient |
 | `type` | STI shape — e.g., `PasswordChangedNotifier::Notification` |
 | `read_at` | Nullable timestamp; the read/unread state |
-| `seen_at` | First time the recipient surfaced the row in chrome; set by `mark_seen!` from the notification methods mixin |
 
 There's a composite index `(recipient_id, read_at, created_at)` to back the `/account/notifications` index page (default sort + `?filter=unread`), the per-user unread breakdown that drives the bell indicator, and the cleanup job's `read_at < cutoff` scan.
 
@@ -96,7 +95,6 @@ end
 | `PasswordChangedNotifier` | `security` | `danger` | `User#password_digest` change |
 | `PasskeyAddedNotifier` | `security` | `danger` | Passkey enrollment (`Passkeys::RegistrationsController#verify`) |
 | `SignInFromNewDeviceNotifier` | `security` | `danger` | Login from a previously-unseen browser fingerprint |
-| `WorkspaceInvitationReceivedNotifier` | `account_access` | `info` | `Invitation` created targeting this user |
 | `WorkspaceInvitationAcceptedNotifier` | `workspace_activity` | `success` | An invitee accepts the inviter's invitation |
 | `WorkspaceInvitationDeclinedNotifier` | `workspace_activity` | `info` | An invitee declines |
 | `WorkspaceInvitationResentNotifier` | `account_access` | `info` | Inviter manually resends |
@@ -319,13 +317,13 @@ Both scheduled in `config/recurring.yml` under the `production:` key — that fi
 
 For each due user:
 
-1. Computes the recipient's pending notifications since their last digest send (`seen_at: nil`, created since `digest_last_sent_at`, excluding `security` types — security always delivers instantly)
-2. If non-empty: dispatches `NotificationMailer.digest(user, notifications)` and stamps `seen_at` on every included notification
+1. Captures `cycle_started_at` **before** selecting, then computes the recipient's still-unread notifications in the half-open window `[digest_last_sent_at, cycle_started_at)` (`read_at: nil`, excluding `security` types — security always delivers instantly)
+2. If non-empty: dispatches `NotificationMailer.digest(user, ids)` — **ids, not records** — and stamps `digest_last_sent_at = cycle_started_at`. The half-open window means a notification arriving while the mail is built sits above the new watermark and lands in the next cycle, rather than falling below a watermark stamped after delivery and never being selected. The mailer re-queries those ids `where(read_at: nil)` at delivery time and sends nothing if they have all been read since — so reading an item in-app suppresses its digest line, and a row deleted by retention between enqueue and render cannot raise `DeserializationError` and dead-letter the whole digest.
 3. Updates `digest_last_sent_at` + recomputes `digest_next_due_at` via `UserPreferences#reschedule_digest!`, which writes `NotificationPreferences#next_due_at` — the user's cadence (`daily` or `weekly`, stored in `notification_preferences`) in their own timezone (digest hour is hardcoded at 8 AM local)
 
 If quiet hours block delivery at the digest time, the digest is held until the window closes.
 
-**`seen_at` semantics**: the `seen_at` stamp in step 2 (a single bulk `update_all`) is the load-bearing dedupe — the next cycle's `where(seen_at: nil)` filter skips stamped rows, so no item ever appears in two consecutive digests. The accepted trade-off: seen is marked at **job run**, not at mail delivery. If the downstream mail delivery job fails after `DigestMailerJob` commits, the user has notifications marked seen but no email — and those items will not re-enter a later digest, because the `seen_at` filter excludes them. Recovery is the in-app surface (the unread indicator still shows them until the user opens them, since `seen_at` is independent of `read_at`) plus the mail job's own retry policy.
+**Cycle-boundary semantics**: dedupe between cycles is the half-open watermark, not a stamp on the notification. `cycle_started_at` is captured before the SELECT and becomes the next floor, so the windows tile exactly — no gap, no overlap. What suppresses a digest line is the recipient **reading** the item; the job marks nothing on the row itself. That is a deliberate change: `seen_at` was written only by this job, to itself, and read only by this job's own scope, so the digest deduped against its own bookkeeping and emailed people things they had already read. The accepted trade, stated: glancing at the list without opening an item does not suppress its digest line. If the downstream mail job fails after the watermark is stamped, those items do not re-enter a later digest — recovery is the in-app surface, which still shows them unread, plus the mail job's own retry policy.
 
 ### `NotificationCleanupJob`
 

@@ -93,8 +93,6 @@ en:
           never: "Never"
       update:
         saved_announcement: "Preferences saved"
-    workspace_invitation_received:
-      message: "%{inviter} invited you to %{workspace}"
     workspace_invitation_accepted:
       message: "%{accepter} accepted your invitation to %{workspace}"
     workspace_invitation_resent:
@@ -104,7 +102,7 @@ en:
     workspace_role_changed:
       message: "Your role in %{workspace} changed to %{new_role}"
     workspace_invitation_expiring_soon:
-      message: "Your invitation to %{workspace} expires in %{hours_remaining} hours"
+      message: "Your invitation expires in %{hours_remaining} hours"
     workspace_member_added:
       message: "%{added_user_name} joined %{workspace}"
     workspace_capacity_approaching:
@@ -167,8 +165,8 @@ en:
       body: "Your role in %{workspace} has changed to %{new_role}."
       action: "Open workspace"
     workspace_invitation_expiring_soon:
-      subject: "Your invitation to %{workspace} is about to expire"
-      heading: "Your invitation to %{workspace} is about to expire"
+      subject: "Your invitation is about to expire"
+      heading: "Your invitation is about to expire"
       greeting: "Hi %{name},"
       body: "Your invitation to %{workspace} expires in %{hours_remaining} hours. Accept it before then to avoid having to request a new one."
       action: "Accept invitation"

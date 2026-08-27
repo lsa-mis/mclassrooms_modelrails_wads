@@ -168,11 +168,6 @@ class ApplicationNotifier < Noticed::Event
       stored
     end
 
-    def mark_seen!
-      return if seen_at.present?
-      update_column(:seen_at, Time.current)
-    end
-
     # Wrap Notifier message/url bodies. Rescues only deletion shapes —
     # RecordNotFound and NoMethodError with a *nil* receiver; real bugs on
     # non-nil receivers propagate.

@@ -31,11 +31,14 @@ Rails.application.configure do
   # While tests run files are not watched, reloading is not necessary.
   config.enable_reloading = false
 
-  # Eager loading loads your entire application. When running a single test locally,
-  # this is usually not necessary, and can slow down your test suite. However, it's
-  # recommended that you enable it in continuous integration systems to ensure eager
-  # loading is working properly before deploying your code.
-  config.eager_load = ENV["CI"].present?
+  # Unconditionally, not `ENV["CI"].present?` (#852): eager loading changes
+  # Zeitwerk's load order and everything downstream of it (`descendants`,
+  # subscriber registration, class-body side effects), so a lazily-loaded
+  # local run is a different program than CI — and a green local full-suite
+  # run was being cited as CI evidence. Costs a few seconds of boot per
+  # worker; buys "the pre-push gate runs what CI runs."
+  # spec/eager_load_parity_spec.rb pins it.
+  config.eager_load = true
 
   # Configure public file server for tests with cache-control for performance.
   config.public_file_server.headers = { "cache-control" => "public, max-age=3600" }

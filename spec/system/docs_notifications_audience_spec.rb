@@ -50,6 +50,7 @@ RSpec.describe "Docs notifications audience filter", type: :system do
 
     it "does not show the user-facing copy at the developer URL" do
       visit "/docs/developer/notifications"
+      expect(page).to have_css("article h1", text: /Notifications — Technical Reference/i)
       # Anchored on the user doc's H1 title — stable across prose edits.
       # Regex anchors ensure "Notifications — Technical Reference" does not
       # trigger a false positive against the bare "Notifications" pattern.

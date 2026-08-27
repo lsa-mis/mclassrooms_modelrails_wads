@@ -8,13 +8,7 @@ RSpec.describe "Workspace invitations", type: :system do
   let!(:owner_membership) { create(:membership, :owner, user: admin, workspace: workspace) }
 
   before do
-    visit new_session_path
-    fill_in I18n.t("sessions.new.email_label"), with: admin.email_address
-    click_button I18n.t("sessions.new.continue")
-    expect(page).to have_text(I18n.t("sessions.check_email.title"))
-    token = MagicLinkToken.create_for_email(admin.email_address)
-    visit magic_link_callback_path(token: token)
-    click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
+    sign_in_via_form(admin)
     expect(page).to have_css("#user-menu-button")
   end
 

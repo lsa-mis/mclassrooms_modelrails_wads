@@ -15,7 +15,7 @@ RSpec.describe OauthLink do
   end
 
   describe "existing identity (provider+uid already linked)" do
-    let!(:owner) { create(:user, email_address: "owner@example.com") }
+    let!(:owner) { create(:user, :no_authentications, email_address: "owner@example.com") }
     let!(:auth) do
       owner.authentications.create!(
         provider: "google", uid: "uid-1", email: "owner@example.com", verified_at: Time.current
@@ -64,9 +64,7 @@ RSpec.describe OauthLink do
 
   describe "signed-in user linking a new provider" do
     let(:actor) do
-      create(:user, email_address: "actor@example.com").tap do |u|
-        u.authentications.create!(provider: "email", uid: u.email_address, verified_at: Time.current)
-      end
+      create(:user, email_address: "actor@example.com")
     end
 
     it "returns :already_linked when the provider is already verified for this user" do
@@ -139,9 +137,7 @@ RSpec.describe OauthLink do
     end
 
     it "attaches the identity to an existing user who owns a verified email auth" do
-      existing = create(:user, email_address: "person@example.com").tap do |u|
-        u.authentications.create!(provider: "email", uid: u.email_address, verified_at: Time.current)
-      end
+      existing = create(:user, email_address: "person@example.com")
 
       outcome = nil
       expect {
@@ -153,9 +149,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :failed (C1 collision) when the email belongs to an account without a verified email auth" do
-      create(:user, email_address: "person@example.com").tap do |u|
-        u.authentications.create!(provider: "email", uid: u.email_address)
-      end
+      create(:user, :unverified_email, email_address: "person@example.com")
 
       outcome = nil
       expect {
@@ -191,6 +185,9 @@ RSpec.describe OauthLink do
       end
 
       it "returns :failed when the unverified email already belongs to another account (takeover guard)" do
+        # The other account is the production shape -- a verified email auth.
+        # The guard must hold against an account that can exist, not only
+        # against the zero-auth state production cannot produce (#850 panel).
         create(:user, email_address: "person@example.com")
 
         outcome = nil
@@ -244,9 +241,7 @@ RSpec.describe OauthLink do
     end
 
     it "leaves a still-valid join token parked for a pre-existing user (drive-by guard)" do
-      create(:user, email_address: "person@example.com").tap do |u|
-        u.authentications.create!(provider: "email", uid: u.email_address, verified_at: Time.current)
-      end
+      create(:user, email_address: "person@example.com")
       allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies)
         .and_return(%i[invite open_link])
       workspace = create(:workspace, personal: false, join_policy: "open_link")

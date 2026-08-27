@@ -12,6 +12,13 @@
       value object treats it as quiet-hours-never-active). -%>
   <div class="px-6 py-5 space-y-4"
        data-controller="quiet-hours-warning">
+    <%# The server renders the warning's initial visibility rather than
+        shipping it hidden for Stimulus to correct on connect: a user whose
+        JS is slow or blocked otherwise sees no warning at all in the one
+        state it exists for. NotificationPreferences#quiet_hours_deceptive?
+        is the single owner of the condition; the controller maintains it
+        live from the same rule. -%>
+    <% quiet_hours_deceptive = NotificationPreferences.new(prefs).quiet_hours_deceptive? %>
     <%= form_with url: settings_notification_preferences_path,
           method: :patch,
           data: { controller: "auto-submit" } do |f| %>
@@ -111,7 +118,7 @@
         always-present means the inner <p>'s text appearing is spoken. -%>
     <div role="status" aria-live="polite">
       <p id="quiet-hours-empty-days-warning"
-         class="text-xs text-warning hidden"
+         class="<%= class_names("text-xs", "text-warning", "hidden" => !quiet_hours_deceptive) %>"
          data-quiet-hours-warning-target="warning">
         <%= t("notifications.preferences.quiet_hours.empty_days_warning") %>
       </p>

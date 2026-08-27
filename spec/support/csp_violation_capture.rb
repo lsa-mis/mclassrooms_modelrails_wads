@@ -2,10 +2,12 @@
 
 # Runtime CSP-violation capture for system specs (#128): fails any example
 # whose page fired `securitypolicyviolation` — the bug class #499/#500 proved
-# source-level scans are blind to. Mechanics: one init script per browser
-# process accumulates violations in sessionStorage so same-tab navigations
-# within an example don't lose them; the after-hook reads AND clears, so
-# nothing bleeds across examples. See /docs/developer/testing.
+# source-level scans are blind to. Mechanics: the before-hook installs an init
+# script on each example's fresh page — install is page-scoped, and the
+# after-example `Capybara.reset_sessions!` disposes the page along with its
+# init scripts (#848). The script accumulates violations in sessionStorage so
+# same-tab navigations within an example don't lose them; the after-hook reads
+# AND clears, so nothing bleeds across examples. See /docs/developer/testing.
 module CspViolationCapture
   LISTENER_JS = <<~JS
     document.addEventListener("securitypolicyviolation", (e) => {
@@ -25,12 +27,12 @@ module CspViolationCapture
   # session-nonce generator should produce zero violations anywhere.)
   ALLOWED_VIOLATIONS = [].freeze
 
+  # Unconditional on purpose: `Page.addScriptToEvaluateOnNewDocument` is
+  # page-scoped, and every example starts on a fresh page. Memoizing the
+  # install (on any longer-lived object) is how #848 silently reduced coverage
+  # to one example per worker process.
   def install_csp_violation_listener
-    browser = page.driver.browser
-    return if browser.instance_variable_get(:@__csp_listener_installed)
-
     cdp_add_init_script(LISTENER_JS)
-    browser.instance_variable_set(:@__csp_listener_installed, true)
   end
 
   def captured_csp_violations

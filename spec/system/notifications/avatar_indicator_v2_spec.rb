@@ -8,7 +8,7 @@ RSpec.describe "Avatar notification indicator v2", type: :system do
   def deliver_danger;  PasswordChangedNotifier.with(record: user).deliver(user); end
   def deliver_info
     invitation = create(:invitation, email: user.email_address)
-    WorkspaceInvitationReceivedNotifier.with(record: invitation).deliver(user)
+    WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
   end
   def deliver_warning
     workspace = create(:workspace)
@@ -79,6 +79,7 @@ RSpec.describe "Avatar notification indicator v2", type: :system do
     it "does not render the standalone notifications bell link" do
       deliver_danger
       visit root_path
+      expect(page).to have_css("turbo-frame#notifications_indicator_avatar", visible: :all)
       expect(page).to have_no_css("#notifications-bell-link")
       expect(page).to have_no_css('turbo-frame#notifications_bell_label_frame')
       expect(page).to have_no_css('turbo-frame#notifications_bell_indicator_frame')

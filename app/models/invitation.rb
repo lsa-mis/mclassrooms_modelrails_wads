@@ -72,16 +72,37 @@ class Invitation < ApplicationRecord
     scope
   }
 
-  # Parse a raw invite-form string ("a@x.com, b@y.com\nc@z.com") into a clean
-  # address list. bulk_invite! applies it to whatever it's given, so the
+  # One invite submission fans out to N emails at addresses the sender chose,
+  # so the list is bounded per submission (D13). The controller's rate_limit
+  # bounds how often someone may submit; this bounds how much one submission
+  # can do. Both layers, because either alone leaves the other's gap open.
+  MAX_EMAILS_PER_SUBMISSION = 20
+
+  # Returned rather than a bare Array so the cap cannot be applied silently:
+  # a caller that ignores over_limit? truncates the sender's list without
+  # telling them, which in onboarding means teammates that were typed in
+  # simply never get invited and nobody finds out.
+  ParsedEmailList = Data.define(:emails, :over_limit) do
+    def over_limit? = over_limit
+    def empty? = emails.empty?
+  end
+
+  # Parse a raw invite-form string ("a@x.com, b@y.com\nc@z.com") into a clean,
+  # capped address list. bulk_invite! applies it to whatever it's given, so the
   # invite forms hand the textarea value over verbatim instead of each
   # duplicating the split/strip.
   def self.parse_email_list(emails)
-    Array(emails).flat_map { |chunk| chunk.to_s.split(/[\n,]/) }.map(&:strip).reject(&:blank?)
+    all = Array(emails).flat_map { |chunk| chunk.to_s.split(/[\n,]/) }.map(&:strip).reject(&:blank?)
+
+    ParsedEmailList.new(
+      emails: all.first(MAX_EMAILS_PER_SUBMISSION),
+      over_limit: all.size > MAX_EMAILS_PER_SUBMISSION
+    )
   end
 
   def self.bulk_invite!(workspace:, emails:, role:, invited_by:)
-    emails = parse_email_list(emails)
+    parsed = parse_email_list(emails)
+    emails = parsed.emails
     sent = 0
     skipped = 0
 
@@ -121,7 +142,7 @@ class Invitation < ApplicationRecord
       sent += 1
     end
 
-    { sent: sent, skipped: skipped }
+    { sent: sent, skipped: skipped, over_limit: parsed.over_limit? }
   end
 
   # Shared consumption core for both signup acceptance paths: the session-based

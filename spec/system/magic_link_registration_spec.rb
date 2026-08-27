@@ -10,12 +10,9 @@ RSpec.describe "Magic link registration", type: :system do
     it "sends a registration link and allows account creation" do
       visit new_session_path
 
-      fill_in I18n.t("sessions.new.email_label"), with: "brand-new@example.com"
-      click_button I18n.t("sessions.new.continue")
+      token = request_magic_link("brand-new@example.com")
 
-      expect(page).to have_text(I18n.t("sessions.check_email.title"))
-
-      visit magic_link_callback_path(token: MagicLinkToken.create_for_email("brand-new@example.com"))
+      visit magic_link_callback_path(token: token)
 
       expect(page).to have_text(I18n.t("magic_link_callbacks.new_registration.title"))
       expect(page).to have_text("brand-new@example.com")

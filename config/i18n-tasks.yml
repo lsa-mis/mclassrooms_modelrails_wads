@@ -229,14 +229,17 @@ ignore_unused:
   # delete these and every feed entry silently degrades to a humanized column
   # value with nothing raising and the suite still green (#522).
   - activity.actions.*
-  # settings/sessions/index.html.erb builds the key the same dynamic way from
-  # ActivityLog::SECURITY_ACTIONS entries:
-  #   t("settings.sessions.activity.#{entry.action}", default: ...humanize)
+  # AccountActivityHelper#account_activity_label builds the key the same
+  # dynamic way from ActivityLog::SECURITY_ACTIONS entries, and appends
+  # `_with_os` when the row carries one:
+  #   t("settings.sessions.activity.#{entry.action}#{"_with_os" if os}", ...)
   # Same #522 risk as activity.actions.* above — the `default:` means a
   # deleted key silently degrades to a humanized action string.
   # spec/models/activity_log_spec.rb pins every SECURITY_ACTIONS key's
   # existence, so a stale entry here still fails the suite (same role as the
-  # passkeys.errors.* spec above).
+  # passkeys.errors.* spec above); the `_with_os` variant is not a
+  # SECURITY_ACTIONS member and is pinned instead by its rendered text in
+  # spec/requests/settings/sessions_spec.rb.
   - settings.sessions.activity.user.*
   # Consumed by Rails/Active Model rather than an explicit t() call. Caveat
   # worth knowing: this also means a key left behind by a deleted validation

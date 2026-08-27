@@ -146,9 +146,18 @@ RSpec.describe "Notification preferences", type: :system do
 
       toggle_label.click
 
+      # Poll on the suite-owned wait budget, not a private 2s — a CSS
+      # transition's rect change is not Capybara-retryable, and a sibling
+      # example has blown a five-second budget on this contended runner
+      # (#841/#857). The rescue keeps a timeout reporting through the
+      # expectation's message instead of a bare Timeout::Error.
       moved = false
-      Timeout.timeout(2) do
-        sleep 0.05 until (moved = page.evaluate_script(knob_left_js) != initial_x)
+      begin
+        Timeout.timeout(Capybara.default_max_wait_time) do
+          sleep 0.05 until (moved = page.evaluate_script(knob_left_js) != initial_x)
+        end
+      rescue Timeout::Error
+        moved = false
       end
 
       expect(moved).to eq(true), "Toggle pill knob did not move after click — visual feedback is broken"
@@ -208,18 +217,24 @@ RSpec.describe "Notification preferences", type: :system do
       expect(page).to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
     end
 
+    # Asserts the warning EXISTS and is hidden, rather than that its text is
+    # absent. The bare negation could not distinguish "correctly hidden" from
+    # "never rendered" or "page broken" — it passed with the controller
+    # deleted and with the <p> deleted. Same idiom as footer_cookies_spec.
     it "hides the warning when quiet hours are enabled with at least one active day" do
       set_quiet_hours(enabled: true, active_days: %w[monday wednesday friday])
       visit edit_settings_notification_preferences_path
 
-      expect(page).not_to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
+      expect(page).to have_css("#quiet-hours-empty-days-warning", visible: :hidden)
+      expect(page).to have_no_css("#quiet-hours-empty-days-warning", visible: true)
     end
 
     it "hides the warning when quiet hours are disabled regardless of days" do
       set_quiet_hours(enabled: false, active_days: [])
       visit edit_settings_notification_preferences_path
 
-      expect(page).not_to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
+      expect(page).to have_css("#quiet-hours-empty-days-warning", visible: :hidden)
+      expect(page).to have_no_css("#quiet-hours-empty-days-warning", visible: true)
     end
 
     it "live: clicking the last checked day to uncheck it reveals the warning without reload" do
@@ -269,7 +284,12 @@ RSpec.describe "Notification preferences", type: :system do
       fieldset = find("fieldset", text: I18n.t("notifications.preferences.quiet_hours.active_days_label"))
       described_by_id = fieldset["aria-describedby"]
       expect(described_by_id).to be_present, "fieldset must point at the warning so SR users link the two"
-      warning = find("##{described_by_id}")
+      # visible: :all, matching the sibling lookups of this same element at
+      # the top and bottom of this block. What this example asserts is a
+      # WIRING relationship — the fieldset points at the warning — for which
+      # visibility is irrelevant. Without it the lookup waited on JS and
+      # flaked on loaded shards (#837).
+      warning = find("##{described_by_id}", visible: :all)
       expect(warning.text).to include(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
     end
 

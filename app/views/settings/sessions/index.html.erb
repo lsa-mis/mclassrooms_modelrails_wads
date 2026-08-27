@@ -4,7 +4,7 @@
         title: t("settings.sessions.index.title"),
         description: t("settings.sessions.index.description") %>
 
-  <ul role="list" class="mt-8 space-y-4">
+  <ul role="list" data-testid="device-list" class="mt-8 space-y-4">
     <% @sessions.each do |session| %>
       <% current = session.id == Current.session.id %>
       <%# Single-column stack below lg (#768): the settings sidebar appears at
@@ -87,17 +87,16 @@
             matching the device list above. %>
         <ol role="list" class="divide-y divide-border">
           <% @recent_activity.each do |entry| %>
-            <%# Label plus relative time only — metadata (device OS, passkey
-                nickname) stays unrendered by design. A future security
-                action added without a matching label here still renders,
-                humanized, rather than a raw "translation missing" string. -%>
+            <%# Label plus relative time. Metadata stays unrendered except where
+                a label names it — see AccountActivityHelper, which also
+                carries the humanized fallback for a security action shipped
+                without a label. -%>
             <li data-testid="account-activity-item"
                 class="flex items-center justify-between gap-4 px-6 py-4 text-sm">
-              <span class="text-text-body">
-                <%= t("settings.sessions.activity.#{entry.action}",
-                      default: entry.action.delete_prefix("user.").humanize) %>
-              </span>
-              <time datetime="<%= entry.created_at.iso8601 %>" class="text-xs text-text-muted shrink-0">
+              <span class="text-text-body"><%= account_activity_label(entry) %></span>
+              <time datetime="<%= entry.created_at.iso8601 %>"
+                    title="<%= account_activity_timestamp(entry) %>"
+                    class="text-xs text-text-muted shrink-0">
                 <%= t("settings.sessions.activity.time_ago", time: time_ago_in_words(entry.created_at)) %>
               </time>
             </li>

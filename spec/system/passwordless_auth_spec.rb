@@ -23,12 +23,9 @@ RSpec.describe "Passwordless-first auth", type: :system do
       email = "newbie-#{SecureRandom.hex(4)}@example.com"
 
       visit new_session_path
-      fill_in I18n.t("sessions.new.email_label"), with: email
-      click_button I18n.t("sessions.new.continue")
+      token = request_magic_link(email)
 
-      expect(page).to have_text(I18n.t("sessions.check_email.title"))
-
-      visit magic_link_callback_path(token: MagicLinkToken.create_for_email(email))
+      visit magic_link_callback_path(token: token)
 
       fill_in I18n.t("magic_link_callbacks.new_registration.first_name_label"), with: "New"
       fill_in I18n.t("magic_link_callbacks.new_registration.last_name_label"),  with: "Bie"
@@ -100,17 +97,21 @@ RSpec.describe "Passwordless-first auth", type: :system do
       # We submit natively via execute_script to bypass Turbo's submit event
       # listener — HTMLFormElement.prototype.submit skips all event listeners —
       # so the browser issues a real browser-level POST and follows the render.
-      page.execute_script(<<~JS)
-        const form = document.querySelector("form[action*='password_reset']");
-        if (form) { HTMLFormElement.prototype.submit.call(form); }
-      JS
+      perform_enqueued_jobs do
+        page.execute_script(<<~JS)
+          const form = document.querySelector("form[action*='password_reset']");
+          if (form) { HTMLFormElement.prototype.submit.call(form); }
+        JS
 
-      # After the native POST, PasswordResetsController#create re-renders
-      # check_email (including "Check your email" heading) inside the layout.
-      # Wait for that heading to confirm the server rendered it.
-      expect(page).to have_text(I18n.t("sessions.check_email.title"), wait: 10)
+        # After the native POST, PasswordResetsController#create re-renders
+        # check_email (including "Check your email" heading) inside the layout.
+        # Wait for that heading to confirm the server rendered it.
+        expect(page).to have_text(I18n.t("sessions.check_email.title"), wait: 10)
+      end
 
-      visit magic_link_callback_path(token: MagicLinkToken.create_for_email(user.email_address, intent: "set_password"))
+      # The reset mail carries the app's set_password token; minting a second
+      # one here would race the controller's and prove nothing about the mail.
+      visit magic_link_callback_path(token: magic_link_token_from_email(user.email_address))
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
 
       expect(page).to have_current_path(edit_settings_password_path)

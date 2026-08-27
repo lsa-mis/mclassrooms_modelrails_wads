@@ -68,6 +68,7 @@ RSpec.describe "Workspace settings danger zone", type: :system do
 
     it "shows no Archive or Delete controls (home workspaces are lifecycle-exempt)" do
       visit edit_workspace_settings_path(home)
+      expect(page).to have_css("h1", text: CGI.unescapeHTML(I18n.t("settings.pages.workspace_limits_and_plan.h1_html")))
       expect(page).to have_no_button(I18n.t("workspaces.archive.trigger"))
       expect(page).to have_no_button(I18n.t("workspaces.destroy.trigger"))
     end

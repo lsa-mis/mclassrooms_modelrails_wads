@@ -47,14 +47,17 @@ RSpec.describe "Noticed hardening" do
     end
   end
 
-  describe "seen_before_read check constraint" do
-    it "rejects read_at < seen_at" do
-      user = create(:user)
-      now = Time.current
-      expect {
-        TestNotification.create!(event_id: event.id, recipient: user,
-                                 seen_at: now, read_at: now - 1.hour)
-      }.to raise_error(ActiveRecord::StatementInvalid, /CHECK constraint failed: seen_before_read/)
+  # The seen_before_read constraint went with the seen_at column (D10) — read
+  # state is now the only per-row attention state, so there is no ordering
+  # between two stamps left to enforce.
+  describe "seen_at removal" do
+    it "no longer has a seen_at column or its ordering constraint" do
+      columns = ActiveRecord::Base.connection.columns("noticed_notifications").map(&:name)
+      expect(columns).not_to include("seen_at")
+
+      constraints = ActiveRecord::Base.connection
+        .check_constraints("noticed_notifications").map(&:name)
+      expect(constraints).not_to include("seen_before_read")
     end
   end
 

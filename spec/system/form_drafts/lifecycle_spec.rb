@@ -17,10 +17,9 @@ RSpec.describe "Form draft submit lifecycle", type: :system do
       click_button "Save"
     end
     expect(page).to have_text("Saved")
-    # Negative-assertion window (#453): proving nothing was written has no
-    # condition to wait on — allow the flush path's async encrypt+write time
-    # to land wrongly, then assert silence.
-    sleep 0.5
+    # Allow the flush path's async encrypt+write time to land wrongly, then
+    # assert silence (window owned by the helper — #453/#857).
+    wait_out_draft_autosave_window
     expect(page.evaluate_script("localStorage.getItem(#{draft_storage_key(user, 'harness-main').to_json}) === null")).to be(true)
   end
 

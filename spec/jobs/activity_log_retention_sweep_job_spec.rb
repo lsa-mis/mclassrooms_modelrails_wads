@@ -25,8 +25,9 @@ RSpec.describe ActivityLogRetentionSweepJob, type: :job do
     let(:user) { create(:user) }
 
     def personal_row(action, age)
+      user # materialize before the warp — records created inside travel_to land at the travelled-to timestamp (R7, #830)
       travel_to(age.ago) do
-        ActivityLog.create!(action: action, actor: user, trackable: user, visibility: "personal")
+        create(:activity_log, :security, action: action, actor: user)
       end
     end
 

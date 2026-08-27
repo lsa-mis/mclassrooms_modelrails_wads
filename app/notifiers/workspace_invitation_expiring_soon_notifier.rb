@@ -3,7 +3,9 @@
 class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
   category :account_access
   severity :warning
-  record_preloads invitable: :workspace
+  # No record_preloads: the neutral copy removed this notifier's last
+  # association traversal, and a declaration for associations #message no
+  # longer reads fails the preloads guard as unused eager loading.
   # Dispatched by WorkspaceInvitationExpiringSweepJob, which scans the
   # 24-hour expiring window every 6 hours. With the default minute bucket,
   # each invitation in the window would receive ~4 dispatches per day (one
@@ -30,7 +32,6 @@ class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
         I18n.t(
           "notifications.workspace_invitation_expiring_soon.message",
           locale: recipient_locale,
-          workspace: event.record.resolved_workspace&.name,
           hours_remaining: event.record.expires_in_hours
         )
       end
