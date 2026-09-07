@@ -89,8 +89,9 @@ RSpec.describe "Passkeys", type: :system do
 
       # Default option set: the full cumulative A/AA/AAA stack. The previous
       # ["wcag2aaa"] narrowing here was justified by two claims that were not
-      # true — axe's best-practice rules were never in AXE_TAG_SET so the
-      # default never ran them, and the audit has run AAA locally since #542,
+      # true — the default reported no best-practice advisory it could bury the
+      # signal under (it still doesn't; only PROMOTED_BEST_PRACTICE_RULES
+      # survive the filter, #464), and the audit has run AAA locally since #542,
       # not AA. What the narrowing did do was drop the A/AA foundation (#829).
       expect(axe_clean_in_both_themes?).to eq(true),
         "AAA violations:\n#{axe_violations_in_both_themes.join("\n")}"

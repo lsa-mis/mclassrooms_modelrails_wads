@@ -70,43 +70,55 @@ RSpec.describe "Mutating controller actions authorize or are allow-listed" do
   # auth-entry flow (no signed-in user to authorize) or scoped entirely to
   # Current.user's own resources (no cross-user/tenant surface). Adding to this
   # list is a deliberate, reviewed decision.
-  allow_list = %w[
-    direct_uploads#create
-    email_verification_resends#create
-    invitation_accepts#create
-    invitation_declines#create
-    magic_link_callbacks#create
-    magic_link_callbacks#sign_in
-    magic_links#create
-    password_resets#create
-    sessions#create
-    sessions#destroy
-    sessions#lookup
-    sessions#update
-    workspaces/joins#create
-    passkeys/authentications#options
-    passkeys/authentications#verify
-    passkeys/reauthentications#options
-    passkeys/reauthentications#verify
-    passkeys/registrations#options
-    passkeys/registrations#verify
-    onboardings#update
-    passkey_prompts#update
-    pending_joins#create
-    pending_joins#destroy
-    settings/connected_accounts#destroy
-    settings/connected_accounts#resend_verification
-    settings/email_confirmations#destroy
-    settings/notifications#destroy
-    settings/notifications#update
-    settings/other_sessions#destroy
-    settings/passkeys#destroy
-    settings/passwords#create
-    settings/passwords#destroy
-    settings/passwords#update
-    settings/reauthentication_codes#create
-    settings/reauthentications#create
-    settings/sessions#destroy
+  allow_list = [
+    "direct_uploads#create",
+    "email_verification_resends#create",
+    # The signed verification token is the authorization: it acts only on the
+    # single Authentication it names, exactly like magic_link_callbacks#create
+    # and magic_link_callbacks/sessions#create below.
+    "email_verifications#create",
+    "invitation_accepts#create",
+    # The signed block-confirmation token from the invitee's own invitation
+    # email is the authorization; the action acts only on the invitation the
+    # token names (#951).
+    "invitation_blocks#create",
+    "invitation_declines#create",
+    "magic_link_callbacks#create",
+    "magic_link_callbacks/sessions#create",
+    "magic_links#create",
+    "password_resets#create",
+    "sessions#create",
+    "sessions#destroy",
+    "sessions/lookups#create",
+    "sessions#update",
+    "workspaces/joins#create",
+    # WebAuthn ceremonies: the challenge is public or the current user's own,
+    # and the signed assertion is the authorization for what it earns.
+    "passkeys/authentication/challenges#create",
+    "passkeys/authentication/sessions#create",
+    "passkeys/reauthentication/challenges#create",
+    "passkeys/reauthentication/confirmations#create",
+    "passkeys/registration/challenges#create",
+    "passkeys/registration/credentials#create",
+    "onboardings#update",
+    "passkey_prompts#update",
+    "pending_joins#create",
+    "pending_joins#destroy",
+    "settings/connected_accounts#destroy",
+    "settings/connected_accounts/verification_resends#create",
+    # Same rationale as email_verifications#create above: the signed
+    # verification token names the one Authentication the action acts on.
+    "settings/connected_account_verifications#create",
+    "settings/email_confirmations#destroy",
+    "settings/notifications#update",
+    "settings/other_sessions#destroy",
+    "settings/passkeys#destroy",
+    "settings/passwords#create",
+    "settings/passwords#destroy",
+    "settings/passwords#update",
+    "settings/reauthentication_codes#create",
+    "settings/reauthentications#create",
+    "settings/sessions#destroy"
   ].to_set
 
   it "every mutating action calls authorize or is explicitly allow-listed" do

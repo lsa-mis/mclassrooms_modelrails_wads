@@ -44,7 +44,14 @@ export default class extends Controller {
       option.hidden = !match
       return match
     })
-    this.emptyTarget.hidden = visible.length > 0
+    const isEmpty = visible.length === 0
+    this.emptyTarget.hidden = !isEmpty
+    // An empty listbox (no role="option" children at all) is hidden too —
+    // not just visually empty — so a screen reader lands on the visible
+    // role="status" sibling instead of an empty listbox with nothing to
+    // announce (aria-required-children stays satisfied either way, since
+    // the status message lives outside the listbox — see combobox_component.rb).
+    this.listTarget.hidden = isEmpty
     // Keep the active option valid as the visible set narrows.
     this._setActive(visible[0] || null)
   }
@@ -113,6 +120,18 @@ export default class extends Controller {
 
   closeOnClickOutside({ target }) {
     if (!this.element.contains(target)) this.close()
+  }
+
+  // Focus leaving the widget dismisses it (APG combobox; #684). A pointer
+  // selection never gets here: keepFocus cancels the option's mousedown so the
+  // input keeps focus until the click lands.
+  closeOnFocusOut({ relatedTarget }) {
+    if (relatedTarget && this.element.contains(relatedTarget)) return
+    this.close()
+  }
+
+  keepFocus(event) {
+    event.preventDefault()
   }
 
   // Promote options to stable ids so aria-activedescendant can reference them

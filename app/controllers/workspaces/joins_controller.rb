@@ -27,7 +27,7 @@ module Workspaces
     private
 
     def admit_authenticated_user
-      @workspace.admit(Current.user, role: @workspace.default_self_join_role)
+      @workspace.admit(Current.user, role: @workspace.default_self_join_role, self_join: true)
       redirect_to workspace_path(@workspace), notice: t("workspaces.joins.create.joined", workspace: @workspace.name)
     rescue Workspace::AlreadyMember
       # Already in: no-op, land them in the workspace.

@@ -11,7 +11,10 @@ export default class extends Controller {
   static values = { target: String }
 
   connect() {
-    const input = document.querySelector(this.targetValue)
+    // Each identity-picker view carries its own file input (#912); resolve
+    // the one in this frame, never the first match in the document.
+    const scope = this.element.closest("turbo-frame") || document
+    const input = scope.querySelector(this.targetValue)
     if (!input) return
 
     // Notify the identity-picker controller that a file picker is opening

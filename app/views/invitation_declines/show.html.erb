@@ -4,12 +4,22 @@
     <%= t("invitation_declines.show.title") %>
   </h1>
 
-  <p class="mt-4 text-text-muted">
-    <%= t("invitation_declines.show.body", workspace: @invitation.invitable.name) %>
+  <p class="mt-4 text-text-muted break-words">
+    <%= t("invitation_declines.show.body",
+          workspace: @invitation.invitable.name,
+          inviter: @invitation.invited_by.email_address) %>
   </p>
 
   <%= button_to t("invitation_declines.show.confirm"),
         decline_invitation_path(token: @invitation.token),
         method: :post,
         class: "btn-outline-danger mt-8 w-full" %>
+
+  <% if @invitation.has_invitee? %>
+    <%# Blocking moved behind the signed link in the invitation email (#951):
+        nothing reachable from a bearer URL can block. %>
+    <p class="mt-6 text-sm text-text-body break-words">
+      <%= t("invitation_declines.show.block_hint", inviter: @invitation.invited_by.email_address) %>
+    </p>
+  <% end %>
 </div>

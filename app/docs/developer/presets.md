@@ -38,6 +38,12 @@ When in doubt, start with **Solo-default** — switching to any of the others is
 
 Switching **to `:none`** is a special case: it's effectively a from-scratch product shape. Existing users keep their workspaces; the knob change only affects new signups. Landing new users on a workspace-agnostic home requires overriding `authenticated_home_path` (see [Workspace-optional](/docs/developer/presets-none) and [Forking](/docs/developer/forking)) and building a home view that works with no workspace in context. Plan this at setup time.
 
+## Two mechanics that surprise people
+
+**The first-run wizard's step is derived, never persisted.** Under the `:none` posture the only onboarding state on the record is `onboarded_at`; `User#onboarding_step` reads the workspace and project data to decide `:workspace`, `:project`, or `:team`, so the dispatcher, the guard, and the step controllers all get one answer from one place instead of re-deriving it.
+
+**Under `:shared`, signup pre-creates a placeholder membership, and invitation acceptance reconciles it.** `User#onboard_workspace` joins every new user to the shared workspace as a Member (with `self_join: :onboarding`, so nobody is notified about their own arrival). When that user then accepts an invitation carrying a different role, `Workspace#admit` finds the existing kept membership and adopts the invitation's role rather than treating it as a duplicate accept. The `:personal` posture is untouched by this branch. If the shared workspace is not admittable at signup time, registration still succeeds and the user simply joins nothing; a raise there would roll the account back.
+
 ## Next steps
 
 Pick the shape you're building and follow its page end-to-end:

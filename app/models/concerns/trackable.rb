@@ -15,12 +15,14 @@
 # tier is the contract, not the call site: several writers share this one.
 #
 #   BEST-EFFORT (rescues; never fails the operation it records) — this
-#   concern, plus three writers that live outside it because their events
+#   concern, plus four writers that live outside it because their events
 #   never reach these callbacks: Membership#record_ownership_demotion (a
 #   callback-skipping CAS update_all), ApplicationController#log_blocked_role_grant
-#   (a refusal, so there is no record to track), and
+#   (a refusal, so there is no record to track),
 #   Authenticatable#detect_and_record_new_device (a sign-in, corroborated by
-#   the Session row).
+#   the Session row), and Invitation#record_suppressed_delivery (fired from
+#   mailer callbacks, where this concern's hooks must not run — the stamp it
+#   records is written callback-free on purpose; PR 4 spec §7).
 #
 #   STRICT (no rescue; the audit row commits with the credential mutation or
 #   neither does) — User#audit_password_digest_change and
@@ -54,13 +56,21 @@ module Trackable
     changes = previous_changes.except("updated_at", "created_at")
     changes = changes.except(*SENSITIVE_ATTRIBUTES)
     return if changes.empty?
-    create_activity("#{model_name.param_key}.updated", changes: enrich_tracked_changes(changes))
+    create_activity("#{model_name.param_key}.updated", tracked_update_metadata(changes))
   end
 
   # Overridable so a model can make a specific event human-readable or
   # admin-only. Defaults preserve existing behavior for every other model.
   def enrich_tracked_changes(changes)
     changes
+  end
+
+  # Overridable so a model can attach provenance an update row needs beyond the
+  # changed columns — the create path has track_creation's metadata argument for
+  # that, the update path had nothing. Same best-effort guarantee: this is
+  # assembled inside create_activity's rescue, not a new writer.
+  def tracked_update_metadata(changes)
+    { changes: enrich_tracked_changes(changes) }
   end
 
   def activity_visibility(_action)

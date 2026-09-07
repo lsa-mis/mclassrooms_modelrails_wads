@@ -35,10 +35,14 @@ RSpec.describe "Verified OAuth account linking", type: :system do
     expect(delivered).to be_present
     expect(delivered.to).to eq([ "alice.work@gmail.com" ])
 
-    # Mint a verification link for the pending auth and click it
+    # Mint a verification link for the pending auth, land on the confirmation
+    # page (GET does not verify, #950), and click through to verify (POST).
     auth = user.authentications.find_by(provider: "google")
     expect(auth).to be_pending
-    visit verify_settings_connected_accounts_path(token: auth.generate_token_for(:email_verification))
+    visit settings_connected_account_verification_path(token: auth.generate_token_for(:email_verification))
+    expect(auth.reload).not_to be_verified
+    click_button I18n.t("settings.connected_account_verifications.show.button",
+      email: auth.email, provider: auth.display_provider)
 
     # Verified, redirected to connected accounts
     expect(page).to have_current_path(settings_connected_accounts_path)

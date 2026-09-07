@@ -1,4 +1,4 @@
-<%# locals: (title:, id: nil, body_id: nil, size: :md, description: nil, trigger: nil, trigger_class: "btn-secondary") -%>
+<%# locals: (title:, id: nil, body_id: nil, size: :md, description: nil, role: :dialog, trigger: nil, trigger_class: "btn-secondary") -%>
 <%#
   Thin adapter over UI::DialogComponent.
 
@@ -13,7 +13,7 @@
 -%>
 <% if trigger.present? %>
   <%= render UI::DialogComponent.new(
-        title: title, id: id, body_id: body_id, size: size, description: description, wrapper: true) do |d| %>
+        title: title, id: id, body_id: body_id, size: size, description: description, role: role, wrapper: true) do |d| %>
     <% d.with_trigger do %>
       <%= tag.button(trigger, type: "button", class: trigger_class) %>
     <% end %>
@@ -22,5 +22,5 @@
 <% else %>
   <%= render UI::DialogComponent.new(
         title: title, id: id, body_id: body_id || "modal-body", size: size, description: description,
-        wrapper: false) do %><%= yield %><% end %>
+        role: role, wrapper: false) do %><%= yield %><% end %>
 <% end %>

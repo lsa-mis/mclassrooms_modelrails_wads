@@ -56,7 +56,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
       pinned = page.find("[data-test='current-workspace-row']")
       within(pinned) do
         expect(page).to have_text(I18n.t("workspaces.plans.free"))
-        expect(page).to have_text(I18n.t("workspaces.index.row.role.owner"))
+        expect(page).to have_text("Owner")
         expect(page).to have_text(I18n.t("workspaces.index.row.member", count: 2))
         # "Last accessed 2 minutes ago" — use a partial substring to avoid
         # locale/clock fragility.
@@ -65,7 +65,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
       others = page.find("[data-test='other-workspaces-list']")
       within(others) do
-        expect(page).to have_text(I18n.t("workspaces.index.row.role.member"))
+        expect(page).to have_text("Member")
       end
     end
 

@@ -76,37 +76,8 @@ RSpec.describe "Magic Link Callbacks", type: :request do
     end
   end
 
-  describe "POST /magic_link_callback/:token/sign_in (SEC-5: the state-changing half)" do
-    let(:user) { create(:user) }
-
-    it "consumes the token and signs the existing user in" do
-      token = MagicLinkToken.create_for_email(user.email_address)
-      post magic_link_callback_sign_in_path(token: token)
-      expect(MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consumed_at).to be_present
-      expect(response).to redirect_to(root_path)
-      get root_path
-      expect(response).to have_http_status(:ok) # session established
-    end
-
-    it "honors the set_password intent's return path" do
-      token = MagicLinkToken.create_for_email(user.email_address, intent: "set_password")
-      post magic_link_callback_sign_in_path(token: token)
-      expect(response).to redirect_to(edit_settings_password_path)
-    end
-
-    it "rejects an already-consumed token" do
-      token = MagicLinkToken.create_for_email(user.email_address)
-      MagicLinkToken.consume!(token)
-      post magic_link_callback_sign_in_path(token: token)
-      expect(response).to redirect_to(new_session_path)
-      expect(flash[:alert]).to be_present
-    end
-
-    it "rejects a bogus token" do
-      post magic_link_callback_sign_in_path(token: "nope")
-      expect(response).to redirect_to(new_session_path)
-    end
-  end
+  # The sign-in POST (SEC-5's state-changing half) moved to
+  # spec/requests/magic_link_callbacks/sessions_spec.rb with the resource (#1007).
 
   describe "POST /magic_link_callback/:token" do
     context "valid token and valid user params" do
@@ -144,6 +115,16 @@ RSpec.describe "Magic Link Callbacks", type: :request do
           user: { first_name: "Jane", last_name: "Doe" }
         }
         expect(response).to redirect_to(root_path)
+      end
+
+      it "leaves exactly one welcome notification on the new account" do
+        post magic_link_callback_path(token: token), params: {
+          user: { first_name: "Jane", last_name: "Doe" }
+        }
+
+        registrant = User.find_by(email_address: "newreg@example.com")
+        expect(Noticed::Notification.where(recipient: registrant,
+                                           type: "WelcomeNotifier::Notification").count).to eq 1
       end
     end
 

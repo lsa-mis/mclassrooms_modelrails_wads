@@ -38,7 +38,7 @@ RSpec.describe "Email change", type: :system do
   describe "confirming email change" do
     before do
       sign_in_via_form(user)
-      Users::EmailChange.new(user).initiate!("confirmed@example.com")
+      User::EmailChange.new(user).initiate!("confirmed@example.com")
       user.reload
     end
 
@@ -61,7 +61,7 @@ RSpec.describe "Email change", type: :system do
   describe "cancelling email change" do
     before do
       sign_in_via_form(user)
-      Users::EmailChange.new(user).initiate!("cancel@example.com")
+      User::EmailChange.new(user).initiate!("cancel@example.com")
       visit edit_settings_profile_path
     end
 

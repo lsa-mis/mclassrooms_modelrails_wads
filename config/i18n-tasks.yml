@@ -55,7 +55,6 @@ data:
     - ['identity_picker.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['invitation_accepts.*', 'config/locales/%{locale}/invitations.%{locale}.yml']
     - ['invitation_declines.*', 'config/locales/%{locale}/invitations.%{locale}.yml']
-    - ['invitation_mailer.invite_client.*', 'config/locales/%{locale}/clientside.%{locale}.yml']
     - ['invitation_mailer.invite.*', 'config/locales/%{locale}/invitations.%{locale}.yml']
     - ['lifecycle.*', 'config/locales/%{locale}/lifecycle.%{locale}.yml']
     - ['lifecycle_status.*', 'config/locales/%{locale}/lifecycle.%{locale}.yml']
@@ -63,6 +62,10 @@ data:
     - ['magic_link_mailer.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
     - ['magic_links.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
     - ['markdowndocs.default_title', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['markdowndocs.search_placeholder', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['markdowndocs.search_label', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['markdowndocs.no_search_results', 'config/locales/%{locale}/application.%{locale}.yml']
+    - ['markdowndocs.try_different_search', 'config/locales/%{locale}/application.%{locale}.yml']
     - ['markdowndocs.modes.*', 'config/locales/%{locale}/application.%{locale}.yml']
     - ['markdowndocs.docs.*', 'config/locales/%{locale}/markdowndocs.%{locale}.yml']
     - ['modals.*', 'config/locales/%{locale}/modals.%{locale}.yml']
@@ -84,14 +87,15 @@ data:
     - ['sessions.check_email.*', 'config/locales/%{locale}/auth.%{locale}.yml']
     - ['sessions.create.*', 'config/locales/%{locale}/auth.%{locale}.yml']
     - ['sessions.destroy.*', 'config/locales/%{locale}/auth.%{locale}.yml']
-    - ['sessions.lookup.*', 'config/locales/%{locale}/auth.%{locale}.yml']
+    - ['sessions.lookups.*', 'config/locales/%{locale}/auth.%{locale}.yml']
     - ['sessions.new.*', 'config/locales/%{locale}/auth.%{locale}.yml']
-    - ['sessions.password_form.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
+    - ['sessions.passwords.*', 'config/locales/%{locale}/magic_links.%{locale}.yml']
     - ['settings.appearance.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['settings.avatars.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['settings.connected_accounts.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['settings.email_confirmations.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['settings.notification_preferences.*', 'config/locales/%{locale}/account.%{locale}.yml']
+    - ['settings.notification_readings.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['settings.other_sessions.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['settings.passkeys.*', 'config/locales/%{locale}/account.%{locale}.yml']
     - ['settings.passwords.*', 'config/locales/%{locale}/account.%{locale}.yml']
@@ -214,8 +218,8 @@ ignore_unused:
   # the working proof of use.
   - navigation.profile
   - settings.sidebar.items.invitations
-  - workspaces.invitations.resend.recently_sent
-  - workspaces.invitations.resend.resent
+  - workspaces.invitations.resends.create.recently_sent
+  - workspaces.invitations.resends.create.resent
   # Resolved dynamically at runtime, so no static call site exists.
   - notification_mailer.digest.subject.*
   # Rendered via t(error.i18n_key) — each Passkeys::Error subclass derives its
@@ -224,7 +228,7 @@ ignore_unused:
   # key's existence, so a stale entry here still fails the suite.
   - passkeys.errors.*
   # activity_logs/_activity_log.html.erb builds the key from the record:
-  #   t("activity.actions.#{activity_log.action}", default: action.humanize)
+  #   t("activity.actions.#{activity_log.display_action}", default: action.humanize)
   # The `default:` is what makes this dangerous rather than merely invisible —
   # delete these and every feed entry silently degrades to a humanized column
   # value with nothing raising and the suite still green (#522).

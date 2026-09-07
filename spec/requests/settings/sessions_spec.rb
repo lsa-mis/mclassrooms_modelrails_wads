@@ -199,18 +199,21 @@ RSpec.describe "Settings::Sessions", type: :request do
       expect(response.body).to include(I18n.t("settings.sessions.activity.empty"))
     end
 
-    # The fallback's real case is a NEW MEMBER of SECURITY_ACTIONS shipped
-    # without a locale key — a non-member no longer reaches the card at all
-    # now that membership is the filter (#827). stub_const puts the action in
-    # the set the way a later PR in this arc would.
-    it "degrades a future security action without a label to a humanized fallback" do
-      stub_const("ActivityLog::SECURITY_ACTIONS", ActivityLog::SECURITY_ACTIONS + [ "user.mystery_action" ])
-      create(:activity_log, :security, action: "user.mystery_action", actor: user)
+    # No fallback any more: a NEW MEMBER of SECURITY_ACTIONS shipped without a
+    # locale key fails spec/code_smells/dynamic_i18n_keys_have_values_spec.rb
+    # before it reaches this card. What the card promises is that every
+    # current member renders its own label.
+    it "renders its label for every security action" do
+      ActivityLog::SECURITY_ACTIONS.each do |action|
+        create(:activity_log, :security, action: action, actor: user)
+      end
 
       get settings_sessions_path
 
-      row = activity_items(response.body).first
-      expect(row.text).to include("Mystery action")
+      labels = activity_items(response.body).map { |row| activity_label(row) }
+      ActivityLog::SECURITY_ACTIONS.each do |action|
+        expect(labels).to include(I18n.t("settings.sessions.activity.#{action}"))
+      end
     end
 
     # Three reviewers, independently: "about 5 hours ago" is not enough to
@@ -261,9 +264,8 @@ RSpec.describe "Settings::Sessions", type: :request do
         .to eq(I18n.t("settings.sessions.activity.user.signed_in_new_device"))
     end
 
-    # The exception is sanctioned by the LOCALE, not by the metadata: an
-    # `os` key on an action whose label does not interpolate one renders
-    # nothing extra. That is what keeps the nickname — user-supplied free
+    # The exception is sanctioned by ActivityLog::SECURITY_ACTIONS_WITH_OS, not
+    # by the metadata: an `os` key on any other action renders nothing extra. That is what keeps the nickname — user-supplied free
     # text — off the page without a second guard to remember.
     it "renders no metadata on actions whose label does not name any" do
       create(:activity_log, :security, action: "user.passkey_added", actor: user, metadata: { os: "macOS", nickname: "Dave's laptop" })

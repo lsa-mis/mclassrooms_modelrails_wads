@@ -154,24 +154,35 @@ en:
         resend_action_aria_label: "Resend confirmation for %{provider}"
         cancel_action_aria_label: "Cancel %{provider} link"
         disconnect_action_aria_label: "Unlink %{provider}"
+        verified_banner: "%{email} is verified."
       destroy:
         success: "%{provider} unlinked."
         cannot_remove_last_verified: "You can't remove your last verified sign-in method."
       verify:
-        success: "%{provider} linked. You can sign in with it."
-        invalid_or_expired: "This confirmation link is invalid or expired. Sign in and request a new one from your connected accounts."
         email_mismatch: "Your email is verified, but that invitation was sent to a different address. Ask your workspace administrator to invite this email."
         join_link_at_capacity: "Your email is verified, but that workspace is full right now. Ask a workspace administrator to make room or send you an invitation."
-      resend_verification:
-        resent: "We sent a fresh confirmation link to %{email}."
-        already_verified: "That sign-in method is already verified."
-        rate_limited: "Please wait a moment before requesting another confirmation email."
+      verification_resends:
+        create:
+          resent: "We sent a fresh confirmation link to %{email}."
+          already_verified: "That sign-in method is already verified."
+          rate_limited: "Please wait a moment before requesting another confirmation email."
+    notification_readings:
+      create:
+        success: "All notifications marked as read."
+    connected_account_verifications:
+      show:
+        title: "Verify connected account"
+        prompt: "Confirm that %{email} is yours to finish connecting %{provider}."
+        button: "Verify %{email} for %{provider}"
+        cancel: "Not you? Cancel"
+        invalid_or_expired: "This confirmation link is invalid or expired. Sign in and request a new one from your connected accounts."
+      create:
+        success: "%{provider} linked. You can sign in with it."
   identity_picker:
     preview: "Preview"
     last_updated: "Updated %{time} ago"
     choose_source: "Choose how you're represented"
     source_label: "Identity source"
-    select_file: "Select image file"
     save: "Save & apply"
     save_crop: "Save crop"
     crop_title: "Crop & adjust"

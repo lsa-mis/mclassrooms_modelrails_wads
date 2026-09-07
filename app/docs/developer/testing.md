@@ -76,6 +76,13 @@ Bullet raises on N+1 queries in test and alerts in development. Its safelists �
 
 System specs run on Capybara + Cuprite, a pure-Ruby CDP driver (the suite migrated off Playwright in #497 — no Node dependency). The support files below make that stack reliable.
 
+### Waiting in system specs
+
+A system spec waits for observable state, never for a clock. `visit` already waits for every Stimulus controller to connect (the readiness gate below), and Capybara's matchers retry on their own budget (`Capybara.default_max_wait_time`, longer on CI), so `expect(page).to have_css(...)` is the wait. A bare `sleep N` before an assertion passes green under load with the state you wanted still on its way; it is what the `ModelRails/NoSleepInSystemSpecs` cop (`lib/rubocop`) fails on commit. Two shapes look like `sleep` and are not the banned one:
+
+- **A bounded poll**, for state Capybara cannot see — a preference row, a `localStorage` key, a computed style: `Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.05 until user.preferences.reload.timezone.present? }`. The `sleep` is the tick; the condition and the budget are the wait. A `sleep` inside a `loop`, `until`, `while`, or `times` block reads the same way.
+- **A named negative wait**, for proving that a request did *not* arrive, which no condition can express: `sleep 0.3 # post-connect round-trip margin for a wrongful clobber`. It is allowed only after a condition-based wait, and the inline comment naming what it waits out is what the cop reads; without it the line is a bare sleep.
+
 ### CDP helpers
 
 `spec/support/cdp_helpers.rb` wraps the Ferrum/CDP operations the specs need — Cuprite exposes the underlying `Ferrum::Browser` at `page.driver.browser`. The helpers came out of the Playwright→Ferrum migration (#497): `cdp_evaluate` / `cdp_evaluate_async` / `cdp_execute` for JS, `cdp_add_init_script` (call before visiting), `cdp_press`, `cdp_click_at`, `cdp_clear_cookies`, `cdp_resize`, `cdp_emulate_reduced_motion`, `cdp_intercept`, and raw `cdp_command` — each documented at its definition. Two gotchas the helpers encode: Ferrum's `evaluate` wraps source in a returning function, which breaks UMD bundles like axe-core (`cdp_execute` runs the raw statement instead), and network interception has no per-route handler — every intercepted request **must** call `.continue`, `.abort`, or `.respond`, or Ferrum leaves it hanging.

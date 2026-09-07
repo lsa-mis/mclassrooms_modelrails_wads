@@ -1,5 +1,6 @@
 require "rails_helper"
 
+# The core's examples; each trait's live beside it under spec/models/workspace/.
 RSpec.describe Workspace, type: :model do
   describe "validations" do
     it "requires a name" do
@@ -139,18 +140,6 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
-  describe "logo" do
-    it "generates initials from name" do
-      workspace = build(:workspace, name: "Acme Corp")
-      expect(workspace.initials).to eq("AC")
-    end
-
-    it "limits initials to 2 characters" do
-      workspace = build(:workspace, name: "The Big Company Name")
-      expect(workspace.initials).to eq("TB")
-    end
-  end
-
   describe "name length" do
     it "limits name to 255 characters" do
       workspace = build(:workspace, name: "a" * 256)
@@ -162,96 +151,6 @@ RSpec.describe Workspace, type: :model do
     it "requires max_members to be positive" do
       workspace = build(:workspace, max_members: 0)
       expect(workspace).not_to be_valid
-    end
-  end
-
-  describe "logo attachment" do
-    let(:workspace) { create(:workspace) }
-
-    # HEIC/HEIF included: it is the iPhone camera default, so rejecting it
-    # bounces the most common source of a logo upload. Safe to accept — the
-    # active_storage initializer records that both load and transform under
-    # Vips.block_untrusted(true) after CVE-2026-66066, and Rails converts the
-    # variant to PNG automatically because they are not web_image_content_types.
-    it "accepts valid image content types" do
-      %w[image/png image/jpeg image/gif image/webp image/heic image/heif].each do |content_type|
-        workspace.logo.attach(io: StringIO.new("fake"), filename: "test.png", content_type: content_type)
-        workspace.valid?
-        expect(workspace.errors[:logo]).to be_empty, "Expected #{content_type} to be valid"
-      end
-    end
-
-    it "rejects non-image content types" do
-      workspace.logo.attach(io: StringIO.new("not an image"), filename: "doc.pdf", content_type: "application/pdf")
-      expect(workspace).not_to be_valid
-      expect(workspace.errors[:logo]).to be_present
-    end
-
-    it "rejects files over 5MB" do
-      workspace.logo.attach(io: StringIO.new("x" * 6.megabytes), filename: "big.png", content_type: "image/png")
-      expect(workspace).not_to be_valid
-      expect(workspace.errors[:logo]).to be_present
-    end
-  end
-
-  describe "logo_original attachment" do
-    let(:workspace) { create(:workspace) }
-
-    it "rejects non-image content types" do
-      workspace.logo_original.attach(io: StringIO.new("not an image"), filename: "doc.pdf", content_type: "application/pdf")
-      expect(workspace).not_to be_valid
-      expect(workspace.errors[:logo_original]).to be_present
-    end
-
-    it "rejects files over 10MB (original can be larger than cropped)" do
-      workspace.logo_original.attach(io: StringIO.new("x" * 11.megabytes), filename: "big.png", content_type: "image/png")
-      expect(workspace).not_to be_valid
-      expect(workspace.errors[:logo_original]).to be_present
-    end
-  end
-
-  describe "logo_source" do
-    it "defaults to initials" do
-      workspace = create(:workspace)
-      expect(workspace.logo_source).to eq("initials")
-    end
-
-    it "validates inclusion in upload and initials" do
-      workspace = build(:workspace, logo_source: "upload")
-      expect(workspace).to be_valid
-
-      workspace.logo_source = "invalid"
-      expect(workspace).not_to be_valid
-    end
-  end
-
-  describe "#available_logo_sources" do
-    it "returns upload and initials" do
-      workspace = build(:workspace)
-      expect(workspace.available_logo_sources).to eq(%w[upload initials])
-    end
-  end
-
-  describe "primary_color (integer hue)" do
-    it "defaults to 210 (blue)" do
-      workspace = create(:workspace)
-      expect(workspace.primary_color).to eq(210)
-    end
-
-    it "validates inclusion in 0..360" do
-      workspace = build(:workspace, primary_color: 180)
-      expect(workspace).to be_valid
-
-      workspace.primary_color = -1
-      expect(workspace).not_to be_valid
-
-      workspace.primary_color = 361
-      expect(workspace).not_to be_valid
-    end
-
-    it "allows nil" do
-      workspace = build(:workspace, primary_color: nil)
-      expect(workspace).to be_valid
     end
   end
 
@@ -267,34 +166,6 @@ RSpec.describe Workspace, type: :model do
       workspace = build(:workspace, join_policy: "open_link", personal: false)
       expect(workspace).to be_valid
       expect(workspace).to be_open_link
-    end
-  end
-
-  describe "#open_join?" do
-    before { allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link]) }
-
-    it "is true for an org workspace with join_policy 'open_link' when instance permits it" do
-      workspace = build(:workspace, join_policy: "open_link", personal: false)
-      expect(workspace).to be_open_join
-    end
-
-    it "is false on a personal workspace, regardless of policy (hard guard)" do
-      # Build without validation so we can simulate a malformed row reaching the predicate.
-      workspace = build(:workspace, personal: true)
-      workspace.join_policy = "open_link"
-      expect(workspace).not_to be_open_join
-    end
-
-    it "is false when the instance allowlist excludes :open_link" do
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite])
-      workspace = build(:workspace, personal: false)
-      workspace.join_policy = "open_link"
-      expect(workspace).not_to be_open_join
-    end
-
-    it "is false for invite policy" do
-      workspace = build(:workspace, join_policy: "invite", personal: false)
-      expect(workspace).not_to be_open_join
     end
   end
 
@@ -326,172 +197,12 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
-  # Single membership-grant entry point — extracted from Invitation so the
-  # open-link self-join path can share the same lock + capacity + discarded-
-  # reactivation + role-reconciliation logic.
-  describe "#accepting_open_joins?" do
-    let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
-
-    before do
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-    end
-
-    it "is true when the join policy is open and the workspace is admittable" do
-      expect(workspace.accepting_open_joins?).to be(true)
-    end
-
-    it "is false when the join policy is not open" do
-      workspace.update!(join_policy: "invite")
-      expect(workspace.accepting_open_joins?).to be(false)
-    end
-
-    it "is false when the workspace is not admittable (archived/suspended)" do
-      workspace.archive!
-      expect(workspace.accepting_open_joins?).to be(false)
-    end
-  end
-
   describe "typed admission errors" do
     it "are standalone StandardErrors, not ActiveRecord::RecordInvalid subclasses" do
       [ Workspace::AlreadyMember, Workspace::AtCapacity, Workspace::NotAdmittableError ].each do |klass|
         expect(klass.ancestors).to include(StandardError)
         expect(klass.ancestors).not_to include(ActiveRecord::RecordInvalid)
       end
-    end
-  end
-
-  describe "#admit" do
-    let(:workspace) { create(:workspace, max_members: 3, personal: false) }
-    let(:user) { create(:user) }
-    let!(:owner_role) {
-      Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
-        r.name = "Owner"
-        r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-      }
-    }
-    let!(:member_role) {
-      Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
-        r.name = "Member"
-        r.permissions = {}
-      }
-    }
-
-    it "creates a membership for a new user at the specified role" do
-      expect {
-        workspace.admit(user, role: member_role)
-      }.to change(workspace.memberships, :count).by(1)
-
-      expect(workspace.memberships.find_by!(user: user).role).to eq(member_role)
-    end
-
-    it "reactivates a discarded membership without overwriting its role" do
-      # Seed the workspace with an Owner so deactivating doesn't violate
-      # "must keep at least one owner" rules — and create a regular member
-      # to deactivate as the test subject.
-      other_owner = create(:user)
-      workspace.memberships.create!(user: other_owner, role: owner_role)
-      discarded = workspace.memberships.create!(user: user, role: member_role)
-      discarded.deactivate!
-
-      expect {
-        workspace.admit(user, role: member_role)
-      }.not_to change(workspace.memberships, :count)
-
-      expect(discarded.reload).not_to be_discarded
-    end
-
-    it "reactivates a discarded membership with on_existing: :adopt (no granted_by rewrite, same as :raise)" do
-      other_owner = create(:user)
-      workspace.memberships.create!(user: other_owner, role: owner_role)
-      discarded = workspace.memberships.create!(user: user, role: member_role)
-      discarded.deactivate!
-
-      result = nil
-      expect {
-        result = workspace.admit(user, role: member_role, granted_by: other_owner, on_existing: :adopt)
-      }.not_to change(workspace.memberships, :count)
-
-      expect(result).to eq(discarded)
-      expect(discarded.reload).not_to be_discarded
-      # Reactivation preserves the original grant's provenance — granted_by is
-      # only written when a membership row is created, identical to :raise.
-      expect(discarded.granted_by).to be_nil
-    end
-
-    it "raises AtCapacity when the workspace is at capacity" do
-      # Fill the workspace to max_members.
-      workspace.update!(max_members: 1)
-      workspace.memberships.create!(user: create(:user), role: owner_role)
-
-      expect {
-        workspace.admit(user, role: member_role)
-      }.to raise_error(Workspace::AtCapacity)
-    end
-
-    context "when user is already a kept member" do
-      before { workspace.memberships.create!(user: user, role: member_role) }
-
-      it "raises AlreadyMember under :personal (duplicate-accept error)" do
-        expect {
-          workspace.admit(user, role: owner_role)
-        }.to raise_error(Workspace::AlreadyMember)
-      end
-
-      it "adopts the existing membership untouched with on_existing: :adopt" do
-        existing = workspace.memberships.find_by!(user: user)
-
-        result = nil
-        expect {
-          result = workspace.admit(user, role: owner_role, on_existing: :adopt)
-        }.not_to change(workspace.memberships, :count)
-
-        expect(result).to eq(existing)
-        # Adopt tolerates the member as-is: no role overwrite, even though the
-        # admit call asked for a different role.
-        expect(existing.reload.role).to eq(member_role)
-      end
-
-      context "under :shared posture" do
-        before do
-          allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
-          allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
-        end
-
-        it "updates the role when it differs (placeholder reconciliation)" do
-          expect {
-            workspace.admit(user, role: owner_role)
-          }.not_to raise_error
-
-          expect(workspace.memberships.find_by!(user: user).role).to eq(owner_role)
-        end
-
-        it "no-ops when the role matches" do
-          expect { workspace.admit(user, role: member_role) }.not_to raise_error
-        end
-      end
-    end
-  end
-
-  describe "#at_capacity?" do
-    it "is true when kept memberships have reached max_members" do
-      workspace = create(:workspace, max_members: 1)
-      create(:membership, workspace: workspace)
-
-      expect(workspace.at_capacity?).to be true
-    end
-
-    it "is false below the limit" do
-      workspace = create(:workspace, max_members: 2)
-      create(:membership, workspace: workspace)
-
-      expect(workspace.at_capacity?).to be false
-    end
-
-    it "does not count discarded memberships" do
-      workspace = create(:workspace, max_members: 1)
-      create(:membership, workspace: workspace).discard!
-
-      expect(workspace.at_capacity?).to be false
     end
   end
 
@@ -533,6 +244,47 @@ RSpec.describe Workspace, type: :model do
 
       expect(workspace).not_to be_persisted
       expect(workspace.errors[:name]).to be_present
+    end
+  end
+  # #921. Every tracked write in a workspace leaves an activity_logs row
+  # pointing at it, and the FK refuses the DELETE. Before this, the only
+  # workspaces that could be hard-destroyed were ones nobody had ever done
+  # anything in — and "Delete permanently" is a user-facing action.
+  describe "hard destroy with an audit trail" do
+    let(:workspace) { create(:workspace) }
+    let(:user) { create(:user) }
+
+    # Trackable reads Current for the actor and the workspace; set both the way
+    # the request cycle does, then put them back.
+    def with_current(user, workspace)
+      Current.session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+      Current.workspace = workspace
+      yield
+    ensure
+      Current.session = nil
+      Current.workspace = nil
+    end
+
+    it "destroys the workspace's own activity trail with it" do
+      with_current(user, workspace) { create(:membership, user: user, workspace: workspace) }
+      expect(ActivityLog.for_workspace(workspace)).to be_any
+
+      expect { workspace.destroy! }.not_to raise_error
+      expect(ActivityLog.where(workspace_id: workspace.id)).to be_empty
+    end
+
+    # The retention floor's rows are written by ActivityLog.record_security_event!,
+    # which hardcodes `workspace_id: nil` and is the single writer for every
+    # SECURITY_ACTIONS row in both tiers. So no security row is workspace-scoped
+    # and a workspace destroy cannot reach one. This pins that, because the day
+    # a security row gains a workspace_id is the day `dependent: :destroy`
+    # starts eating credential evidence silently.
+    it "leaves account-security rows alone, since none of them are workspace-scoped" do
+      ActivityLog.record_security_event!(action: "user.password_changed", user: user)
+      with_current(user, workspace) { create(:membership, user: user, workspace: workspace) }
+
+      expect { workspace.destroy! }.not_to raise_error
+      expect(ActivityLog.where(action: "user.password_changed").count).to eq(1)
     end
   end
 end

@@ -44,7 +44,13 @@ class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
     end
 
     def url
-      Rails.application.routes.url_helpers.edit_workspace_settings_path(event.record)
+      # The record IS the routed object here, so a deleted workspace hands the
+      # helper a bare nil — UrlGenerationError, which render_safe_or_placeholder
+      # deliberately does not rescue. present_or_gone! converts it to the
+      # deletion shape first.
+      render_safe_or_placeholder do
+        Rails.application.routes.url_helpers.edit_workspace_settings_path(present_or_gone!(event.record))
+      end
     end
   end
 end

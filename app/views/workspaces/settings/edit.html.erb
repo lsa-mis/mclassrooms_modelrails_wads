@@ -5,7 +5,7 @@
   <% if @workspace.archived? %>
     <%= render "shared/archived_banner",
           message: t("workspaces.archived_banner"),
-          restore_path: unarchive_workspace_path(@workspace) %>
+          restore_path: workspace_archival_path(@workspace) %>
   <% end %>
   <%= render "shared/settings_page_header",
         title_html: t("settings.pages.workspace_limits_and_plan.h1_html"),

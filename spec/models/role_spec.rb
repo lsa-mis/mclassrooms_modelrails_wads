@@ -12,6 +12,16 @@ RSpec.describe Role, type: :model do
     end
   end
 
+  describe ".owner" do
+    it "is the one definition the predicate and every owner query share" do
+      owner = Role.system_default!("owner")
+      Role.system_default!("admin")
+
+      expect(Role.owner).to contain_exactly(owner)
+      expect(Role.owner.all?(&:owner?)).to be(true)
+    end
+  end
+
   describe "validations" do
     it "requires a name" do
       role = build(:role, name: nil)

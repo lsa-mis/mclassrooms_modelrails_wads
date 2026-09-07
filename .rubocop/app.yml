@@ -1,0 +1,17 @@
+# Fork-owned: your project's RuboCop overrides live here. Upstream
+# (modelrails_base) freezes this file after creation (merge=ours), so a sync
+# never touches it. See /docs/developer/getting-started (Turning a house cop
+# off in your fork).
+#
+# The house cops in .rubocop/house.yml are on by default. Each is a rule about
+# how base writes code; turning one off is a decision your project makes, so
+# say why on the line above it — a future reader (or a reviewer, or an agent)
+# will look here first.
+#
+#   # Our admin area keeps a few verb routes on purpose; see ADR-7.
+#   ModelRails/RestfulActions:
+#     Enabled: false
+#
+# Existing offenses in code you inherited or wrote before a cop landed belong
+# in .rubocop_todo.yml, not here: the todo file grandfathers by path and
+# shrinks as files are fixed; this file changes the rule itself.

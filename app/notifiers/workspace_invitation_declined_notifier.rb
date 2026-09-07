@@ -18,7 +18,9 @@ class WorkspaceInvitationDeclinedNotifier < ApplicationNotifier
     end
 
     def url
-      Rails.application.routes.url_helpers.workspace_path(event.record.resolved_workspace)
+      render_safe_or_placeholder do
+        Rails.application.routes.url_helpers.workspace_path(present_or_gone!(event.record.resolved_workspace))
+      end
     end
   end
 end

@@ -1,0 +1,7 @@
+<%# ✗ Don't: the only confirmation is the button text flipping to "Copied!" — no live
+    region, the accessible name changes mid-flow, and nothing proves the copy happened. %>
+<div class="flex items-center gap-2">
+  <input type="text" readonly value="https://example.test/invitations/abc123/accept"
+         aria-label="Invitation link" class="form-input flex-1 min-w-0 font-mono text-sm">
+  <%= ui :button, "Copy", variant: :outline, tone: :neutral %>
+</div>

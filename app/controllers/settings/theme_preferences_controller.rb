@@ -3,12 +3,12 @@ module Settings
     layout "settings"
 
     def edit
-      @preferences = Current.user.preferences || Current.user.build_preferences
+      @preferences = Current.user.preferences!
       authorize @preferences, policy_class: Settings::ThemePreferencesPolicy
     end
 
     def update
-      preferences = Current.user.preferences || Current.user.create_preferences!
+      preferences = Current.user.preferences!
       authorize preferences, policy_class: Settings::ThemePreferencesPolicy
       preferences.update!(theme: params[:theme] || theme_params[:theme])
 

@@ -11,7 +11,7 @@
 
   <div class="mt-8 flex items-center gap-3">
     <%= button_to t("magic_link_callbacks.confirm.sign_in_button"),
-          magic_link_callback_sign_in_path(token: @token),
+          magic_link_callback_session_path(@token),
           method: :post,
           class: "btn-primary" %>
 

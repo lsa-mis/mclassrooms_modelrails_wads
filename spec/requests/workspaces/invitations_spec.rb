@@ -75,24 +75,25 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
     end
 
+    # Resending is the create of a resend nested under the invitation (#1007).
     describe "POST /workspaces/:workspace_slug/invitations/:id/resend" do
       let!(:invitation) { create(:invitation, invitable: workspace, invited_by: user) }
 
       it "resends the invitation email" do
         expect {
-          post resend_workspace_invitation_path(workspace, invitation)
+          post workspace_invitation_resend_path(workspace, invitation)
         }.to have_enqueued_mail(InvitationMailer, :invite)
       end
 
       it "dispatches a WorkspaceInvitationResentNotifier to the inviter on first resend" do
         expect {
-          post resend_workspace_invitation_path(workspace, invitation)
+          post workspace_invitation_resend_path(workspace, invitation)
         }.to change { user.notifications.where(type: "WorkspaceInvitationResentNotifier::Notification").count }.by(1)
       end
 
       it "shows the 'resent' flash on first resend" do
-        post resend_workspace_invitation_path(workspace, invitation)
-        expect(flash[:notice]).to eq(I18n.t("workspaces.invitations.resend.resent"))
+        post workspace_invitation_resend_path(workspace, invitation)
+        expect(flash[:notice]).to eq(I18n.t("workspaces.invitations.resends.create.resent"))
       end
 
       it "shows the 'recently_sent' flash on a second rapid resend (sentinel :deduplicated branch)" do
@@ -103,13 +104,13 @@ RSpec.describe "Workspace Invitations", type: :request do
         # We DO NOT stub the notifier — we exercise the real DB constraint
         # so this regression-protects the actual production branch.
         freeze_time do
-          post resend_workspace_invitation_path(workspace, invitation)
+          post workspace_invitation_resend_path(workspace, invitation)
           first_flash = flash[:notice]
-          post resend_workspace_invitation_path(workspace, invitation)
+          post workspace_invitation_resend_path(workspace, invitation)
           second_flash = flash[:notice]
 
-          expect(first_flash).to eq(I18n.t("workspaces.invitations.resend.resent"))
-          expect(second_flash).to eq(I18n.t("workspaces.invitations.resend.recently_sent"))
+          expect(first_flash).to eq(I18n.t("workspaces.invitations.resends.create.resent"))
+          expect(second_flash).to eq(I18n.t("workspaces.invitations.resends.create.recently_sent"))
 
           # Make the dedup mechanism explicit: the second dispatch's
           # populate_idempotency_key callback computed the same
@@ -135,9 +136,9 @@ RSpec.describe "Workspace Invitations", type: :request do
         # the invitee email path. Verifies we didn't accidentally short-circuit
         # both on the dedup branch.
         freeze_time do
-          post resend_workspace_invitation_path(workspace, invitation)
+          post workspace_invitation_resend_path(workspace, invitation)
           expect {
-            post resend_workspace_invitation_path(workspace, invitation)
+            post workspace_invitation_resend_path(workspace, invitation)
           }.to have_enqueued_mail(InvitationMailer, :invite)
         end
       end

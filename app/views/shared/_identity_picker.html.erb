@@ -3,6 +3,7 @@
   identity = model.identity
   has_image = identity.image?
   original_url = url_for(identity.croppable_image) if has_image
+  crop_file_input_id = "#{dom_id(model)}-identity-picker-file-crop"
 %>
 
 <div data-controller="identity-picker"
@@ -18,19 +19,15 @@
      data-identity-picker-color-names-value="<%= t('identity_picker.js.color_names') %>"
      data-identity-picker-original-url-value="<%= original_url %>">
 
-  <%# Hidden file input — triggered programmatically %>
-  <input type="file"
-         accept="image/png,image/jpeg,image/gif,image/webp"
-         class="sr-only"
-         data-identity-picker-target="fileInput"
-         data-action="change->identity-picker#handleFileSelected"
-         aria-label="<%= t('identity_picker.select_file') %>">
-
   <%# ARIA live region for announcements %>
   <div aria-live="polite" class="sr-only"></div>
 
-  <%# Hub view — lazy-loaded via Turbo Frame %>
-  <turbo-frame id="identity-picker-hub" src="<%= hub_url %>" loading="lazy">
+  <%# Hub view — lazy-loaded via Turbo Frame. `data-action` lives on THIS
+      persistent element, not the hub partial's own <turbo-frame> tag: a
+      frame navigation never copies the response tag's own attributes
+      onto it (#912 — onHubLoad silently never fired for a real navigation). %>
+  <turbo-frame id="identity-picker-hub" src="<%= hub_url %>" loading="lazy"
+               data-action="turbo:frame-load->identity-picker#onHubLoad">
   </turbo-frame>
 
   <div data-identity-picker-target="cropSection" hidden>
@@ -62,7 +59,7 @@
       <%= render "shared/identity_picker/crop_viewport",
             has_image: has_image, original_url: original_url %>
       <%= render "shared/identity_picker/crop_controls" %>
-      <%= render "shared/identity_picker/crop_footer", form_url: form_url %>
+      <%= render "shared/identity_picker/crop_footer", form_url: form_url, file_input_id: crop_file_input_id %>
     </div>
   </div>
 </div>

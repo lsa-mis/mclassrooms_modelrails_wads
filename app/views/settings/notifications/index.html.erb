@@ -1,5 +1,10 @@
-<section aria-labelledby="notifications-heading"
-         class="page-container-wide">
+<%# A plain container, not a named region: this wraps everything inside <main>,
+    so a landmark here only duplicates main — and its name would be the h1's
+    "Notifications", which is already the toast pill stack's aria-label. Two
+    region landmarks with one name is what axe landmark-unique reports, and
+    what a screen-reader user meets as two identical entries in the landmark
+    list. The toast container keeps the name; it is the one that needs it. %>
+<div class="page-container-wide">
   <h1 id="notifications-heading"
       class="text-3xl font-bold text-text-heading mb-6">
     <%= t("notifications.index.heading") %>
@@ -7,7 +12,35 @@
 
   <%= render "filter_chips", current_filter: @current_filter %>
 
-  <%= render "bulk_actions" %>
+  <div class="flex flex-wrap gap-3 mb-4">
+    <div data-controller="modal" class="inline-block">
+      <button type="button"
+              data-action="click->modal#open"
+              class="btn-secondary text-sm">
+        <%= t("notifications.index.mark_all_read.action") %>
+      </button>
+
+      <%= render "shared/confirm_dialog",
+            title: t("notifications.index.mark_all_read.title"),
+            message: t("notifications.index.mark_all_read.confirm"),
+            confirm_text: t("notifications.index.mark_all_read.action"),
+            confirm_url: settings_notification_readings_path,
+            confirm_method: :post,
+            variant: :info %>
+    </div>
+  </div>
+
+  <%# One paragraph, no role: static text inside the page's named section.
+      The period is rendered from the preferences page's own option labels so
+      "1 year" reads the same on both sides of the link. Bare inline anchor —
+      the suite's 44px check exempts only display:inline links. %>
+  <p class="text-xs text-text-muted mb-6">
+    <%= t("notifications.index.retention_hint.text",
+          period: t("notifications.preferences.advanced.retention_options.#{@retention_days}")) %>
+    <%= link_to t("notifications.index.retention_hint.change"),
+          edit_settings_notification_preferences_path(anchor: "retention-days"),
+          class: "text-interactive underline hover:no-underline focus-ring rounded" %>
+  </p>
 
   <% if @notifications.empty? %>
     <%= render "shared/empty_state", message: t("notifications.index.empty_all") %>
@@ -18,4 +51,4 @@
       <%= render partial: "item", collection: @notifications, as: :notification %>
     <% end %>
   <% end %>
-</section>
+</div>

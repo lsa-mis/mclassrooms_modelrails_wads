@@ -8,7 +8,11 @@
 module NotificationBroadcaster
   module_function
 
-  def refresh_for(user, announcement_key:)
+  # `severity:` (a notifier's severity_name) names the arrival and, for
+  # :danger, routes it to the assertive region: a credential change must
+  # not sound like "New notification" (#926). Read-state refreshes pass no
+  # severity and keep their generic key.
+  def refresh_for(user, announcement_key:, severity: nil)
     stream_key = [ user, :notifications ]
     summary = UnreadNotificationSummary.new(user).to_h
 
@@ -47,8 +51,8 @@ module NotificationBroadcaster
     safe_broadcast(stream_key, source: "aria_live") do
       Turbo::StreamsChannel.broadcast_update_to(
         stream_key,
-        target: "notifications-live",
-        content: I18n.t(announcement_key)
+        target: severity.to_s == "danger" ? "notifications-live-assertive" : "notifications-live",
+        content: announcement_content(announcement_key, severity)
       )
     end
   end
@@ -65,4 +69,11 @@ module NotificationBroadcaster
     )
   end
   private_class_method :safe_broadcast
+
+  def announcement_content(announcement_key, severity)
+    return I18n.t(announcement_key) if severity.nil?
+
+    I18n.t("notifications.bell.arrival_announcement_with_severity",
+           phrase: I18n.t("notifications.severity_phrase.#{severity}"))
+  end
 end

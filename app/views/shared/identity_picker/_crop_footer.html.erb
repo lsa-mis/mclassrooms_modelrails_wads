@@ -1,4 +1,4 @@
-<%# locals: (form_url:) -%>
+<%# locals: (form_url:, file_input_id:) -%>
 <div class="sm:col-span-full flex flex-col gap-3 pt-4 border-t border-border">
   <div class="flex items-center justify-end gap-3">
     <button type="button"
@@ -13,12 +13,19 @@
     </button>
   </div>
   <div class="flex items-center justify-between">
-    <button type="button"
-            data-action="click->identity-picker#openFilePicker"
-            class="btn-text-icon btn-text-interactive text-sm px-2">
+    <%# The input is this label's next sibling so Tab order matches visual
+        order (2.4.3, #912); native label activation opens the OS dialog. %>
+    <label for="<%= file_input_id %>"
+           class="btn-text-icon btn-text-interactive text-sm px-2 inline-flex items-center min-h-11 cursor-pointer">
       <%= icon(:arrow_up_tray, size: :sm) %>
       <%= t("identity_picker.upload_new") %>
-    </button>
+    </label>
+    <input type="file"
+           id="<%= file_input_id %>"
+           accept="image/png,image/jpeg,image/gif,image/webp"
+           class="sr-only"
+           data-identity-picker-target="fileInput"
+           data-action="change->identity-picker#handleFileSelected click->identity-picker#markFilePickerOpen">
     <%= button_to form_url,
           method: :delete,
           class: "btn-text-icon btn-text-danger text-sm px-2 bg-transparent border-0 cursor-pointer",

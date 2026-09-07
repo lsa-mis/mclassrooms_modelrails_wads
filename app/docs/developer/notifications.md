@@ -1,7 +1,7 @@
 ---
 title: Notifications — Technical Reference
 description: Architecture, broadcast pipeline, persistence schema, and operational concerns for the notifications system
-keywords: notifications architecture noticed gem turbo streams broadcasts broadcaster indicator recipients gating idempotency value object pundit cleanup retention digest mailer quiet hours placeholder deleted record schema bullet half-open watermark read state audit trail activity log security event password passkey new device sign-in retention floor strict best-effort account activity
+keywords: notifications architecture noticed gem turbo streams broadcasts broadcaster indicator recipients gating idempotency value object pundit cleanup retention digest mailer quiet hours placeholder deleted record schema bullet half-open watermark read state audit trail activity log security event password passkey new device sign-in retention floor strict best-effort account activity actor rule self join granted_by onboarding grade deliver nil
 ---
 
 # Notifications — Technical Reference
@@ -93,15 +93,19 @@ end
 | Notifier | Category | Severity | What it dispatches on |
 |---|---|---|---|
 | `PasswordChangedNotifier` | `security` | `danger` | `User#password_digest` change |
-| `PasskeyAddedNotifier` | `security` | `danger` | Passkey enrollment (`Passkeys::RegistrationsController#verify`) |
+| `PasskeyAddedNotifier` | `security` | `danger` | Passkey enrollment (`Passkeys::Registration::CredentialsController#create`) |
 | `SignInFromNewDeviceNotifier` | `security` | `danger` | Login from a previously-unseen browser fingerprint |
 | `WorkspaceInvitationAcceptedNotifier` | `workspace_activity` | `success` | An invitee accepts the inviter's invitation |
 | `WorkspaceInvitationDeclinedNotifier` | `workspace_activity` | `info` | An invitee declines |
 | `WorkspaceInvitationResentNotifier` | `account_access` | `info` | Inviter manually resends |
 | `WorkspaceInvitationExpiringSoonNotifier` | `account_access` | `warning` | Sweep job finds invitations within 24 hours of expiry |
 | `WorkspaceRoleChangedNotifier` | `account_access` | `info` | Owner changes a member's role |
-| `WorkspaceMemberAddedNotifier` | `workspace_activity` | `success` | New member joins (fans out to all owners) |
+| `WorkspaceCreatedNotifier` | `workspace_activity` | `success` | Someone creates a workspace through `Workspace.create_owned` |
+| `WorkspaceMemberAddedNotifier` | `workspace_activity` | `success` | New member joins, or a removed one is re-admitted (fans out to all owners except whoever performed the add) |
+| `WorkspaceMemberRemovedNotifier` | `account_access` | `warning` | A membership is discarded — an owner removing someone, or a member leaving. In-app to the removed member and the owners (minus whoever acted); email to the removed member only |
+| `WorkspaceJoinedNotifier` | `workspace_activity` | `success` | Someone admits themselves through an open join link — the joiner's own orientation, since the actor rule drops them from `WorkspaceMemberAddedNotifier` |
 | `WorkspaceCapacityApproachingNotifier` | `billing` | `warning` | Sweep job finds a workspace approaching its plan limit |
+| `WelcomeNotifier` | `account_access` | `info` | A real registration completes — `MagicLinkCallbacksController#create`, or either signup branch of `OauthLink` |
 
 ### Category → notifier types
 
@@ -117,16 +121,64 @@ The method is available as both a class method (backing the per-recipient `recip
 
 ### In-app gating lives in `recipients`
 
-Noticed 2.9.x deprecates the `:database` delivery method — notification rows are auto-saved by the deliver pipeline itself, so there is no delivery-method conditional to hang an "is in-app enabled for this recipient?" check on. The only place to prevent a `noticed_notifications` row from ever existing is **recipient resolution**: the notifier's `recipients` block filters out users whose `<category>.in_app` preference is `false` (which, for non-security categories, also covers quiet hours via `deliver_now?`). This is the pattern for every notifier that respects in-app preferences; `WorkspaceMemberAddedNotifier` and `WorkspaceCapacityApproachingNotifier` are the two current examples. Combined with the missing-row fallback above, users without a preferences row are correctly treated as opted-in at the column-default level instead of being silently filtered out of every dispatch.
+Noticed 2.9.x deprecates the `:database` delivery method — notification rows are auto-saved by the deliver pipeline itself, so there is no delivery-method conditional to hang an "is in-app enabled for this recipient?" check on. The only place to prevent a `noticed_notifications` row from ever existing is **recipient resolution**: the notifier's `recipients` block filters out users whose `<category>.in_app` preference is `false` (which, for non-security categories, also covers quiet hours via `deliver_now?`). This is the pattern for every notifier that respects in-app preferences — `WorkspaceMemberAddedNotifier`, `WorkspaceCapacityApproachingNotifier`, `WorkspaceCreatedNotifier`, `WorkspaceJoinedNotifier` and `WelcomeNotifier` all declare a `recipients` block and are dispatched with `deliver(nil)` so the block, not the caller's argument, resolves recipients. Combined with the missing-row fallback above, users without a preferences row are correctly treated as opted-in at the column-default level instead of being silently filtered out of every dispatch.
+
+**The `deliver(nil)` invariant, both directions.** `Noticed::Deliverable#deliver` is `recipients ||= evaluate_recipients` — `noticed-3.0.0`, `app/models/concerns/noticed/deliverable.rb:87`. An explicit recipient does not *add* to the block; it *replaces* it, and the block never runs. So:
+
+- A notifier that **declares** a `recipients` block must be dispatched with `deliver(nil)`. Passing a recipient skips `permitted_in_app` — delivering to someone who opted out or is inside quiet hours — and skips the actor exclusion below. Nothing raises, nothing is logged; the preference is just quietly ignored.
+- A notifier that declares **no** block must be dispatched with an explicit recipient. `deliver(nil)` there resolves to zero recipients and writes no rows at all — a dispatch that silently does nothing.
+
+Neither failure is visible at runtime, so both directions are fenced by `spec/code_smells/notifier_recipients_block_dispatch_spec.rb`, which scans every `SomeNotifier.with(...).deliver(...)` in `app/` and matches it against whether that notifier declares a block.
 
 Genuinely per-notifier specifics:
 
-- **`WorkspaceMemberAddedNotifier`** (fires on `Membership` create) is dual-recipient: (1) the added user, (2) all workspace owners, `.uniq`'d so an added user who is already an owner isn't double-notified. The block preloads `:preferences` in one query — per-user `user.preferences` access inside the filter is otherwise an N+1 across the candidate set (Bullet caught it). Email goes **only** to the added user: a `before_enqueue` lambda `throw(:abort)`s unless `recipient_id == event.record.user_id` AND the added user's `workspace_activity.email` pref is `true`. Comparing on the `recipient_id` column (not the loaded association) avoids a per-row association load that Bullet would flag when Noticed's `EventJob` iterates `event.notifications`. Owners never get an immediate email — the digest pipeline is their intended email fallback.
+- **`WorkspaceMemberAddedNotifier`** (fires on `Membership` create, and on the undiscard that re-admits a removed member) is dual-recipient: (1) the added user, (2) all workspace owners, `.uniq`'d so an added user who is already an owner isn't double-notified — minus whoever performed the add. Nobody is notified about their own action, so an owner who adds someone hears nothing, and an owner-inviter gets only `WorkspaceInvitationAcceptedNotifier` rather than that plus "X joined". On the self-join paths there is no granter at all, so the actor is the joining user themselves — they hear nothing here, and the owners still learn that someone joined. An open-link joiner is oriented by `WorkspaceJoinedNotifier` instead; the `:shared` preset's signup join is not, because `WelcomeNotifier` already is. See *The actor rule* below. The actor arrives as the `actor:` **param**, never off `record.granted_by`: that is a non-persisted `attr_accessor`, so an exclusion reading it back off the record would exclude nobody the moment recipient resolution stopped seeing the in-memory row. The block preloads `:preferences` in one query — per-user `user.preferences` access inside the filter is otherwise an N+1 across the candidate set (Bullet caught it). Email goes **only** to the added user: a `before_enqueue` lambda `throw(:abort)`s unless `recipient_id == event.record.user_id` AND the added user's `workspace_activity.email` pref is `true`. Comparing on the `recipient_id` column (not the loaded association) avoids a per-row association load that Bullet would flag when Noticed's `EventJob` iterates `event.notifications`. Owners never get an immediate email — the digest pipeline is their intended email fallback.
 - **`WorkspaceCapacityApproachingNotifier`** (fired by `WorkspaceCapacitySweepJob` when a workspace reaches ≥ 80% of a plan quota; v1 sweeps only the `members` metric) sends to workspace owners filtered by `billing.in_app` — the category is deliberately `billing`, not `security`, so quiet hours suppress these. It declares `dedup_bucket :day` + `dedup_seed { params[:metric] }`: the default one-minute bucket is wrong for a recurring sweep (cadence in `config/recurring.yml`), so the key is scoped per `(workspace, metric)` with a **day** bucket. Repeat sweeps in one day dedupe to a single alert; distinct metrics for the same workspace on the same day don't collapse onto each other; the next day's sweep gets a fresh key and delivers again if the workspace is still over threshold.
+
+- **`WelcomeNotifier`** is the only notifier dispatched from the HTTP registration path rather than a model callback. `User` has `after_create :onboard_workspace`, so a callback-fired welcome would ride every `create(:user)` in the suite and shift every notification count in it; the dispatch sites are `MagicLinkCallbacksController#create` (after the token is confirmed consumed, since a concurrently-consumed token rolls the signup back while `commit_signup_atomically` still returns `true`) and both signup branches of `OauthLink`, which no factory reaches. In-app only: someone who just registered is already in the app, and signup's own mail should not compete with a welcome email.
+
+- **`WorkspaceJoinedNotifier`** is the self-join counterpart to the welcome email an invited member gets. Because the joiner is the actor, excluding them from `WorkspaceMemberAddedNotifier` also removes the notification row the welcome email rides on — this notifier is what keeps a new member oriented without weakening the actor rule. It fires from `Membership`'s `after_create_commit :notify_self_joined` / `after_update_commit :notify_self_rejoined` (distinct filter names for one body: the `:commit` chain dedups by filter name, so reusing one would replace the other), both gated on the non-persisted `self_join` marker at its `true` grade. See *The actor rule* below for why that marker is deliberately not `granted_by: user`, and why the `:onboarding` grade — the `:shared` preset's signup join — fires nothing here. In-app only, on `WelcomeNotifier`'s reasoning: the joiner clicked join seconds ago and is being redirected into the workspace.
+
+### The actor rule — nobody is notified about their own action
+
+Recipient resolution drops whoever performed the action (the 37signals rule). An owner who adds a member hears nothing about their own add, and a self-joiner is never told, in the third person, that they joined.
+
+The actor travels as a **param** — `WorkspaceMemberAddedNotifier.with(record: membership, actor: …)` — and is never read back off the record inside the `recipients` block. Every source of the actor is a non-persisted `attr_accessor` on `Membership`, so an exclusion keyed on `record.granted_by` (or `record.removed_by`) would exclude nobody the moment recipient resolution stopped seeing the in-memory row: silently, with nothing failing.
+
+`Membership` carries **three** markers. Two of them describe how a membership arrived, and keeping *those* apart is the point:
+
+| Marker | Question it answers | Where it lands |
+|---|---|---|
+| `granted_by` | who granted this membership | the `membership.created` activity row's `granted_by` metadata, **and** the notification actor |
+| `self_join` | nobody granted it — the joining user acted | the notification actor only |
+| `removed_by` | who removed this member | the notification actor only |
+
+`removed_by` sits on the other transition entirely — it reaches the model as an argument to `Membership#deactivate!` and feeds `WorkspaceMemberRemovedNotifier`, where it decides both who is excluded and whether the row reads "was removed" or "left". It is unrelated to the pair below, and shares nothing with them but the actor-as-param discipline.
+
+The tempting simplification is to collapse the arrival pair, since a self-join is arguably "granted by the joiner". Don't: `granted_by` is audit provenance. Writing the joiner in as their own granter makes the audit row for a self-join **indistinguishable from an admin grant** — the one distinction that row exists to record. What ships records no granter for a self-join, which is both true and unambiguous.
+
+`granted_by` and `self_join` are also mutually exclusive, and refused rather than merely documented: `Membership.reject_conflicting_provenance!` raises `ArgumentError` when a caller hands both to `Workspace#admit` or `Membership#reactivate!`. Before that guard, `self_join` silently won the actor selection while `granted_by` still reached the audit row — a row naming a granter for something the same row records as ungranted.
+
+`self_join` has two grades, because "who acted" and "does the joiner need telling where they landed" are separate questions:
+
+- **`true`** — a join the user chose, through an open link. They are excluded from `WorkspaceMemberAddedNotifier` (they are the actor) and oriented by `WorkspaceJoinedNotifier` instead; the owners still learn that someone joined.
+- **`:onboarding`** — the membership `User#join_shared_workspace` creates at signup under the `:shared` preset. The exclusion applies; the orientation notice does not. `WelcomeNotifier` already lands in the same second, the `:personal` sibling path (`User#create_personal_workspace`) raises no workspace notification either, and under `:shared` the workspace *is* the app — "you joined Acme" restates the redirect the user just followed.
+
+A membership created with **neither** marker is not neutral. The actor resolves to `nil`, nobody is excluded, and the new member is told about their own join — which is exactly what `User#join_shared_workspace` did before it declared its stance. `spec/code_smells/membership_creation_declares_actor_stance_spec.rb` fails on any creation site in `app/` or `lib/` that names neither, with a reviewed allow-list for the first-owner seeds (a workspace's very first owner-membership has nobody to notify, so `Membership#workspace_has_other_owners?` skips the fan-out entirely).
+
+**Every in-memory instance that saves inside the transaction must carry the markers.** Rails, not the caller, picks which instance of a row runs the commit callbacks: with `run_commit_callbacks_on_first_saved_instances_in_transaction` set to `false`, it is the *last* one saved. `Workspace#admit` can be handed a second instance of a row the same transaction just inserted — under the `:shared` preset, `User#onboard_workspace` creates a placeholder Member membership and `Invitation#accept!` reconciles its role through `admit`, both inside `Signupable#commit_signup_atomically` — so `admit` stamps `granted_by` and `self_join` onto that `existing` instance too. Leaving it markerless silently dropped the actor rule: the granter was told about their own grant, and a self-joiner was told they had joined.
+
+The same discipline gates `WorkspaceCreatedNotifier`: it fires only when the non-persisted `created_by` marker is set, which `Workspace.create_owned` — the one path a person creates a workspace through — does and nothing else does. Seeds, fixtures, and the signup-time personal workspace stay silent; a fork adding a creation site opts in by setting the marker.
 
 ### Email gating and the `:digest` sentinel
 
-An email is one of three fates: deliver now, drop, or wait for `DigestMailerJob` to pick it up. Email `before_enqueue` guards call `deliver_email_now?`, which is strictly "send the instant email now" — it answers `false` both for an opt-out/DND drop and for the digest deferral, so the digest frequency choice can never be defeated by an accidental truthiness check. (`recipient_pref(:email)` still reports the tri-state — `true` / `false` / `:digest` — as an introspection surface.)
+An email is one of three fates: deliver now, drop, or wait for `DigestMailerJob` to pick it up. The gate is `deliver_email_now_for?(user)`, which is strictly "send the instant email to this user now" — it answers `false` both for an opt-out/DND drop and for the digest deferral, so the digest frequency choice can never be defeated by an accidental truthiness check. (`recipient_pref(:email)` still reports the tri-state — `true` / `false` / `:digest` — as an introspection surface.)
+
+`deliver_email_now?` is the one-argument shim for the common case: it is `deliver_email_now_for?(recipient)` and nothing else. Reach for it whenever the recipient is the user being asked about.
+
+Prefer the explicit form in a `before_enqueue` that has already narrowed the fan-out to one known user — typically with `throw(:abort) unless recipient_id == event.record.user_id`. At that point the surviving recipient *is* `event.record.user`, which the guard has already loaded, so asking about it directly is equivalent. It is not a query saving: an aborting guard loads `recipient` at most once either way, and both member notifiers' `EventJob` measures flat at four queries with two owners and with eight. What it avoids is Bullet — Noticed's `EventJob` iterates `event.notifications.each`, and a lazy `recipient` load off a member of that collection is a shape Bullet's N+1 heuristic raises on whether or not the load repeats.
+
+A notifier whose email leg has **no** narrowing guard is a different case: there the gate genuinely runs per recipient, loads each one and their preferences, and grows with the fan-out. `deliver_email_now_for?` cannot help — each recipient's own preferences are exactly what that gate needs.
 
 ### `render_safe_or_placeholder` — the deleted-record contract
 
@@ -237,7 +289,7 @@ Performance: the unread breakdown summary is computed ONCE at the top of `refres
 | Caller | When | Announcement key |
 |---|---|---|
 | `ApplicationNotifier#broadcast_notifications_arrival` (after_create_commit on the event) | New notification arrives | `arrival_announcement` |
-| `Settings::NotificationsController#broadcast_bell_refresh` (private) | Read-state mutation (`update`, `open`, `mark_all_read`, `destroy` when previously unread) | `read_state_announcement` |
+| `Settings::NotificationsController#broadcast_bell_refresh` (private), called from `update`; `Settings::NotificationReadingsController#create` (mark all read) and `Settings::Notifications::ReadingsController#create` calls `NotificationBroadcaster.refresh_for` directly for the same reason | Read-state mutation | `read_state_announcement` |
 
 Both flow through `NotificationBroadcaster.refresh_for` — no duplicate broadcast code lives anywhere else. The fan-out in `broadcast_notifications_arrival` iterates `User.where(id: recipient_ids).find_each` so per-user broadcast failures are isolated (one bad user can't poison the rest).
 
@@ -260,7 +312,7 @@ One trap inside `notifications_menu_count_frame`: the Notifications-row link mus
 
 ### Cross-tab read-state sync
 
-The tab that performs a read-state mutation gets its own surfaces refreshed by the direct Turbo Stream response; the broadcasts exist to cover every OTHER tab the user has open. The contract, pinned by `spec/requests/settings/notifications_spec.rb`: every read-state mutation (`update`, `mark_all_read`, `open`, `destroy`-when-unread) must fire `broadcast_update_to` on the `[user, :notifications]` channel for all three frame targets — `notifications_indicator_avatar` (the dot + its severity), `notifications_indicator_hamburger` (its twin), and `notifications_menu_count_frame` (the count badge) — plus the `aria-live` announcement. Each frame is independent, so the surfaces update in isolation: the count badge re-renders even when a dot is already current. `open` on an already-read notification is an idempotent no-op — zero broadcasts.
+The tab that performs a read-state mutation gets its own surfaces refreshed by the direct Turbo Stream response; the broadcasts exist to cover every OTHER tab the user has open. The contract, pinned by `spec/requests/settings/notifications_spec.rb`: every read-state mutation (`update`, `mark_all_read`, `open` via the `readings` resource) must fire `broadcast_update_to` on the `[user, :notifications]` channel for all three frame targets — `notifications_indicator_avatar` (the dot + its severity), `notifications_indicator_hamburger` (its twin), and `notifications_menu_count_frame` (the count badge) — plus the `aria-live` announcement. Each frame is independent, so the surfaces update in isolation: the count badge re-renders even when a dot is already current. `open` on an already-read notification is an idempotent no-op — zero broadcasts.
 
 ## NotificationPreferences value object
 
@@ -292,7 +344,9 @@ Validates a partial-change hash (the shape the preferences form posts), coerces 
 
 | Controller | Routes | Notes |
 |---|---|---|
-| `Settings::NotificationsController` | `index`, `update` (read-state toggle), `destroy`, `open` (mark read + redirect), `mark_all_read`, `destroy_all_read` | Pundit-gated; calls `broadcast_bell_refresh` on every read-state mutation |
+| `Settings::NotificationsController` | `index`, `update` (read-state toggle) | Pundit-gated; calls `broadcast_bell_refresh` on every read-state mutation |
+| `Settings::NotificationReadingsController` | `create` (mark all read) | Pundit-gated (`mark_all_read?`); one atomic `update_all`, then `NotificationBroadcaster.refresh_for` |
+| `Settings::Notifications::ReadingsController` | `create` (open-and-mark-read, POST-only via the nested `reading` resource) | Pundit-gated on `NotificationPolicy#open?`; the old mutating GET `:open` is gone (#686) |
 | `Settings::NotificationPreferencesController` | `edit`, `update` | Delegates validation to `NotificationPreferences#merge`; rescues `InvalidChange` → 422 |
 | `Settings::Preferences::TimezonesController` | `update` | Beacon-path returns 204; explicit-user path (`override=true`) returns Turbo Stream that closes the drawer + announces "Timezone updated" |
 
@@ -300,7 +354,7 @@ Validates a partial-change hash (the shape the preferences form posts), coerces 
 
 | Policy | Notes |
 |---|---|
-| `NotificationPolicy` | Per-record policy gates `update?`/`destroy?`/`open?` by `record.recipient_id == user.id`. `Scope` filters all of `Noticed::Notification` to the current user |
+| `NotificationPolicy` | Per-record policy gates `update?`/`open?` (both by `record.recipient_id == user.id`); collection-level `index?`/`mark_all_read?` require only a signed-in user. `Scope` filters all of `Noticed::Notification` to the current user |
 | `Settings::NotificationPreferencesPolicy` | Trivial — `edit?`/`update?` both return `user.present?` |
 | `Settings::ThemePreferencesPolicy` | Same shape |
 | `Settings::TimezonePolicy` | Same shape |
@@ -327,17 +381,21 @@ If quiet hours block delivery at the digest time, the digest is held until the w
 
 ### `NotificationCleanupJob`
 
-Per-user retention enforcement. For each user with non-`nil` `retention_days`:
+Per-user retention enforcement. For every user:
 
-1. Cutoff = `(retention_days + 2).days.ago` (2-day grace so cleanup never deletes today's reads)
-2. Delete `Noticed::Notification` where `recipient_id = user.id` AND `read_at < cutoff` AND `read_at IS NOT NULL`
-3. **Security floor exception** — notifications whose notifier carries `category :security` are kept for at least 365 days regardless of user retention preference. The floor is defined in `NotificationPreferences::RETENTION_FLOORS` and the job filters via `ApplicationNotifier.notification_types_for("security")`
+1. `days = ApplicationNotifier.preferences_for(user).retention_days` — the single owner of the missing-row fallback, so a user with no preferences row is swept at the schema default carried by `UserPreferences.new` (90, matching `DEFAULT_RETENTION_DAYS`), and a pre-migration explicit null reads as `NEVER_CAP_DAYS` (365).
+2. Cutoff = `(days + 2).days.ago` (2 days of slack against timezone drift; it only ever keeps a row longer).
+3. Delete `Noticed::Notification` where `recipient_id = user.id` AND `read_at < cutoff` AND `read_at IS NOT NULL`.
 
-**Unread is never deleted**, regardless of age: the user hasn't seen the item yet, so the retention clock effectively starts at `read_at`, not `created_at`. A `nil` `retention_days` means "Never" — the user opted out of auto-deletion and the job skips them entirely.
+**Unread is never deleted**, regardless of age: the retention clock starts at `read_at`, not `created_at`.
 
-**Batched deletion**: rows go out via `in_batches(of: 100, &:delete_all)`. SQLite serializes write transactions, so a 10k-row delete in one statement could block incoming notification writes for seconds; per-batch transactions release the write lock between rounds, capping any single block at roughly 10 ms.
+**No retention floor at this layer.** A security-category notification expires under the user's retention like any other row. The durable record of that event is its `ActivityLog` row, kept for at least `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR` (365 days) — see [Security event audit coverage](#security-event-audit-coverage).
 
-Uses `delete_all` (not `destroy_all`) because `Noticed::Notification` has no destroy callbacks and no outgoing `dependent:` cascades (the only cascade is *inbound* from `noticed_events`) — `destroy_all` would instantiate every doomed row, fire nonexistent callbacks, and DELETE row-by-row: slower with no behavioral difference. Single DELETE per batch, no row instantiation. The `noticed_events` row remains; `Noticed::Event#has_many :notifications, dependent: :delete_all` handles cascade in the reverse direction.
+**Fault isolation**: each user's sweep runs under its own `rescue StandardError`, reported through `Rails.error` with the user id. That isolates a per-user data fault (a malformed preferences row). It does not isolate a systemic one — SQLite's writer lock is global — so a cycle in which every attempted user failed re-raises, and Solid Queue records a failure and retries.
+
+**Batched deletion**: rows go out via `in_batches(of: 100, &:delete_all)` so the writer lock is released between rounds. Each yielded batch is derived from the scoped relation, so its DELETE still carries `read_at IS NOT NULL AND read_at < cutoff` and a row marked unread between the id SELECT and the DELETE is not deleted. That holds in both of `in_batches`' modes (`activerecord-8.1.3.1/lib/active_record/relation/batches.rb:440` for the id-list `rewhere`, `:457-458` for the range mode's `apply_finish_limit` on the same relation). A partial batch is re-entrant: the next run recomputes the cutoff.
+
+`delete_all`, not `destroy_all`: `Noticed::Notification` has no callbacks worth running here. The one it has — noticed's counter cache on `noticed_events.notifications_count` — is bypassed by every deletion path in the app (this job, `Noticed::Event#has_many :notifications, dependent: :delete_all`, and `User#notifications, dependent: :delete_all`), so the counter is not a reliable signal; orphan-event pruning (#811) must use `NOT EXISTS`. `User#notifications, dependent: :delete_all` is also the *only* enforcement against orphaned notification rows: `noticed_notifications` carries no foreign key to users, so raw SQL or `User.delete_all` in a fork orphans them silently, and this job — which iterates `User.find_each` — never sees them again.
 
 ## Security event audit coverage
 
@@ -351,7 +409,7 @@ The three security notifiers above each pair with a row in `ActivityLog` — a s
 
 Passkey removal has no notifier of its own — only enrollment does, via `PasskeyAddedNotifier`; the ActivityLog row above is the only record that a passkey was removed.
 
-Retention for this tier is governed by `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR` (365 days) rather than the job's 12-month `RETENTION_WINDOW`. **The two are numerically the same today** — `12.months.ago` and `365.days.ago` land on the same date in an ordinary year — so this is a *decoupling*, not an extension: security rows do not currently outlive ordinary ones. The floor only starts to bite if a fork shortens `RETENTION_WINDOW`, at which point credential-event history keeps its 365 days regardless. The sweep deletes security rows past the **earlier** of the two cutoffs, so the floor can only ever hold a row longer than the general window, never less (`12.months.ago` reaches one day further back than `365.days.ago` when the window spans a Feb 29 — without that guard the "floor" would invert for roughly one year in four). This ActivityLog row is now the durable record of these events; `NotificationPreferences::RETENTION_FLOORS` above still governs the separate `noticed_notifications` row today, but exists only to protect that UI-facing copy — a future change may retire it now that this floor covers the underlying event.
+Retention for this tier is governed by `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR` (365 days) rather than the job's 12-month `RETENTION_WINDOW`. **The two are numerically the same today** — `12.months.ago` and `365.days.ago` land on the same date in an ordinary year — so this is a *decoupling*, not an extension: security rows do not currently outlive ordinary ones. The floor only starts to bite if a fork shortens `RETENTION_WINDOW`, at which point credential-event history keeps its 365 days regardless. The sweep deletes security rows past the **earlier** of the two cutoffs, so the floor can only ever hold a row longer than the general window, never less (`12.months.ago` reaches one day further back than `365.days.ago` when the window spans a Feb 29 — without that guard the "floor" would invert for roughly one year in four). This ActivityLog row is the durable record of these events. The `noticed_notifications` row has no floor of its own (PR 5).
 
 ## Record preloads (index N+1 prevention)
 
@@ -393,7 +451,7 @@ Watch for:
 
 ### Tuning
 
-- **Retention** is per-user via `notification_preferences.retention_days`. Floors are app-wide via `NotificationPreferences::RETENTION_FLOORS`. Bump the security floor by editing that constant.
+- **Retention** is per-user via `notification_preferences.retention_days` (choices in `NotificationPreferences::ALLOWED_RETENTION_DAYS`; absent-key and explicit-null defaults in `DEFAULT_RETENTION_DAYS` / `NEVER_CAP_DAYS`). The only retention floor is the audit sweep's `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR`.
 - **Digest hour** is hardcoded at 8 AM local in `NotificationPreferences#digest_hour_local`. Per-user configuration was deliberately removed in the v2 redesign — IA simplification.
 - **Idempotency window** is 1 minute (the `minute_bucket` divisor). Increasing it widens the dedup horizon. Cross-minute retries by design land in distinct buckets and both succeed.
 
@@ -401,14 +459,17 @@ Watch for:
 
 1. Subclass `ApplicationNotifier` under `app/notifiers/`
 2. Declare `category :name` (one of `security`, `account_access`, `workspace_activity`, `billing`)
-3. Declare `severity :level` (one of `:danger`, `:warning`, `:info`, `:success`) — drives the bell color; omitting it defaults to `:info`
+3. Declare `severity :level` (one of `:danger`, `:warning`, `:info`, `:success`) — drives the bell color; omitting it defaults to `:info`. Then add the notifier to the roster in `spec/notifiers/notifier_severity_assignments_spec.rb` — that spec fails until you do, so a forgotten `severity` cannot quietly ship as `:info`
 4. Define `notification_methods do; def message; def url; end` (use `event.record.*` for context)
 5. Add `deliver_by :email, ... if:` guards if you want email
 6. Add I18n keys under `notifications.<notifier_snake_case>.message`
 7. If `#message` traverses associations off `event.record`, declare them: `record_preloads :project` (nested form for polymorphic hops: `record_preloads invitable: :workspace`). Then add the notifier's delivery to the roster in `spec/requests/settings/notifications_record_preloads_spec.rb` — that spec fails until you do, and it is what proves the declaration right (missing → N+1, superfluous → unused eager loading)
-8. Dispatch with `NotifierClass.with(record: ...).deliver(recipients)` from wherever the triggering event happens
+8. Dispatch from a **model callback** when the notification is about a record changing — that is the seam every write path shares, so no caller can forget it. Move to a controller or PORO only when a callback would fire on writes the notification is not about: `WelcomeNotifier` is the standing example (`User` has `after_create :onboard_workspace`, so a callback would fire for every seeded and factory-built user, not just a real registration). Record the reason at the notifier when you take the exception
+9. Dispatch as `NotifierClass.with(record: ...).deliver(recipient)` when the call site knows the recipient, or `.deliver(nil)` when the notifier declares a `recipients` block. The two are not interchangeable; see *In-app gating lives in `recipients`* above for why, and `spec/code_smells/notifier_recipients_block_dispatch_spec.rb` for the fence
 
 The `category` + `severity` macros and the `with` parameter are enough to route the new notifier through the existing preference gates, bell-indicator severity selection, idempotency, broadcasts, retention, and digest pipeline. No controller or view changes needed.
+
+One extra obligation if the notifier reaches an **invitee** rather than a workspace member: re-check `Invitation#deliverable?` at the notifier's delivery gate — the last hop it controls — and add the site to the delivery-site roster in [Security](/docs/developer/security#invitation-blocks-decline-and-block). A preference gate is not a deliverability gate.
 
 ## Related
 

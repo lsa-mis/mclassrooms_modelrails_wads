@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = [
-    "fileInput", "cropPreview", "cropSection",
+    "cropPreview", "cropSection",
     "colorField", "colorSlider", "colorHex",
     "initialsPreview", "hueSwatch", "gifWarning"
   ]
@@ -114,9 +114,12 @@ export default class extends Controller {
     this._manageFocus("hub")
   }
 
-  openFilePicker() {
+  // The file input opens via a native <label for> now (accessible target
+  // size — see the crop footer partial), so this only needs to arm the
+  // cancel-suppression flag; label forwarding (or Enter/Space on the
+  // focused input) already dispatches the click that opens the dialog.
+  markFilePickerOpen() {
     this._filePickerOpen = true
-    this.fileInputTarget.click()
   }
 
   handleFileSelected(event) {

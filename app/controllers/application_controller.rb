@@ -134,9 +134,18 @@ class ApplicationController < ActionController::Base
   # never redirects — keeping every branch loop-safe.
   # url_from filters cross-origin referers (SEC-10): a forged Referer must
   # fall back to root, not make the error handler raise UnsafeRedirectError.
+  # #931: even the show?-permitted branch can loop — a refused PATCH/DELETE
+  # at the workspace's OWN path (`/workspaces/:slug`, shared by GET/PATCH/PUT/
+  # DELETE) would redirect right back to itself, so that one case falls
+  # through to workspaces_path instead.
   def not_authorized_redirect_path
     return url_from(request.referer) || root_path if Current.workspace.blank?
-    return workspace_path(Current.workspace) if policy(Current.workspace).show?
+
+    if policy(Current.workspace).show?
+      workspace_home = workspace_path(Current.workspace)
+      return request.path == workspace_home ? workspaces_path : workspace_home
+    end
+
     return find_a_room_path if Current.user && RoleResolver.for(Current.user).viewer?
 
     root_path

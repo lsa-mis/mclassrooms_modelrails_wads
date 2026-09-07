@@ -3,6 +3,7 @@ en:
     placeholder: "This notification refers to something that no longer exists."
     bell:
       arrival_announcement: "New notification"
+      arrival_announcement_with_severity: "New notification: %{phrase}"
       read_state_announcement: "Notifications updated"
     severity_phrase:
       danger: "a security alert"
@@ -83,14 +84,13 @@ en:
       advanced:
         heading: "Advanced"
         retention_label: "Auto-delete read notifications after"
-        retention_help: "Security alerts are kept for at least 1 year regardless of this setting."
+        retention_help: "Read notifications are removed this many days after you read them. Unread notifications stay until you read them. Your account's security history is kept separately on the Security page."
         retention_options:
           "30": "30 days"
           "60": "60 days"
           "90": "90 days"
           "180": "180 days"
           "365": "1 year"
-          never: "Never"
       update:
         saved_announcement: "Preferences saved"
     workspace_invitation_accepted:
@@ -103,8 +103,17 @@ en:
       message: "Your role in %{workspace} changed to %{new_role}"
     workspace_invitation_expiring_soon:
       message: "Your invitation expires in %{hours_remaining} hours"
+    workspace_created:
+      message: "You created %{workspace}."
+    workspace_joined:
+      message: "You joined %{workspace}."
     workspace_member_added:
       message: "%{added_user_name} joined %{workspace}"
+    # Third-person event-log voice, and it branches on the EVENT rather than on
+    # who is reading: the removed member sees the same sentence the owners do.
+    workspace_member_removed:
+      removed: "%{user_name} was removed from %{workspace}"
+      left: "%{user_name} left %{workspace}"
     workspace_capacity_approaching:
       message: "%{workspace} is approaching its %{metric} limit (%{current} of %{limit})"
     passkey_added:
@@ -115,6 +124,8 @@ en:
       message: "Your password was removed from your account, %{user_name}."
     sign_in_from_new_device:
       message: "We noticed a new sign-in from %{os}. If this wasn't you, please review your account."
+    welcome:
+      message: "Welcome, %{user_name}. Invitations, member changes and account activity land here. Choose what you hear about in your preferences."
     index:
       heading: "Notifications"
       filters_aria: "Filter notifications"
@@ -129,25 +140,18 @@ en:
       item:
         mark_read: "Mark as read"
         mark_unread: "Mark as unread"
-        delete: "Delete"
         status_unread: "Unread."
         status_read: "Read."
         time_ago: "%{time} ago"
         mark_read_aria: "Mark as read: %{summary}"
         mark_unread_aria: "Mark as unread: %{summary}"
-        delete_aria: "Delete notification: %{summary}"
       mark_all_read:
         action: "Mark all as read"
         title: "Mark all as read?"
         confirm: "Mark all your unread notifications as read?"
-        success: "All notifications marked as read."
-      destroy_all_read:
-        action: "Delete all read"
-        title: "Delete all read notifications?"
-        confirm: "Delete all your read notifications?"
-        success: "Read notifications deleted."
-    destroy:
-      success: "Notification deleted."
+      retention_hint:
+        text: "Once you've read a notification, we remove it %{period} later. Unread notifications stay until you read them."
+        change: "Change retention"
   notification_mailer:
     digest:
       subject:
@@ -176,6 +180,14 @@ en:
       greeting: "Hi %{name},"
       body: "You've been added to %{workspace} as %{new_role}."
       action: "Open workspace"
+    # The one second-person surface of this event, and the only one the removed
+    # member alone receives. No action link: the workspace is exactly where
+    # they can no longer go.
+    workspace_member_removed:
+      subject: "You've been removed from %{workspace}"
+      heading: "You've been removed from %{workspace}"
+      greeting: "Hi %{name},"
+      body: "You no longer have access to %{workspace}."
     workspace_capacity_approaching:
       subject: "%{workspace} is approaching its %{metric} limit"
       heading: "%{workspace} is approaching its %{metric} limit"

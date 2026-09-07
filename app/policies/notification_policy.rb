@@ -13,20 +13,12 @@ class NotificationPolicy < ApplicationPolicy
     user.present?
   end
 
-  def destroy_all_read?
-    user.present?
-  end
-
   def update?
     record.recipient_id == user.id && record.recipient_type == "User"
   end
 
-  def destroy?
-    update?
-  end
-
   # Bell-dropdown click — marks read + redirects to the notifier's URL.
-  # Same recipient gate as update/destroy.
+  # Same recipient gate as update.
   def open?
     update?
   end

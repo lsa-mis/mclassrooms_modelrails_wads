@@ -9,7 +9,8 @@
 #   delivery_methods:   { in_app: { enabled },
 #                         email:  { enabled, frequency: instant|daily|weekly } }
 #   quiet_hours:        { enabled, start: "HH:MM", end: "HH:MM", allow_urgent }
-#   retention_days:     Integer (30/60/90/180/365) or nil ("never")
+#   retention_days:     Integer (30/60/90/180/365); the reader defaults an
+#                       absent key and caps an explicit null
 class NotificationPreferences
   CATEGORIES = %w[security account_access workspace_activity billing].freeze
   # Digest is folded into Email channel's frequency selector — no longer a channel.
@@ -20,13 +21,15 @@ class NotificationPreferences
   # string comparisons.
   DAYS_OF_WEEK = %w[monday tuesday wednesday thursday friday saturday sunday].freeze
   SECURITY_CATEGORY = "security"
-  # NotificationCleanupJob enforces a 1-year retention floor on security
-  # notifications regardless of user preference.
-  RETENTION_FLOORS = { "security" => 365.days }.freeze
   # Validation constants used by #merge. Live on the value object (not the
   # controller) because they describe schema semantics.
   HH_MM_REGEX = /\A([01]\d|2[0-3]):([0-5]\d)\z/
   ALLOWED_RETENTION_DAYS = [ 30, 60, 90, 180, 365 ].freeze
+  # The reader owns these, not the column default and not the migration (PR 5,
+  # D9): rolling deploys and unlocked whole-column preference saves can put a
+  # nil back after the backfill, so the value object must never return one.
+  DEFAULT_RETENTION_DAYS = 90    # absent key — a row written without the choice
+  NEVER_CAP_DAYS = 365           # explicit null — the retired "Never" choice, capped
 
   # Raised by #merge when a partial-change hash violates the JSONB schema.
   # Caller catches and responds 422 — see Settings::NotificationPreferencesController#update.
@@ -138,7 +141,9 @@ class NotificationPreferences
   end
 
   def retention_days
-    @data["retention_days"]
+    return NEVER_CAP_DAYS if @data.key?("retention_days") && @data["retention_days"].nil?
+
+    @data.fetch("retention_days", DEFAULT_RETENTION_DAYS)
   end
 
   # Next digest send time (8am local) in the user's own timezone.
@@ -159,11 +164,10 @@ class NotificationPreferences
   #
   # `changes` is the parameter shape posted from the preferences form:
   # nested string-keyed hash with values that may need type coercion
-  # (the form submits strings; the JSONB column wants booleans / ints /
-  # nil for "never" retention).
+  # (the form submits strings; the JSONB column wants booleans / ints).
   #
   # Raises NotificationPreferences::InvalidChange on:
-  #   - retention_days not in ALLOWED_RETENTION_DAYS (and not "never"/blank)
+  #   - retention_days not in ALLOWED_RETENTION_DAYS
   #   - notification_types key outside CATEGORIES
   #   - delivery_methods.email.frequency outside EMAIL_FREQUENCIES
   #   - quiet_hours.start/end not matching HH:MM
@@ -276,15 +280,11 @@ class NotificationPreferences
     coerce_booleans!(changes)
   end
 
-  # Blank / "never" => valid (means "never auto-delete").
-  # Otherwise the integer form must appear in ALLOWED_RETENTION_DAYS.
   def valid_retention?(value)
-    return true if value.blank? || value.to_s == "never"
     ALLOWED_RETENTION_DAYS.include?(value.to_i)
   end
 
   def normalize_retention(value)
-    return nil if value.blank? || value.to_s == "never"
     value.to_i
   end
 

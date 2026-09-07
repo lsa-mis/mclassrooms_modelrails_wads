@@ -76,11 +76,6 @@ class OmniauthCallbacksController < ApplicationController
     redirect_for(outcome)
   end
 
-  def failure
-    redirect_to new_session_path,
-      alert: t("sessions.create.oauth_failure")
-  end
-
   private
 
   def redirect_for(outcome)

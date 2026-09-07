@@ -87,8 +87,8 @@
                 <p class="font-medium text-text-heading truncate"><%= membership.workspace.name %></p>
                 <p class="text-sm text-text-muted"><%= lifecycle_status_label(membership.workspace) %></p>
               </div>
-              <%= button_to t("lifecycle.restore"), unarchive_workspace_path(membership.workspace),
-                    method: :patch,
+              <%= button_to t("lifecycle.restore"), workspace_archival_path(membership.workspace),
+                    method: :delete,
                     class: "btn-touch-target btn-text btn-text-interactive text-sm shrink-0" %>
             <% end %>
           <% end %>

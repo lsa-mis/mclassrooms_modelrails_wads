@@ -377,7 +377,7 @@ RSpec.describe "Workspace Members", type: :request do
       it "refuses an admin reactivating a deactivated owner and leaves it discarded" do
         deactivated_owner = create(:membership, :owner, user: create(:user), workspace: workspace)
         deactivated_owner.discard!
-        patch reactivate_workspace_member_path(workspace, deactivated_owner)
+        post workspace_member_reactivation_path(workspace, deactivated_owner)
         expect(deactivated_owner.reload).to be_discarded
         expect(response).to have_http_status(:redirect)
       end
@@ -460,25 +460,29 @@ RSpec.describe "Workspace Members", type: :request do
       end
     end
 
-    describe "PATCH /workspaces/:workspace_slug/members/:id/reactivate" do
+    # Reactivating is the create of a reactivation nested under the member (#1007).
+    describe "POST /workspaces/:workspace_slug/members/:id/reactivation" do
       let!(:target_membership) { add_member }
 
       before { target_membership.discard! }
 
       it "reactivates the member" do
-        patch reactivate_workspace_member_path(workspace, target_membership)
+        post workspace_member_reactivation_path(workspace, target_membership)
         expect(target_membership.reload).not_to be_discarded
       end
     end
 
-    describe "PATCH /workspaces/:workspace_slug/members/:id/transfer_ownership" do
+    # Transferring ownership is the create of an ownership transfer nested under the member (#1007).
+    describe "POST /workspaces/:workspace_slug/members/:id/ownership_transfer" do
       it "transfers ownership" do
         target_membership = add_member
         owner_role = Role.system_default!("owner")
         admin_role = Role.system_default!("admin")
-        patch transfer_ownership_workspace_member_path(workspace, target_membership)
+        post workspace_member_ownership_transfer_path(workspace, target_membership)
         expect(target_membership.reload.role).to eq(owner_role)
         expect(membership.reload.role).to eq(admin_role)
+        expect(response).to redirect_to(workspace_members_path(workspace))
+        expect(flash[:notice]).to eq(I18n.t("workspaces.members.ownership_transfers.create.transferred"))
       end
     end
 
@@ -523,12 +527,12 @@ RSpec.describe "Workspace Members", type: :request do
 
       it "denies reactivate" do
         target_membership.discard!
-        patch reactivate_workspace_member_path(workspace, target_membership)
+        post workspace_member_reactivation_path(workspace, target_membership)
         expect(target_membership.reload).to be_discarded
       end
 
       it "denies transfer_ownership" do
-        patch transfer_ownership_workspace_member_path(workspace, target_membership)
+        post workspace_member_ownership_transfer_path(workspace, target_membership)
         expect(response).to have_http_status(:redirect)
       end
     end
@@ -589,6 +593,41 @@ RSpec.describe "Workspaces::Members destroy", type: :request do
         follow_redirect!
         expect(flash[:notice]).to eq(I18n.t("workspaces.members.destroy.deactivated"))
         expect(other_membership.reload.discarded_at).to be_present
+      end
+    end
+
+    # #933: the controller is the only caller of #deactivate!, so it is the
+    # only place the actor can be named. Without it every removal would read
+    # as a system action and the person who did it would be notified about it.
+    context "notifying the people a removal concerns" do
+      let!(:owner_membership) { create(:membership, :owner, user: user, workspace: workspace) }
+      let!(:other_membership) { create(:membership, user: other_user, workspace: workspace) }
+      let!(:bystander_owner) { create(:user) }
+      let!(:second_owner) { create(:membership, :owner, user: bystander_owner, workspace: workspace) }
+
+      def removal_message_for(recipient)
+        Noticed::Notification
+          .where(type: "WorkspaceMemberRemovedNotifier::Notification", recipient: recipient)
+          .last&.message
+      end
+
+      it "names the acting owner, so the removed member reads it as a removal" do
+        delete workspace_member_path(workspace, other_membership)
+
+        expect(removal_message_for(other_user))
+          .to eq("#{other_user.first_name} was removed from #{workspace.name}")
+        expect(removal_message_for(user)).to be_nil
+      end
+
+      # The other owner is the reader here on purpose: recipients are the removed
+      # member plus the owners, and a plain member hears nothing about someone
+      # else's removal.
+      it "reads as a departure when the member removes their own membership" do
+        delete workspace_member_path(workspace, owner_membership)
+
+        expect(removal_message_for(bystander_owner))
+          .to eq("#{user.first_name} left #{workspace.name}")
+        expect(removal_message_for(other_user)).to be_nil
       end
     end
 

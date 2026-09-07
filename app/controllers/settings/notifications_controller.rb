@@ -7,8 +7,8 @@ module Settings
   # PREFERENCES, which does carry the shell. Recorded in the
   # settings_layout_opt_in code-smell spec's rulings.
   class NotificationsController < ApplicationController
-    before_action :set_notification, only: [ :update, :destroy ]
-    before_action :authorize_notification, only: [ :update, :destroy ]
+    before_action :set_notification, only: [ :update ]
+    before_action :authorize_notification, only: [ :update ]
 
     def index
       authorize Noticed::Notification, :index?, policy_class: NotificationPolicy
@@ -37,6 +37,7 @@ module Settings
         scope = scope.where(type: ApplicationNotifier.notification_types_for(params[:category]))
       end
       @current_filter = current_filter_key
+      @retention_days = ApplicationNotifier.preferences_for(Current.user).retention_days
       @pagy, @notifications = pagy(scope, limit: 25)
       # Second stage of the eager load: `includes` stops at the polymorphic
       # record, so each notifier declares what its `#message` traverses
@@ -51,44 +52,6 @@ module Settings
         format.turbo_stream
         format.html { redirect_back fallback_location: settings_notifications_path }
       end
-    end
-
-    def destroy
-      # Capture read-state before destroy! so we can decide whether other
-      # tabs need a bell-button refresh. Destroying an unread notification
-      # drops the user's unread count; destroying a read one doesn't change
-      # the badge so we skip the broadcast to avoid pointless work.
-      was_unread = @notification.read_at.nil?
-      @notification.destroy!
-      broadcast_bell_refresh if was_unread
-      redirect_to settings_notifications_path, notice: t("notifications.destroy.success")
-    end
-
-    def mark_all_read
-      authorize Noticed::Notification, :mark_all_read?, policy_class: NotificationPolicy
-      # Single atomic UPDATE: WHERE clause is evaluated once, rows un-marked
-      # concurrently can't slip past a moving cursor (the in_batches race
-      # the panel flagged), and every row gets the same timestamp instead
-      # of per-batch drift. Per-user volume here is bounded by retention
-      # caps — if it ever grows, route the heavy lift to PR-5's sweep job.
-      now = Time.current
-      Current.user.notifications.where(read_at: nil)
-                                .update_all(read_at: now, updated_at: now)
-      broadcast_bell_refresh
-      redirect_to settings_notifications_path,
-                  notice: t("notifications.index.mark_all_read.success")
-    end
-
-    def destroy_all_read
-      authorize Noticed::Notification, :destroy_all_read?, policy_class: NotificationPolicy
-      # delete_all (not destroy_all): Noticed::Notification has no
-      # destroy callbacks and no `dependent:` cascades pointing OUT from
-      # it (the only cascade is INTO it from noticed_events via the
-      # `dependent: :delete_all` on Noticed::Event#has_many :notifications).
-      # Single DELETE, no row instantiation, no callback overhead.
-      Current.user.notifications.where.not(read_at: nil).delete_all
-      redirect_to settings_notifications_path,
-                  notice: t("notifications.index.destroy_all_read.success")
     end
 
     private

@@ -25,13 +25,6 @@ RSpec.describe NotificationCleanupJob, type: :job do
     recipient.notifications.last
   end
 
-  def deliver_password_changed_at(time, recipient: user)
-    travel_to(time) do
-      PasswordChangedNotifier.with(record: recipient).deliver(recipient)
-    end
-    recipient.notifications.last
-  end
-
   describe "#perform" do
     context "user with retention_days = 90" do
       before do
@@ -74,50 +67,20 @@ RSpec.describe NotificationCleanupJob, type: :job do
 
         expect(Noticed::Notification.where(id: ancient_unread.id)).to exist
       end
-
-      it "preserves security-category notifications under the 1-year floor" do
-        old_security = deliver_password_changed_at(180.days.ago)
-        old_security.update!(read_at: 180.days.ago)
-
-        described_class.perform_now
-
-        expect(Noticed::Notification.where(id: old_security.id)).to exist,
-          "security notification within 1-year floor should be kept regardless of retention preference"
-      end
-
-      it "deletes security-category notifications older than the 1-year floor" do
-        very_old_security = deliver_password_changed_at(400.days.ago)
-        very_old_security.update!(read_at: 400.days.ago)
-
-        described_class.perform_now
-
-        expect(Noticed::Notification.where(id: very_old_security.id)).not_to exist
-      end
-    end
-
-    context "user with retention_days = nil (Never)" do
-      before do
-        prefs = user.preferences.notification_preferences
-        user.preferences.update!(notification_preferences: prefs.merge("retention_days" => nil))
-      end
-
-      it "does not delete any read notifications regardless of age" do
-        ancient = deliver_workspace_invitation_at(2.years.ago)
-        ancient.update!(read_at: 2.years.ago)
-
-        described_class.perform_now
-
-        expect(Noticed::Notification.where(id: ancient.id)).to exist
-      end
     end
 
     context "user without preferences row" do
-      it "does not raise" do
+      it "sweeps at the default retention, matching what the index hint tells them" do
         unconfigured = create(:user)
+        old = deliver_workspace_invitation_at(100.days.ago, recipient: unconfigured)
+        old.update!(read_at: 100.days.ago)
+        recent = deliver_workspace_invitation_at(50.days.ago, recipient: unconfigured)
+        recent.update!(read_at: 50.days.ago)
 
-        expect {
-          described_class.perform_now
-        }.not_to raise_error
+        described_class.perform_now
+
+        expect(Noticed::Notification.where(id: old.id)).not_to exist
+        expect(Noticed::Notification.where(id: recent.id)).to exist
       end
     end
 
@@ -136,6 +99,56 @@ RSpec.describe NotificationCleanupJob, type: :job do
 
         expect(Noticed::Notification.where(id: old_for_user.id)).not_to exist
         expect(Noticed::Notification.where(id: recent_for_other.id)).to exist
+      end
+    end
+
+    context "fault isolation" do
+      # A malformed row: retention_days stored as a string. `"90" + 2` raises
+      # TypeError inside that user's body and nowhere else — a real data fault,
+      # no mocking, so the rescue is exercised for the reason it exists.
+      def corrupt_retention_for(someone)
+        someone.create_preferences! unless someone.preferences
+        prefs = someone.preferences.notification_preferences
+        someone.preferences.update_column(:notification_preferences, prefs.merge("retention_days" => "90"))
+      end
+
+      it "reports one user's failure and still sweeps the next user" do
+        corrupt_retention_for(user)
+        other_user.create_preferences!
+        old_for_other = deliver_workspace_invitation_at(100.days.ago, recipient: other_user)
+        old_for_other.update!(read_at: 100.days.ago)
+
+        expect(Rails.error).to receive(:report).with(
+          instance_of(TypeError),
+          hash_including(handled: true, context: hash_including(user_id: user.id))
+        )
+
+        expect { described_class.perform_now }.not_to raise_error
+        expect(Noticed::Notification.where(id: old_for_other.id)).not_to exist
+      end
+
+      it "re-raises when every attempted user failed, so the queue records a failure" do
+        corrupt_retention_for(user)
+        corrupt_retention_for(other_user)
+        allow(Rails.error).to receive(:report)
+
+        expect { described_class.perform_now }.to raise_error(TypeError)
+      end
+    end
+
+    context "user whose stored retention is an explicit null (a pre-migration Never choice)" do
+      it "sweeps at the Never cap, not never" do
+        prefs = user.preferences.notification_preferences
+        user.preferences.update_column(:notification_preferences, prefs.merge("retention_days" => nil))
+        ancient = deliver_workspace_invitation_at(400.days.ago)
+        ancient.update!(read_at: 400.days.ago)
+        within_cap = deliver_workspace_invitation_at(200.days.ago)
+        within_cap.update!(read_at: 200.days.ago)
+
+        described_class.perform_now
+
+        expect(Noticed::Notification.where(id: ancient.id)).not_to exist
+        expect(Noticed::Notification.where(id: within_cap.id)).to exist
       end
     end
   end

@@ -32,6 +32,20 @@ RSpec.describe MagicLinkToken, type: :model do
       expect(MagicLinkToken.find_valid(alice_first)).to be_nil
       expect(MagicLinkToken.find_valid(bob)).to be_present
     end
+
+    it "stores the canonical form of a padded, mixed-case address" do
+      token = MagicLinkToken.create_for_email("  Ada@Example.com ")
+
+      expect(MagicLinkToken.find_valid(token).email).to eq("ada@example.com")
+    end
+
+    it "supersedes the prior token when the same IDN address is typed in its other form" do
+      first = MagicLinkToken.create_for_email("user@bücher.de")
+      second = MagicLinkToken.create_for_email("user@xn--bcher-kva.de")
+
+      expect(MagicLinkToken.find_valid(first)).to be_nil
+      expect(MagicLinkToken.find_valid(second).email).to eq("user@xn--bcher-kva.de")
+    end
   end
 
   describe ".create_for_email with intent" do

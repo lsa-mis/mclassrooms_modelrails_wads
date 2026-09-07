@@ -154,7 +154,28 @@ class ApplicationNotifier < Noticed::Event
     # all abort.
     # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
     def deliver_email_now?
-      preferences_object.deliver_now?(category: event.class.category_name, channel: :email)
+      deliver_email_now_for?(recipient)
+    end
+
+    # The same gate asked about a user the caller already holds.
+    #
+    # Not a performance fix, despite appearances: a hook that aborts every
+    # recipient but one loads `recipient` once either way, and the EventJob
+    # measures flat at 4 queries with 2 owners and with 8. What it avoids is
+    # Bullet. Noticed's EventJob iterates `event.notifications.each`, so
+    # reading `recipient` in a before_enqueue is a lazy load off a member of
+    # that collection — which Bullet's heuristic cannot tell from a real N+1,
+    # and raises on. A hook that has just established
+    # `recipient_id == event.record.user_id` hands the record's own user here
+    # instead, keeping the gate in one place.
+    #
+    # A notifier whose email leg has NO such narrowing guard is a different
+    # story: there `deliver_email_now?` really does load per recipient, and
+    # this method cannot help, because each recipient's own preferences are
+    # what the gate needs.
+    def deliver_email_now_for?(user)
+      ApplicationNotifier.preferences_for(user)
+        .deliver_now?(category: event.class.category_name, channel: :email)
     end
 
     def recipient_locale
@@ -181,6 +202,19 @@ class ApplicationNotifier < Noticed::Event
       raise unless e.receiver.nil?
       Rails.logger.info("Notification ##{id} references deleted record; rendering placeholder")
       I18n.t("notifications.placeholder")
+    end
+
+    # Convert a possibly-deleted record into the deletion shape BEFORE it
+    # reaches a route helper. Helpers reject nil with
+    # ActionController::UrlGenerationError, which render_safe_or_placeholder
+    # deliberately does not rescue (elsewhere it is a real routing bug) — so an
+    # unconverted nil escapes even the digest's own wrapped call site and takes
+    # down that user's ENTIRE digest render, not just the one dead row.
+    # Only #url bodies need this: #message traversals dereference the record
+    # and already raise NoMethodError on nil.
+    def present_or_gone!(record)
+      raise ActiveRecord::RecordNotFound if record.nil?
+      record
     end
 
     private
@@ -279,7 +313,8 @@ class ApplicationNotifier < Noticed::Event
     # swallow-log-report contract for adapter outages. Per-user iteration so one
     # bad broadcast doesn't poison the rest — each call is self-rescuing.
     User.where(id: recipient_ids).find_each do |user|
-      NotificationBroadcaster.refresh_for(user, announcement_key: "notifications.bell.arrival_announcement")
+      NotificationBroadcaster.refresh_for(user, announcement_key: "notifications.bell.arrival_announcement",
+                                          severity: self.class.severity_name)
     end
   end
 

@@ -1,5 +1,6 @@
 require "rails_helper"
 
+# One pages resource, show keyed by name; the templates are the allowlist (#1007).
 RSpec.describe "Pages", type: :request do
   describe "GET /" do
     it "returns the home page" do
@@ -152,6 +153,13 @@ RSpec.describe "Pages", type: :request do
       get contact_path
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("pages.contact.hero.title"))
+    end
+  end
+
+  describe "GET /:id for a name that is not a page" do
+    it "is not routable, so the constraint is the first fence" do
+      get "/pricing"
+      expect(response).to have_http_status(:not_found)
     end
   end
 end

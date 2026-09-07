@@ -14,7 +14,12 @@ RSpec.describe "Code smell: activity log immutability" do
   # passes delete_all as a SYMBOL, which the original dotted-call pattern
   # missed entirely (found when the #438 retention job failed to trip this
   # guard as designed).
-  bypass_writes = /\b(?:ActivityLog|activity_logs)\b[^\n]*(?:\.|&:)(?:update_all|delete_all|destroy_all|update_columns|upsert(?:_all)?)\b/
+  # `dependent:` is the third spelling, and it slipped through until #921:
+  # `has_many :activity_logs, dependent: :delete_all` deletes rows relation-
+  # level exactly like the dotted call, but the separator is `: ` rather than
+  # `.` or `&:`. A guard that exists to make relation-level deletion a REVIEWED
+  # decision has to see the association form too.
+  bypass_writes = /\b(?:ActivityLog|activity_logs)\b[^\n]*(?:(?:\.|&:)(?:update_all|delete_all|destroy_all|update_columns|upsert(?:_all)?)|dependent:\s*:(?:delete_all|destroy_all))\b/
 
   # path => reason. Empty until the #438 retention job exists.
   # The documented door through the immutability guarantee — an entry here is
@@ -25,7 +30,13 @@ RSpec.describe "Code smell: activity log immutability" do
       "the panel-decided retention sweep (#438), now two-grade: 12-month " \
       "window for best-effort workspace rows, SECURITY_RETENTION_FLOOR for " \
       "strict account-security rows (notifications lifecycle arc) — see the " \
-      "job's header"
+      "job's header",
+    "app/models/workspace.rb" =>
+      "#921: a workspace's own audit trail dies with it. `:delete_all` rather " \
+      "than `:destroy` because ActivityLog#readonly? is persisted?, so " \
+      "instance-level destroy raises by design — relation-level is the only " \
+      "door. Cannot reach the security tier: record_security_event! hardcodes " \
+      "workspace_id: nil, so no SECURITY_ACTIONS row is in the association's scope"
   }.freeze
 
   it "no app or lib code rewrites or deletes activity log rows" do

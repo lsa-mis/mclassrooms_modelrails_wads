@@ -7,7 +7,7 @@ RSpec.describe "Passwordless-first auth", type: :system do
   # Flow 1: brand-new user signs up via magic link — no password anywhere.
   #
   # The app default is :invite_only; open signups are required so the
-  # sessions#lookup action allows new-user registration. Use direct config
+  # sessions/lookups#create allows new-user registration. Use direct config
   # mutation (not allow stubs) so the change is visible on the Rack server
   # thread that Playwright drives — the same pattern used by
   # passwordless_join_link_spec.rb.
@@ -60,8 +60,8 @@ RSpec.describe "Passwordless-first auth", type: :system do
 
       click_link I18n.t("sessions.check_email.use_password")
 
-      fill_in I18n.t("sessions.password_form.password_label"), with: "SecureP@ssw0rd123!"
-      click_button I18n.t("sessions.password_form.submit")
+      fill_in I18n.t("sessions.passwords.new.password_label"), with: "SecureP@ssw0rd123!"
+      click_button I18n.t("sessions.passwords.new.submit")
 
       expect(page).to have_current_path(root_path)
     end
@@ -71,7 +71,7 @@ RSpec.describe "Passwordless-first auth", type: :system do
   # Flow 3: forgot-password sends a set_password magic link that lands on the
   # change-password form.
   #
-  # The "Forgot your password?" button in password_form.html.erb is a
+  # The "Forgot your password?" button in sessions/passwords/new.html.erb is a
   # button_to (POST to password_reset_path). Because button_to triggers a
   # Turbo fetch submission, use execute_script to issue a native browser POST
   # so the redirect is followed in the same Playwright session — the same
@@ -89,7 +89,7 @@ RSpec.describe "Passwordless-first auth", type: :system do
 
       click_link I18n.t("sessions.check_email.use_password")
 
-      expect(page).to have_field(I18n.t("sessions.password_form.password_label"), wait: 5)
+      expect(page).to have_field(I18n.t("sessions.passwords.new.password_label"), wait: 5)
 
       # "Forgot your password?" is a button_to (POST to /password_reset) inside
       # a turbo_frame. The button_to form carries data-turbo-frame="_top" so

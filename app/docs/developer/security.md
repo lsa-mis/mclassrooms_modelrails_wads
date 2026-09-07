@@ -1,7 +1,7 @@
 ---
 title: Security
 description: Security configuration, recommendations, and best practices for ModelRails
-keywords: rate limiting account locking headers csp password oauth rack attack https bearer token libvips heic content types direct upload email normalization punycode recipient throttle nonce form-action provider registry
+keywords: rate limiting account locking headers csp password oauth rack attack https bearer token libvips heic content types direct upload email normalization punycode recipient throttle nonce form-action provider registry invitation block decline suppression deliverable ghost
 ---
 
 # Security
@@ -44,6 +44,113 @@ matches the 15-minute token expiry: a throttled-out user is never stranded
 longer than their newest link's lifetime, and an attacker gets at most the cap
 in supersedes per window before the victim's link becomes untouchable.
 
+### Verified addresses gate invitations
+
+Sending an invitation requires a **proven** address: `User#can_invite?` is true only when the user holds an authentication whose `verified_at` is set. Every writer of that column got there by demonstrating control of the mailbox — clicking a signed link sent to it (`Authentication#verify!`, the magic-link callback) or a provider vouching for it (`OauthLink`, gated on `identity.email_verified?`). One writer used to prove nothing: `Settings::PasswordsController#create` stamped `verified_at` on a freshly minted email authentication, and setting a password demonstrates control of the *session*, not of the address. That stamp is gone, which is what lets the predicate stay a simple existence check. The gate is only as strong as the weakest path that sets the column: if you add a `verified_at` writer, add it to the inventory in `spec/requests/can_invite_gate_spec.rb`.
+
+### Invitation blocks (decline-and-block)
+
+An invitee can stop an inviter's future invitations from reaching their
+address. Since #951 the only way to do that is the **"Don't invite me again"
+link in the invitation email itself**: it carries a signed, stateless
+`generates_token_for :block_confirmation` token (payload `[status]`, so it dies
+on accept, decline, block, or revoke; lifetime seven days, the invitation's
+own) as a query parameter. The link opens a confirmation page
+(`GET /invitation_block?token=`, no side effects) whose one button performs
+`decline_and_block!` (`POST /invitation_block`) and renders the outcome in the
+document. A refresh after that re-posts a spent token and lands on the home page
+with "This link was already used, or the invitation has expired"; the
+"already handled" page is reached only when a decline races the block. Nothing
+reachable from a bearer invitation URL can block: the decline
+page only points at the email link, and the former `POST /invitations/:token/block`
+route is gone. Mailbox possession is the proof, the same proof accepting relies
+on through email verification. An `InvitationBlock`
+row means "invitations from inviter *I* to address *E* are not delivered".
+Blocks are **email-keyed and account-independent**: they work for a decliner
+with no account, survive the address later becoming a user, and do not follow
+a user who changes their address. A block is policy state, not audit — it is
+deleted with its inviter, and the operator door in
+[Troubleshooting](/docs/developer/troubleshooting#operations) is the only way
+to lift one.
+
+When a delivery aimed at a blocked address is refused, the invitation is
+stamped `suppressed_at` (a **ghost**) and, on the mailer sites, an
+admin-visibility `invitation.delivery_suppressed` activity row records the
+attempt. Suppression is delivery-side only: it never changes what the
+invitation *is* or whether it can be accepted.
+`Invitation#deliverable?` is `has_invitee? && !blocked_by_invitee?` — two named
+checks so a `false` self-identifies (a magic-link invitation has nothing to
+deliver, which is not a block and writes no row).
+
+Four invariants hold the design together:
+
+- **Directional.** A block suppresses deliveries to the blocked-from address
+  only, never to the inviter. Inviter-facing notifiers (declined, accepted,
+  resent) never consult blocks, so decline-and-block still delivers exactly
+  one decline notification.
+- **Ghosts stay redeemable.** `acceptable?`, the `acceptable` scope, and
+  `guard_acceptable!` never look at `suppressed_at`. A redemption error would
+  hand the blocked inviter a detection oracle, and the accept page is fresh,
+  informed consent — so a suppressed invitation can still be accepted by
+  token (stored encrypted, never plaintext — see *Bearer Tokens in Request
+  Logs*).
+- **No oracle in the inviter's surfaces.** A ghost is an ordinary pending row
+  in the members index; resend produces the same confirmation as a live
+  invitation; and no activity row the inviter can read is written by
+  suppression or by block creation. `bulk_invite!`'s counters stay symmetric
+  with the unblocked case: re-inviting an address that already has a pending
+  invitation counts `skipped` whether or not a block exists. The two paths get
+  there differently — an unblocked duplicate is caught by the pending-address
+  check, a blocked one collides with its own ghost in the index — but neither
+  creates a record, so neither can be told apart by the count. Fork forms adding
+  a single-create invitation path reach the same symmetry through
+  `Invitation.already_invited?`, which refuses a
+  re-invite when a *pending* row exists that is either unsuppressed (from any
+  inviter) or this inviter's own — live *or* ghost. Both halves are scoped
+  `pending`, not `acceptable`, to match the expiry-blind `pending_live` index:
+  an expired pending row still holds the live slot, so a narrower pre-check
+  would let a blocked re-invite succeed where an unblocked one is refused, once
+  the first invitation ages out. Matched, both cases get the identical "already
+  has a pending invitation" flash.
+- **`suppressed_at` has exactly three writers, all callback-free.**
+  Create-time on the bulk path (create attributes), retroactively at block
+  creation (`update_column`), and the mailer guard (`update_column`) — never a
+  callback-running `update!`. (`update_all` is the operator unblock's verb, not
+  a writer's.) `Trackable` would otherwise publish the
+  stamp to the workspace feed as an ordinary update, which is itself the
+  oracle. A fourth writer, or a callback-running one, is a violation.
+
+The honest claim is that a block is **not cheaply confirmable — not
+unknowable**. A 100% non-response rate across repeated invitations is a
+statistical tell, and ghosts expire with their invitations at 7 days.
+Suppression buys the invitee deniability, not secrecy.
+
+**Delivery-site roster.** Every place an invitation email can leave the app,
+and the guard that stops it:
+
+| # | Site | Guard |
+| --- | --- | --- |
+| 1 | `Invitation.bulk_invite!` (workspace invites, incl. onboarding) | `InvitationMailer` `before_action` + create-time stamp |
+| 2 | `Workspaces::InvitationsController#resend` | `InvitationMailer` `before_action` |
+| 3 | `WorkspaceInvitationExpiringSweepJob` (in-app + email dispatch) | `next unless invitation.deliverable?` — silent skip, no audit row |
+| 4 | `NotificationMailer#workspace_invitation_expiring_soon` (the reminder's email leg) | `return unless @invitation.deliverable?` before `mail(...)` — silent skip |
+
+Sites 1–2 share one guard, and so does every future `InvitationMailer` method
+a fork adds — the `before_action` halts the action by setting an empty
+`response_body`, not by `throw :abort`, which raises `UncaughtThrowError` in an
+ActionMailer callback.
+Site 4 exists because the reminder's preference gate runs at dispatch time: a
+block landing between the sweep's dispatch and the mail's render is only
+catchable at the final hop.
+
+**Any new invitee-facing notifier must re-check `deliverable?` at its delivery
+gate — the last hop it controls.** Adding a site to this table is part of
+adding the notifier.
+
+`invitation_declines#create` and `invitation_blocks#create` are both public,
+unauthenticated endpoints and are rate-limited at 10 requests per 3 minutes
+per IP.
+
 ### Account Locking
 
 After 5 failed login attempts, accounts are locked for 1 hour. Auto-unlock occurs after the lockout period.
@@ -57,7 +164,7 @@ factors a locked-out user needs to get back in. Consequence to be aware of:
 a locked account is locked out of *passwords*, not out of the account — the
 owner can still sign in with a passkey or magic link. If your fork wants a
 lock to mean "no sign-in at all", add the `locked?` check to
-`magic_link_callbacks#sign_in` and `Passkeys::AuthenticateCeremony` as well.
+`magic_link_callbacks/sessions#create` and `Passkeys::AuthenticateCeremony` as well.
 
 Admin rake tasks:
 
@@ -120,7 +227,25 @@ limit. Clicking a magic link is a two-step GET→POST: the GET renders a
 "Sign in as x@y?" confirmation and never consumes the token or starts a session,
 so a mail scanner or prefetcher doing a bare GET can't burn the link; the POST
 (the visible button) runs the atomic consume and signs in. Mirrors the join-link
-confirmation flow.
+confirmation flow. Email verification (both the first-email flow and
+connected-account linking) follows the same GET-confirm / POST-verify shape,
+and its token travels as a query parameter, not a path segment ([#950](https://github.com/dschmura/modelrails_base/issues/950)).
+
+### Bearer Tokens in Request Logs
+
+Four flows carry a bearer token as a URL path segment: the magic-link callback (`/magic_link_callback/:token`), invitation accept and decline (`/invitations/:token/…`; blocking moved behind a signed query-string link in the invitee's own email, #951), and workspace join links (`/workspaces/:slug/joins/:token`). Connected-account email verification moved its token to the query string (`/settings/connected_accounts/verify?token=…`, [#950](https://github.com/dschmura/modelrails_base/issues/950)); a legacy path-token alias (`/settings/connected_accounts/verify/:token`) stays live for one token lifetime (24 hours) past the 2026-09 deploy so in-flight emails still land, then it is removed. Rails writes a path segment into every `Started GET …` line verbatim: `config.filter_parameters` reaches query strings and form fields, and `Rails::Rack::Logger` logs `request.filtered_path`, which filters the query string and passes path segments through. (Active Storage's direct-upload route carries a five-minute signed token the same way.)
+
+None of these five tokens is plaintext at rest. Magic-link and workspace-join-link tokens are stored only as SHA-256 digests (see *Magic-Link Tokens*); connected-account email verification is Rails' stateless `generates_token_for` and stores nothing at all. Invitation tokens (`invitations.token`) and the parked invitation token from an unverified-email OAuth signup (`authentications.pending_invitation_token`) are deterministically encrypted rather than digested, because the expiring-soon reminder and the notification mailer rebuild the accept URL from the token days after creation — a digest, being one-way, cannot be turned back into a link (#953). What this section accepts is a token's momentary appearance in a request-log line, never its form at rest.
+
+**This is an accepted, recorded exposure, not an oversight** ([#916](https://github.com/dschmura/modelrails_base/issues/916), panel decision 2026-09-03). Redacting the Rails line would not change what is on the host: kamal-proxy writes its own JSON access log with the request `path` and the raw `query` for every request, so the same token lands on the same disk either way, and a token moved into the query string is logged there too. What bounds the exposure is topology, not redaction:
+
+- Both logs are Docker `json-file` logs on the single deploy host, capped at 10 MB each by Kamal's defaults (`--log-opt max-size=10m` for the app container, `log_max_size` for the proxy) when `config/deploy.yml` sets nothing. Nothing is shipped off the host. The app-container log is replaced on each deploy and pruned with the last five containers; the proxy log is long-lived and rolls on size only, so it is the copy that holds a token longest.
+- Reading either log needs `docker logs` over the deploy SSH key, which is root. Anyone who can read a token there can already read the database.
+- Token lifetimes cap what a copy is worth. Magic-link tokens expire in 15 minutes, are single-use, and are superseded by requesting a new link. Invitation tokens expire in 7 days, are single-use, and accept refuses an email mismatch. Email-verification tokens expire in 24 hours. Workspace join links expire seven days after creation or rotation (`WorkspaceJoinLink::LIFETIME`), same as invitations, and an admin can also revoke one early ([#952](https://github.com/dschmura/modelrails_base/issues/952)).
+
+**Rule for new work.** A secret goes in the query string or the request body, never in a path segment; `spec/code_smells/no_new_bearer_tokens_in_route_paths_spec.rb` holds the existing routes to a named allow-list and fails on a new one. Existing routes move only when they are touched for another reason (verification first, [#950](https://github.com/dschmura/modelrails_base/issues/950)), with both route shapes live for one token lifetime; join links move by forced rotation.
+
+**Reopen this decision when any of these becomes true:** logs are shipped off the host (a log driver, a sidecar, a hosted aggregator); an error-reporting or APM gem is added, because Rails hands them `request.filtered_path` in the `process_action.action_controller` payload and the path token goes to a third party with no log configuration change; someone other than the deploy user gets host access; or a flow gains a long-lived or high-privilege path token (audit with `bin/rails routes | grep -E "/:[a-z_]*token"`). When a trigger fires, the Rails line and the proxy log must be addressed together.
 
 ### Security Headers
 
@@ -168,10 +293,34 @@ is in `form-action` — **silently**: no server error, nothing in the logs,
 here; `fetch` raises at boot on a registry entry without a `form_action_host`.
 See [OAuth Security](#oauth-security) for the registry itself.
 
+### Cookie classification
+
+Every cookie the app sets is classified once, in
+`config/initializers/biscuit.rb` (`Rails.application.config.cookie_classification`),
+right beside Biscuit's own consent categories. The rule: a first-party cookie
+that stores a choice the user just made through a control, carries no
+identifier, and is read by no third party is `necessary` and needs no
+consent banner gate; anything that profiles, measures, or is read by a third
+party goes in its Biscuit category instead, and its write is gated on that
+category's consent. `spec/initializers/cookie_classification_spec.rb` holds
+the classification and this list together — a new cookie that lands in only
+one of the two fails the suite.
+
+| Cookie | Category | Reason |
+|---|---|---|
+| `session_id` | necessary | authentication session (the app's own signed cookie, `Authenticatable#start_new_session_for`) |
+| `_modelrails_base_session` (Rails' configured session-store key) | necessary | Rails' encrypted session cookie: CSRF token, flash messages, and short-lived flow state (pending join/invitation tokens, post-auth redirect target) |
+| `biscuit_consent` | necessary | the consent record itself |
+| `theme` | necessary | display choice made through a control; no identifier; first-party |
+| `sidebar_collapsed` | necessary | layout choice made through a control; no identifier; first-party |
+
+The next cookie goes in `config/initializers/biscuit.rb` and here; the spec
+fails otherwise.
+
 ### Password Security
 
 - 12-character minimum
-- Pwned password check (Have I Been Pwned API)
+- Pwned password check (Have I Been Pwned range API), run before `save` and outside the write transaction (see [Architecture § Concurrency](/docs/developer/architecture)). It is **fail-open**: a network failure allows the password rather than blocking registration on an external service.
 - Account recovery issues a single-use `MagicLinkToken` (`set_password` intent, 15-minute expiry), not a stateless reset token
 
 ### Canonical Email Keys
@@ -198,6 +347,45 @@ normalizing to the ASCII (punycode) form gives both representations one
 canonical key. The **local part** is deliberately untouched: SMTPUTF8
 (RFC 6531) lets mailboxes accept Unicode local parts, and IDNA does not apply
 there.
+
+### Personal Data at Rest
+
+Every column that holds something about a person is an Active Record
+Encryption column — a database dump or backup carries ciphertext, not
+addresses. Deterministic encryption (same plaintext, same bytes) is used only
+where a finder or a unique index needs the column; everything else takes the
+stronger non-deterministic cipher and cannot be searched or sorted in SQL —
+which is why the members page filters and sorts in Ruby (`WorkspaceRoster`).
+
+| Column | Cipher | Why |
+| ------ | ------ | --- |
+| `users.email_address` | deterministic, downcased | sign-in lookup; unique index |
+| `authentications.uid` | deterministic | `(provider, uid)` lookup and unique index — for email-provider rows this *is* the address |
+| `invitations.email` | deterministic, downcased | one pending invitation per address per invitable |
+| `magic_link_tokens.email` | deterministic, downcased | one unconsumed token per address |
+| `users.pending_email`, `first_name`, `last_name` | non-deterministic | never looked up |
+| `authentications.email`, `invitations.company_name`, `client_accesses.company_name` | non-deterministic | never looked up |
+
+`workspaces.name` stays plaintext deliberately: the slug is the name,
+parameterized, and sits in every URL. Three properties worth knowing: the
+deterministic columns for one address — `users.email_address` and the
+email-provider `authentications.uid` — hold identical bytes, so a leaked dump
+joins them; the `deterministic_key` cannot be rotated (Rails raises on a
+key list), so it is backed up with the credentials key; and the two
+invitation-token columns are encrypted *differently* on purpose —
+`invitations.token` is deterministic (its `find_by` lookup and unique index
+need it) while `authentications.pending_invitation_token` is not (nothing
+looks it up by value), so the same token does not encrypt to identical bytes
+in both places. Keys are generated per fork — see
+[Forking](/docs/developer/forking#bootstrap-secrets-and-configuration).
+Rows written before a column was encrypted are unreadable by this release for
+the personal-data columns from #902 — the template ships no conversion for
+those. Invitation tokens are the exception: `invitations.token` and
+`authentications.pending_invitation_token` ship one
+(`db/migrate/20260903115906_encrypt_invitation_tokens_at_rest.rb`, #953),
+re-runnable and reversible. For everything else, Rails' own coexistence path
+(`support_unencrypted_data`, `extend_queries`, `record.encrypt`) is documented
+in the Active Record Encryption guide under "Migrating Existing Data".
 
 ### OAuth Security
 
@@ -232,7 +420,7 @@ The `Trackable` concern logs workspace-domain model changes to `ActivityLog` on 
 
 **Account-security events are a separate, stricter tier.** Password set/change/removal, passkey enrollment/removal, and sign-in from a new device write rows named in `ActivityLog::SECURITY_ACTIONS`, through `ActivityLog.record_security_event!`. The credential events are written **in the same transaction as the mutation they record, with no rescue** — a failed audit write fails the credential write. Sign-in detection stays best-effort, because the `Session` row is already the primary record of a sign-in.
 
-These rows are retained on their own floor (`ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR`, 365 days) rather than the general 12-month window, and are readable by their owner on `/settings/sessions`. Full per-event table, including what corroborates each row: [Notifications § Security event audit coverage](/docs/developer/notifications).
+These rows are retained on their own floor (`ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR`, 365 days) rather than the general 12-month window, and are readable by their owner on `/settings/sessions`. Full per-event table, including what corroborates each row: [Notifications § Security event audit coverage](/docs/developer/notifications). The matching in-app notification carries no retention floor of its own — it is attention state on the user's clock. The `ActivityLog` row is the record.
 
 ### Image Processing (Active Storage + libvips)
 
@@ -259,9 +447,7 @@ Enforcement reality — what each check actually buys (panel, 2026-08-13):
 
 The `>= x.y.z` floor on the `rails` gem in the Gemfile is a security floor: it stops a fresh `bundle install` in a fork from resolving back onto a version patched for a known CVE. Dependabot rewrites that line on every Rails bump and will drop the floor, so `spec/code_smells/template_invariants_spec.rb` fails if the requirement ever admits a vulnerable release again.
 
-## External Client Access
-
-`Invitation.consume!` enforces an `EmailMismatch` guard: if the invitation was addressed to a specific email and the redeeming user's proven email does not match, redemption is refused with `Invitation::EmailMismatch`. This prevents a leaked invite link from being claimed by a different email address (`app/models/invitation.rb`).
+`Invitation.consume!` enforces an `EmailMismatch` guard: if the invitation was addressed to a specific email and the redeeming user's proven email does not match, redemption is refused with `Invitation::EmailMismatch`. This prevents a leaked invite link from being claimed by a different email address (`app/models/invitation/acceptance.rb`).
 
 ## Production Recommendations
 
@@ -365,9 +551,10 @@ config.ssl_options = { hsts: { subdomains: true, preload: true, expires: 1.year 
 Some vulnerabilities disclose anything readable by the app process — CVE-2026-66066 above is one. Upgrading closes the hole but does not undo an exfiltration that already happened. If your deployment ran an affected version while reachable by untrusted users, treat every secret the process could read as exposed and replace it:
 
 1. `secret_key_base` — rotating it signs out every user and invalidates encrypted and signed cookies, signed global IDs, and existing Active Storage URLs.
-2. The master key (`config/master.key` or `RAILS_MASTER_KEY`) and everything `config/credentials.yml.enc` decrypts. Re-encrypt under the new key with `bin/rails credentials:edit`.
+2. The master key (`config/master.key` or `RAILS_MASTER_KEY`) and everything `config/credentials.yml.enc` decrypts. Re-encrypt under the new key with `bin/rails credentials:edit`. One entry inside the blob is different: `active_record_encryption.primary_key` rotates by listing the new key after the old one and re-saving records (Rails guide, "Rotating Keys"), but `deterministic_key` **cannot** rotate — Rails refuses a list. Replacing it means decrypting every deterministic column under the old key and re-writing under the new one in a one-off pass this template does not ship; until then, an exposed deterministic key means the addresses in `users.email_address`, `authentications.uid`, `invitations.email`, and `magic_link_tokens.email` are recoverable from any dump taken while it was in use — as is `invitations.token` (also deterministic, for its `find_by` lookup and unique index), so working invitation accept/decline/block links are recoverable from that dump too, for as long as those invitations stay pending. `authentications.pending_invitation_token` (the parked copy of the same token, held non-deterministically because nothing looks it up by value) decrypts under the rotatable `primary_key` instead, so it isn't stuck the way the deterministic columns are — but until you actually rotate, it is exposed the same way everything else in this step is.
 3. Storage service credentials (S3, GCS, Azure) if you moved off the local disk service.
 4. Database credentials, if your database is not the bundled SQLite file.
 5. API tokens and keys for every third-party service the app calls — OAuth client secrets, mail provider keys, error reporting DSNs.
+6. Bearer tokens that may sit in the host's request logs (see *Bearer Tokens in Request Logs*): rotate every active workspace join link, and treat any magic-link, invitation, or verification token issued inside its lifetime as spent by requesting or sending a fresh one.
 
 Replace secrets outright. Keeping the old value as a rotation fallback is only an intermediate step; do not leave an exposed secret in the rotation list.

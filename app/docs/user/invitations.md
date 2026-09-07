@@ -1,7 +1,7 @@
 ---
 title: Invitations
 description: Receiving and accepting workspace invitations
-keywords: invitation invite workspace accept decline email-match magic link
+keywords: invitation invite workspace accept decline block email-match magic link
 ---
 
 ## Receiving an invitation
@@ -30,7 +30,13 @@ The one exception: **magic-link invitations** (a shareable URL that an admin cop
 
 ## Declining an invitation
 
-Workspace invitations include a **Decline** link in the email. Clicking it marks the invitation as declined — no account or membership is created.
+Workspace invitations include a **Decline** link in the email. Clicking it marks the invitation as declined — no account or membership is created. (The "expiring soon" reminder is a different email and links only to **Accept** — decline from the original invitation email.)
+
+Every invitation email also carries a **Don't invite me again** link. It opens a page that asks you to confirm; confirming declines the invitation and stops future invitations from that sender to your address. Only that link can do this: it exists in your email and nowhere else, which is how the app knows it is really you. Blocking is per-sender and per-address, and it needs no account. The decline page reminds you where the link is.
+
+A block stops **delivery only**. It does not cancel or invalidate anything: an invitation link you already have still works while that invitation is valid, and blocking does not stop that person creating invitations or reaching you any other way.
+
+Undoing a block is not self-serve yet — ask the people who run this app to lift it for you.
 
 ---
 

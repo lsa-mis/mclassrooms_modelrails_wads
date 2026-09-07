@@ -246,12 +246,13 @@ RSpec.describe "Okta OIDC", type: :request do
       expect(auth).to be_pending
 
       # Same-browser verification: the deferred sign-in happens here
-      # (Settings::ConnectedAccountsController#verify → start_new_session_for).
+      # (Settings::ConnectedAccountVerificationsController#create →
+      # start_new_session_for). GET only confirms (#950); POST verifies.
       token = auth.generate_token_for(:email_verification)
       expect {
-        get verify_settings_connected_accounts_path(token: token)
+        post settings_connected_account_verification_path, params: { token: token }
       }.to change(Session, :count).by(1)
-      expect(response).to redirect_to(root_path)
+      expect(response).to redirect_to(settings_connected_accounts_path)
 
       # Sign-out from that deferred session routes through Okta's
       # end_session_endpoint, exactly like a directly-signed-in Okta session.

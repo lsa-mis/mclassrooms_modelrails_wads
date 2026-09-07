@@ -71,10 +71,6 @@ en:
         last_accessed:
           touched: "Last accessed %{relative} ago"
           never: "Never accessed"
-        role:
-          owner: "Owner"
-          admin: "Admin"
-          member: "Member"
     new:
       title: "Create a workspace"
       name_label: "Workspace name"
@@ -101,13 +97,15 @@ en:
       confirm: "This can't be undone. The workspace and everything in it will be gone."
       confirm_action: "Delete forever"
     archive:
-      success: "Workspace archived. You can restore it anytime from the Archived section."
       trigger: "Archive workspace"
       title: "Archive this workspace?"
       confirm: "It'll move out of your active list. You can bring it back anytime from the Archived section."
       confirm_action: "Archive"
-    unarchive:
-      success: "Workspace restored."
+    archivals:
+      create:
+        success: "Workspace archived. You can restore it anytime from the Archived section."
+      destroy:
+        success: "Workspace restored."
     members:
       index:
         title: "Members"
@@ -159,10 +157,12 @@ en:
         cannot_deactivate_last_owner: "Cannot deactivate the last owner."
         left: "You left %{workspace}."
         cannot_leave_last_owner: "You can't leave — you're the last owner. Transfer ownership first."
-      reactivate:
-        reactivated: "Member reactivated."
-      transfer_ownership:
-        transferred: "Ownership transferred."
+      reactivations:
+        create:
+          reactivated: "Member reactivated."
+      ownership_transfers:
+        create:
+          transferred: "Ownership transferred."
     settings:
       edit:
         title: "Workspace settings"
@@ -188,15 +188,17 @@ en:
         no_active_link: "No active link yet. Generate one to share."
         generate: "Generate link"
         rotate: "Rotate link"
-        rotate_confirm: "Rotating will invalidate the current link. Continue?"
+        rotate_confirm: "Rotating disables the current link and issues a new one valid for seven days. Continue?"
         revoke: "Revoke link"
         revoke_confirm: "Revoking will disable the current link. Continue?"
-        copy: "Copy"
         link_aria: "Workspace join link"
         show_once_warning_lead: "Copy this link now."
         show_once_warning: "For security it is shown only once — you won't be able to see the full link again. Rotate the link anytime to generate a new one."
         masked_aria: "Join link (hidden for security)"
         masked_help: "For security, the full link is shown only once, when you generate or rotate it. Rotate to get a new link you can copy."
+        expires_on: "Expires %{date}"
+        expired: "Expired. Rotate to issue a new link."
+        rotate_help: "Rotating issues a new link valid for seven days and disables the current one."
       update:
         success: "Settings updated."
     brandings:

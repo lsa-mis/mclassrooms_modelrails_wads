@@ -84,5 +84,30 @@ RSpec.describe NotificationMailer, type: :mailer do
         expect(mail.body.encoded).to include("notification_preferences")
       end
     end
+
+    # The digest wraps every #message and #url call in
+    # render_safe_or_placeholder, but that only rescues the two deletion
+    # shapes. A url body that hands a route helper a deleted record raises
+    # ActionController::UrlGenerationError straight through the wrap and takes
+    # the WHOLE digest down — every other notification in it included.
+    context "when one notification's record has been deleted" do
+      it "still renders the surviving notifications" do
+        healthy = deliver_workspace_invitation_accepted
+        created_workspace = Workspace.create_owned({ name: "Doomed" }, owner: user)
+        dead = user.notifications.where(type: "WorkspaceCreatedNotifier::Notification").sole
+        # Workspace declares no `dependent:` for activity_logs and the FK
+        # blocks the DELETE, so the audit rows go first.
+        ActivityLog.where(workspace_id: created_workspace.id).delete_all
+        created_workspace.destroy!
+
+        eager = user.notifications.includes(event: :record).find(healthy.id)
+        expected_text = eager.render_safe_or_placeholder { eager.message }
+
+        mail = described_class.digest(user, [ dead, healthy ])
+
+        expect(mail.body.encoded).to include(expected_text)
+        expect(mail.body.encoded).to include(I18n.t("notifications.placeholder"))
+      end
+    end
   end
 end

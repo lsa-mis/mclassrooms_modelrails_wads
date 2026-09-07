@@ -121,10 +121,10 @@ When `kamal deploy` rolls a new container:
 
 1. Solid Queue's `puma-plugin-solid_queue` receives the shutdown signal alongside Puma
 2. Its `on_worker_shutdown` hook begins draining in-flight jobs
-3. Kamal waits `stop_wait_time` seconds (45 by default — see [Deployment](/docs/developer/deployment#stop_wait_time-45-at-top-level))
+3. Docker waits `stop_timeout` seconds before SIGKILL (45 in `config/deploy.yml` — see [Deployment](/docs/developer/deployment#stop_timeout-45-at-top-level))
 4. Any job that hasn't completed by then gets SIGKILLed and re-runs on the next container (via Solid Queue's at-least-once delivery semantics)
 
-**Jobs you write should be idempotent.** Solid Queue gives you at-least-once delivery; deploys can SIGKILL mid-execution if `stop_wait_time` is too tight. Use database constraints, idempotency keys, or `find_or_create_by!` patterns instead of assuming "this job runs exactly once."
+**Jobs you write should be idempotent.** Solid Queue gives you at-least-once delivery; deploys can SIGKILL mid-execution if `stop_timeout` is too tight. Use database constraints, idempotency keys, or `find_or_create_by!` patterns instead of assuming "this job runs exactly once."
 
 ## Graduation to a dedicated jobs host
 

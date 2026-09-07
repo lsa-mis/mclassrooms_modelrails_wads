@@ -7,7 +7,8 @@ module WorkspaceNavHelper
   # "workspaces" matches the old `layout "settings", only:` split, since
   # workspaces#show is the Overview, not a settings page.
   WORKSPACE_SETTINGS_ENDPOINTS = {
-    "workspaces" => %w[edit update identity_picker_hub],
+    "workspaces" => %w[edit update],
+    "workspaces/logos" => :all,
     "workspaces/settings" => :all,
     "workspaces/members" => :all,
     "workspaces/invitations" => :all

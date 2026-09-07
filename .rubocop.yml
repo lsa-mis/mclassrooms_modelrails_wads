@@ -3,7 +3,18 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
 # Existing size violations are grandfathered here (DES-15); the two Metrics cops
 # below then hold NEW code to the limit. Shrink the todo as files are refactored.
-inherit_from: .rubocop_todo.yml
+# House cops (lib/rubocop): the playbook's shape rules made executable. The
+# require stays here because RuboCop resolves it relative to the file it is
+# in; the cops' config lives in .rubocop/house.yml.
+require:
+  - ./lib/rubocop/modelrails
+
+inherit_from:
+  - .rubocop_todo.yml
+  # The house cops (base-owned), then the fork's overrides (fork-owned,
+  # merge=ours). Later files win, so a fork turns a cop off in app.yml.
+  - .rubocop/house.yml
+  - .rubocop/app.yml
 
 # So the policy Excludes below (migrations, specs) merge with the todo's
 # grandfather Excludes instead of one clobbering the other.

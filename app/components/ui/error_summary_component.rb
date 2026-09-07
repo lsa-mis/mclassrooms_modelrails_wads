@@ -7,8 +7,13 @@ module UI
   # submits. `role="alert"` alone does not announce on a server-rendered
   # response (a live region only fires on mutation, and the region arrives
   # with its content), and Turbo's 422 re-render drops focus to <body>. So
-  # this container is focusable (`tabindex="-1"`) and carries `autofocus`:
+  # the outer container is focusable (`tabindex="-1"`) and carries `autofocus`:
   # browsers honour it on load, Turbo Drive re-honours it after every render.
+  # The `role="alert"` sits on an INNER element, GOV.UK's shape (#758): when
+  # the focused element and the alert are one and the same, a reader can
+  # announce it twice (the alert, then the focused element). Focus lands on
+  # the role-less container and reads its contents once; the alert inside
+  # keeps its semantics for readers that use them.
   # Each item links to its field, turning the summary into a working task list.
   #
   # ## Use when
@@ -16,7 +21,8 @@ module UI
   #   `error_summary` shim builds `items` (with per-field anchors) for you.
   #
   # ## Accessibility contract
-  # - **Guarantees:** a focusable, autofocused `role="alert"` container; a
+  # - **Guarantees:** a focusable, autofocused container (`data-slot="error-summary"`)
+  #   wrapping a `role="alert"` block; a
   #   count-pluralized heading at a configurable level (default h2 — pass
   #   `heading_level:` when the form sits under deeper headings, 1.3.1/2.4.10);
   #   items as real links to `#<field_id>` when `href` is given.
@@ -39,9 +45,9 @@ module UI
     end
 
     def call
-      content_tag(:div, role: "alert", tabindex: "-1", autofocus: true,
+      content_tag(:div, tabindex: "-1", autofocus: true, data: { slot: "error-summary" },
                        class: cn(BASE, @extra_class), **@html_attrs) do
-        content_tag(:div, class: "flex items-start gap-3") do
+        content_tag(:div, role: "alert", class: "flex items-start gap-3") do
           safe_join([ icon, body ])
         end
       end
@@ -70,7 +76,11 @@ module UI
     def list_item(item)
       content_tag(:li) do
         if item[:href]
-          content_tag(:a, item[:message], href: item[:href], class: "underline focus-ring")
+          # A list item alone (not in-text) — 2.5.5 AAA applies. min-h-11
+          # meets the 44px floor, which covers axe's 24px AA target-size
+          # rule and its neighbor-spacing check too.
+          content_tag(:a, item[:message], href: item[:href],
+            class: "inline-flex min-h-11 items-center underline focus-ring")
         else
           item[:message]
         end

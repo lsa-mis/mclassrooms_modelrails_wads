@@ -158,7 +158,16 @@ summary::-webkit-details-marker { display: none; }
 .pnlm-container .pnlm-orientation-button-inactive { background-position: 0 -264px; }
 .pnlm-container .pnlm-orientation-button-active { background-position: 0 -308px; }
 
-/* Composite-widget target sizing (panel call, 2026-07-13 — see
+/* The identity picker opens its sr-only file input through a visible
+   <label for>, immediately followed by the input in the DOM. Keyboard
+   focus lands on the 1px input, so the ring paints on the label right
+   before it — an adjacency selector needs no id coupling (#912). */
+[data-controller~="identity-picker"] label:has(+ [data-identity-picker-target="fileInput"]:focus-visible) {
+  outline: 2px solid var(--color-interactive-focus);
+  outline-offset: 2px;
+}
+
+/* Composite-widget target sizing (WCAG 2.5.5 deviation — see
    app/docs/developer/accessibility.md): menu and listbox interiors keep
    desktop density (WCAG 2.5.5 not claimed for them on fine pointers; the
    24px 2.5.8 AA floor is enforced by the spec gate). When ANY available
@@ -210,37 +219,53 @@ summary::-webkit-details-marker { display: none; }
     min-width: var(--form-input-height);
   }
 
-  /* Text-only button base; color/size stay at the call site. */
+  /* Text-only button base; color/size stay at the call site.
+
+     No text-decoration (#772 ruling). It used to carry one, which meant the
+     line no longer told a link from a button anywhere in the app — this class
+     dresses 17 buttons and 7 links, and _pending_join_banner renders a bordered
+     button and a lined one as siblings, both performing state changes. The line
+     is now reserved for in-prose links, where .prose a keeps it on hover and
+     only deepens text-decoration-color. The old hover cue (removing the line)
+     was also a latent 1.4.1: it stripped the sole non-color affordance exactly
+     while the pointer was on the control, so the first one dropped into a
+     paragraph would have failed use-of-color.
+
+     The rest-state affordance for a tone-less .btn-text is adjacency — every
+     call site is a de-emphasized action beside a primary button ("Cancel",
+     "Skip", "Dismiss"). That is the same argument #760 accepted for
+     .btn-text-icon, and it holds in an action row and nowhere else; the guard
+     in spec/code_smells/btn_text_is_action_row_only_spec.rb keeps it there. */
   .btn-text {
-    /* min 44px both axes: text buttons measured ~20px tall (and short
-       labels like "Edit" ~26px wide) — under the AAA target floor
-       (a11y gate, 2026-07-13). justify-center so a short label sits centered
-       in the 44px box rather than left-aligned with a trailing gap. */
-    @apply inline-flex min-h-11 min-w-11 items-center justify-center font-medium underline rounded;
+    /* min 44px both axes: text buttons measured ~20px tall (short labels
+       ~26px wide) — under the AAA target floor (WCAG 2.5.5). Invisible
+       hit-area growth. */
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center font-medium rounded;
     @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
-    @apply hover:no-underline;
-  }
-
-  /* Icon+label text action (#760 ruling): with a glyph in the box the
-     underline would run beneath the icon, so this variant skips the underline
-     entirely. The hover cue is a tinted background per tone (below) — not a
-     text-color shift, because danger has no AAA-safe darker text token
-     (danger-strong is graphics-only in dark mode) and an opacity fade reads
-     as disabled. Same 44px floor and focus contract as .btn-text. */
-  .btn-text-icon {
-    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 font-medium rounded;
-    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
-  }
-
-  .btn-text-icon.btn-text-interactive {
     @apply hover:bg-interactive-subtle;
   }
 
+  /* Icon+label text action (#760 ruling): with a glyph in the box a rule under
+     the label would run beneath the icon too. The hover cue is a tinted
+     background per tone — not a text-color shift, because danger has no
+     AAA-safe darker text token (danger-strong is graphics-only in dark mode)
+     and an opacity fade reads as disabled. Same 44px floor and focus contract
+     as .btn-text, which since #772 shares this cue rather than owning a
+     separate one. */
+  .btn-text-icon {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 font-medium rounded;
+    @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
+    @apply hover:bg-interactive-subtle;
+  }
+
+  /* Compound rather than bare .btn-text-danger: the tone must out-specify the
+     base's hover tint, not merely follow it in source order. */
+  .btn-text.btn-text-danger,
   .btn-text-icon.btn-text-danger {
     @apply hover:bg-danger-surface;
   }
 
-  /* Color variants of .btn-text. Apply alongside .btn-text. */
+  /* Color variants. Apply alongside .btn-text or .btn-text-icon. */
   .btn-text-danger {
     @apply text-danger;
   }

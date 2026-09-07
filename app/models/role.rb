@@ -8,6 +8,10 @@ class Role < ApplicationRecord
 
   scope :system_defaults, -> { where(workspace_id: nil) }
 
+  # "Is an owner" has one definition; every query and predicate reads it here.
+  OWNER_SLUG = "owner"
+  scope :owner, -> { where(slug: OWNER_SLUG) }
+
   # Canonical definitions for the global (workspace_id: nil) roles. Single
   # source of truth shared by db/seeds.rb and every request-time lookup —
   # before this existed, call sites each carried their own copy and could
@@ -20,7 +24,7 @@ class Role < ApplicationRecord
   }.freeze
 
   def owner?
-    slug == "owner"
+    slug == OWNER_SLUG
   end
 
   # find_or_create_by! is find-then-create, not atomic: two concurrent

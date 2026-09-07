@@ -12,7 +12,8 @@ RSpec.describe "Invitation Declines", type: :request do
     it "renders the decline confirm on the consolidated outline-danger button (#766)" do
       get decline_invitation_path(token: invitation.token)
       html = Capybara.string(response.body)
-      expect(html).to have_css("button.btn-outline-danger[type='submit']")
+      expect(html).to have_css("button.btn-outline-danger[type='submit']",
+                               text: I18n.t("invitation_declines.show.confirm"))
     end
 
     it "shows error for invalid token" do
@@ -39,6 +40,13 @@ RSpec.describe "Invitation Declines", type: :request do
       post decline_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
       expect(flash[:notice]).to eq(I18n.t("invitation_declines.create.success"))
+    end
+
+    it "rate limits via the cache counter" do
+      allow(Rails.cache).to receive(:increment).and_return(11)
+      post decline_invitation_path(token: invitation.token)
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("invitation_declines.create.rate_limited"))
     end
   end
 end

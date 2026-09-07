@@ -12,7 +12,7 @@
     <% gallery.each_with_index do |asset, i| %>
       <button type="button" <%= "hidden" if i.positive? %>
               class="absolute inset-0 block w-full cursor-zoom-in focus-ring"
-              aria-label="<%= t("ui.gallery.enlarge", alt: asset.alt_for(:image), default: "Enlarge %{alt}") %>"
+              aria-label="<%= t("ui.gallery.enlarge", alt: asset.alt_for(:image)) %>"
               data-media-stage-target="slide"
               data-media-stage-caption="<%= asset.description_for(:image) %>"
               data-media-stage-position="<%= t("rooms.show.photo_badge_position", n: i + 1, total: gallery.size) %>"

@@ -86,6 +86,14 @@ RSpec.describe "Account Notification Preferences", type: :request do
         expect(response.body).to include(%Q(<optgroup label="Europe">))
         expect(response.body).to include(%Q(<optgroup label="Pacific">))
       end
+
+      it "offers no 'Never' retention option and no longer promises a security floor" do
+        get edit_settings_notification_preferences_path
+
+        expect(response.body).not_to include("Never")
+        expect(response.body).not_to include("at least 1 year")
+        expect(response.body).to include("Read notifications are removed this many days after you read them.")
+      end
     end
 
     describe "PATCH /account/notification_preferences" do
@@ -152,12 +160,13 @@ RSpec.describe "Account Notification Preferences", type: :request do
         expect(user.preferences.reload.notification_preferences["retention_days"]).to eq(30)
       end
 
-      it "stores nil retention_days for the 'never' option" do
+      it "rejects a blank retention_days now that Never is retired" do
         patch settings_notification_preferences_path, params: {
           notification_preferences: { retention_days: "" }
         }
 
-        expect(user.preferences.reload.notification_preferences["retention_days"]).to be_nil
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(user.preferences.reload.notification_preferences["retention_days"]).to eq(90)
       end
 
       it "rejects retention_days outside the allowed list with 422" do

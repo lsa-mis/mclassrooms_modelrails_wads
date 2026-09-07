@@ -95,6 +95,20 @@ RSpec.describe "Account Profiles", type: :request do
         end
       end
 
+      context "same email typed in the Unicode form of its stored punycode domain" do
+        let(:user) { create(:user, email_address: "user@bücher.de") }
+
+        it "is not an email change, so it needs no re-authentication" do
+          user.sessions.update_all(reauthenticated_at: 1.hour.ago)
+          patch settings_profile_path, params: {
+            user: { first_name: "Updated", email_address: "user@bücher.de" }
+          }
+          expect(user.reload.first_name).to eq("Updated")
+          expect(user.pending_email).to be_nil
+          expect(response).to redirect_to(edit_settings_profile_path)
+        end
+      end
+
       context "passwordless user" do
         let(:user) { create(:user, password: nil, password_digest: nil) }
 

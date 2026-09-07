@@ -9,6 +9,10 @@ en:
     skip_to_content: "Skip to main content"
   markdowndocs:
     default_title: "Documentation"
+    search_placeholder: "Search documentation..."
+    search_label: "Search documentation"
+    no_search_results: "No matching documents"
+    try_different_search: "Try a different search term"
     modes:
       user: "User Guide"
       user_description: "User-friendly explanations and step-by-step instructions"

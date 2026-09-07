@@ -49,6 +49,44 @@ RSpec.describe RequiredProductionConfig do
       expect(e.message).to include("git rm config/initializers/required_production_config.rb")
       expect(e.message).to include("/docs/developer/deployment")
     end
+
+    # Personal data is encrypted at rest (#902); without keys the app boots,
+    # /up reports healthy, and the first user read raises.
+    describe "Active Record encryption keys" do
+      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com" } }
+      let(:keys) { { primary_key: "p", deterministic_key: "d", key_derivation_salt: "s" } }
+
+      it "raises when neither credentials nor config carry the keys" do
+        expect { described_class.check!(host, {}, {}) }
+          .to raise_error(RuntimeError, /active_record_encryption/)
+      end
+
+      it "names the missing key" do
+        credentials = { active_record_encryption: keys.except(:deterministic_key) }
+
+        expect { described_class.check!(host, credentials, {}) }
+          .to raise_error(RuntimeError, /deterministic_key/)
+      end
+
+      it "accepts keys from the credentials" do
+        expect { described_class.check!(host, { active_record_encryption: keys }, {}) }
+          .not_to raise_error
+      end
+
+      it "accepts keys from the encryption config (the environment-variable path)" do
+        expect { described_class.check!(host, {}, keys) }
+          .not_to raise_error
+      end
+
+      it "names the fix in the message" do
+        described_class.check!(host, {}, {})
+        raise "expected check! to raise"
+      rescue RuntimeError => e
+        expect(e.message).to include("db:encryption:init")
+        expect(e.message).to include("credentials:edit --environment production")
+        expect(e.message).to include("/docs/developer/forking")
+      end
+    end
   end
 
   describe "boot wiring" do

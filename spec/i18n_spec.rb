@@ -42,3 +42,25 @@ RSpec.describe I18n do
   # config/i18n-tasks.yml stays: it places `add-missing` keys in the correct
   # domain file, which was the half of normalize this layout actually needed.
 end
+
+# #911: keys under `activity.actions` were written flat and dotted
+# ("membership.created:"). I18n's nested lookup splits the requested key on "."
+# and walks the hash segment by segment, so a flat dotted key is unreachable —
+# and the renderer's `default:` turned every miss into a humanized column value
+# with nothing raising. i18n-tasks cannot see this: it flattens nested keys to
+# the same dotted form, so both shapes look identical to the gates above.
+RSpec.describe "activity.actions locale shape" do
+  it "nests every key, because a dot inside a key never resolves" do
+    dotted = []
+    walk = lambda do |node, path|
+      node.each do |key, value|
+        dotted << (path + [ key ]).join(".") if key.to_s.include?(".")
+        walk.call(value, path + [ key ]) if value.is_a?(Hash)
+      end
+    end
+    walk.call(I18n.t("activity.actions"), [])
+
+    expect(dotted).to be_empty,
+      "Flat dotted keys under activity.actions never resolve (#911): #{dotted.join(', ')}"
+  end
+end

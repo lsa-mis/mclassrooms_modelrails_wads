@@ -1,6 +1,64 @@
 require "rails_helper"
 
 RSpec.describe ActivityLog, type: :model do
+  # #932: a deactivation and a reactivation are both `membership.updated`, so
+  # the feed called every one of them a role change. These run against rows
+  # Trackable actually wrote, not hand-built metadata — the concern stores
+  # `{ changes: … }` under a SYMBOL key on the in-memory row and a string key
+  # once reloaded, and the derivation has to read both.
+  describe "#display_action" do
+    let(:workspace) { create(:workspace) }
+    let(:owner) { create(:user) }
+    let(:membership) { create(:membership, workspace: workspace) }
+
+    before do
+      create(:membership, :owner, user: owner, workspace: workspace)
+      Current.session = owner.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+      Current.workspace = workspace
+      membership
+    end
+
+    after do
+      Current.session = nil
+      Current.workspace = nil
+    end
+
+    def last_membership_update
+      ActivityLog.where(trackable: membership, action: "membership.updated").order(:created_at).last
+    end
+
+    it "names a removal a deactivation" do
+      membership.deactivate!
+
+      expect(last_membership_update.display_action).to eq("membership.deactivated")
+    end
+
+    it "names a re-admission a reactivation" do
+      membership.deactivate!
+      membership.reactivate!(granted_by: owner)
+
+      expect(last_membership_update.display_action).to eq("membership.reactivated")
+    end
+
+    it "leaves a role change as the plain update" do
+      membership.change_role!(Role.system_default!("admin"))
+
+      expect(last_membership_update.display_action).to eq("membership.updated")
+    end
+
+    it "reads the symbol-keyed metadata of a row that has not been reloaded" do
+      membership.deactivate!
+      row = ActivityLog.where(trackable: membership, action: "membership.updated").order(:created_at).last
+
+      expect(row.metadata.keys.map(&:to_s)).to include("changes")
+      expect(row.display_action).to eq("membership.deactivated")
+    end
+
+    it "leaves every other action alone" do
+      expect(build(:activity_log, action: "project.created").display_action).to eq("project.created")
+    end
+  end
+
   describe "validations" do
     it "requires an action" do
       log = build(:activity_log, action: nil)

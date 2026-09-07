@@ -43,36 +43,51 @@ RSpec.describe "Email verifications", type: :request do
   let(:user) { create(:user, :unverified_email) }
   let(:authentication) { user.authentications.email.sole }
 
-  describe "GET /email_verification" do
-    context "with valid token" do
-      it "verifies the email" do
-        get email_verification_path(token: authentication.generate_token_for(:email_verification))
-        expect(authentication.reload.verified_at).to be_present
-      end
+  describe "GET /email_verification?token=" do
+    it "renders the confirmation and verifies nothing" do
+      get email_verification_path(token: authentication.generate_token_for(:email_verification))
 
-      it "redirects with success message" do
-        get email_verification_path(token: authentication.generate_token_for(:email_verification))
-        expect(response).to redirect_to(root_path)
-        expect(flash[:notice]).to eq(I18n.t("email_verifications.show.success"))
-      end
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(I18n.t("email_verifications.show.title"))
+      expect(authentication.reload).not_to be_verified
     end
 
-    context "with expired token" do
-      it "rejects the verification" do
-        token = authentication.generate_token_for(:email_verification)
-        travel(Authentication::TOKEN_LIFETIME + 1.minute) do
-          get email_verification_path(token: token)
-        end
-        expect(authentication.reload.verified_at).to be_nil
-      end
+    it "redirects with the invalid flash for a bad token" do
+      get email_verification_path(token: "invalid")
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(I18n.t("email_verifications.show.invalid_or_expired"))
+    end
+  end
+
+  describe "POST /email_verification" do
+    it "verifies and continues to after-authentication" do
+      post email_verification_path, params: { token: authentication.generate_token_for(:email_verification) }
+
+      expect(authentication.reload).to be_verified
+      expect(response).to redirect_to(root_path) # after_authentication_url with no return_to and no client-only user
+      expect(flash[:notice]).to eq(I18n.t("email_verifications.create.success"))
     end
 
-    context "with invalid token" do
-      it "rejects the verification" do
-        get email_verification_path(token: "invalid")
-        expect(response).to redirect_to(root_path)
-        expect(flash[:alert]).to be_present
+    it "rejects an expired token" do
+      token = authentication.generate_token_for(:email_verification)
+      travel(Authentication::TOKEN_LIFETIME + 1.minute) do
+        post email_verification_path, params: { token: token }
       end
+      expect(authentication.reload.verified_at).to be_nil
+    end
+
+    it "refuses a spent token" do
+      token = authentication.generate_token_for(:email_verification)
+      authentication.verify!
+
+      post email_verification_path, params: { token: token }
+      expect(flash[:alert]).to eq(I18n.t("email_verifications.show.invalid_or_expired"))
+    end
+
+    it "rejects an invalid token" do
+      post email_verification_path, params: { token: "invalid" }
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to be_present
     end
   end
 end

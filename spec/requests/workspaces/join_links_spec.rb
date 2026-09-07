@@ -43,6 +43,21 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
         expect(workspace.join_links.active.first.token_digest).not_to eq(original_digest)
       end
 
+      # An expired-but-unrevoked link is still `current` (the partial unique
+      # index keys on revoked_at IS NULL), so rotation must revoke it before
+      # `create!` or the insert collides with RecordNotUnique (#952).
+      it "rotates an expired current link without colliding, leaving exactly one current, active link" do
+        expired = create(:workspace_join_link, workspace: workspace, created_by: owner)
+        travel_to 8.days.from_now do
+          expect(expired).to be_expired
+          expect { post workspace_join_links_path(workspace) }.not_to raise_error
+
+          expect(expired.reload).to be_revoked
+          expect(workspace.join_links.current.count).to eq(1)
+          expect(workspace.join_links.active.count).to eq(1)
+        end
+      end
+
       describe "show-once reveal (the token is hashed at rest)" do
         before do
           allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])

@@ -21,11 +21,66 @@ module AxeAccessibility
     ".highlight"
   ].freeze
 
+  # Ledger for the teardown audit (#912). The after(:each) hook at the bottom
+  # of this file writes one entry per system example: :audited, or :blank when
+  # the example ended with no page. VisitTracking records which examples
+  # navigated at all. `unaudited` reads the two against each other for the
+  # after(:suite) gate: an example that navigated and was not audited is a
+  # hole in the AAA invariant, whatever left the hole. The hook once sat inert
+  # for months because a second `reset_sessions!` after-hook ran ahead of it
+  # and it skipped every example as blank; this is what makes that loud.
+  TEARDOWN_LEDGER = {}
+  VISITED_EXAMPLES = Set.new
+
+  def self.unaudited(example_ids, ledger: TEARDOWN_LEDGER, visited: VISITED_EXAMPLES)
+    example_ids.reject do |id|
+      ledger[id] == :audited || (ledger[id] == :blank && !visited.include?(id))
+    end
+  end
+
+  # Prepended to system examples so the gate knows which ones navigated.
+  # Covers the DSL `visit`; a bare `page.visit` is outside it, as it is for
+  # StimulusReady.
+  module VisitTracking
+    def visit(*args, **kwargs)
+      VISITED_EXAMPLES << RSpec.current_example.id if RSpec.current_example
+      super
+    end
+  end
+
   # WCAG 2.2 AAA conformance is CUMULATIVE (2.0 + 2.1 + 2.2 at A/AA/AAA,
   # WCAG §5) — but axe tags each version separately (wcag2a ≠ wcag21a ≠
   # wcag22aa). Filtering on the 2.0-era tags alone silently skipped every
   # 2.1/2.2 rule on every audit (backlog #10, found via the Load-360 button).
   AXE_TAG_SET = %w[wcag2a wcag2aa wcag2aaa wcag21a wcag21aa wcag22aa].freeze
+
+  # axe's `best-practice` tag is NOT a blocking tier, and #464 settled that it
+  # never becomes one wholesale. A reporting sweep of the entire system suite
+  # (2026-09-03, 169 spec files, both themes) returned 1,782 best-practice
+  # findings; 1,700 of them were `landmark-one-main`, `page-has-heading-one`
+  # and `region` on ViewComponent preview hosts and mail fragments — contexts
+  # whose page shape structurally cannot satisfy a page-shape rule, which is
+  # why the `include:` scoping doc above already treats them as out of scope.
+  #
+  # These three are the exception, and the reason a reporting-only tier was not
+  # built: in that same sweep they fired ONLY on real application pages — never
+  # once on a preview host or a mail fragment — and every finding was a genuine
+  # duplicate-landmark defect (a nested <main> on /docs/*, a repeated landmark
+  # name on /settings/notifications). A rule with no false-positive surface and
+  # a 100% real-defect rate does not need an advisory lane to graduate from; it
+  # needs to block.
+  #
+  # Widening this list is the failure mode to guard against — the panel's
+  # original worry was burying the team in findings. Add a rule only with sweep
+  # evidence that it too fires exclusively on real pages;
+  # spec/system/accessibility/promoted_best_practice_rules_spec.rb fences both
+  # directions.
+  BEST_PRACTICE_TAG = "best-practice"
+  PROMOTED_BEST_PRACTICE_RULES = %w[
+    landmark-unique
+    landmark-no-duplicate-main
+    landmark-main-is-top-level
+  ].freeze
 
   # target-size (2.5.8 AA, 24px) ships `enabled: false` in axe 4.x — the tag
   # alone never runs it. The 44px AAA floor (2.5.5) has NO axe rule at all;
@@ -62,9 +117,14 @@ module AxeAccessibility
     # bypass. Narrowing coverage must not be something a caller can do by
     # accident; adding a tag is.
     options = options.symbolize_keys
+    # BEST_PRACTICE_TAG rides along so the promoted rules RUN; axe has no way
+    # to say "these tags plus these three rules", and everything the tag brings
+    # that is not promoted is dropped from the results below. Keep the two
+    # halves together: adding the tag without the filter turns every
+    # preview-host page-shape advisory into a blocking failure.
     options[:runOnly] = {
       type: "tag",
-      values: (AXE_TAG_SET | Array(options.dig(:runOnly, :values))).freeze
+      values: (AXE_TAG_SET | [ BEST_PRACTICE_TAG ] | Array(options.dig(:runOnly, :values))).freeze
     }
     options[:rules] = AXE_RULE_OVERRIDES.merge(options[:rules] || {})
 
@@ -254,20 +314,35 @@ module AxeAccessibility
             const widgetItem = el.matches("[role=menuitem],[role=menuitemcheckbox],[role=menuitemradio],[role=option]") &&
                                el.closest("[role=menu],[role=menubar],[role=listbox]");
             const floor = widgetItem ? 23.5 : 43.5;
-            let r = blurredRect;
-            const label = el.labels && el.labels[0];
-            if (label) {
+            // Every visible label is a candidate target of its own (#912). A
+            // label that wraps the control or sits within the field's own
+            // label-to-control spacing unions with it — that is the labelled
+            // field the SC measures. FIELD_GAP is FormFieldComponent's `mt-3`
+            // (12px) plus 2px of sub-pixel slack for rounded rects. A
+            // label elsewhere on the page counts by its own box: the space
+            // between two separate regions is not a target, so unioning
+            // them made a phantom rectangle that passed a 1px control by
+            // spanning the page. Hidden labels (display:none,
+            // visibility:hidden, empty box) are not candidates at all.
+            const FIELD_GAP = 14;
+            const unions = [ blurredRect ];
+            for (const label of (el.labels || [])) {
+              if (!visibleEl(label)) continue;
               const lr = label.getBoundingClientRect();
-              r = { width: Math.max(r.right, lr.right) - Math.min(r.left, lr.left),
-                    height: Math.max(r.bottom, lr.bottom) - Math.min(r.top, lr.top) };
+              const touches = !(lr.right < blurredRect.left - FIELD_GAP || lr.left > blurredRect.right + FIELD_GAP ||
+                                lr.bottom < blurredRect.top - FIELD_GAP || lr.top > blurredRect.bottom + FIELD_GAP);
+              unions.push(touches
+                ? { width: Math.max(blurredRect.right, lr.right) - Math.min(blurredRect.left, lr.left),
+                    height: Math.max(blurredRect.bottom, lr.bottom) - Math.min(blurredRect.top, lr.top) }
+                : { width: lr.width, height: lr.height });
             }
             // Layout-box fallback: getBoundingClientRect shrinks under
             // transforms — an audit racing a dialog's 200ms close animation
             // (panel at scale .95) measured 44px buttons at 42. offsetWidth/
             // Height ignore transforms; persistent scale bugs are prevented
             // at the source (no scale-* rest classes on panels).
-            const w = Math.max(r.width, el.offsetWidth || 0);
-            const h = Math.max(r.height, el.offsetHeight || 0);
+            const boxes = unions.map(u => ({ w: Math.max(u.width, el.offsetWidth || 0), h: Math.max(u.height, el.offsetHeight || 0) }));
+            const { w, h } = boxes.reduce((a, b) => Math.min(b.w, b.h) > Math.min(a.w, a.h) ? b : a);
             if (w < floor || h < floor)
               tooSmall.push({ el, why: `target ${Math.round(w)}x${Math.round(h)} — floor is ${widgetItem ? "24x24 (2.5.8 AA, widget-item deviation)" : "44x44 (2.5.5)"}` });
           }
@@ -292,24 +367,32 @@ module AxeAccessibility
             const bg = getComputedStyle(node).backgroundImage;
             return typeof bg === "string" && bg.includes("url(");
           };
-          const overMediaUnplated = (el) => {
+          // Returns the offending media node (not a boolean) so the report can
+          // name what overlapped the control: a CI-only occurrence on the
+          // workspace heading link could not be diagnosed from the control alone.
+          const mediaUnderControl = (el) => {
             const r = el.getBoundingClientRect();
             const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-            if (!stack.includes(el)) return false; // center not on the control (covered/offscreen)
+            if (!stack.includes(el)) return null; // center not on the control (covered/offscreen)
             for (const node of stack) {
               const opaque = alphaOf(getComputedStyle(node).backgroundColor) >= 0.9;
               if (node === el || el.contains(node)) {
-                if (opaque) return false;
+                if (opaque) return null;
                 continue;
               }
-              if (opaque) return false;
-              if (isMedia(node)) return true;
+              if (opaque) return null;
+              if (isMedia(node)) return node;
             }
-            return false;
+            return null;
           };
           const seeThrough = focusables
-            .filter(overMediaUnplated)
-            .map(el => ({ el, why: "transparent control overlapping media — contrast is unknowable; add an opaque plate" }));
+            .map(el => ({ el, media: mediaUnderControl(el) }))
+            .filter(({ media }) => media)
+            .map(({ el, media }) => {
+              const mr = media.getBoundingClientRect();
+              const cr = el.getBoundingClientRect();
+              return { el, why: `transparent control overlapping media — contrast is unknowable; add an opaque plate. Media under the control's centre: ${describe(media)} at ${Math.round(mr.left)},${Math.round(mr.top)} ${Math.round(mr.width)}x${Math.round(mr.height)}; control at ${Math.round(cr.left)},${Math.round(cr.top)} ${Math.round(cr.width)}x${Math.round(cr.height)}` };
+            });
           pushCheck("mc-transparent-over-media", "Interactive elements over images/canvas/video need an opaque background", seeThrough);
 
           // WCAG 2.4.7 — deterministic CSSOM analysis, not focus mutation:
@@ -360,6 +443,51 @@ module AxeAccessibility
             .map(el => ({ el, why: "outline suppressed by author CSS with no :focus/:focus-visible paint rule matching this element or an ancestor (WCAG 2.4.7)" }));
           pushCheck("mc-focus-indicator", "Focusable elements must show a visible focus indicator (WCAG 2.4.7)", noIndicator);
 
+          // A visually hidden focusable (sr-only: a 1px clipped box) keeps
+          // the UA outline, so the sweep above passes it while a keyboard
+          // user sees nothing (#947; the identity picker's file input was
+          // this). Such a control passes only if something VISIBLE paints on
+          // its focus. Rather than parse selector text (Tailwind's escaped
+          // class names contain the literal text ":focus-visible", which
+          // defeats any regex), the control is given a probe class and every
+          // focus rule is re-evaluated with its :focus* pseudo replaced by
+          // that class (:focus-within becomes :has(.probe)): whichever
+          // element then matches is what would paint on the control's focus.
+          // Covers `input:focus + label`, `.peer:focus-visible ~ .track`,
+          // `label:has(+ input:focus-visible)`, and `has-[:focus-visible]:`
+          // utilities alike. Bypass links stay exempt: they expand themselves
+          // on focus, which paints nothing PAINTS lists.
+          const PROBE = "__axe-focus-probe";
+          const UNESCAPED_FOCUS = /(?<!\\\\):focus/;
+          const focusRuleParts = [];
+          const collectFocusParts = (rules) => { for (const rule of rules) { try {
+            if (rule.cssRules && rule.cssRules.length) collectFocusParts(rule.cssRules);
+            const sel = rule.selectorText;
+            if (!sel || !rule.style || !UNESCAPED_FOCUS.test(sel)) continue;
+            if (!PAINTS.some(p => rule.style.getPropertyValue(p))) continue;
+            for (const part of sel.split(",")) if (UNESCAPED_FOCUS.test(part)) focusRuleParts.push(part.trim());
+          } catch (_) {} } };
+          for (const s of document.styleSheets) { try { collectFocusParts(s.cssRules); } catch (_) {} }
+          const paintsSomewhereVisible = (el) => {
+            el.classList.add(PROBE);
+            try {
+              return focusRuleParts.some(part => {
+                const probed = part
+                  .replace(/(?<!\\\\):focus-within/g, `:has(.${PROBE})`)
+                  .replace(/(?<!\\\\):focus-visible|(?<!\\\\):focus/g, `.${PROBE}`);
+                try { return [...document.querySelectorAll(probed)].some(node => node !== el && visibleEl(node)); }
+                catch (_) { return false; }
+              });
+            } finally { el.classList.remove(PROBE); }
+          };
+          const hiddenUnpainted = focusables.filter(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width > 2 || r.height > 2) return false;
+            if (el.matches("a[href]") && getComputedStyle(el).position === "absolute") return false; // bypass link
+            return !paintsSomewhereVisible(el);
+          }).map(el => ({ el, why: "focus lands on a hidden box and nothing visible paints on its focus: add a :focus-visible rule on its label, an ancestor, or a counterpart via :has()/sibling (WCAG 2.4.7)" }));
+          pushCheck("mc-focus-indicator-hidden", "Visually hidden focusables need a visible element that paints on their focus (WCAG 2.4.7)", hiddenUnpainted);
+
           arguments[arguments.length - 1](JSON.stringify(results));
           } catch (__axeErr) {
             arguments[arguments.length - 1](JSON.stringify({
@@ -375,8 +503,33 @@ module AxeAccessibility
       raise "axe-core audit failed in the browser: #{result["__axe_error"]}\n#{result["__axe_stack"]}"
     end
 
+    # Drop what BEST_PRACTICE_TAG dragged in beyond the promoted rules. A
+    # violation survives if it carries any WCAG tag (the real gate) or is one
+    # of the three promoted rules. The custom mc-* checks pushed by the JS above
+    # carry no tags at all and are matched by neither clause, so they are named
+    # explicitly rather than surviving by accident.
+    result["violations"] = Array(result["violations"]).select do |v|
+      (Array(v["tags"]) & AXE_TAG_SET).any? ||
+        PROMOTED_BEST_PRACTICE_RULES.include?(v["id"]) ||
+        v["id"].to_s.start_with?("mc-")
+    end
+
     @__axe_audit_run_count = axe_audit_run_count + 1
     @__axe_audit_memo[memo_key] = result
+  end
+
+  # Turbo work still in flight at teardown is not a page state. Turbo marks
+  # whatever is busy with aria-busy="true": <html> for a visit, the <form>
+  # for a submission, a <turbo-frame> for a frame load (turbo-rails 8.0.23,
+  # turbo.js markAsBusy at 227, called at 993, 4384, 4787, 4808). axe reports
+  # the attribute on <html> as an ARIA error (#948, two CI shards). A form
+  # submission whose redirect visit has not started yet shows only on the
+  # form, which is why the wait covers every busy element and not just the
+  # document. Waits for all of it to clear so the audit sees the page the
+  # user lands on; false if it never did within the budget, in which case
+  # the audit runs anyway and its report says why.
+  def wait_for_turbo_to_settle(wait: Capybara.default_max_wait_time)
+    page.has_no_css?("[aria-busy='true']", wait: wait)
   end
 
   # Real (non-memoized) audits this example has run — the observability handle
@@ -557,15 +710,22 @@ RSpec.configure do |config|
   # the default has to be the safe one, or this regresses to CI-only by habit.
   unless ENV["SKIP_AXE"] == "1"
     config.after(:each, type: :system) do |example|
-      # Deliberate-violation examples (component previews that DOCUMENT an
-      # anti-pattern) opt out explicitly — tag with `skip_axe_hook: true`
-      # and say why at the tag site.
-      next if example.metadata[:skip_axe_hook]
+      # No page, nothing to audit: an example that never navigated (a
+      # request-level check under type: :system, or one that failed in setup).
+      # An example that DID navigate and still ends here is #912 — something
+      # disposed the session before this hook — and the after(:suite) gate
+      # below fails the run for it. There is no per-example opt-out: a page a
+      # preview must render deliberately wrong is fixed to be right instead.
+      # Only a truly empty document is skipped: an about:blank whose body was
+      # written by the example (a mail template loaded for audit, #461) is a
+      # page state like any other.
+      if Capybara.current_session.current_url.start_with?("about:") &&
+         !Capybara.current_session.evaluate_script("!!(document.body && document.body.children.length)")
+        AxeAccessibility::TEARDOWN_LEDGER[example.id] = :blank
+        next
+      end
 
-      # Multi-session examples can end with an about:blank window current —
-      # auditing an empty document only produces a bogus document-title
-      # violation.
-      next if Capybara.current_session.current_url.start_with?("about:")
+      wait_for_turbo_to_settle
       # Prepare toasts for audit:
       # - Defeat in-progress animations (element opacity, transforms)
       # - Force a solid background so axe can reliably compute color contrast.
@@ -624,10 +784,49 @@ RSpec.configure do |config|
         (results["violations"] || []).map { |v| v.merge("themeContext" => theme) }
       end
 
+      AxeAccessibility::TEARDOWN_LEDGER[example.id] = :audited
+
       formatted = violations.map { |v| "[#{v['themeContext'].upcase}] #{format_violation(v)}" }
+
+      # rspec-rails' failure screenshot runs before config-level after hooks,
+      # so a teardown-audit failure had no picture; take one here, named after
+      # the example, into the directory CI already uploads.
+      if violations.any?
+        shot = Rails.root.join("tmp/capybara", "axe_teardown_#{example.full_description.parameterize.first(120)}.png")
+        begin
+          page.save_screenshot(shot)
+          formatted << "[Screenshot Image]: #{shot}"
+        rescue StandardError
+          formatted << "[Screenshot unavailable]"
+        end
+      end
 
       expect(violations).to be_empty,
         "Accessibility violations found:#{formatted.join("\n")}"
+    end
+
+    config.prepend AxeAccessibility::VisitTracking, type: :system
+
+    # The gate that keeps the hook above from going quiet again (#912): every
+    # system example that navigated must have an :audited entry. Raising here
+    # fails the run as a suite-level error; each parallel worker checks its
+    # own examples.
+    config.after(:suite) do
+      ran = RSpec.world.all_examples.select do |ex|
+        ex.metadata[:type] == :system && ex.execution_result.started_at &&
+          ex.execution_result.status != :pending
+      end
+      missing = AxeAccessibility.unaudited(ran.map(&:id))
+      next if missing.empty?
+
+      raise "The AAA teardown audit did not run for #{missing.size} system " \
+            "example(s) that navigated — the audit is not optional:\n  " \
+            "#{missing.join("\n  ")}"
+    end
+  else
+    config.before(:suite) do
+      warn "\n*** SKIP_AXE=1: the WCAG 2.2 AAA teardown audit is OFF for this run. " \
+           "A focused local loop only — never in CI or before a push. ***\n"
     end
   end
 end

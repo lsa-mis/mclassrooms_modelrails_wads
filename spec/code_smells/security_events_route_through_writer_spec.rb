@@ -25,13 +25,13 @@ RSpec.describe "Code smell: security events route through record_security_event!
   direct_writes = /\bActivityLog\.(create!?|insert(_all)?|upsert(_all)?)\b/
 
   # path => why this call site legitimately writes ActivityLog directly.
-  # All three are BEST-EFFORT, workspace-domain writers — the other tier.
+  # All four are BEST-EFFORT, workspace-domain writers — the other tier.
   # A security-tier write does not belong here; it belongs in the writer.
   allowed_direct_writes = {
     "app/models/concerns/trackable.rb" =>
       "the best-effort, workspace-domain write shape itself — the concern this " \
       "whole tier distinction is documented on",
-    "app/models/membership.rb" =>
+    "app/models/membership/ownership.rb" =>
       "record_ownership_demotion, reached from a callback-skipping CAS " \
       "update_all, so the concern's callbacks cannot fire for it",
     "app/controllers/application_controller.rb" =>
@@ -41,7 +41,12 @@ RSpec.describe "Code smell: security events route through record_security_event!
       "fork: the admin-curation writer — workspace-tier before/after rows " \
       "written INSIDE the curated change's transaction (deliberately not " \
       "best-effort; the audit row and the change commit together). Curation " \
-      "actions are never SECURITY_ACTIONS"
+      "actions are never SECURITY_ACTIONS",
+    # The writer moved into the concern with #951's split (#915); same reason.
+    "app/models/invitation/suppression.rb" =>
+      "record_suppressed_delivery — best-effort, admin-visibility, fired from " \
+      "mailer callbacks where Trackable's hooks must not run (a block oracle " \
+      "otherwise; PR 4 spec §7)"
   }.freeze
 
   # Files allowed to mention a security-action literal without routing it
@@ -70,6 +75,22 @@ RSpec.describe "Code smell: security events route through record_security_event!
       "allowed_direct_writes in this spec, with its reason."
   end
 
+  it "carries no stale exemptions" do
+    live_files = ruby_sources
+      .select { |file| File.read(file).match?(direct_writes) }
+      .map { |file| Pathname(file).relative_path_from(Rails.root).to_s }
+    stale = allowed_direct_writes.keys - live_files
+
+    expect(stale).to be_empty,
+      "These exemptions name a file that no longer writes ActivityLog directly — " \
+      "the allow-list is describing code that moved or went away, and because the " \
+      "scan above skips an exempted file whole, a stale key would silently cover a " \
+      "future direct write in it:\n  #{stale.join("\n  ")}"
+  end
+
+  # Per-file by design. Since the model decomposition, app/models/user/password.rb
+  # must satisfy this on its own (it names the literal and calls the writer); a
+  # split that separates the two breaks this example, and should.
   it "every file naming a security action routes it through the writer" do
     action_literal = Regexp.union(ActivityLog::SECURITY_ACTIONS)
 

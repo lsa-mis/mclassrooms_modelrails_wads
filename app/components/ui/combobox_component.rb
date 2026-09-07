@@ -23,8 +23,9 @@ module UI
   #   each option is a `role="option"` with `aria-selected`. The controller tracks
   #   the highlighted option via `aria-activedescendant` (DOM focus stays on the
   #   input — ↑/↓/Home/End move the active option, Enter selects it, Escape closes).
-  #   The input and options carry the AAA `focus-ring`; the empty state is an i18n
-  #   live region.
+  #   Options are not tab stops (`tabindex="-1"`): Tab leaves the widget and closes
+  #   it, as does any focus leaving it. The input and options carry the AAA
+  #   `focus-ring`; the empty state is an i18n live region.
   # - **You supply:** `name:` (hidden-field name), `options:` (array of
   #   `{ value:, label: }`), optional `value:` (pre-selected), `placeholder:`,
   #   `label:` (accessible name), and `size:`.
@@ -73,7 +74,7 @@ module UI
       # `data:` attr can't clobber `data-controller` and silently break Stimulus.
       @data = {
         controller: "combobox",
-        action: "click@document->combobox#closeOnClickOutside"
+        action: "click@document->combobox#closeOnClickOutside focusout->combobox#closeOnFocusOut"
       }.merge(html_attrs.delete(:data) || {})
       @html_attrs = html_attrs
     end
@@ -125,9 +126,17 @@ module UI
 
     def list_id = "#{@id}-list"
 
+    # The empty-state status message is a SIBLING of the listbox, not a
+    # child: `role="listbox"` only permits `role="option"`/group children
+    # (aria-required-children), so a `role="status"` div inside it is an
+    # ARIA violation regardless of the `hidden` toggle. It still lives
+    # inside the same panel so it visually occupies the dropdown.
     def dropdown
-      content_tag(:div, listbox, data: { combobox_target: "panel" }, hidden: true,
-        style: "position-anchor: --#{@id}", class: PANEL)
+      content_tag(:div, data: { combobox_target: "panel" }, hidden: true,
+        style: "position-anchor: --#{@id}", class: PANEL) do
+        concat listbox
+        concat empty_state
+      end
     end
 
     def listbox
@@ -137,28 +146,35 @@ module UI
         "aria-label": accessible_name,
         class: LIST,
         data: { combobox_target: "list" }) do
-        concat options_list
-        concat content_tag(:div,
-          I18n.t("modelrails_ui.combobox.empty", default: "No results found."),
-          class: EMPTY,
-          role: "status",
-          data: { combobox_target: "empty" },
-          hidden: true)
+        options_list
       end
+    end
+
+    def empty_state
+      content_tag(:div,
+        I18n.t("modelrails_ui.combobox.empty", default: "No results found."),
+        class: EMPTY,
+        role: "status",
+        data: { combobox_target: "empty" },
+        hidden: true)
     end
 
     def options_list
       safe_join(@options.map { |opt|
+        # tabindex=-1: options are reached through aria-activedescendant, never by
+        # Tab (#684); mousedown is cancelled so a pointer selection never blurs the
+        # input before its click lands.
         content_tag(:button, opt[:label],
           type: "button",
           role: "option",
+          tabindex: "-1",
           "aria-selected": (opt[:value].to_s == @value).to_s,
           class: OPTION,
           data: {
             combobox_target: "option",
             combobox_value: opt[:value],
             combobox_label: opt[:label],
-            action: "click->combobox#select"
+            action: "mousedown->combobox#keepFocus click->combobox#select"
           })
       })
     end

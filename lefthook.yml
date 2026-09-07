@@ -18,7 +18,7 @@ pre-commit:
 pre-push:
   # Sequential ordering with stop-on-first-failure. Critical because
   # `tailwind_build` rewrites app/assets/builds/tailwind.css and `rspec`'s
-  # Playwright system tests load that file from the dev server. Running the
+  # Cuprite system tests load that file from the dev server. Running the
   # two in parallel produced a race window (~1-2s) where early specs read a
   # partial CSS file and axe-core reported phantom contrast violations on
   # static, members, and docs pages. Ordering tailwind_build first

@@ -9,14 +9,29 @@ class Authentication < ApplicationRecord
     [ :create, :update, :destroy ]
   end
 
+  # Dynamic key, no fallback: spec/code_smells/dynamic_i18n_keys_have_values_spec.rb
+  # proves every configured provider has its label.
   def self.display_name_for(provider_string)
-    I18n.t("authentication.providers.#{provider_string}",
-           default: provider_string.to_s.titleize)
+    I18n.t("authentication.providers.#{provider_string}")
   end
 
   def display_provider
     self.class.display_name_for(provider)
   end
+
+  normalizes :email, with: ->(e) { EmailNormalizer.normalize(e) }
+  # Encrypted at rest (#902). uid is deterministic because (provider, uid) is
+  # the sign-in lookup and a unique index — and for email-provider rows it is
+  # the address itself (#903). No downcase: provider ids are opaque.
+  encrypts :email
+  encrypts :uid, deterministic: true
+  # Parked invitation token: the same bearer credential as invitations.token,
+  # kept until email verification claims it (#953). Non-deterministic: the
+  # only index here is `WHERE … IS NOT NULL`, and nothing looks the column up
+  # by value (fix round 1) — determinism would only make it byte-identical to
+  # invitations.token for the same token, letting a leaked dump join a parked
+  # signup to its invitation.
+  encrypts :pending_invitation_token
 
   validates :provider, presence: true
   validates :uid, presence: true
@@ -57,8 +72,17 @@ class Authentication < ApplicationRecord
     verified? && user.authentications.verified.count <= 1
   end
 
+  # Compare-and-swap, the MagicLinkToken#consume! shape (#950): the token payload
+  # already dies once verified_at is set, but two requests inside the same
+  # window both pass find_by_token_for; the WHERE is what makes the second lose.
+  # update_all fires no callbacks, so the Broadcastable update is sent by hand.
   def verify!
-    update!(verified_at: Time.current)
+    now = Time.current
+    return false unless self.class.where(id: id, verified_at: nil).update_all(verified_at: now, updated_at: now) == 1
+
+    reload
+    broadcast_changes
+    true
   end
 
   # One-shot claim of everything parked on this Authentication during the

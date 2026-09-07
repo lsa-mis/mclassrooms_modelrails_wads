@@ -41,18 +41,18 @@ RSpec.describe "Iframe component accessibility", type: :system do
     expect_aaa_in_both_themes
   end
 
-  # skip_axe_hook: this preview DELIBERATELY renders the anti-pattern (a
-  # title-less iframe) to document it — the CI after-each audit would rightly
-  # fail it, which is the point of the example, not a regression.
-  it "dont_no_title: documents the failure mode with no live title-less iframe", skip_axe_hook: true do
+  # The "don't" page renders no iframe at all (the component refuses to), so
+  # the teardown audit covers it like any other page. Its one interactive
+  # element is the code sample, a scrollable region that must be focusable
+  # and named.
+  it "dont_no_title: documents the failure mode with no live title-less iframe" do
     visit "/rails/view_components/ui/iframe_component/dont_no_title"
 
     # The "don't" scenario documents the failure mode via a non-executing <pre>
     # sample (the component fails loud on a blank title) — assert it renders no
-    # actual title-less iframe. No axe pass here: the audit target is the iframe's
-    # accessible name, and the only element on this page is a scrollable doc <pre>
-    # whose scrollable-region-focusable advisory is unrelated to the component.
-    expect(page).to have_css("#if-scope pre")
+    # actual title-less iframe.
+    expect(page).to have_css("#if-scope pre[tabindex='0'][role='region']")
     expect(page).to have_no_css("#if-scope iframe")
+    expect_aaa_in_both_themes
   end
 end

@@ -127,6 +127,16 @@ RSpec.describe WorkspaceInvitationExpiringSweepJob, type: :job do
       }.not_to change { Noticed::Event.where(type: "WorkspaceInvitationExpiringSoonNotifier").count }
     end
 
+    it "skips a blocked invitation entirely — no in-app row, no email job (T13)" do
+      invitee = create(:user)
+      invitation = create(:invitation, invitable: workspace, invited_by: inviter,
+                          email: invitee.email_address, expires_at: 12.hours.from_now)
+      create(:invitation_block, inviter: inviter, email: invitee.email_address)
+
+      expect { described_class.perform_now }
+        .not_to change { Noticed::Event.where(type: "WorkspaceInvitationExpiringSoonNotifier").count }
+    end
+
     # Integration test for the seam between the sweep job (which fires every 6
     # hours) and the day-bucket idempotency override on
     # WorkspaceInvitationExpiringSoonNotifier. The sweep spec covers query +

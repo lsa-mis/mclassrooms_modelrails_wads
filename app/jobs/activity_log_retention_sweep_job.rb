@@ -4,9 +4,9 @@
 #   * workspace-domain rows (Trackable): best-effort to write, swept at 12 months.
 #   * account-security rows (ActivityLog::SECURITY_ACTIONS): retained for at
 #     least SECURITY_RETENTION_FLOOR, and never less than the general window
-#     (see security_cutoff). This floor REPLACED the notification-layer
-#     RETENTION_FLOORS (notifications lifecycle arc, 2026-08) — deleting or
-#     shortening it silently destroys the system's only credential-event record.
+#     (see security_cutoff). This floor REPLACED the notification-layer floor,
+#     which PR 5 removed (notifications lifecycle arc, 2026-08/09) — deleting
+#     or shortening it silently destroys the system's only credential-event record.
 #     The floor is about RETENTION only; the write guarantee is the caller's
 #     (strict for credential mutations, best-effort for new-device sign-in).
 # This job is the registered bypass through the ActivityLog immutability guard

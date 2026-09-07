@@ -84,12 +84,28 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
     # The frame surfaces also broadcast_update_to (different targets); allow them
     # so the specific aria-live expectation below is the only constraint.
     allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+    # #926: a danger-severity arrival is named and assertive; nothing generic.
     expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
       [ a_kind_of(User), :notifications ],
-      target: "notifications-live",
-      content: I18n.t("notifications.bell.arrival_announcement")
+      target: "notifications-live-assertive",
+      content: I18n.t("notifications.bell.arrival_announcement_with_severity",
+                      phrase: I18n.t("notifications.severity_phrase.danger"))
     )
 
     PasswordChangedNotifier.with(record: user).deliver(user)
+  end
+
+  it "announces an info-severity arrival politely, naming its severity (#926)" do
+    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+    expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
+      [ a_kind_of(User), :notifications ],
+      target: "notifications-live",
+      content: I18n.t("notifications.bell.arrival_announcement_with_severity",
+                      phrase: I18n.t("notifications.severity_phrase.info"))
+    )
+
+    workspace = create(:workspace)
+    membership = create(:membership, user: user, workspace: workspace)
+    WorkspaceRoleChangedNotifier.with(record: membership).deliver(user)
   end
 end

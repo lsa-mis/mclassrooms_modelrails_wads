@@ -10,9 +10,14 @@ image: lsa-mis/mclassrooms_modelrails_wads
 # This template defaults to SQLite (with Solid Queue/Cache/Cable in-process).
 # SQLite is single-writer and single-host by design — it cannot be shared
 # across machines. That shapes everything below:
-#   - servers.web runs on exactly one host (max-replicas: 1 enforces this)
+#   - servers.web lists exactly one host; a second host would be a second
+#     SQLite file, not a replica (scale out only after the Graduation checklist)
 #   - The commented `job:` role below is a TRAP for SQLite users; only enable
 #     it after migrating to a network-attached database
+# On that one host, Kamal's normal rollover (boot the new container, wait for
+# healthy, stop the old) briefly runs two containers against the same volume.
+# That is the situation Puma's own workers are already in — SQLite serializes
+# same-host access with file locks — so nothing here fights the rollover.
 # When you outgrow SQLite, see the "Graduation checklist" in the env block.
 
 # Deploy to these servers.
@@ -21,12 +26,6 @@ servers:
     hosts:
       # TODO(LSA TS): production server IP. One host only — SQLite is single-host.
       - REPLACE_WITH_PRODUCTION_SERVER_IP
-    options:
-      # Required for SQLite: ensures Kamal stops the old container BEFORE
-      # starting the new one during deploys. Two containers writing to the
-      # same SQLite file is corruption territory. Remove only after migrating
-      # to a networked database (see Graduation checklist below).
-      max-replicas: 1
 
   # === TRAP for SQLite users ===
   # The job: role below runs a separate `bin/jobs` Solid Queue supervisor.
@@ -71,10 +70,10 @@ registry:
   password:
     - KAMAL_REGISTRY_PASSWORD
 
-# Give Solid Queue's in-Puma supervisor enough time to drain in-flight jobs
-# during deploy. Kamal's default (30s) is too tight when SOLID_QUEUE_IN_PUMA
-# is true — jobs get SIGKILL'd mid-execution. 45s covers typical drain time.
-stop_wait_time: 45
+# Give Solid Queue's in-Puma supervisor time to drain in-flight jobs on deploy.
+# Docker's SIGTERM→SIGKILL grace for a proxied role is 10s; a job still running
+# at that point is SIGKILL'd mid-execution. 45s covers typical drain time.
+stop_timeout: 45
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:

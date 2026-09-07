@@ -7,8 +7,8 @@
   <%# Add a passkey — registration ceremony wired to the webauthn Stimulus controller %>
   <div class="mt-8"
        data-controller="webauthn"
-       data-webauthn-reg-options-url-value="<%= passkeys_registration_options_path %>"
-       data-webauthn-reg-verify-url-value="<%= passkeys_registration_verify_path %>">
+       data-webauthn-reg-options-url-value="<%= passkeys_registration_challenge_path %>"
+       data-webauthn-reg-verify-url-value="<%= passkeys_registration_credential_path %>">
     <div class="flex items-end gap-3">
       <div class="flex-1 max-w-xs">
         <label for="passkey_nickname" class="block text-sm font-medium text-text-body mb-1">

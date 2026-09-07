@@ -1,7 +1,7 @@
 ---
 title: Deployment
 description: Deploy ModelRails to production with Kamal — SQLite topology, Solid Queue graduation path, SSL configuration, and the runtime invariants that keep deploys safe.
-keywords: kamal deploy production sqlite solid queue max-replicas stop_wait_time graduation rolling deploy ssl https proxy registry github container preflight rails_host placeholder
+keywords: kamal deploy production sqlite solid queue single-host stop_timeout graduation rolling deploy ssl https proxy registry github container preflight rails_host placeholder
 ---
 
 # Deployment
@@ -16,9 +16,9 @@ This template defaults to **SQLite** (with Solid Queue, Solid Cache, and Solid C
 
 That shapes everything in `config/deploy.yml`:
 
-- `servers.web` runs on **exactly one host** (`max-replicas: 1` enforces this)
+- `servers.web` runs on **exactly one host** — a second host would be a second SQLite file, not a replica
 - The commented `servers.job:` block is a **trap** for SQLite users — uncommenting it requires migrating to a network-attached database first
-- Rolling deploys must **stop the old container before starting the new one** (Kamal's normal start-then-drain behavior would briefly run two containers against the same SQLite file — corruption territory)
+- Kamal's normal rollover (boot the new container, wait for it to pass its health check, stop the old one) briefly runs two containers against the same volume. On one host that is the situation Puma's own workers are already in — SQLite serializes same-host access with file locks — so the template does nothing to fight the rollover
 
 The template ships these defaults safely; you only need to think about them when you outgrow SQLite. See [Graduation checklist](#graduation-checklist) below.
 
@@ -32,9 +32,7 @@ Replace placeholders with your real values:
 servers:
   web:
     hosts:
-      - <YOUR-SERVER-IP>   # was: 192.168.0.1
-    options:
-      max-replicas: 1      # Required for SQLite; do not change
+      - <YOUR-SERVER-IP>   # was: 192.168.0.1 — exactly one; see above
 
 registry:
   server: ghcr.io          # or your registry
@@ -49,8 +47,10 @@ Add to `.kamal/secrets`:
 
 ```bash
 KAMAL_REGISTRY_PASSWORD=<your-github-pat-or-registry-token>
-RAILS_MASTER_KEY=<contents of config/master.key>
+RAILS_MASTER_KEY=<contents of config/credentials/production.key>
 ```
+
+The template uses per-environment credentials (`bin/rails credentials:edit --environment production`, see [Forking](forking)), so the key is `config/credentials/production.key` — not the single `config/master.key` a default `rails new` would use. The tracked `.kamal/secrets` already reads the right file; this is the value to put in a managed platform's settings.
 
 Or copy `.env.example` to `.env` for local Kamal commands.
 
@@ -65,17 +65,13 @@ The `docker_build` CI job (see [Getting Started](/docs/developer/getting-started
 
 ## Production-safety invariants
 
-The template ships three Kamal settings that aren't obvious from the Rails scaffold:
+The template ships two Kamal settings that aren't obvious from the Rails scaffold:
 
-### `max-replicas: 1` on `servers.web.options`
+### `stop_timeout: 45` at top level
 
-Forces Kamal to **stop the old container before starting the new one** during deploys. Without this, two containers would briefly hold the SQLite file open — `db:prepare` in `bin/docker-entrypoint` races, and SQLite's WAL mode can't always reconcile concurrent boot-time schema work.
+Docker's SIGTERM→SIGKILL grace for a proxied role is 10 seconds. With `SOLID_QUEUE_IN_PUMA: true` (the template default), Solid Queue's `on_worker_shutdown` hook needs longer to drain in-flight jobs before SIGKILL. **45 seconds** is the floor; raise it if you run long-running jobs in-process.
 
-When you migrate to a networked DB (Postgres/MySQL), you can remove this constraint and scale `web` horizontally.
-
-### `stop_wait_time: 45` at top level
-
-Kamal's default container-stop grace is 30 seconds. With `SOLID_QUEUE_IN_PUMA: true` (the template default), Solid Queue's `on_worker_shutdown` hook needs longer to drain in-flight jobs before SIGKILL. **45 seconds** is the recommended floor; raise it if you run long-running jobs in-process.
+An earlier revision spelled this `stop_wait_time` and paired it with a `max-replicas: 1` docker option — neither is a key Kamal 2 or Docker knows, and `kamal config` rejected the file before touching a host. `spec/code_smells/template_invariants_spec.rb` now runs `config/deploy.yml` through Kamal's own loader, which is the check that catches a misspelled key on the day it is written.
 
 ### Builder args pass Ruby version through to the production image
 
@@ -93,7 +89,7 @@ The template ships `SOLID_QUEUE_IN_PUMA: true` in `deploy.yml` env. This runs th
 
 **This is the right default for the one-box SQLite deploy.** Two containers, one VPS, one `kamal deploy`. No accessory networking. No job-server-can't-reach-SQLite-file issues.
 
-**It is not the right default forever.** Recurring jobs share Puma's GVL with HTTP requests, and a deploy restart can SIGKILL jobs mid-execution if `stop_wait_time` is too low.
+**It is not the right default forever.** Recurring jobs share Puma's GVL with HTTP requests, and a deploy restart can SIGKILL jobs mid-execution if `stop_timeout` is too low.
 
 ### Graduation checklist
 
@@ -107,7 +103,7 @@ When you outgrow this default — typically when you add a second web server, or
 
 4. **Uncomment the `servers.job:` block** in `config/deploy.yml`. This declares a separate `bin/jobs` supervisor host. The image is the same — only the `cmd` differs.
 
-You can now scale `web` horizontally too. Remove `max-replicas: 1` once `web` is no longer pinned to single-host SQLite semantics.
+You can now add web hosts too — `servers.web.hosts` is a list — once `web` is no longer pinned to single-host SQLite semantics.
 
 ## SSL configuration: paired changes required
 
@@ -170,7 +166,7 @@ Before the first deploy:
 
 ## Production preflight
 
-`config/initializers/required_production_config.rb` refuses to boot a production process when `RAILS_HOST` is unset or still a placeholder (`example.com`, anything ending in `.example`). The reason it refuses rather than warns: every mailer link — magic links, password resets, invitations — is generated from `RAILS_HOST`, and DNS-rebinding protection (`config.hosts`) is derived from it. With a placeholder value the app boots, `/up` reports healthy, and nobody can sign in. A failed boot is the only version of this failure you can see.
+`config/initializers/required_production_config.rb` refuses to boot a production process when `RAILS_HOST` is unset or still a placeholder (`example.com`, anything ending in `.example`), or when the Active Record encryption keys are missing from the production credentials. The reason it refuses rather than warns: every mailer link — magic links, password resets, invitations — is generated from `RAILS_HOST`, and DNS-rebinding protection (`config.hosts`) is derived from it. With a placeholder value the app boots, `/up` reports healthy, and nobody can sign in. Missing encryption keys fail the same way — healthy `/up`, then the first read of a user raises. A failed boot is the only version of either failure you can see. Keys: `bin/rails db:encryption:init`, pasted into `bin/rails credentials:edit --environment production` ([Forking](/docs/developer/forking#bootstrap-secrets-and-configuration)).
 
 Rules the guard follows:
 
@@ -250,11 +246,12 @@ bin/kamal dbc               # = bin/rails dbconsole with credentials
 |---|---|---|
 | `bundle install` fails in Docker build with "Could not find version file .tool-versions" | `.tool-versions` not copied before `bundle install` runs | `Dockerfile` — the `COPY Gemfile Gemfile.lock .tool-versions ./` line; regression test in `spec/code_smells/template_invariants_spec.rb` |
 | Deploy succeeds but app returns 502 | Health check failing because of HTTPS redirect | `config.ssl_options` excludes `/up` from `force_ssl` redirect |
-| Jobs disappear mid-deploy | `stop_wait_time` too short for Solid Queue drain | `config/deploy.yml` `stop_wait_time: 45` or higher |
+| Jobs disappear mid-deploy | `stop_timeout` too short for Solid Queue drain | `config/deploy.yml` `stop_timeout: 45` or higher |
 | `kamal deploy` from devcontainer fails with "docker: command not found" | `docker-outside-of-docker` feature not active | `.devcontainer/devcontainer.json` features; rebuild container |
-| Two containers visible during deploy | `max-replicas: 1` missing on `servers.web.options` | Restore the setting; SQLite cannot tolerate this |
-| Deploy takes unusually long with no error, on a release carrying an `activity_logs` migration | SQLite has no `ALTER TABLE ADD CONSTRAINT`, so Rails implements constraint changes as a full table rebuild (`CREATE` / `INSERT … SELECT` / `DROP` / `RENAME`). On a large `activity_logs` that copy runs inside `db:prepare` at boot — and because deploys are stop-then-start, boot time *is* your outage window | Check the row count before deploying (`bin/kamal app exec 'bin/rails runner "puts ActivityLog.count"'`). If it is large, run `ActivityLogRetentionSweepJob` first to shrink the table, or accept the longer window deliberately |
-| Deploy fails "container not healthy" on a slow boot | Health-check window too tight for the app's boot time | Raise `proxy.healthcheck.timeout` / boot limit in `config/deploy.yml`; with SQLite's stop-then-start deploys, boot time is also your per-deploy downtime — measure it once with a stopwatch |
+| `kamal …` dies with `ConfigurationError: unknown key` before touching a host | A key Kamal 2 doesn't know in `config/deploy.yml` — Kamal validates the whole file first | `bin/kamal config`; the template-invariants spec runs the file through Kamal's loader |
+| Two containers visible during deploy | Kamal's rollover: the new container boots and passes its health check before the old one stops | Expected on one host — SQLite serializes same-host access. A second *host* is the problem, never a second container |
+| Deploy takes unusually long with no error, on a release carrying an `activity_logs` migration | SQLite has no `ALTER TABLE ADD CONSTRAINT`, so Rails implements constraint changes as a full table rebuild (`CREATE` / `INSERT … SELECT` / `DROP` / `RENAME`). On a large `activity_logs` that copy runs inside `db:prepare` at boot, before the new container reports healthy — and the old container is serving against the table being rebuilt the whole time | Check the row count before deploying (`bin/kamal app exec 'bin/rails runner "puts ActivityLog.count"'`). If it is large, run `ActivityLogRetentionSweepJob` first to shrink the table, or accept the longer window deliberately |
+| Deploy fails "container not healthy" on a slow boot | Health-check window too tight for the app's boot time | Raise `proxy.healthcheck.timeout` / boot limit in `config/deploy.yml`; the old container keeps serving until the new one is healthy, so a slow boot lengthens the deploy, not the outage |
 
 ## Deploying without Kamal
 
@@ -286,8 +283,8 @@ Preset and seed variables (`SIGNUP_MODE`, `SIGNUP_PERMITTED_JOIN_STRATEGIES`,
 ### The constraint that follows you everywhere
 
 SQLite is single-writer, so run **exactly one web instance**. Scaling to a
-second server on a managed platform is the same corruption risk as removing
-`max-replicas: 1` under Kamal. Graduate to a networked database first (see the
+second server on a managed platform is the same corruption risk as adding a
+second host to `servers.web` under Kamal. Graduate to a networked database first (see the
 [Solid Queue topology](#solid-queue-topology) graduation checklist above) —
 that constraint belongs to the app, not to the deploy tool.
 

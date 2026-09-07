@@ -12,7 +12,7 @@ class PendingJoinsController < ApplicationController
       return redirect_to root_path, alert: t(".unavailable")
     end
 
-    workspace.admit(Current.user, role: workspace.default_self_join_role)
+    workspace.admit(Current.user, role: workspace.default_self_join_role, self_join: true)
     clear_pending_join
     redirect_to workspace_path(workspace), notice: t(".joined", workspace: workspace.name)
   rescue Workspace::AlreadyMember, Workspace::AtCapacity

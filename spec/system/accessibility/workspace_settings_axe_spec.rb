@@ -63,5 +63,37 @@ RSpec.describe "Workspace settings section — AAA", type: :system do
       expect(axe_clean_in_both_themes?(axe_options)).to be(true),
         "AAA violations on join-link masked state: #{axe_violations_in_both_themes(axe_options).join("\n")}"
     end
+
+    # #952: expiry is conveyed in words inside <time datetime>, never by colour
+    # alone, and the expiry paragraph is the aria-describedby target for both
+    # the rotate button and the masked stub.
+    it "shows the live link's expiry in a time[datetime], wired to the rotate button and masked stub, and is axe-clean at AAA (both themes)" do
+      link = create(:workspace_join_link, workspace: workspace, created_by: user)
+      visit edit_workspace_settings_path(workspace)
+
+      expect(page).to have_css(
+        "p#join_link_expiry time[datetime='#{link.reload.expires_at.iso8601}']",
+        text: I18n.l(link.expires_at, format: :long)
+      )
+      expect(page).to have_css("div[aria-describedby='join_link_expiry']")
+      expect(find_button(I18n.t("workspaces.settings.join_policy.rotate"))[:"aria-describedby"])
+        .to eq("join_link_expiry")
+
+      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+        "AAA violations on join-link expiry: #{axe_violations_in_both_themes(axe_options).join("\n")}"
+    end
+
+    it "shows the expired message in words (no colour cue) for a lapsed link, and is axe-clean at AAA (both themes)" do
+      create(:workspace_join_link, workspace: workspace, created_by: user)
+      travel_to 8.days.from_now do
+        visit edit_workspace_settings_path(workspace)
+
+        expect(page).to have_css("#join_link_expiry", text: I18n.t("workspaces.settings.join_policy.expired"))
+        expect(page).not_to have_css("#join_link_expiry time")
+
+        expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+          "AAA violations on expired join-link: #{axe_violations_in_both_themes(axe_options).join("\n")}"
+      end
+    end
   end
 end

@@ -29,10 +29,15 @@ module IdentityPickerHelpers
     )
   end
 
-  # Attach a file to the identity picker's hidden file input.
-  # The input has the sr-only class, so Capybara must be told visible: false.
+  # Attach a file to the identity picker's hidden file input. Each view (hub,
+  # crop) now has its own input, sr-only and a DOM sibling of its own label
+  # (#912 — focus order), so both can match `[data-identity-picker-target=
+  # 'fileInput']` at once (the crop one hidden behind [hidden] on its
+  # ancestor). Callers always reach this from the hub (see upload_photo, the
+  # only caller), so scope to it explicitly rather than leaving the match
+  # ambiguous. Capybara must be told visible: false — sr-only isn't display:none.
   def attach_identity_picker_file(path)
-    input = page.find("input[data-identity-picker-target='fileInput']", visible: false)
+    input = find("#identity-picker-hub input[data-identity-picker-target='fileInput']", visible: false)
     input.attach_file(path)
   end
 
@@ -81,6 +86,11 @@ module IdentityPickerHelpers
       "[data-controller~='image-cropper'][data-image-cropper-ready='true']",
       wait: 10
     )
+    # The picker moves focus into the cropper container on a timer after the
+    # modal animation (identity_picker_controller#_manageFocus). Until that has
+    # landed the view is still settling: a spec that tabs before it fires has
+    # its focus taken back (#997). Waiting on the focus is waiting on the state.
+    expect(page).to have_css("[data-image-cropper-target='container']:focus", wait: 10)
   end
 
   # Wait for hub view to become visible (after a mode switch back to hub).
@@ -164,14 +174,6 @@ module IdentityPickerHelpers
       )
       firstLink.focus()
     JS
-  end
-
-  # Close the modal so the after(:each) axe audit doesn't scan the open
-  # dialog (the hub's initials source card uses oklch() with a CSS custom
-  # property axe-core can't resolve for contrast computation).
-  def close_modal_before_axe_audit
-    cdp_press("Escape")
-    expect(page).to have_no_css("dialog[open]", wait: 3)
   end
 
   # Build a user with a cropped avatar and its original, source set to "upload".

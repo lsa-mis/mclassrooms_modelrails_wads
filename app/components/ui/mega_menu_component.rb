@@ -42,7 +42,12 @@ module UI
 
     COLUMN_HEADING = "mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted"
 
-    ITEM_CLS = "focus-ring group flex items-start gap-3 rounded-sm p-2 text-sm transition-colors " \
+    # min-h-11: a navigation link, not a role="menuitem" widget interior, so
+    # the 44px AAA floor (2.5.5) applies. items-start stays (not items-center)
+    # since an item's description is optional — some items are one line, some
+    # two, and items-start keeps both cases' text starting at the same top
+    # edge instead of the block jumping around as the row grows to 44px.
+    ITEM_CLS = "focus-ring group flex min-h-11 items-start gap-3 rounded-sm p-2 text-sm transition-colors " \
                "hover:bg-surface-sunken hover:text-text-heading"
 
     ITEM_TITLE = "font-medium leading-none"

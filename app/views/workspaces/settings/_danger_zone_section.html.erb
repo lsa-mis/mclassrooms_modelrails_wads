@@ -17,8 +17,8 @@
               title: t("workspaces.archive.title"),
               message: t("workspaces.archive.confirm"),
               confirm_text: t("workspaces.archive.confirm_action"),
-              confirm_url: archive_workspace_path(workspace),
-              confirm_method: :patch,
+              confirm_url: workspace_archival_path(workspace),
+              confirm_method: :post,
               variant: :default %>
       </div>
 

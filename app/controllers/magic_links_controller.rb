@@ -11,8 +11,7 @@ class MagicLinksController < ApplicationController
     with: -> { redirect_to new_session_path, alert: t("magic_links.create.rate_limited") }
 
   def create
-    email = params[:email_address]&.downcase&.strip
-    user = User.find_by(email_address: email)
+    user = User.find_by(email_address: params[:email_address])
 
     # Recipient throttle (SEC-9): shared :magic_link bucket with the lookup and
     # password-reset endpoints. Throttled requests fall through to the same

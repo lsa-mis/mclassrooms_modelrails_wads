@@ -15,6 +15,15 @@
      aria-live="polite"
      aria-atomic="true"
      class="sr-only"></div>
+<%# Assertive twin for danger-severity arrivals (#926): a credential change
+    interrupts; everything else waits its turn in the polite region above.
+    aria-live="assertive" (not role="alert": the error summary's inner alert
+    must stay the page's only one, which its specs rely on); present and
+    empty from first render. %>
+<div id="notifications-live-assertive"
+     aria-live="assertive"
+     aria-atomic="true"
+     class="sr-only"></div>
 
 <%# Feedback widget: the adopted lsa_tdx_feedback modal + trigger (our view
     override), rendered site-wide so feedback — including "I can't sign in" — is

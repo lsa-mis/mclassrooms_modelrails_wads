@@ -89,10 +89,20 @@ RSpec.describe "Magic link registration", type: :system do
 
       click_button I18n.t("magic_link_callbacks.new_registration.submit")
 
-      expect(page).to have_css("[role='alert'][tabindex='-1']")
+      # GOV.UK's split (#758): the focusable container is not the alert. Focus
+      # lands on the container; the alert sits inside it with the heading and
+      # the list, so a reader gets the alert's semantics without a second
+      # announcement from the focused element carrying the same role.
+      expect(page).to have_css("[data-slot='error-summary'][tabindex='-1'] [role='alert']")
       expect(page.evaluate_script(
-        "document.activeElement === document.querySelector('[role=\"alert\"]')"
+        "document.activeElement === document.querySelector('[data-slot=\"error-summary\"]')"
       )).to be(true)
+      # What Chrome hands assistive technology, not what the markup says.
+      expect(ax_property("[data-slot='error-summary']", "focused")).to be(true)
+      expect(ax_role("[data-slot='error-summary'] [role='alert']")).to eq("alert")
+      expect(ax_name("[data-slot='error-summary'] h2")).to eq(
+        I18n.t("modelrails_ui.error_summary.heading", count: 2)
+      )
     end
 
     it "links each error summary item to its field, and the field exists on the page" do

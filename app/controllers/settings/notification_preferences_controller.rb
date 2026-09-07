@@ -32,7 +32,7 @@ module Settings
     private
 
     def set_preferences
-      @preferences = Current.user.preferences || Current.user.create_preferences!
+      @preferences = Current.user.preferences!
     end
 
     # The notification_preferences form posts a nested hash that's a

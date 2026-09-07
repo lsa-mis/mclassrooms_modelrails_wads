@@ -15,15 +15,21 @@ module AccountActivityHelper
   # second guard to remember. Adding a metadata-naming label is therefore a
   # deliberate act, which is the property worth having here.
   #
-  # The trailing humanized fallback covers a SECURITY_ACTIONS member shipped
-  # without a label: readable text rather than "translation missing".
+  # Only the actions whose writer records an os render the _with_os label; any
+  # other action renders its bare label whatever its metadata carries, which is
+  # what keeps user-supplied text (a passkey nickname) off the page without a
+  # second guard. Dynamic key, no fallback:
+  # spec/code_smells/dynamic_i18n_keys_have_values_spec.rb proves every
+  # SECURITY_ACTIONS member has its label and every os-recording one its variant.
   def account_activity_label(entry)
     os = entry.metadata&.dig("os").presence
-    bare = :"settings.sessions.activity.#{entry.action}"
+    bare = "settings.sessions.activity.#{entry.action}"
 
-    t("#{bare}#{"_with_os" if os}",
-      os: os,
-      default: [ bare, entry.action.delete_prefix("user.").humanize ])
+    if os && ActivityLog::SECURITY_ACTIONS_WITH_OS.include?(entry.action)
+      t("#{bare}_with_os", os: os)
+    else
+      t(bare)
+    end
   end
 
   # The exact moment behind a row's relative time, for the `title` on its

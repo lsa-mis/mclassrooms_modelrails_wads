@@ -15,10 +15,9 @@ require "rails_helper"
 # toggle label ("Enable quiet hours") doesn't duplicate the card heading
 # ("Quiet hours"), so it's untouched — no collision exists there.
 #
-# skip_axe_hook: axe runs INSIDE the viewport block instead — the suite-wide
-# hook fires after the viewport restore and would audit the desktop layout
-# (see spec/support/responsive_viewport.rb).
-RSpec.describe "Preferences toggle label at narrow viewports", type: :system, skip_axe_hook: true do
+# The axe assertion runs INSIDE each viewport block (the teardown audit fires
+# after the restore, at the desktop width; see spec/support/responsive_viewport.rb).
+RSpec.describe "Preferences toggle label at narrow viewports", type: :system do
   let(:user) { create(:user) }
 
   before do

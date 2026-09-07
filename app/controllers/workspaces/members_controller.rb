@@ -7,23 +7,13 @@ module Workspaces
       @roles = @workspace.effective_roles
       @assignable_roles = assignable_roles_for(Invitation)
 
-      memberships = @workspace.memberships.for_members_index(
+      # Pagy's offset paginator accepts arrays, so the combined roster
+      # (invitations first, then members — see WorkspaceRoster) paginates as
+      # one list.
+      combined = WorkspaceRoster.new(@workspace).rows(
         q: params[:q], role: params[:role], status: params[:status],
         sort: params[:sort], direction: params[:direction]
       )
-      invitations = @workspace.invitations.for_members_index(
-        q: params[:q], role: params[:role], status: params[:status],
-        sort: params[:sort], direction: params[:direction]
-      )
-
-      # Invitations first — they're actionable (pending), members are settled;
-      # each group honors the active sort within itself (#124). Pagy's offset
-      # paginator accepts arrays so the combined list paginates together.
-      # Trade-off, stated honestly: BOTH relations fully materialize into Ruby
-      # here — acceptable at template scale (tens of rows), and the memory
-      # cost grows with the workspace. Revisit as a UNION query when a
-      # workspace approaches ~500 combined rows (#124's deferred half).
-      combined = invitations.to_a + memberships.to_a
       # Clamp beyond-range pages (stale bookmark, a filter narrowing the set
       # under someone's feet) to the last real page — Pagy 43 hands the view
       # nil rows for an out-of-range request, which 500s the render (found by
@@ -69,7 +59,7 @@ module Workspaces
 
       leaving = @membership.user == Current.user
 
-      @membership.deactivate!
+      @membership.deactivate!(removed_by: Current.user)
 
       if leaving
         redirect_to workspaces_path,
@@ -86,21 +76,6 @@ module Workspaces
         redirect_to workspace_members_path(@workspace),
                     alert: t(".cannot_deactivate_last_owner")
       end
-    end
-
-    def reactivate
-      @membership = @workspace.memberships.find(params[:id])
-      authorize @membership
-      @membership.reactivate!
-      redirect_to workspace_members_path(@workspace), notice: t(".reactivated")
-    end
-
-    def transfer_ownership
-      @membership = @workspace.memberships.kept.find(params[:id])
-      authorize @membership
-      current_membership = @workspace.memberships.kept.find_by!(user: Current.user)
-      current_membership.transfer_ownership_to!(@membership)
-      redirect_to workspace_members_path(@workspace), notice: t(".transferred")
     end
 
     private

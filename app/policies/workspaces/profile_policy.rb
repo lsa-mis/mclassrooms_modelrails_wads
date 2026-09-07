@@ -14,9 +14,5 @@ module Workspaces
     def update?
       can?("manage_settings")
     end
-
-    def identity_picker_hub?
-      can?("manage_settings")
-    end
   end
 end

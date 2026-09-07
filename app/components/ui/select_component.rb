@@ -32,7 +32,12 @@ module UI
   #
   # No fail-loud guard — there's no enum axis to validate.
   class SelectComponent < ApplicationComponent
-    BASE = "flex min-h-[var(--form-input-height)] w-full rounded-md border border-border-strong bg-transparent px-3 py-1 text-sm shadow-sm " \
+    # min-w alongside min-h, one spelling of the 2.5.5 floor (#983): `w-full`
+    # pins nothing, so a select in a flex row with a sibling button — the
+    # members table's inline role editor is the live case — takes only the
+    # leftover space. It measured 29px at phone width and 43px on a CI members
+    # table, while its height was never at risk.
+    BASE = "flex min-h-[var(--form-input-height)] min-w-[var(--form-input-height)] w-full rounded-md border border-border-strong bg-transparent px-3 py-1 text-sm shadow-sm " \
            "outline-none focus-visible:border-border-focus focus-ring " \
            "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger " \
            "disabled:cursor-not-allowed disabled:opacity-50"

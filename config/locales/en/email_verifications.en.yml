@@ -1,5 +1,10 @@
 en:
   email_verifications:
     show:
-      success: "Your email address has been verified."
+      title: "Verify your email address"
+      prompt: "Confirm that %{email} is yours."
+      button: "Verify %{email}"
+      cancel: "Not you? Cancel"
       invalid_or_expired: "This verification link is invalid or has expired. Please request a new one."
+    create:
+      success: "Your email address has been verified."

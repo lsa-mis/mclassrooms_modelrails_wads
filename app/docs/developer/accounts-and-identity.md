@@ -50,6 +50,21 @@ These are the correct terms. Use them in UI copy, docs, and code comments. "Acco
 | Settings about you | **identity settings** (at `/settings`) | "account settings" (when meaning the person) |
 | Settings about a workspace | **workspace settings** (reached via the switcher) | "account settings" (when meaning the tenant) |
 
+## Password lifecycle
+
+A password is optional (`has_secure_password validations: false`); the passwordless flows are primary. When one exists, three rules govern its removal and its checks, all on `User`.
+
+**`remove_password!` tears down password authentication as one unit** — the email authentications, the digest, and whatever the caller needs committed alongside (session revocation, via the block) — and returns whether *this* caller performed the removal. Two details are load-bearing:
+
+- The `reload` at the top of the transaction is the concurrency guard (#826). A second request that loaded the user before the first removal committed still holds the old digest in memory; its `update!` would issue a real UPDATE, satisfy `saved_change_to_password_digest?`, and write a second `user.password_removed` audit row. Re-reading inside the transaction — where the write lock is already held, so the read is current — makes the second caller a no-op instead.
+- It uses `save!(validate: false)`, not `update_columns` and not `update!`. `update_columns` silently skips callbacks, and the strict audit row and the post-commit notifier are the point of taking the callback path (#813). `validate: false` drops full-record validation so a record that drifted invalid for reasons unrelated to credentials — an attachment allowlist tightening, say — cannot hold the removal hostage (#820).
+
+**Every digest-touching path notifies** (settings change, reset, removal): the notifier hangs on the model, not the controllers, so no path can forget. The audit row is strict-tier and the notice is post-commit; see [Architecture § Activity Tracking](/docs/developer/architecture) for why those two sit on different callbacks.
+
+**Lockout** is `MAX_FAILED_ATTEMPTS` (5) failed logins, held for `LOCK_DURATION` (1 hour); `register_failed_login!` and `register_successful_login!` are the only writers of the counter.
+
+**The Have I Been Pwned check runs before `save`**, outside the write transaction — see [Architecture § Concurrency](/docs/developer/architecture) for the timing and [Security § Password Security](/docs/developer/security) for its fail-open posture.
+
 ## For forks
 
 See [Forking this template](/docs/developer/forking) for the full forking guide and the four signup presets.

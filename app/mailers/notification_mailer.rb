@@ -27,6 +27,11 @@ class NotificationMailer < ApplicationMailer
     @notification = params[:notification]
     @recipient = params[:recipient]
     @invitation = params[:record]
+    # Delivery-time gate, the reminder's final hop: noticed's before_enqueue
+    # runs at EventJob time, so a block landing between dispatch and render is
+    # only catchable here (PR 4 spec §8.3 site 6 / Departure 3). No mail call →
+    # NullMail → no delivery.
+    return unless @invitation.deliverable?
     @workspace = @invitation.resolved_workspace
     @hours_remaining = @invitation.expires_in_hours
     @accept_url = accept_invitation_url(token: @invitation.token)
@@ -48,6 +53,22 @@ class NotificationMailer < ApplicationMailer
     mail(
       to: @recipient.email_address,
       subject: t("notification_mailer.workspace_member_added.subject",
+                 workspace: @workspace.name)
+    )
+  end
+
+  # The removal notice. Only the removed member is ever sent one — the
+  # notifier's before_enqueue drops every other recipient — so this is the one
+  # place the event speaks in the second person.
+  def workspace_member_removed
+    @notification = params[:notification]
+    @recipient = params[:recipient]
+    @membership = params[:record]
+    @workspace = @membership.workspace
+
+    mail(
+      to: @recipient.email_address,
+      subject: t("notification_mailer.workspace_member_removed.subject",
                  workspace: @workspace.name)
     )
   end

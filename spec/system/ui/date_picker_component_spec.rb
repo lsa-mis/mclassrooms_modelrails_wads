@@ -70,6 +70,53 @@ RSpec.describe "Date picker component accessibility and keyboard operation", typ
     expect(tabbable).to eq(1), "roving tabindex contract: exactly one tabbable day, got #{tabbable}"
   end
 
+  # The example above roves from TODAY, so on the last days of a month its
+  # ArrowDown target lies past the 42-cell grid. These two pin the APG rule
+  # that makes it date-independent: an arrow that leaves the grid pages to
+  # the adjacent month and lands on the same date there — it never dead-ends.
+  it "ArrowDown from the last rendered day pages to the next month and lands a week later" do
+    visit preview
+    open_picker
+
+    page.execute_script(<<~JS)
+      const buttons = document.querySelectorAll('[role=grid] button[data-calendar-date-param]')
+      const last = buttons[buttons.length - 1]
+      buttons.forEach(b => b.tabIndex = -1); last.tabIndex = 0; last.focus()
+    JS
+    before_month = grid_month
+    last_date = page.evaluate_script("document.activeElement.dataset.calendarDateParam")
+
+    cdp_press("ArrowDown")
+
+    expect(page).to have_css("[role=grid]:not([aria-label='#{before_month}'])")
+    focused_date = page.evaluate_script("document.activeElement?.dataset?.calendarDateParam")
+    expect(focused_date).to eq((Date.iso8601(last_date) + 7).iso8601),
+      "ArrowDown from the last row lands on the same weekday a week later, in the next month"
+
+    tabbable = page.evaluate_script("document.querySelectorAll('[role=grid] button[tabindex=\"0\"]').length")
+    expect(tabbable).to eq(1), "roving tabindex contract survives the month change, got #{tabbable}"
+  end
+
+  it "ArrowLeft from the first rendered day pages to the previous month and lands a day earlier" do
+    visit preview
+    open_picker
+
+    page.execute_script(<<~JS)
+      const buttons = document.querySelectorAll('[role=grid] button[data-calendar-date-param]')
+      const first = buttons[0]
+      buttons.forEach(b => b.tabIndex = -1); first.tabIndex = 0; first.focus()
+    JS
+    before_month = grid_month
+    first_date = page.evaluate_script("document.activeElement.dataset.calendarDateParam")
+
+    cdp_press("ArrowLeft")
+
+    expect(page).to have_css("[role=grid]:not([aria-label='#{before_month}'])")
+    focused_date = page.evaluate_script("document.activeElement?.dataset?.calendarDateParam")
+    expect(focused_date).to eq((Date.iso8601(first_date) - 1).iso8601),
+      "ArrowLeft from the first cell lands on the previous day, in the previous month"
+  end
+
   it "PageDown moves to the next month and keeps the grid's accessible name in sync" do
     visit preview
     open_picker

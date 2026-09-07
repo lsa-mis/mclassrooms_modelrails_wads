@@ -1,0 +1,15 @@
+<% content_for(:title) { t("invitation_blocks.already_processed.title") } %>
+
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-bold text-text-heading">
+    <%= t("invitation_blocks.already_processed.title") %>
+  </h1>
+
+  <p class="mt-4 text-text-body">
+    <%= t("invitation_blocks.already_processed.body") %>
+  </p>
+
+  <p class="mt-8">
+    <%= link_to t("invitation_blocks.create.done"), root_path, class: "btn-text text-sm" %>
+  </p>
+</div>

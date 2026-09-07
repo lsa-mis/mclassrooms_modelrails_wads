@@ -1,0 +1,16 @@
+<% inviter = @invitation.invited_by.email_address %>
+<% content_for(:title) { t(".blocked_title", inviter: inviter) } %>
+
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-bold text-text-heading break-words">
+    <%= t(".blocked_title", inviter: inviter) %>
+  </h1>
+
+  <p class="mt-4 text-text-body break-words">
+    <%= t(".blocked_body", email: @invitation.email) %>
+  </p>
+
+  <p class="mt-8">
+    <%= link_to t(".done"), root_path, class: "btn-text text-sm" %>
+  </p>
+</div>

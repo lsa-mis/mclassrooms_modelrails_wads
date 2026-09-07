@@ -169,7 +169,7 @@ module Authenticatable
       cookie_theme = cookies[:theme]
       return unless cookie_theme.present? && %w[light dark system].include?(cookie_theme)
 
-      preferences = user.preferences || user.create_preferences!
+      preferences = user.preferences!
       preferences.update!(theme: cookie_theme) if preferences.theme != cookie_theme
     end
 

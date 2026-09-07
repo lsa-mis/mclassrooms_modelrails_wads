@@ -20,7 +20,12 @@ RSpec.describe "Settings controllers opt into the settings shell" do
       # The notification inbox is a full-width triage surface reached from the
       # user menu bell; the settings sidebar's "Notifications" item points at
       # notification PREFERENCES (which has the shell). Deliberate.
-      "notifications" => "triage inbox, not a sidebar destination"
+      "notifications" => "triage inbox, not a sidebar destination",
+      # A public token confirmation page, reached signed out on the deferred
+      # unverified-OAuth signup path (#950) — it must not wear the account
+      # settings shell, which would show a signed-out stranger the identity
+      # nav rail for an account they have no session for.
+      "connected_account_verifications" => "public token confirmation, reached signed out"
     }
   end
 

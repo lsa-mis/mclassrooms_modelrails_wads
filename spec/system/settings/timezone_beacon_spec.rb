@@ -18,7 +18,8 @@ RSpec.describe "Timezone beacon (Stimulus + layout connect)", type: :system, js:
       sign_in_via_form(user)
 
       # The beacon fires on layout connect. Give it a moment to round-trip.
-      Timeout.timeout(5) do
+      # Suite budget, not a stopwatch (#945); the write has no page-visible confirmation to synchronize on.
+      Timeout.timeout(Capybara.default_max_wait_time) do
         loop do
           break if user.preferences.reload.timezone.present?
           sleep 0.1
