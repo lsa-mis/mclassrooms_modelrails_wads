@@ -625,6 +625,21 @@ dialog[open]::backdrop {
   min-height: 44px;
 }
 
+/* The gem's own 640px breakpoint stacks the banner but keeps its three
+   actions in a wrapping ROW ("Reject non-essential"/"Accept all"/"Manage
+   preferences" — this app's own longer copy than the gem's shorter
+   defaults), each button `white-space: nowrap` per the gem's CSS. At 320px
+   two buttons sharing a row sit within a few px of the available width, so
+   font-metric differences between the local Chrome build and CI's headless
+   Chrome can tip a row into horizontal overflow even though nothing on the
+   page actually needs more than the viewport's width. One button per row
+   below phone width removes the race entirely instead of chasing exact px. */
+@media (max-width: 480px) {
+  .biscuit-banner__actions {
+    flex-direction: column;
+  }
+}
+
 .biscuit-btn:focus-visible {
   outline: 2px solid var(--color-interactive-focus);
   outline-offset: 2px;
