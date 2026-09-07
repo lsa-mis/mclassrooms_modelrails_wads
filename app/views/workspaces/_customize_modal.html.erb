@@ -3,7 +3,7 @@
     Opened from the Overview via a shared/_modal trigger button.
     Posts name changes to workspaces#update (Workspaces::ProfilePolicy).
 
-    IMPORTANT: the logo picker (identity_picker_hub) opens its own <dialog>.
+    IMPORTANT: the logo picker (workspaces/logos#show) opens its own <dialog>.
     A <dialog> inside a <form> causes browsers to auto-close the form tag,
     leaving the submit button outside the form. To avoid this, the logo section
     lives AFTER the name form (not nested inside it). The logo picker's own
@@ -50,7 +50,7 @@
         <%= render "shared/identity_picker",
               model: workspace,
               form_url: workspace_path(workspace),
-              hub_url: identity_picker_hub_workspace_path(workspace),
+              hub_url: workspace_logo_path(workspace),
               hub_title: t("identity_picker.choose_workspace_logo"),
               crop_title: t("identity_picker.adjust_workspace_logo") %>
       <% end %>

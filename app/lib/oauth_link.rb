@@ -122,6 +122,11 @@ class OauthLink
       claims.claim!(user, newly_registered: existing.nil?)
     end
 
+    # Only a brand-new account is signing up; a pre-existing user attaching a
+    # provider is not. Dispatched here rather than from a User callback — see
+    # WelcomeNotifier.
+    WelcomeNotifier.with(record: user).deliver(nil) if existing.nil?
+
     outcome(:signed_in, user: user, problems: claims.problems, spent_tokens: claims.spent)
   rescue Invitation::NotAcceptable, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique,
          Workspace::NotAdmittableError, Workspace::AlreadyMember, Workspace::AtCapacity
@@ -140,6 +145,7 @@ class OauthLink
     # pending Authentication instead, claimed by Authentication#claim_pending!
     # once the verification link is clicked.
     auth = nil
+    user = nil
     ApplicationRecord.transaction do
       user = create_user_from_identity
       auth = user.authentications.build(
@@ -152,6 +158,10 @@ class OauthLink
       )
       auth.save!
     end
+
+    # This account is real but not yet usable — the welcome waits on its
+    # notifications page until the verification link proves the address.
+    WelcomeNotifier.with(record: user).deliver(nil)
 
     # deliver_later runs after the transaction commits (project convention:
     # deliver_later inside a transaction can enqueue a job that fires on rollback).

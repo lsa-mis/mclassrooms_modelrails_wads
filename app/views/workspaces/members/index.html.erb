@@ -156,13 +156,19 @@
   <% end %>
 
   <% if flash[:magic_link_url].present? %>
-    <div class="mt-4 p-4 bg-info-surface rounded-lg" role="alert">
+    <%# Show-once reveal (the flash carries the URL for one render). Not role="alert":
+        a container that arrives pre-filled after a full render announces nothing —
+        the copy control's own regions do the announcing. data-turbo-temporary keeps
+        the URL out of Turbo's snapshot. %>
+    <div id="magic_link_reveal" class="mt-4 p-4 bg-info-surface rounded-lg" data-turbo-temporary>
       <p class="text-sm font-medium text-interactive">
         <%= t("workspaces.invitations.index.magic_link_label") %>
       </p>
-      <code class="mt-1 block text-sm text-interactive break-all">
-        <%= flash[:magic_link_url] %>
-      </code>
+      <%= ui :copy,
+            value: flash[:magic_link_url],
+            label: t("workspaces.invitations.index.magic_link_aria"),
+            label_hidden: true,
+            class: "mt-2" %>
     </div>
   <% end %>
 </div>

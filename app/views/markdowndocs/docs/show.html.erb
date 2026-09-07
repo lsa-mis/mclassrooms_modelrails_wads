@@ -54,7 +54,14 @@
 
     <div class="grid grid-cols-1 gap-8
           lg:grid-cols-12">
-      <main class="lg:col-span-8">
+      <%# A grid column, not a landmark. The layout's <main id="main-content">
+          already owns the page, so a <main> here nests a second one inside it —
+          two "main" destinations in the landmark list, and axe's
+          landmark-no-duplicate-main plus landmark-main-is-top-level. The
+          <article> below still marks the content. Fixed upstream too
+          (markdowndocs 0.11.3); this override shadows the engine's view, so the
+          gem release alone would not reach this page. %>
+      <div class="lg:col-span-8">
         <article class="bg-surface-raised rounded-lg shadow-sm p-8">
           <%# docs-code-focusable: makes horizontally-scrollable <pre> code
               blocks keyboard-focusable (tabindex=0) so keyboard users can
@@ -65,7 +72,7 @@
             <%= safe_html @rendered_content %>
           </div>
         </article>
-      </main>
+      </div>
 
       <div class="hidden lg:block lg:col-span-4">
         <div class="lg:sticky lg:top-8">

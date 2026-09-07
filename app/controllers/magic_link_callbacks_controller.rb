@@ -5,8 +5,9 @@ class MagicLinkCallbacksController < ApplicationController
 
   # GET only. Never consumes the token or starts a session — a mail scanner or
   # prefetcher doing a bare GET must not be able to burn a link or sign anyone
-  # in. Existing users get a confirmation page whose button POSTs to #sign_in;
-  # new users get the registration form (which already POSTs to #create).
+  # in. Existing users get a confirmation page whose button POSTs to the nested
+  # session (MagicLinkCallbacks::SessionsController#create); new users get the
+  # registration form (which already POSTs to #create).
   def show
     @token_record = MagicLinkToken.find_valid(params[:token])
     unless @token_record
@@ -23,20 +24,6 @@ class MagicLinkCallbacksController < ApplicationController
       @user = User.new(email_address: @token_record.email)
       render :new_registration
     end
-  end
-
-  def sign_in
-    token_record = MagicLinkToken.find_valid(params[:token])
-    user = token_record && User.find_by(email_address: token_record.email)
-
-    # Atomic consume prevents double-spend from concurrent requests.
-    unless user && MagicLinkToken.consume!(params[:token])
-      redirect_to(authenticated? ? root_path : new_session_path, alert: t("magic_link_callbacks.show.invalid"))
-      return
-    end
-
-    start_new_session_for(user)
-    redirect_to magic_link_return_path(token_record), notice: t("magic_link_callbacks.show.signed_in")
   end
 
   def create
@@ -76,6 +63,10 @@ class MagicLinkCallbacksController < ApplicationController
 
     if success && token_consumed
       start_new_session_for(@user)
+      # Here, not inside commit_signup_atomically: a concurrently-consumed
+      # token rolls the signup back yet still returns true, and never from a
+      # User callback (see WelcomeNotifier).
+      WelcomeNotifier.with(record: @user).deliver(nil)
       redirect_to after_authentication_url, notice: t(".registered")
     elsif @user.errors.any?
       # User failed model validation — re-render the registration form.
@@ -85,16 +76,6 @@ class MagicLinkCallbacksController < ApplicationController
     else
       # Token was consumed by a concurrent request — treat as invalid.
       redirect_to(authenticated? ? root_path : new_session_path, alert: t(".invalid"))
-    end
-  end
-
-  private
-
-  # Server-side intent → fixed path. Never trust a user-supplied URL here.
-  def magic_link_return_path(token_record)
-    case token_record.intent
-    when "set_password" then edit_settings_password_path
-    else after_authentication_url
     end
   end
 end

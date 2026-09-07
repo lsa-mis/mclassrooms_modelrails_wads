@@ -87,6 +87,23 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
     end
   end
 
+  describe "#url" do
+    it "links to the invitation's workspace" do
+      described_class.with(record: invitation).deliver(inviter)
+      notification = inviter.notifications.last
+      expect(notification.url).to eq(
+        Rails.application.routes.url_helpers.workspace_path(workspace)
+      )
+    end
+
+    it "returns the placeholder copy when the invitation has been deleted" do
+      described_class.with(record: invitation).deliver(inviter)
+      invitation.destroy
+      notification = inviter.notifications.last
+      expect(notification.url).to eq(I18n.t("notifications.placeholder"))
+    end
+  end
+
   describe "Invitation#after_update_commit trigger" do
     it "fires the notifier when an invitation transitions to declined" do
       pending_invitation = create(:invitation,

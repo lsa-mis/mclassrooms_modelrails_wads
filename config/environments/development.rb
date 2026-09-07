@@ -36,6 +36,16 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
+  # Active Record Encryption keys for the development database (#902).
+  # Literal on purpose: the template ships no credentials, and a fresh clone
+  # must run without secrets. Rails applies these OVER credentials — a fork
+  # that adds development credentials later must delete these lines for them
+  # to win. A database written before these keys existed is not readable:
+  # `bin/rails db:reset`.
+  config.active_record.encryption.primary_key = "JfGPNf7LqnoT4u0efBUt5hNwZzUdjLCq"
+  config.active_record.encryption.deterministic_key = "31pHrP5HHKRr56fRPcyI8mc3DqVxAzh9"
+  config.active_record.encryption.key_derivation_salt = "0zM3DPgftgScUasAmjXcJLtlcEndyoUE"
+
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 

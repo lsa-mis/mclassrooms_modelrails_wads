@@ -311,11 +311,20 @@ module UI
       return nil unless object
 
       before_type_cast = :"#{method}_before_type_cast"
-      if object.respond_to?(before_type_cast)
+      if object.respond_to?(before_type_cast) && value_came_from_user?(method)
         object.public_send(before_type_cast)
       elsif object.respond_to?(method)
         object.public_send(method)
       end
+    end
+
+    # The same guard ActionView's field helpers use: the pre-cast value is the
+    # user's only when they assigned it this request. For a record loaded from
+    # the database it is the stored bytes — for an encrypted attribute, the
+    # ciphertext.
+    def value_came_from_user?(method)
+      came_from_user = :"#{method}_came_from_user?"
+      !object.respond_to?(came_from_user) || object.public_send(came_from_user)
     end
 
     def error_for(method)

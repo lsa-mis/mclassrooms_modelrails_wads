@@ -4,7 +4,7 @@
       below is shown as a non-executing sample: it would raise ArgumentError. %>
   <div class="space-y-3 text-text-body">
     <p>An iframe <strong>must</strong> carry a <code>title:</code> (its accessible name). These calls all fail loud:</p>
-    <pre class="overflow-x-auto rounded-lg bg-surface-sunken p-4 text-sm"><code><%#
+    <pre tabindex="0" role="region" aria-label="Calls that raise" class="overflow-x-auto rounded-lg bg-surface-sunken p-4 text-sm focus-ring"><code><%#
 %>ui :iframe, src: map_url                  # raises: missing keyword: :title
 ui :iframe, src: map_url, title: ""        # raises: blank title
 ui :iframe, src: map_url, title: "   "     # raises: blank title</code></pre>

@@ -40,6 +40,14 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         get "/auth/google_oauth2/callback"
         expect(response).to redirect_to(root_path)
       end
+
+      it "leaves exactly one welcome notification on the new account" do
+        get "/auth/google_oauth2/callback"
+
+        registrant = User.find_by(email_address: "oauth@example.com")
+        expect(Noticed::Notification.where(recipient: registrant,
+                                           type: "WelcomeNotifier::Notification").count).to eq 1
+      end
     end
 
     context "existing user with matching email and verified email auth" do
@@ -51,6 +59,13 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
         }.not_to change(User, :count)
 
         expect(user.authentications.google.count).to eq(1)
+      end
+
+      it "does not welcome a pre-existing user attaching a provider" do
+        get "/auth/google_oauth2/callback"
+
+        expect(Noticed::Notification.where(recipient: user,
+                                           type: "WelcomeNotifier::Notification").count).to eq 0
       end
     end
   end
@@ -86,6 +101,8 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
   end
 
+  # OmniAuth's on_failure lands on /auth/failure; that page is
+  # OmniauthFailuresController#show (#1007).
   describe "OAuth failure" do
     it "redirects with error" do
       get "/auth/failure", params: { message: "invalid_credentials" }

@@ -32,6 +32,11 @@ en:
       label: "Search and select an option"
       placeholder: "Select…"
       empty: "No results found."
+    copy:
+      action: "Copy"
+      button_label: "%{action} %{label}"
+      copied: "Copied %{label} to the clipboard"
+      failed: "Couldn't copy automatically. %{label} is selected — use your browser or device copy command."
     command:
       dialog_label: "Command palette"
       list_label: "Commands"

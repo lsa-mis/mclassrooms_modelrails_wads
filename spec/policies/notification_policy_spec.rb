@@ -41,14 +41,4 @@ RSpec.describe NotificationPolicy, type: :policy do
       expect(described_class.new(user, foreign_notification).update?).to be false
     end
   end
-
-  describe "#destroy?" do
-    it "permits the recipient" do
-      expect(described_class.new(user, own_notification).destroy?).to be true
-    end
-
-    it "denies a non-recipient" do
-      expect(described_class.new(user, foreign_notification).destroy?).to be false
-    end
-  end
 end

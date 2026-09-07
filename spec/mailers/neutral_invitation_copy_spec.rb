@@ -12,7 +12,7 @@ RSpec.describe "neutral invitation copy", type: :mailer do
   end
 
   describe "InvitationMailer#invite" do
-    subject(:mail) { InvitationMailer.invite(invitation) }
+    subject(:mail) { InvitationMailer.with(invitation: invitation).invite }
 
     it "never names the workspace, in subject or body" do
       expect(mail.subject).not_to include(workspace.name)

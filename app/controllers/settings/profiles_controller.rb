@@ -31,14 +31,14 @@ module Settings
 
     def email_change_requested?
       new_email = params.dig(:user, :email_address)
-      new_email.present? && new_email.strip.downcase != Current.user.email_address
+      new_email.present? && User.normalize_value_for(:email_address, new_email) != Current.user.email_address
     end
 
     def handle_email_change
       name_attrs = profile_params.to_h.slice("first_name", "last_name").compact
       @user.assign_attributes(name_attrs) if name_attrs.any?
 
-      if Users::EmailChange.new(@user).initiate!(profile_params[:email_address])
+      if User::EmailChange.new(@user).initiate!(profile_params[:email_address])
         @user.save! if @user.changed?
         AuthenticationMailer.email_change_verification(@user).deliver_later
         AuthenticationMailer.email_change_notification(@user).deliver_later

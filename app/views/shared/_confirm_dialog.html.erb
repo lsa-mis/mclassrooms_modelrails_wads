@@ -17,19 +17,25 @@
     {}
   end
   input_field_id = "confirm-input-#{id || confirm_input.hash.abs}" if confirm_input
+
+  # The message is the dialog's accessible DESCRIPTION, not body copy: the
+  # component wires description: to aria-describedby, and an alertdialog
+  # announces name + description the moment it opens — with focus already on
+  # the header's Close button, a body <p> is never announced (#683-adjacent;
+  # 2026-08-29 panel). The icon rides inside the description so it stays
+  # beside the text; it is aria-hidden, so the description reads as the
+  # message alone.
+  description = safe_join([
+    tag.span(icon(confirm_icon, size: :lg), class: "inline-block align-middle mr-2 #{icon_color}"),
+    message
+  ])
 %>
 <%# body_id: unique per render (#685) — confirm dialogs render per row on
     list pages and are never Turbo-Stream targets, so they must not share the
     surface-only default "modal-body". %>
-<%= render "shared/modal", title: title, id: id, size: :sm, body_id: "confirm-#{id || SecureRandom.hex(4)}-body" do %>
+<%= render "shared/modal", title: title, id: id, role: :alertdialog, description: description,
+      body_id: "confirm-#{id || SecureRandom.hex(4)}-body" do %>
   <%= tag.div data: wrapper_data do %>
-    <div class="flex gap-4">
-      <div class="shrink-0 mt-0.5 <%= icon_color %>">
-        <%= icon(confirm_icon, size: :lg) %>
-      </div>
-      <p class="text-sm text-text-body leading-relaxed"><%= message %></p>
-    </div>
-
     <% if confirm_input %>
       <div class="mt-4 space-y-2">
         <label for="<%= input_field_id %>" class="block text-sm font-medium text-text-body">

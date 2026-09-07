@@ -116,48 +116,4 @@ RSpec.describe Workspace, type: :model do
       expect(home.reload).not_to be_discarded
     end
   end
-
-  describe "#admittable?" do
-    let(:workspace) { create(:workspace) }
-
-    it "is true only when active (kept, not archived, not suspended)" do
-      expect(workspace.admittable?).to be(true)
-    end
-
-    it "is false when archived" do
-      workspace.archive!
-      expect(workspace.admittable?).to be(false)
-    end
-
-    it "is false when suspended" do
-      workspace.suspend!
-      expect(workspace.admittable?).to be(false)
-    end
-
-    it "is false when discarded" do
-      workspace.discard!
-      expect(workspace.admittable?).to be(false)
-    end
-  end
-
-  describe "#admit admittability guard" do
-    let(:workspace) { create(:workspace) }
-    let(:role) { Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" } }
-    let(:joiner) { create(:user) }
-
-    it "raises NotAdmittableError when the workspace is archived" do
-      workspace.archive!
-      expect { workspace.admit(joiner, role: role) }.to raise_error(Workspace::NotAdmittableError)
-      expect(workspace.reload.memberships.where(user: joiner)).to be_empty
-    end
-
-    it "raises NotAdmittableError when the workspace is suspended" do
-      workspace.suspend!
-      expect { workspace.admit(joiner, role: role) }.to raise_error(Workspace::NotAdmittableError)
-    end
-
-    it "admits normally into an active workspace" do
-      expect { workspace.admit(joiner, role: role) }.to change { workspace.memberships.kept.count }.by(1)
-    end
-  end
 end

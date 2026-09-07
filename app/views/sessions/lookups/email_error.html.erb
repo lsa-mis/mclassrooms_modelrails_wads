@@ -1,0 +1,11 @@
+<%= turbo_frame_tag "sign_in_form" do %>
+  <%= form_with model: @email_lookup, url: main_app.session_lookup_path, scope: nil, class: "mt-8 space-y-6" do |form| %>
+    <%= form.email_field :email_address,
+          label: t("sessions.new.email_label"),
+          required: true,
+          autofocus: true,
+          autocomplete: "email" %>
+
+    <%= form.submit t("sessions.new.continue"), class: "btn-primary w-full" %>
+  <% end %>
+<% end %>

@@ -98,7 +98,7 @@ RSpec.describe "Settings::Reauthentications", type: :request do
     end
 
     it "answers a gated XHR (passkey enrollment) with a reauth_required JSON signal" do
-      post passkeys_registration_options_path, headers: { "ACCEPT" => "application/json" }
+      post passkeys_registration_challenge_path, headers: { "ACCEPT" => "application/json" }
       expect(response).to have_http_status(:forbidden)
       expect(response.parsed_body["reauth_required"]).to be(true)
       expect(response.parsed_body["redirect_to"]).to eq(new_settings_reauthentication_path)

@@ -38,7 +38,9 @@ class WorkspaceInvitationExpiringSoonNotifier < ApplicationNotifier
     end
 
     def url
-      Rails.application.routes.url_helpers.accept_invitation_path(token: event.record.token)
+      render_safe_or_placeholder do
+        Rails.application.routes.url_helpers.accept_invitation_path(token: present_or_gone!(event.record.token))
+      end
     end
   end
 end

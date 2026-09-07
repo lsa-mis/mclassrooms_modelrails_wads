@@ -39,8 +39,8 @@ RSpec.describe "Locked workspace gate", type: :request do
     expect(response).to have_http_status(:ok)
   end
 
-  it "blocks the archive action (gate runs before the action)" do
-    patch archive_workspace_path(workspace)
+  it "blocks archiving (gate runs before the action)" do
+    post workspace_archival_path(workspace)
     expect(response).to redirect_to(workspaces_path)
     expect(workspace.reload).not_to be_archived
   end

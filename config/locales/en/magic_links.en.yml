@@ -35,7 +35,9 @@ en:
       last_name_label: "Last name"
       submit: "Create account"
   sessions:
-    password_form:
-      password_label: "Password"
-      submit: "Sign in"
-      use_magic_link: "Send me a sign-in link instead"
+    passwords:
+      new:
+        password_prompt: "Enter your password to sign in."
+        password_label: "Password"
+        submit: "Sign in"
+        use_magic_link: "Send me a sign-in link instead"

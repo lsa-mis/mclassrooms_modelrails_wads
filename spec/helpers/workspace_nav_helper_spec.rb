@@ -12,6 +12,11 @@ RSpec.describe WorkspaceNavHelper, type: :helper do
       expect(helper.current_workspace_section).to eq(:settings)
     end
 
+    it "is :settings on the logo picker hub, which the Profile page loads" do
+      stub_route("workspaces/logos", "show")
+      expect(helper.current_workspace_section).to eq(:settings)
+    end
+
     it "is :settings on members, invitations, and workspace settings controllers (any action)" do
       stub_route("workspaces/members", "index")
       expect(helper.current_workspace_section).to eq(:settings)

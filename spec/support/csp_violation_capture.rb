@@ -4,8 +4,8 @@
 # whose page fired `securitypolicyviolation` — the bug class #499/#500 proved
 # source-level scans are blind to. Mechanics: the before-hook installs an init
 # script on each example's fresh page — install is page-scoped, and the
-# after-example `Capybara.reset_sessions!` disposes the page along with its
-# init scripts (#848). The script accumulates violations in sessionStorage so
+# session reset rspec-rails runs after each system example disposes the page
+# along with its init scripts (#848). The script accumulates violations in sessionStorage so
 # same-tab navigations within an example don't lose them; the after-hook reads
 # AND clears, so nothing bleeds across examples. See /docs/developer/testing.
 module CspViolationCapture

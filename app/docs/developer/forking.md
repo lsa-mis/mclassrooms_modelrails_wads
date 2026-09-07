@@ -179,6 +179,24 @@ Your fork **may** commit its own `.yml.enc` blobs — normal for a private app; 
 `.key` files stay gitignored. `.kamal/secrets` reads
 `config/credentials/production.key` at deploy time.
 
+Personal data — email addresses, names, company names — is encrypted at rest
+with Active Record Encryption, and **production refuses to boot without the
+keys**. Generate them once and paste the block into the production credentials:
+
+```bash
+bin/rails db:encryption:init
+bin/rails credentials:edit --environment production   # paste the active_record_encryption block
+```
+
+Development and test read literal keys from `config/environments/development.rb`
+and `test.rb` — a fresh clone and CI run with no secrets, and that data is
+disposable. Rails applies those settings *over* credentials, so keys added to
+development credentials are ignored until the environment-file lines are
+removed. The `deterministic_key` has no rotation path in Rails: back it up
+wherever the credentials key is backed up, because losing it loses every
+email lookup. Which columns, and why some are deterministic:
+[Security](/docs/developer/security#personal-data-at-rest).
+
 For production you'll also set `RAILS_HOST`, pick a tenancy preset
 (`WORKSPACE_ON_SIGNUP`), and choose a signup mode — see `.env.example`,
 [Presets](presets), and [Deployment](deployment).
@@ -195,6 +213,7 @@ on every sync.
 | `config/locales/en/pages.en.yml` | Marketing copy for your pages |
 | `app/views/pages/**`, `app/controllers/pages_controller.rb` | Your marketing/static pages |
 | `config/routes/app.rb` | Your product's routes (loaded by `draw(:app)`) |
+| `.rubocop/app.yml` | Your RuboCop overrides — turn a house cop off here, with the reason ([Getting started](getting-started#turning-a-house-cop-off-in-your-fork)) |
 | `config/markdowndocs_categories.local.yml` | Registers your own docs pages on this `/docs` index |
 | `app/assets/tailwind/tokens/_brand.css` | Brand-color overrides — swap the primary palette family ([Theming](theming)) |
 | `README.md` | Your product's README |
@@ -230,6 +249,15 @@ end
 ```
 
 This is the primary seam for [Workspace-optional (`:none`)](/docs/developer/presets-none) apps, where post-sign-in landing should be a workspace-agnostic home (a user profile, an event listing, a personal dashboard) rather than a workspace context. But it's useful for any preset — even Solo-default forks often want to land users on `/dashboard` instead of `/`.
+
+### Tuning knobs you own
+
+These constants are yours to change and are **not** merge-frozen: an upstream change to them will conflict on sync, which is the point — you decide.
+
+- `NotificationPreferences::ALLOWED_RETENTION_DAYS` — the retention choices offered (`app/lib/notification_preferences.rb`)
+- `NotificationPreferences::DEFAULT_RETENTION_DAYS` — the fallback for a row whose `retention_days` key is absent; the column default in `db/schema.rb` is what a new user actually gets — change both, or the column default wins
+- `NotificationPreferences::NEVER_CAP_DAYS` — what a pre-PR-5 "Never" choice reads as
+- `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR` — how long credential-event audit rows are kept, regardless of the general window
 
 ### How the merge driver actually behaves
 
@@ -299,7 +327,8 @@ orphaned pages across both maps automatically.
 
 ```bash
 git fetch upstream
-git log --oneline main..upstream/main   # what's coming
+git log --oneline main..upstream/main                   # what's coming
+git log --diff-filter=R --stat main..upstream/main      # what moved — plan renames, don't discover them mid-merge
 ```
 
 Read `CHANGELOG.md` on `upstream/main` first — breaking changes and migrations

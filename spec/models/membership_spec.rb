@@ -1,23 +1,7 @@
 require "rails_helper"
 
+# The core's examples; each trait's live beside it under spec/models/membership/.
 RSpec.describe Membership, type: :model do
-  describe "#owner?" do
-    it "is true when the role is the owner role" do
-      expect(build(:membership, :owner).owner?).to be true
-    end
-
-    it "is false for non-owner roles" do
-      expect(build(:membership).owner?).to be false
-    end
-
-    it "answers role identity only — a discarded owner membership is still owner?" do
-      membership = create(:membership, :owner)
-      membership.discard!
-
-      expect(membership.owner?).to be true
-    end
-  end
-
   # SEC-1: a role change is a privilege event — audit it readably (role slugs,
   # not the mutable role_id FK) and in the admin-only feed.
   describe "role-change audit trail" do
@@ -167,6 +151,70 @@ RSpec.describe Membership, type: :model do
     end
   end
 
+  # A replayed DELETE — a stale tab, the back button, a scripted retry — reaches
+  # MembersController#destroy with an already-discarded membership, because that
+  # action resolves through the UNSCOPED association on purpose (the members
+  # page shows removed people). Before this, Discardable#discard! moved
+  # discarded_at t1 -> t2 unconditionally, so the removed member got a second
+  # "was removed" row and a second email, and the audit trail grew a second
+  # removal that never happened. The one-minute idempotency bucket absorbs a
+  # rapid double-submit and nothing else.
+  describe "deactivation idempotency" do
+    let(:workspace) { create(:workspace) }
+    let(:owner) { create(:user) }
+    let(:membership) { create(:membership, workspace: workspace) }
+
+    before do
+      create(:membership, :owner, user: owner, workspace: workspace)
+      membership
+    end
+
+    def removal_events
+      Noticed::Event.where(type: "WorkspaceMemberRemovedNotifier")
+    end
+
+    def removal_audit_rows
+      ActivityLog.where(trackable: membership, action: "membership.updated")
+    end
+
+    it "records one removal and one notification however many times it is called" do
+      membership.deactivate!(removed_by: owner)
+      # Past the notifier's dedup bucket, so a second dispatch would be a real
+      # second event rather than a swallowed duplicate.
+      travel_to(2.minutes.from_now) { membership.deactivate!(removed_by: owner) }
+
+      expect(removal_events.count).to eq(1)
+      expect(removal_audit_rows.count).to eq(1)
+    end
+
+    it "leaves the removal timestamp where the first call put it" do
+      membership.deactivate!(removed_by: owner)
+      first_stamp = membership.reload.discarded_at
+
+      travel_to(2.minutes.from_now) { membership.deactivate!(removed_by: owner) }
+
+      expect(membership.reload.discarded_at).to eq(first_stamp)
+    end
+
+    it "returns from the second call without writing an audit row" do
+      membership.deactivate!(removed_by: owner)
+
+      expect {
+        travel_to(2.minutes.from_now) { membership.deactivate!(removed_by: owner) }
+      }.not_to change { ActivityLog.count }
+    end
+
+    # Belt to the return's braces: any other path that re-stamps discarded_at on
+    # an already-removed membership must not read as a fresh removal either.
+    it "does not treat a re-discard as a new removal" do
+      membership.deactivate!(removed_by: owner)
+
+      expect {
+        travel_to(2.minutes.from_now) { membership.discard! }
+      }.not_to change { removal_events.count }
+    end
+  end
+
   describe "reactivation" do
     let(:membership) { create(:membership) }
 
@@ -247,34 +295,6 @@ RSpec.describe Membership, type: :model do
       carol_membership.user.update!(first_name: "Carol", last_name: "Clark", email_address: "carol.clark@example.test")
     end
 
-    describe ".search" do
-      it "finds by first name" do
-        results = workspace.memberships.search("Alice")
-        expect(results).to include(alice_membership)
-        expect(results).not_to include(bob_membership)
-      end
-
-      it "finds by last name" do
-        results = workspace.memberships.search("Baker")
-        expect(results).to include(bob_membership)
-      end
-
-      it "finds by email" do
-        results = workspace.memberships.search(alice_membership.user.email_address)
-        expect(results).to include(alice_membership)
-      end
-
-      it "is case-insensitive" do
-        results = workspace.memberships.search("alice")
-        expect(results).to include(alice_membership)
-      end
-
-      it "returns all when query is blank" do
-        expect(workspace.memberships.search("")).to match_array(workspace.memberships)
-        expect(workspace.memberships.search(nil)).to match_array(workspace.memberships)
-      end
-    end
-
     describe ".filter_by_role" do
       it "filters by role slug" do
         results = workspace.memberships.filter_by_role("owner")
@@ -307,30 +327,6 @@ RSpec.describe Membership, type: :model do
         expect(workspace.memberships.filter_by_status("")).to match_array(workspace.memberships)
       end
     end
-
-    describe ".sorted_by" do
-      it "sorts by name ascending" do
-        results = workspace.memberships.includes(:user).sorted_by("name", "asc")
-        names = results.map { |m| m.user.first_name }
-        expect(names).to eq(%w[Alice Bob Carol])
-      end
-
-      it "sorts by name descending" do
-        results = workspace.memberships.includes(:user).sorted_by("name", "desc")
-        names = results.map { |m| m.user.first_name }
-        expect(names).to eq(%w[Carol Bob Alice])
-      end
-
-      it "sorts by role" do
-        results = workspace.memberships.includes(:role).sorted_by("role", "asc")
-        expect(results).to be_present
-      end
-
-      it "defaults to created_at desc for unknown columns" do
-        results = workspace.memberships.sorted_by("unknown", "asc")
-        expect(results).to eq(workspace.memberships.order(created_at: :desc))
-      end
-    end
   end
 
   # G (SEC-1 follow-up): membership.created previously carried empty metadata —
@@ -342,187 +338,6 @@ RSpec.describe Membership, type: :model do
       entry = ActivityLog.where(action: "membership.created", trackable: membership).last
       expect(entry).to be_present
       expect(entry.metadata["role"]).to eq("owner")
-    end
-  end
-
-  describe "ownership transfer" do
-    let(:workspace) { create(:workspace) }
-    let(:owner_membership) { create(:membership, :owner, workspace: workspace) }
-    let(:target_membership) { create(:membership, workspace: workspace) }
-
-    it "promotes the target to owner" do
-      owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
-      owner_membership.transfer_ownership_to!(target_membership)
-      expect(target_membership.reload.role).to eq(owner_role)
-    end
-
-    it "demotes the current owner to admin" do
-      admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
-      owner_membership.transfer_ownership_to!(target_membership)
-      expect(owner_membership.reload.role).to eq(admin_role)
-    end
-
-    # G (SEC-1 follow-up): the demote is a callback-skipping CAS update_all
-    # (race-safety, by design) — which also skipped Trackable. A privilege
-    # demotion must still reach the audit trail, explicitly.
-    it "audits the demotion at admin visibility despite the callback-skipping CAS" do
-      owner_membership.transfer_ownership_to!(target_membership)
-
-      entry = ActivityLog.where(action: "membership.updated", trackable: owner_membership).last
-      expect(entry).to be_present
-      expect(entry.visibility).to eq("admin")
-      expect(entry.metadata.dig("changes", "role")).to eq([ "owner", "admin" ])
-    end
-
-    # Race-safety: panel review flagged that two concurrent transfers from
-    # the same owner could leave the workspace with two owners (both target
-    # promotions succeed, demote-self is idempotent). Demote must be an
-    # atomic conditional update guarded by current role; if a racer already
-    # demoted us, abort *before* promoting target.
-    it "raises and leaves target unpromoted if current role is no longer owner" do
-      admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
-      # Out-of-band demote simulates a racing transfer that already won;
-      # stub reload so the in-memory role stays "owner" (modelling a stale
-      # snapshot read on a different connection).
-      Membership.where(id: owner_membership.id).update_all(role_id: admin_role.id)
-      allow(owner_membership).to receive(:reload) { owner_membership }
-
-      expect {
-        owner_membership.transfer_ownership_to!(target_membership)
-      }.to raise_error(ActiveRecord::RecordInvalid)
-
-      expect(target_membership.reload.role.slug).not_to eq("owner")
-    end
-  end
-
-  # Locks in the self-exclusion semantic of the predicate that gates the
-  # WorkspaceMemberAddedNotifier `after_create_commit` callback. The predicate
-  # name (`workspace_has_other_owners?`) must reflect that we're asking about
-  # owners *other than this membership* — without that exclusion, the very
-  # first owner being seeded for a fresh workspace would self-trigger a
-  # "new member joined" notification with itself as the audience.
-  #
-  # Predicate is private (matches Rails conventions for callback gates); we
-  # exercise it via `send` rather than expose the method publicly just for
-  # tests.
-  describe "#workspace_has_other_owners? (self-exclusion semantic)" do
-    let(:workspace) { create(:workspace) }
-
-    it "returns false when this is the only owner-role membership in the workspace" do
-      sole_owner = create(:membership, :owner, workspace: workspace)
-      expect(sole_owner.send(:workspace_has_other_owners?)).to be false
-    end
-
-    it "returns true when another owner-role membership exists in the workspace" do
-      first_owner = create(:membership, :owner, workspace: workspace)
-      create(:membership, :owner, workspace: workspace)
-      expect(first_owner.send(:workspace_has_other_owners?)).to be true
-    end
-
-    it "returns true for a non-owner membership when another owner-role membership exists in the workspace" do
-      # The predicate is a workspace-scoped question — "are there other
-      # owners in this workspace?" — not "is THIS membership not the lone
-      # owner?". A non-owner member added to a workspace that already has
-      # an owner returns true (the gate fires the notifier).
-      create(:membership, :owner, workspace: workspace)
-      member_membership = create(:membership, workspace: workspace)
-      expect(member_membership.send(:workspace_has_other_owners?)).to be true
-    end
-
-    it "returns false when no other owner exists even with an admin sibling" do
-      sole_owner = create(:membership, :owner, workspace: workspace)
-      create(:membership, :admin, workspace: workspace)
-      expect(sole_owner.send(:workspace_has_other_owners?)).to be false
-    end
-
-    it "ignores discarded owner memberships" do
-      first_owner = create(:membership, :owner, workspace: workspace)
-      second_owner = create(:membership, :owner, workspace: workspace)
-      second_owner.discard!
-      expect(first_owner.send(:workspace_has_other_owners?)).to be false
-    end
-
-    it "ignores owners from other workspaces" do
-      sole_in_target = create(:membership, :owner, workspace: workspace)
-      other_workspace = create(:workspace)
-      create(:membership, :owner, workspace: other_workspace)
-      expect(sole_in_target.send(:workspace_has_other_owners?)).to be false
-    end
-  end
-
-  describe ".other_kept_owners" do
-    let(:workspace) { create(:workspace) }
-
-    it "returns kept owner-role memberships in the workspace excluding the given membership id" do
-      first_owner = create(:membership, :owner, workspace: workspace)
-      second_owner = create(:membership, :owner, workspace: workspace)
-
-      expect(Membership.other_kept_owners(workspace.id, excluding: first_owner.id))
-        .to contain_exactly(second_owner)
-    end
-
-    it "excludes discarded owners, non-owner roles, and owners of other workspaces" do
-      owner = create(:membership, :owner, workspace: workspace)
-      create(:membership, :owner, workspace: workspace).discard!
-      create(:membership, :admin, workspace: workspace)
-      create(:membership, :owner, workspace: create(:workspace))
-
-      expect(Membership.other_kept_owners(workspace.id, excluding: owner.id)).to be_empty
-    end
-  end
-
-  # Wiring coverage: drive the model state change and assert the notifier
-  # actually fires. The notifiers themselves are specced in spec/notifiers/;
-  # without these, the after_*_commit registrations could be deleted and the
-  # suite would stay green.
-  describe "notification wiring" do
-    let(:owner) { create(:user) }
-    let(:workspace) { create(:workspace) }
-    let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
-    let(:member) { create(:user) }
-
-    describe "member added (after_create_commit)" do
-      it "notifies the added user and the existing owner" do
-        membership = create(:membership, user: member, workspace: workspace)
-        event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
-        expect(event).to be_present
-        expect(event.record).to eq(membership)
-        expect(event.notifications.map(&:recipient)).to contain_exactly(member, owner)
-      end
-
-      it "does not notify when seeding a workspace's first owner" do
-        fresh_workspace = create(:workspace)
-        expect {
-          create(:membership, :owner, user: member, workspace: fresh_workspace)
-        }.not_to change { Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").count }
-      end
-    end
-
-    describe "role changed (after_update_commit)" do
-      let!(:membership) { create(:membership, user: member, workspace: workspace) }
-      let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
-
-      it "notifies the member when their role changes" do
-        expect {
-          membership.change_role!(admin_role)
-        }.to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }.by(1)
-        event = Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").last
-        expect(event.notifications.map(&:recipient)).to eq([ member ])
-      end
-
-      it "does not notify on a save that leaves the role unchanged" do
-        expect {
-          membership.update!(last_accessed_at: Time.current)
-        }.not_to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }
-      end
-
-      it "transfer_ownership_to! notifies the promoted member, not the demoted initiator" do
-        expect {
-          owner_membership.transfer_ownership_to!(membership)
-        }.to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }.by(1)
-        event = Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").last
-        expect(event.notifications.map(&:recipient)).to eq([ member ])
-      end
     end
   end
 end

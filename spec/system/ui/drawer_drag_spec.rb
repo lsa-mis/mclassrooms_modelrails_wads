@@ -19,9 +19,10 @@ RSpec.describe "Drawer drag-to-dismiss", type: :system do
   # The drawer animates up from translateY(100%), and `dialog[open]` is true the moment it
   # opens — long before the panel stops moving. Measuring the handle mid-animation gives a
   # position the pointer never lands on, and the press hits whatever has slid into that
-  # spot instead. Wait for the panel to come to rest.
+  # spot instead. Wait for the panel to come to rest. The budget is the suite's, not a
+  # stopwatch (#945).
   def settle
-    Timeout.timeout(5) do
+    Timeout.timeout(Capybara.default_max_wait_time) do
       loop do
         first = handle_box["y"]
         sleep 0.05

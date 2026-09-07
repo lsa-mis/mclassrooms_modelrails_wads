@@ -11,7 +11,7 @@
     ) do %>
   <div class="flex items-center justify-between gap-4">
     <p class="text-sm text-info"><%= message %></p>
-    <%= button_to t("lifecycle.restore"), restore_path, method: :patch,
+    <%= button_to t("lifecycle.restore"), restore_path, method: :delete,
           class: "btn-touch-target btn-text btn-text-interactive text-sm shrink-0" %>
   </div>
 <% end %>

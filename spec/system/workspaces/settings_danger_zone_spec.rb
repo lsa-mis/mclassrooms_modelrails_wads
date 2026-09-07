@@ -19,7 +19,7 @@ RSpec.describe "Workspace settings danger zone", type: :system do
       within("dialog[open]") { click_button I18n.t("workspaces.archive.confirm_action") }
 
       expect(page).to have_current_path(workspaces_path)
-      expect(page).to have_text(I18n.t("workspaces.archive.success"))
+      expect(page).to have_text(I18n.t("workspaces.archivals.create.success"))
       expect(workspace.reload).to be_archived
       expect(workspace.reload).not_to be_discarded
     end

@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="<%= I18n.locale %>">
   <head>
+    <%# The subject as the document title (#461): a mail rendered in a browser
+        or read by assistive tech is a document, and axe's document-title rule
+        held for every template. %>
+    <title><%= message.subject %></title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <style>
       /* Email styles need to be inline */

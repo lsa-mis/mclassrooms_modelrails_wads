@@ -29,6 +29,12 @@ This audit runs automatically after *every* system spec, **everywhere — includ
 
 Set `SKIP_AXE=1` to opt out for a fast focused loop (roughly a third quicker on a single file). It is deliberately opt-*out*: the default has to be the safe one.
 
+**The audit cannot be switched off silently.** It once was, for months, without a single red run: a second `Capybara.reset_sessions!` after-hook in `spec/support/capybara.rb` ran ahead of the audit hook, so every example was already on `about:blank` when the audit looked, and it skipped ([#912](https://github.com/dschmura/modelrails_base/issues/912)). Three things now hold it on:
+
+- The audit hook writes a ledger entry for every system example (`:audited`, or `:blank` when the example ended with no page), and a prepended `visit` records which examples navigated. An `after(:suite)` gate raises for any example that navigated without an `:audited` entry, so an inert hook fails the run instead of passing it.
+- There is no per-example opt-out tag. A page that has to show an anti-pattern is built to show it accessibly (a non-executing code sample, for instance), not excused from the audit. Narrow-viewport examples assert axe inside their viewport block *and* get the teardown audit at the restored desktop width.
+- `spec/code_smells/axe_teardown_audit_is_always_on_spec.rb` refuses a `reset_sessions!` anywhere in `spec/support`, a skip tag anywhere in `spec/`, and `SKIP_AXE` in any workflow that runs specs (the devcontainer provisioning check is the one named exception) or in the Lefthook config. It also reads the support file and requires the per-example hook and the suite gate to stay registered, behind nothing but the `SKIP_AXE` guard, so deleting them is red too. `SKIP_AXE=1` prints a banner at suite start so a shell profile cannot hide it.
+
 > **Why both, and why not CI-only.** Until [#541](https://github.com/dschmura/modelrails_base/issues/541) the hook ran only under `ENV["CI"]` and audited whatever theme the example happened to leave behind. That made the verdict depend on test choreography — the same command would catch a violation on one run and miss it on the next — and it meant a page's dark rendering was audited only if some example happened to leave it dark. A real dark-mode contrast bug reached `main` under a green CI as a result. Dedicated `*_in_both_themes` examples still matter, but they only cover the states *they* set up; the per-example hook is what covers every state your specs already render.
 
 Beyond axe's own rules, every audit also runs (2026-07 gate upgrade):

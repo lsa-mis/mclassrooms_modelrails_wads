@@ -5,9 +5,9 @@ RSpec.describe "Toast notification system", type: :system do
 
   def trigger_login_failure
     # The lookup action now sends a magic link; reach the password form directly.
-    visit session_password_form_path(email_address: user.email_address)
-    fill_in I18n.t("sessions.password_form.password_label"), with: "wrongpassword"
-    click_button I18n.t("sessions.password_form.submit")
+    visit new_session_password_path(email_address: user.email_address)
+    fill_in I18n.t("sessions.passwords.new.password_label"), with: "wrongpassword"
+    click_button I18n.t("sessions.passwords.new.submit")
   end
 
   def dismiss_cookie_banner
@@ -32,6 +32,14 @@ RSpec.describe "Toast notification system", type: :system do
     it "appears as a pill in the top-center container" do
       sign_in_via_form(user)
       expect(page).to have_css("#toast-pills [data-controller='toast-pill']")
+    end
+
+    # #901: the page-load flash is moved into the region after load, so it is
+    # a mutation the region announces; the carrier template removes itself.
+    it "reaches the live region as a mutation after load, not as initial content" do
+      sign_in_via_form(user)
+      expect(page).to have_css("#toast-pills [role='status']", text: I18n.t("magic_link_callbacks.show.signed_in"))
+      expect(page).to have_no_css("template[data-controller='toast-flash']", visible: :all)
     end
 
     it "keeps role=status but no own live attrs — the container announces (#683)" do

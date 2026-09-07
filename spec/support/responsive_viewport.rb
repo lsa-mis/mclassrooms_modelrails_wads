@@ -11,11 +11,11 @@
 #   scrollable vs clipped is one (programmatic scrolling works on both).
 # - Prefer data-* hooks over Tailwind-utility class selectors: styling
 #   classes carry no semantics and forks restyle them first.
-# - Tag lane examples `skip_axe_hook: true` and assert
-#   `axe_violations_in_both_themes` INSIDE the block: the suite-wide axe
-#   hook runs after this helper's `ensure` restore, i.e. at the 1400x1400
-#   desktop viewport, and can never see the narrow-viewport DOM this lane
-#   protects.
+# - Assert `axe_violations_in_both_themes` INSIDE the block: the suite's
+#   teardown audit runs after this helper's `ensure` restore, i.e. at the
+#   1400x1400 desktop viewport, so the narrow-viewport DOM this lane protects
+#   is audited only by the assertion in the block. Both run; neither is
+#   optional.
 # - Failure screenshots are captured after the restore too — they show the
 #   DESKTOP layout of a narrow-viewport failure. Known limitation.
 #

@@ -40,17 +40,22 @@ export default class extends Controller {
     if (i === -1) return
 
     let next = null
+    let days = 0
     switch (event.key) {
-      case "ArrowLeft":  next = buttons[i - 1]; break
-      case "ArrowRight": next = buttons[i + 1]; break
-      case "ArrowUp":    next = buttons[i - 7]; break
-      case "ArrowDown":  next = buttons[i + 7]; break
+      case "ArrowLeft":  days = -1; break
+      case "ArrowRight": days = 1; break
+      case "ArrowUp":    days = -7; break
+      case "ArrowDown":  days = 7; break
       case "Home":       next = buttons[i - (i % 7)]; break
       case "End":        next = buttons[i - (i % 7) + 6]; break
       case "PageUp":     this.prevMonth(); this.#focusFirst(); event.preventDefault(); return
       case "PageDown":   this.nextMonth(); this.#focusFirst(); event.preventDefault(); return
       default: return
     }
+    // Arrows address a DATE, not a grid index: a target past the grid's edge
+    // lives in the adjacent month, so page there and land on that date (APG
+    // date-grid: arrow navigation crosses month boundaries, never dead-ends).
+    if (days) next = this.#buttonFor(this.#addDays(current.dataset.calendarDateParam, days))
 
     if (next) {
       event.preventDefault()
@@ -71,9 +76,18 @@ export default class extends Controller {
     const [year, month] = this.monthValue.split("-").map(Number)
     const d = new Date(year, month - 1 + delta, 1)
     this.monthValue = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`
+    // Stimulus delivers monthValueChanged on a MutationObserver tick — after
+    // this call returns. Keyboard paging needs the new grid NOW so it can
+    // focus a day on it; render synchronously (the observer's re-render is
+    // idempotent).
+    this.#render(this.monthValue)
   }
 
   monthValueChanged(value) {
+    this.#render(value)
+  }
+
+  #render(value) {
     if (!value) return
     const [year, month] = value.split("-").map(Number)
     const date = new Date(year, month - 1, 1)
@@ -100,6 +114,10 @@ export default class extends Controller {
     const start = new Date(first)
     start.setDate(start.getDate() - startOffset)
 
+    // Roving tabindex: the focused day keeps the stop (a re-render must not
+    // move it out from under the keyboard), else selected, else today, else
+    // the first in-month day.
+    const focused = buttons.includes(document.activeElement) ? document.activeElement : null
     let rovingSet = false
     buttons.forEach((btn, i) => {
       const d = new Date(start)
@@ -124,8 +142,7 @@ export default class extends Controller {
       const cell = btn.closest("[role=gridcell]")
       if (cell) cell.setAttribute("aria-selected", String(isSelected))
 
-      // Roving tabindex: prefer selected, then today, then the first in-month day.
-      const tabbable = (isSelected) || (!selected && isToday)
+      const tabbable = focused ? btn === focused : (isSelected || (!selected && isToday))
       btn.tabIndex = tabbable ? 0 : -1
       if (tabbable) rovingSet = true
     })
@@ -145,6 +162,21 @@ export default class extends Controller {
   #focusFirst() {
     const target = this.#dayButtons().find(b => b.dataset.outside === "false") || this.#dayButtons()[0]
     if (target) { this.#setRovingTo(target); target.focus() }
+  }
+
+  // The button showing `iso`, paging to the adjacent month first when the date
+  // lies outside the rendered grid — an arrow never needs more than one page.
+  #buttonFor(iso) {
+    const find = () => this.#dayButtons().find(b => b.dataset.calendarDateParam === iso)
+    const hit = find()
+    if (hit) return hit
+    this.#shiftMonth(iso < this.monthValue ? -1 : 1)
+    return find() || null
+  }
+
+  #addDays(iso, days) {
+    const [y, m, d] = iso.split("-").map(Number)
+    return this.#iso(new Date(y, m - 1, d + days))
   }
 
   #dayButtons() {

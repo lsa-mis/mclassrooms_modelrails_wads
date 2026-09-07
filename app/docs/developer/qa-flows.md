@@ -69,7 +69,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 **Config:** set `SIGNUP_MODE=invite_only` in `.env` and restart `bin/dev`.
 
 1. In a private window navigate to `/session/new`, enter a **new** email address (no existing account), and click **Continue**.
-   **Expect:** The closed page (`sessions/closed.html.erb`) renders inline — a heading, a body paragraph, and a link to sign in. **Not a 404.** The response renders the `:closed` template via `sessions#lookup`.
+   **Expect:** The closed page (`sessions/lookups/closed.html.erb`) renders inline — a heading, a body paragraph, and a link to sign in. **Not a 404.** The response renders the `:closed` template via `sessions/lookups#create`.
 2. Check that OAuth buttons on the sign-in page redirect with an alert rather than proceeding when signups are closed — this is the `signups_open?` guard in the OAuth callback.
 
 ### 1c. Invite flow (owner sends, recipient accepts)
@@ -108,18 +108,18 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 
 1. Navigate to `/session/new` (the sign-in page).
 2. Enter an email address that belongs to an existing user without a password and click **Continue**.
-   The form submits to `POST /session/lookup`.
+   The form submits to `POST /session/lookup` (`Sessions::LookupsController#create`).
    **Expect:** The `check_email` page renders inline (Turbo Frame replaces the form). In development the heading is a link to `/letter_opener`.
 3. Open `/letter_opener` and click the magic-link sign-in email.
    The link is `GET /magic_link_callback/:token`.
    **Expect:** `MagicLinkCallbacksController#show` finds the user and renders the `:confirm` page ("Sign in as …?"). The GET does **not** consume the token or start a session.
-4. Press the confirmation button (`POST /magic_link_callback/:token/sign_in`).
-   **Expect:** `#sign_in` atomically consumes the token (prevents double-spend), calls `start_new_session_for`, and redirects to `after_authentication_url`. Re-opening the original GET link now shows an invalid-token alert.
+4. Press the confirmation button (`POST /magic_link_callback/:token/session`).
+   **Expect:** `MagicLinkCallbacks::SessionsController#create` atomically consumes the token (prevents double-spend), calls `start_new_session_for`, and redirects to `after_authentication_url`. Re-opening the original GET link now shows an invalid-token alert.
 
 ### Existing user (has password)
 
 1. Navigate to `/session/new` and enter the email address.
-   **Expect:** The `check_email` page renders inline (same as passwordless). A magic-link sign-in email is dispatched — check `/letter_opener`. Because the user `has_password?`, a secondary **"Use your password instead"** link to `session_password_form_path` also appears on the `check_email` page.
+   **Expect:** The `check_email` page renders inline (same as passwordless). A magic-link sign-in email is dispatched — check `/letter_opener`. Because the user `has_password?`, a secondary **"Use your password instead"** link to `new_session_password_path` also appears on the `check_email` page.
 2. Click **Use your password instead** → enter the password and submit to `POST /session`.
    **Expect:** You are signed in and redirected to `after_authentication_url`.
 
@@ -222,8 +222,9 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
    `Workspaces::JoinsController#show` is called. The `before_action :set_workspace_and_link` validates the workspace, link, and `workspace.open_join?`. On success the confirmation page renders.
    **Expect:** A confirmation page — not a join yet. The GET is intentionally read-only to prevent prefetch and link-unfurlers from triggering automatic admission.
 3. Click **Join** (the confirmation form submits `POST /workspaces/:slug/joins/:token`).
-   `admit_authenticated_user` calls `workspace.admit(Current.user, role: workspace.default_self_join_role)`.
+   `admit_authenticated_user` calls `workspace.admit(Current.user, role: workspace.default_self_join_role, self_join: true)`.
    **Expect:** Redirect to `workspace_path(@workspace)` with "joined" notice. You are now a member.
+   **Expect (notifications):** the workspace owners get "X joined"; you do not — you get your own "You joined …" instead (`WorkspaceJoinedNotifier`), because nobody is notified about their own action.
 
 **Walkthrough — unauthenticated visitor joins (Flow B):**
 

@@ -30,7 +30,7 @@ module Settings
         tz = params[:timezone].to_s
         return head :unprocessable_entity unless VALID_IANA_NAMES.include?(tz)
 
-        @preferences = Current.user.preferences || Current.user.create_preferences!
+        @preferences = Current.user.preferences!
         authorize @preferences, policy_class: Settings::TimezonePolicy
         override = params[:override].to_s == "true"
 

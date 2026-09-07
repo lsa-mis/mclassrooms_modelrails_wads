@@ -1,0 +1,25 @@
+<% inviter = @invitation.invited_by.email_address %>
+<% content_for(:title) { t(".title", inviter: inviter) } %>
+
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-bold text-text-heading break-words">
+    <%= t(".title", inviter: inviter) %>
+  </h1>
+
+  <p class="mt-4 text-text-body break-words">
+    <%= t(".prompt", inviter: inviter, email: @invitation.email) %>
+  </p>
+
+  <div class="mt-8 flex items-center gap-3">
+    <%# Full-page submit: Turbo only renders a redirect after a form POST, and
+        this POST renders its outcome in the document on purpose (#951). %>
+    <%= button_to t(".button", inviter: inviter),
+          invitation_block_path,
+          method: :post,
+          params: { token: params[:token] },
+          form: { data: { turbo: false } },
+          class: "btn-primary" %>
+
+    <%= link_to t(".cancel"), root_path, class: "btn-text text-sm" %>
+  </div>
+</div>

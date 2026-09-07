@@ -40,6 +40,15 @@ Rails.application.configure do
   # spec/eager_load_parity_spec.rb pins it.
   config.eager_load = true
 
+  # The pin above is only half of it. spec/tasks/* invoke rake tasks
+  # in-process, and Rails' `environment` task re-applies `eager_load =
+  # rake_eager_load` (default false) — on an already-booted app that runs
+  # immediately, flipping the flag for the rest of the worker. Every spec that
+  # runs after a task spec in that worker then runs a different program than
+  # CI, and the parity pin fails one seed in three (#923). Keeping the rake
+  # value equal to the pin closes the class for any future task spec.
+  config.rake_eager_load = true
+
   # Configure public file server for tests with cache-control for performance.
   config.public_file_server.headers = { "cache-control" => "public, max-age=3600" }
 
@@ -55,6 +64,16 @@ Rails.application.configure do
 
   # Store uploaded files on the local file system in a temporary directory.
   config.active_storage.service = :test
+
+  # Active Record Encryption keys for the test database (#902). Literal on
+  # purpose: the template ships no credentials and CI has none, and test data
+  # is disposable. Rails applies these OVER credentials — a fork that adds test
+  # credentials later must delete these lines for them to win.
+  config.active_record.encryption.primary_key = "vauOXZgIb7aP2CYJQ5E7A2s9lzQBHq4u"
+  config.active_record.encryption.deterministic_key = "SiBtuw5trN4zlNpD2Zp51S434Oh5xl3G"
+  config.active_record.encryption.key_derivation_salt = "o0fFAcEEJceU0nHIq7Abhwh5UTyf6cGx"
+  # YAML fixtures (none today) carry plaintext and are encrypted on load.
+  config.active_record.encryption.encrypt_fixtures = true
 
   # Use the test queue adapter so have_enqueued_job/have_enqueued_mail
   # matchers can inspect the queue deterministically.
@@ -84,9 +103,9 @@ Rails.application.configure do
 
   # Bullet: raise on N+1 queries in tests
   # CSP enforced in test as it is in dev/prod. Previously report-only with
-  # the rationale "Playwright doesn't forward CSP nonces" — but in practice
+  # the rationale "the browser driver doesn't forward CSP nonces" — but in practice
   # importmap+Stimulus tags do receive nonces via the standard layout helpers
-  # and Playwright's execute_script bypasses CSP at the driver level anyway.
+  # and the driver's execute_script bypasses CSP at the driver level anyway.
   # Enforcing here catches real bugs like inline event handlers
   # (onchange="...") that get silently dropped by the browser in prod.
   config.content_security_policy_report_only = false

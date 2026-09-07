@@ -1,0 +1,22 @@
+<%# Rendered by sessions/lookups#create into the email form's <turbo-frame id="sign_in_form">
+    when an unknown email is entered while signups are closed. It MUST carry the
+    matching frame (turbo-rails' frame layout does not auto-wrap) or Turbo shows
+    its built-in "Content missing". Compact, like check_email — the page already
+    renders the OAuth buttons above this frame, so they're not repeated here. %>
+<%= turbo_frame_tag "sign_in_form" do %>
+  <div class="mt-8 text-center" role="status" aria-live="polite">
+    <h2 class="text-xl font-semibold text-text-heading">
+      <%= t("registrations.closed.title") %>
+    </h2>
+
+    <p class="mt-3 text-text-muted">
+      <%= safe_html(t("registrations.closed.body_html", app_name: t("application.name"))) %>
+    </p>
+
+    <div class="mt-6">
+      <%= link_to t("registrations.closed.sign_in_link"), main_app.new_session_path,
+            class: "text-sm text-interactive underline hover:no-underline focus-ring rounded",
+            data: { turbo_frame: "_top" } %>
+    </div>
+  </div>
+<% end %>

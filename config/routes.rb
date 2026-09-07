@@ -13,32 +13,49 @@ Rails.application.routes.draw do
   # adoption forms are text-only). Controller lives in spec/support/harness.
   resource :draft_harness, only: %i[show create], controller: "draft_harness" if Rails.env.test?
 
-  resource :session
-  resource :email_verification, only: [ :new, :show ]
+  resource :session do
+    scope module: :sessions do
+      # The two steps of email-first sign-in (#1007): the lookup sends the right
+      # link and renders the next step; the password step's form posts to sessions#create.
+      resource :lookup, only: [ :create ]
+      resource :password, only: [ :new ]
+    end
+  end
+  resource :email_verification, only: [ :new, :show, :create ]
 
+  # A WebAuthn ceremony is two creates on two nouns (#1007): the challenge the
+  # authenticator signs, then what the signature earns — a credential, a
+  # session, or a confirmation of the current one.
   namespace :passkeys do
-    post "registration/options",   to: "registrations#options",   as: :registration_options
-    post "registration/verify",    to: "registrations#verify",    as: :registration_verify
-    post "authentication/options", to: "authentications#options", as: :authentication_options
-    post "authentication/verify",  to: "authentications#verify",  as: :authentication_verify
-    post "reauthentication/options", to: "reauthentications#options", as: :reauthentication_options
-    post "reauthentication/verify",  to: "reauthentications#verify",  as: :reauthentication_verify
+    namespace :registration do
+      resource :challenge, only: :create
+      resource :credential, only: :create
+    end
+    namespace :authentication do
+      resource :challenge, only: :create
+      resource :session, only: :create
+    end
+    namespace :reauthentication do
+      resource :challenge, only: :create
+      resource :confirmation, only: :create
+    end
   end
 
   resource :email_verification_resend, only: [ :create ]
 
   resource :magic_link, only: [ :create ]
   resource :password_reset, only: [ :create ]
-  get "magic_link_callback/:token", to: "magic_link_callbacks#show", as: :magic_link_callback
+  # GET only renders a confirmation; the session is a nested resource whose
+  # create is the POST, so a mail scanner or prefetch can't burn the token or
+  # sign anyone in (SEC-5). Registration keeps its POST on the callback itself.
+  resources :magic_link_callbacks, param: :token, path: "magic_link_callback", only: [ :show ] do
+    resource :session, only: [ :create ], module: :magic_link_callbacks
+  end
   post "magic_link_callback/:token", to: "magic_link_callbacks#create"
-  # Existing-user sign-in is a POST so a GET (mail scanner / prefetch) can't
-  # burn the token or establish a session — the GET only renders a confirmation.
-  post "magic_link_callback/:token/sign_in", to: "magic_link_callbacks#sign_in", as: :magic_link_callback_sign_in
-  post "session/lookup", to: "sessions#lookup", as: :session_lookup
-  get  "session/password", to: "sessions#password_form", as: :session_password_form
 
   get "/auth/:provider/callback", to: "omniauth_callbacks#create"
-  get "/auth/failure", to: "omniauth_callbacks#failure"
+  # OmniAuth fixes this path (on_failure); the page is its own controller's show (#1007).
+  get "/auth/failure", to: "omniauth_failures#show", as: :omniauth_failure
 
   resource :passkey_prompt, only: [ :update ]
 
@@ -49,9 +66,8 @@ Rails.application.routes.draw do
   namespace :settings do
     resource :profile, only: [ :edit, :update ]
     resource :password, only: [ :new, :create, :edit, :update, :destroy ]
-    resource :avatar, only: [ :update, :destroy ] do
-      get :hub
-    end
+    # show is the picker hub the profile page lazy-loads (#1007).
+    resource :avatar, only: [ :show, :update, :destroy ]
     resource :theme_preference, only: [ :edit, :update ]
     resource :notification_preferences, only: [ :edit, :update ]
     namespace :preferences do
@@ -63,44 +79,46 @@ Rails.application.routes.draw do
     resource :reauthentication_code, only: [ :create ]
     resources :passkeys, only: [ :index, :destroy ]
     resources :connected_accounts, only: [ :index, :destroy ] do
-      member do
-        post :resend_verification
-      end
-      collection do
-        get "verify/:token", action: :verify, as: :verify
+      # Resending the verification email is a resend, created (#1007).
+      scope module: :connected_accounts do
+        resource :verification_resend, only: :create
       end
     end
+    resource :connected_account_verification, only: [ :show, :create ], path: "connected_accounts/verify"
+    # Legacy path-token route, kept for one token lifetime (24 h) after the
+    # 2026-09 deploy so in-flight verification emails still land; remove after
+    # that deploy plus one day. Renders the confirmation only (#950/#916).
+    get "connected_accounts/verify/:token", to: "connected_account_verifications#show", as: :legacy_verify_settings_connected_accounts
     resource :email_confirmation, only: [ :show, :destroy ]
-    resources :notifications, only: [ :index, :update, :destroy ] do
+    resources :notifications, only: [ :index, :update ] do
       # POST-only open-and-mark-read (#686): a GET here MUTATED (read_at), so
       # link prefetchers and mail scanners marked notifications read — the
       # same class of route the magic-link comment below refuses.
       scope module: :notifications do
         resource :reading, only: :create
       end
-      collection do
-        post :mark_all_read
-        delete :destroy_all_read
-      end
     end
+    # Mark all read: readings for every unread notification, created at once
+    # (#1007) — the bulk twin of the per-notification reading above.
+    resource :notification_readings, only: :create
   end
 
   resources :workspaces, param: :slug do
-    member do
-      get :identity_picker_hub
-      patch :archive
-      patch :unarchive
-    end
     scope module: :workspaces do
+      # Archived is a state, so it is a singular resource: POST archives, DELETE restores (#1007).
+      resource :archival, only: [ :create, :destroy ]
+      # The logo picker hub; saves post to workspaces#update, where the logo lives (#1007).
+      resource :logo, only: [ :show ]
       resources :members, only: [ :index, :edit, :update, :destroy ] do
-        member do
-          patch :reactivate
-          patch :transfer_ownership
+        # Deactivating is members#destroy; reactivating creates a reactivation (#1007).
+        scope module: :members do
+          resource :reactivation, only: :create
+          resource :ownership_transfer, only: :create
         end
       end
       resources :invitations, only: [ :new, :create, :destroy ] do
-        member do
-          post :resend
+        scope module: :invitations do
+          resource :resend, only: :create
         end
       end
       resources :join_links, only: [ :create, :destroy ]
@@ -117,6 +135,9 @@ Rails.application.routes.draw do
   post "invitations/:token/accept", to: "invitation_accepts#create"
   get "invitations/:token/decline", to: "invitation_declines#show", as: :decline_invitation
   post "invitations/:token/decline", to: "invitation_declines#create"
+  # Blocking an inviter is reached only from the signed link in the invitee's
+  # own invitation email; the token travels as a query parameter (#951/#916).
+  resource :invitation_block, only: [ :show, :create ]
 
   resource :onboarding, only: %i[show update]
   namespace :onboarding do

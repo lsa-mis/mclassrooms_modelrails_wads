@@ -4,7 +4,8 @@
       <%= activity_log.actor&.full_name || t("activity.system") %>
     </span>
     <span class="text-text-muted">
-      <%= t("activity.actions.#{activity_log.action}", default: activity_log.action.humanize) %>
+      <%= t("activity.actions.#{activity_log.display_action}",
+             member: activity_log.display_member || t("activity.unknown_member")) %>
     </span>
   </div>
   <time datetime="<%= activity_log.created_at.iso8601 %>"

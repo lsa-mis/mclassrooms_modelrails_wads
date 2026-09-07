@@ -20,8 +20,8 @@
 
     <% if @factors.include?(:passkey) %>
       <div data-controller="webauthn"
-           data-webauthn-auth-options-url-value="<%= passkeys_reauthentication_options_path %>"
-           data-webauthn-auth-verify-url-value="<%= passkeys_reauthentication_verify_path %>"
+           data-webauthn-auth-options-url-value="<%= passkeys_reauthentication_challenge_path %>"
+           data-webauthn-auth-verify-url-value="<%= passkeys_reauthentication_confirmation_path %>"
            data-webauthn-messages-value="<%= { error: t("settings.reauthentications.new.passkey_error") }.to_json %>">
         <button type="button" class="btn-secondary btn-touch-target"
                 data-action="webauthn#authenticate">

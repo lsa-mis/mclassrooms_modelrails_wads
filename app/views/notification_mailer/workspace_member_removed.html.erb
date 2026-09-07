@@ -1,0 +1,5 @@
+<h1><%= t("notification_mailer.workspace_member_removed.heading", workspace: @workspace.name) %></h1>
+
+<p><%= t("notification_mailer.workspace_member_removed.greeting", name: @recipient.first_name) %></p>
+
+<p><%= t("notification_mailer.workspace_member_removed.body", workspace: @workspace.name) %></p>

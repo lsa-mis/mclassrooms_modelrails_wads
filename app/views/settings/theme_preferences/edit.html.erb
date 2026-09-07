@@ -16,7 +16,7 @@
       controller's write-on-blank guard so an explicit choice always
       wins. The beacon's anti-clobber semantics (write only when stored
       timezone is blank) then preserve that choice on subsequent visits. %>
-  <% preferences = Current.user.preferences || Current.user.create_preferences! %>
+  <% preferences = Current.user.preferences! %>
   <section class="mt-10" aria-labelledby="appearance-timezone-heading">
     <h2 id="appearance-timezone-heading" class="text-lg font-semibold text-text-heading">
       <%= t("settings.appearance.timezone.heading") %>

@@ -65,8 +65,19 @@ linters:
     enabled: false
   RightTrim:
     enabled: false
+  # One house cop on the Ruby inside views (the deferred RuboCop-on-ERB rule,
+  # enabled narrowly): a t() call carries no inline default.
   Rubocop:
-    enabled: false
+    enabled: true
+    only:
+      - ModelRails/NoI18nDefault
+    # Its own RuboCop config, not .rubocop.yml: the linter needs the house
+    # cops required and the one cop enabled, and nothing else applies to ERB.
+    rubocop_config:
+      require:
+        - ./lib/rubocop/modelrails
+      ModelRails/NoI18nDefault:
+        Enabled: true
   RubocopText:
     enabled: false
   SpaceAroundErbTag:

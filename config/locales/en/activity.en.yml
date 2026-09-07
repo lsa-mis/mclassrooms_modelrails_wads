@@ -4,13 +4,39 @@ en:
     empty: "No activity yet."
     system: "System"
     ago: "ago"
+    # Stand-in subject for a membership row whose membership has since been
+    # hard-deleted. The row outlives it (activity is immutable), so the sentence
+    # still has to name someone.
+    unknown_member: "a member"
+    # Nested, never flat and dotted: I18n splits a requested key on "." and
+    # walks the hash segment by segment, so a literal "membership.created" key
+    # is unreachable and the renderer's `default:` silently humanizes instead
+    # (#911). spec/i18n_spec.rb fails on a dot inside any key here.
     actions:
-      workspace.updated: "updated workspace settings"
-      membership.created: "joined the workspace"
-      membership.updated: "had their role changed"
-      invitation.created: "sent an invitation"
-      invitation.updated: "invitation was updated"
-      project.created: "created a project"
-      project.updated: "updated a project"
-      resource.created: "added a resource"
-      resource.updated: "updated a resource"
+      workspace:
+        created: "created the workspace"
+        updated: "updated workspace settings"
+      # The row's SUBJECT is its actor — Trackable writes `actor: Current.user`,
+      # i.e. whoever performed the change. So every membership string below
+      # names the affected member as the OBJECT; writing them in the passive
+      # ("was deactivated") attached the removal to the remover.
+      # `created` is the exception and stays subject-only: its actor IS the
+      # person who joined.
+      membership:
+        created: "joined the workspace"
+        updated: "changed %{member}'s role"
+        # A deactivation, a departure and a reactivation are all recorded as
+        # `membership.updated`; ActivityLog#display_action picks between these
+        # from the row's own `changes` metadata and its actor (#932).
+        deactivated: "deactivated %{member}"
+        reactivated: "reactivated %{member}"
+        left: "left the workspace"
+      invitation:
+        created: "sent an invitation"
+        updated: "invitation was updated"
+      project:
+        created: "created a project"
+        updated: "updated a project"
+      resource:
+        created: "added a resource"
+        updated: "updated a resource"

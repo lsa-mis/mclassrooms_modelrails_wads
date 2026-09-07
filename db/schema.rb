@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_022634) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -187,6 +187,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_022634) do
     t.index ["workspace_id"], name: "index_floors_on_workspace_id"
   end
 
+  create_table "invitation_blocks", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.integer "inviter_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email", "inviter_id"], name: "index_invitation_blocks_on_email_and_inviter", unique: true
+    t.index ["inviter_id"], name: "index_invitation_blocks_on_inviter_id"
+  end
+
   create_table "invitations", force: :cascade do |t|
     t.datetime "accepted_at"
     t.integer "accepted_by_id"
@@ -200,10 +209,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_022634) do
     t.datetime "revoked_at"
     t.integer "role_id"
     t.string "status", default: "pending", null: false
+    t.datetime "suppressed_at"
     t.string "token", null: false
     t.datetime "updated_at", null: false
     t.index ["accepted_by_id"], name: "index_invitations_on_accepted_by_id"
-    t.index ["email", "invitable_type", "invitable_id"], name: "index_invitations_on_email_and_invitable_pending", unique: true, where: "status = 'pending'"
+    t.index ["email", "invitable_type", "invitable_id", "invited_by_id"], name: "index_invitations_pending_ghosts", unique: true, where: "status = 'pending' AND suppressed_at IS NOT NULL"
+    t.index ["email", "invitable_type", "invitable_id"], name: "index_invitations_pending_live", unique: true, where: "status = 'pending' AND suppressed_at IS NULL"
     t.index ["invitable_type", "invitable_id"], name: "index_invitations_on_invitable"
     t.index ["invited_by_id"], name: "index_invitations_on_invited_by_id"
     t.index ["role_id"], name: "index_invitations_on_role_id"
@@ -499,7 +510,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_022634) do
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["digest_next_due_at"], name: "index_user_preferences_on_digest_next_due_at", where: "digest_next_due_at IS NOT NULL"
-    t.index ["user_id"], name: "index_user_preferences_on_user_id"
+    t.index ["user_id"], name: "index_user_preferences_on_user_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -559,6 +570,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_022634) do
   create_table "workspace_join_links", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "created_by_id", null: false
+    t.datetime "expires_at", null: false
     t.datetime "revoked_at"
     t.string "token_digest", null: false
     t.datetime "updated_at", null: false
@@ -609,6 +621,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_022634) do
   add_foreign_key "editor_assignments", "workspaces"
   add_foreign_key "floors", "buildings"
   add_foreign_key "floors", "workspaces"
+  add_foreign_key "invitation_blocks", "users", column: "inviter_id"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"

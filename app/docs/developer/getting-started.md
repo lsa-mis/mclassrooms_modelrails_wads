@@ -11,6 +11,10 @@ keywords: setup install mise ruby bundle rspec tests oauth credentials developme
 - [mise](https://mise.jdx.dev/) for runtime version management (see `.tool-versions`)
 - Chromium (managed automatically by Cuprite/Ferrum for system tests)
 
+## The stack
+
+Rails 8.1 or newer, and the pieces Rails ships: Propshaft for assets, import maps for JavaScript (with `tailwindcss-rails` for CSS), Hotwire (Turbo and Stimulus) for interaction, the built-in authentication generator's shape for sessions, and Solid Queue, Solid Cache, and Solid Cable on SQLite. That is a floor, not a preference list: there is no Devise, no JavaScript bundler, no React, no Sprockets, and no Redis-backed queue, and a fork that adds one of them is off the path every other page here describes. The `ModelRails/StackFloor` cop (`lib/rubocop`) fails a Gemfile line that brings in what the floor replaces, or pins `rails` below it, on commit.
+
 ## Setup
 
 ```bash
@@ -228,6 +232,18 @@ Runs the same checks plus additional linting:
 3. Commit (pre-commit hook auto-fixes Ruby style)
 4. Push (pre-push hook runs full CI locally)
 5. Open PR on GitHub (Actions run second round of checks)
+
+### Turning a house cop off in your fork
+
+Base ships eight house cops under `lib/rubocop` (`ModelRails/*`), configured in the base-owned `.rubocop/house.yml` and on by default. They are rules about how base writes code — the same kind of thing as the omakase config it inherits — and your fork is free to disagree with any of them. Do it in the fork-owned `.rubocop/app.yml`, which upstream never touches (`merge=ours`), with the reason on the line above:
+
+```yaml
+# Our admin area keeps a few verb routes on purpose; see ADR-7.
+ModelRails/RestfulActions:
+  Enabled: false
+```
+
+That is a decision with a name, which is what a reviewer or an agent reads first. It is not the place for offenses in code you inherited or wrote before a cop landed: those belong in `.rubocop_todo.yml`, which grandfathers by path and shrinks as files are fixed, while `app.yml` changes the rule itself. Never edit `.rubocop/house.yml` or `.rubocop.yml` in a fork; both are base-owned and every upstream sync would conflict.
 
 ### Linting Commands
 

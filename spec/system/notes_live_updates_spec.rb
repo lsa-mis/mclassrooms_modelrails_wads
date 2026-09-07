@@ -163,5 +163,13 @@ RSpec.describe "Notes live updates", type: :system do
     using_session(:observer_session) do
       expect(page).to have_no_css(reply_selector, wait: 5)
     end
+
+    # #912's teardown gate audits Capybara.current_session, which every
+    # `using_session` block above restores to the (never-visited) default
+    # session on exit — leaving nothing for the automatic hook to find.
+    # Handing it a real, already-navigated session here is what makes the
+    # mandatory AAA pass actually cover this page, same as it would for a
+    # single-session test.
+    Capybara.session_name = :observer_session
   end
 end

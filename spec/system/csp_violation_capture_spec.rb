@@ -2,7 +2,7 @@ require "rails_helper"
 
 # Self-test for spec/support/csp_violation_capture.rb (#848): the listener must
 # be listening in EVERY example, not just the first one a worker process runs.
-# `Capybara.reset_sessions!` (spec/support/capybara.rb after-hook) disposes the
+# `Capybara.reset_sessions!` (rspec-rails' after-example system-test teardown) disposes the
 # browser context and its page-scoped init script, so this spec replays that
 # between-examples lifecycle mid-example and proves capture still works after.
 RSpec.describe "CSP violation capture harness", type: :system do

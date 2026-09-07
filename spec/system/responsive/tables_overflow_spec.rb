@@ -10,10 +10,9 @@ require "rails_helper"
 # scrolls. The project-memberships table carried the identical wrapper
 # pattern and is covered here too (panel checkpoint 1).
 #
-# skip_axe_hook: axe runs INSIDE the viewport block instead — the suite-wide
-# hook fires after the viewport restore and would audit the desktop layout
-# (see spec/support/responsive_viewport.rb).
-RSpec.describe "Tables at narrow viewports", type: :system, skip_axe_hook: true do
+# The axe assertion runs INSIDE each viewport block (the teardown audit fires
+# after the restore, at the desktop width; see spec/support/responsive_viewport.rb).
+RSpec.describe "Tables at narrow viewports", type: :system do
   let(:user) { create(:user, first_name: "Owner", last_name: "User") }
 
   before { sign_in_via_form(user) }

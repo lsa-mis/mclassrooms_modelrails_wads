@@ -57,8 +57,13 @@ module UI
     # sticky/backdrop-blur ancestor cannot bury it (app/javascript/overlays/top_layer.js).
     CONTENT = "z-50 min-w-48 overflow-hidden rounded-md border bg-surface-overlay p-1 text-text-body shadow mt-1.5 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
 
-    # Styled link inside a flyout panel
-    PANEL_LINK = "flex flex-col gap-1 rounded-sm p-2 text-sm transition-all focus-ring " \
+    # Styled link inside a flyout panel. min-h-11: a navigation link (not a
+    # role="menuitem" widget interior), so the 44px AAA floor (2.5.5)
+    # applies. justify-center (not items-center — this is flex-col, so the
+    # main axis is vertical) keeps single-line content vertically centered
+    # as the row grows to meet the floor, without pulling multi-line
+    # title+description content off its left edge.
+    PANEL_LINK = "flex min-h-11 flex-col justify-center gap-1 rounded-sm p-2 text-sm transition-all focus-ring " \
                  "hover:bg-surface-sunken hover:text-text-heading " \
                  "aria-[current]:bg-surface-sunken/50 aria-[current]:text-text-heading"
 

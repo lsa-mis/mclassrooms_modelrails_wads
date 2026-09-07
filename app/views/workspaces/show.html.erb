@@ -9,11 +9,11 @@
   <% if @workspace.archived? %>
     <%= render "shared/archived_banner",
           message: t("workspaces.archived_banner"),
-          restore_path: unarchive_workspace_path(@workspace) %>
+          restore_path: workspace_archival_path(@workspace) %>
   <% end %>
   <%= turbo_stream_from @workspace %>
 
   <%= render "shared/activity_feed",
-        activities: ActivityLog.visible.for_workspace(@workspace).recent.includes(:actor),
+        activities: ActivityLog.visible.for_workspace(@workspace).recent.for_feed,
         top_margin: (@workspace.archived? ? "mt-8" : "mt-0") %>
 </div>

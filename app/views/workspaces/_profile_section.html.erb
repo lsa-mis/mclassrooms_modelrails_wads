@@ -36,7 +36,7 @@
           <%= render "shared/identity_picker",
                 model: workspace,
                 form_url: workspace_path(workspace),
-                hub_url: identity_picker_hub_workspace_path(workspace),
+                hub_url: workspace_logo_path(workspace),
                 hub_title: t("identity_picker.choose_workspace_logo"),
                 crop_title: t("identity_picker.adjust_workspace_logo") %>
         <% end %>

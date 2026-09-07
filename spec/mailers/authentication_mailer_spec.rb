@@ -41,8 +41,8 @@ RSpec.describe AuthenticationMailer, type: :mailer do
       expect(mail.subject).to include(I18n.t("application.name"))
     end
 
-    it "includes the verification URL in the body" do
-      expect(mail.body.encoded).to include("/connected_accounts/verify/")
+    it "includes the verification URL in the body, with the token in the query string" do
+      expect(mail.body.encoded).to include("/connected_accounts/verify?token=")
     end
 
     it "addresses the user by first name" do

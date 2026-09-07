@@ -2,6 +2,10 @@ class MagicLinkToken < ApplicationRecord
   include Consumable
 
   validates :token_digest, presence: true, uniqueness: true
+  normalizes :email, with: ->(e) { EmailNormalizer.normalize(e) }
+  # Encrypted at rest (#902): deterministic for the one-unconsumed-token-per-
+  # address index that create_for_email's supersede relies on.
+  encrypts :email, deterministic: true, downcase: true
   validates :email, presence: true, format: { with: User::EMAIL_FORMAT }
   validates :expires_at, presence: true
 
@@ -22,12 +26,11 @@ class MagicLinkToken < ApplicationRecord
   # email, or nil for the losing thread — the winner already emailed the one
   # valid link, and the plaintext is unrecoverable from the digest.
   def self.create_for_email(email, intent: nil)
-    normalized_email = email.downcase
     token = SecureRandom.urlsafe_base64(32)
 
     transaction do
-      where(email: normalized_email, consumed_at: nil).update_all(consumed_at: Time.current)
-      create!(token_digest: digest(token), email: normalized_email, expires_at: 15.minutes.from_now, intent: intent)
+      where(email: email, consumed_at: nil).update_all(consumed_at: Time.current)
+      create!(token_digest: digest(token), email: email, expires_at: 15.minutes.from_now, intent: intent)
     end
     token
   rescue ActiveRecord::RecordNotUnique

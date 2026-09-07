@@ -1,6 +1,9 @@
 class InvitationDeclinesController < ApplicationController
   allow_unauthenticated_access
 
+  rate_limit to: 10, within: 3.minutes, only: :create,
+    with: -> { redirect_to root_path, alert: t("invitation_declines.create.rate_limited") }
+
   def show
     @invitation = find_valid_invitation
   end

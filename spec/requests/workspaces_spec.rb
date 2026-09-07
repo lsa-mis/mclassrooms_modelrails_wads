@@ -303,23 +303,7 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
-    describe "GET /workspaces/:slug/identity_picker_hub" do
-      let(:workspace) { create(:workspace) }
-      let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-      it "renders the hub partial" do
-        get identity_picker_hub_workspace_path(workspace, source: "initials"),
-            headers: { "Turbo-Frame" => "identity-picker-hub" }
-        expect(response).to have_http_status(:ok)
-        expect(response.body).to include("identity-picker-hub")
-      end
-
-      it "falls back to the current logo source for an invalid source param" do
-        get identity_picker_hub_workspace_path(workspace, source: "gravatar"),
-            headers: { "Turbo-Frame" => "identity-picker-hub" }
-        expect(response).to have_http_status(:ok)
-      end
-    end
+    # The logo picker hub moved to spec/requests/workspaces/logos_spec.rb with the resource (#1007).
 
     describe "DELETE /workspaces/:slug" do
       let(:workspace) { create(:workspace) }
@@ -336,36 +320,7 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
-    describe "PATCH /workspaces/:slug/archive" do
-      let(:workspace) { create(:workspace) }
-      let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-      it "archives the workspace and redirects to the index" do
-        patch archive_workspace_path(workspace)
-        expect(workspace.reload).to be_archived
-        expect(response).to redirect_to(workspaces_path)
-      end
-
-      it "denies non-owners" do
-        member = create(:user)
-        create(:membership, user: member, workspace: workspace)
-        sign_in(member)
-        patch archive_workspace_path(workspace)
-        expect(workspace.reload).not_to be_archived
-      end
-    end
-
-    describe "PATCH /workspaces/:slug/unarchive" do
-      let(:workspace) { create(:workspace) }
-      let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-      it "restores an archived workspace and redirects to it" do
-        workspace.archive!
-        patch unarchive_workspace_path(workspace)
-        expect(workspace.reload).not_to be_archived
-        expect(response).to redirect_to(workspace_path(workspace))
-      end
-    end
+    # Archive/restore moved to spec/requests/workspaces/archivals_spec.rb with the resource (#1007).
 
     describe "DELETE from the archived state" do
       let(:workspace) { create(:workspace) }

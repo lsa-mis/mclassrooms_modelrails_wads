@@ -77,8 +77,4 @@ RSpec.configure do |config|
     # (it deletes :name), which raises on a frozen constant.
     driven_by :cuprite, screen_size: CUPRITE_SCREEN_SIZE, options: CUPRITE_DRIVER_OPTIONS.dup
   end
-
-  config.after(:each, type: :system) do
-    Capybara.reset_sessions!
-  end
 end

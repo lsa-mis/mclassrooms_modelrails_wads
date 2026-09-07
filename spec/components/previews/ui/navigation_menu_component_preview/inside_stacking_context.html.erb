@@ -7,7 +7,10 @@
     <%= ui :navigation_menu, label: "Primary" do |nav| %>
       <% nav.with_item(label: "Home", href: "#", active: true) %>
       <% nav.with_item(label: "Products") do %>
-        <a href="#" class="flex flex-col gap-1 rounded-sm p-2 text-sm focus-ring hover:bg-surface-sunken">
+        <%# UI::NavigationMenuComponent::PANEL_LINK, not a hand-copied class
+            list — the preview's own stale copy (missing min-h-11) is what
+            let this fall under the 44px AAA floor (#912). %>
+        <a href="#" class="<%= UI::NavigationMenuComponent::PANEL_LINK %>">
           <span class="font-medium text-text-heading">Analytics</span>
         </a>
       <% end %>

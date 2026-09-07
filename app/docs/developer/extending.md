@@ -64,6 +64,10 @@ end
 
 > **The moment a create involves a second row** — a membership, a join record, anything that must exist for the first row to be usable — move the assembly onto the tenant root as a verb: `Workspace#create_milestone(attrs, creator:)` in the `Workspace#create_project` shape (one transaction, `lock!` + guard, both writes, returns the possibly-invalid record for form re-render). Committing the first row and then writing the second outside the transaction is the orphaned-record bug class #660 and #676 closed — a raise between the writes strands a committed record its own creator can't see. See the creation-verb shape under Concurrency in [Architecture](architecture).
 
+#### Only the seven actions
+
+Every routed action is `index`, `show`, `new`, `create`, `edit`, `update`, or `destroy`, with no cited exceptions. A `member do ... end` block with a verb in it is a resource that has not been named yet: archive and unarchive are `create` and `destroy` on a nested singular `archival`; resending an invitation is `create` on a nested `resend`; a two-step ceremony is two creates on two nouns (a passkey's `challenge`, then its `credential`); a static page is `show` on `pages`, keyed by name. The trade is one more small controller for a URL that names the domain, and base took it everywhere (its own `bin/rails routes`, filtered to non-REST actions, prints nothing). The `ModelRails/RestfulActions` cop (`lib/rubocop`) fails a public controller method with any other name on commit, so a helper that belongs below `private` fails too.
+
 ### 4. Authorize with a Pundit policy
 
 Every controller action calls `authorize`. Add a policy that extends `ApplicationPolicy`, which provides `membership` (the current user's membership in `Current.workspace`) and `can?("permission")` (reads that member's role-permission flags):
@@ -102,6 +106,21 @@ Mix in the same concerns the built-in models use, only as needed:
 | `Broadcastable` | Turbo Stream broadcasts on change | define a private `broadcast_target` (e.g. `workspace` or the parent record) |
 
 Workspace and Membership already use all three; copy whichever match your model.
+
+#### Per-model traits
+
+A concern that belongs to one model is a **trait**, and it lives with its model, not in `app/models/concerns/`: `app/models/user/avatar.rb` reopens the class and nests the module —
+
+```ruby
+class User < ApplicationRecord
+  module Avatar
+    extend ActiveSupport::Concern
+    # ...
+  end
+end
+```
+
+— and the model includes it by its bare name (`include Avatar`). The nested form is required, not stylistic: the compact `module User::Avatar` does not open `User`'s lexical scope, so the trait cannot see the model's constants. `app/models/concerns/` is for concerns a second model also includes (`Discardable`, `Trackable`, `Broadcastable`). What earns a trait is a domain name a user would recognize plus a reason to change that differs from the model's; a slice by Rails artifact type ("validations", "callbacks") does not, and a method that overrides a shared concern's hook or calls `super` stays in the class body, where include order cannot shadow it. Include order is callback registration order, so a trait that registers callbacks is included where its callbacks belonged. Base's own traits under `app/models/{user,invitation,workspace,membership}/` are the exemplars. The `ModelRails/ModelConcernNamespace` cop (`lib/rubocop`) fails a compact-form file under `app/models/<model>/` on commit.
 
 ### 6. Outside the request cycle (jobs, rake tasks, machine clients)
 

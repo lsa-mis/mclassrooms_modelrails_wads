@@ -31,7 +31,7 @@
 
 /public/assets
 
-# Node modules (Playwright browser driver)
+# Node modules — nothing ships Node since #497; ignored so a stray install stays out of git
 /node_modules
 
 # Test coverage reports

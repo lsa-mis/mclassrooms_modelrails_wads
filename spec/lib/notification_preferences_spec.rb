@@ -418,12 +418,36 @@ RSpec.describe NotificationPreferences do
   end
 
   describe "#retention_days" do
-    it "returns the configured value" do
-      expect(prefs_for(default_jsonb).retention_days).to eq 90
+    it "returns the stored choice" do
+      expect(described_class.new({ "retention_days" => 30 }).retention_days).to eq(30)
     end
 
-    it "returns nil for never (key explicitly set to nil)" do
-      expect(prefs_for(default_jsonb.merge("retention_days" => nil)).retention_days).to be_nil
+    it "returns the default when the key is absent (a row written before the column default)" do
+      expect(described_class.new({}).retention_days).to eq(described_class::DEFAULT_RETENTION_DAYS)
+      expect(described_class::DEFAULT_RETENTION_DAYS).to eq(90)
+    end
+
+    it "returns the Never cap when the key is an explicit null (a pre-migration 'Never' choice)" do
+      expect(described_class.new({ "retention_days" => nil }).retention_days).to eq(described_class::NEVER_CAP_DAYS)
+      expect(described_class::NEVER_CAP_DAYS).to eq(365)
+    end
+  end
+
+  describe "#merge with retention_days" do
+    let(:prefs) { described_class.new(UserPreferences.new.notification_preferences) }
+
+    it "accepts every allowed choice as a string and stores an integer" do
+      described_class::ALLOWED_RETENTION_DAYS.each do |days|
+        expect(prefs.merge("retention_days" => days.to_s).retention_days).to eq(days)
+      end
+    end
+
+    it "rejects 'never' now that the option is retired" do
+      expect { prefs.merge("retention_days" => "never") }.to raise_error(described_class::InvalidChange)
+    end
+
+    it "rejects a blank value" do
+      expect { prefs.merge("retention_days" => "") }.to raise_error(described_class::InvalidChange)
     end
   end
 
@@ -465,15 +489,10 @@ RSpec.describe NotificationPreferences do
       expect(described_class::EMAIL_FREQUENCIES).to eq %w[instant daily weekly]
     end
 
-    it "enforces a 1-year floor for security retention" do
-      expect(described_class::RETENTION_FLOORS["security"]).to eq 365.days
-    end
-
     it "freezes all collection constants" do
       expect(described_class::CATEGORIES).to be_frozen
       expect(described_class::CHANNELS).to be_frozen
       expect(described_class::EMAIL_FREQUENCIES).to be_frozen
-      expect(described_class::RETENTION_FLOORS).to be_frozen
     end
   end
 
@@ -531,16 +550,6 @@ RSpec.describe NotificationPreferences do
         "delivery_methods" => { "email" => { "enabled" => "false" } }
       )
       expect(merged.to_h.dig("delivery_methods", "email", "enabled")).to eq(false)
-    end
-
-    it "normalizes retention_days='never' to nil" do
-      merged = prefs_for(default_jsonb).merge("retention_days" => "never")
-      expect(merged.to_h["retention_days"]).to be_nil
-    end
-
-    it "coerces retention_days integer-strings to Integer" do
-      merged = prefs_for(default_jsonb).merge("retention_days" => "60")
-      expect(merged.to_h["retention_days"]).to eq(60)
     end
 
     it "raises InvalidChange for retention_days outside the allowed list" do

@@ -26,7 +26,7 @@
     <% grouped.each do |category, notifications| %>
       <% next if notifications.empty? %>
       <h2 style="font-size: 16px; color: <%= MailerTheme::SUBTLE %>; margin: 24px 0 8px; border-bottom: 1px solid <%= MailerTheme::BORDER %>; padding-bottom: 4px;">
-        <%= t("notifications.preferences.categories.#{category}", default: category.humanize) %>
+        <%= t("notifications.preferences.categories.#{category}") %>
       </h2>
       <ul style="list-style: none; padding: 0; margin: 0;">
         <% notifications.each do |notification| %>
@@ -53,7 +53,7 @@
     <p style="font-size: 12px; color: <%= MailerTheme::MUTED %>; margin: 0;">
       <%= t("notification_mailer.digest.footer") %>
       <a href="<%= @preferences_url %>" style="color: <%= MailerTheme::INTERACTIVE %>;">
-        <%= t("navigation.notification_preferences", default: "Notification preferences") %>
+        <%= t("navigation.notification_preferences") %>
       </a>
     </p>
   </body>

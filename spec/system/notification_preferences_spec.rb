@@ -6,7 +6,7 @@ RSpec.describe "Notification preferences", type: :system do
 
   before do
     sign_in_via_form(user)
-    user.create_preferences!(timezone: "America/New_York") unless user.preferences
+    user.preferences!.update!(timezone: "America/New_York") # one row, never a racing second (#884)
     # Sign-in dispatches a SignInFromNewDeviceNotifier; clearing keeps the
     # bell-tooltip DND test deterministic about the unread count.
     user.notifications.destroy_all
@@ -115,11 +115,13 @@ RSpec.describe "Notification preferences", type: :system do
       quiet_hours_input = find("input[name='notification_preferences[quiet_hours][enabled]']", visible: :all)
       find("label[for='#{quiet_hours_input[:id]}']", match: :first, visible: :all).click
 
-      # Wait for the auto-submit round-trip to complete by polling DB state.
-      Timeout.timeout(5) do
-        sleep 0.1 until user.preferences.reload.notification_preferences.dig("quiet_hours", "enabled") == true
-      end
-      expect(user.preferences.notification_preferences.dig("quiet_hours", "enabled")).to eq(true)
+      # The PATCH response announces the save into the page-level live region
+      # (update.turbo_stream.erb). Waiting on that synchronizes with the round
+      # trip at the suite's budget and names what is missing when it fails;
+      # a stopwatch around a database poll did neither (#945).
+      expect(page).to have_css("#notifications-live",
+        text: I18n.t("notifications.preferences.update.saved_announcement"), visible: :all)
+      expect(user.preferences.reload.notification_preferences.dig("quiet_hours", "enabled")).to eq(true)
     end
   end
 
@@ -203,7 +205,7 @@ RSpec.describe "Notification preferences", type: :system do
     # silently off — the toggle is misleading. A warning surfaces the
     # contradiction so the user can either re-check a day or disable QH.
     def set_quiet_hours(enabled:, active_days:)
-      user.preferences.update!(
+      user.preferences!.update!(
         notification_preferences: user.preferences.notification_preferences.merge(
           "quiet_hours" => { "enabled" => enabled, "active_days" => active_days }
         )
@@ -274,7 +276,7 @@ RSpec.describe "Notification preferences", type: :system do
     # have no signal the warning is tied to *this* fieldset — fix via
     # fieldset[aria-describedby] pointing at the warning's id.
     it "the Quiet Hours day-chip fieldset references the empty-days warning via aria-describedby" do
-      user.preferences.update!(
+      user.preferences!.update!(
         notification_preferences: user.preferences.notification_preferences.merge(
           "quiet_hours" => { "enabled" => true, "active_days" => [] }
         )
@@ -302,7 +304,7 @@ RSpec.describe "Notification preferences", type: :system do
     it "announces the empty-days warning via a stable live region, not by toggling the live region itself" do
       # Quiet hours disabled = warning hidden = the common case. The live
       # region must still be present and unhidden so a later reveal announces.
-      user.preferences.update!(
+      user.preferences!.update!(
         notification_preferences: user.preferences.notification_preferences.merge(
           "quiet_hours" => { "enabled" => false, "active_days" => [] }
         )
@@ -318,6 +320,33 @@ RSpec.describe "Notification preferences", type: :system do
         "the warning must sit inside a role=status aria-live=polite wrapper"
       expect(live_region[:class].to_s).not_to include("hidden"),
         "the live region wrapper must stay in the a11y tree (never hidden) so revealing the warning is announced"
+    end
+  end
+
+  # #940: the retention select auto-saves. Arrowing through options fires
+  # `change` per step in some browser and reader pairs, so a keyboard user
+  # would write every intermediate value. The form debounces its submit, so
+  # a run of changes settles into one save of the final value.
+  describe "retention select settles before saving (#940)" do
+    def preference_patches
+      cdp_browser.network.traffic.count do |exchange|
+        request = exchange.request
+        # form_with method: :patch submits as POST with a _method override.
+        request && %w[POST PATCH].include?(request.method) && request.url.include?(settings_notification_preferences_path)
+      end
+    end
+
+    it "saves once, with the final value, after a quick run of changes" do
+      visit edit_settings_notification_preferences_path
+      options = NotificationPreferences::ALLOWED_RETENTION_DAYS
+      labels = options.map { |days| I18n.t("notifications.preferences.advanced.retention_options.#{days}") }
+      before = preference_patches
+
+      labels.first(3).each { |label| select label, from: "retention-days" }
+
+      expect(page).to have_css("#notifications-live", text: I18n.t("notifications.preferences.update.saved_announcement"), visible: :all)
+      expect(user.preferences.reload.notification_preferences["retention_days"]).to eq(options[2])
+      expect(preference_patches - before).to eq(1)
     end
   end
 end

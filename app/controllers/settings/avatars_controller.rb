@@ -14,16 +14,18 @@ module Settings
         end
       }
 
-    def hub
+    # The picker hub, lazy-loaded into the profile page's modal.
+    def show
       @user = Current.user
-      authorize @user, :update?, policy_class: Settings::AvatarPolicy
+      authorize @user, policy_class: Settings::AvatarPolicy
       identity = @user.identity
 
       render partial: "shared/identity_picker_hub",
         locals: {
           identity: identity,
+          model: @user,
           form_url: settings_avatar_path,
-          hub_url: hub_settings_avatar_path,
+          hub_url: settings_avatar_path,
           current_source: identity.resolve_source(params[:source])
         },
         layout: false

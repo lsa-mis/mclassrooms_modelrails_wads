@@ -58,17 +58,17 @@ Use the filter chips at the top to narrow what you see:
 
 ### Per-notification actions
 
-Each row has buttons for:
+Each row has one control:
 
 - **Mark as read / Mark as unread** — toggles the read state
-- **Delete** — removes the notification entirely
 
 ### Bulk actions
 
 At the top of the list:
 
-- **Mark all as read** — clears your unread count without deleting anything
-- **Delete all read** — clean up the noise after you've handled things. Unread notifications are preserved
+- **Mark all as read** — clears your unread count without removing anything
+
+Beneath it, the page tells you how your list clears on its own (see [Advanced](#5-advanced)).
 
 ## Real-time updates across tabs
 
@@ -136,7 +136,7 @@ If you turn quiet hours on but uncheck every day, the system can't apply the win
 
 ### 5. Advanced
 
-- **Auto-delete read notifications after** — how long to keep read notifications before deleting them. Options: 30, 60, 90, 180, 365 days, or Never. Security alerts are always kept for at least 1 year regardless of this setting
+- **Auto-delete read notifications after** — how long a read notification stays before it is removed. Options: 30, 60, 90, 180, or 365 days. The clock starts when you read it, so unread notifications are never removed. Your account's security history (password changes, new devices, passkeys) is kept separately for at least a year on the Security page, regardless of this setting.
 
 ## What carries across devices
 
@@ -153,8 +153,8 @@ Not yet. SMS and push notifications are on the roadmap; the current channels are
 **Can I undo "Mark all as read"?**
 No. Mark-all-read is a single atomic operation. If you need to recover a specific notification, the data isn't lost — it's still in your notifications list with `read_at` set — so you can find it via the filters and mark it unread again.
 
-**Can I undo "Delete all read"?**
-No. Deleted notifications are permanently removed. Use this when you're certain you don't need to refer back to read notifications.
+**Can I delete a notification?**
+No. Read notifications are removed on their own after your retention window, counted from when you read them; unread ones stay until you read them. Marking a notification read is the only action, and it is what starts the clock. Nothing you can do here affects your account's security history, which lives on the Security page.
 
 ## Related
 

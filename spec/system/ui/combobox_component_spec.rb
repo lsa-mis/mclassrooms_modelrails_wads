@@ -173,4 +173,33 @@ RSpec.describe "Combobox component accessibility", type: :system do
       expect(active_option_text).to eq("United States")
     end
   end
+
+
+  # #684: options are not tab stops, and focus leaving the widget dismisses it.
+  describe "tab order and dismissal (#684)" do
+    it "Tab from the input leaves the widget and closes it: options are not tab stops" do
+      visit "/rails/view_components/ui/combobox_component/two_on_a_page"
+      first_input, second_input = page.all("[role='combobox']", minimum: 2)
+
+      first_input.click
+      expect(first_input["aria-expanded"]).to eq("true")
+
+      cdp_press("Tab")
+
+      expect(page.evaluate_script("document.activeElement.id")).to eq(second_input["id"])
+      expect(first_input["aria-expanded"]).to eq("false")
+      expect(page).to have_css("[role='option'][tabindex='-1']", visible: :all)
+    end
+
+    it "still commits a pointer selection: mousedown keeps focus on the input, click selects" do
+      visit "/rails/view_components/ui/combobox_component/default"
+      input = find("[role='combobox']")
+      input.click
+      option = page.all("[role='option']", visible: true).first
+      option.click
+
+      expect(find("input[type='hidden'][data-combobox-target='hidden']", visible: :all).value).to eq(option["data-combobox-value"])
+      expect(input["aria-expanded"]).to eq("false")
+    end
+  end
 end

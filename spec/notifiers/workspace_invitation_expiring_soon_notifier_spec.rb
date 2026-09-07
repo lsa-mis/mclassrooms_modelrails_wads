@@ -87,6 +87,21 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
         drain_noticed_jobs
       }.to have_enqueued_mail(NotificationMailer, :workspace_invitation_expiring_soon)
     end
+
+    # Scoped to ActionMailer::MailDeliveryJob rather than a bare
+    # perform_enqueued_jobs — the latter also runs unrelated jobs like
+    # CheckGravatarJob (enqueued from the user factories above), which does
+    # network IO and isn't relevant to this notifier (same reasoning as the
+    # sibling notifier specs' drain_noticed_jobs comment).
+    it "does not email when the block lands after dispatch (T14, final-hop gate)" do
+      described_class.with(record: invitation).deliver(invitee)
+      create(:invitation_block, inviter: inviter, email: invitation.email)
+
+      expect {
+        drain_noticed_jobs                                             # EventJob → Email method
+        perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob)      # → ActionMailer job
+      }.not_to change { ActionMailer::Base.deliveries.count }
+    end
   end
 
   describe "preferences gating" do
@@ -139,6 +154,23 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
                  hours_remaining: 24)
         )
       end
+    end
+  end
+
+  describe "#url" do
+    it "links to the accept-invitation path with the invitation token" do
+      described_class.with(record: invitation).deliver(invitee)
+      notification = invitee.notifications.last
+      expect(notification.url).to eq(
+        Rails.application.routes.url_helpers.accept_invitation_path(token: invitation.token)
+      )
+    end
+
+    it "returns the placeholder copy when the invitation has been deleted" do
+      described_class.with(record: invitation).deliver(invitee)
+      invitation.destroy
+      notification = invitee.notifications.last
+      expect(notification.url).to eq(I18n.t("notifications.placeholder"))
     end
   end
 end

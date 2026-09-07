@@ -385,9 +385,10 @@ RSpec.describe "Account Avatars", type: :request do
       end
     end
 
-    describe "GET /account/avatar/hub" do
+    # The picker hub is the avatar resource's show (#1007); it was GET /hub.
+    describe "GET /account/avatar" do
       it "renders the hub partial" do
-        get hub_settings_avatar_path(source: "initials"),
+        get settings_avatar_path(source: "initials"),
           headers: { "Turbo-Frame" => "identity-picker-hub" }
 
         expect(response).to have_http_status(:ok)
@@ -395,7 +396,7 @@ RSpec.describe "Account Avatars", type: :request do
       end
 
       it "falls back to current source for invalid source param" do
-        get hub_settings_avatar_path(source: "invalid"),
+        get settings_avatar_path(source: "invalid"),
           headers: { "Turbo-Frame" => "identity-picker-hub" }
 
         expect(response).to have_http_status(:ok)

@@ -39,12 +39,39 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
       expect(response).to redirect_to(workspace_path(workspace))
     end
 
+    # Nobody is notified about their own action: the joiner is the actor here,
+    # so member-added goes to the owner only and the joiner is oriented by
+    # WorkspaceJoinedNotifier instead.
+    it "leaves the joiner out of member-added, notifies the owner, and orients the joiner" do
+      Noticed::Notification.delete_all
+
+      post workspace_join_path(workspace, token: link.plaintext_token)
+
+      member_added = Noticed::Notification
+        .where(type: "WorkspaceMemberAddedNotifier::Notification").map(&:recipient)
+      expect(member_added).to contain_exactly(owner)
+      expect(
+        Noticed::Notification.where(recipient: newcomer, type: "WorkspaceJoinedNotifier::Notification").count
+      ).to eq 1
+    end
+
     it "rejects a revoked link" do
       link.revoke!
       expect {
         post workspace_join_path(workspace, token: link.plaintext_token)
       }.not_to change(workspace.memberships, :count)
       expect(response).to redirect_to(root_path)
+    end
+
+    it "rejects an expired (but unrevoked) link with the same neutral error" do
+      token = link.plaintext_token # force the let to build the link before travelling
+      travel_to 8.days.from_now do
+        expect {
+          post workspace_join_path(workspace, token: token)
+        }.not_to change(workspace.memberships, :count)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("workspaces.joins.invalid_or_revoked"))
+      end
     end
 
     it "rejects when the workspace's join_policy is not open_link" do
@@ -104,6 +131,15 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
       link.revoke!
       get workspace_join_path(workspace, token: link.plaintext_token)
       expect(response).to redirect_to(root_path)
+    end
+
+    it "redirects with the same neutral error for an expired (but unrevoked) link" do
+      token = link.plaintext_token # force the let to build the link before travelling
+      travel_to 8.days.from_now do
+        get workspace_join_path(workspace, token: token)
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("workspaces.joins.invalid_or_revoked"))
+      end
     end
   end
 end

@@ -138,6 +138,23 @@ RSpec.describe "Account profile — identity picker", type: :system do
       expect(user.primary_color).to eq(120)
     end
 
+    # Regression guard (#912): onHubLoad's `data-action` binding must live on
+    # the persistent <turbo-frame> (_identity_picker.html.erb), not the hub
+    # partial's own frame tag — a real navigation never copies the response
+    # tag's own attributes onto the live element, so a binding declared
+    # there silently never fires. select_identity_source is a real
+    # turbo-frame navigation (not the crop round-trip, which calls
+    # onHubLoad manually), so this only passes if onHubLoad actually runs
+    # off that event.
+    it "announces the newly selected source via the live region" do
+      open_identity_picker
+      select_identity_source("Initials")
+
+      within("[data-controller~='identity-picker']") do
+        expect(page).to have_css("[aria-live='polite']", text: I18n.t("identity_picker.sources.initials.title"), visible: :all)
+      end
+    end
+
     context "when user has a Gravatar" do
       before do
         user.update_columns(has_gravatar: true)
@@ -246,20 +263,19 @@ RSpec.describe "Account profile — identity picker", type: :system do
       expect_color_picker_visible
       expect(page).to have_css("#identity-picker-hub a[aria-checked='true']",
         text: I18n.t("identity_picker.sources.initials.title"))
-
-      close_modal_before_axe_audit
     end
   end
 
   describe "file picker dismissal" do
     # Regression guard for a bug caught during characterization testing:
-    # when openFilePicker() calls fileInputTarget.click() inside a <dialog>
-    # and the user dismisses the OS file dialog (Escape on native picker),
-    # the browser fires a cancel event on the ancestor <dialog>. The modal
-    # controller's cancel handler would previously close the whole modal.
-    # The fix: identity_picker_controller sets a _filePickerOpen flag while
-    # the picker is open, and its cancel handler suppresses the close event
-    # (preventDefault + stopImmediatePropagation) so the user returns to hub.
+    # activating the "Upload new" label forwards a click to its file input
+    # inside a <dialog>, and when the user dismisses the OS file dialog
+    # (Escape on native picker), the browser fires a cancel event on the
+    # ancestor <dialog>. The modal controller's cancel handler would
+    # previously close the whole modal. The fix: identity_picker_controller
+    # sets a _filePickerOpen flag while the picker is open, and its cancel
+    # handler suppresses the close event (preventDefault +
+    # stopImmediatePropagation) so the user returns to hub.
     it "keeps the modal open on hub when a cancel event fires during file picker" do
       # Force a fast modal close animation so the dialog[open] assertion below
       # reliably reflects "this didn't close" rather than "this hasn't finished
@@ -271,9 +287,10 @@ RSpec.describe "Account profile — identity picker", type: :system do
 
       open_identity_picker
 
-      # Simulate the state right after openFilePicker() has been called:
-      # flag is true, then a cancel event arrives on the dialog (as the browser
-      # fires when the OS file dialog is dismissed without a selection).
+      # Simulate the state right after the "Upload new" label's forwarded
+      # click has armed the flag: flag is true, then a cancel event arrives
+      # on the dialog (as the browser fires when the OS file dialog is
+      # dismissed without a selection).
       page.execute_script(<<~JS)
         const el = document.querySelector("[data-controller~='identity-picker']")
         const ctrl = window.Stimulus.getControllerForElementAndIdentifier(el, "identity-picker")
@@ -303,8 +320,6 @@ RSpec.describe "Account profile — identity picker", type: :system do
         })()
       JS
       expect(flag_cleared).to eq(true)
-
-      close_modal_before_axe_audit
     end
   end
 
@@ -340,6 +355,55 @@ RSpec.describe "Account profile — identity picker", type: :system do
       wait_for_hub_view
 
       expect(patch_count).to eq(1)
+    end
+  end
+
+  describe "keyboard access to the upload trigger" do
+    # The file input is a DOM sibling immediately after its label (#912 —
+    # focus order matches visual order), so Tab reaches it right after the
+    # crop footer's own buttons, and the ring paints on that label
+    # (application.css). This proves both the order and the paint.
+    it "reaches the crop input right after the crop footer buttons, with the focus ring on its label" do
+      open_identity_picker
+      upload_photo(avatar_fixture)
+
+      input_id = "#{ActionView::RecordIdentifier.dom_id(user)}-identity-picker-file-crop"
+      label_outline = lambda do
+        page.evaluate_script(<<~JS)
+          (() => {
+            const input = document.getElementById("#{input_id}");
+            const label = input && input.previousElementSibling;
+            return label ? getComputedStyle(label).outlineStyle : "no label";
+          })()
+        JS
+      end
+      expect(label_outline.call).to eq("none")
+
+      reached = false
+      previous_focus_tag = nil
+      previous_focus_text = nil
+      20.times do
+        previous_focus_tag = page.evaluate_script("document.activeElement.tagName")
+        previous_focus_text = page.evaluate_script("document.activeElement.textContent.trim()")
+        cdp_press("Tab")
+        if page.evaluate_script("document.activeElement.id") == input_id
+          reached = true
+          break
+        end
+      end
+      expect(reached).to be(true), "Tab never reached the crop file input"
+      # The label isn't tabbable (native labels aren't in the tab order), so
+      # the stop right before the input is the last focusable element ahead
+      # of it — the crop footer's own "Save crop" button.
+      expect(previous_focus_tag).to eq("BUTTON")
+      expect(previous_focus_text).to eq(I18n.t("identity_picker.save_crop"))
+      # Bounded poll for the paint, not a read-once. The flake #997 saw here
+      # was not paint lag: the picker's deferred focus move was landing after
+      # the Tab and taking focus back, which wait_for_crop_view now waits out.
+      Timeout.timeout(Capybara.default_max_wait_time) do
+        sleep 0.05 until label_outline.call == "solid"
+      end
+      expect(label_outline.call).to eq("solid")
     end
   end
 end

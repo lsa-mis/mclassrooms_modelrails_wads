@@ -12,7 +12,7 @@
 <% grouped.each do |category, notifications| -%>
 <% next if notifications.empty? -%>
 
-## <%= t("notifications.preferences.categories.#{category}", default: category.humanize) %>
+## <%= t("notifications.preferences.categories.#{category}") %>
 
 <% notifications.each do |notification| -%>
 - <%= notification.render_safe_or_placeholder { notification.message } %>

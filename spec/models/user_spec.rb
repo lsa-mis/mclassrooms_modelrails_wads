@@ -1,5 +1,6 @@
 require "rails_helper"
 
+# The core's examples; each trait's live beside it under spec/models/user/.
 RSpec.describe User, type: :model do
   describe "validations" do
     it "requires an email address" do
@@ -26,19 +27,20 @@ RSpec.describe User, type: :model do
       session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
       expect(user.sessions).to include(session)
     end
-  end
 
-  describe "personal workspace" do
-    it "creates a personal workspace on sign-up" do
+    # #931: #workspaces ran through every membership, so a removed member still
+    # reached the workspace through WorkspaceScoped and the switcher.
+    it "drops a workspace from #workspaces once the membership is deactivated" do
       user = create(:user)
-      expect(user.workspaces.count).to eq(1)
-      expect(user.workspaces.first.name).to include(user.first_name)
-    end
+      workspace = create(:workspace)
+      membership = create(:membership, user: user, workspace: workspace)
 
-    it "assigns owner role to personal workspace" do
-      user = create(:user)
-      membership = user.memberships.first
-      expect(membership.role.slug).to eq("owner")
+      expect(user.workspaces.reload).to include(workspace)
+
+      membership.deactivate!
+
+      expect(user.workspaces.reload).not_to include(workspace)
+      expect(user.memberships.reload).to include(membership)
     end
   end
 
@@ -92,284 +94,10 @@ RSpec.describe User, type: :model do
     end
   end
 
-  describe "password validations" do
-    it "requires minimum 12 characters" do
-      user = build(:user, password: "Short1!aaa")
-      expect(user).not_to be_valid
-      expect(user.errors[:password]).to be_present
-    end
-
-    it "accepts 12+ character password" do
-      user = build(:user, password: "ValidP@ssw0rd!")
-      expect(user).to be_valid
-    end
-  end
-
-  describe "Pwned API failure resilience" do
-    it "allows registration when Pwned API raises an error" do
-      pwned = instance_double(Pwned::Password)
-      allow(pwned).to receive(:pwned?).and_raise(Pwned::Error.new("timeout"))
-      allow(Pwned::Password).to receive(:new).and_return(pwned)
-
-      user = build(:user, password: "SecureP@ssw0rd123!")
-      expect(user).to be_valid
-    end
-  end
-
-  # #674: the range check is network I/O; run via precheck it happens OUTSIDE
-  # the write transaction and the validation consumes the memo instead of
-  # calling out again from inside BEGIN IMMEDIATE.
-  describe "#precheck_password_pwned!" do
-    let(:pwned) { instance_double(Pwned::Password) }
-
-    before { allow(Pwned::Password).to receive(:new).and_return(pwned) }
-
-    it "memoizes the result so validation does no second network call" do
-      allow(pwned).to receive(:pwned?).and_return(true)
-      user = build(:user, password: "SecureP@ssw0rd123!")
-      user.precheck_password_pwned!
-
-      expect(user).not_to be_valid
-      expect(user.errors[:password]).to be_present
-      expect(pwned).to have_received(:pwned?).once
-    end
-
-    it "re-checks live when the password changes after the precheck (no stale memo)" do
-      allow(pwned).to receive(:pwned?).and_return(true, false)
-      user = build(:user, password: "SecureP@ssw0rd123!")
-      user.precheck_password_pwned!
-      user.password = user.password_confirmation = "Different@Passw0rd!"
-
-      expect(user).to be_valid
-      expect(pwned).to have_received(:pwned?).twice
-    end
-
-    it "fails open when the precheck hits a Pwned::Error" do
-      allow(pwned).to receive(:pwned?).and_raise(Pwned::Error.new("timeout"))
-      user = build(:user, password: "SecureP@ssw0rd123!")
-      user.precheck_password_pwned!
-
-      expect(user).to be_valid
-      expect(pwned).to have_received(:pwned?).once
-    end
-  end
-
   describe "email normalization" do
     it "strips whitespace from email" do
       user = create(:user, email_address: "  test@example.com  ")
       expect(user.email_address).to eq("test@example.com")
-    end
-  end
-
-  describe "account locking" do
-    let(:user) { create(:user) }
-
-    it "locks after 5 failed attempts" do
-      5.times { user.register_failed_login! }
-      expect(user.reload).to be_locked
-    end
-
-    it "does not lock after 4 failed attempts" do
-      4.times { user.register_failed_login! }
-      expect(user.reload).not_to be_locked
-    end
-
-    it "auto-unlocks after 1 hour" do
-      user.update!(locked_at: 61.minutes.ago, failed_login_attempts: 5)
-      expect(user).not_to be_locked
-    end
-
-    it "resets failed attempts on successful login" do
-      3.times { user.register_failed_login! }
-      user.register_successful_login!
-      expect(user.reload.failed_login_attempts).to eq(0)
-    end
-  end
-
-  describe "avatar_source validation" do
-    it "allows 'upload' as avatar_source" do
-      user = build(:user, avatar_source: "upload")
-      user.valid?
-      expect(user.errors[:avatar_source]).to be_empty
-    end
-
-    it "allows 'gravatar' as avatar_source" do
-      user = build(:user, avatar_source: "gravatar")
-      user.valid?
-      expect(user.errors[:avatar_source]).to be_empty
-    end
-
-    it "allows 'initials' as avatar_source" do
-      user = build(:user, avatar_source: "initials")
-      user.valid?
-      expect(user.errors[:avatar_source]).to be_empty
-    end
-
-    it "rejects invalid avatar_source" do
-      user = build(:user, avatar_source: "invalid")
-      expect(user).not_to be_valid
-      expect(user.errors[:avatar_source]).to be_present
-    end
-  end
-
-  describe "#gravatar_url" do
-    it "generates a SHA256-based Gravatar URL" do
-      user = build(:user, email_address: "test@example.com")
-      hash = Digest::SHA256.hexdigest("test@example.com")
-      expect(user.gravatar_url).to eq("https://www.gravatar.com/avatar/#{hash}?s=128&d=404")
-    end
-
-    it "accepts a custom size" do
-      user = build(:user, email_address: "test@example.com")
-      expect(user.gravatar_url(size: 64)).to include("s=64")
-    end
-
-    it "normalizes email before hashing" do
-      user = build(:user, email_address: "Test@Example.COM")
-      hash = Digest::SHA256.hexdigest("test@example.com")
-      expect(user.gravatar_url).to include(hash)
-    end
-
-    it "returns nil when email is blank" do
-      user = build(:user)
-      allow(user).to receive(:email_address).and_return(nil)
-      expect(user.gravatar_url).to be_nil
-    end
-  end
-
-  describe "avatar_original" do
-    it "supports avatar_original attachment" do
-      user = create(:user)
-      user.avatar_original.attach(
-        io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
-        filename: "original.png",
-        content_type: "image/png"
-      )
-      expect(user.avatar_original).to be_attached
-    end
-  end
-
-  describe "avatar_original attachment" do
-    it "rejects non-image content types" do
-      user = create(:user)
-      user.avatar_original.attach(
-        io: StringIO.new("not an image"),
-        filename: "doc.pdf",
-        content_type: "application/pdf"
-      )
-      expect(user).not_to be_valid
-      expect(user.errors[:avatar_original]).to be_present
-    end
-
-    it "rejects files over 10MB" do
-      user = create(:user)
-      user.avatar_original.attach(
-        io: StringIO.new("x" * 11.megabytes),
-        filename: "huge.png",
-        content_type: "image/png"
-      )
-      expect(user).not_to be_valid
-      expect(user.errors[:avatar_original]).to be_present
-    end
-  end
-
-  describe "#available_avatar_sources" do
-    it "always includes upload" do
-      user = create(:user)
-      expect(user.available_avatar_sources).to include("upload")
-    end
-
-    it "always includes initials" do
-      user = create(:user)
-      expect(user.available_avatar_sources).to include("initials")
-    end
-
-    it "includes gravatar when user has gravatar" do
-      user = create(:user)
-      user.update_columns(has_gravatar: true)
-      expect(user.available_avatar_sources).to include("gravatar")
-    end
-
-    it "excludes gravatar when user has no gravatar" do
-      user = create(:user)
-      user.update_columns(has_gravatar: false)
-      expect(user.available_avatar_sources).not_to include("gravatar")
-    end
-  end
-
-  describe "avatar Active Storage validations" do
-    # HEIC/HEIF included: it is the iPhone camera default, so rejecting it
-    # bounces the most common source of an avatar upload. Safe to accept — the
-    # active_storage initializer records that both load and transform under
-    # Vips.block_untrusted(true) after CVE-2026-66066, and Rails converts the
-    # variant to PNG automatically because they are not web_image_content_types.
-    it "accepts valid image content types" do
-      user = create(:user)
-      %w[image/png image/jpeg image/gif image/webp image/heic image/heif].each do |content_type|
-        user.avatar.attach(io: StringIO.new("fake"), filename: "test.png", content_type: content_type)
-        user.valid?
-        expect(user.errors[:avatar]).to be_empty, "Expected #{content_type} to be valid"
-      end
-    end
-
-    it "rejects invalid content types" do
-      user = create(:user)
-      user.avatar.attach(io: StringIO.new("fake"), filename: "test.txt", content_type: "text/plain")
-      expect(user).not_to be_valid
-      expect(user.errors[:avatar]).to be_present
-    end
-
-    it "rejects files over 5MB" do
-      user = create(:user)
-      large_io = StringIO.new("x" * 6.megabytes)
-      user.avatar.attach(io: large_io, filename: "big.png", content_type: "image/png")
-      expect(user).not_to be_valid
-      expect(user.errors[:avatar]).to be_present
-    end
-  end
-
-  describe "Gravatar check callbacks" do
-    it "enqueues CheckGravatarJob after create" do
-      expect {
-        create(:user)
-      }.to have_enqueued_job(CheckGravatarJob)
-    end
-
-    it "enqueues CheckGravatarJob after email change" do
-      user = create(:user)
-      expect {
-        user.update!(email_address: "newemail#{SecureRandom.hex(4)}@example.com")
-      }.to have_enqueued_job(CheckGravatarJob)
-    end
-
-    it "does not enqueue CheckGravatarJob when email does not change" do
-      user = create(:user)
-      expect {
-        user.update!(first_name: "Updated")
-      }.not_to have_enqueued_job(CheckGravatarJob)
-    end
-  end
-
-  describe "primary_color" do
-    it "defaults to 210" do
-      user = create(:user)
-      expect(user.primary_color).to eq(210)
-    end
-
-    it "validates inclusion in 0..360" do
-      user = build(:user, primary_color: 180)
-      expect(user).to be_valid
-
-      user.primary_color = -1
-      expect(user).not_to be_valid
-
-      user.primary_color = 361
-      expect(user).not_to be_valid
-    end
-
-    it "allows nil" do
-      user = build(:user, primary_color: nil)
-      expect(user).to be_valid
     end
   end
 
@@ -412,162 +140,6 @@ RSpec.describe User, type: :model do
     end
   end
 
-  describe "#personal_workspace" do
-    let(:user) { create(:user) }
-
-    it "returns the workspace pointed to by personal_workspace_id" do
-      expect(user.personal_workspace).to eq(Workspace.find(user.personal_workspace_id))
-    end
-
-    it "returns nil if the personal workspace has been soft-deleted" do
-      # discard! now raises HomeWorkspaceProtectedError for a personal workspace, so set
-      # the tombstone directly — this exercises the defensive nil-return for a
-      # legacy/console-discarded personal workspace row, which is the case this
-      # guard is here to survive.
-      user.personal_workspace.update_column(:discarded_at, Time.current)
-      expect(user.personal_workspace).to be_nil
-    end
-
-    it "returns nil if personal_workspace_id is unset" do
-      user.update_column(:personal_workspace_id, nil)
-      expect(user.personal_workspace).to be_nil
-    end
-  end
-
-  describe "#create_personal_workspace (idempotency + uniqueness)" do
-    let(:user) { create(:user) }
-
-    it "is idempotent when called a second time on the same user" do
-      original_id = user.personal_workspace_id
-      expect(original_id).to be_present
-
-      expect { user.send(:create_personal_workspace) }
-        .not_to change { user.reload.personal_workspace_id }
-      expect(user.personal_workspace_id).to eq(original_id)
-    end
-
-    it "enforces uniqueness at the database level" do
-      other_user = create(:user)
-      # Try to point two users at the same personal workspace — the partial
-      # unique index on personal_workspace_id (where IS NOT NULL) must reject.
-      expect {
-        other_user.update_column(:personal_workspace_id, user.personal_workspace_id)
-      }.to raise_error(ActiveRecord::RecordNotUnique)
-    end
-  end
-
-  describe "#onboard_workspace under :shared posture" do
-    let!(:shared_workspace) { create(:workspace, slug: "acme", name: "Acme", personal: false) }
-
-    before do
-      allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
-      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared_workspace.slug)
-    end
-
-    it "joins the configured shared workspace instead of creating a personal one" do
-      user = create(:user)
-
-      expect(user.personal_workspace_id).to be_nil
-      expect(user.workspaces).to contain_exactly(shared_workspace)
-    end
-
-    it "joins as a Member (not Owner)" do
-      user = create(:user)
-
-      membership = shared_workspace.memberships.find_by!(user: user)
-      expect(membership.role.slug).to eq("member")
-    end
-
-    it "raises when the configured shared workspace doesn't exist" do
-      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return("missing")
-
-      expect { create(:user) }.to raise_error(/shared workspace/i)
-    end
-
-    it "creates the account but joins no membership when the shared workspace is suspended" do
-      shared_workspace.suspend!
-
-      user = nil
-      expect {
-        user = create(:user)
-      }.to change(User, :count).by(1)
-
-      expect(shared_workspace.memberships.where(user: user)).to be_empty
-    end
-  end
-
-  # MClassrooms Task 4: the shared-preset join role is a fork-configurable
-  # knob (TenancyConfig.shared_join_role / config.x.tenancy.shared_join_role,
-  # env TENANCY_SHARED_JOIN_ROLE) rather than the template's hardcoded
-  # "member". MClassrooms overrides it to "viewer" (empty-permissions,
-  # any-authenticated-U-M-user tier) so every new signup lands read-only in
-  # the single shared `mclassrooms` workspace until an admin promotes them.
-  describe "#onboard_workspace under :shared posture with MClassrooms' configured join role" do
-    let!(:shared_workspace) { create(:workspace, slug: "mclassrooms", name: "MClassrooms", personal: false) }
-
-    before do
-      allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
-      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared_workspace.slug)
-      allow(Rails.configuration.x.tenancy).to receive(:shared_join_role).and_return("viewer")
-      allow(Rails.configuration.x.tenancy).to receive(:workspace_creation).and_return(:disabled)
-    end
-
-    it "joins the mclassrooms workspace as Viewer, with exactly one membership and no personal workspace" do
-      user = create(:user)
-
-      expect(user.personal_workspace_id).to be_nil
-      expect(user.memberships.count).to eq(1)
-
-      membership = shared_workspace.memberships.find_by!(user: user)
-      expect(membership.role.slug).to eq("viewer")
-      expect(membership.role.name).to eq("Viewer")
-      expect(membership.role.permissions).to eq({})
-    end
-
-    it "reports workspace creation as disabled under this posture" do
-      expect(TenancyConfig).not_to be_workspace_creation_enabled
-    end
-  end
-
-  describe "#onboard_workspace under :none posture" do
-    before do
-      allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:none)
-    end
-
-    it "creates no workspace on sign-up" do
-      user = create(:user)
-      expect(user.workspaces).to be_empty
-      expect(user.memberships).to be_empty
-    end
-
-    it "assigns no personal_workspace_id" do
-      user = create(:user)
-      expect(user.personal_workspace_id).to be_nil
-      expect(user.personal_workspace).to be_nil
-    end
-
-    it "dispatches to an explicit no-op (does not call create_personal_workspace)" do
-      expect_any_instance_of(User).not_to receive(:create_personal_workspace)
-      expect_any_instance_of(User).not_to receive(:join_shared_workspace)
-      create(:user)
-    end
-  end
-
-  describe "factory trait :with_zero_workspaces" do
-    it "builds a user with no workspaces and no personal_workspace_id" do
-      user = create(:user, :with_zero_workspaces)
-      expect(user.workspaces).to be_empty
-      expect(user.memberships).to be_empty
-      expect(user.personal_workspace_id).to be_nil
-    end
-
-    it "still produces a persisted, valid user" do
-      user = create(:user, :with_zero_workspaces)
-      expect(user).to be_persisted
-      expect(user).to be_valid
-    end
-  end
-
   describe "#email_verification_pending?" do
     it "is true when the email authentication is unverified" do
       user = create(:user, :unverified_email)
@@ -586,50 +158,6 @@ RSpec.describe User, type: :model do
     end
   end
 
-  describe "#onboarded?" do
-    it "is false when onboarded_at is nil" do
-      expect(build(:user, onboarded_at: nil).onboarded?).to be(false)
-    end
-
-    it "is true when onboarded_at is set" do
-      expect(build(:user, onboarded_at: Time.current).onboarded?).to be(true)
-    end
-  end
-
-  describe "onboarding step derivation (:none wizard)" do
-    let(:owner_role) do
-      Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-        r.name = "Owner"
-        r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-      end
-    end
-
-    def join(user, workspace)
-      workspace.memberships.create!(user: user, role: owner_role)
-      user.reload
-    end
-
-    it "#onboarding_workspace returns the first kept workspace, or nil when there is none" do
-      user = create(:user, :with_zero_workspaces)
-      expect(user.onboarding_workspace).to be_nil
-
-      workspace = create(:workspace)
-      join(user, workspace)
-      expect(user.onboarding_workspace).to eq(workspace)
-    end
-
-    it "#onboarding_step is :workspace when the user has no workspace" do
-      user = create(:user, :with_zero_workspaces)
-      expect(user.onboarding_step).to eq(:workspace)
-    end
-
-    it "#onboarding_step is still :workspace once the user has one (the wizard is single-step)" do
-      user = create(:user, :with_zero_workspaces)
-      join(user, create(:workspace))
-      expect(user.onboarding_step).to eq(:workspace)
-    end
-  end
-
   describe "#webauthn_handle!" do
     it "lazily generates a stable opaque handle" do
       user = create(:user)
@@ -639,76 +167,43 @@ RSpec.describe User, type: :model do
     end
   end
 
-  describe "password digest audit trail" do
-    let(:user) { create(:user, password: "0riginal-Passw0rd!") }
+  describe "#destroy with invitation history (T23, #816)" do
+    it "destroys sent invitations and blocks, and detaches accepted ones" do
+      user = create(:user)
+      workspace = create(:workspace)
+      sent = create(:invitation, invitable: workspace, invited_by: user)
+      create(:invitation_block, inviter: user, email: "b@example.com")
+      accepted = create(:invitation, invitable: create(:workspace), invited_by: create(:user))
+      accepted.accept!(user)
 
-    it "writes user.password_changed in the same transaction as the digest write" do
-      expect {
-        user.update!(password: "n3w-Sekure-Passw0rd!")
-      }.to change { ActivityLog.where(action: "user.password_changed", trackable: user, visibility: "personal").count }.by(1)
+      expect { user.destroy! }.to change(Invitation, :count).by(-1)
+      expect(InvitationBlock.where(inviter_id: user.id)).to be_empty
+      expect(accepted.reload.accepted_by_id).to be_nil
+      expect(Invitation.exists?(sent.id)).to be(false)
+    end
+  end
+
+  describe "#destroy" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    # Three deliveries, each in its own idempotency minute-bucket so noticed
+    # does not dedup them into one row.
+    def deliver_three_to(user)
+      3.times do |i|
+        travel_to(Time.current + (i + 1).minutes) do
+          PasswordChangedNotifier.with(record: user).deliver(user)
+        end
+      end
+      expect(user.notifications.count).to eq(3)
     end
 
-    it "writes user.password_removed when the digest is cleared" do
-      expect {
-        user.update!(password_digest: nil)
-      }.to change { ActivityLog.where(action: "user.password_removed", trackable: user).count }.by(1)
-    end
+    it "removes the user's notification rows with a single DELETE (#817)" do
+      user = create(:user)
+      deliver_three_to(user)
 
-    it "writes exactly one user.password_changed row on the first password set (passwordless -> password)" do
-      passwordless_user = create(:user, password: nil)
-      expect {
-        passwordless_user.update!(password: "First-Setup-Pass1!")
-      }.to change {
-        ActivityLog.where(action: "user.password_changed", trackable: passwordless_user, visibility: "personal").count
-      }.by(1)
-    end
+      queries = count_queries_touching("noticed_notifications") { user.destroy! }
 
-    it "rolls back the credential write when the audit write fails (strict tier)" do
-      # Ruling R7: materialize `user` BEFORE installing the stub. If the stub
-      # were live already, the lazy `let(:user)` would create the user under
-      # it — onboard_workspace drives audit writes through other paths, and
-      # this example would pass for the wrong reason instead of proving the
-      # rollback.
-      original_digest = user.password_digest
-      allow(ActivityLog).to receive(:create!).and_raise(ActiveRecord::StatementInvalid, "boom")
-      expect { user.update!(password: "n3w-Sekure-Passw0rd!") }.to raise_error(ActiveRecord::StatementInvalid)
-      expect(user.reload.password_digest).to eq(original_digest)
-    end
-
-    # The controller-level guard for the concurrent double-submit: a second
-    # request holding a stale in-memory digest would otherwise issue its own
-    # UPDATE, satisfy saved_change_to_password_digest?, and write a second
-    # removal row (#826). remove_password! re-reads inside the transaction,
-    # where the write lock is already held, so the read is current.
-    it "writes one removal row when two separately-loaded instances both remove" do
-      user # Ruling R7: materialize before the count block.
-      first = User.find(user.id)
-      second = User.find(user.id)
-
-      expect {
-        first.remove_password!
-        second.remove_password!
-      }.to change { ActivityLog.where(action: "user.password_removed").count }.by(1)
-    end
-
-    it "reports whether it won the removal" do
-      user
-      first = User.find(user.id)
-      second = User.find(user.id)
-
-      expect(first.remove_password!).to be(true)
-      expect(second.remove_password!).to be(false)
-    end
-
-    it "runs the caller's block inside the same transaction as the removal" do
-      user
-      observed = nil
-      user.remove_password! { observed = User.find(user.id).password_digest }
-
-      # The block sees the cleared digest, so it is inside the transaction
-      # rather than after it — which is what keeps session revocation atomic
-      # with the credential teardown.
-      expect(observed).to be_nil
+      expect(queries).to eq(1)
     end
   end
 end

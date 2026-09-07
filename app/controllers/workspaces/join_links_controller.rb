@@ -6,15 +6,18 @@ module Workspaces
     #
     # Atomically rotates: revokes any existing active link + creates a new one.
     # "Rotate" and "Generate" are the same operation — every successful create
-    # leaves exactly one active link. The revoke-then-create ordering and the
-    # IMMEDIATE transaction (which serializes concurrent rotates on SQLite) keep
-    # the invariant; a partial unique index enforces it at the DB level too.
+    # leaves exactly one active link. Revokes every unrevoked link, expired or
+    # not, because the unique index keys on `revoked_at IS NULL` — an
+    # expired-but-unrevoked row would otherwise collide with the fresh insert.
+    # The revoke-then-create ordering and the IMMEDIATE transaction (which
+    # serializes concurrent rotates on SQLite) keep the invariant; the partial
+    # unique index enforces it at the DB level too.
     def create
       authorize WorkspaceJoinLink
 
       link = nil
       Workspace.transaction do
-        @workspace.join_links.active.find_each(&:revoke!)
+        @workspace.join_links.current.find_each(&:revoke!)
         link = @workspace.join_links.create!(created_by: Current.user)
       end
 

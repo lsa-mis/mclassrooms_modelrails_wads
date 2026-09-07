@@ -677,20 +677,34 @@ RSpec.describe "Template invariants" do
     let(:queue_yml_raw) { File.read(root.join("config/queue.yml")) }
     let(:recurring_yml_raw) { File.read(root.join("config/recurring.yml")) }
 
-    it "servers.web declares max-replicas: 1 (SQLite is single-writer, single-host)" do
-      web_options = deploy_yml.dig("servers", "web", "options") || {}
-      expect(web_options["max-replicas"]).to eq(1),
-        "expected `servers.web.options.max-replicas: 1` so Kamal stops the old container " \
-        "before starting the new one. Two containers writing to the same SQLite file is " \
-        "corruption territory. (Donal McBreen)"
+    # A structural assertion on a key name proves the key is spelled the way
+    # the spec expects, not that the tool accepts it: `stop_wait_time` and a
+    # `max-replicas` docker option shipped for months while `kamal config`
+    # rejected the file before touching a host. Kamal's own loader is the check.
+    it "config/deploy.yml is accepted by the installed Kamal's own configuration loader" do
+      require "kamal"
+      expect {
+        Kamal::Configuration.create_from(config_file: root.join("config/deploy.yml"), version: "spec")
+      }.not_to raise_error
     end
 
-    it "deploy.yml sets stop_wait_time so Solid Queue can drain gracefully on deploy" do
-      expect(deploy_yml).to have_key("stop_wait_time"),
-        "expected `stop_wait_time` at top level of deploy.yml. Default Kamal 30s isn't " \
-        "enough for Solid Queue's on_worker_shutdown to drain in-flight jobs. (Rosa Gutiérrez)"
-      expect(deploy_yml["stop_wait_time"]).to be >= 45,
-        "expected stop_wait_time >= 45s for SK drain (got #{deploy_yml['stop_wait_time']})"
+    it "servers.web is a single host with no docker options Docker rejects (SQLite is single-writer, single-host)" do
+      web = deploy_yml.dig("servers", "web") || {}
+      expect(Array(web["hosts"]).length).to eq(1),
+        "expected exactly one web host — SQLite lives on one machine; scale out only after " \
+        "graduating to a networked database. (Donal McBreen)"
+      expect(web.dig("options", "max-replicas")).to be_nil,
+        "`max-replicas` is not a `docker run` flag; Kamal passes servers.*.options verbatim to " \
+        "`docker run`, so the deploy fails at container start"
+    end
+
+    it "deploy.yml sets stop_timeout so Solid Queue can drain gracefully on deploy" do
+      expect(deploy_yml).to have_key("stop_timeout"),
+        "expected `stop_timeout` at top level of deploy.yml: Docker's SIGTERM→SIGKILL grace for a " \
+        "proxied role defaults to 10s, not enough for Solid Queue's on_worker_shutdown to drain " \
+        "in-flight jobs. (Rosa Gutiérrez)"
+      expect(deploy_yml["stop_timeout"]).to be >= 45,
+        "expected stop_timeout >= 45s for SK drain (got #{deploy_yml['stop_timeout']})"
     end
 
     it "deploy.yml documents the SOLID_QUEUE_IN_PUMA graduation checklist for forkers" do
@@ -774,14 +788,14 @@ RSpec.describe "Template invariants" do
         "(not just deploy.yml comments they only read mid-deploy)"
 
       content = File.read(deployment_doc_path)
-      expect(content).to match(/max-replicas/i),
-        "expected deployment.md to explain max-replicas: 1 SQLite constraint"
+      expect(content).to match(/exactly one host/i),
+        "expected deployment.md to explain the single-host SQLite constraint"
       expect(content).to match(/SOLID_QUEUE_IN_PUMA/),
         "expected deployment.md to document SOLID_QUEUE_IN_PUMA topology + graduation"
       expect(content).to match(/[Gg]raduation/),
         "expected deployment.md to spell out the graduation path from SQLite/Puma defaults"
-      expect(content).to match(/stop_wait_time/),
-        "expected deployment.md to explain stop_wait_time tuning for Solid Queue drain"
+      expect(content).to match(/stop_timeout/),
+        "expected deployment.md to explain stop_timeout tuning for Solid Queue drain"
     end
 
     it "app/docs/developer/background-jobs.md exists and documents Solid Queue topology" do
@@ -1083,7 +1097,7 @@ RSpec.describe "Template invariants" do
       app_routes_path = Rails.root.join("config/routes/app.rb")
       expect(File.exist?(app_routes_path)).to be(true),
         "expected config/routes/app.rb — the fork-owned home of product routes (see /docs/developer/forking)"
-      expect(File.read(app_routes_path)).to include('root "pages#home"'),
+      expect(File.read(app_routes_path)).to match(/^root /),
         "expected the root route in config/routes/app.rb — it moved there from config/routes.rb (see /docs/developer/forking)"
     end
 
@@ -1095,6 +1109,7 @@ RSpec.describe "Template invariants" do
         config/locales/en/pages.en.yml
         config/locales/en/brand.en.yml
         config/routes/app.rb
+        .rubocop/app.yml
         config/markdowndocs_categories.local.yml
         app/assets/tailwind/tokens/_brand.css
         README.md

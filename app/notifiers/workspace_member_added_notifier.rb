@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-# Fires when a Membership is created. Dual recipients: the added user gets
-# in-app + email; workspace owners (excluding the added user) get in-app only,
-# with the digest pipeline as their intended email fallback.
+# Fires when a Membership is created or a removed member is re-admitted. Dual
+# recipients: the added user gets in-app + email; workspace owners (excluding
+# the added user) get in-app only, with the digest pipeline as their intended
+# email fallback.
 # See /docs/developer/notifications (Notifier subclasses).
 class WorkspaceMemberAddedNotifier < ApplicationNotifier
   category :workspace_activity
@@ -12,11 +13,18 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
   recipients do
     added_user = record.user
 
+    # Nobody is notified about their own action (the 37signals rule). The
+    # actor rides as a PARAM, never off `record.granted_by`: that
+    # attr_accessor is non-persisted, so an exclusion keyed on it would
+    # exclude nobody the moment recipient resolution stopped reading the
+    # in-memory record — silently, with no failing test.
+    #
     # Owner resolution delegates to the canonical `Workspace#owners` helper;
     # `[added_user] + ...` plus `.uniq` handles the "added user is already an
     # owner" dedup case. `permitted_in_app` (ApplicationNotifier) preloads
     # :preferences and gates on the declared category's in_app preference.
-    permitted_in_app(([ added_user ] + record.workspace.owners).compact.uniq)
+    candidates = ([ added_user ] + record.workspace.owners).compact.uniq - [ params[:actor] ].compact
+    permitted_in_app(candidates)
   end
 
   # Email is gated to only the added user, AND only when their workspace_activity.email
@@ -49,7 +57,9 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
     end
 
     def url
-      Rails.application.routes.url_helpers.workspace_path(event.record.workspace)
+      render_safe_or_placeholder do
+        Rails.application.routes.url_helpers.workspace_path(present_or_gone!(event.record.workspace))
+      end
     end
   end
 end

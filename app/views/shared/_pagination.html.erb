@@ -5,9 +5,8 @@
       <%= t("pagination.showing",
             from: pagy.from,
             to: pagy.to,
-            count: pagy.count,
-            default: "Showing %{from} to %{to} of %{count} results") %>
+            count: pagy.count) %>
     </p>
-    <%== pagy.series_nav(aria_label: t("pagination.aria_label", default: "Pages")) %>
+    <%== pagy.series_nav(aria_label: t("pagination.aria_label")) %>
   </div>
 <% end %>

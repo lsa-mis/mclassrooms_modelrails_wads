@@ -16,8 +16,14 @@ RSpec.describe "shared/_confirm_dialog", type: :view do
   describe "structure" do
     before { render_dialog }
 
-    it "renders inside a modal" do
-      expect(rendered).to have_css("dialog[role='dialog']")
+    # A <dialog> opens with focus on its first focusable element (the header's
+    # Close button) and the screen reader announces the dialog's name AND
+    # description at that moment. Without aria-describedby the message is
+    # never announced — the user hears "Delete Item, dialog. Close, button."
+    it "renders as an alert dialog whose accessible description is the message" do
+      expect(rendered).to have_css("dialog[role='alertdialog'][aria-describedby]")
+      dialog = Capybara.string(rendered).find("dialog")
+      expect(rendered).to have_css("##{dialog['aria-describedby']}", text: "This cannot be undone.")
     end
 
     it "shows the title" do
@@ -78,9 +84,11 @@ RSpec.describe "shared/_confirm_dialog", type: :view do
       expect(rendered).to have_css("dialog#delete-confirm")
     end
 
-    it "uses small modal size" do
+    # An alertdialog is capped at max-w-md by UI::DialogComponent regardless of
+    # size: — the role owns the width, so the partial passes no size.
+    it "renders at the component's alertdialog width" do
       render_dialog
-      expect(rendered).to have_css("[data-modal-target='panel'].max-w-sm")
+      expect(rendered).to have_css("[data-modal-target='panel'].max-w-md")
     end
   end
 

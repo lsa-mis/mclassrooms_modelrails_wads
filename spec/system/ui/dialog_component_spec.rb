@@ -21,12 +21,14 @@ RSpec.describe "Dialog component accessibility", type: :system do
 
   # Real-modal scenarios. `dont_no_title` is the teaching anti-pattern (no
   # aria-labelledby target) — not audited here.
-  %w[basic with_form confirm_destructive].each do |scenario|
+  # confirm_destructive renders shared/confirm_dialog, which is an alertdialog
+  # (the message is its accessible description); the other two are plain dialogs.
+  { "basic" => "dialog", "with_form" => "dialog", "confirm_destructive" => "alertdialog" }.each do |scenario, role|
     it "#{scenario}: opens a modal that passes AAA in both themes" do
       visit "/rails/view_components/ui/dialog_component/#{scenario}"
 
       # Closed in the DOM until opened — full ARIA scaffolding present either way.
-      expect(page).to have_css("dialog[role='dialog'][aria-modal='true']", visible: :all)
+      expect(page).to have_css("dialog[role='#{role}'][aria-modal='true']", visible: :all)
 
       open_modal
 

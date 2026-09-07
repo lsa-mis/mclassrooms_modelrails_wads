@@ -107,4 +107,22 @@ end
 
 RSpec.configure do |config|
   config.include CdpHelpers, type: :system
+
+  # The computed accessibility tree for one DOM node, as Chrome hands it to
+  # assistive technology: role, name, and properties such as focused and live
+  # (#758). Deterministic where a screen reader's choice of words is not.
+  # Ferrum wraps no Accessibility domain, so these are raw CDP commands.
+  def ax_node_for(selector)
+    cdp_command("Accessibility.enable")
+    node = cdp_browser.at_css(selector) or raise ArgumentError, "no DOM node for #{selector}"
+    cdp_command("Accessibility.getPartialAXTree", nodeId: node.node_id, fetchRelatives: false).fetch("nodes").first
+  end
+
+  def ax_role(selector) = ax_node_for(selector).dig("role", "value")
+
+  def ax_name(selector) = ax_node_for(selector).dig("name", "value")
+
+  def ax_property(selector, name)
+    ax_node_for(selector).fetch("properties", []).find { |prop| prop["name"] == name }&.dig("value", "value")
+  end
 end

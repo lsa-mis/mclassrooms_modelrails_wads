@@ -33,7 +33,7 @@ class AuthenticationMailer < ApplicationMailer
   def link_verification_email(authentication)
     @user = authentication.user
     @authentication = authentication
-    @verify_url = verify_settings_connected_accounts_url(token: authentication.generate_token_for(:email_verification))
+    @verify_url = settings_connected_account_verification_url(token: authentication.generate_token_for(:email_verification))
     @app_name = t("application.name")
     @provider_name = authentication.display_provider
 

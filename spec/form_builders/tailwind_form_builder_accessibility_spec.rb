@@ -263,7 +263,7 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility", type: :component d
     it "is a focused, autofocused live region with links to each field" do
       user.errors.add(:first_name, "can't be blank")
       result = parse(builder.error_summary)
-      expect(result).to have_css("div[role='alert'][tabindex='-1'][autofocus]")
+      expect(result).to have_css("div[data-slot='error-summary'][tabindex='-1'][autofocus] div[role='alert']")
       expect(result).to have_css("li a[href='#user_first_name']")
     end
 

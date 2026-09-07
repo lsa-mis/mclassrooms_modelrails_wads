@@ -73,3 +73,11 @@ primitive directly when you're outside a form or building something custom.
 | `error_summary` | announcing every validation error together, focused on submit (`f.error_summary`) | the field-level error paragraph alone |
 
 <%= embed UI::FormFieldComponentPreview %>
+
+## Values to take with you
+
+| Component | Reach for it when                                                                              | Otherwise →        |
+|-----------|--------------------------------------------------------------------------------------------------|--------------------|
+| `copy`    | a readonly value the user needs to paste elsewhere — a share link, a token, an ID — with an announced copied/failed confirmation | `input` (editable) |
+
+<%= embed UI::CopyComponentPreview %>

@@ -27,6 +27,25 @@ RSpec.describe "PendingJoins", type: :request do
       expect(session[:pending_join_token]).to be_nil
     end
 
+    # Accepting a parked join is still a self-join: the user is the actor, so
+    # member-added goes to the owner only and WorkspaceJoinedNotifier orients
+    # the joiner.
+    it "leaves the joiner out of member-added, notifies the owner, and orients the joiner" do
+      owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+      owner = create(:user)
+      workspace.memberships.create!(user: owner, role: owner_role)
+      Noticed::Notification.delete_all
+
+      post pending_join_path
+
+      member_added = Noticed::Notification
+        .where(type: "WorkspaceMemberAddedNotifier::Notification").map(&:recipient)
+      expect(member_added).to contain_exactly(owner)
+      expect(
+        Noticed::Notification.where(recipient: user, type: "WorkspaceJoinedNotifier::Notification").count
+      ).to eq 1
+    end
+
     it "reports the join as unavailable when the link was revoked in the meantime" do
       link.revoke!
 
@@ -35,6 +54,16 @@ RSpec.describe "PendingJoins", type: :request do
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq(I18n.t("pending_joins.create.unavailable"))
       expect(user.memberships.kept.where(workspace: workspace)).not_to exist
+    end
+
+    it "reports the join as unavailable when the parked link expired in the meantime (#952)" do
+      travel_to 8.days.from_now do
+        post pending_join_path
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("pending_joins.create.unavailable"))
+        expect(user.memberships.kept.where(workspace: workspace)).not_to exist
+      end
     end
 
     it "reports a generic failure when the workspace is at capacity" do

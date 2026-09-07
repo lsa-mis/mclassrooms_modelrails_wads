@@ -14,24 +14,24 @@
       hidden: !revealed,
       class: "mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning-border bg-warning-surface px-4 py-3" do %>
   <p class="font-medium text-warning">
-    <%= t("form_draft.notice", default: "You have an unsaved draft of this form.") %>
+    <%= t("form_draft.notice") %>
   </p>
   <div class="flex flex-wrap gap-2">
     <button type="button" class="btn-secondary focus-ring"
             data-action="form-draft#recover">
-      <%= t("form_draft.recover", default: "Recover draft") %>
+      <%= t("form_draft.recover") %>
     </button>
     <button type="button" class="btn-secondary focus-ring"
             data-action="form-draft#discard">
-      <%= t("form_draft.discard", default: "Discard draft") %>
+      <%= t("form_draft.discard") %>
     </button>
   </div>
 <% end %>
 <div data-form-draft-target="status"
      role="status" aria-live="polite" aria-atomic="true" class="sr-only"
-     data-found-text="<%= t("form_draft.found", default: "Recoverable draft found. Recover and Discard buttons are before the form fields.") %>"
-     data-restored-one-text="<%= t("form_draft.restored_one", default: "Draft restored. 1 field updated.") %>"
-     data-restored-other-text="<%= t("form_draft.restored_other", default: "Draft restored. %{count} fields updated.") %>"
-     data-restored-partial-text="<%= t("form_draft.restored_partial", default: "Draft restored. %{count} fields updated. Rich text content was not restored and remains saved.") %>"
-     data-restored-none-text="<%= t("form_draft.restored_none", default: "Draft not restored — its content needs the rich text editor, which does not support draft recovery yet.") %>"
-     data-discarded-text="<%= t("form_draft.discarded", default: "Draft discarded.") %>"></div>
+     data-found-text="<%= t("form_draft.found") %>"
+     data-restored-one-text="<%= t("form_draft.restored_one") %>"
+     data-restored-other-text="<%= t("form_draft.restored_other") %>"
+     data-restored-partial-text="<%= t("form_draft.restored_partial") %>"
+     data-restored-none-text="<%= t("form_draft.restored_none") %>"
+     data-discarded-text="<%= t("form_draft.discarded") %>"></div>

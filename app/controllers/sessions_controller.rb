@@ -1,8 +1,8 @@
 class SessionsController < ApplicationController
-  allow_unauthenticated_access only: %i[new create lookup password_form]
+  allow_unauthenticated_access only: %i[new create]
   skip_onboarding_requirement only: :destroy
   require_unauthenticated_access only: :new
-  rate_limit to: 10, within: 3.minutes, only: [ :create, :lookup ], with: -> { redirect_to new_session_path, alert: t("sessions.create.rate_limited") }
+  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to new_session_path, alert: t("sessions.create.rate_limited") }
 
   def new
   end
@@ -25,37 +25,6 @@ class SessionsController < ApplicationController
     end
   end
 
-  def lookup
-    @email_lookup_form = EmailLookupForm.new(email_address: lookup_email_address)
-
-    unless @email_lookup_form.valid?
-      render :email_error
-      return
-    end
-
-    email = EmailNormalizer.normalize(@email_lookup_form.email_address)
-    user = User.find_by(email_address: email)
-
-    if user
-      deliver_magic_link(user.email_address)
-      @email_address = email
-      @has_password = user.has_password?
-      render :check_email
-    else
-      unless signups_open?
-        render :closed, status: :unprocessable_entity
-        return
-      end
-      deliver_magic_link(email, registration: true)
-      @email_address = email
-      render :check_email
-    end
-  end
-
-  def password_form
-    @email_address = params[:email_address]
-  end
-
   def destroy
     okta_id_token = session.delete(:okta_id_token)
     terminate_session
@@ -68,10 +37,6 @@ class SessionsController < ApplicationController
   end
 
   private
-
-  def lookup_email_address
-    params[:email_address].presence || params.dig(:email_lookup_form, :email_address)
-  end
 
   # RP-initiated logout (Task 6, D4): when the session being torn down
   # originated from an Okta sign-in (OmniauthCallbacksController stashed the
@@ -88,24 +53,5 @@ class SessionsController < ApplicationController
   def okta_end_session_url(id_token)
     query = { id_token_hint: id_token, post_logout_redirect_uri: new_session_url }.to_query
     "#{AuthConfig.okta_issuer.to_s.chomp('/')}/v1/logout?#{query}"
-  end
-
-  private
-
-  # Recipient throttle (SEC-9): a throttled request renders the exact same
-  # response WITHOUT touching the token table — skipping create_for_email is
-  # what keeps an attacker from superseding the link the real user is
-  # mid-click on. No leakage either way.
-  def deliver_magic_link(email, registration: false)
-    return unless EmailRecipientThrottle.allow!(email, kind: :magic_link)
-
-    token = MagicLinkToken.create_for_email(email)
-    return unless token
-
-    if registration
-      MagicLinkMailer.registration_link(email, token).deliver_later
-    else
-      MagicLinkMailer.sign_in_link(email, token).deliver_later
-    end
   end
 end

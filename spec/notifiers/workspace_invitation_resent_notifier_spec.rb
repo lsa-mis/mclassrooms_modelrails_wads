@@ -81,5 +81,12 @@ RSpec.describe WorkspaceInvitationResentNotifier, type: :notifier do
         Rails.application.routes.url_helpers.workspace_members_path(workspace)
       )
     end
+
+    it "returns the placeholder copy when the invitation has been deleted" do
+      described_class.with(record: invitation).deliver(inviter)
+      invitation.destroy
+      notification = inviter.notifications.last
+      expect(notification.url).to eq(I18n.t("notifications.placeholder"))
+    end
   end
 end

@@ -583,7 +583,9 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         [ user, :notifications ],
         target: "notifications-live",
-        content: I18n.t("notifications.bell.arrival_announcement")
+        # #926: the arrival names its severity (this notifier's is StubAccountAccessNotifier.severity_name).
+        content: I18n.t("notifications.bell.arrival_announcement_with_severity",
+                        phrase: I18n.t("notifications.severity_phrase.#{StubAccountAccessNotifier.severity_name}"))
       )
 
       StubAccountAccessNotifier.with(record: resource).deliver(user)

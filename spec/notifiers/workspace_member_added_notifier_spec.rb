@@ -84,6 +84,51 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
     end
   end
 
+  # 37signals rule (Fizzy/Campfire): you are never notified about your own
+  # action. The actor rides as an event PARAM, not off `record.granted_by` —
+  # that attr_accessor is non-persisted, so an exclusion keyed on it would
+  # silently exclude nobody the moment recipient resolution moved off the
+  # in-memory record.
+  describe "actor exclusion" do
+    it "drops the owner who performed the add, keeping the added user and the other owners" do
+      workspace.admit(added_user, role: member_role, granted_by: owner_user_a)
+
+      recipients = Noticed::Notification
+        .where(type: "#{described_class.name}::Notification").map(&:recipient)
+      expect(recipients).to contain_exactly(added_user, owner_user_b)
+    end
+
+    it "persists the actor on the event so resolution never depends on a transient attribute" do
+      workspace.admit(added_user, role: member_role, granted_by: owner_user_a)
+
+      event = Noticed::Event.where(type: described_class.name).last
+      expect(event.reload.params[:actor]).to eq(owner_user_a)
+    end
+
+    it "notifies everyone when there is no actor (system-seeded grant)" do
+      workspace.admit(added_user, role: member_role)
+
+      recipients = Noticed::Notification
+        .where(type: "#{described_class.name}::Notification").map(&:recipient)
+      expect(recipients).to contain_exactly(added_user, owner_user_a, owner_user_b)
+    end
+
+    it "drops the actor even when they are the only owner left, leaving just the added user" do
+      # Ada (owner_user_a) re-adds herself is impossible; the real shape is a
+      # lone-owner workspace where the owner adds the only other person —
+      # "the actor is gone from the list even when they are the whole rest of
+      # it". The full recipient set is pinned, not just the actor's own count:
+      # asserting only `owner_user_a.count == 0` also passed when the fan-out
+      # was empty, or when it had reached someone it should not have.
+      owner_b_membership.deactivate!
+      workspace.admit(added_user, role: member_role, granted_by: owner_user_a)
+
+      expect(
+        Noticed::Notification.where(type: "#{described_class.name}::Notification").map(&:recipient)
+      ).to eq([ added_user ])
+    end
+  end
+
   # Spec case 2: Added user receives one in-app notification.
   describe "added user — in-app" do
     it "creates exactly one Noticed::Notification row for the added user" do
@@ -258,6 +303,27 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
       expect {
         m.touch
       }.not_to change { Noticed::Event.where(type: described_class.name).count }
+    end
+  end
+  # #920. The row outlives the workspace it points at, and #url may not raise
+  # out of the notifications index or the digest render — the digest wraps
+  # RENDERING, not URL generation, so one stale row takes down a whole
+  # recipient's digest rather than just its own line.
+  describe "#url once the workspace is gone" do
+    # Workspace declares no `dependent:` for activity_logs and the FK blocks
+    # the DELETE (#921), so the audit rows go first. The placeholder contract
+    # is about the record being gone, not about how it got there.
+    def hard_delete(workspace)
+      ActivityLog.where(workspace_id: workspace.id).delete_all
+      workspace.destroy!
+    end
+
+    it "renders the placeholder instead of raising" do
+      add_member!
+      notification = Noticed::Event.where(type: described_class.name).last.notifications.first
+      hard_delete(workspace)
+
+      expect(notification.reload.url).to eq(I18n.t("notifications.placeholder"))
     end
   end
 end

@@ -26,8 +26,8 @@ GUIDES = {
        production); .kamal/secrets reads config/credentials/production.key.
     4. First deploy: bin/kamal setup. After that: bin/kamal deploy.
 
-    Keep max-replicas: 1 and SOLID_QUEUE_IN_PUMA: true until you graduate off
-    SQLite — the deploy.yml comments explain the checklist.
+    Keep servers.web at exactly one host and SOLID_QUEUE_IN_PUMA: true until
+    you graduate off SQLite — the deploy.yml comments explain the checklist.
   TEXT
   "self-host" => <<~TEXT,
     Self-hosting on your own hardware
@@ -77,7 +77,8 @@ GUIDES = {
     The one constraint that follows you everywhere
     ----------------------------------------------
     SQLite is single-writer: run exactly one web instance. Scaling to a second
-    server/dyno is the same corruption risk as max-replicas: 2 under Kamal.
+    server/dyno is the same corruption risk as a second host in servers.web
+    under Kamal.
     Graduate to Postgres first (see /docs/developer/deployment).
 
     Full contract: "Deploying without Kamal" in /docs/developer/deployment

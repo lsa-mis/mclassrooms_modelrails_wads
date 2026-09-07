@@ -32,7 +32,8 @@ RSpec.describe "Docs mode persistence (markdowndocs gem)", type: :system do
       click_button I18n.t("markdowndocs.modes.developer")
     end
 
-    Timeout.timeout(5) do
+    # Suite budget, not a stopwatch (#945); the write has no page-visible confirmation to synchronize on.
+    Timeout.timeout(Capybara.default_max_wait_time) do
       sleep 0.1 until user.preferences.reload.docs_mode == "developer"
     end
     expect(user.preferences.reload.docs_mode).to eq("developer")

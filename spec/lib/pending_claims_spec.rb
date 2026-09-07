@@ -202,6 +202,23 @@ RSpec.describe PendingClaims do
         expect(claims.problems).to be_empty
       end
 
+      # Fix round 1 (#952): the digest-parked claim path (deferred-OAuth) is
+      # the other real caller of WorkspaceJoinLink#admit, alongside the
+      # session-token path already covered above — nothing in the suite
+      # exercised expiry through it.
+      it "silently spends an expired link's digest, same as a revoked one" do
+        link # force the let before travelling, so expires_at is computed from real "now"
+        claims = described_class.new(join_digest: digest)
+
+        travel_to 8.days.from_now do
+          claims.claim(user)
+        end
+
+        expect(user.workspaces).not_to include(workspace)
+        expect(claims.spent).to include(:join)
+        expect(claims.problems).to be_empty
+      end
+
       it "records :join_link_at_capacity without raising when the workspace is full" do
         workspace.update!(max_members: 1)
         create(:membership, workspace: workspace, user: create(:user), role: member_role)

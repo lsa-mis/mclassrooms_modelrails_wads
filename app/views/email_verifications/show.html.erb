@@ -1,0 +1,22 @@
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-md mx-auto px-4 py-16">
+  <h1 class="text-2xl font-bold text-text-heading">
+    <%= t(".title") %>
+  </h1>
+
+  <p class="mt-4 text-text-body">
+    <%= t(".prompt", email: @authentication.user.email_address) %>
+  </p>
+
+  <div class="mt-8 flex items-center gap-3">
+    <%= button_to t(".button", email: @authentication.user.email_address),
+          email_verification_path,
+          method: :post,
+          params: { token: @token },
+          class: "btn-primary" %>
+
+    <%= link_to t(".cancel"), root_path,
+          class: "btn-text text-sm" %>
+  </div>
+</div>

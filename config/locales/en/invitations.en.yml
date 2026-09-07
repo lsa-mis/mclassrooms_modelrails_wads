@@ -8,11 +8,13 @@ en:
       body: "%{inviter} has invited you to join a workspace on %{app_name} as a %{role}. The workspace is named on the page you land on when you accept or decline."
       accept_action: "Accept invitation"
       decline_action: "Decline invitation"
+      block_action: "Don't invite me again"
       expiry_note: "This invitation expires in 7 days."
   workspaces:
     invitations:
       index:
         magic_link_label: "Share this link to invite members:"
+        magic_link_aria: "Invitation link"
         magic_link_section_title: "Generate a shareable magic link"
         magic_link_section_hint: "Anyone with the link can join with the role you select."
         magic_link_role_label: "Role"
@@ -30,11 +32,12 @@ en:
         magic_link_created: "Magic link created."
       destroy:
         revoked: "Invitation revoked."
-      resend:
-        resent: "Invitation resent."
-        recently_sent: "We already resent this within the last minute."
-        magic_link_refreshed: "Magic link refreshed."
-        rate_limited: "Too many requests. Please try again later."
+      resends:
+        create:
+          resent: "Invitation resent."
+          recently_sent: "We already resent this within the last minute."
+          magic_link_refreshed: "Magic link refreshed."
+          rate_limited: "Too many requests. Please try again later."
   invitation_accepts:
     # Outside show:/create: on purpose — the shared `find_valid_invitation`
     # filter emits these for both actions and looks them up absolutely.
@@ -56,7 +59,24 @@ en:
     invalid: "This invitation link is invalid or has expired."
     show:
       title: "Decline invitation"
-      body: "Are you sure you want to decline the invitation to %{workspace}?"
+      body: "Are you sure you want to decline the invitation to %{workspace} from %{inviter}?"
       confirm: "Decline invitation"
+      block_hint: "To stop future invitations from %{inviter}, use the “Don't invite me again” link in your invitation email."
     create:
       success: "Invitation declined."
+      rate_limited: "Too many attempts. Open the link from your invitation email and try again in a few minutes."
+  invitation_blocks:
+    invalid: "This link was already used, or the invitation has expired."
+    show:
+      title: "Block invitations from %{inviter}?"
+      prompt: "This declines the invitation and stops future invitations from %{inviter} reaching %{email}. They will see that you declined, not that you blocked them."
+      button: "Block invitations from %{inviter}"
+      cancel: "Cancel"
+    create:
+      blocked_title: "Invitations from %{inviter} are blocked"
+      blocked_body: "The invitation was declined, and future invitations from this sender won't reach %{email}."
+      done: "Back to the home page"
+      rate_limited: "Too many attempts. Open the link from your invitation email and try again in a few minutes."
+    already_processed:
+      title: "This invitation was already handled"
+      body: "You won't receive more invitations from this sender."

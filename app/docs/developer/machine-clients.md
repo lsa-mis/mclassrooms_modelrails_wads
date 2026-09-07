@@ -56,8 +56,9 @@ the cross-tenant bug. Carry the tenant in the server context and fetch it
 with `fetch`, not `[]`:
 
 ```ruby
-workspace_id = server_context.fetch(:workspace_id)  # missing tenant RAISES
-Current.workspace = Current.user!.workspaces.kept.find(workspace_id)
+user = User.find(server_context.fetch(:user_id))            # missing actor RAISES
+workspace_id = server_context.fetch(:workspace_id)           # missing tenant RAISES
+Current.workspace = user.workspaces.kept.find(workspace_id)  # not a member RAISES
 ```
 
 `fetch` turns a mis-wired client into an exception instead of a nil that

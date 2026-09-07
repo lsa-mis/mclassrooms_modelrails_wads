@@ -5,8 +5,12 @@
     same logical control after the row swaps in. Default false on initial
     page render — autofocus on first paint would scroll-jump unexpectedly. -%>
 <%# `#message` renders I18n through the notifier subclass each call — compute
-    once for the body copy and the three action aria-labels. -%>
+    once for the body copy and the two action aria-labels. -%>
 <% message = notification.message %>
+<%# The notifier's url, or the placeholder for a deleted record (#919): a
+    deleted-record row is plain text, never a dead href. %>
+<% destination = notification.render_safe_or_placeholder { notification.url } %>
+<% linkable = destination.present? && destination != t("notifications.placeholder") %>
 <li id="<%= dom_id(notification) %>"
     data-notification-type="<%= notification.type %>"
     class="px-4 py-4 flex flex-col gap-3
@@ -18,7 +22,11 @@
           visual-only, and inferring state from which action button renders
           put the burden on the listener. %>
       <span class="sr-only"><%= notification.read_at? ? t("notifications.index.item.status_read") : t("notifications.index.item.status_unread") %></span>
-      <%= message %>
+      <% if linkable %>
+        <%= link_to message, destination, class: "underline focus-ring rounded-sm" %>
+      <% else %>
+        <%= message %>
+      <% end %>
     </p>
     <p class="mt-1 text-xs text-text-muted">
       <%# Wrapped "ago" form (#763): <time datetime> is not announced, so the
@@ -45,11 +53,5 @@
             aria: { label: t("notifications.index.item.mark_read_aria", summary: message) },
             class: "btn-secondary text-sm" %>
     <% end %>
-
-    <%= button_to t("notifications.index.item.delete"),
-          settings_notification_path(notification),
-          method: :delete,
-          aria: { label: t("notifications.index.item.delete_aria", summary: message) },
-          class: "btn-outline-danger text-sm" %>
   </div>
 </li>

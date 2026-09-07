@@ -9,8 +9,8 @@
     role="group" clears only the first).
     aria-live lives HERE, on the stable containers (#683): a live region must
     be registered BEFORE content arrives, and appended toasts that carry their
-    own aria-live are inserted-with-content — AT silently drops them. The
-    per-toast role (status/alert) stays for page-load flashes. %>
+    own aria-live are inserted-with-content — AT silently drops them. Page-load
+    flashes are moved in after load for the same reason (#901, below). %>
 <div id="toast-pills"
      role="region"
      aria-live="polite"
@@ -18,10 +18,6 @@
      class="fixed top-[var(--toast-pill-top)] left-1/2 -translate-x-1/2 z-[var(--toast-z)]
             flex flex-col items-center gap-2
             pointer-events-none">
-  <% flash.each do |type, message| %>
-    <% next unless toast_types.dig(type.to_sym, :tier) == :pill %>
-    <%= render "shared/toast_pill", type: type, message: message %>
-  <% end %>
 </div>
 
 <%# Bottom-center: warning/error cards %>
@@ -33,8 +29,21 @@
             flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]
             max-w-[calc(100vw-2rem)]
             pointer-events-none">
-  <% flash.each do |type, message| %>
-    <% next unless toast_types.dig(type.to_sym, :tier) == :card %>
-    <%= render "shared/toast_card", type: type, message: message %>
-  <% end %>
 </div>
+
+<%# Page-load flashes travel OUTSIDE the live regions and are moved in after
+    load by toast_flash_controller (#901): a region announces changes made
+    after it is registered, so a toast rendered inside it at parse time is
+    never spoken. data-turbo-temporary keeps the carrier out of Turbo's
+    snapshot, so Back never replays a flash. %>
+<% { pill: "toast-pills", card: "toast-cards" }.each do |tier, container_id| %>
+  <% tier_flashes = flash.select { |type, _| toast_types.dig(type.to_sym, :tier) == tier } %>
+  <% next if tier_flashes.empty? %>
+  <template data-controller="toast-flash"
+            data-toast-flash-container-value="<%= container_id %>"
+            data-turbo-temporary>
+    <% tier_flashes.each do |type, message| %>
+      <%= render "shared/toast_#{tier}", type: type, message: message %>
+    <% end %>
+  </template>
+<% end %>
