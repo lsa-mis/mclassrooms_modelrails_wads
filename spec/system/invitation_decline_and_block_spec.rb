@@ -49,6 +49,23 @@ RSpec.describe "Invitation decline and block", type: :system do
       overflow = page.evaluate_script(
         "document.documentElement.scrollWidth - document.documentElement.clientWidth"
       )
+      if overflow.to_i.positive?
+        report = page.evaluate_script(<<~JS)
+          (function() {
+            const docWidth = document.documentElement.clientWidth;
+            const all = document.querySelectorAll('*');
+            let offenders = [];
+            all.forEach(el => {
+              const r = el.getBoundingClientRect();
+              if (r.right > docWidth + 0.5 || r.width > docWidth + 0.5) {
+                offenders.push({tag: el.tagName, cls: (el.className || '').toString().slice(0,80), width: r.width, right: r.right, left: r.left, text: el.textContent.trim().slice(0,60)});
+              }
+            });
+            return offenders.slice(0, 20);
+          })()
+        JS
+        warn "DEBUG-T21C-OVERFLOW-REPORT: #{report.inspect}"
+      end
       expect(overflow).to be <= 0, "page overflows its 320px viewport by #{overflow}px"
     end
   end
