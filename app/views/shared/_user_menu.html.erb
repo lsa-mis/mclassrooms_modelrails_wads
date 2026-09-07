@@ -143,8 +143,13 @@
   </div>
   <% end %>
 <% else %>
+  <%# Mobile has its own "Sign in" entry inside the hamburger panel
+      (shared/_header's mobile-menu-panel) — this top-bar copy is redundant
+      there and, combined with the logo and the hamburger button, was tight
+      enough to overflow a 320px viewport (T21c). Hidden below md, same as
+      the sign-up button beside it in shared/_header. %>
   <%= link_to t("navigation.sign_in"), main_app.new_session_path,
-        class: "min-h-[var(--form-input-height)] flex items-center text-text-body
+        class: "hidden md:flex min-h-[var(--form-input-height)] items-center text-text-body
                 hover:text-interactive-hover
                 focus-ring rounded px-2" %>
 <% end %>
