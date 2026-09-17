@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Operations activity feed", type: :request do
+  # Fork (MClassrooms): no Project domain — a workspace's own creation row
+  # (Trackable on Workspace) is what puts its name in the feed here.
   let(:operator) { create(:user).tap { |u| Operatorship.grant!(user: u) } }
 
   before { sign_in(operator) }
@@ -8,8 +10,6 @@ RSpec.describe "Operations activity feed", type: :request do
   it "renders rows from several workspaces" do
     w1 = create(:workspace, name: "Alpha")
     w2 = create(:workspace, name: "Beta")
-    create(:project, workspace: w1)
-    create(:project, workspace: w2)
 
     get operations_activity_logs_path
     expect(response).to have_http_status(:ok)
@@ -22,7 +22,6 @@ RSpec.describe "Operations activity feed", type: :request do
   # makes it read as a link rather than plain text (1.4.1).
   it "renders a row's workspace name link as visibly a link" do
     workspace = create(:workspace, name: "Alpha")
-    create(:project, workspace: workspace)
 
     get operations_activity_logs_path
     link = Capybara.string(response.body).first(:link, "Alpha")
@@ -36,7 +35,6 @@ RSpec.describe "Operations activity feed", type: :request do
   # the structure has to be asserted directly.
   it "renders each row in one flat list, not a nested one-item list per row" do
     workspace = create(:workspace, name: "Alpha")
-    create(:project, workspace: workspace)
 
     get operations_activity_logs_path
     html = Capybara.string(response.body)
@@ -140,6 +138,30 @@ RSpec.describe "Operations activity feed", type: :request do
     html = Capybara.string(response.body)
     expect(html).to have_text("Alpha")
     expect(html).to have_no_link(href: operations_workspace_path(workspace))
+  end
+
+  # Fork (MClassrooms): admin curation rows (Curation::Apply, visibility
+  # "admin") reached no feed until this one existed, and a missing
+  # activity.actions label raises under raise_on_missing_translations — an
+  # operator's page would 500 the first time an admin curated anything.
+  # Every action the admin controllers hand Curation::Apply needs a label.
+  it "labels every fork curation action this feed can render" do
+    sources = Dir[Rails.root.join("app/controllers/admin/**/*.rb")] + Dir[Rails.root.join("app/lib/**/*.rb")]
+    actions = sources.flat_map { |f| File.read(f).scan(/action: "([a-z_]+\.[a-z_]+)"/).flatten }.uniq
+    expect(actions).not_to be_empty
+
+    missing = actions.reject { |a| I18n.exists?("activity.actions.#{a}") }
+    expect(missing).to be_empty, "curation actions without an activity.actions label: #{missing.join(", ")}"
+  end
+
+  it "renders a fork curation row with its label instead of raising" do
+    workspace = create(:workspace, name: "Alpha")
+    ActivityLog.create!(actor: operator, action: "announcement.created", trackable: workspace,
+                        workspace: workspace, visibility: "admin")
+
+    get operations_activity_logs_path
+    expect(response).to have_http_status(:ok)
+    expect(Capybara.string(response.body)).to have_text(I18n.t("activity.actions.announcement.created"))
   end
 
   # activity_logs.trackable_id has no FK, so a hard-deleted User leaves a

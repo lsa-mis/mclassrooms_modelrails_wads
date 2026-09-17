@@ -57,3 +57,28 @@ en:
       operatorship:
         granted: "granted %{member} operator access"
         revoked: "revoked %{member}'s operator access"
+      # Fork-owned actions: admin curation rows (Curation::Apply, visibility
+      # "admin") reached no feed until the operations feed existed; under
+      # raise_on_missing_translations an unlabelled action raises there.
+      # spec/requests/operations/activity_logs_spec.rb pins the full set.
+      announcement:
+        created: "posted an announcement"
+        updated: "updated an announcement"
+        destroyed: "deleted an announcement"
+      characteristic_display_rule:
+        created: "added a characteristic display rule"
+        updated: "updated a characteristic display rule"
+        destroyed: "deleted a characteristic display rule"
+      editor_assignment:
+        granted: "granted editor access"
+        revoked: "revoked editor access"
+      room:
+        media_bulk_uploaded: "bulk-uploaded room media"
+      sync_scope_rule:
+        created: "added a sync scope rule"
+        updated: "updated a sync scope rule"
+        destroyed: "deleted a sync scope rule"
+      unit_display_name:
+        created: "added a unit display name"
+        updated: "updated a unit display name"
+        destroyed: "deleted a unit display name"
