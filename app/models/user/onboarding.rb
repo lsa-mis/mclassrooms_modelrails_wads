@@ -30,6 +30,20 @@ class User < ApplicationRecord
       Workspace.kept.find_by(id: personal_workspace_id)
     end
 
+    # Idempotent: a second call creates nothing. That guard is the contract,
+    # not an optimisation — `onboard_workspace` runs from an after_create, and
+    # re-entry (a fork's backfill, a console repair, a retried sign-up) must
+    # not hand a user a second personal workspace. Public because that is a
+    # contract worth stating, and there is no other public door to it (#900).
+    def create_personal_workspace
+      return if personal_workspace_id.present?
+
+      workspace = Workspace.create!(name: "#{first_name}'s Workspace", personal: true)
+      owner_role = Role.system_default!("owner")
+      workspace.memberships.create!(user: self, role: owner_role)
+      update_column(:personal_workspace_id, workspace.id)
+    end
+
     private
 
     # The contract per preset: /docs/developer/presets.
@@ -42,15 +56,6 @@ class User < ApplicationRecord
     end
 
     def skip_workspace_creation
-    end
-
-    def create_personal_workspace
-      return if personal_workspace_id.present?
-
-      workspace = Workspace.create!(name: "#{first_name}'s Workspace", personal: true)
-      owner_role = Role.system_default!("owner")
-      workspace.memberships.create!(user: self, role: owner_role)
-      update_column(:personal_workspace_id, workspace.id)
     end
 
     # Fork: the join role is configurable (TenancyConfig.shared_join_role),

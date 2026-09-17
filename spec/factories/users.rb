@@ -37,7 +37,6 @@ FactoryBot.define do
       when :verified, :pending
         user.authentications.create!(
           provider: "email",
-          uid: user.email_address,
           verified_at: (Time.current if evaluator.email_authentication == :verified)
         )
       else
@@ -47,6 +46,10 @@ FactoryBot.define do
 
     trait :passkey_prompt_pending do
       passkey_prompt_seen_at { nil }
+    end
+
+    trait :suspended do
+      suspended_at { Time.current }
     end
 
     # Magic-link / OAuth-only account — the common case in a passwordless-first

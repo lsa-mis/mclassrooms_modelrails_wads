@@ -206,4 +206,169 @@ RSpec.describe User, type: :model do
       expect(queries).to eq(1)
     end
   end
+
+  describe "operator reach" do
+    let(:user) { create(:user) }
+    let!(:workspace) { create(:workspace) }
+    let!(:suspended) { create(:workspace).tap(&:suspend!) }
+    let!(:discarded) { create(:workspace).tap(&:discard!) }
+
+    it "is not an operator by default and reaches no workspaces" do
+      expect(user).not_to be_operator
+      expect(user.operated_workspaces).to be_empty
+      expect(user.operated_workspaces).to be_a(ActiveRecord::Relation)
+    end
+
+    it "reaches every kept workspace, suspended included, once granted" do
+      Operatorship.grant!(user: user)
+
+      expect(user.reload).to be_operator
+      # `include`, not `contain_exactly`: under the default :personal preset,
+      # `user`'s own onboarding workspace is also kept and legitimately in
+      # scope here — operated_workspaces is instance-wide reach, not "every
+      # workspace but mine".
+      expect(user.operated_workspaces).to include(workspace, suspended)
+      expect(user.operated_workspaces).not_to include(discarded)
+    end
+
+    it "loses reach when the operatorship is revoked" do
+      Operatorship.grant!(user: user).revoke!
+
+      expect(user.reload).not_to be_operator
+      expect(user.operated_workspaces).to be_empty
+    end
+  end
+
+  describe "#granted_operatorships" do
+    it "carries every operatorship a user has granted, keyed by granted_by_id" do
+      granter = create(:user)
+      first_grant = Operatorship.grant!(user: create(:user), granted_by: granter)
+      second_grant = Operatorship.grant!(user: create(:user), granted_by: granter)
+
+      expect(granter.granted_operatorships).to contain_exactly(first_grant, second_grant)
+      expect(granter.granted_operatorships.pluck(:granted_by_id).uniq).to eq([ granter.id ])
+    end
+  end
+
+  describe "#unlock!" do
+    it "clears the lockout and writes an admin-visibility row naming the operator" do
+      operator = create(:user)
+      user = create(:user)
+      5.times { user.register_failed_login! }
+      expect(user.reload).to be_locked
+
+      expect(user.unlock!(by: operator)).to eq(:unlocked)
+
+      expect(user.reload.locked_at).to be_nil
+      expect(user.failed_login_attempts).to eq(0)
+      row = ActivityLog.find_by!(action: "user.unlocked", trackable: user)
+      expect(row.actor).to eq(operator)
+      expect(row.visibility).to eq("admin")
+    end
+
+    it "returns :not_locked and writes no row when the account isn't locked" do
+      user = create(:user)
+      operator = create(:user)
+      expect {
+        expect(user.unlock!(by: operator)).to eq(:not_locked)
+      }.not_to change(ActivityLog, :count)
+    end
+
+    it "accepts a nil actor, the rake shape" do
+      user = create(:user)
+      5.times { user.register_failed_login! }
+      expect(user.unlock!(by: nil)).to eq(:unlocked)
+      expect(ActivityLog.find_by!(action: "user.unlocked", trackable: user).actor).to be_nil
+    end
+
+    it "a successful login clears the same counter but writes no row (the Session row is the record)" do
+      user = create(:user)
+      3.times { user.register_failed_login! }
+
+      expect { user.register_successful_login! }.not_to change(ActivityLog, :count)
+
+      expect(user.reload.failed_login_attempts).to eq(0)
+      expect(user.locked_at).to be_nil
+    end
+  end
+
+  describe "#suspend!" do
+    it "suspends, destroys sessions, and writes an admin-visibility row naming the operator, leaving memberships and project access intact" do
+      operator = create(:user)
+      user = create(:user)
+      workspace = create(:workspace)
+      create(:membership, :owner, user: user, workspace: workspace)
+      # :project's factory already gives its creator a project_membership (production invariant).
+      project = create(:project, workspace: workspace, created_by: user)
+      user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+
+      expect {
+        expect(user.suspend!(by: operator)).to eq(:suspended)
+      }.not_to change { user.memberships.kept.count }
+
+      expect(user.reload).to be_suspended
+      expect(user.sessions.count).to eq(0)
+      expect(ProjectMembership.where(project: project, user: user)).to exist
+      row = ActivityLog.find_by!(action: "user.suspended", trackable: user)
+      expect(row.actor).to eq(operator)
+      expect(row.visibility).to eq("admin")
+    end
+
+    it "is a no-op on a second call and does not bump suspended_at" do
+      user = create(:user, :suspended)
+      operator = create(:user)
+      suspended_at = user.suspended_at
+
+      expect {
+        expect(user.suspend!(by: operator)).to eq(:already_suspended)
+      }.not_to change(ActivityLog, :count)
+
+      expect(user.reload.suspended_at).to eq(suspended_at)
+    end
+
+    it "accepts a nil actor, the rake shape" do
+      user = create(:user)
+      expect(user.suspend!(by: nil)).to eq(:suspended)
+      expect(ActivityLog.find_by!(action: "user.suspended", trackable: user).actor).to be_nil
+    end
+
+    it "rolls back the suspension when the audit write fails, leaving the session alive" do
+      user = create(:user)
+      session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+      allow(ActivityLog).to receive(:create!).and_raise(StandardError, "boom")
+
+      expect { user.suspend!(by: create(:user)) }.to raise_error(StandardError, "boom")
+
+      expect(user.reload.suspended_at).to be_nil
+      expect(Session.exists?(session.id)).to be true
+    end
+  end
+
+  describe "#unsuspend!" do
+    it "clears the suspension and writes an admin-visibility row naming the operator" do
+      operator = create(:user)
+      user = create(:user, :suspended)
+
+      expect(user.unsuspend!(by: operator)).to eq(:unsuspended)
+
+      expect(user.reload).not_to be_suspended
+      row = ActivityLog.find_by!(action: "user.unsuspended", trackable: user)
+      expect(row.actor).to eq(operator)
+      expect(row.visibility).to eq("admin")
+    end
+
+    it "returns :not_suspended and writes no row when the account isn't suspended" do
+      user = create(:user)
+      operator = create(:user)
+      expect {
+        expect(user.unsuspend!(by: operator)).to eq(:not_suspended)
+      }.not_to change(ActivityLog, :count)
+    end
+
+    it "accepts a nil actor, the rake shape" do
+      user = create(:user, :suspended)
+      expect(user.unsuspend!(by: nil)).to eq(:unsuspended)
+      expect(ActivityLog.find_by!(action: "user.unsuspended", trackable: user).actor).to be_nil
+    end
+  end
 end

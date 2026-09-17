@@ -8,7 +8,7 @@
 # Batched delete_all: SQLite serializes writers; no destroy callbacks or cascades.
 # See /docs/developer/architecture (Concurrency).
 class ExpiredSessionsSweepJob < ApplicationJob
-  queue_as :default
+  queue_as :low
 
   def perform
     Session.expired.in_batches(of: 100, &:delete_all)

@@ -57,7 +57,7 @@ RSpec.describe "Notifications index page", type: :system do
       # calling notification.message on the spec's own (un-preloaded) object,
       # which Bullet would flag as the page's N+1.
       message = I18n.t("notifications.workspace_invitation_resent.message",
-                       invitee_email: invitation.email, workspace: invitation.invitable.name)
+                       invitee_email: invitation.email, workspace_name: invitation.invitable.name)
 
       visit settings_notifications_path
       within("##{ActionView::RecordIdentifier.dom_id(notification)}") do

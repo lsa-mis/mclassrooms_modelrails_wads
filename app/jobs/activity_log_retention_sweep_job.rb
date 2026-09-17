@@ -13,7 +13,7 @@
 # (#604). Batched delete_all — SQLite serializes writers.
 # See /docs/developer/architecture (Activity Tracking).
 class ActivityLogRetentionSweepJob < ApplicationJob
-  queue_as :default
+  queue_as :low
 
   RETENTION_WINDOW = 12.months
   SECURITY_RETENTION_FLOOR = 365.days

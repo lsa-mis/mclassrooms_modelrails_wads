@@ -66,7 +66,7 @@ module UI
     #
     # When an avatar is the only content of a button or link, there is no visible text
     # to announce. Pass `aria_label:` to expose the avatar to assistive technology:
-    # `ui :avatar, src: url, size: :sm, aria_label: "Open Dave's profile"`.
+    # `ui :avatar, src: url, size: :sm, aria_label: "Open Nell's profile"`.
     # For user avatars, prefer `avatar_for(user, size: :sm)` — it sets the label for you.
     # @label Don't · interactive avatar with no label
     def dont_interactive_no_label

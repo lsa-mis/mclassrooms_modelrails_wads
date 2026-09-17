@@ -150,7 +150,7 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
         notification = invitee.notifications.last
         expect(notification.message).to eq(
           I18n.t("notifications.workspace_invitation_expiring_soon.message",
-                 workspace: workspace.name,
+                 workspace_name: workspace.name,
                  hours_remaining: 24)
         )
       end

@@ -1,0 +1,6 @@
+# Fork-owned (merge=ours): your product's names for the template's nouns. Any
+# subset; the template's defaults in config/vocabulary.yml fill the rest.
+# Nothing upstream will ever change in this file, so freezing it is safe.
+#
+# workspace: { singular: "course", plural: "courses" }
+# project:   { singular: "team",   plural: "teams" }

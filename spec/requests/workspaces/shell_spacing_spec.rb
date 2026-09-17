@@ -7,16 +7,19 @@ RSpec.describe "Workspace shell spacing hooks", type: :request do
 
   before { sign_in(user) }
 
-  it "pads the identity bar from the header/sidebar edges" do
+  # The sidebar and the content column open at the same height. The identity
+  # bar that used to set this gap is gone (the sidebar switcher carries
+  # identity now), so the sidebar is what the content column matches.
+  it "opens the sidebar and the content column at the same top gap" do
     get workspace_path(workspace)
-    doc = Nokogiri::HTML(response.body)
-    bar = doc.at_css("#workspace_logo_show").ancestors("div").first
-    expect(bar["class"]).to include("pt-4")
+    sidebar = Nokogiri::HTML(response.body).at_css("aside[aria-label]")
+
+    expect(sidebar["class"]).to include("pt-4")
   end
 
-  # The identity bar + section-nav strip sit at px-6; every page's content
-  # container must match so headings line up with the identity above them
-  # (and don't drift 8px left on mobile). pt-4 keeps the top gap uniform.
+  # The section-nav strip sits at px-6; every page's content container must
+  # match so headings share one left edge (and don't drift 8px left on
+  # mobile). pt-4 keeps the top gap uniform.
   it "uses a consistent px-6 pt-4 content gutter across all shell pages" do
     [
       workspace_path(workspace),

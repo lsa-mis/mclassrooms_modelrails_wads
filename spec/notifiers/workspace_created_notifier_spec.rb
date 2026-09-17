@@ -61,7 +61,7 @@ RSpec.describe WorkspaceCreatedNotifier, type: :notifier do
       notification = events.last.notifications.first
 
       expect(notification.message).to eq(
-        I18n.t("notifications.workspace_created.message", workspace: "Acme")
+        I18n.t("notifications.workspace_created.message", workspace_name: "Acme")
       )
       expect(notification.url).to eq(Rails.application.routes.url_helpers.workspace_members_path(workspace))
     end

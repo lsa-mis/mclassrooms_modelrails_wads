@@ -95,7 +95,7 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
       post workspace_join_path(workspace, token: link.plaintext_token)
       expect(workspace.memberships.find_by(user: newcomer)).to be_nil
       # A generic i18n message, never the raw model validation string.
-      expect(flash[:alert]).to eq(I18n.t("workspaces.joins.create.could_not_join", workspace: workspace.name))
+      expect(flash[:alert]).to eq(I18n.t("workspaces.joins.create.could_not_join", workspace_name: workspace.name))
       expect(flash[:alert]).not_to match(/capacity|max_members/i)
     end
 

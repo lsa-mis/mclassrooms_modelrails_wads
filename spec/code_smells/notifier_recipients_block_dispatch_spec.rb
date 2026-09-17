@@ -17,8 +17,12 @@ require "rails_helper"
 # Passing a recipient to a block-declaring notifier therefore delivers to
 # someone who opted out, in quiet hours, or who is the actor — silently. No
 # exception, no log line, nothing red. The inverse is just as quiet: a notifier
-# with NO block, dispatched as `deliver(nil)`, resolves to zero recipients and
-# writes no rows at all.
+# with NO block, dispatched as `deliver(nil)`, resolves to zero recipients, so
+# `ApplicationNotifier#deliver` returns :skipped and writes no rows at all.
+# (The :skipped guard is #928's — before it, the gem's unconditional `save!`
+# wrote the event row and burned its idempotency key even with no recipients.
+# It makes a mis-dispatch harmless rather than corrupting; it does not make one
+# correct, which is what this spec is for.)
 #
 # Both directions held by hand when this spec was written; nothing enforced
 # them. This does.
@@ -132,9 +136,10 @@ RSpec.describe "Code smell: notifier recipient dispatch matches its recipients b
 
     expect(offenders).to be_empty,
       "This notifier declares no recipients block, so deliver(nil) resolves to " \
-      "no recipients and writes no notification rows — a dispatch that silently " \
-      "does nothing. Either name the recipient, or move recipient resolution " \
-      "into a recipients block on the notifier:\n  #{offenders.join("\n  ")}"
+      "no recipients, returns the :skipped sentinel and writes no rows at all " \
+      "— a dispatch that silently does nothing. Either name the recipient, or " \
+      "move recipient resolution into a recipients block on the " \
+      "notifier:\n  #{offenders.join("\n  ")}"
   end
 
   it "resolves every dispatched notifier to a class under app/notifiers" do

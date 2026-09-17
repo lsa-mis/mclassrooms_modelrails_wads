@@ -67,11 +67,19 @@ RSpec.describe User::EmailChange, type: :model do
       expect(user.reload.email_address).to eq("new@example.com")
     end
 
-    it "updates email Authentication uid" do
+    # #903: the email row's uid is the user's id, so an address change is not
+    # its business. The sync that used to keep the two in step is gone — and
+    # with it the `update_all` that skipped the uniqueness validator.
+    it "leaves the email Authentication uid alone" do
       email_auth = user.authentications.email.first
       token = user.pending_email_token
-      described_class.new(user).confirm!(token)
-      expect(email_auth.reload.uid).to eq("new@example.com")
+
+      expect { described_class.new(user).confirm!(token) }
+        .not_to change { email_auth.reload.uid }
+
+      # Both halves: the change moved nothing, and what it left is the id —
+      # so an unchanged-but-wrong value cannot satisfy this example.
+      expect(email_auth.uid).to eq(user.id.to_s)
     end
 
     # The production-common confirmer: a magic-link signup holding the
@@ -81,16 +89,15 @@ RSpec.describe User::EmailChange, type: :model do
 
       it "carries verification to the address the user just proved" do
         # The confirmation link is mailed to pending_email, so the round trip
-        # proves the NEW mailbox — verified_at must survive the uid rewrite.
-        # It survives today by accident of update_all being the method chosen;
-        # this pins the property, not the accident.
+        # proves the NEW mailbox — verified_at must survive the change.
         verified_at_before = user.authentications.email.sole.verified_at
+        uid_before = user.authentications.email.sole.uid
         token = user.pending_email_token
 
         expect(described_class.new(user).confirm!(token)).to be true
 
         auth = user.authentications.email.sole
-        expect(auth.uid).to eq("new@example.com")
+        expect(auth.uid).to eq(uid_before)
         expect(auth.verified_at).to eq(verified_at_before)
         # Load-bearing only while the email row is this user's SOLE auth —
         # can_invite? counts verified rows across all providers. Don't add an

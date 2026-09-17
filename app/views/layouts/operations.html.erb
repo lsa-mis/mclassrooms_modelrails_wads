@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>"
+      data-controller="theme"
+      data-theme-theme-value="<%= current_user_theme %>">
+<%= render "shared/layout_head" %>
+
+  <body class="min-h-screen flex flex-col bg-surface-raised text-text-heading">
+    <%= render "shared/skip_link" %>
+    <%= render "shared/header" %>
+    <%= render "shared/toasts" %>
+
+    <%# Persistent banner: an operator must never mistake an operations screen
+        for a workspace screen. variant: :default resolves to bg-surface-raised
+        — this body's own fill — so it would sit invisible against the page;
+        :info actually separates it. Wrapped in the same max-w-5xl column as
+        nav/main so it doesn't run bare edge-to-edge as the only unboxed
+        <body> child. %>
+    <div class="max-w-5xl mx-auto px-6 pt-4">
+      <%= ui :banner, t("operations.area.banner"), variant: :info %>
+    </div>
+
+    <%
+      # WCAG 2.4.8 Location (AAA). The current-page cue matches
+      # shared/_settings_sidebar_item — filled surface + weight + heading
+      # colour — because that is what this app's other horizontal navs use and
+      # one step of weight at 14px is a weak signal alone. Not colour alone
+      # (1.4.1); text-text-heading on bg-surface-sunken is a proven AAA pair.
+      nav_items = [
+        [ t("operations.nav.workspaces"), operations_workspaces_path ],
+        [ t("operations.nav.users"), operations_users_path ],
+        [ t("operations.nav.activity"), operations_activity_logs_path ],
+        [ t("operations.nav.operators"), operations_operatorships_path ]
+      ]
+    %>
+    <nav aria-label="<%= t("operations.area.nav_label") %>" class="border-b border-border">
+      <%# role="list": same preflight list-style:none trap as the activity
+          feed's <ol>. %>
+      <ul role="list" class="max-w-5xl mx-auto px-6 py-2 flex gap-4 text-sm">
+        <% nav_items.each do |label, path| %>
+          <% current = current_page?(path) %>
+          <li>
+            <%= link_to label, path,
+                  class: "btn-text btn-text-interactive#{" bg-surface-sunken font-semibold text-text-heading" if current}",
+                  "aria-current": (current ? "page" : nil) %>
+          </li>
+        <% end %>
+      </ul>
+    </nav>
+
+    <main id="main-content" tabindex="-1" class="flex-1 max-w-5xl w-full mx-auto px-6 pb-16">
+      <%= yield %>
+    </main>
+
+    <%= render "shared/layout_tail" %>
+  </body>
+</html>

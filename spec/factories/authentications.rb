@@ -12,10 +12,9 @@ FactoryBot.define do
     # and provider is unique per user (#850).
     association :user, factory: [ :user, :no_authentications ]
     provider { "email" }
-    # Production always mirrors: an email authentication's uid IS the user's
-    # address (#856). User emails are sequence-prefixed, so this is also
-    # unique by construction.
-    uid { user.email_address }
+    # No uid: the model assigns the user's id for email rows (#903), which is
+    # what production does and is unique by construction. OAuth traits below
+    # supply their own, because nothing assigns those.
 
     trait :google do
       provider { "google" }

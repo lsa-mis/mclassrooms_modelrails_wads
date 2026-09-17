@@ -44,4 +44,15 @@ RSpec.describe "Workspaces index archived section", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
+
+  # The pointer resting on a row is a state a visitor reaches. A static
+  # list_group_item highlights on hover unless told not to, and the Restore
+  # button's text-interactive over that highlight is below AAA — so the row is
+  # audited hovered.
+  it "passes axe AAA with the pointer resting on an archived row" do
+    visit workspaces_path
+    within("[data-test='archived-workspaces']") { page.find("li", match: :first).hover }
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+  end
 end

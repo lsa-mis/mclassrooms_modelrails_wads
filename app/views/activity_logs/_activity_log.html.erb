@@ -1,7 +1,16 @@
+<%# locals: (activity_log:, context: nil) -%>
+<%# context is prepared markup (a link, or plain text) naming where the row
+    happened — the cross-workspace operations feed needs it, the workspace and
+    project feeds pass nothing and render exactly as before. It lives inside
+    this <li> because the row IS the list item: a caller that wraps this
+    partial to add its own context makes every entry a nested one-item list. -%>
 <li class="flex items-start gap-3 text-sm">
   <div class="flex-1">
+    <% if context %>
+      <div class="font-medium text-text-heading"><%= context %></div>
+    <% end %>
     <span class="font-medium text-text-heading">
-      <%= activity_log.actor&.full_name || t("activity.system") %>
+      <%= activity_log.display_subject || t("activity.system") %>
     </span>
     <span class="text-text-muted">
       <%= t("activity.actions.#{activity_log.display_action}",

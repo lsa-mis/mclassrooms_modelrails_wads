@@ -2,9 +2,7 @@ require "rails_helper"
 require "rake"
 
 RSpec.describe "Tenancy rake tasks" do
-  before(:all) do
-    Rails.application.load_tasks
-  end
+  before(:all) { RakeTasks.load_once }
 
   describe "tenancy:owner_setup_link" do
     let(:owner) { create(:user, email_address: "owner@acme.test") }

@@ -205,7 +205,7 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
 2. Fill in a name and submit.
    **Expect:** The workspace is created. You are assigned the `owner` role atomically with it — the controller calls `Workspace.create_owned(attrs, owner: Current.user)`, which wraps the workspace INSERT and the owner membership in one transaction (the owner role self-heals via `Role.system_default!`). You are redirected to `workspace_path(@workspace)`.
 
-**Config: `TENANCY_WORKSPACE_CREATION=disabled`.** The `before_action :ensure_workspace_creation_enabled` guard on `new` and `create` fires. Navigate to `/workspaces/new` — expect a redirect or error, not the form.
+**Config: `TENANCY_WORKSPACE_CREATION=disabled`.** The `RequiresWorkspaceCreationEnabled` gate on `new` and `create` fires. Navigate to `/workspaces/new`, and as an operator to `/operations/workspaces/new` — expect a redirect, not the form, on both.
 
 ### Joining via an open link
 
@@ -249,11 +249,12 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
 
 ## Flow 5 — Identity surfaces
 
-### `/me` — identity card
+### `/workspaces` — your workspaces
 
-1. Sign in and navigate to `/me` (reachable from the user/avatar menu's "Your home" item, or directly by URL).
-   **Expect:** A card showing your avatar, full name, and email address, with an "Edit in settings" button (links to `edit_settings_profile_path`). Below it, a "Your workspaces" section listing every workspace you belong to (`Current.user.memberships.kept.includes(:workspace, :role)`), each showing workspace name, your role, and linking to `workspace_path(membership.workspace)`.
-2. If you have no workspace memberships the section shows an empty-state message — not an error.
+1. Sign in and navigate to `/workspaces` (the account menu's "All workspaces" item, the "All workspaces" row at the bottom of the workspace switcher's menu, or directly by URL).
+   **Expect (desktop, ≥`md`):** an identity anchor — your avatar and full name — above the "Your workspaces" heading and the "New workspace" button (present only while workspace creation is enabled). Below: the current workspace, if any, as a card marked "Current"; then **Other workspaces**, each card showing plan, your role, member count and last access, with a **Switch** button (a name filter appears once there are three or more); then **Archived** workspaces, each with a **Restore** button.
+   **Expect (phone, below `md`):** the workspace switcher sits at the top of the column in its "All workspaces" state — your avatar and name over "All workspaces" — and the identity anchor does not render separately; the switcher carries it.
+2. With no memberships and nothing archived, the page shows an empty-state message (with a create action while creation is enabled) — not an error.
 
 ### `/settings` — account settings
 
@@ -270,22 +271,24 @@ Navigate into the settings hub. The sidebar shows these items in personal contex
 
 **Timezone.** Timezone is set automatically by a client beacon (`settings/preferences/timezone`). There is no manual timezone setting page.
 
-### Header workspace switcher
+### Workspace switcher
 
-The header switcher (`shared/_workspace_switcher.html.erb`) renders **only when the user has two or more workspaces** (`workspaces.size > 1`). The partial is hidden via `if workspaces.size > 1`; the DOM element is entirely absent for single-workspace users.
+The switcher (`shared/_workspace_switcher.html.erb`; trigger in `shared/_workspace_switcher_trigger.html.erb`) renders on **every workspace page**, solo users included — it is what names the workspace. Desktop (≥`md`): it heads the sidebar. Phone (below `md`): the sidebar is `display:none`, not absent, so a second copy renders in the content column above the Overview / Projects / Settings strip with every id suffixed `-mobile`; the hamburger holds global chrome only. Only the *list* of workspaces in the menu is gated on `workspaces.size > 1`.
 
-1. Sign in as a user with exactly one workspace.
-   **Expect:** No workspace switcher visible in the header. The workspace name is not shown in the nav bar.
-2. Join or create a second workspace (requires `TENANCY_WORKSPACE_CREATION=enabled` or an invitation to a second workspace).
-   Reload any page.
-   **Expect (desktop, ≥`md`):** A workspace switcher dropdown button appears in the header (`hidden md:block`), showing the current workspace's avatar and name (name truncated at 12 characters on large screens). On mobile the switcher lives inside the hamburger menu instead — see step 4.
-3. Click the switcher button.
-   **Expect:** A dropdown menu opens listing all workspaces. The current workspace is marked with a left border (`border-l-4 border-interactive`), a sunken background, bold weight, and `aria-current`. Clicking another workspace navigates to `workspace_path(workspace)` for that workspace.
-4. **On mobile** (below `md`), the desktop dropdown is hidden; open the **hamburger menu** — the switcher renders there as a labeled inline list ("Workspaces"), each entry linking to its workspace with the current one marked via `aria-current`. (The user menu's "All workspaces" link → the workspaces index is an alternate switching path on any breakpoint.)
+1. Sign in as a user with exactly one workspace and open any workspace page.
+   **Expect:** one control — the workspace's logo, its name and your role — at the top of the sidebar (desktop) or above the section tabs (phone). Opening it shows a menu whose only row is "All workspaces".
+2. Join or create a second workspace (requires `TENANCY_WORKSPACE_CREATION=enabled` or an invitation), then reload.
+   **Expect:** the menu lists your workspaces, the current one marked with a left border (`border-l-4 border-interactive`), a sunken background, semibold weight and `aria-current`; "All workspaces" is the last row, aligned with the names. On a phone the list pins the current workspace first and shows at most five, most recently accessed first — "All workspaces" is the overflow.
+3. Click another workspace.
+   **Expect:** navigation to `workspace_path(workspace)`; the control now names that workspace.
+4. Rename the workspace from its Settings › Profile page.
+   **Expect:** the control updates in place — both copies on a phone — through a Turbo Stream that replaces the whole trigger (`workspaces/update.turbo_stream.erb`), never a piece of it.
+5. Navigate to `/workspaces`.
+   **Expect (phone):** the control stays, in its "All workspaces" state (see Flow 5), and its menu marks "All workspaces" current. Desktop has no sidebar on this page; the identity anchor above the heading takes its place.
 
 ### Edge cases — Identity
 
-- **`/me` requires authentication.** Navigating to `/me` when signed out triggers the authentication guard and redirects to the sign-in page.
+- **`/workspaces` requires authentication.** Navigating to `/workspaces` when signed out triggers the authentication guard and redirects to the sign-in page.
 - **Settings sidebar in org context.** When the settings layout is loaded in the context of a workspace (e.g., `/workspaces/:slug/edit`), the sidebar shows workspace-scoped items (Profile, Members, Invitations, Limits & Plan), gated by Pundit. Items for which the current user lacks the required permission are omitted — they are not shown as disabled.
 - **Removing the last OAuth/email sign-in method.** `Settings::ConnectedAccountsController#destroy` checks `only_verified_remaining?` before destroying. Attempting to remove the last verified authentication method shows the "cannot remove last verified" alert without deleting anything.
 
@@ -347,3 +350,78 @@ real-crypto harnesses (no mocking the gem):
   `WebAuthn.addVirtualAuthenticator`). The example lives in
   `spec/system/passkey_auth_spec.rb`. Note: the virtual authenticator requires
   `Capybara.app_host` to match the configured RP origin.
+
+---
+
+## Flow 9 — Instance operations
+
+**Config:** any preset. Two accounts: an **operator** and a plain **member**; keep the member in a private window. Background: [Instance operations](/docs/developer/operations).
+
+### Bootstrap the operator
+
+1. Make sure the operator's account exists (sign up, the console one-liner in the runbook, or the `:shared` seed), then:
+
+   ```bash
+   bin/rails 'operators:grant[op@example.com]'
+   bin/rails 'tenancy:owner_setup_link[op@example.com]'
+   ```
+
+   **Expect:** the grant reports success; running it again reports they are already an operator. The setup link is printed to the terminal, never emailed. Open it, confirm → signed in → `/settings/password/new`. Set a password within 15 minutes: the area re-checks reauthentication on every request, and a passwordless account's only other factor is an emailed code.
+2. As the member, navigate to `/operations`, `/operations/users`, `/operations/operatorships`.
+   **Expect:** a plain 404 each time — not 403, not a redirect. No link to the area exists anywhere for a member.
+3. As the operator, navigate to `/operations`.
+   **Expect:** the banner "Instance operations — you are above the workspaces, not inside one." and a nav of Workspaces · Users · Activity · Operators. Every workspace on the instance is listed — locked and archived ones included — sorted case-insensitively, each name linking to its page.
+
+### Create a workspace for an owner
+
+1. Workspaces → **New workspace**. Name it, set **Owner's email address** to the member's address → **Create workspace**.
+   **Expect:** "Workspace created."; the workspace page lists the member as Owner; the operator is not a member of it.
+2. Repeat with an address nobody has an account for.
+   **Expect:** the operator is the Owner for now; `/letter_opener` holds an Owner-role invitation to that address. Accept it in a private window → the new person is an Owner too; the operator stays a member until they hand off (Members → Leave). This is deliberate — see [The operator becomes the owner](/docs/developer/operations#the-operator-becomes-the-owner).
+3. Submit with the owner email blank, then with `not-an-email`.
+   **Expect:** the form re-renders with the error on the **Owner's email address** field, the submitted value still in it, and no workspace created.
+
+### Lock and unlock a workspace
+
+1. Open a workspace → **Lock this workspace** → confirm ("Everyone in it is blocked until you unlock it. Nothing is deleted.").
+   **Expect:** "Workspace locked."; the status badge reads Locked; the button is now **Unlock this workspace**.
+2. As the member, open that workspace.
+   **Expect:** "This workspace is locked." — every page in it is blocked.
+3. Unlock it, then as the member open the workspace's activity.
+   **Expect:** rows naming the operator: "locked the workspace" and "unlocked the workspace". Lock it twice in quick succession (double-submit) → exactly one "locked" row.
+
+### Look a user up, suspend, reinstate
+
+1. Users → enter the member's exact email address (any case) → **Search**.
+   **Expect:** one result linking to their page. A wrong address → "No user has that email address." Without a query the page lists nobody.
+2. On the member's page: **Suspend** → confirm ("This ends their sessions and blocks sign-in until you reinstate them. Their workspaces and roles stay as they are.").
+   **Expect:** "Access suspended."; a **Suspended** badge with "since …" in your own time zone; **Reinstate** where Suspend was; the memberships list below is unchanged.
+3. As the member: their existing tab now redirects to sign-in (the session was ended). Sign in with the password.
+   **Expect:** "Your account has been suspended. Contact whoever runs this app to have it reinstated." Request a magic link and open it → the same refusal. Passkey and OAuth sign-in are refused the same way.
+4. Operator: **Reinstate**.
+   **Expect:** "Access reinstated." The member signs in normally and every workspace and role is exactly as it was.
+5. Open the page of any operator, your own included.
+   **Expect:** an **Operator** badge, no Suspend button, and "Operators can't be suspended. Revoke their operator access first." with "operator access" linking to the roster.
+
+### Clear a sign-in lockout
+
+1. As the member, enter a wrong password five times.
+   **Expect:** "Your account has been locked due to too many failed attempts. Please try again later."
+2. Operator: open the member's page.
+   **Expect:** "Sign-in blocked after 5 failed attempts — clears in about 1 hour." and **Let them try again**. Click it → "Lockout cleared."; the sentence is gone; the member can sign in at once.
+
+### Operators
+
+1. Operators → **Grant operator access to (email)** = the member → **Grant**.
+   **Expect:** "Operator access granted."; the roster shows them "granted by *you* on *date*" (a rake or seed grant shows "rake or seed"). Grant again → "That user is already an operator." An unknown address → "No user has that email address." Blank → "Enter an email address."
+2. With two operators on the roster, **Revoke** your own row.
+   **Expect:** "You cannot revoke your own operator access. Ask another operator to do it." Revoke the member instead → confirm ("Revoke *name*'s operator access?") → "Operator access revoked." Now, as the only operator left, revoke yourself → "The last operator cannot be revoked from here. Use rails operators:revoke on the server."
+3. Activity.
+   **Expect:** newest first: the grant and revoke rows ("granted *name* operator access", "revoked *name*'s operator access"), the suspension and reinstatement, the lock and unlock — each naming the operator. Personal security events (password changes, passkeys, new devices) never appear here.
+
+### Edge cases — Operations
+
+- **`TENANCY_WORKSPACE_CREATION=disabled`:** the Workspaces index shows no **New workspace**; `/operations/workspaces/new` redirects with "Workspace creation is disabled on this instance."; a member still gets 404.
+- **Break-glass:** `rails 'users:suspend[op@example.com]'` suspends an operator (the panel refuses; the task does not check) and `rails users:unsuspend` restores them; `rails 'operators:revoke[email]'` revokes even the last operator.
+- **Reauthentication:** sign in, wait 15 minutes, open `/operations` → the reauthentication interstitial (password, passkey, or emailed code), then the page.
+- **AAA:** every operations page is audited in both themes by `spec/system/operations_area_spec.rb`; when checking by hand, switch theme and re-read a page with the pointer resting on a list row.

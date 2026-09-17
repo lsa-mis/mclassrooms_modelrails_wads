@@ -46,7 +46,7 @@ in supersedes per window before the victim's link becomes untouchable.
 
 ### Verified addresses gate invitations
 
-Sending an invitation requires a **proven** address: `User#can_invite?` is true only when the user holds an authentication whose `verified_at` is set. Every writer of that column got there by demonstrating control of the mailbox — clicking a signed link sent to it (`Authentication#verify!`, the magic-link callback) or a provider vouching for it (`OauthLink`, gated on `identity.email_verified?`). One writer used to prove nothing: `Settings::PasswordsController#create` stamped `verified_at` on a freshly minted email authentication, and setting a password demonstrates control of the *session*, not of the address. That stamp is gone, which is what lets the predicate stay a simple existence check. The gate is only as strong as the weakest path that sets the column: if you add a `verified_at` writer, add it to the inventory in `spec/requests/can_invite_gate_spec.rb`.
+Sending an invitation requires a **proven** address: `User#can_invite?` is true only when the user holds an authentication whose `verified_at` is set. Every writer of that column got there by demonstrating control of the mailbox — clicking a signed link sent to it (`Authentication#verify!`, the magic-link callback) or a provider vouching for it (`OauthLink`, gated on `identity.email_verified?`) — or an operator vouching for an address they typed on the command line (`rails operators:grant`, the `:shared` seed's reasoning for its bootstrap owner; both create the row and never convert a pending one). One writer used to prove nothing: `Settings::PasswordsController#create` stamped `verified_at` on a freshly minted email authentication, and setting a password demonstrates control of the *session*, not of the address. That stamp is gone, which is what lets the predicate stay a simple existence check. The gate is only as strong as the weakest path that sets the column: if you add a `verified_at` writer, add it to the inventory in `spec/requests/can_invite_gate_spec.rb`.
 
 ### Invitation blocks (decline-and-block)
 
@@ -166,12 +166,32 @@ owner can still sign in with a passkey or magic link. If your fork wants a
 lock to mean "no sign-in at all", add the `locked?` check to
 `magic_link_callbacks/sessions#create` and `Passkeys::AuthenticateCeremony` as well.
 
+### Account suspension
+
+An operator hold, separate from the failed-attempt lockout above: refused at
+`start_new_session_for`, the one funnel every sign-in path uses (password,
+magic link, passkey, OAuth), and again at session resumption. Sessions are
+destroyed at suspend time; memberships, roles and project access are left
+untouched, so reinstating a user restores them exactly. The hold refuses
+sessions, not writes: a sign-in token a suspended account presents is spent
+as usual, and an OAuth callback still links the provider before the refusal.
+`user.suspended`, `user.unsuspended` and `user.unlocked` are STRICT-tier
+audit rows at `admin` visibility naming the operator as actor (none for a
+rake run). The operations area refuses to suspend an operator; `rails
+users:suspend` does not check, because it is the break-glass path.
+
 Admin rake tasks:
 
 ```bash
-rails users:unlock[email@example.com]     # Unlock a locked account
-rails users:verify[email@example.com]     # Manually verify an email
-rails users:suspend[email@example.com]    # Suspend an account (destroys sessions, deactivates memberships)
+rails 'users:unlock[email@example.com]'      # Unlock a locked account
+rails 'users:verify[email@example.com]'      # Manually verify an email
+rails 'users:suspend[email@example.com]'     # Suspend a user (sessions end, sign-in blocked; no operator guard)
+rails 'users:unsuspend[email@example.com]'   # Unsuspend a user (restores sign-in)
+rails 'workspaces:suspend[slug]'             # Lock a workspace (members blocked until unsuspended)
+rails 'workspaces:unsuspend[slug]'           # Unlock a workspace
+rails 'operators:grant[email@example.com]'   # Grant instance-operator access to a user
+rails 'operators:revoke[email@example.com]'  # Revoke instance-operator access from a user (no last-operator guard)
+rails operators:list                         # List instance operators
 ```
 
 ### Session Lifetime
@@ -195,10 +215,11 @@ out every *other* session; users can review and revoke devices at
 Actions that add, remove, or change an authentication factor require a recent
 proof of identity, so a borrowed session can't be turned into a takeover.
 `Reauthenticatable#require_reauthentication!` gates: password change/removal,
-passkey enrollment and deletion, email change, and OAuth unlink. It checks
-`Session#reauthenticated?` (a 15-minute window on `reauthenticated_at`, set at
-sign-in and refreshed by the interstitial) and, if stale, sends the user to
-`/settings/reauthentication`.
+passkey enrollment and deletion, email change, OAuth unlink, and every
+action in the [instance-operations area](operations) (`/operations`). It
+checks `Session#reauthenticated?` (a 15-minute window on
+`reauthenticated_at`, set at sign-in and refreshed by the interstitial) and,
+if stale, sends the user to `/settings/reauthentication`.
 
 The interstitial offers only the factors the user has (`User#available_reauth_factors`):
 password, a passkey (verified through `AuthenticateCeremony` **bound to the
@@ -206,11 +227,15 @@ current user** — another account's passkey is rejected), or a one-time
 `ReauthenticationChallenge` code emailed and entered in-page (never a link, so
 it can't be replayed into a sign-in). All of it is tunable in
 `config/initializers/sessions.rb`; `reauth_enabled = false` makes the gate a
-no-op — except passkey enrollment, which stays gated regardless: enrollment
-mints a durable, phishing-resistant credential and revokes nothing, so it is
-hard-wired (`require_reauthentication!(force: true)`) and additionally fires
-`PasskeyAddedNotifier`. Email changes are gated here rather than on a
-password, so passwordless users can change their email.
+no-op — except passkey enrollment and the operations area, which stay gated
+regardless: enrollment mints a durable, phishing-resistant credential and
+revokes nothing, and the operations area suspends workspaces and mints
+operatorships, so both are hard-wired
+(`require_reauthentication!(force: true)`), and enrollment additionally
+fires `PasskeyAddedNotifier`. Email changes are gated here rather than on a
+password, so passwordless users can change their email. The operations gate
+is also the only one that fires on GET requests, not just mutations — see
+[Instance operations: How it stays safe](operations#how-it-stays-safe).
 
 Sign-ins from an unrecognized browser/OS additionally trigger a security
 notification (`SignInFromNewDeviceNotifier`). The alert is gated by
@@ -241,7 +266,7 @@ None of these five tokens is plaintext at rest. Magic-link and workspace-join-li
 
 - Both logs are Docker `json-file` logs on the single deploy host, capped at 10 MB each by Kamal's defaults (`--log-opt max-size=10m` for the app container, `log_max_size` for the proxy) when `config/deploy.yml` sets nothing. Nothing is shipped off the host. The app-container log is replaced on each deploy and pruned with the last five containers; the proxy log is long-lived and rolls on size only, so it is the copy that holds a token longest.
 - Reading either log needs `docker logs` over the deploy SSH key, which is root. Anyone who can read a token there can already read the database.
-- Token lifetimes cap what a copy is worth. Magic-link tokens expire in 15 minutes, are single-use, and are superseded by requesting a new link. Invitation tokens expire in 7 days, are single-use, and accept refuses an email mismatch. Email-verification tokens expire in 24 hours. Workspace join links expire seven days after creation or rotation (`WorkspaceJoinLink::LIFETIME`), same as invitations, and an admin can also revoke one early ([#952](https://github.com/dschmura/modelrails_base/issues/952)).
+- Token lifetimes cap what a copy is worth. Magic-link tokens expire in 15 minutes, are single-use, and are superseded by requesting a new link. Presenting a spent one starts no session and consumes nothing: its owner, if already signed in, is told so (`authentication.already_signed_in`); anyone else gets the invalid answer. A superseded-but-unused link carries the same `consumed_at` as a redeemed one and is answered the same way — the distinction is [#1083](https://github.com/dschmura/modelrails_base/issues/1083). Invitation tokens expire in 7 days, are single-use, and accept refuses an email mismatch. Email-verification tokens expire in 24 hours. Workspace join links expire seven days after creation or rotation (`WorkspaceJoinLink::LIFETIME`), same as invitations, and an admin can also revoke one early ([#952](https://github.com/dschmura/modelrails_base/issues/952)).
 
 **Rule for new work.** A secret goes in the query string or the request body, never in a path segment; `spec/code_smells/no_new_bearer_tokens_in_route_paths_spec.rb` holds the existing routes to a named allow-list and fails on a new one. Existing routes move only when they are touched for another reason (verification first, [#950](https://github.com/dschmura/modelrails_base/issues/950)), with both route shapes live for one token lifetime; join links move by forced rotation.
 
@@ -360,18 +385,16 @@ which is why the members page filters and sorts in Ruby (`WorkspaceRoster`).
 | Column | Cipher | Why |
 | ------ | ------ | --- |
 | `users.email_address` | deterministic, downcased | sign-in lookup; unique index |
-| `authentications.uid` | deterministic | `(provider, uid)` lookup and unique index — for email-provider rows this *is* the address |
+| `authentications.uid` | deterministic | `(provider, uid)` lookup and unique index; email-provider rows carry the user id, not the address (#903) |
 | `invitations.email` | deterministic, downcased | one pending invitation per address per invitable |
 | `magic_link_tokens.email` | deterministic, downcased | one unconsumed token per address |
 | `users.pending_email`, `first_name`, `last_name` | non-deterministic | never looked up |
 | `authentications.email`, `invitations.company_name`, `client_accesses.company_name` | non-deterministic | never looked up |
 
 `workspaces.name` stays plaintext deliberately: the slug is the name,
-parameterized, and sits in every URL. Three properties worth knowing: the
-deterministic columns for one address — `users.email_address` and the
-email-provider `authentications.uid` — hold identical bytes, so a leaked dump
-joins them; the `deterministic_key` cannot be rotated (Rails raises on a
-key list), so it is backed up with the credentials key; and the two
+parameterized, and sits in every URL. Two properties worth knowing: the
+`deterministic_key` cannot be rotated (Rails raises on a key list), so it is
+backed up with the credentials key; and the two
 invitation-token columns are encrypted *differently* on purpose —
 `invitations.token` is deterministic (its `find_by` lookup and unique index
 need it) while `authentications.pending_invitation_token` is not (nothing
@@ -418,9 +441,9 @@ The `Trackable` concern logs workspace-domain model changes to `ActivityLog` on 
 - `token`, `password_digest`
 - `oauth_token`, `oauth_refresh_token`
 
-**Account-security events are a separate, stricter tier.** Password set/change/removal, passkey enrollment/removal, and sign-in from a new device write rows named in `ActivityLog::SECURITY_ACTIONS`, through `ActivityLog.record_security_event!`. The credential events are written **in the same transaction as the mutation they record, with no rescue** — a failed audit write fails the credential write. Sign-in detection stays best-effort, because the `Session` row is already the primary record of a sign-in.
+**Account-security events are a separate, stricter tier.** Password set/change/removal, passkey enrollment/removal, sign-in from a new device, and instance-operator grant/revocation write rows named in `ActivityLog::SECURITY_ACTIONS`, through `ActivityLog.record_security_event!`. The credential events — including operator grants and revocations — are written **in the same transaction as the mutation they record, with no rescue** — a failed audit write fails the credential write. Sign-in detection stays best-effort, because the `Session` row is already the primary record of a sign-in.
 
-These rows are retained on their own floor (`ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR`, 365 days) rather than the general 12-month window, and are readable by their owner on `/settings/sessions`. Full per-event table, including what corroborates each row: [Notifications § Security event audit coverage](/docs/developer/notifications). The matching in-app notification carries no retention floor of its own — it is attention state on the user's clock. The `ActivityLog` row is the record.
+These rows are retained on their own floor (`ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR`, 365 days) rather than the general 12-month window. Rows at `personal` visibility (the account events above) are readable by their owner on `/settings/sessions`; rows at `admin` visibility (operator grants and revocations, whose actor is the granter when there is one — a rake grant records none — rather than the subject) appear in the operations feed instead. Full per-event table, including what corroborates each row: [Notifications § Security event audit coverage](/docs/developer/notifications). The matching in-app notification carries no retention floor of its own — it is attention state on the user's clock. The `ActivityLog` row is the record.
 
 ### Image Processing (Active Storage + libvips)
 
@@ -551,7 +574,7 @@ config.ssl_options = { hsts: { subdomains: true, preload: true, expires: 1.year 
 Some vulnerabilities disclose anything readable by the app process — CVE-2026-66066 above is one. Upgrading closes the hole but does not undo an exfiltration that already happened. If your deployment ran an affected version while reachable by untrusted users, treat every secret the process could read as exposed and replace it:
 
 1. `secret_key_base` — rotating it signs out every user and invalidates encrypted and signed cookies, signed global IDs, and existing Active Storage URLs.
-2. The master key (`config/master.key` or `RAILS_MASTER_KEY`) and everything `config/credentials.yml.enc` decrypts. Re-encrypt under the new key with `bin/rails credentials:edit`. One entry inside the blob is different: `active_record_encryption.primary_key` rotates by listing the new key after the old one and re-saving records (Rails guide, "Rotating Keys"), but `deterministic_key` **cannot** rotate — Rails refuses a list. Replacing it means decrypting every deterministic column under the old key and re-writing under the new one in a one-off pass this template does not ship; until then, an exposed deterministic key means the addresses in `users.email_address`, `authentications.uid`, `invitations.email`, and `magic_link_tokens.email` are recoverable from any dump taken while it was in use — as is `invitations.token` (also deterministic, for its `find_by` lookup and unique index), so working invitation accept/decline/block links are recoverable from that dump too, for as long as those invitations stay pending. `authentications.pending_invitation_token` (the parked copy of the same token, held non-deterministically because nothing looks it up by value) decrypts under the rotatable `primary_key` instead, so it isn't stuck the way the deterministic columns are — but until you actually rotate, it is exposed the same way everything else in this step is.
+2. The master key (`config/master.key` or `RAILS_MASTER_KEY`) and everything `config/credentials.yml.enc` decrypts. Re-encrypt under the new key with `bin/rails credentials:edit`. One entry inside the blob is different: `active_record_encryption.primary_key` rotates by listing the new key after the old one and re-saving records (Rails guide, "Rotating Keys"), but `deterministic_key` **cannot** rotate — Rails refuses a list. Replacing it means decrypting every deterministic column under the old key and re-writing under the new one in a one-off pass this template does not ship; until then, an exposed deterministic key means the addresses in `users.email_address`, `invitations.email`, and `magic_link_tokens.email` are recoverable from any dump taken while it was in use — as is `invitations.token` (also deterministic, for its `find_by` lookup and unique index), so working invitation accept/decline/block links are recoverable from that dump too, for as long as those invitations stay pending. `authentications.pending_invitation_token` (the parked copy of the same token, held non-deterministically because nothing looks it up by value) decrypts under the rotatable `primary_key` instead, so it isn't stuck the way the deterministic columns are — but until you actually rotate, it is exposed the same way everything else in this step is.
 3. Storage service credentials (S3, GCS, Azure) if you moved off the local disk service.
 4. Database credentials, if your database is not the bundled SQLite file.
 5. API tokens and keys for every third-party service the app calls — OAuth client secrets, mail provider keys, error reporting DSNs.

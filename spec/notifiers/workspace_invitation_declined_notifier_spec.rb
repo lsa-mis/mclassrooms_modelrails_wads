@@ -82,7 +82,7 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_invitation_declined.message",
                decliner_email: decliner_email,
-               workspace: workspace.name)
+               workspace_name: workspace.name)
       )
     end
   end

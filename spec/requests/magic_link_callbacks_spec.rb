@@ -61,6 +61,39 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         expect(response).to redirect_to(new_session_path)
         expect(flash[:alert]).to be_present
       end
+
+      # A spent link re-presented by the browser that is signed in as its
+      # owner — a re-clicked email, a retry, a prefetcher — is not a failure.
+      # Answering "invalid or has expired" told a signed-in user the opposite
+      # of what just happened; #846 fixed this on the sign-in POST and never
+      # on the registration path. The GET still consumes nothing and starts
+      # no session; it only stops lying.
+      it "tells the signed-in owner they are already signed in, and starts no session" do
+        token = MagicLinkToken.create_for_email(user.email_address)
+        MagicLinkToken.consume!(token)
+        sign_in(user)
+
+        expect { get magic_link_callback_path(token: token) }
+          .not_to change { user.sessions.count }
+
+        expect(response).not_to redirect_to(new_session_path)
+        expect(flash[:alert]).to be_blank
+        expect(flash[:notice]).to eq(I18n.t("authentication.already_signed_in"))
+      end
+
+      # The fence, mirrored from the sign-in POST: only the address the token
+      # belongs to may read a spent token as its own replay.
+      it "still rejects a spent token belonging to a different address" do
+        other = create(:user)
+        others_token = MagicLinkToken.create_for_email(other.email_address)
+        MagicLinkToken.consume!(others_token)
+        sign_in(user)
+
+        get magic_link_callback_path(token: others_token)
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("magic_link_callbacks.show.invalid"))
+      end
     end
 
     context "expired token" do
@@ -100,6 +133,16 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         auth = user.authentications.find_by(provider: "email")
         expect(auth).to be_present
         expect(auth.verified_at).to be_present
+      end
+
+      # #903: the signup path no longer copies the address into uid.
+      it "identifies the email authentication by the user's id, not their address" do
+        post magic_link_callback_path(token: token), params: {
+          user: { first_name: "Jane", last_name: "Doe" }
+        }
+
+        user = User.find_by(email_address: "newreg@example.com")
+        expect(user.authentications.sole.uid).to eq(user.id.to_s)
       end
 
       it "consumes the token" do
@@ -174,6 +217,39 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         }
         expect(response).to redirect_to(new_session_path)
         expect(flash[:alert]).to be_present
+      end
+
+      # A double-submitted registration form. The first POST consumed the
+      # token and signed the user in; the second arrives from that same
+      # browser. It must answer what the first POST answered — the welcome —
+      # not "invalid or has expired", and it must not create a second user.
+      it "answers a replayed registration with the welcome, not an expiry alert" do
+        # The first POST must get past the signups gate to consume the token
+        # and start the session; the sibling examples never reach that gate.
+        allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open)
+        token = MagicLinkToken.create_for_email("double@example.com")
+        params = { user: { first_name: "Nell", last_name: "Ramirez" } }
+        post magic_link_callback_path(token: token), params: params
+
+        expect { post magic_link_callback_path(token: token), params: params }
+          .not_to change(User, :count)
+
+        expect(response).not_to redirect_to(new_session_path)
+        expect(flash[:alert]).to be_blank
+        expect(flash[:notice]).to eq(I18n.t("magic_link_callbacks.create.registered"))
+      end
+
+      it "still rejects a spent registration token presented by a different signed-in user" do
+        token = MagicLinkToken.create_for_email("someone-else@example.com")
+        MagicLinkToken.consume!(token)
+        sign_in(create(:user))
+
+        post magic_link_callback_path(token: token), params: {
+          user: { first_name: "Nell", last_name: "Ramirez" }
+        }
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("magic_link_callbacks.create.invalid"))
       end
     end
   end

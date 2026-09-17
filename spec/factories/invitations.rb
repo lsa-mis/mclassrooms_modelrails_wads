@@ -1,7 +1,12 @@
 FactoryBot.define do
   factory :invitation do
     association :invitable, factory: :workspace
-    email { Faker::Internet.email }
+    # Sequence-prefixed for the same reason as the user factory (#856): the
+    # pending-invitation indexes are unique on (email, invitable), so two
+    # invitations built for one workspace collide whenever Faker repeats an
+    # address — improbable, not impossible, and the failure surfaces as
+    # RecordInvalid on a row the failing spec never mentions.
+    sequence(:email) { |n| "invite-#{n}-#{Faker::Internet.email}" }
     role { Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" } }
     invited_by factory: :user
     expires_at { 7.days.from_now }

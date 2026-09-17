@@ -3,6 +3,8 @@ module MagicLinkCallbacks
   # page's button POSTs here, the token is spent, the session starts. The GET
   # on the callback itself only renders that confirmation.
   class SessionsController < ApplicationController
+    include MagicLinkReplayable
+
     allow_unauthenticated_access
 
     def create
@@ -36,24 +38,12 @@ module MagicLinkCallbacks
       params[:magic_link_callback_token]
     end
 
-    # The spent token this same browser already redeemed, or nil.
-    #
-    # A second POST of one token is ordinary: a double-clicked confirm button, a
-    # browser retrying a POST, a driver re-dispatching a click on a loaded CI
-    # shard. `consume!` is single-use, so the replay comes back nil and looks
-    # exactly like an expired link — except the session the first POST created is
-    # live, which no expiry and no superseding mint can produce.
-    #
-    # Matching on the address is the fence: only the owner may read a spent token
-    # as their own replay. A signed-in visitor holding somebody else's used link
-    # still gets the invalid alert, and no session is started either way.
+    # The spent token this same browser already redeemed, or nil — the
+    # rationale and the address fence live on MagicLinkReplayable, shared with
+    # the registration callback. Passed this controller's own `token` because
+    # the two controllers name the param differently.
     def replayed_sign_in
-      return nil unless authenticated?
-
-      spent = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token))
-      return nil if spent.nil? || spent.consumed_at.nil?
-
-      spent if spent.email == Current.user.email_address
+      replayed_by_owner(token)
     end
 
     # Server-side intent → fixed path. Never trust a user-supplied URL here.

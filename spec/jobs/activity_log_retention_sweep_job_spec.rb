@@ -88,5 +88,22 @@ RSpec.describe ActivityLogRetentionSweepJob, type: :job do
       described_class.perform_now
       expect(ActivityLog.exists?(admin_row.id)).to be(false)
     end
+
+    # Operatorship's rows are written at admin visibility (the actor is the
+    # granter, not the subject) — this proves the retention floor keys off
+    # action membership, not off the personal visibility the other members use.
+    it "protects an operatorship row past the general window but inside the floor, whatever its visibility" do
+      stub_const("ActivityLogRetentionSweepJob::RETENTION_WINDOW", 30.days)
+      travel_to(60.days.ago) { Operatorship.grant!(user: user, granted_by: create(:user)) }
+      row = ActivityLog.find_by!(action: "operatorship.granted", trackable: user)
+
+      described_class.perform_now
+
+      expect(ActivityLog.exists?(row.id)).to be(true)
+    end
+  end
+
+  it "runs on the low queue" do
+    expect(described_class.queue_name).to eq("low")
   end
 end

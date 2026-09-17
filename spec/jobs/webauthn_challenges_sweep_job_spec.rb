@@ -22,4 +22,8 @@ RSpec.describe WebauthnChallengesSweepJob, type: :job do
     expect(WebauthnChallenge.exists?(live.id)).to be(true)
     expect(WebauthnChallenge.exists?(recently_expired.id)).to be(true)
   end
+
+  it "runs on the low queue" do
+    expect(described_class.queue_name).to eq("low")
+  end
 end

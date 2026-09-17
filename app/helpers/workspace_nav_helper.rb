@@ -33,10 +33,8 @@ module WorkspaceNavHelper
       { label: t("workspaces.sidebar.overview"), href: workspace_path(workspace),
         icon: :home, active: current_page?(workspace_path(workspace)) }
     ]
-    unless workspace.personal?
-      items << { label: t("workspaces.sidebar.settings"), href: edit_workspace_path(workspace),
-                 icon: :cog, active: current_workspace_section == :settings }
-    end
+    items << { label: t("workspaces.sidebar.settings"), href: edit_workspace_path(workspace),
+               icon: :cog, active: current_workspace_section == :settings }
     items
   end
 end

@@ -29,7 +29,7 @@ class WorkspaceJoinedNotifier < ApplicationNotifier
         I18n.t(
           "notifications.workspace_joined.message",
           locale: recipient_locale,
-          workspace: event.record.workspace.name
+          workspace_name: event.record.workspace.name
         )
       end
     end

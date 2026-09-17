@@ -11,7 +11,7 @@
 # window. purge_later fans file deletion out as per-blob jobs so a storage
 # hiccup on one blob can't halt the sweep.
 class UnattachedBlobsSweepJob < ApplicationJob
-  queue_as :default
+  queue_as :low
 
   GRACE_PERIOD = 2.days
 

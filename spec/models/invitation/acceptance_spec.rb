@@ -93,6 +93,10 @@ RSpec.describe Invitation, type: :model do
       expect(membership.role).to eq(invitation.role)
     end
 
+    it "marks the invitee onboarded" do
+      expect { invitation.accept!(user) }.to change { user.reload.onboarded? }.from(false).to(true)
+    end
+
     it "raises if user is already a member" do
       create(:membership, user: user, workspace: workspace)
       expect { invitation.accept!(user) }.to raise_error(Workspace::AlreadyMember)

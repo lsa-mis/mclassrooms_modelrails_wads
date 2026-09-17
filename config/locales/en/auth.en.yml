@@ -12,6 +12,7 @@ en:
       success: "Signed in successfully."
       failure: "Invalid email or password."
       locked: "Your account has been locked due to too many failed attempts. Please try again later."
+      suspended: "Your account has been suspended. Contact whoever runs this app to have it reinstated."
       rate_limited: "Too many attempts. Please try again later."
       oauth_failure: "Authentication failed. Please try again."
     lookups:
@@ -28,16 +29,16 @@ en:
       success: "Signed out successfully."
   registrations:
     create:
-      invitation_consumed: "That invitation is no longer valid. Please ask your workspace administrator for a new one."
-      invitation_email_mismatch: "You're signed in, but that invitation was sent to a different email address. Ask your workspace administrator to invite this one."
+      invitation_consumed: "That invitation is no longer valid. Please ask your %{workspace} administrator for a new one."
+      invitation_email_mismatch: "You're signed in, but that invitation was sent to a different email address. Ask your %{workspace} administrator to invite this one."
     closed:
       title: "Sign-ups are by invitation only"
       body_html: |
-        If your team uses %{app_name}, ask your workspace administrator
+        If your team uses %{app_name}, ask your %{workspace} administrator
         to send you an invitation. Already have an invitation email?
         Click the link in that message to get started.
       sign_in_link: "Sign in to an existing account"
-      oauth_blocked: "Sign-ups are by invitation only. Please ask your workspace administrator for an invitation."
+      oauth_blocked: "Sign-ups are by invitation only. Please ask your %{workspace} administrator for an invitation."
   activerecord:
     errors:
       models:
@@ -48,16 +49,16 @@ en:
         membership:
           attributes:
             base:
-              workspace_member_limit: "workspace has reached its member limit"
+              workspace_member_limit: "%{workspace} has reached its member limit"
               last_owner: "cannot deactivate the last owner"
         project:
           attributes:
             base:
-              workspace_project_limit: "workspace has reached its project limit"
+              workspace_project_limit: "%{workspace} has reached its %{project} limit"
         project_membership:
           attributes:
             user:
-              not_workspace_member: "must be a workspace member"
+              not_workspace_member: "must be a member of the %{workspace}"
         invitation:
           attributes:
             base:
@@ -76,5 +77,5 @@ en:
         workspace:
           attributes:
             join_policy:
-              personal_must_be_invite: "must be 'invite' for personal workspaces"
+              personal_must_be_invite: "must be 'invite' for personal %{workspaces}"
               not_permitted_by_instance: "is not permitted by this instance"

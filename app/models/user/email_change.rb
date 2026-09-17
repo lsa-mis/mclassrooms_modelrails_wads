@@ -26,22 +26,20 @@ class User < ApplicationRecord
     # the emailed link. Returns false (no change) on a blank/wrong/expired token
     # or a validation failure.
     def confirm!(token)
-      # Guard clauses stay OUTSIDE the transaction: a `return` inside
-      # `transaction do` commits rather than rolls back under modern Rails,
-      # so an early exit must never share a block with the writes.
+      # Guard clauses stay ahead of the write, never inside a transaction block
+      # with it: a `return` from inside `transaction do` commits rather than
+      # rolls back under modern Rails. Since #903 the write is a single `save!`
+      # — already atomic on its own — so there is no block here to be tempted
+      # into; keep it that way if a second write ever joins this one.
       return false if token.blank?
 
       @user.reload
       return false if @user.pending_email_token != token
       return false unless valid_token?
 
-      @user.transaction do
-        @user.email_address = @user.pending_email
-        clear_fields
-        @user.save!
-
-        @user.authentications.email.update_all(uid: @user.email_address)
-      end
+      @user.email_address = @user.pending_email
+      clear_fields
+      @user.save!
 
       true
     rescue ActiveRecord::RecordInvalid

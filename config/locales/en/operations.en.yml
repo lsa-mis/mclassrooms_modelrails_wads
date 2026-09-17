@@ -1,0 +1,111 @@
+en:
+  operations:
+    area:
+      banner: "Instance operations — you are above the %{workspaces}, not inside one."
+      nav_label: "Operations"
+    nav:
+      workspaces: "%{Workspaces}"
+      users: "Users"
+      activity: "Activity"
+      operators: "Operators"
+    workspaces:
+      index:
+        title: "%{Workspaces}"
+        description: "Every %{workspace} on this instance, including locked and archived ones."
+        caption: "All %{workspaces}"
+        empty: "No %{workspaces} yet."
+        new: "New %{workspace}"
+        columns:
+          name: "Name"
+          status: "Status"
+          owner: "Owner"
+          members: "Members"
+      show:
+        status_prefix: "Status"
+        members: "Members"
+        no_members: "No members yet."
+        suspend: "Lock this %{workspace}"
+        suspend_confirm: "Everyone in it is blocked until you unlock it. Nothing is deleted."
+        unsuspend: "Unlock this %{workspace}"
+      new:
+        title: "New %{workspace}"
+        name: "Name"
+        owner_email: "Owner's email address"
+        submit: "Create %{workspace}"
+      create:
+        success: "%{Workspace} created."
+      suspensions:
+        create:
+          success: "%{Workspace} locked."
+        destroy:
+          success: "%{Workspace} unlocked."
+    users:
+      index:
+        title: "Users"
+        description: "Look a user up by their exact email address."
+        search_label: "Email address"
+        search_placeholder: "someone@example.com"
+        search: "Search"
+        no_match: "No user has that email address."
+      show:
+        operator: "Operator"
+        suspended: "Suspended"
+        suspended_since: "since %{time}"
+        memberships: "Memberships"
+        no_memberships: "No memberships yet."
+        reinstate: "Reinstate"
+        suspend: "Suspend"
+        suspend_confirm: "This ends their sessions and blocks sign-in until you reinstate them. Their %{workspaces} and roles stay as they are."
+        operator_unsuspendable_html: "Operators can't be suspended. Revoke their %{link} first."
+        operator_access: "operator access"
+        lockout: "Sign-in blocked after %{count} failed attempts — clears in %{time}."
+        clear_lockout: "Let them try again"
+      locks:
+        destroy:
+          success: "Lockout cleared."
+      suspensions:
+        create:
+          success: "Access suspended."
+        destroy:
+          success: "Access reinstated."
+    activity_logs:
+      index:
+        title: "Activity across the instance"
+        description: "Newest first, every %{workspace}. Personal security events are not shown here."
+        instance: "Instance"
+    operatorships:
+      index:
+        title: "Operators"
+        description: "Who can operate this instance."
+        # _html: %{date} carries real markup here. See i18n.md (the _html
+        # suffix convention).
+        granted_by_html: "granted by %{name} on %{date}"
+        bootstrap: "rake or seed"
+        grant_label: "Grant operator access to (email)"
+        grant: "Grant"
+        revoke: "Revoke"
+        revoke_aria_label: "Revoke %{name}'s operator access"
+        revoke_confirm: "Revoke %{name}'s operator access?"
+      create:
+        success: "Operator access granted."
+        already: "That user is already an operator."
+        not_found: "No user has that email address."
+        blank: "Enter an email address."
+      destroy:
+        success: "Operator access revoked."
+        already_revoked: "That operator access was already revoked."
+        last_operator: "The last operator cannot be revoked from here. Use rails operators:revoke on the server."
+        self_revoke: "You cannot revoke your own operator access. Ask another operator to do it."
+  # First app-level override of a humanized attribute name — must match
+  # workspaces.new.owner_email above, or the error summary names a field the
+  # form doesn't. See i18n.md (ignore_unused caveat) for why.
+  activerecord:
+    attributes:
+      workspace:
+        owner_email: "Owner's email address"
+    errors:
+      models:
+        workspace:
+          attributes:
+            owner_email:
+              invalid: "must be a valid email address"

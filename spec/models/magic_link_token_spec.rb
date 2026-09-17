@@ -81,6 +81,33 @@ RSpec.describe MagicLinkToken, type: :model do
     end
   end
 
+  # The spent row for a token, or nil — the read half of replay detection,
+  # kept on the model so the address fence in the controllers has one lookup
+  # to guard and cannot drift between them. "Spent" is consumed_at present,
+  # which also covers a superseded link; redeemed-vs-superseded is #1083.
+  describe ".find_spent" do
+    it "returns the row once the token has been consumed" do
+      token = MagicLinkToken.create_for_email("spent@example.com")
+      MagicLinkToken.consume!(token)
+
+      expect(MagicLinkToken.find_spent(token)).to eq(
+        MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token))
+      )
+    end
+
+    it "returns nil while the token is still live" do
+      token = MagicLinkToken.create_for_email("live@example.com")
+
+      expect(MagicLinkToken.find_spent(token)).to be_nil
+    end
+
+    it "returns nil for a blank or unknown token without touching the digest of an empty string" do
+      expect(MagicLinkToken.find_spent(nil)).to be_nil
+      expect(MagicLinkToken.find_spent("")).to be_nil
+      expect(MagicLinkToken.find_spent("not-a-real-token")).to be_nil
+    end
+  end
+
   describe "#consume! (instance)" do
     it "returns true on first call and false on subsequent calls" do
       token_value = MagicLinkToken.create_for_email("test@example.com")

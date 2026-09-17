@@ -51,4 +51,36 @@ RSpec.describe "Code smell: invitation.delivery_suppressed stays admin-only" do
   it "never appears in ActivityLog.security_events_for the inviter" do
     expect(ActivityLog.security_events_for(inviter)).not_to include(suppressed_row)
   end
+
+  # The operations feed is the admin console this spec's header anticipated.
+  # On a :shared instance the bootstrap owner is BOTH the operator and the
+  # inviter, so an admin-tier surface is an inviter-facing one and I3 is a
+  # question about this scope, not only about the workspace feeds.
+  it "never appears in ActivityLog.for_operations_feed" do
+    expect(ActivityLog.for_operations_feed).to include(visible_row)
+    expect(ActivityLog.for_operations_feed).not_to include(suppressed_row)
+  end
+
+  # Naming the surfaces is what let the console ship past this guard: a scope
+  # added later is invisible to a list of examples. Enumerate the read-surface
+  # scopes instead and fail on any this spec does not cover, so the next one
+  # cannot be added silently.
+  it "covers every read-surface scope ActivityLog defines" do
+    covered = %w[visible security_events_for for_operations_feed]
+    # for_workspace and recent are composable fragments, not read surfaces:
+    # neither filters visibility, and both are always chained onto one above.
+    fragments = %w[for_workspace recent]
+
+    declared = File.read(Rails.root.join("app/models/activity_log.rb"))
+                   .scan(/^  scope :(\w+)/).flatten
+
+    expect(declared - covered - fragments).to be_empty, <<~MESSAGE
+      New ActivityLog scope(s) not covered by invariant I3:
+        #{(declared - covered - fragments).join(', ')}
+      If the scope is a reader-facing surface, add an example proving a
+      delivery-suppressed row cannot reach it. If it is a composable fragment
+      that never filters visibility on its own, add it to `fragments` and say
+      why. Do not add it to `covered` without an example.
+    MESSAGE
+  end
 end

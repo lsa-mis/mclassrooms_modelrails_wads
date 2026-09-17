@@ -268,12 +268,12 @@ RSpec.describe "Settings::Sessions", type: :request do
     # by the metadata: an `os` key on any other action renders nothing extra. That is what keeps the nickname — user-supplied free
     # text — off the page without a second guard to remember.
     it "renders no metadata on actions whose label does not name any" do
-      create(:activity_log, :security, action: "user.passkey_added", actor: user, metadata: { os: "macOS", nickname: "Dave's laptop" })
+      create(:activity_log, :security, action: "user.passkey_added", actor: user, metadata: { os: "macOS", nickname: "Nell's laptop" })
 
       get settings_sessions_path
 
       # Through the parsed row, not the raw body: ERB escapes the apostrophe to
-      # &#39;, so a raw-body include("Dave's laptop") could never fail even if
+      # &#39;, so a raw-body include("Nell's laptop") could never fail even if
       # the view did render the nickname. Equality, not include, so anything
       # appended to the label fails.
       expect(activity_label(activity_items(response.body).first))

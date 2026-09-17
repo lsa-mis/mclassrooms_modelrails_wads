@@ -1,20 +1,17 @@
 en:
   workspaces:
-    context_banner:
-      label: "Workspace context"
-      in_workspace_html: "You're in <strong>%{name}</strong>"
-    not_found: "Workspace not found."
-    locked_notice: "This workspace is locked."
+    not_found: "%{Workspace} not found."
+    locked_notice: "This %{workspace} is locked."
     locked_row:
-      heading: "This workspace is locked."
+      heading: "This %{workspace} is locked."
       body: "Access to “%{name}” has been paused. Get in touch and we'll help you sort it out."
       contact: "Contact support"
-    creation_disabled: "Workspace creation is disabled on this instance."
-    archived_banner: "This workspace is archived."
+    creation_disabled: "%{Workspace} creation is disabled on this instance."
+    archived_banner: "This %{workspace} is archived."
     pending_join_banner:
-      label: "Pending workspace join"
-      message: "You followed a link to join %{workspace}."
-      join: "Join %{workspace}"
+      label: "Pending %{workspace} join"
+      message: "You followed a link to join %{workspace_name}."
+      join: "Join %{workspace_name}"
       dismiss: "Dismiss"
     join_links:
       create:
@@ -24,23 +21,19 @@ en:
     joins:
       invalid_or_revoked: "That join link is invalid, revoked, or no longer accepts joins."
       show:
-        title: "Join %{workspace}"
-        prompt: "You're about to join %{workspace} as a Member."
-        join_button: "Join %{workspace}"
+        title: "Join %{workspace_name}"
+        prompt: "You're about to join %{workspace_name} as a Member."
+        join_button: "Join %{workspace_name}"
         cancel: "Cancel"
       create:
-        joined: "Welcome to %{workspace}."
-        already_member: "You're already a member of %{workspace}."
-        register_first: "Create an account to join %{workspace}."
-        could_not_join: "You couldn't be added to %{workspace} right now."
-    switcher:
-      label: "Workspaces"
-    identity_bar:
-      overview_link_label: "%{name} — go to overview"
+        joined: "Welcome to %{workspace_name}."
+        already_member: "You're already a member of %{workspace_name}."
+        register_first: "Create an account to join %{workspace_name}."
+        could_not_join: "You couldn't be added to %{workspace_name} right now."
     sidebar:
-      aria_label: "Workspace navigation"
-      section_label: "Workspace"
-      strip_heading: "Workspace"
+      aria_label: "%{Workspace} navigation"
+      section_label: "%{Workspace}"
+      strip_heading: "%{Workspace}"
       overview: "Overview"
       settings: "Settings"
     plans:
@@ -48,23 +41,23 @@ en:
       pro: "Pro"
       enterprise: "Enterprise"
     index:
-      title: "Your workspaces"
-      new_workspace: "New workspace"
-      empty: "You don't have any workspaces yet."
+      title: "Your %{workspaces}"
+      new_workspace: "New %{workspace}"
+      empty: "You don't have any %{workspaces} yet."
       current_badge: "Current"
-      other_workspaces_heading: "Other workspaces"
+      other_workspaces_heading: "Other %{workspaces}"
       archived_heading: "Archived"
-      create_workspace_cta: "Create workspace"
+      create_workspace_cta: "Create %{workspace}"
       filter:
-        label: "Filter your workspaces"
+        label: "Filter your %{workspaces}"
         placeholder: "Filter by name…"
         # __COUNT__ is replaced client-side by workspace_filter_controller.js.
         status: "__COUNT__ matching"
-        empty: "No workspaces match your filter."
+        empty: "No %{workspaces} match your filter."
       row:
         switch: "Switch"
         leave: "Leave"
-        leave_confirm: "Leave %{workspace}? You'll lose access. This can be reversed only by being re-invited."
+        leave_confirm: "Leave %{workspace_name}? You'll lose access. This can be reversed only by being re-invited."
         member:
           one: "1 member"
           other: "%{count} members"
@@ -72,40 +65,33 @@ en:
           touched: "Last accessed %{relative} ago"
           never: "Never accessed"
     new:
-      title: "Create a workspace"
-      name_label: "Workspace name"
-      submit: "Create workspace"
+      title: "New %{workspace}"
+      name_label: "%{Workspace} name"
+      submit: "Create %{workspace}"
     create:
-      success: "Workspace created."
-    overview:
-      customize:
-        open: "Customize"
-        title: "Customize workspace"
-        name_label: "Workspace name"
-        save: "Save changes"
-        logo_label: "Logo"
+      success: "%{Workspace} created."
     edit:
-      title: "%{workspace} — Profile"
-      name_label: "Workspace name"
+      title: "%{workspace_name} — Profile"
+      name_label: "%{Workspace} name"
     update:
-      success: "Workspace profile updated."
+      success: "%{Workspace} profile updated."
       rate_limited: "Too many requests. Please try again later."
     destroy:
-      success: "Workspace deleted."
+      success: "%{Workspace} deleted."
       trigger: "Delete permanently"
-      title: "Delete this workspace for good?"
-      confirm: "This can't be undone. The workspace and everything in it will be gone."
+      title: "Delete this %{workspace} for good?"
+      confirm: "This can't be undone. The %{workspace} and everything in it will be gone."
       confirm_action: "Delete forever"
     archive:
-      trigger: "Archive workspace"
-      title: "Archive this workspace?"
+      trigger: "Archive %{workspace}"
+      title: "Archive this %{workspace}?"
       confirm: "It'll move out of your active list. You can bring it back anytime from the Archived section."
       confirm_action: "Archive"
     archivals:
       create:
-        success: "Workspace archived. You can restore it anytime from the Archived section."
+        success: "%{Workspace} archived. You can restore it anytime from the Archived section."
       destroy:
-        success: "Workspace restored."
+        success: "%{Workspace} restored."
     members:
       index:
         title: "Members"
@@ -133,7 +119,7 @@ en:
         transfer_ownership_aria: "Transfer ownership to %{name}"
         empty: "No members found."
         invite_member: "Invite member"
-        table_label: "Workspace members"
+        table_label: "%{Workspace} members"
         results_summary:
           one: "Showing 1 result"
           other: "Showing %{count} results"
@@ -155,7 +141,7 @@ en:
       destroy:
         deactivated: "Member deactivated."
         cannot_deactivate_last_owner: "Cannot deactivate the last owner."
-        left: "You left %{workspace}."
+        left: "You left %{workspace_name}."
         cannot_leave_last_owner: "You can't leave — you're the last owner. Transfer ownership first."
       reactivations:
         create:
@@ -165,7 +151,7 @@ en:
           transferred: "Ownership transferred."
     settings:
       edit:
-        title: "Workspace settings"
+        title: "%{Workspace} settings"
         max_members_label: "Maximum members"
         plan_label: "Plan"
         submit: "Save settings"
@@ -174,14 +160,14 @@ en:
           identity_submit: "Save identity"
           capacity_title: "Capacity"
           danger_zone_title: "Danger zone"
-          danger_zone_description: "Archive this workspace to put it away — you can restore it anytime. Deleting is permanent."
+          danger_zone_description: "Archive this %{workspace} to put it away — you can restore it anytime. Deleting is permanent."
       join_policy:
         heading: "Join policy"
-        description: "Control how new members join this workspace."
+        description: "Control how new members join this %{workspace}."
         invite_label: "Invitation only"
         invite_help: "Members can only join through an admin-issued email invitation."
         open_link_label: "Shareable join link"
-        open_link_help: "Anyone with the link can join this workspace (as a Member). The link can be rotated or revoked."
+        open_link_help: "Anyone with the link can join this %{workspace} (as a Member). The link can be rotated or revoked."
         open_link_disabled_explanation: "Shareable join links are not permitted on this deployment. Ask the operator to add :open_link to SIGNUP_PERMITTED_JOIN_STRATEGIES."
         save: "Save join policy"
         active_link_heading: "Active link"
@@ -191,7 +177,7 @@ en:
         rotate_confirm: "Rotating disables the current link and issues a new one valid for seven days. Continue?"
         revoke: "Revoke link"
         revoke_confirm: "Revoking will disable the current link. Continue?"
-        link_aria: "Workspace join link"
+        link_aria: "%{Workspace} join link"
         show_once_warning_lead: "Copy this link now."
         show_once_warning: "For security it is shown only once — you won't be able to see the full link again. Rotate the link anytime to generate a new one."
         masked_aria: "Join link (hidden for security)"
@@ -208,8 +194,8 @@ en:
         change_logo: "Change logo"
   pending_joins:
     create:
-      joined: "Welcome to %{workspace}."
+      joined: "Welcome to %{workspace_name}."
       unavailable: "That join link is no longer available."
-      could_not_join: "You couldn't be added to %{workspace} right now."
+      could_not_join: "You couldn't be added to %{workspace_name} right now."
     destroy:
       dismissed: "Dismissed."

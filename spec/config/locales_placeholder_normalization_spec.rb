@@ -12,19 +12,19 @@ require "rails_helper"
 # in line so a translator working on either string sees a single vocabulary.
 RSpec.describe "notifications.en.yml placeholder normalization", type: :config do
   it "uses %{new_role} (not %{role}) in notification_mailer.workspace_role_changed.body" do
-    body = I18n.t("notification_mailer.workspace_role_changed.body", workspace: "_", new_role: "Admin")
+    body = I18n.t("notification_mailer.workspace_role_changed.body", workspace_name: "_", new_role: "Admin")
     expect(body).to include("Admin")
     expect(body).not_to include("%{")
   end
 
   it "uses %{new_role} (not %{role}) in notification_mailer.workspace_member_added.body" do
-    body = I18n.t("notification_mailer.workspace_member_added.body", workspace: "_", new_role: "Member")
+    body = I18n.t("notification_mailer.workspace_member_added.body", workspace_name: "_", new_role: "Member")
     expect(body).to include("Member")
     expect(body).not_to include("%{")
   end
 
   it "the message keys keep %{new_role} (no regression)" do
-    role_changed = I18n.t("notifications.workspace_role_changed.message", workspace: "_", new_role: "Admin")
+    role_changed = I18n.t("notifications.workspace_role_changed.message", workspace_name: "_", new_role: "Admin")
     expect(role_changed).to include("Admin")
     expect(role_changed).not_to include("%{")
   end

@@ -49,4 +49,45 @@ RSpec.describe "Workspace activity feed", type: :request do
 
     expect(response).to have_http_status(:ok)
   end
+
+  # The onboarding membership is created in User#after_create, where
+  # Current.user cannot exist yet (it delegates to a session that starts after
+  # the signup transaction commits). Trackable therefore writes actor: nil and
+  # the feed read "System joined the workspace". The row still knows who
+  # joined — it IS that person's membership — so the subject comes from there.
+  # Both onboarding postures create the membership inside that same callback.
+  describe "a freshly registered user's first feed row" do
+    before { allow(Rails.configuration.x.signup).to receive(:mode).and_return(:open) }
+
+    def register!(email)
+      token = MagicLinkToken.create_for_email(email)
+      post magic_link_callback_path(token: token),
+           params: { user: { first_name: "Nell", last_name: "Ramirez" } }
+    end
+
+    it "names the user, not System, on their personal workspace (:personal)" do
+      register!("nell-personal@example.test")
+      user = User.find_by!(email_address: "nell-personal@example.test")
+
+      get workspace_path(user.workspaces.kept.sole)
+      page = Capybara.string(response.body)
+
+      expect(page).to have_text("Nell Ramirez #{I18n.t("activity.actions.membership.created")}", normalize_ws: true)
+      expect(page).to have_no_text("System joined the workspace", normalize_ws: true)
+    end
+
+    it "names the user, not System, on the shared workspace (:shared)" do
+      shared = create(:workspace, name: "Everyone")
+      allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared.slug)
+
+      register!("nell-shared@example.test")
+
+      get workspace_path(shared)
+      page = Capybara.string(response.body)
+
+      expect(page).to have_text("Nell Ramirez #{I18n.t("activity.actions.membership.created")}", normalize_ws: true)
+      expect(page).to have_no_text("System joined the workspace", normalize_ws: true)
+    end
+  end
 end

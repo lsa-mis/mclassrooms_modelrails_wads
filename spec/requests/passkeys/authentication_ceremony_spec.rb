@@ -39,6 +39,23 @@ RSpec.describe "Passkeys authentication ceremony", type: :request do
       expect(response.parsed_body["redirect_to"]).to be_present
     end
 
+    it "returns 403 JSON with the suspended message for a suspended user" do
+      user.update!(suspended_at: Time.current)
+
+      post passkeys_authentication_challenge_path
+      challenge = WebauthnChallenge.where(purpose: "authentication").last.challenge
+      assertion = client.get(challenge: challenge)
+
+      # Accept: application/json, same as webauthn_controller.js's #post — the
+      # shared rescue_from handler content-negotiates, unlike this controller's
+      # own rescues, which render JSON unconditionally.
+      post passkeys_authentication_session_path, params: assertion.to_json,
+           headers: { "CONTENT_TYPE" => "application/json", "ACCEPT" => "application/json" }
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body["error"]).to eq(I18n.t("sessions.create.suspended"))
+    end
+
     it "returns 422 for an unknown credential (different user's passkey)" do
       # Register a second user with their own client — their credential is in the
       # DB but belongs to a different WebauthnCredential row with a different

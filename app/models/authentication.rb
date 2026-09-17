@@ -21,8 +21,7 @@ class Authentication < ApplicationRecord
 
   normalizes :email, with: ->(e) { EmailNormalizer.normalize(e) }
   # Encrypted at rest (#902). uid is deterministic because (provider, uid) is
-  # the sign-in lookup and a unique index — and for email-provider rows it is
-  # the address itself (#903). No downcase: provider ids are opaque.
+  # the sign-in lookup and a unique index. No downcase: provider ids are opaque.
   encrypts :email
   encrypts :uid, deterministic: true
   # Parked invitation token: the same bearer credential as invitations.token,
@@ -32,6 +31,19 @@ class Authentication < ApplicationRecord
   # invitations.token for the same token, letting a leaked dump join a parked
   # signup to its invitation.
   encrypts :pending_invitation_token
+
+  # An email-provider row's uid is the user's id, not a second copy of
+  # users.email_address (#903). One writer, here, so no caller has to remember
+  # the value: it is stable for the life of the account, so an email change is
+  # no longer its business, and the two deterministic columns stop holding
+  # identical bytes for the same address. Blank-only, so the data migration is
+  # the sole path that rewrites a row already carrying an address.
+  #
+  # It reads user_id, so an email row needs a persisted user — which every
+  # writer has (`user.authentications.create!`). Building one on an unsaved
+  # user fails loudly on the uid presence validation rather than saving a
+  # half-formed row.
+  before_validation :assign_email_uid, if: :email?
 
   validates :provider, presence: true
   validates :uid, presence: true
@@ -115,6 +127,10 @@ class Authentication < ApplicationRecord
   end
 
   private
+
+  def assign_email_uid
+    self.uid = user_id.to_s if uid.blank? && user_id.present?
+  end
 
   def broadcast_target
     [ user, :authentications ]

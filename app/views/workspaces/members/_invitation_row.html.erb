@@ -24,10 +24,18 @@
   </td>
   <td class="py-3 px-2">
     <div class="action-group">
+    <%# form: data-turbo-frame="_top" on both buttons (#1038). This row renders
+        inside the members_results frame, and both actions answer with a
+        redirect whose flash — the refreshed magic-link reveal, the notice —
+        lives in the layout OUTSIDE the frame. Without the escape Turbo frames
+        that redirect into members_results and drops everything else on the
+        page: the user clicks and nothing visibly happens. Same reason the
+        magic-link generate form carries it (index.html.erb). -%>
     <% if policy(invitation).resend? %>
       <%= button_to t("workspaces.members.index.pending_invitations.resend"),
             workspace_invitation_resend_path(workspace, invitation),
             method: :post,
+            form: { data: { turbo_frame: "_top" } },
             aria: { label: t("workspaces.members.index.pending_invitations.resend_aria", email: invitation.email) },
             class: "text-sm text-interactive hover:text-interactive-hover bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
@@ -36,6 +44,7 @@
       <%= button_to t("workspaces.members.index.pending_invitations.revoke"),
             workspace_invitation_path(workspace, invitation),
             method: :delete,
+            form: { data: { turbo_frame: "_top" } },
             aria: { label: t("workspaces.members.index.pending_invitations.revoke_aria", email: invitation.email) },
             class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>

@@ -74,11 +74,9 @@ module Settings
     # (user_id, provider), and a finder that also keyed on uid missed the
     # existing row whenever the address had changed underneath it, then
     # attempted a duplicate (#865). Finding the row never downgrades one that
-    # is already verified; uid stays whatever the email-change sync last wrote.
+    # is already verified; the model assigns uid on create (#903).
     def ensure_pending_email_authentication!
-      Current.user.authentications.find_or_create_by!(provider: "email") do |auth|
-        auth.uid = Current.user.email_address
-      end
+      Current.user.authentications.find_or_create_by!(provider: "email")
     end
 
     def password_params

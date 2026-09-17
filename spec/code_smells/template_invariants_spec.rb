@@ -8,6 +8,30 @@ require "yaml"
 # since) — each catches a misconfiguration that would otherwise propagate
 # silently. See /docs/developer/testing.
 RSpec.describe "Template invariants" do
+  # #789 — `git -C <dir>` loses to an inherited GIT_DIR, and git hooks export
+  # one (man 5 githooks); under Lefthook these reads would enumerate the wrong
+  # repository's index and assert the invariants against someone else's files.
+  # The GIT_CONFIG_* family rides along for completeness: any variable that can
+  # redirect a config write or read belongs in the set (mirrors
+  # ForkFlow::CLEAN_GIT_ENV). A nil value deletes the key in the child,
+  # restoring `-C` precedence.
+  # A `let` rather than a constant: a constant in a describe block lands on
+  # Object and collides across workers (no_object_level_spec_constants_spec).
+  let(:clean_git_env) do
+    {
+      "GIT_DIR" => nil,
+      "GIT_WORK_TREE" => nil,
+      "GIT_INDEX_FILE" => nil,
+      "GIT_COMMON_DIR" => nil,
+      "GIT_OBJECT_DIRECTORY" => nil,
+      "GIT_NAMESPACE" => nil,
+      "GIT_CONFIG" => nil,
+      "GIT_CONFIG_GLOBAL" => nil,
+      "GIT_CONFIG_SYSTEM" => nil,
+      "GIT_CONFIG_COUNT" => nil
+    }.freeze
+  end
+
   let(:root) { Rails.root }
 
   describe "Ruby version pinning is consistent across all sources of truth" do
@@ -531,6 +555,41 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  describe "every workflow job has a timeout (#1101)" do
+    # Without timeout-minutes a job inherits GitHub's 360-minute default, so a
+    # runner-side hang — #1101 was apt-get update stalling on one test shard —
+    # blocks the required status for six hours instead of failing in minutes.
+    # The slowest legitimate job here runs under four minutes.
+    let(:workflows) do
+      Dir.glob(root.join(".github/workflows/*.yml")).to_h do |path|
+        [ File.basename(path), YAML.safe_load(File.read(path), aliases: true) ]
+      end
+    end
+
+    it "declares timeout-minutes on every job in every workflow" do
+      missing = workflows.flat_map do |file, workflow|
+        workflow.fetch("jobs").reject { |_, job| job["timeout-minutes"].is_a?(Integer) }.keys.map { |job| "#{file}: #{job}" }
+      end
+
+      expect(missing).to be_empty,
+        "expected timeout-minutes on every job (GitHub's default is 360 minutes):\n  #{missing.join("\n  ")}"
+    end
+
+    # The apt step is the one that hung: it is the only step that talks to a
+    # package mirror, so it gets its own, shorter budget within the job's.
+    it "gives every apt-get step its own timeout" do
+      missing = workflows.flat_map do |file, workflow|
+        workflow.fetch("jobs").flat_map do |name, job|
+          Array(job["steps"]).select { |s| s["run"].to_s.include?("apt-get") && !s["timeout-minutes"].is_a?(Integer) }
+                             .map { |s| "#{file}: #{name} / #{s['name']}" }
+        end
+      end
+
+      expect(missing).to be_empty,
+        "expected a step-level timeout-minutes on every apt-get step:\n  #{missing.join("\n  ")}"
+    end
+  end
+
   describe "CI scans the production image for OS-level CVEs" do
     # brakeman covers app code and bundler-audit covers gem deps, but neither
     # sees the OS packages baked into ruby:slim (glibc, openssl, sqlite3,
@@ -754,6 +813,60 @@ RSpec.describe "Template invariants" do
       expect(digest_mailer["queue"]).to eq("mailers"),
         "expected digest_mailer to be routed to the `mailers` queue so it shows up in " \
         "queue-level observability (was on `default` — sharing with DB sweep jobs)"
+    end
+
+    # Solid Queue resolves a `command:` entry with no `queue:` key to
+    # SolidQueue::RecurringJob, which is `queue_as :solid_queue_recurring`
+    # (RecurringTask#enqueue_options compacts a nil queue away). A queue no
+    # worker polls is a job that can never be claimed, and it fails silently —
+    # the row is enqueued and simply sits there (#894).
+    it "recurring.yml routes every entry to a queue queue.yml actually polls" do
+      polled = YAML.safe_load(queue_yml_raw, aliases: true)
+        .dig("default", "workers").to_a.flat_map { |worker| Array(worker["queues"]) }
+      recurring = YAML.safe_load(recurring_yml_raw, aliases: true).fetch("production")
+
+      unpolled = recurring.reject { |_name, entry| polled.include?(effective_recurring_queue(entry)) }
+
+      expect(unpolled).to be_empty,
+        "expected every config/recurring.yml entry to land on one of #{polled.inspect}; these do not: " +
+        unpolled.map { |name, entry| "#{name} -> #{effective_recurring_queue(entry)}" }.join(", ")
+    end
+
+    # queue.yml declares `low: best-effort cleanup, retention sweeps`; this is
+    # the assertion that the declaration is honoured. The two workspace sweeps
+    # stay on `default` deliberately — they dispatch notifiers a user waits on,
+    # so they must not queue behind an hour of blob purges (#894).
+    # `notification_dispatch_reconcile` is on `default` for the same reason: it
+    # re-delivers a notification that already failed to arrive once (#927).
+    it "recurring.yml keeps cleanup sweeps on `low` and notifier sweeps on `default`" do
+      recurring = YAML.safe_load(recurring_yml_raw, aliases: true).fetch("production")
+      expected = {
+        "clear_solid_queue_finished_jobs" => "low",
+        "unattached_blobs_sweep" => "low",
+        "expired_sessions_sweep" => "low",
+        "webauthn_challenges_sweep" => "low",
+        "activity_log_retention_sweep" => "low",
+        "notification_cleanup" => "low",
+        "notification_dispatch_reconcile" => "default",
+        "workspace_invitation_expiring_sweep" => "default",
+        "workspace_capacity_sweep" => "default"
+      }
+
+      actual = expected.keys.index_with { |name| effective_recurring_queue(recurring.fetch(name)) }
+
+      expect(actual).to eq(expected),
+        "expected config/recurring.yml to honour queue.yml's `low: best-effort cleanup, " \
+        "retention sweeps` convention"
+    end
+
+    # Mirrors SolidQueue::RecurringTask: an explicit `queue:` wins, otherwise
+    # the job class's own `queue_as` decides — and a `command:` entry has no
+    # class, so SolidQueue::RecurringJob's does.
+    def effective_recurring_queue(entry)
+      return entry["queue"] if entry["queue"].present?
+
+      job_class = entry["class"].presence&.constantize || SolidQueue::RecurringJob
+      job_class.queue_name
     end
 
     it "database.yml declares journal_mode WAL explicitly so forks inherit the durability posture" do
@@ -1027,7 +1140,8 @@ RSpec.describe "Template invariants" do
     )}x
 
     it "tracks no AI-agent configuration files" do
-      tracked = `git -C #{root} ls-files`.lines.map(&:strip)
+      tracked = IO.popen(clean_git_env, [ "git", "-C", root.to_s, "ls-files" ], &:read)
+        .to_s.lines.map(&:strip)
       offenders = tracked.grep(ai_config_patterns)
 
       expect(offenders).to be_empty,
@@ -1044,7 +1158,8 @@ RSpec.describe "Template invariants" do
     # generate per-environment credentials on day one (README "Forking this
     # template") and may commit their own blobs in their private repos.
     it "tracks no credential blobs or keys in git" do
-      tracked = `git -C #{root} ls-files config`.lines.map(&:strip)
+      tracked = IO.popen(clean_git_env, [ "git", "-C", root.to_s, "ls-files", "config" ], &:read)
+        .to_s.lines.map(&:strip)
       offenders = tracked.grep(/\.yml\.enc\z|master\.key\z|credentials\/.*\.key\z/)
       expect(offenders).to be_empty,
         "expected no encrypted credential blobs or keys tracked in git, found: " \
@@ -1113,6 +1228,14 @@ RSpec.describe "Template invariants" do
         config/markdowndocs_categories.local.yml
         app/assets/tailwind/tokens/_brand.css
         README.md
+        app/views/shared/_site_mark.html.erb
+        public/icon.svg
+        public/icon.png
+        public/icon-192.png
+        public/icon-512.png
+        public/apple-touch-icon.png
+        public/favicon.ico
+        config/vocabulary.local.yml
       ].each do |path|
         expect(gitattributes).to match(/^#{Regexp.escape(path)} merge=ours$/),
           "expected .gitattributes to mark #{path} merge=ours"

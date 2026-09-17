@@ -97,6 +97,8 @@ The wizard is a single step in the base template — the example domain that use
 
 **Skipping/finishing.** `PATCH /onboarding` hits `OnboardingsController#update`, which sets `onboarded_at` immediately and redirects to the workspace (or `root_path` if none exists yet). Once `onboarded?` is true the guard never fires again.
 
+**Joining.** Accepting an invitation or an open join link stamps `onboarded_at` too, inside the membership transaction (`Workspace#admit`, the one membership-grant seam). An invitee never sees the wizard — it exists for the self-signup who has nowhere to go, and its invite step would refuse a Member. If a wizard step ever refuses someone anyway (data from before the stamp), `Onboarding::BaseController` marks them onboarded and sends them to their workspace rather than inheriting the workspace redirect the guard would bounce straight back.
+
 See [Onboarding](/docs/user/onboarding) for a full walkthrough, screenshots, and i18n keys.
 
 ## Setup

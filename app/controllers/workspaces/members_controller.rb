@@ -63,7 +63,7 @@ module Workspaces
 
       if leaving
         redirect_to workspaces_path,
-                    notice: t("workspaces.members.destroy.left", workspace: @workspace.name)
+                    notice: t("workspaces.members.destroy.left", workspace_name: @workspace.name)
       else
         redirect_to workspace_members_path(@workspace),
                     notice: t(".deactivated")

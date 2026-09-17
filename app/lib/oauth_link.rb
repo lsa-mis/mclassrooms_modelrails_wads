@@ -105,12 +105,19 @@ class OauthLink
   def claim_verified_signup
     claims = new_pending_claims
     existing = find_verified_user_by_email(identity.email)
-    user = existing || create_user_from_identity
+    user = nil
 
     # A pre-existing user linking a new verified provider must not be silently
     # force-joined by a pending join token riding the session (drive-by join) —
     # hence newly_registered below.
+    #
+    # The new-user branch is resolved inside this transaction, mirroring
+    # claim_unverified_signup: create_user_from_identity commits on its own,
+    # so resolving it ahead of the transaction left a committed orphan user
+    # (and its onboarded workspace) whenever the Authentication insert or
+    # claims.claim! raised afterward (#1044).
     ApplicationRecord.transaction do
+      user = existing || create_user_from_identity
       user.save!
       user.authentications.create!(
         provider: identity.provider,
@@ -128,8 +135,11 @@ class OauthLink
     WelcomeNotifier.with(record: user).deliver(nil) if existing.nil?
 
     outcome(:signed_in, user: user, problems: claims.problems, spent_tokens: claims.spent)
+  # Workspace::AdmissionError, not the three subclasses by name: every admission
+  # outcome collapses to the same :failed here, so a fourth added to #admit is
+  # covered without an edit (#689).
   rescue Invitation::NotAcceptable, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique,
-         Workspace::NotAdmittableError, Workspace::AlreadyMember, Workspace::AtCapacity
+         Workspace::AdmissionError
     # Spent session tokens still surface — session writes aren't transactional,
     # and re-parking a dead token would reject forever.
     outcome(:failed, spent_tokens: claims.spent)

@@ -101,7 +101,7 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
       notification = user.notifications.last
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_role_changed.message",
-               workspace: workspace.name,
+               workspace_name: workspace.name,
                new_role: new_role.name)
       )
     end

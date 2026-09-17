@@ -252,6 +252,39 @@ RSpec.describe "User menu dropdown", type: :system do
     end
   end
 
+  # #713. Turbo's snapshot clone normalises only `select`, `input[type=password]`
+  # and `noscript`, and `menu_controller#disconnect()` only cancels the type-ahead —
+  # so a menu still open when the page is cached is frozen open. Back then restores a
+  # `role="menu"` with live menuitems (this panel is `absolute`, so `topLayer.enable`
+  # no-ops on it and there is no closed-popover `display: none` to hide it) under a
+  # trigger that reports `aria-expanded="true"`, and the first click on that trigger
+  # is dead — the controller thinks the menu is already open.
+  describe "Turbo snapshot restore (#713)" do
+    it "restores with the menu closed and the trigger reporting collapsed" do
+      find("#user-menu-button").click
+      expect(page).to have_css("#user-menu", visible: :visible)
+
+      # A programmatic Turbo visit, not a click. Every click path closes the menu
+      # first by design — an item runs `menu#activate`, anything else runs
+      # `menu#closeOnClickOutside` — so a navigation that does not originate in a
+      # click (a `turbo_stream` redirect action, or any `Turbo.visit`) is the
+      # reachable way to cache a page with a menu still open. `visit` is not usable:
+      # it is a hard browser goto, fires no `turbo:before-cache`, and leaves the
+      # snapshot cache empty.
+      page.execute_script("window.Turbo.visit('#{page_path(:about)}')")
+      expect(page).to have_current_path(page_path(:about))
+
+      page.go_back
+      expect(page).to have_current_path(root_path)
+
+      expect(page).to have_no_css("#user-menu", visible: :visible)
+      expect(page).to have_css("#user-menu[hidden]", visible: :all)
+      expect(page).to have_css("#user-menu-button[aria-expanded='false']")
+      expect(page).to have_css("[data-controller~='menu'][data-menu-open-value='false']:has(#user-menu)",
+        visible: :all)
+    end
+  end
+
   describe "unauthenticated" do
     it "shows sign in link instead of avatar" do
       Capybara.reset_sessions!

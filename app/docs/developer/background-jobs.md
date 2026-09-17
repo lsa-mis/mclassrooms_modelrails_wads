@@ -39,9 +39,9 @@ workers:
 
 | Queue | Convention | Examples |
 |---|---|---|
-| `default` | Business logic, sweeps, model callbacks, anything you `perform_later` without specifying a queue | `WorkspaceInvitationExpiringSweepJob`, custom callback jobs |
+| `default` | Business logic, model callbacks, the notifier sweeps, anything you `perform_later` without specifying a queue | `WorkspaceInvitationExpiringSweepJob`, `WorkspaceCapacitySweepJob`, `NotificationDispatchReconcileJob`, custom callback jobs |
 | `mailers` | Action Mailer / mailer-class jobs (network-bound, slower) | `DigestMailerJob`, `UserMailer.deliver_later` |
-| `low` | Best-effort cleanup, retention sweeps — work that can wait without operational impact | Future use; reserved for jobs you'd be OK losing in a deploy edge case |
+| `low` | Best-effort cleanup and retention sweeps — nobody is waiting on it, and it must never delay work someone *is* waiting on | `clear_solid_queue_finished_jobs`, `NotificationCleanupJob`, `ExpiredSessionsSweepJob`, `WebauthnChallengesSweepJob`, `UnattachedBlobsSweepJob`, `ActivityLogRetentionSweepJob` |
 
 ### Routing a job to a specific queue
 
@@ -67,15 +67,26 @@ Mailer jobs from `Mailer.deliver_later` calls automatically use the `mailers` qu
 
 ## Recurring jobs
 
-Recurring jobs are declared in `config/recurring.yml` and dispatched by Solid Queue's scheduler. The template ships five:
+Recurring jobs are declared in `config/recurring.yml` and dispatched by Solid Queue's scheduler. The template ships ten:
 
 | Job | Cadence | Queue | What it does |
 |---|---|---|---|
-| `clear_solid_queue_finished_jobs` | Every hour at :12 | (command, no queue) | Cleans up completed/failed jobs from Solid Queue's own tables in batches with 0.3s sleep between |
+| `clear_solid_queue_finished_jobs` | Every hour at :12 | `low` | Cleans up completed/failed jobs from Solid Queue's own tables in batches with 0.3s sleep between |
 | `workspace_invitation_expiring_sweep` | Every 6 hours | `default` | Notifies users whose invitations expire soon (per-day idempotency) |
 | `workspace_capacity_sweep` | Every 12 hours | `default` | Alerts workspace owners approaching member limits |
 | `digest_mailer` | Every 15 minutes | `mailers` | Polls the `digest_next_due_at` index to send pending digest emails per each user's cadence |
-| `notification_cleanup` | Daily at 3am UTC | `default` | Batched deletion of old notifications (chunks of 100 with SQLite lock release between transactions) |
+| `notification_dispatch_reconcile` | Every 15 minutes | `default` | Re-enqueues `Noticed::EventJob` for events whose enqueue never landed — rows committed, `dispatched_at` still NULL between 5 minutes and 24 hours old. On `default`, not `low`: it re-delivers a notification a user is waiting on (#927) |
+| `notification_cleanup` | Daily at 3am UTC | `low` | Batched deletion of old notifications (chunks of 100 with SQLite lock release between transactions) |
+| `expired_sessions_sweep` | Daily at 4am | `low` | Batched delete of sessions past the idle/absolute timeouts (expiry is already enforced at read time) |
+| `webauthn_challenges_sweep` | Daily at 4:30am | `low` | Deletes WebAuthn challenge rows past a 1-day grace, consumed or not |
+| `unattached_blobs_sweep` | Daily at 5am | `low` | Purges direct-upload blobs that were never attached, after a 2-day grace |
+| `activity_log_retention_sweep` | Weekly, Sunday 3:30am | `low` | Bounds the activity trail at the job's `RETENTION_WINDOW`, minus the security retention floor |
+
+### Why the sweeps are on the `low` queue
+
+Six of the ten entries are pure housekeeping — nothing downstream is waiting on them — so they belong on `low`, where they cannot delay work someone *is* waiting on. Three stay on `default` because they put a notification in front of a user: the two `workspace_*` sweeps dispatch user-facing notifiers, and `notification_dispatch_reconcile` re-delivers one that already failed to arrive.
+
+A recurring entry with **no** `queue:` key is not "the default queue" — Solid Queue resolves it to `SolidQueue::RecurringJob`, whose queue is `solid_queue_recurring`. Nothing in `config/queue.yml` polls that, so such a job enqueues and is never claimed, silently. Always name a queue.
 
 ### Why `digest_mailer` is on the `mailers` queue
 

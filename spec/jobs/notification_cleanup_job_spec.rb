@@ -151,5 +151,34 @@ RSpec.describe NotificationCleanupJob, type: :job do
         expect(Noticed::Notification.where(id: within_cap.id)).to exist
       end
     end
+
+    describe "preferences loading" do
+      # `preferences_for` reads `user.preferences`, so without a preload the
+      # sweep issues one user_preferences SELECT per user. Compared at two
+      # population sizes rather than against a fixed budget: a "<= 2" ceiling
+      # hard-codes the find_each batch size and would still pass at
+      # batch_size: 1, and a total query count moves for reasons that have
+      # nothing to do with this relation. Preloaded, the cost is one query per
+      # find_each batch — one batch at either size, since both are far under
+      # the default 1000 — so growing the population by 10x must not move the
+      # count at all.
+      def user_preferences_queries_after_adding(users)
+        create_list(:user, users).each(&:create_preferences!)
+        count_queries_touching("user_preferences") { described_class.perform_now }
+      end
+
+      it "does not issue more user_preferences queries as the population grows 10x" do
+        small = user_preferences_queries_after_adding(5)
+        large = user_preferences_queries_after_adding(50)
+
+        # A count of zero would satisfy the equality without proving anything.
+        expect(small).to be_positive
+        expect(large).to eq(small)
+      end
+    end
+  end
+
+  it "runs on the low queue" do
+    expect(described_class.queue_name).to eq("low")
   end
 end

@@ -1,15 +1,22 @@
 <%# locals: (current_workspace:) -%>
 <%# Desktop workspace-sidebar wrapper — provides the <aside> landmark
-    and the boxed sidebar visual chrome. Contents (workspace nav items)
-    live in _workspace_sidebar_items.html.erb. Below md, the same items
-    source instead renders as an in-page section-nav strip (see
-    _section_nav_strip) — not this <aside>.
+    and the boxed sidebar visual chrome. Contents (the workspace switcher,
+    which carries identity, plus the nav items) live in
+    _workspace_sidebar_items.html.erb. Below md, the same items source instead
+    renders as an in-page section-nav strip (see _section_nav_strip) — not
+    this <aside>.
 
-    The workspace switcher now lives exclusively in the header
-    (#workspace-switcher-button, Phase 2b). The Settings hub has its
-    own sidebar (_settings_sidebar) with destination-specific nav items. -%>
+    Sticky because the switcher lives here rather than in the header: a tenant
+    indicator that scrolls away is the argument that retired the old context
+    banner, and it would apply just as well to this. The 4rem offset and height
+    both track the header's inner h-16 (_header) — change that and these must
+    move with it. The 1px the header's border adds is hidden behind the header
+    itself, which paints above (z-40).
+
+    The Settings hub's own sidebar (_settings_sidebar) is sticky to match. -%>
 <aside aria-label="<%= t("workspaces.sidebar.aria_label") %>"
-       class="w-64 shrink-0 px-4 py-6 border-r border-border bg-surface">
+       class="w-64 shrink-0 px-4 pt-4 pb-6 border-r border-border bg-surface
+              md:sticky md:top-16 md:h-[calc(100dvh-4rem)] md:overflow-y-auto">
   <%= render "shared/workspace_sidebar_items",
         current_workspace: current_workspace %>
 </aside>

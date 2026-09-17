@@ -59,6 +59,21 @@ RSpec.describe ActivityLog, type: :model do
     end
   end
 
+  # Suspendable#suspend!/#unsuspend! are guarded `update!` calls, so a
+  # lock/unlock arrives as workspace.updated with suspended_at in changes —
+  # the same shape membership.updated splits on discarded_at.
+  describe "#display_action for workspace suspension" do
+    it "names a suspension and an unsuspension from the row's changes" do
+      suspended = ActivityLog.new(action: "workspace.updated", metadata: { changes: { suspended_at: [ nil, Time.current ] } })
+      unsuspended = ActivityLog.new(action: "workspace.updated", metadata: { changes: { suspended_at: [ Time.current, nil ] } })
+      renamed = ActivityLog.new(action: "workspace.updated", metadata: { changes: { name: [ "a", "b" ] } })
+
+      expect(suspended.display_action).to eq("workspace.suspended")
+      expect(unsuspended.display_action).to eq("workspace.unsuspended")
+      expect(renamed.display_action).to eq("workspace.updated")
+    end
+  end
+
   describe "validations" do
     it "requires an action" do
       log = build(:activity_log, action: nil)
@@ -112,10 +127,17 @@ RSpec.describe ActivityLog, type: :model do
   describe "scopes" do
     let(:workspace) { create(:workspace) }
 
+    # include/not_to include rather than contain_exactly: the workspace's own
+    # `workspace.created` row belongs to this scope too (Workspace answers
+    # activity_workspace for itself, #1084). The old exact match only held
+    # because that row used to be written with a nil workspace — the scope
+    # was passing on a defect, and pinning the row COUNT was never its job.
     it ".for_workspace filters by workspace" do
       ws_log = create(:activity_log, workspace: workspace)
-      create(:activity_log, workspace: create(:workspace))
-      expect(ActivityLog.for_workspace(workspace)).to contain_exactly(ws_log)
+      other_log = create(:activity_log, workspace: create(:workspace))
+
+      expect(ActivityLog.for_workspace(workspace)).to include(ws_log)
+      expect(ActivityLog.for_workspace(workspace)).not_to include(other_log)
     end
 
     it ".visible returns workspace-visibility logs" do
@@ -213,12 +235,31 @@ RSpec.describe ActivityLog, type: :model do
     # write a plausible row that the retention sweep deletes at 12 months
     # instead of the security floor, with every other spec still green.
     it "raises instead of writing when the action is outside SECURITY_ACTIONS" do
-      user # Ruling R7: materialize before the count block — onboarding writes its own rows.
+      user # materialize before the count block — creating a user writes its own activity rows.
       expect {
         expect {
           ActivityLog.record_security_event!(action: "user.passkey_add", user: user)
         }.to raise_error(ArgumentError, /SECURITY_ACTIONS/)
       }.not_to change(ActivityLog, :count)
+    end
+
+    # Operatorship's actor is the granter/revoker, not the subject — actor:
+    # and visibility: let a caller override the self-event default so the
+    # row still fits that writer's shape.
+    it "writes an operator-actor row at admin visibility when given actor: and visibility:" do
+      operator = create(:user)
+      log = ActivityLog.record_security_event!(action: "operatorship.granted", user: user,
+                                              actor: operator, visibility: "admin",
+                                              metadata: { operatorship_id: 1 })
+
+      expect(log).to have_attributes(actor: operator, trackable: user, visibility: "admin", workspace_id: nil)
+    end
+
+    it "accepts an explicit nil actor (a rake grant has no granter)" do
+      log = ActivityLog.record_security_event!(action: "operatorship.granted", user: user,
+                                              actor: nil, visibility: "admin")
+
+      expect(log.actor).to be_nil
     end
   end
 
@@ -234,6 +275,65 @@ RSpec.describe ActivityLog, type: :model do
       it "has a translation for #{action}" do
         expect(I18n.exists?("settings.sessions.activity.#{action}")).to be(true)
       end
+    end
+  end
+
+  describe "#display_member" do
+    # The operations feed is the first surface to render admin-visibility
+    # rows (the workspace feed is workspace-only, the account security card
+    # is personal-only), and an operatorship grant's trackable is the
+    # grantee User — not a Membership — so without this case
+    # display_member returns nil and the sentence substitutes "a member".
+    it "names the grantee for an operatorship grant, whose trackable is a User" do
+      grantee = create(:user, first_name: "Gale", last_name: "Grantee")
+      Operatorship.grant!(user: grantee)
+      log = ActivityLog.find_by!(action: "operatorship.granted", trackable: grantee)
+
+      expect(log.display_member).to eq("Gale Grantee")
+    end
+  end
+
+  describe ".for_operations_feed" do
+    it "includes workspace and admin tiers across workspaces and excludes personal rows, newest first" do
+      w1 = create(:workspace)
+      w2 = create(:workspace)
+      # trackable is a required polymorphic belongs_to; the workspace itself is
+      # a cheap valid target here since only visibility/ordering are under test.
+      older = ActivityLog.create!(action: "project.created", workspace: w1, visibility: "workspace", created_at: 2.days.ago, trackable: w1)
+      admin = ActivityLog.create!(action: "membership.updated", workspace: w2, visibility: "admin", created_at: 1.day.ago, trackable: w2)
+      personal = ActivityLog.create!(action: "user.passkey_added", workspace: nil, visibility: "personal", trackable: create(:user))
+
+      # create(:workspace) itself writes a workspace.created row (Trackable),
+      # so an exact-array match would break on that incidental noise — assert
+      # membership and order instead.
+      feed = ActivityLog.for_operations_feed.to_a
+
+      expect(feed).to include(admin, older)
+      expect(feed).not_to include(personal)
+      expect(feed.index(admin)).to be < feed.index(older)
+    end
+  end
+
+  # Pins Bullet's internals on purpose: .preload_trackables reading the
+  # association internally (`rows.filter_map(&:trackable)`) to build a
+  # discarded array previously marked the User hop "used" regardless of
+  # whether any caller read it, masking a real unused eager load. This calls
+  # Bullet::Detector::UnusedEagerLoading directly to check that marking, so a
+  # Bullet upgrade that changes it breaks here, not mysteriously elsewhere.
+  describe ".for_feed Bullet visibility" do
+    it "leaves an unread User trackable hop visible to Bullet's unused-eager-load detector" do
+      2.times { Operatorship.grant!(user: create(:user)) }
+
+      Bullet.start_request
+      ActivityLog.where(action: "operatorship.granted").for_feed
+      Bullet::Detector::UnusedEagerLoading.check_unused_preload_associations
+      unused = Bullet.notification_collector.collection
+        .select { |notification| notification.base_class == "ActivityLog" }
+        .flat_map(&:associations)
+
+      expect(unused).to include(:trackable)
+    ensure
+      Bullet.end_request
     end
   end
 end

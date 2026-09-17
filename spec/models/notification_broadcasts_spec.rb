@@ -42,19 +42,71 @@ RSpec.describe "Notification Turbo Stream broadcasts" do
     PasswordChangedNotifier.with(record: user).deliver([ user, other ])
   end
 
-  it "skips broadcasts when there are no User recipients" do
-    # Recipients are Users in v1; no badge surface exists for non-User
-    # streams, so a broadcast there is wasted work. The SQL-level filter
-    # `recipient_type: "User"` makes recipient_ids empty for non-User
-    # dispatches, and the guard short-circuits before any broadcast call.
+  it "skips broadcasts for a dispatch whose recipients all gated out" do
+    # Badge surfaces follow the notification ROWS, never the dispatch: a
+    # dispatch whose recipients all gated out reaches nobody, and nobody's
+    # bell should twitch for it.
+    #
+    # Reached publicly — the workspace's only owner switches the billing
+    # category off, so WorkspaceCapacityApproachingNotifier's permitted_in_app
+    # gate resolves to nobody. (The previous framing, "no User recipients",
+    # is unreachable: db/schema.rb's `check_constraint "recipient_type =
+    # 'User'"` on noticed_notifications rejects every other recipient type.)
+    workspace = user.personal_workspace
+    prefs = create(:user_preferences, user: user)
+    types = prefs.notification_preferences["notification_types"].deep_dup
+    types["billing"] = false
+    prefs.update!(notification_preferences: prefs.notification_preferences.merge("notification_types" => types))
+    # Not a vacuous pass: the owner IS a candidate, so zero recipients is the
+    # preference gate's doing, not an empty owner set.
+    expect(workspace.owners).to eq([ user ])
+    # A notification row belonging to a DIFFERENT event, so the hook's
+    # event_id scope is load-bearing here: a recipient query that dropped it
+    # would broadcast to this user off the back of our empty event.
+    other = create(:user)
+    PasswordChangedNotifier.with(record: other).deliver(other)
+
     expect(Turbo::StreamsChannel).not_to receive(:broadcast_update_to)
 
-    notifier = PasswordChangedNotifier.with(record: user)
-    notifier.save!
-    # Manually delete the auto-created User notification so the SQL filter
-    # returns no rows.
-    notifier.notifications.destroy_all
-    notifier.send(:broadcast_notifications_arrival)
+    # Since #928 the empty set is caught before `super`: no event row, no
+    # idempotency key burned, and the :skipped sentinel returned. This example
+    # asserted the previous shape (`.by(1)`) — an event row written for a
+    # dispatch that reached nobody — which is the defect #928 names.
+    event = WorkspaceCapacityApproachingNotifier.with(record: workspace, metric: "members", current: 8, limit: 10)
+    expect { expect(event.deliver(nil)).to eq :skipped }.not_to change(Noticed::Event, :count)
+  end
+
+  it "loads no users for an event row that carries no notification rows" do
+    # The hook's own `return if recipient_ids.empty?` guard, exercised directly.
+    # #928's :skipped sentinel now catches the zero-recipient case one level up,
+    # so `deliver` no longer reaches this guard — but the guard still stands
+    # between a bare event row (a fork writing one another way, rows swept
+    # between commit and callback) and a broadcast to nobody. Saving the event
+    # without going through `deliver` is what reaches it.
+    #
+    # `User.where` is what pins the guard, and it took two tries to find an
+    # assertion that can actually fail. Both of the obvious ones are vacuous
+    # here, measured with the `return` deleted:
+    #
+    #   - `not_to receive(:broadcast_update_to)` — `User.where(id: []).find_each`
+    #     yields nobody, so nothing broadcasts with the guard gone either.
+    #   - `count_queries_touching("users") == 0` — Rails elides an empty `IN`
+    #     entirely: `User.where(id: []).find_each { }` issues ZERO SQL. The
+    #     count is 0 on both sides of the guard.
+    #
+    # What the guard actually prevents is the lookup being *attempted*, so the
+    # message expectation on `User` is the only thing that goes red when it is
+    # removed. Verified in both directions before this was written.
+    # Materialised FIRST: creating the factory user runs an email uniqueness
+    # validation that calls `User.where`, which the expectation below would
+    # otherwise intercept.
+    event = PasswordChangedNotifier.with(record: user, removed: false)
+
+    expect(Turbo::StreamsChannel).not_to receive(:broadcast_update_to)
+    expect(User).not_to receive(:where)
+
+    expect { event.save! }.to change(Noticed::Event, :count).by(1)
+    expect(Noticed::Notification.where(event_id: event.id)).to be_empty
   end
 
   it "swallows broadcast adapter errors so notification creation isn't blocked" do

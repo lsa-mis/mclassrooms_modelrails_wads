@@ -28,7 +28,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
 
       it "renders the verified pill through UI::Badge (canonical padding)" do
-        create(:authentication, :verified, user: user, provider: "email", uid: user.email_address)
+        create(:authentication, :verified, user: user, provider: "email")
 
         get settings_connected_accounts_path
 
@@ -78,7 +78,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
 
     describe "GET /account/connected_accounts (unlink offered only when removable)" do
       it "omits the Unlink control when it is the only verified method" do
-        create(:authentication, :verified, user: user, provider: "email", uid: user.email_address)
+        create(:authentication, :verified, user: user, provider: "email")
 
         get settings_connected_accounts_path
         page = Capybara::Node::Simple.new(response.body)
@@ -87,7 +87,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
 
       it "offers the Unlink control when more than one verified method remains" do
-        create(:authentication, :verified, user: user, provider: "email", uid: user.email_address)
+        create(:authentication, :verified, user: user, provider: "email")
         create(:authentication, :google, :verified, user: user)
 
         get settings_connected_accounts_path
@@ -96,7 +96,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
       end
 
       it "associates the only-method note with its heading for screen readers" do
-        create(:authentication, :verified, user: user, provider: "email", uid: user.email_address)
+        create(:authentication, :verified, user: user, provider: "email")
 
         get settings_connected_accounts_path
         doc = Nokogiri::HTML(response.body)
@@ -269,7 +269,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
     before { sign_in(user) }
 
     context "user has only one verified auth and one pending auth" do
-      let!(:verified) { user.authentications.create!(provider: "email", uid: user.email_address,
+      let!(:verified) { user.authentications.create!(provider: "email",
         email: user.email_address, verified_at: Time.current) }
       let!(:pending) { user.authentications.create!(provider: "google", uid: "g-1",
         email: "alice.work@gmail.com", verified_at: nil) }
@@ -287,7 +287,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
     end
 
     context "user has two verified auths" do
-      let!(:auth1) { user.authentications.create!(provider: "email", uid: user.email_address,
+      let!(:auth1) { user.authentications.create!(provider: "email",
         email: user.email_address, verified_at: Time.current) }
       let!(:auth2) { user.authentications.create!(provider: "google", uid: "g-1",
         email: user.email_address, verified_at: Time.current) }
@@ -524,7 +524,6 @@ RSpec.describe "Account Connected Accounts", type: :request do
     let(:pending_auth) do
       auth = user.authentications.build(
         provider: "email",
-        uid: user.email_address,
         email: user.email_address,
         verified_at: nil,
         pending_invitation_token: invitation.token
@@ -678,7 +677,7 @@ RSpec.describe "Account Connected Accounts", type: :request do
     before { sign_in(user) }
 
     context "destroy under transactional wrap (sanity check)" do
-      let!(:verified1) { user.authentications.create!(provider: "email", uid: user.email_address,
+      let!(:verified1) { user.authentications.create!(provider: "email",
         email: user.email_address, verified_at: Time.current) }
       let!(:verified2) { user.authentications.create!(provider: "google", uid: "g-1",
         email: user.email_address, verified_at: Time.current) }

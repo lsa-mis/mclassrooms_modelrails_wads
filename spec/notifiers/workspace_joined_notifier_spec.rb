@@ -77,7 +77,7 @@ RSpec.describe "Self-join notifications", type: :notifier do
       notification = joined_notifications_for(joiner).sole
 
       expect(notification.message).to eq(
-        I18n.t("notifications.workspace_joined.message", workspace: workspace.name)
+        I18n.t("notifications.workspace_joined.message", workspace_name: workspace.name)
       )
       expect(notification.url).to eq(Rails.application.routes.url_helpers.workspace_path(workspace))
     end

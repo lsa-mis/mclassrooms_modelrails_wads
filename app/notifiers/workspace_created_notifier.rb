@@ -28,7 +28,7 @@ class WorkspaceCreatedNotifier < ApplicationNotifier
         I18n.t(
           "notifications.workspace_created.message",
           locale: recipient_locale,
-          workspace: event.record.name
+          workspace_name: event.record.name
         )
       end
     end

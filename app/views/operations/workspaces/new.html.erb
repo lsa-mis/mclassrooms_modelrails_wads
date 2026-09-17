@@ -1,0 +1,10 @@
+<% content_for(:title) { t("operations.workspaces.new.title") } %>
+<%= render "shared/settings_page_header", title: t("operations.workspaces.new.title") %>
+
+<%= form_with model: @workspace, url: operations_workspaces_path, class: "mt-4 max-w-md space-y-4" do |form| %>
+  <%= form.error_summary %>
+  <%= form.text_field :name, label: t("operations.workspaces.new.name"), required: true %>
+  <%= form.email_field :owner_email,
+        label: t("operations.workspaces.new.owner_email"), required: true, autocomplete: "email" %>
+  <%= form.submit t("operations.workspaces.new.submit"), class: "btn-primary" %>
+<% end %>

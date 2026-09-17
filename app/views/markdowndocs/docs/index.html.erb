@@ -54,7 +54,11 @@
                 md:grid-cols-2
                 lg:grid-cols-3">
               <% docs.each do |doc| %>
-                <div <% if @search_enabled %>data-docs-search-target="card" data-slug="<%= doc.slug %>"<% end %>>
+                <%# path_slug, NOT the bare slug: the search index is keyed on the
+                    mode-prefixed path slug, and the gem's docs-search controller
+                    matches a card by comparing these two values. A bare slug matches
+                    nothing, so every card hides on every query (#1070, markdowndocs#40). %>
+                <div <% if @search_enabled %>data-docs-search-target="card" data-slug="<%= doc.path_slug %>"<% end %>>
                   <%= render "markdowndocs/docs/card", doc: doc %>
                 </div>
               <% end %>

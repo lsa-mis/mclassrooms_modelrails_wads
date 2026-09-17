@@ -52,15 +52,9 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
   end
 
-  describe "recipient resolution" do
-    it "resolves to all workspace owners (excludes non-owner members)" do
-      event = described_class.with(record: workspace, metric: "members", current: 8, limit: 10)
-      recipients = event.send(:evaluate_recipients)
-      expect(recipients).to match_array([ owner_a, owner_b ])
-      expect(recipients).not_to include(non_owner)
-    end
-  end
-
+  # Recipient resolution itself is asserted through the real dispatch under
+  # "dispatching" below (a row for each owner, none for the non-owner) — the
+  # public surface says the same thing, so there is no resolver example here.
   describe "recipient resolution query efficiency" do
     # A third owner so an N+1 (one user_preferences query per owner) diverges
     # loudly from the single preloaded query the contract requires.
@@ -70,11 +64,51 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     it "issues exactly one user_preferences query for N owners (preloaded, not N+1)" do
       event = described_class.with(record: workspace, metric: "members", current: 8, limit: 10)
 
+      # evaluate_recipients is public API on Noticed::Deliverable — it needs
+      # no `send`, and calling it keeps THIS notifier's recipients block in
+      # the measurement. Measuring `permitted_in_app` directly instead would
+      # still count one query after a refactor that stopped preloading here.
       query_count = count_queries_touching("user_preferences") do
-        event.send(:evaluate_recipients)
+        event.evaluate_recipients
       end
 
       expect(query_count).to eq 1
+    end
+  end
+
+  # #936. The recipients block above is leg A, and it is flat. This is leg B:
+  # Noticed's EventJob iterates `event.notifications.each` and runs this
+  # notifier's email `before_enqueue` against every row — and this notifier's
+  # email leg has NO narrowing guard, so the gate is genuinely asked about each
+  # recipient. Read off the notification row that means a cold `recipient`
+  # load plus a `preferences` load per owner: eight and eight at eight owners.
+  #
+  # Two scoped counts rather than one total: a total-equality assertion can be
+  # satisfied by luck — one leg shrinking while another grows.
+  describe "email gate cost across the fan-out" do
+    def event_for_workspace_with(owner_count)
+      fanned_out = create(:workspace, max_members: 60)
+      owner_count.times do
+        create(:membership, user: create(:user), workspace: fanned_out, role: owner_role)
+      end
+      described_class.with(record: fanned_out, metric: "members", current: 8, limit: 10).deliver(nil)
+      Noticed::Event.where(type: described_class.name).order(:created_at).last
+    end
+
+    # Each measurement re-finds the event so the second one starts from a cold
+    # instance: measuring twice against one in-memory event would read the
+    # first run's memo and report a query count no cold job ever pays.
+    def queries_touching(table, event_id)
+      count_queries_touching(table) { Noticed::EventJob.perform_now(Noticed::Event.find(event_id)) }
+    end
+
+    it "loads the recipients and their preferences once each, not once per owner" do
+      event_id = event_for_workspace_with(8).id
+
+      aggregate_failures do
+        expect(queries_touching("users", event_id)).to eq 1
+        expect(queries_touching("user_preferences", event_id)).to eq 1
+      end
     end
   end
 
@@ -178,7 +212,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
       notification = Noticed::Notification.find_by(recipient: owner_a, type: "#{described_class.name}::Notification")
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_capacity_approaching.message",
-               workspace: workspace.name,
+               workspace_name: workspace.name,
                metric: "members",
                current: 8,
                limit: 10)

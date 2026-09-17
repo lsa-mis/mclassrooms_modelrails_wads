@@ -14,7 +14,7 @@ RSpec.describe Signupable, type: :controller do
         password_confirmation: "supersecret123"
       )
 
-      if commit_signup_atomically(user) { |u| u.authentications.create!(provider: "email", uid: u.email_address) }
+      if commit_signup_atomically(user) { |u| u.authentications.create!(provider: "email") }
         render plain: "ok"
       else
         render plain: "fail", status: :unprocessable_entity

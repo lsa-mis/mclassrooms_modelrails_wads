@@ -21,6 +21,7 @@ permissions:
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -41,6 +42,7 @@ jobs:
 
   scan_js:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -54,15 +56,19 @@ jobs:
           bundler-cache: true
 
       - name: Install libvips (loaded at Rails boot via active_storage_validations)
+        timeout-minutes: 5
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libvips42t64
 
       - name: Scan for security vulnerabilities in JavaScript dependencies
-        run: bin/importmap audit
+        run: |
+          for i in 1 2 3; do bin/importmap audit && exit 0; [ "$i" -lt 3 ] && sleep $((i * 20)); done
+          echo "::error::REGISTRY UNREACHABLE after 3 attempts — audit did not run (#984)"; exit 1
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
@@ -91,6 +97,7 @@ jobs:
 
   lint_docs:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -104,6 +111,7 @@ jobs:
           bundler-cache: true
 
       - name: Install libvips (loaded at Rails boot via active_storage_validations)
+        timeout-minutes: 5
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libvips42t64
@@ -129,6 +137,7 @@ jobs:
   # ruleset's required status context stable.
   split_seed:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Restore recorded spec runtimes
         # The unique per-sha key always misses on a fresh commit, so
@@ -159,6 +168,7 @@ jobs:
   test_shard:
     needs: split_seed
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -189,6 +199,7 @@ jobs:
           bundler-cache: true
 
       - name: Install libvips (Active Storage image variants)
+        timeout-minutes: 5
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libvips42t64
@@ -270,6 +281,7 @@ jobs:
   coverage_merge:
     needs: test_shard
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       RAILS_ENV: test
 
@@ -318,6 +330,7 @@ jobs:
     needs: [test_shard, coverage_merge]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: All shards and the merge succeeded
         run: |
@@ -335,6 +348,7 @@ jobs:
     # GHA cache (type=gha) keeps subsequent builds at ~30-60s wall clock by
     # reusing the apt-get, bundle install, and asset precompile layers.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code

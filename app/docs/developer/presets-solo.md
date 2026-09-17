@@ -61,7 +61,7 @@ The shape modelrails_base ships with: each person gets **their own** personal wo
 
 Three specific behaviors worth knowing:
 
-- **Personal workspaces are hidden from the header switcher dropdown** ([#145](https://github.com/dschmura/modelrails_base/pull/145)) — solo users don't see a switcher until they have at least one *org* workspace.
+- **The workspace switcher names the current workspace on every workspace page, personal included** — a solo user sees their one workspace (and their role) at the top of the sidebar, or above the section tabs on a phone. The menu lists other workspaces only once there are two or more; until then its only row is "All workspaces".
 - **Invitation acceptance is email-bound across every path** (signup / OAuth / magic-link / signed-in accept) — a leaked invite link cannot be redeemed by someone else. Magic-link invitations (no email set) remain intentionally bearer. See PRs [#175](https://github.com/dschmura/modelrails_base/pull/175), [#176](https://github.com/dschmura/modelrails_base/pull/176), [#180](https://github.com/dschmura/modelrails_base/pull/180), [#182](https://github.com/dschmura/modelrails_base/pull/182).
 - **Email verification uses Rails 8 `generates_token_for`** — signed, stateless, single-use. See `Authentication#generates_token_for :email_verification`.
 
@@ -88,12 +88,12 @@ Three positives confirm the preset: a new user has exactly one workspace, it's f
 Browser verification (optional, requires `SIGNUP_MODE=open` or a valid invitation) — sign up a fresh user and confirm:
 
 1. After verifying their email, they land in their personal workspace.
-2. The header workspace switcher does *not* show their personal workspace.
+2. The workspace switcher names their personal workspace with the role Owner; its menu lists no other workspace yet.
 3. `/workspaces/new` is accessible and creates a second workspace.
 
 **When to switch presets.**
 
-- *"Every user should land in one shared workspace — there should* be *no personal workspaces, and the switcher should be gone entirely."* → **[Single-tenant](/docs/developer/presets-single-tenant)** (Reshape 1).
+- *"Every user should land in one shared workspace — there should* be *no personal workspaces, and the switcher should never list a second one."* → **[Single-tenant](/docs/developer/presets-single-tenant)** (Reshape 1).
 - *"I need self-serve join via shareable links (`open_link`), email-domain auto-join (`domain`), or a request-and-approve flow."* → **[Open SaaS](/docs/developer/presets-open-saas)** (Reshape 2+).
 
 ## Next steps

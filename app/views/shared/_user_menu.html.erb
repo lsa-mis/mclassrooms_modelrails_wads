@@ -132,9 +132,16 @@
         </span>
       <% end %>
     <% end %>
-    <%# "All workspaces" is rendered in the mobile Workspaces group
-        (shared/_workspace_switcher, mobile) below, not here — the account
-        group holds only always-present account actions. %>
+    <%# The phone's route to the index. It used to ride the hamburger's
+        Workspaces group; that group is gone — the switcher now renders above
+        the section tabs on workspace pages (#1077) — and on account pages,
+        which carry no workspace context, this is the only way back. Same
+        deliberately-disambiguated label as the desktop menu's copy. %>
+    <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,
+          data: { turbo_prefetch: "true" },
+          class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center px-3 py-2
+                  text-sm text-text-body
+                  hover:bg-surface-sunken hover:text-interactive-hover rounded focus-ring" %>
     <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,
           class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center px-3 py-2
                   text-sm text-text-body

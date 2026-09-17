@@ -21,7 +21,7 @@ class WorkspaceInvitationResentNotifier < ApplicationNotifier
           "notifications.workspace_invitation_resent.message",
           locale: recipient_locale,
           invitee_email: event.record.email,
-          workspace: event.record.resolved_workspace&.name
+          workspace_name: event.record.resolved_workspace&.name
         )
       end
     end

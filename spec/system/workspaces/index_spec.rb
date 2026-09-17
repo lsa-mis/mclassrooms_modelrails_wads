@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Strong workspaces index", type: :system, js: true do
-  let(:user) { create(:user, first_name: "Dave", last_name: "Hancock") }
+  let(:user) { create(:user, first_name: "Nell", last_name: "Hancock") }
   let(:current_workspace) { create(:workspace, name: "Recent") }
   let(:older_workspace) { create(:workspace, name: "Older") }
 
@@ -146,7 +146,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
       end
 
       expect(page).to have_current_path(workspaces_path)
-      expect(page).to have_text(I18n.t("workspaces.members.destroy.left", workspace: "Older"))
+      expect(page).to have_text(I18n.t("workspaces.members.destroy.left", workspace_name: "Older"))
       # Scope the row-removal assertion to the page's workspace listing region —
       # the flash banner above includes "You left Older.", which a global
       # have_no_text("Older") would incorrectly match.

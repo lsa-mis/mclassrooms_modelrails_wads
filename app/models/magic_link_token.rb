@@ -42,6 +42,20 @@ class MagicLinkToken < ApplicationRecord
       &.then { |record| record.expires_at > Time.current && record.consumed_at.nil? ? record : nil }
   end
 
+  # The spent row for a token, or nil: the read half of replay detection,
+  # kept here so MagicLinkReplayable's address fence has exactly one lookup
+  # to guard rather than a copy per controller. Predicate-only — never
+  # consumes. "Spent" is consumed_at present, which also covers a link that
+  # was superseded unused; telling those apart is #1083. The blank guard is
+  # what stops a controller reading the wrong param name from silently
+  # digesting "" and never matching — a green suite with a dead feature.
+  def self.find_spent(token)
+    return nil if token.blank?
+
+    find_by(token_digest: digest(token))
+      &.then { |record| record.consumed_at.present? ? record : nil }
+  end
+
   # Atomic single-use consume (see Consumable#consume_matching). Returns the
   # now-consumed record, or nil if it was already spent or expired.
   def self.consume!(token)

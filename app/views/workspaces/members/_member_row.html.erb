@@ -27,10 +27,18 @@
             class: "text-sm text-interactive hover:text-interactive-hover
                     inline-flex min-h-11 items-center focus-ring rounded" %>
     <% end %>
+    <%# #1050: these three post from inside the members_results frame and all
+        answer with a redirect carrying a flash, which the layout renders
+        OUTSIDE the frame — so Turbo would fetch the notice and throw it away.
+        `_top` targets the whole page, the same escape the magic-link generate
+        form on index.html.erb already takes. Deactivate cannot be a
+        row-replacing stream instead: leaving and the last-owner refusal
+        redirect to a different page entirely. %>
     <% if policy(membership).destroy? && !membership.discarded? %>
       <%= button_to t("workspaces.members.index.deactivate"),
             workspace_member_path(workspace, membership),
             method: :delete,
+            form: { data: { turbo_frame: "_top" } },
             aria: { label: t("workspaces.members.index.deactivate_aria", name: membership.user.full_name) },
             class: "text-sm text-danger hover:opacity-80 bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
@@ -39,6 +47,7 @@
       <%= button_to t("workspaces.members.index.reactivate"),
             workspace_member_reactivation_path(workspace, membership),
             method: :post,
+            form: { data: { turbo_frame: "_top" } },
             aria: { label: t("workspaces.members.index.reactivate_aria", name: membership.user.full_name) },
             class: "text-sm text-success hover:opacity-80 bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>
@@ -47,6 +56,7 @@
       <%= button_to t("workspaces.members.index.transfer_ownership"),
             workspace_member_ownership_transfer_path(workspace, membership),
             method: :post,
+            form: { data: { turbo_frame: "_top" } },
             aria: { label: t("workspaces.members.index.transfer_ownership_aria", name: membership.user.full_name) },
             class: "text-sm text-text-muted hover:text-interactive-hover bg-transparent border-0 cursor-pointer
                     inline-flex min-h-11 items-center focus-ring rounded" %>

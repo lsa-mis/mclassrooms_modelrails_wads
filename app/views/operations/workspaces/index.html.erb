@@ -1,0 +1,38 @@
+<% content_for(:title) { t("operations.workspaces.index.title") } %>
+<div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
+  <%= render "shared/settings_page_header",
+        title: t("operations.workspaces.index.title"),
+        description: t("operations.workspaces.index.description") %>
+  <% if TenancyConfig.workspace_creation_enabled? %>
+    <%= ui :button, t("operations.workspaces.index.new"), href: new_operations_workspace_path, class: "whitespace-nowrap" %>
+  <% end %>
+</div>
+
+<% if @workspaces.any? %>
+  <div class="rounded-lg border border-border bg-surface overflow-hidden">
+    <%# Only the name column links anywhere — the "content already
+        focusable throughout" exemption doesn't apply, so this needs the
+        same keyboard-reachable scroll region as the other overflowing
+        tables (workspaces/members, projects/memberships). %>
+    <%= ui :scroll_area, orientation: :horizontal, max_h: nil,
+          aria_label: t("operations.workspaces.index.caption") do %>
+    <table class="min-w-full text-sm">
+      <caption class="sr-only"><%= t("operations.workspaces.index.caption") %></caption>
+      <thead>
+        <tr class="text-left text-text-heading">
+          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.name") %></th>
+          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.status") %></th>
+          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.owner") %></th>
+          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.members") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= render partial: "operations/workspaces/row", collection: @workspaces, as: :workspace %>
+      </tbody>
+    </table>
+    <% end %>
+    <%= render "shared/pagination", pagy: @pagy %>
+  </div>
+<% else %>
+  <%= render "shared/empty_state", message: t("operations.workspaces.index.empty") %>
+<% end %>

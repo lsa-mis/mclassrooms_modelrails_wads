@@ -29,16 +29,27 @@ module Reauthenticatable
     end
   end
 
-  # Return the user to the page they triggered the action from (a same-origin
-  # referer), so after confirming they can retry it. Gated actions are all
-  # mutating requests, so their own path isn't a useful landing.
+  # Return the user to the page they triggered the action from. Mutations
+  # return to a same-origin referer — their own path isn't a useful landing,
+  # there's nothing to retry there. A GET-gated page returns to itself via
+  # request.fullpath (mirrors Authenticatable#request_authentication's
+  # GET-correct form for the sign-in gate), so a stale-session visit lands
+  # back on the page that gated it, not on profile settings.
+  #
+  # request.head? matters here: HEAD routes to the same action as GET, so a
+  # bare `get?` check would send HEAD down the mutation branch instead
+  # (Brakeman: VerbConfusion).
   def store_reauthentication_return_to
-    referer_path = begin
-      url_from(request.referer)&.then { |uri| URI(uri).request_uri }
-    rescue URI::InvalidURIError
-      nil
+    session[:return_to_after_reauthentication] = if request.get? || request.head?
+      request.fullpath
+    else
+      referer_path = begin
+        url_from(request.referer)&.then { |uri| URI(uri).request_uri }
+      rescue URI::InvalidURIError
+        nil
+      end
+      referer_path.presence || edit_settings_profile_path
     end
-    session[:return_to_after_reauthentication] = referer_path.presence || edit_settings_profile_path
   end
 
   def reauthentication_return_to

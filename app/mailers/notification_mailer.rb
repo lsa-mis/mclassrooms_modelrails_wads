@@ -19,7 +19,7 @@ class NotificationMailer < ApplicationMailer
     mail(
       to: @recipient.email_address,
       subject: t("notification_mailer.workspace_role_changed.subject",
-                 workspace: @workspace.name)
+                 workspace_name: @workspace.name)
     )
   end
 
@@ -39,7 +39,7 @@ class NotificationMailer < ApplicationMailer
     mail(
       to: @recipient.email_address,
       subject: t("notification_mailer.workspace_invitation_expiring_soon.subject",
-                 workspace: @workspace.name)
+                 workspace_name: @workspace.name)
     )
   end
 
@@ -53,7 +53,7 @@ class NotificationMailer < ApplicationMailer
     mail(
       to: @recipient.email_address,
       subject: t("notification_mailer.workspace_member_added.subject",
-                 workspace: @workspace.name)
+                 workspace_name: @workspace.name)
     )
   end
 
@@ -69,7 +69,7 @@ class NotificationMailer < ApplicationMailer
     mail(
       to: @recipient.email_address,
       subject: t("notification_mailer.workspace_member_removed.subject",
-                 workspace: @workspace.name)
+                 workspace_name: @workspace.name)
     )
   end
 
@@ -97,7 +97,7 @@ class NotificationMailer < ApplicationMailer
     mail(
       to: @recipient.email_address,
       subject: t("notification_mailer.workspace_capacity_approaching.subject",
-                 workspace: @workspace.name,
+                 workspace_name: @workspace.name,
                  metric: @metric)
     )
   end

@@ -39,7 +39,7 @@ en:
       one: "1 unread notification"
       other: "%{count} unread notifications"
     notification_preferences: "Notification preferences"
-    all_workspaces: "All workspaces"
+    all_workspaces: "All %{workspaces}"
     toggle_theme: "Toggle theme"
     user_menu_label: "User menu for %{name}"
     user_menu_label_simple: "Open user menu for %{name}"

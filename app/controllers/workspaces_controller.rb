@@ -1,8 +1,8 @@
 class WorkspacesController < ApplicationController
   include WorkspaceScoped
   include IdentityParams
+  include RequiresWorkspaceCreationEnabled
   skip_before_action :set_workspace, only: [ :index, :new, :create ]
-  before_action :ensure_workspace_creation_enabled, only: [ :new, :create ]
 
   # Mirrors settings/avatars_controller: #update purges attachments and writes
   # blobs, so it gets the same per-user budget (2026-08-12 reauth panel fold-in).
@@ -34,10 +34,16 @@ class WorkspacesController < ApplicationController
               )
               .order(Arel.sql("memberships.last_accessed_at DESC NULLS LAST, workspaces.name ASC"))
 
+    # :workspace only — the archived section renders locked_row, which draws
+    # no logo. The logo_attachment include that used to sit here was never
+    # consumed by this page; Bullet keys "used" by class+id, and the header's
+    # hamburger switcher happened to draw the same rows' logos until #1077
+    # moved that switcher into workspace chrome. With that gone Bullet raises
+    # on the dead include, which is the right complaint.
     @archived_memberships = Current.user.memberships.kept
               .joins(:workspace)
               .merge(Workspace.kept.archived)
-              .includes(workspace: :logo_attachment)
+              .includes(:workspace)
               .order("workspaces.name ASC")
               .to_a
 
@@ -104,14 +110,6 @@ class WorkspacesController < ApplicationController
   end
 
   private
-
-  # Posture gate: under TENANCY_WORKSPACE_CREATION=disabled (typically the
-  # :shared preset), additional workspace creation is forbidden. UI omits the
-  # links, but a direct URL still needs to be refused. See app/docs/developer/presets.md.
-  def ensure_workspace_creation_enabled
-    return if TenancyConfig.workspace_creation_enabled?
-    redirect_to root_path, alert: t("workspaces.creation_disabled")
-  end
 
   def create_params
     params.require(:workspace).permit(:name)

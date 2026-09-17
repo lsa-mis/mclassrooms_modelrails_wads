@@ -66,5 +66,39 @@ RSpec.describe "Docs (markdowndocs gem)", type: :system do
       expect(axe_clean_in_both_themes?(axe_options)).to be(true),
         "AAA violations:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
     end
+
+    # The gem's docs-search controller matches a card by comparing the card's
+    # `data-slug` against the ids in the search index, and the index is keyed on
+    # the mode-prefixed path slug. A card tagged with the bare slug therefore
+    # matches nothing and every card is hidden on any query (#1070,
+    # markdowndocs#40). "timezone" was chosen by measuring the live filter: it is
+    # the only term tried whose fuzzy neighbourhood is empty, so it narrows the
+    # user-mode index to exactly one card.
+    it "narrows the index cards to the documents matching the query" do
+      visit "/docs"
+
+      # The controller silently ignores a query typed before the index fetch
+      # resolves, so synchronize on the response rather than on elapsed time.
+      Timeout.timeout(Capybara.default_max_wait_time) do
+        sleep 0.05 until cdp_browser.network.traffic.any? { |exchange|
+          exchange.request.url.include?("search_index") && exchange.response
+        }
+      end
+      expect(page).to have_link("Notifications")
+      expect(page).to have_link("Welcome")
+
+      # Located by placeholder: the control's accessible name is an `aria-label`
+      # (UI::SearchInputComponent), which Capybara only matches with
+      # `enable_aria_label`, and that is not set for this suite.
+      fill_in I18n.t("markdowndocs.search_placeholder"), with: "timezone"
+
+      # Order is load-bearing. The non-matching card is asserted FIRST because
+      # its disappearance is what synchronizes on the debounced search having
+      # run; asserting the matching card first passes against the pre-search
+      # state, so both assertions sample different moments and prove nothing
+      # (the #855 end-state trap, in miniature).
+      expect(page).to have_no_link("Welcome")
+      expect(page).to have_link("Notifications")
+    end
   end
 end

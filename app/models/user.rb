@@ -5,6 +5,13 @@ class User < ApplicationRecord
   include Avatar
   include Password
   include KnownDevices
+  include Suspension
+
+  # Raised by Authenticatable's sign-in funnel when a suspended user attempts
+  # to start a session; rescued centrally in ApplicationController. Declared
+  # on User rather than inside the Suspension concern so the constant's own
+  # name — in backtraces and the rescue_from line — is User::SuspendedError.
+  SuspendedError = Class.new(StandardError)
 
   has_many :sessions, dependent: :destroy
   has_many :authentications, dependent: :destroy
@@ -23,6 +30,12 @@ class User < ApplicationRecord
   has_many :accepted_invitations, class_name: "Invitation", foreign_key: :accepted_by_id, dependent: :nullify
   has_many :invitation_blocks, foreign_key: :inviter_id, dependent: :delete_all
   has_many :webauthn_credentials, dependent: :destroy
+  has_many :operatorships, dependent: :destroy
+  # operatorships carries two FKs into users: the subject row is destroyed
+  # with its user above, but the granter must be free to leave without
+  # dragging along everyone they granted access to — :nullify, same shape as
+  # accepted_invitations above.
+  has_many :granted_operatorships, class_name: "Operatorship", foreign_key: :granted_by_id, dependent: :nullify
 
   # Rails applies `normalizes` to find_by values too, so lookups get canonical matching for free.
   normalizes :email_address, with: ->(e) { EmailNormalizer.normalize(e) }
@@ -69,6 +82,17 @@ class User < ApplicationRecord
 
   def identity
     UserIdentity.new(self)
+  end
+
+  def operator?
+    operatorships.kept.exists?
+  end
+
+  # The operations area's reach, as a RELATION not a predicate: every
+  # Operations:: controller resolves workspaces through this. A future
+  # scoped-operator model can change this body and no call site.
+  def operated_workspaces
+    operator? ? Workspace.kept : Workspace.none
   end
 
   def available_reauth_factors

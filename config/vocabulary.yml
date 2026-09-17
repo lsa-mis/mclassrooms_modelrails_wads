@@ -1,0 +1,6 @@
+# The product's nouns, in the two forms English needs. Template-owned: a fork
+# overrides any of these in config/vocabulary.local.yml (merge=ours) and every
+# locale string that uses %{workspace} / %{Workspace} / %{workspaces} /
+# %{Workspaces} (and the project four) follows. See /docs/developer/forking.
+workspace: { singular: "workspace", plural: "workspaces" }
+project:   { singular: "project",   plural: "projects" }

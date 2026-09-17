@@ -1,0 +1,12 @@
+<%# locals: (workspace:) -%>
+<tr class="border-t border-border">
+  <td class="px-4 py-3 font-medium">
+    <%= link_to workspace.name, operations_workspace_path(workspace), class: "btn-text btn-text-interactive" %>
+  </td>
+  <td class="px-4 py-3"><%= lifecycle_status_label(workspace) %></td>
+  <%# Workspace#owner (singular) consumes the controller's memberships
+      preload when loaded; #owners (plural) is always a fresh query and
+      would N+1 this list. See /docs/developer/architecture (Owner Lookup). %>
+  <td class="px-4 py-3 text-text-body"><%= workspace.owner&.full_name %></td>
+  <td class="px-4 py-3 text-text-body"><%= workspace.memberships.select(&:kept?).size %></td>
+</tr>

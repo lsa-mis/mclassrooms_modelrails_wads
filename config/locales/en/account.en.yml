@@ -85,6 +85,7 @@ en:
       index:
         title: "Active devices"
         description: "Devices where you're currently signed in. Sign out any you don't recognize."
+        devices_heading: "Signed-in devices"
         current_device: "This device"
         current_device_note: "You're using this device now. Sign out from the account menu."
         last_active: "Last active %{time} ago"
@@ -109,6 +110,14 @@ en:
           signed_in_new_device_with_os: "Signed in from a new device (%{os})"
           passkey_added: "Passkey added"
           passkey_removed: "Passkey removed"
+          # admin-visibility rows, so these never actually render on this card; the label exists
+          # because every SECURITY_ACTIONS member needs one (activity_log_spec), keeping the two lists in sync.
+          suspended: "Access suspended by an operator"
+          unsuspended: "Access reinstated by an operator"
+          unlocked: "Sign-in lockout cleared by an operator"
+        operatorship:
+          granted: "Operator access granted"
+          revoked: "Operator access revoked"
     other_sessions:
       destroy:
         signed_out:
@@ -159,8 +168,8 @@ en:
         success: "%{provider} unlinked."
         cannot_remove_last_verified: "You can't remove your last verified sign-in method."
       verify:
-        email_mismatch: "Your email is verified, but that invitation was sent to a different address. Ask your workspace administrator to invite this email."
-        join_link_at_capacity: "Your email is verified, but that workspace is full right now. Ask a workspace administrator to make room or send you an invitation."
+        email_mismatch: "Your email is verified, but that invitation was sent to a different address. Ask your %{workspace} administrator to invite this email."
+        join_link_at_capacity: "Your email is verified, but that %{workspace} is full right now. Ask one of its administrators to make room or send you an invitation."
       verification_resends:
         create:
           resent: "We sent a fresh confirmation link to %{email}."
@@ -214,9 +223,9 @@ en:
       cropper_reset: "Crop reset to original position."
       zoom_announce: "Zoom %{percent}%"
     choose_profile_picture: "Choose profile picture"
-    choose_workspace_logo: "Choose workspace logo"
+    choose_workspace_logo: "Choose %{workspace} logo"
     adjust_profile_picture: "Adjust profile picture"
-    adjust_workspace_logo: "Adjust workspace logo"
+    adjust_workspace_logo: "Adjust %{workspace} logo"
     sources:
       upload:
         title: "Photo"

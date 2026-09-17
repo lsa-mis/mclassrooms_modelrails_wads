@@ -116,6 +116,118 @@ RSpec.describe "Modal system", type: :system do
     end
   end
 
+  # #713. A dialog left open when the user navigates away can come back with the page:
+  # Turbo's snapshot clone normalises only `select`, `input[type=password]` and
+  # `noscript`, and the browser's back-forward cache normalises nothing at all. What
+  # returns is a named dialog still carrying the hardcoded `aria-modal="true"`
+  # (UI::DialogComponent), announced in DOM order, claiming the rest of the page is not
+  # there, with Escape dead (`cancel` fires for modal dialogs only) and focus on <body>.
+  #
+  # There are two examples because there are two ways back to a page, and only one of
+  # them is Turbo's. On a Drive visit Turbo defers `snapshot.clone()` one event-loop tick
+  # past `turbo:before-cache`, so the clone is taken from the old body — and
+  # `modal_controller#disconnect()` closes any open dialog on that body when Turbo
+  # replaces it, so the app wins that one today. On a navigation Turbo does not render,
+  # there is no snapshot at all: the browser keeps the live document and Back restores it
+  # as it stood at unload. The sweep is what covers the second.
+  describe "restore after leaving the page (#713)" do
+    # The Drive case, where `disconnect()` happens to win the clone race. That is luck,
+    # not design — see the example below for the route where nothing wins it for us —
+    # and this one pins it so the incidental protection cannot be removed
+    # silently. The closed dialog keeps its `aria-modal` attribute but is
+    # `display: none`, so the assertion is deliberately visibility-scoped: nothing a
+    # screen reader can reach may claim modality.
+    it "restores with no open dialog and nothing exposed claiming modality" do
+      inject_test_modal
+      click_button "Open Modal"
+      expect(page).to have_css("dialog[open]")
+
+      # A real Turbo link, clicked. `visit` is a hard browser goto: it fires no
+      # `turbo:before-cache` and leaves the snapshot cache empty, so Back would
+      # re-request the page and the restore under test never happens. The link goes
+      # inside the panel because a modal dialog swallows every pointer event aimed
+      # at the page behind it.
+      page.execute_script(<<~JS)
+        const link = document.createElement('a');
+        link.id = 'test-modal-away';
+        link.href = '#{page_path(:about)}';
+        link.textContent = 'Leave via Turbo';
+        link.setAttribute('style', 'display:inline-flex;min-width:44px;min-height:44px;align-items:center');
+        document.querySelector('[data-modal-target="panel"]').appendChild(link);
+      JS
+      click_link "Leave via Turbo"
+      expect(page).to have_current_path(page_path(:about))
+
+      page.go_back
+
+      expect(page).to have_current_path(root_path)
+      expect(page).to have_css("#test-modal", visible: :all)
+      expect(page).to have_no_css("dialog[open]")
+      expect(page).to have_no_css('[aria-modal="true"]')
+    end
+
+    # The case that does not go through Turbo's snapshot cache at all, and the one the
+    # sweep actually earns its place on. Both stylesheet links carry
+    # `data-turbo-track="reload"` (`shared/_layout_head.html.erb`), so stripping them
+    # changes the tracked-element signature: `PageRenderer.shouldRender` is false, Turbo
+    # invalidates with `reloadReason: "tracked_element_mismatch"`, and the destination is
+    # fetched by a FULL browser load — Turbo renders nothing. Back is then served the
+    # ORIGINAL document from the browser's back-forward cache, with its DOM exactly as it
+    # stood at unload. `turbo:before-cache` has already fired by that point, so the sweep
+    # is what makes that DOM correct; there is no snapshot for anything to fix later.
+    # Measured: on the destination the original window's globals are gone (a real
+    # navigation), and after Back they are back (the same document restored).
+    #
+    # Stripping is only how the test reaches an invalidating navigation cheaply. An
+    # external link, `data-turbo="false"`, or a plain asset-digest change reaches the same
+    # place in production, so this is a broader bug than a dialog surviving a Drive visit.
+    #
+    # Coupled to the bfcache being usable: `Cache-Control: no-store` on the root page
+    # would make Back re-request instead of restoring, and the `#test-modal` assertion
+    # below would fail for that reason rather than this one — the injected modal is
+    # client-side only and no server response contains it.
+    it "restores with no open dialog when the navigation away invalidates and Back uses bfcache" do
+      inject_test_modal
+      click_button "Open Modal"
+      expect(page).to have_css("dialog[open]")
+
+      page.execute_script(<<~JS)
+        const link = document.createElement('a');
+        link.id = 'test-modal-away';
+        link.href = '#{page_path(:about)}';
+        link.textContent = 'Leave via Turbo';
+        link.setAttribute('style', 'display:inline-flex;min-width:44px;min-height:44px;align-items:center');
+        document.querySelector('[data-modal-target="panel"]').appendChild(link);
+      JS
+
+      stripped = page.evaluate_script(<<~JS)
+        (() => {
+          const links = [...document.querySelectorAll('head link[rel="stylesheet"]')];
+          links.forEach((l) => l.remove());
+          return links.length;
+        })()
+      JS
+      expect(stripped).to be_positive
+
+      click_link "Leave via Turbo"
+      expect(page).to have_current_path(page_path(:about))
+
+      page.go_back
+
+      expect(page).to have_current_path(root_path)
+      expect(page).to have_css("#test-modal", visible: :all)
+      expect(page).to have_no_css("dialog[open]")
+      expect(page).to have_no_css('[aria-modal="true"]')
+
+      # Land on a served page again. The teardown axe audit has no per-example opt-out
+      # (by design, #912), and it would otherwise audit the stylesheet-less document
+      # this example deliberately created — reporting target-size failures that are an
+      # artifact of the setup, not of the UI.
+      visit root_path
+      expect(page).to have_css("head link[rel='stylesheet']", visible: :all)
+    end
+  end
+
   describe "reduced motion" do
     it "skips animation when prefers-reduced-motion is set" do
       cdp_emulate_reduced_motion

@@ -22,7 +22,7 @@ RSpec.describe "PendingJoins", type: :request do
       post pending_join_path
 
       expect(response).to redirect_to(workspace_path(workspace))
-      expect(flash[:notice]).to eq(I18n.t("pending_joins.create.joined", workspace: workspace.name))
+      expect(flash[:notice]).to eq(I18n.t("pending_joins.create.joined", workspace_name: workspace.name))
       expect(user.memberships.kept.where(workspace: workspace)).to exist
       expect(session[:pending_join_token]).to be_nil
     end
@@ -73,7 +73,7 @@ RSpec.describe "PendingJoins", type: :request do
       post pending_join_path
 
       expect(response).to redirect_to(root_path)
-      expect(flash[:alert]).to eq(I18n.t("pending_joins.create.could_not_join", workspace: workspace.name))
+      expect(flash[:alert]).to eq(I18n.t("pending_joins.create.could_not_join", workspace_name: workspace.name))
       expect(user.memberships.kept.where(workspace: workspace)).not_to exist
     end
   end

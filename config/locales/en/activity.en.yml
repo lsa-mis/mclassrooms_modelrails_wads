@@ -11,32 +11,49 @@ en:
     # Nested, never flat and dotted: I18n splits a requested key on "." and
     # walks the hash segment by segment, so a literal "membership.created" key
     # is unreachable and the renderer's `default:` silently humanizes instead
-    # (#911). spec/i18n_spec.rb fails on a dot inside any key here.
+    # (#911). spec/locales/activity_actions_shape_spec.rb fails on a dot inside
+    # any key here.
     actions:
       workspace:
-        created: "created the workspace"
-        updated: "updated workspace settings"
-      # The row's SUBJECT is its actor — Trackable writes `actor: Current.user`,
-      # i.e. whoever performed the change. So every membership string below
-      # names the affected member as the OBJECT; writing them in the passive
-      # ("was deactivated") attached the removal to the remover.
-      # `created` is the exception and stays subject-only: its actor IS the
-      # person who joined.
+        created: "created the %{workspace}"
+        updated: "updated %{workspace} settings"
+        # Suspend/unsuspend arrive as workspace.updated; ActivityLog#display_action
+        # derives these two from suspended_at in the row's own changes.
+        suspended: "locked the %{workspace}"
+        unsuspended: "unlocked the %{workspace}"
+      # The row's SUBJECT is ActivityLog#display_subject: the actor when there
+      # is one — Trackable writes `actor: Current.user`, whoever performed the
+      # change — so every membership string below names the affected member
+      # as the OBJECT; writing them in the passive ("was deactivated") attached
+      # the removal to the remover.
+      # `created` is the exception and stays subject-only. Its subject is the
+      # member who joined: usually that IS the actor, but an onboarding
+      # membership is created in a User after_create where Current.user cannot
+      # exist yet, so the row supplies the member itself rather than "System".
       membership:
-        created: "joined the workspace"
+        created: "joined the %{workspace}"
         updated: "changed %{member}'s role"
         # A deactivation, a departure and a reactivation are all recorded as
         # `membership.updated`; ActivityLog#display_action picks between these
         # from the row's own `changes` metadata and its actor (#932).
         deactivated: "deactivated %{member}"
         reactivated: "reactivated %{member}"
-        left: "left the workspace"
+        left: "left the %{workspace}"
+        role_grant_blocked: "tried to grant a role they cannot assign"
       invitation:
         created: "sent an invitation"
-        updated: "invitation was updated"
+        updated: "updated an invitation"
+        delivery_suppressed: "suppressed an invitation's delivery"
       project:
-        created: "created a project"
-        updated: "updated a project"
+        created: "created the %{project}"
+        updated: "updated the %{project}"
       resource:
         created: "added a resource"
         updated: "updated a resource"
+      user:
+        suspended: "suspended %{member}"
+        unsuspended: "reinstated %{member}"
+        unlocked: "cleared %{member}'s sign-in lockout"
+      operatorship:
+        granted: "granted %{member} operator access"
+        revoked: "revoked %{member}'s operator access"

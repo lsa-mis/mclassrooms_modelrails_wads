@@ -79,10 +79,63 @@ RSpec.describe WorkspaceJoinLink, type: :model do
       expect(membership.role.slug).to eq("member")
     end
 
+    # Same seam as an invitation: joining is onboarding, so a link-joiner
+    # under :none never lands in the first-run wizard either.
+    it "marks the joiner onboarded" do
+      expect { link.admit(joiner) }.to change { joiner.reload.onboarded? }.from(false).to(true)
+    end
+
     it "is a no-op for a stale link (workspace no longer accepting open joins)" do
       joiner # create outside the expect — onboarding creates its own membership
       open_workspace.update!(join_policy: "invite")
       expect { link.admit(joiner) }.not_to change { open_workspace.memberships.count }
+    end
+
+    # #689 item 4: the posture check is re-read INSIDE admit's write transaction, so a
+    # revoke, an expiry change or a join_policy flip that lands after the caller loaded
+    # the link still refuses. Each example mutates a SECOND instance of the same row and
+    # then admits through the first, stale one — the shape of the race, since the writer
+    # lock serializes the racer's commit ahead of this transaction's fresh read.
+    context "when the posture changed after the link was loaded" do
+      it "refuses a link revoked in the meantime" do
+        joiner # create outside the expect — onboarding creates its own membership
+        stale = WorkspaceJoinLink.find(link.id)
+        WorkspaceJoinLink.find(link.id).revoke!
+
+        expect { stale.admit(joiner) }.not_to change { open_workspace.memberships.count }
+      end
+
+      it "refuses a link whose expiry was pulled in and has since passed" do
+        joiner
+        stale = WorkspaceJoinLink.find(link.id)
+        WorkspaceJoinLink.find(link.id).update!(expires_at: 1.day.from_now)
+
+        # Past the shortened expiry, still inside the seven days the stale instance holds.
+        travel_to 2.days.from_now do
+          expect { stale.admit(joiner) }.not_to change { open_workspace.memberships.count }
+        end
+      end
+
+      # What this pins: a link instance held in memory across a policy flip still refuses,
+      # because the re-check inside the transaction reads the committed row rather than the
+      # instance's stale view. A capability pin rather than a live race — the one caller,
+      # PendingClaims#claim_join, reaches admit for a newly-registered user inside
+      # Signupable#commit_signup_atomically's BEGIN IMMEDIATE, so no flip can commit between
+      # the load and the re-read. The guard is here so a future caller outside that
+      # transaction cannot reintroduce the race.
+      #
+      # The warming step below is what lets this example FAIL against the pre-change code
+      # (measured both ways): without it the association loads after the flip and even the
+      # unguarded version refuses, so the example would pass vacuously. It is not needed for
+      # the guarded version to pass — reload clears the association cache either way.
+      it "refuses when the workspace's join policy flipped in the meantime" do
+        joiner
+        stale = WorkspaceJoinLink.find(link.id)
+        stale.workspace # see above: without this the example cannot fail against the old code
+        Workspace.find(open_workspace.id).update!(join_policy: "invite")
+
+        expect { stale.admit(joiner) }.not_to change { open_workspace.memberships.count }
+      end
     end
 
     it "raises Workspace::AlreadyMember for a duplicate join (callers decide how to treat it)" do

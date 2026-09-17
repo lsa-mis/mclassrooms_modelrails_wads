@@ -60,6 +60,46 @@ When run interactively it finishes by offering to run `bin/setup` for you (the
 dev server is not started — that stays your call). Under `--yes`, or when stdin
 isn't a terminal, it never does: scripted and CI runs stay fast and predictable.
 
+### From a GitHub fork, or a fork of a fork
+
+The template is meant to be forked, and forks get forked: an organization keeps
+its own synced copy under its own name, and products start from that copy. The
+shortest path is the **Fork** button, then a clone, then `bin/fork` with no
+remote flags at all:
+
+```bash
+git clone git@github.com:YOU/myapp.git
+cd myapp
+bin/fork --name myapp --preset personal --yes
+```
+
+Your clone's `origin` is already your product and there is no `upstream` yet.
+Git has no record of what a fork was forked from, but GitHub does, so when
+nothing else names the template and the `gh` CLI is installed, `bin/fork` asks
+GitHub for `origin`'s parent and records that URL in `.fork.yml`. That is the
+repository you pressed Fork on — the organization's copy if you forked the
+copy, the template if you forked the template. `bin/setup` reads the URL and
+adds it as the push-disabled `upstream` in every clone. The script says which
+it did: *template … (origin's GitHub parent)*.
+
+Without `gh`, or when GitHub reports no parent, name the template yourself with
+`--template URL`; an explicit flag always wins over the lookup:
+
+```bash
+bin/fork --name myapp --preset personal --template git@github.com:ORG/modelrails_base_wads.git --yes
+```
+
+`--template` is also how a copy under another name works on the **clone path**
+(`git clone <the copy> myapp`, then `bin/fork --origin <your empty repo>`).
+There `origin` *is* the template, so its GitHub parent would be one hop too far
+and the script deliberately does not ask; `bin/fork` knows the template by
+name — a remote ending in `/modelrails_base` — and `--template` extends that to
+the copy. With the flag, an existing `upstream` equal to that URL counts as
+configured, and an `origin` equal to it gets the same remote surgery as the
+template itself. The match is URL equality, with or without `.git`, never a
+looser name pattern: a repository of your own that merely *starts* with
+`modelrails_base` is never mistaken for the template.
+
 ### By hand (what bin/fork does)
 
 Use this if you'd rather drive it yourself, or to finish up after an interrupted
@@ -119,6 +159,9 @@ bin/setup
 remote (push disabled), activates the merge driver, and writes the fork's
 recorded tenancy preset into their `.env`. Those three things are per-clone, not
 per-fork, which is why they live in setup rather than in the one-time script.
+The git hooks are not among them: `bundle exec lefthook install` is a separate
+one-time step per clone (see [Getting started](getting-started#gate-1-local-lefthook-pre-push)),
+and until it runs a push runs nothing.
 
 > Teammates need **read access to the upstream template repository** for the
 > remote to be useful. If your template is private, grant it before they try to
@@ -141,12 +184,14 @@ find again.
 | Storage volume names | `config/deploy.yml` (`volumes:`) | Renaming later orphans the old volume — do it before first deploy |
 | Brand strings | `config/locales/en/brand.en.yml` | Product name, description, copyright — fork-owned, one file |
 | Brand colors | `config/locales/en/brand.en.yml`'s visual twin: `app/assets/tailwind/tokens/_brand.css` | Optional — swap the primary palette family here; re-prove AAA in CI ([Theming](theming)) |
+| Brand mark | `app/views/shared/_site_mark.html.erb` (one `<svg>`, nothing else) + the icon set in `public/` | Replace wholesale; keep `fill="currentColor"`, `aria-hidden="true"`, and a `viewBox` with no width/height ([Extending](extending#customizing-the-site-logo)) |
+| Vocabulary | `config/vocabulary.local.yml` | Your names for workspace and project (singular + plural); every template string follows ([i18n](i18n#vocabulary)) |
 | Marketing copy | `config/locales/en/pages.en.yml` + `app/views/pages/` | Fork-owned — rewrite wholesale |
 | Languages | `config/application.rb` (`config.i18n.available_locales`) | Register a locale here *before* adding its files, or `I18n.t(locale:)` raises in production — see [Internationalization](i18n) |
 | PWA app name | `public/manifest.webmanifest` (`name` / `short_name`) | Shown on the home screen if users install the PWA |
 | CI image tags | `.github/workflows/ci.yml` + `image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
 | Devcontainer bundle-cache volume | `.devcontainer/devcontainer.json` | Optional; the invariant spec only checks the `bundle-cache` suffix |
-| Fork provenance | `.fork.yml` | Written by `bin/fork`: your name, tenancy preset, and the template commit you forked from. Committed so every clone inherits the decisions — `bin/setup` reads the preset. Nothing gates on it; live state is derived from the repository |
+| Fork provenance | `.fork.yml` | Written by `bin/fork`: your name, tenancy preset, and the template commit you forked from. Committed so every clone inherits the decisions — `bin/setup` reads the preset. Two template invariants read it: the placeholder-support-address check runs only when it exists, and the check that `bin/fork`'s rename targets still exist upstream skips when it does. Everything else is derived from the repository |
 | Session cookie key | optional `config/initializers/session_store.rb` | Only if multiple forks will share a cookie domain |
 
 Then verify nothing was missed:
@@ -216,6 +261,9 @@ on every sync.
 | `.rubocop/app.yml` | Your RuboCop overrides — turn a house cop off here, with the reason ([Getting started](getting-started#turning-a-house-cop-off-in-your-fork)) |
 | `config/markdowndocs_categories.local.yml` | Registers your own docs pages on this `/docs` index |
 | `app/assets/tailwind/tokens/_brand.css` | Brand-color overrides — swap the primary palette family ([Theming](theming)) |
+| `app/views/shared/_site_mark.html.erb` | The brand mark — a file that is one `<svg>` ([Extending](extending#customizing-the-site-logo)) |
+| `public/icon.svg`, `public/icon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `public/favicon.ico` | The favicon and PWA icon set — same artwork, same filenames and sizes ([Getting started](getting-started#favicon-and-pwa-icons)) |
+| `config/vocabulary.local.yml` | Your product's nouns — any subset; `config/vocabulary.yml` fills the rest ([i18n](i18n#vocabulary)) |
 | `README.md` | Your product's README |
 
 A fork may also take `merge=ours` ownership of **template files it has rewritten
@@ -228,6 +276,37 @@ multi-tenant/passwordless model. Unlike the prescribed seams above (which
 upstream froze), upstream *does* keep evolving these files, so the `merge=ours`
 mark means you silently keep your version and should watch for upstream doc
 improvements worth porting by hand.
+
+### Vocabulary — you own the words, upstream owns the sentences
+
+The template's copy never says "workspace" or "project"; it says `%{workspace}`
+and `%{project}`, and a boot-time hook fills those from `config/vocabulary.yml`.
+To rename, put your words in `config/vocabulary.local.yml`:
+
+```yaml
+workspace: { singular: "course", plural: "courses" }
+project:   { singular: "team",   plural: "teams" }
+```
+
+Restart. Every template string, including the ones upstream adds next month,
+arrives in your words — that is the point of this file existing instead of
+you editing `workspaces.en.yml`. Two template specs keep it true: no locale
+value under `config/locales/en/` may spell out the bare noun (`brand` and
+`pages` excepted — those are yours to word), and every interpolation token must
+be supplied. That first rule covers the files you add, so write your own
+strings with `%{project}` too and they follow the rename the same way.
+
+What it does not do. It does not rename models, tables, routes, or URLs —
+those stay `workspaces` and `projects`, and a product whose UI says Course and
+whose URL says `/workspaces/3` is the accepted shape. It does not touch the
+user docs under `app/docs/user/`, which are markdown, not I18n; rename those
+by hand. And it never adds an article: template strings are worded so no "a"
+or "an" precedes a noun, and your own strings should be too. It does not
+escape: a fork's noun lands unescaped in `_html` keys, which is fine for a
+boot-time file only the fork edits and never a place for user input.
+
+Unlike `pages.en.yml`, this file holds nothing upstream will ever change, so
+`merge=ours` here carries none of the silently-missed-fix risk described above.
 
 ### Fork seams — method overrides
 
@@ -371,11 +450,7 @@ git merge upstream/main
 A conflict looks like this — your side on top, upstream's below:
 
 ```text
-<<<<<<< HEAD
-    primary_cta: "Start organizing your photos"
-=======
     primary_cta: "Get started free"
->>>>>>> upstream/main
 ```
 
 Decide which line the file should have (here it's your marketing copy — keep

@@ -2,18 +2,19 @@
 
 require "rails_helper"
 
-# System spec for the header workspace switcher (Phase 2b Task 1).
+# System spec for the workspace switcher, which heads the workspace sidebar.
 #
-# The switcher is `hidden md:block` — visible only at the md breakpoint and above.
-# Playwright's default viewport (1280×720) satisfies this; no resize is needed.
+# It therefore only exists on workspace pages — the sidebar is the switcher's
+# home, so this visits one rather than the workspaces index. The sidebar is
+# `hidden md:flex`; the default viewport satisfies that, no resize needed.
 #
 # Escape is dispatched via the menu controller's navigate handler directly,
 # matching the pattern in user_menu_spec.rb — programmatic KeyboardEvent dispatch
-# does not reach main-world Stimulus listeners in Playwright's isolated context.
+# does not reach main-world Stimulus listeners from the driver's context.
 #
 # Per-spec axe runs AA locally; the AAA 7:1 audit is the CI-only wcag2aaa hook.
 # Do not claim AAA from a local run.
-RSpec.describe "Workspace switcher (header)", type: :system do
+RSpec.describe "Workspace switcher (sidebar)", type: :system do
   let(:user) { create(:user) }
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
   let!(:second) do
@@ -36,7 +37,9 @@ RSpec.describe "Workspace switcher (header)", type: :system do
 
   before do
     sign_in_via_form(user)
-    visit workspaces_path
+    # Start on the OTHER workspace so selecting `second` is a real navigation
+    # rather than a click that lands where we already are.
+    visit workspace_path(user.personal_workspace)
   end
 
   it "opens on click, lists both workspaces, and navigates on selection" do

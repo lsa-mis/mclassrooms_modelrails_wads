@@ -67,11 +67,26 @@ class Membership < ApplicationRecord
 
   # Deliberately NOT gated on Workspace#admittable? — archived workspaces still reactivate; pinned in
   # membership_spec. See /docs/developer/membership-lifecycle.
+  #
+  # Guarded like Project's and Workspace's mutators, and for the same reason (#929): two callers each
+  # holding the row as discarded both cleared discarded_at and both fired notify_member_readmitted.
+  # `lock!` on THIS row rather than deactivate!'s workspace.lock! — this verb enforces no
+  # workspace-wide invariant, and locking the workspace re-reads the wrong record: the guard needs a
+  # fresh discarded_at. The lock clause itself is a no-op on SQLite (Arel's visitor emits none); the
+  # serialization is BEGIN IMMEDIATE, which is what makes the re-read committed state and the guard
+  # genuine check-then-act. Guard INSIDE the transaction for that re-read — deactivate!'s sits outside
+  # because it shortcuts a same-instance replay, not a racer. `next`, not `return`: an early exit
+  # commits nothing. Called inside Workspace#admit's transaction, this one joins it. See
+  # /docs/developer/architecture (Concurrency).
   def reactivate!(granted_by: nil, self_join: false)
     self.class.reject_conflicting_provenance!(granted_by: granted_by, self_join: self_join)
-    self.granted_by = granted_by
-    self.self_join = self_join
-    undiscard!
+    transaction do
+      lock!
+      next if kept?
+      self.granted_by = granted_by
+      self.self_join = self_join
+      undiscard!
+    end
   end
 
   private

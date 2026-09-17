@@ -1,8 +1,17 @@
-<%# Replace the workspace name heading in the persistent identity bar when
-    renamed in-context — shares shared/_workspace_name_link with
-    shared/_workspace_identity_bar so the two can't drift. %>
-<%= turbo_stream.replace "workspace-name-heading" do %>
-  <%= render "shared/workspace_name_link", workspace: @workspace %>
+<%# Replace the sidebar switcher's trigger when the workspace is renamed
+    in-context. The WHOLE trigger, not the name inside it: name, logo and role
+    are one control now, and patching the name alone once injected an <a> into
+    the <button> (nested-interactive). Shares
+    shared/_workspace_switcher_trigger with the live sidebar so the two
+    can't drift. %>
+<%= turbo_stream.replace "workspace-switcher-button" do %>
+  <%= render "shared/workspace_switcher_trigger", workspace: @workspace %>
+<% end %>
+
+<%# The phone copy too — it is in the DOM at every width (md:hidden, not
+    absent), so patching only the sidebar trigger would leave it stale. %>
+<%= turbo_stream.replace "workspace-switcher-button-mobile" do %>
+  <%= render "shared/workspace_switcher_trigger", workspace: @workspace, id_suffix: "-mobile" %>
 <% end %>
 
 <%= turbo_stream.replace "workspace_logo_branding" do %>
@@ -16,19 +25,12 @@
   </span>
 <% end %>
 
-<%= turbo_stream.replace "workspace_logo_show" do %>
-  <span id="workspace_logo_show" class="shrink-0">
-    <%= workspace_icon_for(@workspace, size: :md) %>
-  </span>
-<% end %>
-
 <% if @close_modal %>
-  <%# Close any open modal that targets the standard "modal-body" slot (settings edit page). %>
+  <%# Close any open modal that targets the standard "modal-body" slot — the
+      identity picker on the Profile page. Personal workspaces used to need a
+      second append here for their own Customize modal; they now edit through
+      the same Profile page as an org, so there is one modal to close. %>
   <%= turbo_stream.append "modal-body" do %>
-    <div data-controller="modal-closer"></div>
-  <% end %>
-  <%# Close the Customize modal on the personal-workspace Overview (uses a stable id). %>
-  <%= turbo_stream.append "workspace-customize-body" do %>
     <div data-controller="modal-closer"></div>
   <% end %>
 <% end %>

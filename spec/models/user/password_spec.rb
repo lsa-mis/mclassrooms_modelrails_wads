@@ -83,6 +83,20 @@ RSpec.describe User, type: :model do
       expect(user).not_to be_locked
     end
 
+    # An expired lock has to start the count over: the stale counter is still
+    # at the threshold, so the very next failure would re-lock for a full hour.
+    it "starts counting again after a lock expires, instead of re-locking on the next failure" do
+      5.times { user.register_failed_login! }
+
+      travel_to(User::LOCK_DURATION.from_now + 1.minute) do
+        expect(user.reload).not_to be_locked
+        user.register_failed_login!
+
+        expect(user.reload).not_to be_locked
+        expect(user.failed_login_attempts).to eq(1)
+      end
+    end
+
     it "resets failed attempts on successful login" do
       3.times { user.register_failed_login! }
       user.register_successful_login!

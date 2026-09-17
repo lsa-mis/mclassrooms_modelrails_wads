@@ -24,6 +24,34 @@ RSpec.describe "Workspace Profile destination", type: :system do
     expect(page).to have_text(I18n.t("settings.pages.workspace_profile.description"))
   end
 
+  it "saves the name" do
+    visit edit_workspace_path(workspace)
+
+    fill_in I18n.t("workspaces.edit.name_label"), with: "Acme Limited"
+    click_on I18n.t("workspaces.settings.edit.sections.identity_submit")
+
+    expect(page).to have_css("#workspace-name-heading", text: "Acme Limited")
+    expect(workspace.reload.name).to eq("Acme Limited")
+  end
+
+  # The identity picker renders its own <form>. Nested inside the name form, the
+  # parser ignores its start tag but honours its </form>, closing the OUTER form
+  # and orphaning every later control — the Save button included, so the name
+  # silently would not save. Measured, not assumed: this asserts the DOM the
+  # browser actually built.
+  it "leaves no submit control outside a form" do
+    visit edit_workspace_path(workspace)
+
+    orphans = page.evaluate_script(<<~JS)
+      [...document.querySelectorAll("input[type=submit], button[type=submit]")]
+        .filter(s => !s.closest("form"))
+        .map(s => s.value || s.textContent.trim())
+    JS
+
+    expect(orphans).to be_empty,
+      "submit controls outside any form (nested-form parse break): #{orphans.inspect}"
+  end
+
   it "passes axe-core at WCAG 2.2 AAA in light and dark modes" do
     visit edit_workspace_path(workspace)
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),

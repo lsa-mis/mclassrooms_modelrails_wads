@@ -34,12 +34,18 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
   # Compare on `*_id` (not on the loaded association) so Bullet doesn't flag an N+1 when
   # Noticed iterates `event.notifications.each` in the EventJob; recipient_id is a column
   # on the notification row and avoids the per-row association load that would trigger.
+  #
+  # The second guard asks about `event.record.user` rather than calling the no-argument
+  # `deliver_email_now?`, which since #936 materialises the WHOLE fan-out's users and
+  # preferences to answer for one recipient. The first guard has already established that
+  # the surviving recipient IS `record.user` — a row this hook holds — so one lookup
+  # answers it. Same shape as the removed-member sibling.
   deliver_by :email do |config|
     config.mailer = "NotificationMailer"
     config.method = :workspace_member_added
     config.before_enqueue = lambda {
       throw(:abort) unless recipient_id == event.record.user_id
-      throw(:abort) unless deliver_email_now?
+      throw(:abort) unless deliver_email_now_for?(event.record.user)
     }
     config.enqueue = true
   end
@@ -51,7 +57,7 @@ class WorkspaceMemberAddedNotifier < ApplicationNotifier
           "notifications.workspace_member_added.message",
           locale: recipient_locale,
           added_user_name: event.record.user.first_name,
-          workspace: event.record.workspace.name
+          workspace_name: event.record.workspace.name
         )
       end
     end

@@ -10,7 +10,7 @@ A membership is a seat: granted, re-graded, revoked, restored. It is soft-delete
 
 ## Two associations answer two different questions
 
-`User has_many :memberships` is **unscoped**: it owns `dependent: :destroy` and it is what the members page reads, so removed people still show in history. `User has_many :workspaces` goes **through `active_memberships`, the kept ones only**. Every reader of `workspaces` — `WorkspaceScoped`'s resolver, the header switcher — is asking "which workspaces may this user enter". Routing it through every membership once let a removed member resolve the workspace, get refused by the policy, and be redirected back to the page that had just refused them (#931). Keep the two associations distinct; do not "simplify" `workspaces` onto `memberships`.
+`User has_many :memberships` is **unscoped**: it owns `dependent: :destroy` and it is what the members page reads, so removed people still show in history. `User has_many :workspaces` goes **through `active_memberships`, the kept ones only**. Every reader of `workspaces` — `WorkspaceScoped`'s resolver, the workspace switcher — is asking "which workspaces may this user enter". Routing it through every membership once let a removed member resolve the workspace, get refused by the policy, and be redirected back to the page that had just refused them (#931). Keep the two associations distinct; do not "simplify" `workspaces` onto `memberships`.
 
 ## Removal is idempotent by construction
 
@@ -32,6 +32,14 @@ Re-admission is **not** gated on `Workspace#admittable?`, and that asymmetry wit
 `granted_by` and `self_join` are mutually exclusive (a self-join has no granter — see the actor rule). `Membership.reject_conflicting_provenance!` raises `ArgumentError` at the two entry points, `Workspace#admit` and `#reactivate!`, before any database work, so the caller's own line is in the backtrace. But not every creation goes through an entry point: `User#join_shared_workspace` creates a membership directly, and the actor-stance code smell is satisfied by *either* marker, so a site naming both would look declared and reach the row. The `provenance_markers_are_coherent` validation is the second layer that catches every other path. Both layers are kept on purpose. The messages are programmer-facing; no form can produce them.
 
 `self_join` has a closed grade set (`SELF_JOIN_GRADES`): a grade outside it is a typo, and the validation makes it fail loudly rather than read as a chosen self-join and mail somebody.
+
+## User suspension is not a membership transition
+
+An operator suspending a user touches no membership row at all — memberships,
+roles and project access are left exactly as they were, and a suspended sole
+owner still owns their workspace. Suspension is a hold on the *user*'s
+ability to sign in, not a step in this state machine. See [Instance
+operations: Suspension keeps memberships](operations#suspension-keeps-memberships).
 
 ## Where these are pinned
 

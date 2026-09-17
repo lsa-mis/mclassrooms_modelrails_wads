@@ -72,6 +72,29 @@ Two complementary gates cover missing translations, and it is worth being precis
 
 Bullet raises on N+1 queries in test and alerts in development. Its safelists — intentional preload and delivery-layer trade-offs that hold in both environments, since the app code is identical — are centralized in `lib/bullet_safelists.rb` rather than duplicated per environment file. They drifted once: `development.rb` carried only two entries while `test.rb` had the full set, so false positives fired in dev but never in test, invisible to the suite. One source removes that whole class of drift. Each environment file keeps its own enable/display/raise configuration and calls `BulletSafelists.apply` after `Bullet.enable = true`; every safelist entry carries a comment explaining the trade-off it encodes.
 
+### Rake task specs load once
+
+A spec that invokes a rake task calls `RakeTasks.load_once`
+(`spec/support/rake_tasks.rb`), not `Rails.application.load_tasks` directly:
+loading twice appends a second copy of every task's body, so an aborting
+task raises `SystemExit` mid-example on its second pass — and RSpec still
+prints "0 failures" for the run it just cut short. The exit code is the
+verdict, not the summary line.
+
+### Reviewed lists behind the guards
+
+Two support files hold reviewed lists that code-smell specs enumerate
+against rather than re-deriving by pattern-matching:
+
+- `spec/support/security_event_writers.rb` — `SecurityEventWriters::ALLOWED`,
+  the files permitted to write `ActivityLog` rows directly outside
+  `Trackable` and `record_security_event!`. Shared by the guard that proves
+  no other file bypasses the writer and the one that derives which literal
+  actions those files may write.
+- `spec/support/source_scanning.rb` — `without_comments` and friends, the
+  shared source-text scanning helpers behind the code-smell specs that read
+  `app/` as text rather than through a runtime representation.
+
 ## System-spec infrastructure
 
 System specs run on Capybara + Cuprite, a pure-Ruby CDP driver (the suite migrated off Playwright in #497 — no Node dependency). The support files below make that stack reliable.

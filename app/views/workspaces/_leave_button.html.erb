@@ -8,7 +8,7 @@
 <%= button_to t("workspaces.index.row.leave"),
       workspace_member_path(membership.workspace, membership),
       method: :delete,
-      data: { turbo_confirm: t("workspaces.index.row.leave_confirm", workspace: membership.workspace.name) },
+      data: { turbo_confirm: t("workspaces.index.row.leave_confirm", workspace_name: membership.workspace.name) },
       class: "btn-touch-target inline-flex items-center px-3 py-2 rounded-md
               text-sm font-medium text-text-body
               bg-surface-raised border border-border

@@ -1,0 +1,45 @@
+<% content_for(:title) { t("operations.operatorships.index.title") } %>
+<%= render "shared/settings_page_header",
+      title: t("operations.operatorships.index.title"),
+      description: t("operations.operatorships.index.description") %>
+
+<%# Model-less form_with, same shape as operations/users/index.html.erb's
+    search form: form.label + a bare ui :input (no field group, so no
+    data-slot is needed) + form.submit. %>
+<%= form_with url: operations_operatorships_path, method: :post, class: "mt-4 flex gap-3 items-end max-w-md" do |form| %>
+  <div class="flex-1">
+    <%= form.label :email, t("operations.operatorships.index.grant_label"), class: "block text-sm font-medium text-text-heading" %>
+    <%= ui :input, type: "email", name: "email", id: "email", autocomplete: "email" %>
+  </div>
+  <%= form.submit t("operations.operatorships.index.grant"), class: "btn-primary" %>
+<% end %>
+
+<%= ui :list_group, class: "mt-4" do %>
+  <% @operatorships.each do |operatorship| %>
+    <%= ui :list_group_item, class: "gap-4" do %>
+      <span><%= operatorship.user.full_name %></span>
+      <span class="text-text-body">
+        <%# The <time> element's CONTENT is the absolute date, not a relative
+            "time ago" string — that's what's announced to screen readers and
+            shown to sighted users. %{date} carries that <time> markup
+            through the _html-suffixed translation key. %>
+        <%= t("operations.operatorships.index.granted_by_html",
+              name: operatorship.granted_by&.full_name || t("operations.operatorships.index.bootstrap"),
+              date: content_tag(:time, l(operatorship.created_at.to_date),
+                                 datetime: operatorship.created_at.iso8601)) %>
+      </span>
+      <%# button_to, not a link — same house rule as the workspace/user lock
+          controls. btn-text + btn-text-danger (not solid btn-danger): the
+          precedent for a per-row destructive action inside a list is
+          settings/sessions/index.html.erb and settings/passkeys/index.html.erb
+          ("Revoke"/"Remove"), not the standalone workspace suspend button.
+          aria-label: an N-identical-buttons roster needs distinct accessible
+          names. No separate btn-touch-target/focus-ring — .btn-text already
+          carries both. %>
+      <%= button_to t("operations.operatorships.index.revoke"), operations_operatorship_path(operatorship),
+            method: :delete, class: "btn-text btn-text-danger text-sm",
+            "aria-label": t("operations.operatorships.index.revoke_aria_label", name: operatorship.user.full_name),
+            form: { data: { turbo_confirm: t("operations.operatorships.index.revoke_confirm", name: operatorship.user.full_name) } } %>
+    <% end %>
+  <% end %>
+<% end %>

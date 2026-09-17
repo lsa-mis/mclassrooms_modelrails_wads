@@ -28,14 +28,14 @@ module Workspaces
 
     def admit_authenticated_user
       @workspace.admit(Current.user, role: @workspace.default_self_join_role, self_join: true)
-      redirect_to workspace_path(@workspace), notice: t("workspaces.joins.create.joined", workspace: @workspace.name)
+      redirect_to workspace_path(@workspace), notice: t("workspaces.joins.create.joined", workspace_name: @workspace.name)
     rescue Workspace::AlreadyMember
       # Already in: no-op, land them in the workspace.
-      redirect_to workspace_path(@workspace), notice: t("workspaces.joins.create.already_member", workspace: @workspace.name)
+      redirect_to workspace_path(@workspace), notice: t("workspaces.joins.create.already_member", workspace_name: @workspace.name)
     rescue Workspace::AtCapacity
       # A generic i18n message, never the raw model string (avoids leaking
       # internal validation text to an outsider).
-      redirect_to root_path, alert: t("workspaces.joins.create.could_not_join", workspace: @workspace.name)
+      redirect_to root_path, alert: t("workspaces.joins.create.could_not_join", workspace_name: @workspace.name)
     end
 
     # Flow B entry: park the validated token on the session so
@@ -46,7 +46,7 @@ module Workspaces
     # verification (Settings::ConnectedAccountsController#verify).
     def stash_for_signup
       session[:pending_join_token] = params[:token]
-      redirect_to new_session_path, notice: t("workspaces.joins.create.register_first", workspace: @workspace.name)
+      redirect_to new_session_path, notice: t("workspaces.joins.create.register_first", workspace_name: @workspace.name)
     end
 
     # Looks up the workspace + the active link. Collapses "no workspace",

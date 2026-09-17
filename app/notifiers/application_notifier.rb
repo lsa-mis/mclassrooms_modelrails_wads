@@ -7,38 +7,26 @@ class ApplicationNotifier < Noticed::Event
   # Always a Symbol — the `severity` DSL coerces and validates on write.
   class_attribute :severity_name, instance_accessor: false, default: :info
 
-  # Canonical severity set consumed by UnreadNotificationSummary
-  # (SEVERITY_RANK) and NotificationBellHelper (SEVERITY_CLASSES). Any value
-  # declared via `severity :foo` MUST be one of these — otherwise the
-  # summary's `SEVERITY_RANK.fetch(_1)` raises KeyError at render time, far
-  # from the typo's source.
+  # Must stay in sync with UnreadNotificationSummary::SEVERITY_RANK and
+  # NotificationBellHelper::SEVERITY_CLASSES — an unlisted value raises
+  # KeyError at render time, far from the typo.
   VALID_SEVERITIES = %i[danger warning info success].freeze
 
-  # Bucket segment generators for the idempotency key, keyed by the
-  # granularity a subclass declares via `dedup_bucket`. The :minute default
-  # is the documented one-minute dedup window; :day collapses sweep-driven
-  # re-dispatches to one notification per day.
+  # :day collapses sweep-driven re-dispatches to one notification per day.
   DEDUP_BUCKETS = {
     minute: -> { Time.current.to_i / 60 },
     day: -> { Time.current.to_date.iso8601 }
   }.freeze
 
-  # Declared via the `dedup_bucket` / `dedup_seed` DSL below; consumed by
-  # populate_idempotency_key — the ONE place keys are assembled.
   class_attribute :dedup_bucket_granularity, instance_accessor: false, default: :minute
   class_attribute :dedup_seed_block, instance_accessor: false, default: nil
 
-  # Declared via `record_preloads`; consumed by `.preload_records` (the
-  # notifications-index pipeline). See that method for why this exists.
   class_attribute :record_preload_spec, instance_accessor: false, default: [].freeze
 
   def self.category(name)
     self.category_name = name.to_s
   end
 
-  # Declares a severity for this Notifier. Raises at class-load time on an
-  # unknown value so typos fail loud at boot rather than silently storing a
-  # bad symbol and exploding later at render. See VALID_SEVERITIES above.
   def self.severity(name)
     symbol = name.to_sym
     unless VALID_SEVERITIES.include?(symbol)
@@ -49,9 +37,6 @@ class ApplicationNotifier < Noticed::Event
     self.severity_name = symbol
   end
 
-  # Declares the idempotency-key time bucket for this Notifier. Raises at
-  # class-load time on an unknown granularity — same fail-loud posture as
-  # `severity`.
   def self.dedup_bucket(granularity)
     symbol = granularity.to_sym
     unless DEDUP_BUCKETS.key?(symbol)
@@ -62,32 +47,21 @@ class ApplicationNotifier < Noticed::Event
     self.dedup_bucket_granularity = symbol
   end
 
-  # Declares an extra key segment (or array of segments) contributed between
-  # the record id and the time bucket. The block is instance-exec'd on the
-  # event, so it can read `params` and `record` — e.g.
-  # `dedup_seed { params[:metric] }` scopes dedup per (record, metric).
+  # Instance-exec'd on the event, so the block can read `params` and `record`.
   def self.dedup_seed(&block)
     self.dedup_seed_block = block
   end
 
-  # Declares the associations this notifier's `#message` traverses off the
-  # polymorphic `event.record`, e.g. `record_preloads :project` or the nested
-  # form `record_preloads :accepted_by, invitable: :workspace`. Rails'
-  # `includes(event: :record)` stops at the polymorphic record itself, so
-  # without this the notifications index N+1s one level down. Keep the
-  # declaration in sync with what `#message` reads — the index guard spec
-  # (notifications_record_preloads_spec) renders every notifier type under
-  # Bullet's raise and fails on both a missing and a superfluous entry.
+  # Must stay in sync with what this notifier's `#message` reads:
+  # notifications_record_preloads_spec fails on a missing AND a superfluous
+  # entry. See /docs/developer/notifications (Notifier subclasses).
   def self.record_preloads(*associations)
     self.record_preload_spec = associations.freeze
   end
 
-  # The per-subtype preload pipeline for a mixed page of notifications.
-  # Groups by notifier type, then batch-loads each type's declared
-  # associations, re-grouping by concrete record class at every level of a
-  # nested declaration — a class that lacks the association is skipped, which
-  # is what makes polymorphic hops (Invitation#invitable → Project#workspace,
-  # where a Workspace invitable has no `workspace`) expressible at all.
+  # Skipping a class that lacks the association is what makes a polymorphic
+  # hop expressible (Invitation#invitable → Project#workspace, where a
+  # Workspace invitable has no `workspace`).
   def self.preload_records(notifications)
     notifications.group_by { |notification| notification.event.type }.each_value do |group|
       event_class = group.first.event.class
@@ -128,63 +102,33 @@ class ApplicationNotifier < Noticed::Event
 
   before_create :populate_idempotency_key
 
-  # Broadcast a Turbo Stream replacing the bell frame to each recipient's
-  # `[user, :notifications]` stream after the event's transaction commits.
-  # Hooks here (on the Event) rather than on Noticed::Notification because
-  # Noticed v2 uses `notifications.insert_all!` which bypasses callbacks on
-  # the Notification class. By the time this `after_create_commit` fires,
-  # the bulk-inserted notification rows are already persisted and the page
-  # can pick up fresh state.
+  # On the Event, not Noticed::Notification, which never fires its callbacks.
+  # See /docs/developer/notifications (Why hook on `Noticed::Event`).
   after_create_commit :broadcast_notifications_arrival
 
   notification_methods do
-    # Tri-state delivery report for a channel: true (deliver now), false
-    # (dropped), or :digest (email queued for the digest pipeline). Kept as
-    # an introspection surface — per-notifier specs pin channel gating
-    # through it. App code never branches on the sentinel: the delivery
-    # gates below use the strict deliver_now? predicate directly.
+    # Unused by app code and kept deliberately: per-notifier specs pin channel
+    # gating through it. Delivery gates use the strict predicates below.
     def recipient_pref(channel)
       category = event.class.category_name
       return :digest if preferences_object.defer_to_digest?(category: category, channel: channel)
       preferences_object.deliver_now?(category: category, channel: channel)
     end
 
-    # The email gate for `deliver_by :email` before_enqueue hooks. Strictly
-    # "send the instant email now" — opted out, DND, and deferred-to-digest
-    # all abort.
     # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
     def deliver_email_now?
-      deliver_email_now_for?(recipient)
+      event.email_permitted?(recipient_id)
     end
 
-    # The same gate asked about a user the caller already holds.
-    #
-    # Not a performance fix, despite appearances: a hook that aborts every
-    # recipient but one loads `recipient` once either way, and the EventJob
-    # measures flat at 4 queries with 2 owners and with 8. What it avoids is
-    # Bullet. Noticed's EventJob iterates `event.notifications.each`, so
-    # reading `recipient` in a before_enqueue is a lazy load off a member of
-    # that collection — which Bullet's heuristic cannot tell from a real N+1,
-    # and raises on. A hook that has just established
-    # `recipient_id == event.record.user_id` hands the record's own user here
-    # instead, keeping the gate in one place.
-    #
-    # A notifier whose email leg has NO such narrowing guard is a different
-    # story: there `deliver_email_now?` really does load per recipient, and
-    # this method cannot help, because each recipient's own preferences are
-    # what the gate needs.
     def deliver_email_now_for?(user)
-      ApplicationNotifier.preferences_for(user)
-        .deliver_now?(category: event.class.category_name, channel: :email)
+      event.deliver_email_now_for?(user)
     end
 
     def recipient_locale
       stored = recipient.try(:preferences)&.locale.presence&.to_sym
-      # Guard the availability check rather than trusting the column: rows
-      # written before UserPreferences validated this, or a fork retiring a
-      # language it once shipped, would otherwise hand an unsupported locale
-      # to I18n.t. That raises I18n::InvalidLocale, which
-      # render_safe_or_placeholder does not rescue — the bell 500s.
+      # Check availability rather than trusting the column: an unsupported
+      # locale raises I18n::InvalidLocale, which render_safe_or_placeholder
+      # does not rescue, and the bell 500s.
       return I18n.default_locale unless stored && I18n.available_locales.include?(stored)
       stored
     end
@@ -204,14 +148,10 @@ class ApplicationNotifier < Noticed::Event
       I18n.t("notifications.placeholder")
     end
 
-    # Convert a possibly-deleted record into the deletion shape BEFORE it
-    # reaches a route helper. Helpers reject nil with
-    # ActionController::UrlGenerationError, which render_safe_or_placeholder
-    # deliberately does not rescue (elsewhere it is a real routing bug) — so an
-    # unconverted nil escapes even the digest's own wrapped call site and takes
-    # down that user's ENTIRE digest render, not just the one dead row.
-    # Only #url bodies need this: #message traversals dereference the record
-    # and already raise NoMethodError on nil.
+    # Call this in every `#url` body: a nil reaching a route helper raises
+    # UrlGenerationError, which render_safe_or_placeholder does not rescue, and
+    # one dead row takes down that user's entire digest. `#message` bodies do
+    # not need it — they dereference the record and raise NoMethodError first.
     def present_or_gone!(record)
       raise ActiveRecord::RecordNotFound if record.nil?
       record
@@ -219,32 +159,30 @@ class ApplicationNotifier < Noticed::Event
 
     private
 
-    # Delegates to ApplicationNotifier#preferences_for so per-recipient
-    # gating in `recipient_pref` shares the same fallback semantic that
-    # event-level resolvers use. See ApplicationNotifier#preferences_for
-    # for the missing-prefs rationale.
     def preferences_object
       ApplicationNotifier.preferences_for(recipient)
     end
   end
 
-  # Override deliver to return sentinel :delivered on first-send or :deduplicated
-  # on RecordNotUnique rescue. The DB partial unique index on noticed_events
-  # (idempotency_key) is the atomic source of truth for concurrent dispatch;
-  # this rescue is the real backstop, not dead code.
-  #
-  # No app-level SELECT-then-INSERT fast-path: that pattern was a TOCTOU race
-  # in the previous implementation. The DB constraint enforces atomically.
+  # Three traps, all load-bearing. Do not add a SELECT-then-INSERT fast-path:
+  # the unique index is the atomic source of truth and the rescue is the real
+  # backstop, not dead code. Do not move the empty-set guard into `super`: the
+  # gem saves the event row unconditionally, which burns the idempotency key on
+  # a dispatch nobody received. Do not resolve recipients twice: the array is
+  # handed to `super` so a `recipients` block runs exactly once per dispatch.
+  # See /docs/developer/notifications (Idempotency).
   def deliver(recipients = nil, **options)
-    super
+    resolved = Array.wrap(recipients || evaluate_recipients)
+    return :skipped if resolved.empty?
+
+    super(resolved, **options)
     :delivered
   rescue ActiveRecord::RecordNotUnique
     :deduplicated
   end
 
-  # Resolve a NotificationPreferences object for any user. Missing-prefs users
-  # get a transient `UserPreferences.new` so the schema-default JSONB blob stays
-  # the single source of truth (wrapping `nil` silently default-denied new users).
+  # A missing row falls back to a transient `UserPreferences.new`, not nil —
+  # wrapping nil default-denies every new user.
   # See /docs/developer/notifications (Preference resolution and the missing-row fallback).
   def self.preferences_for(user)
     persisted = user.try(:preferences)
@@ -259,13 +197,22 @@ class ApplicationNotifier < Noticed::Event
     self.class.preferences_for(user)
   end
 
-  # Shared recipient gate for `recipients do ... end` blocks: preloads
-  # :preferences for the whole candidate set in ONE query (`preferences_for`
-  # reads `user.preferences` per-user — an N+1 without the preload; Bullet
-  # caught the original in the Reshape 2a open-link self-join request specs),
-  # then keeps only users whose preferences allow this class's declared
-  # category on the in_app channel. Uses `category_name` from the `category`
-  # DSL so subclasses never restate their category as a string literal.
+  # See /docs/developer/notifications (Email gating and the `:digest` sentinel).
+  def deliver_email_now_for?(user)
+    preferences_for(user).deliver_now?(category: self.class.category_name, channel: :email)
+  end
+
+  # Ids, not a Preloader over the notification rows: the eager `recipient` goes
+  # unread wherever an email leg narrows to one recipient, and Bullet raises on
+  # that in test. See /docs/developer/notifications (Email gating and the
+  # `:digest` sentinel).
+  def email_permitted?(recipient_id)
+    email_permitted_recipient_ids.include?(recipient_id)
+  end
+
+  # The preload is not optional: `preferences_for` reads `user.preferences`
+  # per user, which is an N+1 without it.
+  # See /docs/developer/notifications (In-app gating lives in `recipients`).
   def permitted_in_app(candidates)
     ActiveRecord::Associations::Preloader.new(records: candidates, associations: :preferences).call
     candidates.select do |user|
@@ -273,24 +220,13 @@ class ApplicationNotifier < Noticed::Event
     end
   end
 
-  # Returns the per-notification STI `type` strings for every Notifier
-  # subclass in the given category — i.e. the values stored in
-  # `noticed_notifications.type` (e.g. "PasswordChangedNotifier::Notification").
-  # Use this when filtering Noticed::Notification scopes by category.
-  #
-  # Returns raw class names without the `::Notification` suffix when you
-  # need the parent Notifier identity instead — see `.notifier_class_names_for`.
-  #
-  # The `::Notification` suffix is the Noticed-internal STI shape produced
-  # by `notification_methods do ... end` — keeping that detail localized
-  # here, near the rest of the Notifier scaffolding.
+  # The `::Notification` suffix is Noticed's STI shape, produced by
+  # `notification_methods`. Filter Noticed::Notification scopes with these;
+  # key off the parent Notifier with `.notifier_class_names_for`.
   def self.notification_types_for(category)
     notifier_class_names_for(category).map { |name| "#{name}::Notification" }
   end
 
-  # Returns raw Notifier class-name strings (no STI suffix) for the given
-  # category. Use this when keying off the parent Notifier (event.type),
-  # e.g. retention floors or analytics rollups.
   def self.notifier_class_names_for(category)
     target = category.to_s
     descendants.select { |c| c.category_name == target }.map(&:name)
@@ -298,34 +234,37 @@ class ApplicationNotifier < Noticed::Event
 
   private
 
+  # Plucking recipient_id without recipient_type rides on the check constraint
+  # `recipient_type_user_only_v1`. A fork that drops it to notify a second
+  # recipient type must pluck both columns and filter here.
+  def email_permitted_recipient_ids
+    @email_permitted_recipient_ids ||= User
+      .where(id: notifications.pluck(:recipient_id))
+      .includes(:preferences)
+      .select { |user| deliver_email_now_for?(user) }
+      .map(&:id)
+      .to_set
+  end
+
   def broadcast_notifications_arrival
-    # Query `Noticed::Notification` directly (not `self.notifications`) so
-    # the parent-child `inverse_of` link doesn't make Bullet think `event`
-    # is preloaded for every Notification subtype — false-AVOID-warning
-    # noise across every spec that dispatches a notifier. The SQL is the
-    # same; we lose the auto-set parent reference we don't use anyway.
+    # Not `self.notifications`: the `inverse_of` link makes Bullet report a
+    # false unused-eager-load in every spec that dispatches a notifier.
     recipient_ids = Noticed::Notification
                       .where(event_id: id, recipient_type: "User")
                       .pluck(:recipient_id)
     return if recipient_ids.empty?
 
-    # NotificationBroadcaster handles the four broadcast targets AND the
-    # swallow-log-report contract for adapter outages. Per-user iteration so one
-    # bad broadcast doesn't poison the rest — each call is self-rescuing.
+    # Per-user iteration so one bad broadcast cannot poison the rest; each
+    # call is self-rescuing.
     User.where(id: recipient_ids).find_each do |user|
       NotificationBroadcaster.refresh_for(user, announcement_key: "notifications.bell.arrival_announcement",
                                           severity: self.class.severity_name)
     end
   end
 
-  # Populates noticed_events.idempotency_key from the polymorphic `record`
-  # that Noticed assigns from `with(record: ...)`. Noticed strips :record
-  # from params before validation, so we read self.record (the association)
-  # rather than params[:record]. Pass an explicit `idempotency_key:` to
-  # override when the natural record id isn't the right dedup seed.
-  #
-  # Raises ArgumentError if neither :record nor an explicit key is supplied.
-  # Loud failure beats silent dedup-collapse across distinct events.
+  # Reads `self.record`, not `params[:record]`: Noticed strips :record from
+  # params before validation.
+  # See /docs/developer/notifications (Idempotency).
   def populate_idempotency_key
     return if idempotency_key.present?
 
@@ -342,10 +281,9 @@ class ApplicationNotifier < Noticed::Event
         "#{self.class.name} requires either a :record with an id, or an explicit :idempotency_key"
     end
 
-    # Cross-boundary dispatches (one at second 59 of a minute bucket, retry
-    # at second 0 of the next) get different keys and BOTH succeed. This is
-    # intentional — coalescing beyond the declared bucket is digest
-    # territory, not idempotency.
+    # A dispatch either side of a bucket boundary gets two keys and both
+    # succeed. Intended: coalescing past the declared bucket is the digest's
+    # job, not idempotency's.
     segments = [ self.class.name, seed_id ]
     segments.concat(Array(instance_exec(&self.class.dedup_seed_block))) if self.class.dedup_seed_block
     segments << instance_exec(&DEDUP_BUCKETS.fetch(self.class.dedup_bucket_granularity))

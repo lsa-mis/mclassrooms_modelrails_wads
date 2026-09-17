@@ -1,8 +1,24 @@
 <% content_for(:title) { t("workspaces.index.title") } %>
-<div class="max-w-4xl mx-auto px-4 py-16">
+<%# Phones lead with the switcher, so the column's top padding is the same
+    pt-4 the layout gives it on a workspace page, not the desktop's py-16;
+    px-6 matches the shell so the control shares the heading's left edge. %>
+<div class="max-w-4xl mx-auto px-6 pt-4 pb-16 md:pt-16">
+  <%# The switcher stays in place here too, on phones, in its "All workspaces"
+      state — the index was the one authenticated page where that affordance
+      vanished (#1090). No workspace is current, so the trigger names the user
+      (it is the identity anchor below md) and the menu marks the All-workspaces
+      row current. -mx-2 lets the button's own padding bleed outward so its
+      avatar lands on the heading's edge. Unsuffixed would also be unique on
+      this page (no sidebar copy), but the phone trigger is always -mobile so
+      the responsive specs address one id. %>
+  <div class="md:hidden -mx-2">
+    <%= render "shared/workspace_switcher", workspace: nil, id_suffix: "-mobile", capped: true %>
+  </div>
   <%# Identity anchor: this is the signed-in user's own home for workspaces
-      (the former /me), so it opens with who "you" are before the list. %>
-  <div class="flex items-center gap-3 mb-6" data-test="workspaces-identity">
+      (the former /me), so it opens with who "you" are before the list. Below
+      md the switcher trigger carries the same avatar and name, so this row
+      only renders where the trigger does not. %>
+  <div class="hidden md:flex items-center gap-3 mb-6" data-test="workspaces-identity">
     <%= avatar_for(Current.user, size: :md) %>
     <span class="text-sm font-medium text-text-body truncate"><%= Current.user.full_name %></span>
   </div>
@@ -82,7 +98,11 @@
           <% if membership.workspace.suspended? %>
             <%= render "workspaces/locked_row", workspace: membership.workspace %>
           <% else %>
-            <%= ui :list_group_item, class: "gap-4" do %>
+            <%# hover:bg-surface: the row is not the control, the Restore button
+                is, so it must not highlight like one — and the gem's row hover
+                puts the button's text-interactive at 6.85:1, below AAA
+                (modelrails_ui#197). %>
+            <%= ui :list_group_item, class: "gap-4 hover:bg-surface" do %>
               <div class="min-w-0">
                 <p class="font-medium text-text-heading truncate"><%= membership.workspace.name %></p>
                 <p class="text-sm text-text-muted"><%= lifecycle_status_label(membership.workspace) %></p>

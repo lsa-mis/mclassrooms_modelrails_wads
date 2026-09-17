@@ -1,100 +1,63 @@
-<%# Header workspace context switcher (Phase 2b Task 1).
-    Desktop runs on the menu-pattern Stimulus controller (#685; no new JS).
-    Pass `mobile: true` to render the inline mobile list variant (used inside
-    the hamburger panel, below the account items) instead of the dropdown. -%>
-<% workspaces = switcher_workspaces %>
-<% current = switcher_current_workspace %>
-<% if local_assigns[:mobile] %>
-  <%# Mobile "Workspaces" group — rendered inside the hamburger panel BELOW the
-      account items so the always-present account actions keep a fixed position.
-      The current workspace is pinned first; the list is capped (~5) with
-      "All workspaces" as the overflow / index entry point, so the panel stays a
-      bounded height no matter how many workspaces a user belongs to. Always
-      renders (unlike the desktop dropdown) so "All workspaces" is reachable
-      even with a single workspace. %>
-  <div class="md:hidden px-1 pt-3 mt-1 border-t border-border">
-    <p class="px-2 py-1 text-xs font-semibold text-text-muted uppercase tracking-wide">
-      <%= t("workspaces.switcher.label") %>
-    </p>
-    <%# The switch list only renders with 2+ workspaces (nothing to switch for a
-        solo user); "All workspaces" below always renders as the index entry. %>
-    <% if workspaces.size > 1 %>
-      <% shown = ([ current ] + workspaces_by_recency(workspaces).reject { |w| w.id == current&.id }).compact.first(5) %>
-      <ul role="list" class="mt-1">
-        <% shown.each do |workspace| %>
-        <% is_current = current && workspace.id == current.id %>
-        <% membership = workspace.memberships.detect { |m| m.user_id == Current.user.id } %>
-        <li>
-          <%= link_to main_app.workspace_path(workspace),
-                aria: { current: ("page" if is_current) },
-                class: [ "min-h-[44px] flex items-center gap-3 px-2 py-2 rounded-md text-sm",
-                        (is_current ? "bg-surface-sunken font-semibold text-text-heading border-l-4 border-interactive pl-1"
-                                    : "text-text-body hover:bg-surface-sunken hover:text-interactive-hover focus-ring") ].join(" ") do %>
-            <span class="shrink-0 w-8 h-8 flex items-center justify-center <%= workspace.personal? ? "rounded-full" : "rounded-md overflow-hidden" %>">
-              <%= workspace_icon_for(workspace, size: :sm) %>
-            </span>
-            <span class="flex-1 min-w-0">
-              <span class="block truncate"><%= workspace.name %></span>
-              <span class="block text-xs text-text-muted"><%= membership&.role&.name %></span>
-            </span>
-          <% end %>
-          </li>
-        <% end %>
-      </ul>
-    <% end %>
-    <%# "All workspaces" — the workspace-group footer: overflow when the list is
-        capped, and the always-available path to the index. Lives WITH the
-        switcher (not in the account group) so the list and its "see all" read
-        as one thing. %>
-    <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,
-          data: { turbo_prefetch: "true" },
-          class: "mt-1 min-h-[44px] flex items-center px-2 py-2 rounded-md text-sm font-medium
-                  text-interactive hover:bg-surface-sunken hover:text-interactive-hover focus-ring" %>
-  </div>
-<% elsif workspaces.size > 1 %>
-  <%# Desktop dropdown — hidden on mobile, visible at md+. Additive: renders
-      nothing when the user has only one workspace. (Its "see all" is the avatar
-      menu's "All workspaces"; capping the desktop dropdown is a separate call.) %>
-  <%# menu controller, not the legacy dropdown — see the user menu (#685). %>
-  <div data-controller="menu" data-action="click@document->menu#closeOnClickOutside" class="relative hidden md:block">
-    <button data-menu-target="trigger" data-action="click->menu#toggle keydown->menu#triggerKeydown"
-            id="workspace-switcher-button" type="button"
-            aria-haspopup="menu" aria-expanded="false" aria-controls="workspace-switcher-menu"
-            class="min-h-[44px] flex items-center gap-2 px-3 rounded-lg text-text-body hover:bg-surface-sunken focus-ring">
-      <span class="shrink-0 w-8 h-8 flex items-center justify-center <%= current&.personal? ? "rounded-full" : "rounded-md overflow-hidden" %>">
-        <%= workspace_icon_for(current, size: :sm) if current %>
-      </span>
-      <%# sr-only below lg (not hidden): the workspace name is this button's
-          only accessible name — icon-only at md..lg left it nameless (axe
-          button-name, caught by the responsive lane at 768px). %>
-      <span class="sr-only lg:not-sr-only lg:block lg:max-w-[12ch] lg:truncate font-medium">
-        <%= current&.name || t("workspaces.switcher.label") %>
-      </span>
-      <span aria-hidden="true">&#9662;</span> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
-    </button>
+<%# locals: (workspace:, id_suffix: "", capped: false) -%>
+<%# The workspace switcher as the sidebar's head, carrying identity (logo +
+    name + role) and the switch affordance in ONE control. Being one control is
+    what lets it clear mc-target-size-44 as a block; the identity bar this
+    replaced needed a separate 44px name link, whose 22px of dead space could
+    not fit beside a 40px logo.
 
-    <div data-menu-target="menu" data-action="keydown->menu#navigate"
-         id="workspace-switcher-menu" role="menu" tabindex="-1" hidden
-         aria-labelledby="workspace-switcher-button"
-         class="absolute right-0 mt-2 w-64 rounded-lg bg-surface-raised border border-border shadow-lg z-50 py-1">
-      <% workspaces.each do |workspace| %>
-        <% is_current = current && workspace.id == current.id %>
-        <% membership = workspace.memberships.detect { |m| m.user_id == Current.user.id } %>
-        <%= link_to main_app.workspace_path(workspace), role: "menuitem", tabindex: "-1",
+    Unlike the old header switcher this ALWAYS renders: below 2 workspaces it
+    is still the only place the workspace is named, so it degrades to identity
+    plus "All workspaces" rather than disappearing.
+
+    The trigger lives in its own partial because the rename broadcast replaces
+    it whole (see _workspace_switcher_trigger). -%>
+<% workspaces = switcher_workspaces %>
+
+<div data-controller="menu" data-action="click@document->menu#closeOnClickOutside"
+     class="relative mb-6">
+  <%= render "shared/workspace_switcher_trigger", workspace: workspace, id_suffix: id_suffix %>
+
+  <div data-menu-target="menu" data-action="keydown->menu#navigate"
+       id="workspace-switcher-menu<%= id_suffix %>" role="menu" tabindex="-1" hidden
+       aria-labelledby="workspace-switcher-button<%= id_suffix %>"
+       class="absolute left-0 right-0 mt-1 rounded-lg bg-surface-raised border border-border shadow-lg z-50 py-1">
+    <% if workspaces.size > 1 %>
+      <%# capped: the phone copy pins the current workspace first and shows at
+          most five (the hamburger's old bound), so a long list cannot run the
+          dropdown off a 375px screen; "All workspaces" below is the overflow.
+          Recency sort only inside this 2+ branch — it materializes the relation. %>
+      <% shown = capped ? ([ workspace ].compact + workspaces_by_recency(workspaces).reject { |w| workspace && w.id == workspace.id }).first(5) : workspaces %>
+      <% shown.each do |candidate| %>
+        <% is_current = workspace && candidate.id == workspace.id %>
+        <% membership = candidate.memberships.detect { |m| m.user_id == Current.user.id } %>
+        <%= link_to main_app.workspace_path(candidate), role: "menuitem", tabindex: "-1",
               data: { menu_target: "item", action: "click->menu#activate" },
               aria: { current: ("true" if is_current) },
               class: [ "min-h-[44px] flex items-center gap-3 py-2 text-sm",
                       (is_current ? "pl-2 pr-3 border-l-4 border-interactive bg-surface-sunken font-semibold text-text-heading"
                                   : "px-3 text-text-body hover:bg-surface-sunken") ].compact do %>
-          <span class="shrink-0 w-8 h-8 flex items-center justify-center <%= workspace.personal? ? "rounded-full" : "rounded-md overflow-hidden" %>">
-            <%= workspace_icon_for(workspace, size: :sm) %>
+          <span class="shrink-0">
+            <%= workspace_icon_for(candidate, size: :sm) %>
           </span>
           <span class="flex-1 min-w-0">
-            <span class="block truncate"><%= workspace.name %></span>
+            <span class="block truncate"><%= candidate.name %></span>
             <span class="block text-xs text-text-muted"><%= membership&.role&.name %></span>
           </span>
         <% end %>
       <% end %>
-    </div>
+    <% end %>
+    <%# On the workspaces index no workspace is current, so this row is —
+        marked and styled the same way a current workspace row is (#1090). The
+        empty span holds the icon slot so the label lines up with the names. %>
+    <%= link_to main_app.workspaces_path,
+          role: "menuitem", tabindex: "-1",
+          aria: { current: ("true" if workspace.nil?) },
+          data: { menu_target: "item", action: "click->menu#activate", turbo_prefetch: "true" },
+          class: [ "min-h-[44px] flex items-center gap-3 py-2 text-sm",
+                   (workspace.nil? ? "pl-2 pr-3 border-l-4 border-interactive bg-surface-sunken font-semibold text-text-heading"
+                                   : "px-3 text-interactive hover:bg-surface-sunken") ] do %>
+      <span class="shrink-0 w-8 h-8" aria-hidden="true"></span>
+      <span class="block truncate"><%= t("navigation.all_workspaces") %></span>
+    <% end %>
   </div>
-<% end %>
+</div>

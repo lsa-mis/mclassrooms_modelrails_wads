@@ -46,7 +46,7 @@ RSpec.describe User, type: :model do
       original_id = user.personal_workspace_id
       expect(original_id).to be_present
 
-      expect { user.send(:create_personal_workspace) }
+      expect { user.create_personal_workspace }
         .not_to change { user.reload.personal_workspace_id }
       expect(user.personal_workspace_id).to eq(original_id)
     end

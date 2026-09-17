@@ -22,7 +22,7 @@ class WorkspaceRoleChangedNotifier < ApplicationNotifier
         I18n.t(
           "notifications.workspace_role_changed.message",
           locale: recipient_locale,
-          workspace: event.record.workspace.name,
+          workspace_name: event.record.workspace.name,
           new_role: event.record.role.name
         )
       end

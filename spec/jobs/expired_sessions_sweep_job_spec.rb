@@ -18,4 +18,8 @@ RSpec.describe ExpiredSessionsSweepJob, type: :job do
     expect(Session.exists?(idle_expired.id)).to be(false)
     expect(Session.exists?(old_expired.id)).to be(false)
   end
+
+  it "runs on the low queue" do
+    expect(described_class.queue_name).to eq("low")
+  end
 end

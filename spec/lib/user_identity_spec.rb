@@ -13,10 +13,8 @@ RSpec.describe UserIdentity do
   end
 
   describe "attribute mapping" do
-    it "maps image/image_original/source to the avatar attributes" do
-      with_image = identity_with_image
-      expect(with_image.image).to eq(with_image.send(:model).avatar)
-      expect(with_image.source).to eq("upload")
+    it "maps source to the avatar source" do
+      expect(identity_with_image.source).to eq("upload")
     end
   end
 

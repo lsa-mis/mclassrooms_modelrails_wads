@@ -121,6 +121,25 @@ RSpec.describe "Sessions", type: :request do
     end
   end
 
+  describe "POST /session with suspended account" do
+    let(:suspended_user) { create(:user, :suspended, failed_login_attempts: 3) }
+
+    it "refuses sign-in, alerts, creates no session, and leaves the lockout counter alone" do
+      expect {
+        post session_path, params: {
+          email_address: suspended_user.email_address,
+          password: "SecureP@ssw0rd123!"
+        }
+      }.not_to change(Session, :count)
+
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("sessions.create.suspended"))
+      # A refused sign-in is not a successful one: the counter is cleared only
+      # after the session exists.
+      expect(suspended_user.reload.failed_login_attempts).to eq(3)
+    end
+  end
+
   describe "POST /session tracks failed attempts" do
     let(:user) { create(:user) }
 
@@ -158,4 +177,41 @@ RSpec.describe "Sessions", type: :request do
   end
 
   # The email-first lookup moved to spec/requests/sessions/lookups_spec.rb with the resource (#1007).
+
+  describe "resuming a session after the user is suspended mid-session" do
+    it "redirects to sign in once suspend! destroys the underlying session row" do
+      operator = create(:user)
+      sign_in(user)
+
+      user.suspend!(by: operator)
+
+      get edit_settings_profile_path
+      expect(response).to redirect_to(new_session_path)
+    end
+  end
+
+  # Backstop for a Session row that exists despite the user being suspended —
+  # suspend! always destroys its own sessions, so this only fires if a row is
+  # created some other way (or a future bug reintroduces one). Proves the
+  # find_session_by_cookie check earns its place independent of that guarantee.
+  describe "a live Session row for an already-suspended user" do
+    it "is refused on resumption" do
+      suspended_user = create(:user, :suspended)
+      session_record = suspended_user.sessions.create!(
+        user_agent: "RSpec", ip_address: "127.0.0.1",
+        last_active_at: Time.current, reauthenticated_at: Time.current
+      )
+      env = Rails.application.env_config
+      salt = env["action_dispatch.signed_cookie_salt"]
+      secret = env["action_dispatch.key_generator"].generate_key(salt)
+      verifier = ActiveSupport::MessageVerifier.new(
+        secret, digest: "SHA1", serializer: ActiveSupport::MessageEncryptor::NullSerializer
+      )
+      cookies[:session_id] = verifier.generate(session_record.id.to_s, purpose: "cookie.session_id")
+
+      get edit_settings_profile_path
+
+      expect(response).to redirect_to(new_session_path)
+    end
+  end
 end

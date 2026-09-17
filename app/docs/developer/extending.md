@@ -225,6 +225,38 @@ misfire against the result — the operator names the target directly on the
 command line, and the task acts on exactly that record, not on "whatever the
 current workspace happens to be."
 
+### Pattern 4 — the operations area resolves through the actor's reach
+
+`Operations::` controllers (`/operations`) run inside a request — the
+signed-in-user case Pattern 3 is careful to rule out — but deliberately with
+**no** workspace context: they never include `WorkspaceScoped` and never set
+`Current.workspace`, because an operator administers the instance from above
+the workspaces, not from inside one. A workspace is reached only through the
+signed-in operator's own reach relation:
+
+```ruby
+# app/models/user.rb
+def operated_workspaces
+  operator? ? Workspace.kept : Workspace.none # scoped operators narrow this branch later
+end
+```
+
+```ruby
+# app/controllers/operations/workspaces_controller.rb
+@workspace = operated_workspaces.find_by!(slug: params[:slug])
+```
+
+`Workspace` isn't `Tenanted`, so `no_unscoped_tenant_loads_spec.rb` wouldn't
+flag a bare `Workspace.find_by!` here — but the relation form is the point,
+not a guard dodge. `operated_workspaces` is every kept workspace today; it's
+also the one seam a future scoped-operator model changes, and every
+operations controller reading through it (rather than each reinventing "all
+workspaces") is what makes that a one-method change instead of an audit.
+Anything *inside* the resolved workspace still hops its own
+association (`@workspace.memberships`, `@workspace.activity_logs`), exactly
+like Patterns 1 and 2. See [Instance operations](operations) for what the
+area does with this.
+
 ### Rule of thumb
 
 - **Request-context code** (controllers, helpers, views): always scope
@@ -244,22 +276,25 @@ current workspace happens to be."
 
 ## Customizing the Site Logo
 
-The app logo is rendered via `app/views/shared/_site_logo.html.erb`, an inline SVG partial used in both the header and footer. It accepts strict locals:
+Brand has three fork-owned files: the words (`config/locales/en/brand.en.yml`), the colors (`app/assets/tailwind/tokens/_brand.css`), and the mark — `app/views/shared/_site_mark.html.erb`, a file whose entire body is one `<svg>`. Replace it wholesale with your artwork. It is `merge=ours`, so upstream never conflicts with it again. Three things on the root `<svg>` are the contract with the template, and a view spec asserts them:
 
-| Parameter | Default | Purpose |
-|-----------|---------|---------|
-| `size` | `:medium` | SVG height — `:small` (h-6), `:medium` (h-8), `:large` (h-10) |
-| `color_class` | `"text-sky-700"` | Tailwind color class for the SVG mark (uses `currentColor`) |
-| `show_name` | `false` | Show the app name text next to the mark |
-| `name_class` | `"text-xl font-bold text-slate-900 dark:text-gray-100"` | Tailwind classes for the name text |
+- `fill="currentColor"` — the mark inherits `text-interactive` from the link around it, which is what re-lights it in dark mode.
+- `aria-hidden="true"` — the mark is decorative; the brand name next to it is what assistive tech reads.
+- a `viewBox`, and **no** `width`, `height`, or `class` — the caller sizes it.
 
-To replace the logo with your own SVG, edit the partial and swap the `<svg>` content. Keep `aria-hidden="true"` and `fill="currentColor"` so theming and accessibility continue to work.
-
-Usage example:
+The lockup around it, `app/views/shared/_site_logo.html.erb`, is template-owned: it renders the mark and the product name as siblings inside whatever link the caller provides. The caller's link is the flex box and sizes the mark with a child selector; the one local, `name_class`, lets a compact variant keep the name for screen readers only:
 
 ```erb
-<%= render "shared/site_logo", size: :small, show_name: true %>
+<%= link_to root_path, class: "flex items-center gap-2 min-h-11 focus-ring rounded [&>svg]:h-6" do %>
+  <%= render "shared/site_logo" %>
+<% end %>
+
+<%= link_to root_path, class: "flex items-center min-h-11 focus-ring rounded [&>svg]:h-5" do %>
+  <%= render "shared/site_logo", name_class: "sr-only" %>
+<% end %>
 ```
+
+Use `h-*` on the child, not `size-*`: a wordmark is wider than tall, and a square box letterboxes it. The favicon and PWA icons in `public/` are the same artwork again, in the sizes [Getting started](getting-started#favicon-and-pwa-icons) lists; `public/icon.svg` colors itself with `prefers-color-scheme` rather than the app's `.dark` class because a favicon renders outside the document.
 
 ## Cookie Consent (GDPR)
 
