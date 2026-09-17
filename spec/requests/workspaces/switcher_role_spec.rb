@@ -27,7 +27,7 @@ RSpec.describe "Workspace switcher role line", type: :request do
   it "shows the role on every shell page, not just the Overview" do
     create(:membership, :owner, user: user, workspace: workspace)
 
-    [ workspace_path(workspace), workspace_projects_path(workspace) ].each do |path|
+    [ workspace_path(workspace), edit_workspace_path(workspace) ].each do |path|
       get path
       expect(role_line&.text&.strip).to eq("Owner"), "#{path}: expected the switcher to name the role"
     end

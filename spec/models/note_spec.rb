@@ -117,11 +117,6 @@ RSpec.describe Note, type: :model do
       expect(Note.include?(Broadcastable)).to be true
     end
 
-    it "broadcasts to the notable record" do
-      note = create(:note)
-      expect(note.send(:broadcast_target)).to eq(note.notable)
-    end
-
     # Phase 5 Task 7 (D15): action-specific streams instead of Broadcastable's
     # create/update-only default — Note also broadcasts destroys.
     it "broadcasts create, update, AND destroy" do

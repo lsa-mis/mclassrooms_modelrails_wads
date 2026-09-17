@@ -42,9 +42,12 @@ RSpec.describe "Workspace Profile destination", type: :system do
   it "leaves no submit control outside a form" do
     visit edit_workspace_path(workspace)
 
+    # `s.form` resolves the form= attribute as well as ancestry: the fork's
+    # feedback modal (lsa_tdx_feedback) keeps its submit in a footer outside
+    # the <form> and binds it with form="lsa-tdx-feedback-form".
     orphans = page.evaluate_script(<<~JS)
       [...document.querySelectorAll("input[type=submit], button[type=submit]")]
-        .filter(s => !s.closest("form"))
+        .filter(s => !s.form)
         .map(s => s.value || s.textContent.trim())
     JS
 

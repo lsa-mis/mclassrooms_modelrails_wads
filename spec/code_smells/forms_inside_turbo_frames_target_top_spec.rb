@@ -51,6 +51,14 @@ RSpec.describe "Code smell: forms inside Turbo frames" do
   # with something the frame can absorb: a Turbo Stream, or a render of the
   # frame's own content. An entry is a reviewed decision.
   frame_targeting_is_deliberate = {
+    "app/views/rooms/_save_toggle.html.erb button_to saved_rooms_path" =>
+      "fork (MClassrooms): the shortlist toggle posts to saved_rooms#create, " \
+      "which answers with a Turbo Stream replacing the toggle's own span " \
+      "(saved_rooms/toggle.turbo_stream.erb); there is no redirect and no " \
+      "flash to lose. The html format's redirect_back is the no-JS fallback.",
+    "app/views/rooms/_save_toggle.html.erb button_to saved_room_path" =>
+      "fork (MClassrooms): the same toggle's unsave side (saved_rooms#destroy), " \
+      "same in-place stream answer.",
     "app/views/sessions/new.html.erb form_with session_lookup_path" =>
       "the email lookup posts to sessions/lookups#create, which answers by " \
       "rendering check_email / closed / email_error — each of which carries " \

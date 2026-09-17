@@ -9,19 +9,11 @@ RSpec.describe "Onboarding · invitees", type: :request do
 
   let(:owner) { create(:user, :with_zero_workspaces, onboarded_at: Time.current) }
   let(:workspace) { create(:workspace) }
-  # Membership before project: the project factory seats its creator.
   let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
-  let!(:project) { create(:project, workspace: workspace, created_by: owner) }
   let!(:member_role) do
     Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
       r.name = "Member"
       r.permissions = { manage_projects: true }
-    end
-  end
-  let!(:admin_role) do
-    Role.find_or_create_by!(slug: "admin", workspace_id: nil) do |r|
-      r.name = "Admin"
-      r.permissions = { manage_members: true, manage_projects: true, manage_settings: true }
     end
   end
   let(:invitee) { create(:user, :with_zero_workspaces) }
@@ -42,25 +34,9 @@ RSpec.describe "Onboarding · invitees", type: :request do
     expect(invitee.reload).to be_onboarded
   end
 
-  it "shows an invited Admin no first-run wizard for a workspace they did not set up" do
-    accept_as(admin_role)
-    sign_in(invitee)
-
-    get new_onboarding_team_path
-    expect(response).to redirect_to(root_path)
-  end
-
-  # Data that predates the stamp, or any future refusal inside the wizard: a
-  # refused step leaves the wizard for good instead of bouncing back into it.
-  it "leaves the wizard on a refusal instead of bouncing back into it" do
-    accept_as(member_role)
-    invitee.update_column(:onboarded_at, nil)
-    sign_in(invitee)
-
-    get new_onboarding_team_path
-    expect(response).to redirect_to(workspace_path(workspace))
-    expect(invitee.reload).to be_onboarded
-    get workspace_path(workspace)
-    expect(response).to have_http_status(:ok)
-  end
+  # Fork (MClassrooms): the wizard is the single workspace step
+  # (config/routes.rb draws onboarding/workspace only), so upstream's two
+  # examples probing the invite step (new_onboarding_team_path) have no
+  # surface here; Workspace#admit stamping onboarded_at is what the example
+  # above pins.
 end

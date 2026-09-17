@@ -10,7 +10,7 @@ RSpec.describe "panoramas:render_flat" do
   let(:workspace) { create(:workspace, slug: "backfill-ws", personal: false) }
   let(:building)  { create(:building, workspace: workspace) }
 
-  before(:all) { Rails.application.load_tasks }
+  before(:all) { RakeTasks.load_once }
   before { Rake::Task["panoramas:render_flat"].reenable }
   # config/initializers/flat_panorama_callbacks.rb auto-enqueues
   # RenderFlatPanoramaJob on every panorama attach, including the ones the
@@ -228,7 +228,7 @@ RSpec.describe "panoramas:flat_status" do
   let(:workspace) { create(:workspace, slug: "status-ws", personal: false) }
   let(:building)  { create(:building, workspace: workspace) }
 
-  before(:all) { Rails.application.load_tasks }
+  before(:all) { RakeTasks.load_once }
   before { Rake::Task["panoramas:flat_status"].reenable }
 
   # Snapshot and RESTORE, same as panoramas:render_flat above.

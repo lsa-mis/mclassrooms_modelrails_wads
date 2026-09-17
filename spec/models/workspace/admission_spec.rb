@@ -272,29 +272,6 @@ RSpec.describe Workspace, type: :model do
     end
   end
 
-  describe "#at_project_capacity?" do
-    it "is true when kept projects have reached max_projects" do
-      workspace = create(:workspace, max_projects: 1)
-      create(:project, workspace: workspace)
-
-      expect(workspace.at_project_capacity?).to be true
-    end
-
-    it "is false below the limit" do
-      workspace = create(:workspace, max_projects: 2)
-      create(:project, workspace: workspace)
-
-      expect(workspace.at_project_capacity?).to be false
-    end
-
-    it "does not count discarded projects" do
-      workspace = create(:workspace, max_projects: 1)
-      create(:project, workspace: workspace).discard!
-
-      expect(workspace.at_project_capacity?).to be false
-    end
-  end
-
   # Admittability (kept, not archived, not suspended) gates every admission;
   # these moved from workspace_lifecycle_spec.rb (#1003).
   describe "#admittable?" do

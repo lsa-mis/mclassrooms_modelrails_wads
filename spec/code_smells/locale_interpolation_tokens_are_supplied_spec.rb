@@ -14,7 +14,12 @@ RSpec.describe "Code smell: every locale interpolation token is supplied" do
     new_email new_role nickname os percent period phrase project_name
     provider relative role sent skipped summary time title to user_name
     workspace_name
+  ] + %w[
+    ada alt building caption description floor label min n original owner
+    position room students total value
   ]
+  # ^ The second list: fork (MClassrooms) tokens the directory's views,
+  # helpers and mailers supply (buildings, rooms, media, ui locale files).
   # ^ from Step 1's measurement, minus the eight vocabulary tokens, sorted.
   # `link`: app/views/operations/users/show.html.erb supplies a link_to for
   # operations.users.show.operator_unsuspendable_html.

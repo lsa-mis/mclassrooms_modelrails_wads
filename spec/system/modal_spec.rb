@@ -150,13 +150,13 @@ RSpec.describe "Modal system", type: :system do
       page.execute_script(<<~JS)
         const link = document.createElement('a');
         link.id = 'test-modal-away';
-        link.href = '#{page_path(:about)}';
+        link.href = '#{about_path}';
         link.textContent = 'Leave via Turbo';
         link.setAttribute('style', 'display:inline-flex;min-width:44px;min-height:44px;align-items:center');
         document.querySelector('[data-modal-target="panel"]').appendChild(link);
       JS
       click_link "Leave via Turbo"
-      expect(page).to have_current_path(page_path(:about))
+      expect(page).to have_current_path(about_path)
 
       page.go_back
 
@@ -194,7 +194,7 @@ RSpec.describe "Modal system", type: :system do
       page.execute_script(<<~JS)
         const link = document.createElement('a');
         link.id = 'test-modal-away';
-        link.href = '#{page_path(:about)}';
+        link.href = '#{about_path}';
         link.textContent = 'Leave via Turbo';
         link.setAttribute('style', 'display:inline-flex;min-width:44px;min-height:44px;align-items:center');
         document.querySelector('[data-modal-target="panel"]').appendChild(link);
@@ -210,7 +210,7 @@ RSpec.describe "Modal system", type: :system do
       expect(stripped).to be_positive
 
       click_link "Leave via Turbo"
-      expect(page).to have_current_path(page_path(:about))
+      expect(page).to have_current_path(about_path)
 
       page.go_back
 

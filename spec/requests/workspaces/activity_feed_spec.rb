@@ -78,10 +78,16 @@ RSpec.describe "Workspace activity feed", type: :request do
 
     it "names the user, not System, on the shared workspace (:shared)" do
       shared = create(:workspace, name: "Everyone")
+      # Fork (MClassrooms): under :shared a self-joined member is sent to the
+      # directory (find_a_room_path), never the workspace overview, so the feed
+      # is read as the workspace's owner — the row under test is the same one.
+      owner = create(:user)
+      create(:membership, :owner, user: owner, workspace: shared)
       allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
       allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared.slug)
 
       register!("nell-shared@example.test")
+      sign_in(owner)
 
       get workspace_path(shared)
       page = Capybara.string(response.body)

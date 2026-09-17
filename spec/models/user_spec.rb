@@ -293,13 +293,11 @@ RSpec.describe User, type: :model do
   end
 
   describe "#suspend!" do
-    it "suspends, destroys sessions, and writes an admin-visibility row naming the operator, leaving memberships and project access intact" do
+    it "suspends, destroys sessions, and writes an admin-visibility row naming the operator, leaving memberships intact" do
       operator = create(:user)
       user = create(:user)
       workspace = create(:workspace)
       create(:membership, :owner, user: user, workspace: workspace)
-      # :project's factory already gives its creator a project_membership (production invariant).
-      project = create(:project, workspace: workspace, created_by: user)
       user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
 
       expect {
@@ -308,7 +306,6 @@ RSpec.describe User, type: :model do
 
       expect(user.reload).to be_suspended
       expect(user.sessions.count).to eq(0)
-      expect(ProjectMembership.where(project: project, user: user)).to exist
       row = ActivityLog.find_by!(action: "user.suspended", trackable: user)
       expect(row.actor).to eq(operator)
       expect(row.visibility).to eq("admin")

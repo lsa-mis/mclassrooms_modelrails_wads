@@ -105,7 +105,13 @@ RSpec.describe "Code smell: every dynamic i18n key has a value" do
     # caller's action rather than hardcoding one — already enumerated above
     # from the model descendants loop, so declared safe by exact value here
     # instead of silently allowed.
-    declared_dynamic = { "app/models/concerns/trackable.rb" => [ "action" ] }.freeze
+    declared_dynamic = {
+      "app/models/concerns/trackable.rb" => [ "action" ],
+      # Fork (MClassrooms): Curation::Apply forwards the admin controller's
+      # literal action the same way; the values are the curation verbs those
+      # controllers name (announcement.*, characteristic_display_rule.*, …).
+      "app/lib/curation/apply.rb" => [ "@action" ]
+    }.freeze
 
     unresolved = []
 

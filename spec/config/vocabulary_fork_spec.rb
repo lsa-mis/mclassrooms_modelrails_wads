@@ -21,7 +21,7 @@ RSpec.describe "A fork's vocabulary", type: :config do
   end
 
   it "pluralizes in the fork's words" do
-    expect(I18n.t("workspaces.sidebar.projects")).to eq("Teams")
+    expect(I18n.t("navigation.all_workspaces")).to eq("All courses")
   end
 
   it "keeps a workspace's name a caller argument, untouched by the rename" do

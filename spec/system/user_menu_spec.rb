@@ -271,8 +271,8 @@ RSpec.describe "User menu dropdown", type: :system do
       # reachable way to cache a page with a menu still open. `visit` is not usable:
       # it is a hard browser goto, fires no `turbo:before-cache`, and leaves the
       # snapshot cache empty.
-      page.execute_script("window.Turbo.visit('#{page_path(:about)}')")
-      expect(page).to have_current_path(page_path(:about))
+      page.execute_script("window.Turbo.visit('#{about_path}')")
+      expect(page).to have_current_path(about_path)
 
       page.go_back
       expect(page).to have_current_path(root_path)
