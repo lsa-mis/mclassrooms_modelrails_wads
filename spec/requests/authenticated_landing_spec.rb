@@ -23,16 +23,32 @@ RSpec.describe "Authenticated landing seam", type: :request do
   end
 
   describe "the seam is overridable" do
-    it "after_authentication_url derives from authenticated_home_path" do
-      controller = SessionsController.new
-      controller.set_request!(ActionDispatch::TestRequest.create)
-      allow(controller).to receive(:session).and_return({})
+    # The unique claim of this file: a fork overrides ONE method and every
+    # sign-in path follows. Asserting the redirect target alone would not say
+    # it — inlining `session.delete(:return_to_after_authenticating) ||
+    # root_path` into after_authentication_url deletes the seam and still
+    # passes the two examples above. Stubbing the seam and driving a REAL
+    # sign-in is what fails on that change.
+    #
+    # allow_any_instance_of (a named smell) because the controller instance is
+    # the framework's, created inside the request; there is nothing else to
+    # hold. It IS verified: spec_helper.rb sets verify_partial_doubles, so the
+    # any-instance recorder refuses an undefined method — renaming the seam
+    # fails this example at stub time with "SessionsController does not
+    # implement #authenticated_home_path", not with a quiet wrong redirect.
+    #
+    # Not a duplicate of authenticated_home_spec.rb:4-13, which drives the same
+    # seam through a real client-only flow with no mock at all. That one pins
+    # WHERE the fork-agnostic default sends a client; this one pins that the
+    # landing is dispatched BY METHOD NAME — a fork's override is honoured only
+    # while the call stays dynamic.
+    it "sends a real sign-in wherever a fork points authenticated_home_path" do
+      allow_any_instance_of(SessionsController)
+        .to receive(:authenticated_home_path).and_return(about_path)
 
-      expect(controller.send(:authenticated_home_path)).to eq(Rails.application.routes.url_helpers.root_path)
-      expect(controller.send(:after_authentication_url)).to eq(Rails.application.routes.url_helpers.root_path)
+      post session_path, params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" }
 
-      allow(controller).to receive(:authenticated_home_path).and_return(Rails.application.routes.url_helpers.about_path)
-      expect(controller.send(:after_authentication_url)).to eq(Rails.application.routes.url_helpers.about_path)
+      expect(response).to redirect_to(about_path)
     end
   end
 end

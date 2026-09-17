@@ -60,7 +60,7 @@ Everyone shares **one** workspace. Each person (with how they **sign in**) is a 
 |---|---|---|
 | `signup.mode` | typically `:invite_only` (your call) | `config/initializers/signup.rb` |
 | `tenancy.onboarding` | `:shared` | `User#onboard_workspace` dispatches to `join_shared_workspace` |
-| `tenancy.workspace_creation` | `:disabled` | `WorkspacesController` `before_action` redirects `:new`/`:create` |
+| `tenancy.workspace_creation` | `:disabled` | `RequiresWorkspaceCreationEnabled` (included by `WorkspacesController` and `Operations::WorkspacesController`) redirects `:new`/`:create` — operators included; a second workspace on a single-tenant instance means flipping the flag or a console one-liner |
 | `permitted_join_strategies` | `[:invite]` *(implicit — only mechanism built)* | `Invitation.consume!` is the single membership-grant path |
 | `session.reauth_enabled` | `false` *(optional — your call)* | `config/initializers/sessions.rb`; internal tools often skip the "confirm it's you" interstitial |
 | `session.new_device_notification` | `false` *(optional — your call)* | same file; skips "new sign-in" alerts when every teammate's laptop would fire one |
@@ -74,7 +74,7 @@ The workspace switcher auto-hides under this preset because every user has exact
    | Variable | Required? | Example | Purpose |
    |---|---|---|---|
    | `WORKSPACE_ON_SIGNUP` | yes | `shared` | Selects this preset |
-   | `TENANCY_WORKSPACE_CREATION` | yes | `disabled` | Turns off "New workspace" UI + route |
+   | `TENANCY_WORKSPACE_CREATION` | yes | `disabled` | Turns off "New workspace" UI + route — operators included; a second workspace on a single-tenant instance means flipping the flag or a console one-liner |
    | `TENANCY_SHARED_WORKSPACE_SLUG` | yes | `acme` | URL-safe slug of the shared workspace |
    | `TENANCY_SHARED_WORKSPACE_NAME` | no | `Acme Inc.` | Display name (defaults to titleized slug) |
    | `TENANCY_OWNER_EMAIL` | yes | `admin@acme.com` | Email of the initial Owner |
@@ -117,12 +117,10 @@ owner.memberships.first.role.slug              # => "owner"
 
 In the browser, after the Owner has set their password and signed in:
 
-1. They land directly in the shared workspace (no switcher, no chooser).
-2. The header workspace switcher does not appear, and neither does the user
-   menu's "All workspaces" entry point (its switcher-adjacent "see all"
-   companion) — both are suppressed under `TenancyConfig.shared?` (see
-   `shared/_header.html.erb` and `shared/_user_menu.html.erb`), not merely
-   hidden by incidental single-membership math.
+1. They land directly in the shared workspace (no chooser).
+2. The workspace switcher at the top of the sidebar names the shared workspace and their role; its menu lists no other workspace — only "All workspaces".
+   The user menu's own "All workspaces" entry point stays suppressed under
+   `TenancyConfig.shared?` (see `shared/_user_menu.html.erb`).
 3. `/workspaces/new` redirects to root with the alert `Workspace creation is disabled on this instance.`
 4. Invited new users (via the standard invitation flow) verify their email and become Members of the same shared workspace.
 

@@ -19,6 +19,7 @@ class ApplicationController < ActionController::Base
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
   rescue_from Suspendable::SuspendedError, with: :workspace_locked
   rescue_from Workspace::NotAdmittableError, with: :not_admittable
+  rescue_from User::SuspendedError, with: :user_suspended
 
   helper_method :signups_open?, :pending_join_workspace
 
@@ -162,6 +163,14 @@ class ApplicationController < ActionController::Base
 
   def workspace_locked
     redirect_to workspaces_path, alert: t("workspaces.locked_notice")
+  end
+
+  def user_suspended
+    respond_to do |format|
+      format.html { redirect_to new_session_path, alert: t("sessions.create.suspended") }
+      format.json { render json: { error: t("sessions.create.suspended") }, status: :forbidden }
+      format.any { head :forbidden }
+    end
   end
 
   # Generic, non-disclosing redirect for Workspace::NotAdmittableError — an

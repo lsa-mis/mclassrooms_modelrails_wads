@@ -5,7 +5,7 @@ en:
         media_asset:
           attributes:
             owner:
-              workspace_mismatch: "must belong to the same workspace as this asset"
+              workspace_mismatch: "must belong to the same %{workspace} as this asset"
   media:
     derived_alt:
       # NULL-subject fallback — an unclassified asset (e.g. one of the ~1,362

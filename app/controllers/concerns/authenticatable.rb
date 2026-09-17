@@ -42,7 +42,10 @@ module Authenticatable
       return unless token
 
       session = Session.find_by(id: token)
-      if session && !session.expired?
+      # A suspended user's sessions are destroyed at suspend time (User::Suspension#suspend!),
+      # so this check is the guarantee stated locally rather than argued: it exists only to
+      # cover a row that somehow outlived that destroy (e.g. created directly, bypassing it).
+      if session && !session.expired? && !session.user.suspended?
         session.touch_last_active!
         return session
       end
@@ -95,6 +98,8 @@ module Authenticatable
     # end_session_endpoint. See OmniauthCallbacksController#stash_okta_logout_state.
 
     def start_new_session_for(user)
+      raise User::SuspendedError if user.suspended?
+
       # Clear leftover pre-auth session state at the privilege boundary, keeping
       # only the keys the post-login flow needs. Hygiene, not a fixation fix —
       # Rails' encrypted cookie store already prevents a forged session hash and

@@ -126,7 +126,9 @@ Noticed 2.9.x deprecates the `:database` delivery method — notification rows a
 **The `deliver(nil)` invariant, both directions.** `Noticed::Deliverable#deliver` is `recipients ||= evaluate_recipients` — `noticed-3.0.0`, `app/models/concerns/noticed/deliverable.rb:87`. An explicit recipient does not *add* to the block; it *replaces* it, and the block never runs. So:
 
 - A notifier that **declares** a `recipients` block must be dispatched with `deliver(nil)`. Passing a recipient skips `permitted_in_app` — delivering to someone who opted out or is inside quiet hours — and skips the actor exclusion below. Nothing raises, nothing is logged; the preference is just quietly ignored.
-- A notifier that declares **no** block must be dispatched with an explicit recipient. `deliver(nil)` there resolves to zero recipients and writes no rows at all — a dispatch that silently does nothing.
+- A notifier that declares **no** block must be dispatched with an explicit recipient. `deliver(nil)` there resolves to zero recipients, so `ApplicationNotifier#deliver` returns `:skipped` and writes no rows at all — a dispatch that silently does nothing.
+
+That empty-set guard lives in `ApplicationNotifier#deliver`, not in the gem. `Noticed::Deliverable#deliver` calls `save!` **unconditionally** — only its `notifications.insert_all!` is guarded by `.any?` — so before the guard a zero-recipient dispatch still wrote the `noticed_events` row *and* consumed its minute-bucket idempotency key. That is reachable through a `recipients` block, not just through a mis-dispatched notifier: the actor exclusion below can leave a candidate set empty (a single-owner workspace whose owner acts on their own membership), and a genuine dispatch on the same record inside that minute then deduplicated away with nobody ever notified.
 
 Neither failure is visible at runtime, so both directions are fenced by `spec/code_smells/notifier_recipients_block_dispatch_spec.rb`, which scans every `SomeNotifier.with(...).deliver(...)` in `app/` and matches it against whether that notifier declares a block.
 
@@ -174,11 +176,11 @@ The same discipline gates `WorkspaceCreatedNotifier`: it fires only when the non
 
 An email is one of three fates: deliver now, drop, or wait for `DigestMailerJob` to pick it up. The gate is `deliver_email_now_for?(user)`, which is strictly "send the instant email to this user now" — it answers `false` both for an opt-out/DND drop and for the digest deferral, so the digest frequency choice can never be defeated by an accidental truthiness check. (`recipient_pref(:email)` still reports the tri-state — `true` / `false` / `:digest` — as an introspection surface.)
 
-`deliver_email_now?` is the one-argument shim for the common case: it is `deliver_email_now_for?(recipient)` and nothing else. Reach for it whenever the recipient is the user being asked about.
+`deliver_email_now?` is the no-argument form for the common case — "is this notification's own recipient allowed an instant email?" — and it answers from the notification's `recipient_id` column, never from the `recipient` association.
 
-Prefer the explicit form in a `before_enqueue` that has already narrowed the fan-out to one known user — typically with `throw(:abort) unless recipient_id == event.record.user_id`. At that point the surviving recipient *is* `event.record.user`, which the guard has already loaded, so asking about it directly is equivalent. It is not a query saving: an aborting guard loads `recipient` at most once either way, and both member notifiers' `EventJob` measures flat at four queries with two owners and with eight. What it avoids is Bullet — Noticed's `EventJob` iterates `event.notifications.each`, and a lazy `recipient` load off a member of that collection is a shape Bullet's N+1 heuristic raises on whether or not the load repeats.
+Prefer the explicit form in a `before_enqueue` that has already narrowed the fan-out to one known user — typically with `throw(:abort) unless recipient_id == event.record.user_id`. At that point the surviving recipient *is* `event.record.user`, which the guard has already loaded, so asking about it directly is equivalent — and cheaper. `deliver_email_now?` answers from the event's permitted-recipient set, which materialises **every** recipient and their preferences to decide about one; a guard that has already narrowed the fan-out to a single known user should ask about that user and load one row. Both member notifiers do, and their `EventJob` measures flat at four queries with two owners and with eight.
 
-A notifier whose email leg has **no** narrowing guard is a different case: there the gate genuinely runs per recipient, loads each one and their preferences, and grows with the fan-out. `deliver_email_now_for?` cannot help — each recipient's own preferences are exactly what that gate needs.
+A notifier whose email leg has **no** narrowing guard asks the gate once per recipient, and that used to grow with the fan-out — one `users` select plus one `user_preferences` select per recipient, inside a single `EventJob` (#936). It no longer does. `ApplicationNotifier#email_permitted?` resolves the event's whole permitted-recipient set in one pair of queries and memoises it for the job, so the per-recipient gate is a `Set` membership test on a column value. Noticed offers no hook to preload `:recipient` on the relation its `EventJob` iterates, which is why the set is resolved by id rather than by preloading the notification rows — and preloading them would leave `recipient` eager-loaded and unread on every narrowing-guard notifier, which is Bullet's unused-eager-loading shape.
 
 ### `render_safe_or_placeholder` — the deleted-record contract
 
@@ -217,7 +219,7 @@ The helper owns view-token mapping + severity orchestration. The three public su
 |---|---|---|
 | `unread_notification_summary(user)` | `{ count:, severity: }` (severity nil when count zero) | The three frame-rendering broadcasts (avatar indicator, hamburger indicator, menu count row); passed in as a `summary:` local from `NotificationBroadcaster` to avoid redundant queries |
 | `notification_bell_classes(severity, variant: :icon)` | `{ icon: "text-<severity>" }` for `:icon`; a dot class (`SEVERITY_DOT_CLASSES`) for `:dot` | The indicator partial (`variant: :dot`) — maps severity to the saturated `--color-{severity}` token already used by toasts; `variant:` selects the icon-tint vs. dot-indicator form |
-| `avatar_button_aria_label(user, summary = …)` | I18n-composed string ("User menu for Dave. 3 unread notifications, including a security alert.") | Retained from the retired standalone bell; the current avatar button carries a static identity-only label (`navigation.user_menu_label_simple`), so unread phrasing no longer rides the button's accessible name |
+| `avatar_button_aria_label(user, summary = …)` | I18n-composed string ("User menu for Nell. 3 unread notifications, including a security alert.") | Retained from the retired standalone bell; the current avatar button carries a static identity-only label (`navigation.user_menu_label_simple`), so unread phrasing no longer rides the button's accessible name |
 
 `SEVERITY_RANK = { danger: 4, warning: 3, info: 2, success: 1 }` — higher rank wins when multiple severities are unread. `canonical_severity(severity)` clamps any input to one of the four canonical values (defensive coverage for non-production paths; production is already guarded by `ApplicationNotifier.severity`'s DSL).
 
@@ -250,10 +252,23 @@ Callers can pass `idempotency_key: "custom"` to override the default. If neither
 
 `ApplicationNotifier#deliver` returns sentinels:
 
+- `:skipped` when the recipient set resolves empty — the dispatch returns **before** `super`, so no event row is written and the bucket key stays unconsumed
 - `:delivered` on first-send
 - `:deduplicated` on `ActiveRecord::RecordNotUnique`
 
-Callers (e.g., `WorkspaceInvitationsController#resend`) branch on this to choose flash copy.
+`:skipped` exists because the key is minted in a `before_create` on the event row, and the gem writes that row even with zero recipients (see *The `deliver(nil)` invariant* above). Keying the bucket on the recipient set would be the alternative and is worse: it makes the key non-deterministic across retries of the same dispatch.
+
+Callers (e.g., `Workspaces::Invitations::ResendsController#create`) branch on this to choose flash copy. A caller that branches on `:deduplicated` treats `:skipped` like `:delivered` unless it says otherwise — which is correct where the dispatch carries an explicit, known-present recipient and `:skipped` cannot occur.
+
+## Dispatch reliability
+
+What is atomic is the ledger: `Noticed::Deliverable#deliver` writes the event row, its `idempotency_key`, and every recipient's notification row in one transaction. What is *not* atomic is the delivery job — noticed enqueues `Noticed::EventJob` after that transaction returns, and Solid Queue writes to a separate SQLite database in production, so it never could be. If the enqueue fails (Solid Queue's database busy past its timeout, a full disk) or the process dies in the gap, the recipient sees the notification in the bell, the key is burned so a retry inside the same bucket dedupes away, and the email and broadcast legs never run.
+
+So the job records its own arrival. A `before_perform` callback registered in `config/initializers/noticed.rb` stamps `noticed_events.dispatched_at` at the **start** of `Noticed::EventJob`, and `NotificationDispatchReconcileJob` re-enqueues any event still carrying NULL five minutes later (see [Background jobs](#background-jobs)).
+
+Stamping at the start, not the end, is what keeps the sweep safe: an event whose job was *claimed* is already stamped, so the reconciler covers only the never-enqueued gap and can never re-run an event whose delivery legs already fanned out.
+
+**What the watermark does not cover**, stated plainly because it is easy to assume otherwise: a job that was claimed and then *raised*. `Noticed::EventJob` declares no `retry_on` — only `discard_on ActiveJob::DeserializationError` — and Solid Queue adds no retry policy of its own, so such a job lands in `solid_queue_failed_executions` and stays there until someone retries it by hand. A pruned worker process likewise *fails* its claimed executions rather than releasing them, and this app ships no Mission Control UI to notice either. The reconciler is not that safety net and cannot be: the row is stamped, so it is invisible to the sweep by design. Closing that gap is [#1065](https://github.com/dschmura/modelrails_base/issues/1065).
 
 ## Broadcast pipeline
 
@@ -397,15 +412,35 @@ Per-user retention enforcement. For every user:
 
 `delete_all`, not `destroy_all`: `Noticed::Notification` has no callbacks worth running here. The one it has — noticed's counter cache on `noticed_events.notifications_count` — is bypassed by every deletion path in the app (this job, `Noticed::Event#has_many :notifications, dependent: :delete_all`, and `User#notifications, dependent: :delete_all`), so the counter is not a reliable signal; orphan-event pruning (#811) must use `NOT EXISTS`. `User#notifications, dependent: :delete_all` is also the *only* enforcement against orphaned notification rows: `noticed_notifications` carries no foreign key to users, so raw SQL or `User.delete_all` in a fork orphans them silently, and this job — which iterates `User.find_each` — never sees them again.
 
+### `NotificationDispatchReconcileJob`
+
+Re-enqueues `Noticed::EventJob` for every event whose `dispatched_at` is still NULL — see [Dispatch reliability](#dispatch-reliability) for why that column exists and what it deliberately does not cover. The scan is bounded at both ends, `created_at BETWEEN MAX_LOOKBACK.ago AND GRACE.ago`:
+
+- **`GRACE` (5 minutes)** is well past any plausible enqueue latency, and short enough that a recovered notification is late rather than missing.
+- **`MAX_LOOKBACK` (24 hours)** stops a row that can never be stamped — a deserialization discard, a fork's hand-written row — from being re-enqueued every cycle forever. It is also why the migration that added the column **backfills existing rows** with their own `created_at`: without that, the first sweep after deploy would have re-delivered the entire notification history, since nothing prunes events and `NotificationCleanupJob` deletes notification rows without touching `notifications_count`.
+
+Events with `notifications_count == 0` are skipped: nobody for a re-enqueue to reach. The scan rides the partial index on `noticed_events (created_at) WHERE dispatched_at IS NULL`, which is empty in steady state.
+
+**The sweep stamps each row itself, before enqueuing it.** Its enqueue is the one retry an event gets. Without that stamp, a delivery queue backed up past the 15-minute cadence would hand the next cycle the same unstamped row and fan a second copy of every email out to every recipient. Stamping *before* the enqueue rather than after settles the other direction too: if the enqueue raises, the row is already stamped and is never retried, and the per-row rescue reports it — a lost retry that is visible beats a duplicate fan-out that is not.
+
+It runs on `default`, not `low`: `low` is chartered as work nobody is waiting on, and this re-delivers a notification a user is waiting on and already did not get. Same reasoning that keeps the two workspace notifier sweeps off `low`.
+
+One constraint on forks: noticed's `deliver(..., wait:)` / `wait_until:` deliberately enqueues `EventJob` for later, which this sweep reads as a lost enqueue and re-delivers early. No dispatch in this app uses them; a fork that adds one must widen `GRACE` past its longest wait, or exclude that notifier from the scan.
+
+Same fault posture as `NotificationCleanupJob`: each re-enqueue is rescued and reported through `Rails.error` with the event id, and a cycle in which *every* attempt failed re-raises so Solid Queue records a failure rather than logging a successful sweep. The recovered count is logged at the end of each cycle — a non-zero count means a delivery nearly went missing.
+
 ## Security event audit coverage
 
-The three security notifiers above each pair with a row in `ActivityLog` — a separate table from `noticed_events`/`noticed_notifications`, with its own write guarantee and its own retention. `ActivityLog::SECURITY_ACTIONS` is the single membership set naming these events (`user.password_changed`, `user.password_removed`, `user.signed_in_new_device`, `user.passkey_added`, `user.passkey_removed`); `ActivityLogRetentionSweepJob` keys its retention exemption off `action` membership in that set, never off `visibility` — the `personal` visibility tier is a coincidence of who these rows are scoped to, not the test the sweep uses, so a fork adding an unrelated `personal`-visibility action doesn't silently inherit the security floor. Every row in that set is written through `ActivityLog.record_security_event!`, which owns the row shape and raises on an action outside the set — a drifted action literal fails loudly instead of writing a row that quietly misses the floor.
+The three security notifiers above each pair with a row in `ActivityLog` — a separate table from `noticed_events`/`noticed_notifications`, with its own write guarantee and its own retention. `ActivityLog::SECURITY_ACTIONS` is the single membership set naming these events (`user.password_changed`, `user.password_removed`, `user.signed_in_new_device`, `user.passkey_added`, `user.passkey_removed`, `user.suspended`, `user.unsuspended`, `user.unlocked`, `operatorship.granted`, `operatorship.revoked`); `ActivityLogRetentionSweepJob` keys its retention exemption off `action` membership in that set, never off `visibility` — the `personal` visibility tier is a coincidence of who these rows are scoped to, not the test the sweep uses, so a fork adding an unrelated `personal`-visibility action doesn't silently inherit the security floor. Every row in that set is written through `ActivityLog.record_security_event!`, which owns the row shape and raises on an action outside the set — a drifted action literal fails loudly instead of writing a row that quietly misses the floor.
 
 | Event | ActivityLog write | Guarantee | Other corroborating record |
 |---|---|---|---|
 | Password set / changed / removed | `User#audit_password_digest_change` (`after_update`) | **Strict** — same transaction as the `password_digest` write, no rescue; a failed audit row fails the credential write. Note the consequence when the credential change *is* a compromise response: the rollback also leaves the user's other sessions alive, since revocation commits with the rotation — they die when the rotation is retried successfully | — |
 | Passkey added / removed | `WebauthnCredential#audit_added` (`after_create`) / `#discard!` | **Strict** — same transaction as the credential row; removal is a `Discardable` soft delete, not a destroy. Removal is deliberately *not* a callback: `discard!` claims the kept → discarded transition with a compare-and-swap and audits only if it won, because a callback cannot see another request's commit and two concurrent removals would each write a row. Enrollment stays a callback — the `external_id` unique index makes a duplicate create impossible | The soft-deleted `webauthn_credentials` row itself (`discarded_at` set, row not gone) |
 | Sign-in from a new device | `Authenticatable#detect_and_record_new_device` | **Best-effort** — inside that method's own `rescue ActiveRecord::ActiveRecordError`; a failed audit write must never fail a sign-in | The `Session` row created moments earlier (the primary sign-in record; retained up to `absolute_timeout`, 90 days), and the user's `last_known_browsers` JSON column (a bounded LRU used only to decide "is this browser new?" — a fingerprint cache, not itself durable evidence) |
+| Operator access granted / revoked | `Operatorship.grant!` / `#revoke!` | **Strict** — same transaction as the `operatorships` row; written at `admin` visibility with the granter or revoker as actor (none for a rake grant), so it appears in the operations feed rather than the subject's account card. No notifier pairs with it | The `operatorships` row itself (kept, or `discarded_at` set) |
+| Account unlocked (operator) | `User::Password#unlock!` | **Strict** — same transaction as the `failed_login_attempts`/`locked_at` clear; written at `admin` visibility with the operator as actor (none for a rake unlock). No notifier pairs with it | The cleared `failed_login_attempts`/`locked_at` columns themselves |
+| Account suspended / unsuspended | `User::Suspension#suspend!` / `#unsuspend!` | **Strict** — same transaction as the `suspended_at` write; written at `admin` visibility with the operator as actor (none for a rake suspend/unsuspend). No notifier pairs with it | The operations feed row; the destroyed `sessions` rows (suspend only) |
 
 Passkey removal has no notifier of its own — only enrollment does, via `PasskeyAddedNotifier`; the ActivityLog row above is the only record that a passkey was removed.
 

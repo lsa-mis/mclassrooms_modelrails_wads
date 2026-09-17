@@ -3,7 +3,7 @@ require "rake"
 
 RSpec.describe "Media::AltCoverage" do
   before(:all) do
-    Rails.application.load_tasks
+    RakeTasks.load_once
   end
 
   it "counts needs_review vs attached per model/slot" do

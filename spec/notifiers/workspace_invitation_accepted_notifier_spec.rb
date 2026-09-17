@@ -83,7 +83,7 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_invitation_accepted.message",
                accepter: accepter.email_address,
-               workspace: workspace.name)
+               workspace_name: workspace.name)
       )
     end
   end

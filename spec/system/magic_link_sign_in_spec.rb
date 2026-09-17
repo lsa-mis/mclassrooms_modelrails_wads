@@ -89,9 +89,13 @@ RSpec.describe "Magic link sign-in", type: :system do
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")
       expect(page).to have_text(I18n.t("magic_link_callbacks.show.signed_in"))
 
-      # Token was consumed on confirm — visiting again should fail
+      # Token was consumed on confirm. Visiting it again must not offer the
+      # confirm button (the refusal), and — since this browser is signed in as
+      # the link's owner — must say so rather than call the link expired.
       visit magic_link_callback_path(token: raw_token)
-      expect(page).to have_text(I18n.t("magic_link_callbacks.show.invalid"))
+      expect(page).to have_no_button(I18n.t("magic_link_callbacks.confirm.sign_in_button"))
+      expect(page).to have_text(I18n.t("authentication.already_signed_in"))
+      expect(page).to have_no_text(I18n.t("magic_link_callbacks.show.invalid"))
     end
   end
 end

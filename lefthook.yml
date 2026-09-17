@@ -45,6 +45,7 @@ pre-push:
       # scan_ruby red on a green-locally branch repeatedly (nokogiri + faraday,
       # PR #371). Same bin/bundler-audit + config CI uses (vendored advisory DB,
       # no network --update), so local and CI verdicts match.
+      # scan_js is deliberately not mirrored: it POSTs to the npm registry (#984).
       tags: security
       skip_empty: false
       run: mise exec -- bin/bundler-audit

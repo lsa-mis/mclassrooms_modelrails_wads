@@ -81,6 +81,22 @@ RSpec.describe Workspace, type: :model do
       expect(workspace.memberships.find_by!(user: user).role).to eq(member_role)
     end
 
+    # Joining a workspace is onboarding under every preset: the first-run
+    # wizard exists for a user who has nowhere to go, and under :none an
+    # unstamped invitee is funnelled into a step that refuses a Member.
+    it "marks the admitted user onboarded" do
+      expect {
+        workspace.admit(user, role: member_role)
+      }.to change { user.reload.onboarded? }.from(false).to(true)
+    end
+
+    it "does not stamp a user the workspace refuses" do
+      workspace.suspend!
+
+      expect { workspace.admit(user, role: member_role) }.to raise_error(Workspace::NotAdmittableError)
+      expect(user.reload.onboarded?).to be(false)
+    end
+
     it "reactivates a discarded membership without overwriting its role" do
       # Seed the workspace with an Owner so deactivating doesn't violate
       # "must keep at least one owner" rules — and create a regular member

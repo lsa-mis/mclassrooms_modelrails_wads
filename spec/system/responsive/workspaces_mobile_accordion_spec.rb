@@ -37,6 +37,35 @@ RSpec.describe "Workspace pages — mobile accordion", type: :system, js: true d
     expect(page).to have_css("[data-mobile-menu-target='menu'].hidden", visible: :all)
   end
 
+  # #1077: the sidebar that carries workspace identity is display:none below
+  # md, so a phone showed the section tabs with nothing naming the workspace
+  # unless the hamburger was opened. The switcher now renders a second time
+  # above the tabs — with its own id suffix, because the sidebar copy is
+  # hidden, not absent, and unsuffixed it would duplicate every id.
+  it "names the workspace and the viewer's role above the section tabs, hamburger closed" do
+    visit workspace_path(workspace)
+
+    expect(page).to have_css("[data-mobile-menu-target=button][aria-expanded=false]")
+    expect(page).to have_text(workspace.name)
+    expect(page).to have_text("Owner")
+
+    identity_then_tabs = page.evaluate_script(<<~JS)
+      (() => {
+        const identity = document.querySelector("#workspace-switcher-button-mobile");
+        const tabs = document.querySelector("#section-nav-strip-heading");
+        if (!identity || !tabs) return "missing";
+        return identity.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING ? "identity-first" : "tabs-first";
+      })()
+    JS
+    expect(identity_then_tabs).to eq("identity-first")
+
+    dupes = page.evaluate_script(<<~JS)
+      (() => { const ids = [...document.querySelectorAll("[id]")].map(e => e.id);
+               return ids.filter((id, i) => ids.indexOf(id) !== i); })()
+    JS
+    expect(dupes).to be_empty, "duplicate ids at 375px: #{dupes.inspect}"
+  end
+
   it "passes axe AAA both themes both states" do
     visit workspace_path(workspace)
 

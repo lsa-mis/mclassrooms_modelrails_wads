@@ -8,7 +8,6 @@ require "rails_helper"
 # `ActivityLog.create!(action: "user.password_changed", visibility: "personal")`
 # directly — or writing a near-miss literal like "user.passkey_add" — produces a
 # row the retention sweep deletes at 12 months instead of the security floor,
-# renders plausibly in the activity card via its humanizing `default:` fallback,
 # and leaves the whole suite green. Audit evidence lost silently. That path was
 # reachable the day the guard shipped (#824); no fourth writer was needed.
 #
@@ -16,41 +15,25 @@ require "rails_helper"
 # about the write GUARANTEE a call site gets, which is the distinction
 # app/models/concerns/trackable.rb's header exists to protect.
 RSpec.describe "Code smell: security events route through record_security_event!" do
-  # Locals, not constants: a constant here lands on Object, where another spec
-  # file's same-named constant clobbers it whenever CI shards both into one
-  # worker (the ALLOWED collision that broke CI on 2026-08-14).
-  #
   # `record_security_event!` itself writes via a bare `create!` (implicit
   # receiver), so it does not match this pattern and needs no exemption.
-  direct_writes = /\bActivityLog\.(create!?|insert(_all)?|upsert(_all)?)\b/
+  # Covers both the class-level shape (ActivityLog.create!/.new/.insert_all/
+  # .upsert_all) and the association shape (workspace.activity_logs.create!,
+  # live via Workspace has_many :activity_logs) — a narrower regex covering
+  # only the class-level shape let both escape (a probe file in each shape
+  # stayed off the offender list).
+  direct_writes = /\bActivityLog\.(create!?|new|insert(_all)?|upsert(_all)?)\b|\bactivity_logs\.(create!?|insert(_all)?|upsert(_all)?)\b/
 
-  # path => why this call site legitimately writes ActivityLog directly.
-  # All four are BEST-EFFORT, workspace-domain writers — the other tier.
-  # A security-tier write does not belong here; it belongs in the writer.
-  allowed_direct_writes = {
-    "app/models/concerns/trackable.rb" =>
-      "the best-effort, workspace-domain write shape itself — the concern this " \
-      "whole tier distinction is documented on",
-    "app/models/membership/ownership.rb" =>
-      "record_ownership_demotion, reached from a callback-skipping CAS " \
-      "update_all, so the concern's callbacks cannot fire for it",
-    "app/controllers/application_controller.rb" =>
-      "log_blocked_role_grant, which records a REFUSAL — there is no persisted " \
-      "record to track, so Trackable has nothing to hang off",
-    "app/lib/curation/apply.rb" =>
-      "fork: the admin-curation writer — workspace-tier before/after rows " \
-      "written INSIDE the curated change's transaction (deliberately not " \
-      "best-effort; the audit row and the change commit together). Curation " \
-      "actions are never SECURITY_ACTIONS",
-    # The writer moved into the concern with #951's split (#915); same reason.
-    "app/models/invitation/suppression.rb" =>
-      "record_suppressed_delivery — best-effort, admin-visibility, fired from " \
-      "mailer callbacks where Trackable's hooks must not run (a block oracle " \
-      "otherwise; PR 4 spec §7)"
-  }.freeze
+  # SecurityEventWriters::ALLOWED (spec/support/security_event_writers.rb) is
+  # the single reviewed list, shared with dynamic_i18n_keys_have_values_spec.rb
+  # — see that file's header for why it is a module constant rather than a
+  # `describe`-block local.
+  allowed_direct_writes = SecurityEventWriters::ALLOWED
 
   # Files allowed to mention a security-action literal without routing it
-  # through the writer. Only the file that defines the set qualifies.
+  # through the writer. Only the file that defines the set qualifies —
+  # operatorship.rb now calls record_security_event! like every other writer,
+  # so it satisfies the third example below on its own.
   literal_definers = [ "app/models/activity_log.rb" ].freeze
 
   def ruby_sources

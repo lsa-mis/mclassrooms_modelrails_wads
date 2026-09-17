@@ -6,7 +6,7 @@ en:
         identity: "You"
       strip_heading:
         identity: "Account settings"
-        workspace: "Workspace settings"
+        workspace: "%{Workspace} settings"
       items:
         profile: "Profile"
         notifications: "Notifications"
@@ -25,7 +25,7 @@ en:
     pages:
       profile_personal:
         h1: "Your profile"
-        description: "Visible in every workspace. Only you can edit this."
+        description: "Visible in every %{workspace}. Only you can edit this."
       notifications:
         h1: "Notifications"
         description: "Choose how and when you hear from this app."
@@ -37,7 +37,7 @@ en:
         description: "Theme and visual preferences for this device."
       workspace_profile:
         h1_html: "Profile"
-        description: "Workspace identity — name, logo, and primary color."
+        description: "%{Workspace} identity — name, logo, and primary color."
       workspace_limits_and_plan:
         h1_html: "Limits &amp; Plan"
         description: "Capacity and plan — visible to all members, editable by Owner and Admin."

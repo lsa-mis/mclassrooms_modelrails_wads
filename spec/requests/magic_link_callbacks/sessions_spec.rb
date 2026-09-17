@@ -36,6 +36,17 @@ RSpec.describe "Magic Link Callback Sessions", type: :request do
       expect(response).to redirect_to(new_session_path)
     end
 
+    it "refuses a suspended user's otherwise-valid link" do
+      suspended_user = create(:user, :suspended)
+      token = MagicLinkToken.create_for_email(suspended_user.email_address)
+
+      post magic_link_callback_session_path(token)
+
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("sessions.create.suspended"))
+      expect(suspended_user.sessions.count).to eq(0)
+    end
+
     # #846. A second POST of the token that just signed this browser in — a
     # double-click, a browser retry, a Capybara re-dispatch on a loaded shard.
     # The token is spent, so `consume!` returns nil and the old code answered

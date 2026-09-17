@@ -23,6 +23,11 @@ class Workspace < ApplicationRecord
       memberships.kept.count >= max_members
     end
 
+    # Same shape as at_capacity?, for the other tenant limit: `>=`, evaluated before the insert.
+    def at_project_capacity?
+      projects.kept.count >= max_projects
+    end
+
     # Pinned to the lowest-privilege system role; per-link role customization is deliberately deferred.
     def default_self_join_role
       Role.find_by!(slug: "member", workspace_id: nil)
@@ -37,24 +42,31 @@ class Workspace < ApplicationRecord
         lock!
         raise NotAdmittableError unless admittable?
         existing = memberships.find_by(user: user)
-        if existing&.discarded?
-          existing.reactivate!(granted_by: granted_by, self_join: self_join)
-          existing
-        elsif existing
-          raise AlreadyMember unless on_existing == :adopt || TenancyConfig.shared?
-          # Rails runs commit callbacks on the LAST saved instance, so this second instance must carry
-          # the markers too. See /docs/developer/notifications (The actor rule).
-          existing.granted_by = granted_by
-          existing.self_join = self_join
-          if on_existing != :adopt && existing.role_id != role.id
-            # :shared placeholder reconciliation — see /docs/developer/presets.
-            existing.update!(role: role)
+        membership =
+          if existing&.discarded?
+            existing.reactivate!(granted_by: granted_by, self_join: self_join)
+            existing
+          elsif existing
+            raise AlreadyMember unless on_existing == :adopt || TenancyConfig.shared?
+            # Rails runs commit callbacks on the LAST saved instance, so this second instance must carry
+            # the markers too. See /docs/developer/notifications (The actor rule).
+            existing.granted_by = granted_by
+            existing.self_join = self_join
+            if on_existing != :adopt && existing.role_id != role.id
+              # :shared placeholder reconciliation — see /docs/developer/presets.
+              existing.update!(role: role)
+            end
+            existing
+          else
+            raise AtCapacity if at_capacity?
+            memberships.create!(user: user, role: role, granted_by: granted_by, self_join: self_join)
           end
-          existing
-        else
-          raise AtCapacity if at_capacity?
-          memberships.create!(user: user, role: role, granted_by: granted_by, self_join: self_join)
-        end
+        # Joining a workspace is onboarding under every preset: the first-run
+        # wizard exists for a user who has nowhere to go. Stamped at this one
+        # membership-grant seam so an invitee or link-joiner never lands in a
+        # wizard step that refuses their role. See /docs/developer/presets-none.
+        user.update!(onboarded_at: Time.current) unless user.onboarded?
+        membership
       end
     end
   end

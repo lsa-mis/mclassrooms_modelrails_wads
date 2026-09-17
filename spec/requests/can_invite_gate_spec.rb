@@ -1,4 +1,5 @@
 require "rails_helper"
+require "rake"
 
 # D5's deliverable is the WRITER INVENTORY, not just the predicate: every path
 # that stamps `authentications.verified_at` is asserted against here, so a new
@@ -9,7 +10,7 @@ RSpec.describe "User#can_invite? — verified_at writer inventory", type: :reque
 
   describe "writers that legitimately prove the address" do
     it "email round-trip: Authentication#verify! satisfies the gate" do
-      auth = user.authentications.create!(provider: "email", uid: user.email_address)
+      auth = user.authentications.create!(provider: "email")
       expect(user.reload.can_invite?).to be(false)
 
       auth.verify!
@@ -21,6 +22,18 @@ RSpec.describe "User#can_invite? — verified_at writer inventory", type: :reque
       user.authentications.create!(provider: "google", uid: "g-1",
                                    email: user.email_address, verified_at: Time.current)
 
+      expect(user.reload.can_invite?).to be(true)
+    end
+
+    # An operator vouching for an address they typed on the command line —
+    # `rails operators:grant`, the :shared seed's reasoning for its bootstrap
+    # owner. The task creates the row; it never converts a pending one.
+    it "operator vouching: operators:grant creates a verified email authentication" do
+      RakeTasks.load_once
+      Rake::Task["operators:grant"].reenable
+      Rake::Task["operators:grant"].invoke(user.email_address)
+
+      expect(user.authentications.email.sole.verified_at).to be_present
       expect(user.reload.can_invite?).to be(true)
     end
   end

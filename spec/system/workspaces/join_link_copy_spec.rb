@@ -29,16 +29,13 @@ RSpec.describe "Join link copy control", type: :system do
     expect(page).to have_text(I18n.t("workspaces.settings.join_policy.show_once_warning_lead"))
   end
 
-  it "renders the reveal as a copy field wired to the warning; focus lands on the main landmark (#1036)" do
+  it "renders the reveal as a copy field wired to the warning and lands focus on the copy trigger" do
     expect(page).to have_css("input[readonly][data-copy-target='source'][value^='http']")
     expect(page).to have_css("button[data-action='copy#copy'][aria-describedby='join_link_show_once_warning'][autofocus]")
     expect(page).to have_css("label.sr-only", text: link_noun, visible: :all)
     expect(page).to have_css("[data-turbo-temporary] [data-controller='copy']")
     expect(page).to have_no_css("[data-controller='clipboard']")
-    # Deviation from the trigger holding focus: this redirect targets the same URL
-    # under Turbo morph, which skips Turbo's autofocus-on-render, so
-    # navigation_focus.js's landmark handler wins deterministically. Tracked as #1036.
-    expect(page).to have_css("#main-content:focus")
+    expect(page).to have_css("button[data-action='copy#copy']:focus")
   end
 
   it "copies the URL and announces it without changing the button's text" do

@@ -11,7 +11,7 @@ RSpec.describe "Invitation decline and block", type: :system do
     # two branches leaves only T28 red.
     expect(page).to have_content(
       I18n.t("invitation_declines.show.body",
-             workspace: invitation.invitable.name, inviter: inviter.email_address)
+             workspace_name: invitation.invitable.name, inviter: inviter.email_address)
     )
     expect(page).to have_content(
       I18n.t("invitation_declines.show.block_hint", inviter: inviter.email_address)

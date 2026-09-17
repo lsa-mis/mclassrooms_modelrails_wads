@@ -61,4 +61,28 @@ RSpec.describe "Flow B: new user signs up via workspace join link", type: :reque
     # The email auth is verified immediately (magic-link proves email ownership).
     expect(auth.verified_at).to be_present
   end
+
+  # What Workspace::AdmissionError buys (#689): a fifth outcome added to #admit
+  # is handled by the rescue that already handles the other three, instead of
+  # 500ing a signup because nobody remembered to extend the list.
+  context "when #admit raises an admission outcome this code predates" do
+    before do
+      stub_const("Workspace::FifthOutcome", Class.new(Workspace::AdmissionError))
+      allow_any_instance_of(Workspace).to receive(:admit).and_raise(Workspace::FifthOutcome)
+    end
+
+    it "rolls the signup back and re-offers sign-in rather than erroring out" do
+      post workspace_join_path(workspace, token: link.plaintext_token)
+      token = MagicLinkToken.create_for_email("newcomer@example.com")
+
+      expect {
+        post magic_link_callback_path(token: token), params: {
+          user: { first_name: "New", last_name: "Comer" }
+        }
+      }.not_to change(User, :count)
+
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("magic_link_callbacks.create.invalid"))
+    end
+  end
 end

@@ -61,7 +61,7 @@ RSpec.describe WorkspaceInvitationResentNotifier, type: :notifier do
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_invitation_resent.message",
                invitee_email: "newcomer@example.com",
-               workspace: workspace.name)
+               workspace_name: workspace.name)
       )
     end
 

@@ -24,7 +24,10 @@ RSpec.describe "sign_in_via_form contract", type: :system do
       .to change { MagicLinkToken.where(email: user.email_address).count }.by(1)
   end
 
-  it "leaves that token consumed, so it cannot be replayed" do
+  # "Redeemed a second time", not "replayed": a spent link CAN be presented
+  # again and is answered courteously for its owner (already signed in). What
+  # it cannot do is start a session — consume! is single-use.
+  it "leaves that token consumed, so it cannot be redeemed a second time" do
     sign_in_via_form(user)
 
     tokens = MagicLinkToken.where(email: user.email_address)

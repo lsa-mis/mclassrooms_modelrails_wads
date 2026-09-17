@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "shared/_user_menu_avatar_button.html.erb", type: :view do
-  let(:user) { create(:user, first_name: "Dave", last_name: "Chmura") }
+  let(:user) { create(:user, first_name: "Nell", last_name: "Ramirez") }
 
   it "renders a button with id #user-menu-button (stable test hook)" do
     render partial: "shared/user_menu_avatar_button", locals: { user: user }
@@ -13,7 +13,7 @@ RSpec.describe "shared/_user_menu_avatar_button.html.erb", type: :view do
 
   it "carries a static aria-label naming the user (D1: bell aria moved to bell link)" do
     render partial: "shared/user_menu_avatar_button", locals: { user: user }
-    expect(rendered).to match(/aria-label="Open user menu for Dave Chmura"/)
+    expect(rendered).to match(/aria-label="Open user menu for Nell Ramirez"/)
   end
 
   it "does NOT carry aria-labelledby pointing to a broadcast-replaceable frame (D1)" do

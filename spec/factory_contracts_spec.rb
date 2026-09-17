@@ -20,10 +20,10 @@ RSpec.describe "the :user factory" do
     expect(auth).to be_verified
   end
 
-  it "uses the user's own address as the authentication uid, as production does" do
+  it "uses the user's own id as the authentication uid, as production does" do
     user = create(:user)
 
-    expect(user.authentications.sole.uid).to eq(user.email_address)
+    expect(user.authentications.sole.uid).to eq(user.id.to_s)
   end
 
   it "produces a user who can invite, with no trait to remember" do
@@ -85,10 +85,10 @@ end
 # (provider, uid) index — #456's collision class, patched downstream but never
 # removed at the source (#856). These pin uniqueness by construction.
 RSpec.describe "the :authentication factory" do
-  it "mirrors production: an email authentication's uid is its user's address" do
+  it "mirrors production: an email authentication's uid is its user's id" do
     auth = create(:authentication)
 
-    expect(auth.uid).to eq(auth.user.email_address)
+    expect(auth.uid).to eq(auth.user.id.to_s)
   end
 
   it "keeps OAuth uids unique even when the PRNG repeats itself" do

@@ -11,7 +11,7 @@ RSpec.describe "media:warm_variants" do
   let(:workspace) { create(:workspace, slug: "warm-rake-ws", personal: false) }
   let(:room)      { create(:room, workspace: workspace) }
 
-  before(:all) { Rails.application.load_tasks }
+  before(:all) { RakeTasks.load_once }
   before { Rake::Task["media:warm_variants"].reenable }
 
   around do |example|

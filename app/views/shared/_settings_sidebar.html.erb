@@ -2,7 +2,11 @@
     (256px, surface bg, right border). Contents are the account (identity)
     settings items; below md the same source renders as an in-page section-nav
     strip (see _section_nav_strip) — not this <aside>. -%>
+<%# Sticky to match the workspace sidebar (_workspace_sidebar) — the two rails
+    are the same chrome and must not diverge in scroll behaviour. Offset and
+    height track the header's inner h-16. -%>
 <aside aria-label="<%= t("settings.sidebar.aria_label") %>"
-       class="w-64 shrink-0 px-4 py-6 border-r border-border bg-surface">
+       class="w-64 shrink-0 px-4 py-6 border-r border-border bg-surface
+              md:sticky md:top-16 md:h-[calc(100dvh-4rem)] md:overflow-y-auto">
   <%= render "shared/identity_settings_sidebar_items" %>
 </aside>

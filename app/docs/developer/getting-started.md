@@ -27,7 +27,7 @@ Or step by step:
 ```bash
 bundle install
 rails db:prepare
-rails db:seed       # Seeds default roles
+rails db:seed       # Seeds default roles (and, under the :shared preset, the bootstrap owner's operatorship)
 bin/dev             # Start development server
 ```
 
@@ -189,9 +189,11 @@ Biscuit's gem normally renders a floating "Manage cookies" button in the bottom-
 | `bin/parallel-rspec` | Run full test suite in parallel (CI parity) |
 | `bundle exec rspec` | Run focused specs single-process |
 | `bundle exec brakeman` | Security scan |
-| `rails users:unlock[email]` | Unlock a locked account |
-| `rails users:verify[email]` | Manually verify an email |
-| `rails users:suspend[email]` | Suspend a user |
+| `rails 'users:unlock[email]'` | Unlock a locked account |
+| `rails 'users:verify[email]'` | Manually verify an email |
+| `rails 'users:suspend[email]'` | Suspend a user |
+
+The quotes around a bracketed task are for zsh, the shell a Mac opens by default: unquoted square brackets are a glob pattern, and the command stops at "no matches found" before Rails sees it.
 
 ## CI and Git Hooks
 

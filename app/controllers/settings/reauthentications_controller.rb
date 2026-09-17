@@ -4,6 +4,10 @@ module Settings
   # Passkeys::ReauthenticationsController. Success stamps the current session's
   # reauthenticated_at and returns to the page the user came from.
   class ReauthenticationsController < ApplicationController
+    # An operator under the :none preset can reach here with onboarded_at:
+    # nil (Operations::BaseController forces reauth but skips onboarding) —
+    # this interstitial must stay reachable or that gate strands them.
+    skip_onboarding_requirement
     layout "settings"
 
     rate_limit to: 10, within: 3.minutes, only: :create,

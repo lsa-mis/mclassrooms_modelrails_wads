@@ -43,16 +43,43 @@ registry:
 
 ### 2. Set secrets
 
-Add to `.kamal/secrets`:
+**`.kamal/secrets` is tracked in git. Never put a credential in it — put a reference.**
+
+Kamal reads that file (and its `-common` / `.<destination>` siblings) with dotenv
+plus inline command substitution, so every value resolves at deploy time. Two
+forms work, and both are OS-neutral:
 
 ```bash
-KAMAL_REGISTRY_PASSWORD=<your-github-pat-or-registry-token>
-RAILS_MASTER_KEY=<contents of config/credentials/production.key>
+# From the environment of whoever runs `kamal deploy` — CI provides these
+# from its own secret store.
+KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+
+# Or fetched from a password manager at deploy time.
+KAMAL_REGISTRY_PASSWORD=$(op read op://YourVault/ghcr/token)
 ```
 
-The template uses per-environment credentials (`bin/rails credentials:edit --environment production`, see [Forking](forking)), so the key is `config/credentials/production.key` — not the single `config/master.key` a default `rails new` would use. The tracked `.kamal/secrets` already reads the right file; this is the value to put in a managed platform's settings.
+The shipped file already uses the reference form for `RAILS_MASTER_KEY`; follow
+it. `spec/code_smells/kamal_secrets_hold_no_literals_spec.rb` fails the suite if
+a literal appears, naming the key but never printing the value.
 
-Or copy `.env.example` to `.env` for local Kamal commands.
+Where the raw value should live, in preference order:
+
+1. **A password manager**, read inline with `$(...)`. Nothing lands on disk.
+2. **Your CI platform's secret store** (GitHub Actions secrets), exported into
+   the deploy job's environment.
+3. **An exported shell variable**, if you must — but keep it out of your shell
+   profile. Anything exported there is inherited by *every* process you launch
+   and shows up in process-environment dumps.
+
+For `RAILS_MASTER_KEY`: the template uses per-environment credentials
+(`bin/rails credentials:edit --environment production`, see [Forking](forking)),
+so the key is `config/credentials/production.key` — not the single
+`config/master.key` a default `rails new` would use. The tracked
+`.kamal/secrets` already reads that file; the value itself is what goes into a
+managed platform's settings.
+
+> A root `.env` does **not** reach Kamal. Kamal's dotenv parses its own secrets
+> files, not `.env` — that file is for local Rails only.
 
 ### 3. Bootstrap and deploy
 
@@ -62,6 +89,8 @@ bin/kamal deploy    # Subsequent deploys
 ```
 
 The `docker_build` CI job (see [Getting Started](/docs/developer/getting-started)) verifies your production image builds successfully on every PR, so the first time you run `kamal deploy` you're not also debugging Dockerfile issues.
+
+Once the app is up, mint the first instance operator — see [Instance operations: Day one](operations#day-one-on-an-invite-only-instance).
 
 ## Production-safety invariants
 

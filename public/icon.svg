@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- The favicon: the same mark as app/views/shared/_site_mark.html.erb, kept as a
+     second copy on purpose. It renders outside the document, so the app's .dark
+     class can't reach it; prefers-color-scheme is the only theming it can have. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <style>
     .logo-fill { fill: #1f2937; }

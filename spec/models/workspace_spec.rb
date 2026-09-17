@@ -204,6 +204,19 @@ RSpec.describe Workspace, type: :model do
         expect(klass.ancestors).not_to include(ActiveRecord::RecordInvalid)
       end
     end
+
+    # The raise sites draw the boundary: these three are every outcome #admit
+    # can raise, so a caller that treats "could not admit" as one case names one
+    # class — and a fourth admission outcome is caught without editing it (#689).
+    it "descend from Workspace::AdmissionError" do
+      [ Workspace::AlreadyMember, Workspace::AtCapacity, Workspace::NotAdmittableError ].each do |klass|
+        expect(klass.ancestors).to include(Workspace::AdmissionError)
+      end
+    end
+
+    it "exclude the lifecycle guard, which is raised from archive!/discard!, not #admit" do
+      expect(Workspace::HomeWorkspaceProtectedError.ancestors).not_to include(Workspace::AdmissionError)
+    end
   end
 
   # #676: workspace INSERT + owner membership commit or roll back TOGETHER —
@@ -244,6 +257,115 @@ RSpec.describe Workspace, type: :model do
 
       expect(workspace).not_to be_persisted
       expect(workspace.errors[:name]).to be_present
+    end
+  end
+
+  describe ".create_for_owner_email" do
+    let(:operator) { create(:user) }
+
+    it "owns the workspace by an existing user's account, with no invitation" do
+      existing_owner = create(:user)
+
+      workspace = nil
+      expect {
+        workspace = Workspace.create_for_owner_email(
+          { name: "Acme", owner_email: existing_owner.email_address }, operator: operator
+        )
+      }.not_to change(Invitation, :count)
+
+      expect(workspace.owners).to contain_exactly(existing_owner)
+    end
+
+    it "owns the workspace by the operator and invites an unknown email as Owner" do
+      workspace = nil
+      expect {
+        workspace = Workspace.create_for_owner_email(
+          { name: "Acme", owner_email: "fresh@example.com" }, operator: operator
+        )
+      }.to change(Invitation, :count).by(1)
+
+      expect(workspace.owners).to contain_exactly(operator)
+      invitation = workspace.invitations.sole
+      expect(invitation.email).to eq("fresh@example.com")
+      expect(invitation.role.slug).to eq("owner")
+      expect(invitation.invited_by).to eq(operator)
+    end
+
+    it "does not persist a malformed owner_email, and issues no invitation" do
+      # See the blank-email example below: forces the operator's own
+      # onboarded workspace to exist before the count is measured.
+      operator
+      workspace = nil
+      expect {
+        workspace = Workspace.create_for_owner_email(
+          { name: "Acme", owner_email: "not-an-email" }, operator: operator
+        )
+      }.to change(Workspace, :count).by(0).and change(Invitation, :count).by(0)
+
+      expect(workspace).not_to be_persisted
+      expect(workspace.errors[:owner_email]).to be_present
+    end
+
+    # The silent-skip guard: bulk_invite! swallows a malformed/blank email
+    # rather than raising, so a blank owner_email must fail Workspace's own
+    # validation before this verb ever reaches bulk_invite! — otherwise the
+    # workspace would be silently handed to the operator with no invitation.
+    it "does not persist a blank owner_email, and issues no invitation" do
+      # Created outside the block: create(:user) onboards its own workspace
+      # (User#onboard_workspace), which would otherwise read as this verb's
+      # count when it's really the operator's.
+      operator
+      workspace = nil
+      expect {
+        workspace = Workspace.create_for_owner_email(
+          { name: "Acme", owner_email: "" }, operator: operator
+        )
+      }.to change(Workspace, :count).by(0).and change(Invitation, :count).by(0)
+
+      expect(workspace).not_to be_persisted
+      expect(workspace.errors[:owner_email]).to be_present
+    end
+
+    # A POST with no owner_email key at all reaches the verb as nil, and the
+    # format validation's allow_nil would let the save through — the coercion
+    # to "" is what makes a missing key the same failure as a blank one.
+    it "does not persist when the owner_email key is missing entirely" do
+      operator
+      workspace = nil
+      expect {
+        workspace = Workspace.create_for_owner_email({ name: "Acme" }, operator: operator)
+      }.to change(Workspace, :count).by(0).and change(Invitation, :count).by(0)
+
+      expect(workspace).not_to be_persisted
+      expect(workspace.errors[:owner_email]).to be_present
+    end
+
+    it "strips and case-folds an existing user's email before matching and validating" do
+      existing_owner = create(:user)
+
+      workspace = Workspace.create_for_owner_email(
+        { name: "Acme", owner_email: "  #{existing_owner.email_address.upcase}\n" }, operator: operator
+      )
+
+      expect(workspace).to be_persisted
+      expect(workspace.owners).to contain_exactly(existing_owner)
+    end
+
+    it "issues the invitation after create_owned's transaction has committed" do
+      # open_transactions, not transaction_open?: transactional fixtures
+      # already hold one transaction open for the whole example, so
+      # transaction_open? would read true both inside and after
+      # create_owned's block and couldn't tell the two apart.
+      baseline = Workspace.connection.open_transactions
+
+      allow(Invitation).to receive(:bulk_invite!).and_wrap_original { |m, **kw|
+        expect(Workspace.connection.open_transactions).to eq(baseline)
+        m.call(**kw)
+      }
+
+      Workspace.create_for_owner_email({ name: "Acme", owner_email: "fresh@example.com" }, operator: operator)
+
+      expect(Invitation).to have_received(:bulk_invite!)
     end
   end
   # #921. Every tracked write in a workspace leaves an activity_logs row

@@ -35,8 +35,10 @@ module Signupable
     settle_pending_claims(claims)
     flash.now[:alert] = I18n.t("registrations.create.invitation_consumed")
     false
-  rescue ActiveRecord::RecordInvalid, Workspace::NotAdmittableError,
-         Workspace::AlreadyMember, Workspace::AtCapacity
+  # Workspace::AdmissionError, not the three subclasses by name: signup treats every
+  # admission outcome the same way (roll back, surface @user.errors), so a fourth
+  # outcome added to #admit belongs here without an edit (#689).
+  rescue ActiveRecord::RecordInvalid, Workspace::AdmissionError
     settle_pending_claims(claims)
     false
   end

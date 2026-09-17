@@ -10,7 +10,7 @@
 # Batched delete_all: SQLite serializes writers; no destroy callbacks or cascades.
 # See /docs/developer/architecture (Concurrency).
 class WebauthnChallengesSweepJob < ApplicationJob
-  queue_as :default
+  queue_as :low
 
   # Generous versus the 5-minute TTL; covers consumed rows too (their
   # expires_at is equally in the past by then).

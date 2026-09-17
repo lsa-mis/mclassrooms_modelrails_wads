@@ -22,10 +22,30 @@ document.addEventListener("turbo:load", () => {
   if (!pendingNavigationFocus) return
   pendingNavigationFocus = false
 
-  const target = document.getElementById("main-content")
   const parked = document.activeElement === document.body || document.activeElement === null
+  if (!parked) return
+
+  // A same-URL redirect on a morphing page renders through Turbo's
+  // MorphingPageRenderer, whose shouldAutofocus is false — so the response's
+  // autofocus never fires and focus reaches here still parked (#1036). Honour it
+  // before the landmark: the destination did nominate a focus target, which is
+  // exactly the "destinations that focus something themselves" case above. On a
+  // non-morph render Turbo's own autofocus has already run and focus is not
+  // parked, so this never fires there.
+  // Same filter as Turbo's own queryAutofocusableElement, so the morph path picks the
+  // element the non-morph path would have picked: the first [autofocus] that is not
+  // inert, disabled, hidden, or inside a closed details/dialog.
+  const autofocused = Array.from(document.querySelectorAll("[autofocus]")).find((el) =>
+    el.closest("[inert], :disabled, [hidden], details:not([open]), dialog:not([open])") === null &&
+    typeof el.focus === "function")
+  if (autofocused) {
+    autofocused.focus({ preventScroll: true })
+    if (document.activeElement === autofocused) return
+  }
+
+  const target = document.getElementById("main-content")
   // preventScroll: a fresh navigation already renders at the top, and the
   // default focus scroll nudges content under the sticky header on small
   // viewports (surfaced as a transparent-over-media audit failure).
-  if (target && parked) target.focus({ preventScroll: true })
+  if (target) target.focus({ preventScroll: true })
 })

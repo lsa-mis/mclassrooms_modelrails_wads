@@ -37,6 +37,36 @@ class ForkFlow
   # converted into a push-disabled upstream.
   TEMPLATE_REMOTE = %r{[:/]modelrails_base(\.git)?\z}
 
+  # #789 — every git call below is `-C @root`-scoped, and `-C` LOSES to an
+  # inherited GIT_DIR: with GIT_DIR set, `git -C x init` re-initialises $GIT_DIR
+  # (flipping core.bare when $GIT_DIR is a worktree gitdir) and `git -C x config`
+  # writes $GIT_DIR/config, which for a linked worktree is the shared repository
+  # config. Git hooks export GIT_DIR (man 5 githooks), so anything invoking this
+  # script from a hook inherits one.
+  #
+  # The GIT_CONFIG_* family is here for completeness rather than for #789 — hooks
+  # do not export it — because any variable that can redirect a config write
+  # belongs in this set: GIT_CONFIG sends `git config` writes to an arbitrary
+  # file, and GIT_CONFIG_GLOBAL/SYSTEM/COUNT redirect or inject reads.
+  # GIT_CEILING_DIRECTORIES is deliberately absent: it steers repository
+  # discovery, which is already settled once GIT_DIR is nil.
+  #
+  # A nil value deletes the key in the child process, restoring `-C` precedence.
+  # Passed as the first argument to every spawn — including bin/setup, which
+  # shells git itself.
+  CLEAN_GIT_ENV = {
+    "GIT_DIR" => nil,
+    "GIT_WORK_TREE" => nil,
+    "GIT_INDEX_FILE" => nil,
+    "GIT_COMMON_DIR" => nil,
+    "GIT_OBJECT_DIRECTORY" => nil,
+    "GIT_NAMESPACE" => nil,
+    "GIT_CONFIG" => nil,
+    "GIT_CONFIG_GLOBAL" => nil,
+    "GIT_CONFIG_SYSTEM" => nil,
+    "GIT_CONFIG_COUNT" => nil
+  }.freeze
+
   # Single source of truth: which files carry template identity, and the exact
   # token in each. Static so spec/code_smells can assert the tokens still exist
   # upstream — a token that quietly disappears is indistinguishable from a
@@ -162,7 +192,33 @@ class ForkFlow
   def upstream_configured?
     url, url_status = capture("git", "-C", @root, "remote", "get-url", "upstream")
     push_url, = capture("git", "-C", @root, "remote", "get-url", "--push", "upstream")
-    url_status.zero? && url.match?(TEMPLATE_REMOTE) && push_url == "DISABLED"
+    url_status.zero? && template_remote?(url) && push_url == "DISABLED"
+  end
+
+  # A synced mirror of the template lives under another name, so the name
+  # pattern can't know it; --template names it, and only URL equality
+  # (.git-insensitive) matches — never a looser pattern, for the reason above.
+  def template_remote?(url)
+    return true if url.match?(TEMPLATE_REMOTE)
+
+    given = @opts[:template].to_s
+    !given.empty? && normalize_url(url) == normalize_url(given)
+  end
+
+  def normalize_url(url) = url.to_s.strip.delete_suffix(".git").chomp("/")
+
+  # Git has no record of what a fork was forked from; GitHub does. Asked only
+  # when nothing else names the template, and answered only when `gh` is
+  # installed and origin is a GitHub repo with a parent — otherwise --template.
+  def github_parent(origin_url)
+    match = origin_url.match(%r{github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?/?\z})
+    return nil unless match
+
+    field = origin_url.start_with?("https://") ? "clone_url" : "ssh_url"
+    url, status = capture("gh", "api", "repos/#{match[:owner]}/#{match[:repo]}", "--jq", ".parent.#{field} // empty")
+    status.zero? && !url.empty? ? url : nil
+  rescue Errno::ENOENT
+    nil
   end
 
   def current_branch
@@ -277,13 +333,14 @@ class ForkFlow
     say("\n== Remotes ==")
     origin_url, origin_status = capture("git", "-C", @root, "remote", "get-url", "origin")
     origin_present = origin_status.zero?
-    @template_url = origin_url if origin_present && origin_url.match?(TEMPLATE_REMOTE)
+    origin_is_template = origin_present && template_remote?(origin_url)
+    @template_url = @opts[:template] || (origin_is_template ? origin_url : nil)
     @baseline_sha, = capture("git", "-C", @root, "rev-parse", "HEAD")
 
     if upstream_configured?
       skip("upstream remote configured, push DISABLED")
       @template_url ||= capture("git", "-C", @root, "remote", "get-url", "upstream").first
-    elsif @template_url && upstream_taken?
+    elsif origin_is_template && upstream_taken?
       # Diagnosed before the first mutation: `remote rename` would fail on the
       # existing name, leaving origin's push URL already disabled and the user
       # stranded halfway through the surgery.
@@ -294,7 +351,7 @@ class ForkFlow
         Then either fix it by hand (see /docs/developer/forking) or remove it:
           git remote remove upstream
       MSG
-    elsif @template_url
+    elsif origin_is_template
       # Push URL first: if the rename succeeded and this failed, the fork would
       # be left with a live, writable push URL aimed at the template.
       sh("git", "-C", @root, "remote", "set-url", "--push", "origin", "DISABLED")
@@ -303,9 +360,13 @@ class ForkFlow
       # exists `git pull` would merge the TEMPLATE into your work.
       sh("git", "-C", @root, "branch", "--unset-upstream") if tracking_branch?
       origin_present = false
+    elsif (@template_url ||= (github_parent(origin_url) unless @opts[:origin]))
+      how = @opts[:template] ? "--template" : "origin's GitHub parent"
+      say("  ✓ template #{@template_url} (#{how}) — bin/setup adds it as the push-disabled upstream remote")
     else
       say("  ! no template remote found to convert — verify by hand:")
       say("    git remote -v   # upstream fetch = the template, upstream push = DISABLED")
+      say("    or name it: bin/fork --template URL")
     end
 
     if origin_present
@@ -362,7 +423,7 @@ class ForkFlow
     end
     (RENAME_FILES - planned.keys).each { |path| skip(path) }
 
-    act("write #{FORK_FILE} (committed provenance — see the forking guide)")
+    act("write #{FORK_FILE} (template_url: #{@template_url || 'none'} — committed provenance — see the forking guide)")
     write_fork_file(
       "name"                => snake,
       "product_name"        => title,
@@ -378,6 +439,10 @@ class ForkFlow
     @todos << "Set a real support address in config/locales/en/pages.en.yml " \
               "(now support@#{snake}.example — an unmistakable placeholder, not a mailbox)."
     @todos << "Rewrite marketing copy: config/locales/en/pages.en.yml + app/views/pages/ (fork-owned)."
+    @todos << "Replace the brand mark: app/views/shared/_site_mark.html.erb (one <svg>) and the icon set in public/ " \
+              "(fork-owned — bin/fork renames strings, never artwork)."
+    @todos << "Name your nouns, if the product's aren't workspace/project: config/vocabulary.local.yml " \
+              "(fork-owned — every template string follows, and so do yours when they say %{project}, not the word)."
 
     commit!("Rename identity: #{title}", FORK_FILE, *RENAME_FILES)
   end
@@ -516,7 +581,7 @@ class ForkFlow
     say("\n== Running bin/setup ==")
     # --skip-server: bin/setup ends with `exec bin/dev`, which would replace this
     # process and start a server nobody asked for.
-    return if system("bin/setup", "--skip-server", chdir: @root)
+    return if system(CLEAN_GIT_ENV, "bin/setup", "--skip-server", chdir: @root)
 
     say("\n  ! bin/setup failed — but the fork itself is already committed, so there")
     say("    is nothing here to redo. Fix the setup problem and re-run bin/setup.")
@@ -548,11 +613,11 @@ class ForkFlow
     say("  $ #{cmd.reject { |c| c == @root || c == '-C' }.join(' ')}")
     return true if dry_run?
 
-    system(*cmd) || abort("bin/fork: command failed: #{cmd.join(' ')}")
+    system(CLEAN_GIT_ENV, *cmd) || abort("bin/fork: command failed: #{cmd.join(' ')}")
   end
 
   def capture(*cmd)
-    out = IO.popen(cmd, err: File::NULL, &:read)
+    out = IO.popen(CLEAN_GIT_ENV, cmd, err: File::NULL, &:read)
     [ out.to_s.strip, $?.exitstatus ]
   end
 
@@ -634,6 +699,7 @@ if $PROGRAM_NAME == __FILE__
     o.banner = "Usage: bin/fork [options]   (fork once, setup often)"
     o.on("--name NAME", "Project name (default: directory name; snake_cased)") { |v| options[:name] = v }
     o.on("--origin URL", "Your repository's git URL (becomes the origin remote)") { |v| options[:origin] = v }
+    o.on("--template URL", "The template's git URL when it is a mirror under another name (recorded in .fork.yml; an origin or upstream equal to it counts as the template)") { |v| options[:template] = v }
     o.on("--preset PRESET", "Tenancy preset: #{ForkFlow::PRESETS.join('/')}") { |v| options[:preset] = v }
     o.on("--yes", "Non-interactive: accept defaults, never prompt") { options[:yes] = true }
     o.on("--dry-run", "Print the plan without changing anything") { options[:dry_run] = true }

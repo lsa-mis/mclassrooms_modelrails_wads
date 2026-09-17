@@ -1,24 +1,21 @@
 <%# locals: (current_workspace:) -%>
-<%# Chrome-free workspace-sidebar contents — workspace nav items.
-    Rendered inside `_workspace_sidebar` (which adds the <aside> landmark
-    + sidebar visual chrome for the desktop column). Below md, the same
-    item source renders as an in-page section-nav strip instead (see
-    _section_nav_strip) — not inside this partial.
-    The workspace switcher now lives exclusively in the header
-    (#workspace-switcher-button, Phase 2b) — not in the sidebar.
+<%# Chrome-free workspace-sidebar contents — the workspace switcher (which is
+    also the workspace's identity) followed by the nav items. Rendered inside
+    `_workspace_sidebar`, which adds the <aside> landmark + sidebar chrome for
+    the desktop column. Below md, the same item source renders as an in-page
+    section-nav strip instead (see _section_nav_strip) — not inside this
+    partial.
     Items come from WorkspaceHelper#workspace_shell_nav_items — single
     source of truth, shared with the mobile strip. -%>
 <% section_label_id = "workspace-sidebar-section-label" %>
 
-<%# Visual divider + section label — matches agent_os mobile rhythm
-    and gives the desktop sidebar the same scannable layout. Section
-    label is a styled <div> programmatically associated with the <ul>
-    below via aria-labelledby (screen readers announce "Workspace,
-    list, N items" on entry). %>
-<hr class="mt-4 mb-3 border-border">
+<%= render "shared/workspace_switcher", workspace: current_workspace %>
 
-<div id="<%= section_label_id %>"
-     class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+<%# The visible "WORKSPACE" label is gone — the switcher above names the
+    workspace, so repeating the word labelled nothing. The <ul> still needs an
+    accessible name (screen readers announce "Workspace, list, N items" on
+    entry), so the label survives sr-only. %>
+<div id="<%= section_label_id %>" class="sr-only">
   <%= t("workspaces.sidebar.section_label") %>
 </div>
 

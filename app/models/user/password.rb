@@ -28,13 +28,34 @@ class User < ApplicationRecord
       locked_at > LOCK_DURATION.ago
     end
 
+    # An expired lock starts the count over: nothing else clears the counter
+    # when the hour passes, so the stale count would re-lock on the next miss.
     def register_failed_login!
+      update!(failed_login_attempts: 0, locked_at: nil) if locked_at.present? && !locked?
       increment!(:failed_login_attempts)
       update!(locked_at: Time.current) if failed_login_attempts >= MAX_FAILED_ATTEMPTS
     end
 
+    # Clears the same two columns unlock! does, but writes no audit row: the
+    # Session row created moments later is already this event's record. The
+    # operator path below needs its own row because nothing else marks that
+    # an operator, not a login, ended the lockout.
     def register_successful_login!
       update!(failed_login_attempts: 0, locked_at: nil)
+    end
+
+    # The operator control (Operations::Users::LocksController). Guards on
+    # locked_at.nil?, not locked?: an EXPIRED lock still carries a stale
+    # failed-attempt counter, and "let them try again" should clear it too.
+    # STRICT audit, like the suspension pair in User::Suspension.
+    def unlock!(by:)
+      transaction do
+        lock!
+        next :not_locked if locked_at.nil?
+        update!(failed_login_attempts: 0, locked_at: nil)
+        ActivityLog.record_security_event!(action: "user.unlocked", user: self, actor: by, visibility: "admin")
+        :unlocked
+      end
     end
 
     # The reload is the idempotence guard (#826): a stale digest would otherwise write a second audit row.

@@ -56,11 +56,20 @@ RSpec.describe WorkspaceNavHelper, type: :helper do
   describe "#workspace_shell_nav_items" do
     before { allow(helper).to receive(:current_page?).and_return(false) }
 
-    it "omits Settings for a personal workspace (Overview only — no Projects in this fork)" do
-      ws = create(:workspace, personal: true)
-      allow(Current).to receive(:workspace).and_return(ws)
-      labels = helper.workspace_shell_nav_items.map { |i| i[:label] }
-      expect(labels).to eq([ I18n.t("workspaces.sidebar.overview") ])
+    # Personal workspaces used to omit Settings and offer a bespoke "Customize"
+    # modal holding the same two fields the Profile page already served. One
+    # workspace, one shape — both kinds now get the same three items.
+    it "gives a personal workspace the same items as an org" do
+      personal = create(:workspace, personal: true)
+      org = create(:workspace, personal: false)
+
+      allow(Current).to receive(:workspace).and_return(personal)
+      personal_labels = helper.workspace_shell_nav_items.map { |i| i[:label] }
+      allow(Current).to receive(:workspace).and_return(org)
+      org_labels = helper.workspace_shell_nav_items.map { |i| i[:label] }
+
+      expect(personal_labels).to eq(org_labels)
+      expect(personal_labels).to include(I18n.t("workspaces.sidebar.settings"))
     end
 
     it "includes Settings (active: false) for an org workspace (2 items)" do

@@ -41,10 +41,15 @@ module AccountActivityHelper
   # text content. This <time> has content, so screen readers keep announcing
   # the relative text and the title is a sighted-hover affordance on top.
   #
+  def account_activity_timestamp(entry)
+    viewer_local_timestamp(entry.created_at)
+  end
+
+  # Any absolute time shown to the signed-in user, in their zone.
   # UserPreferences#time_zone is the single owner of the unset-or-unrecognized
   # fallback rule — never re-derive it here.
-  def account_activity_timestamp(entry)
+  def viewer_local_timestamp(time)
     zone = Current.user.preferences&.time_zone || Time.zone
-    l(entry.created_at.in_time_zone(zone), format: :account_activity)
+    l(time.in_time_zone(zone), format: :account_activity)
   end
 end

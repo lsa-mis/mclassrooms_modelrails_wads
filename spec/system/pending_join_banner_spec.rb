@@ -19,7 +19,7 @@ RSpec.describe "Pending join banner (drive-by re-consent)", type: :system do
 
     # Lure: park a pending join as a logged-out visitor, then sign in normally.
     visit workspace_join_path(join_workspace, token: link.plaintext_token)
-    click_button I18n.t("workspaces.joins.show.join_button", workspace: join_workspace.name)
+    click_button I18n.t("workspaces.joins.show.join_button", workspace_name: join_workspace.name)
     expect(page).to have_text(I18n.t("sessions.new.title"))
     sign_in_via_form(existing_user)
   end
@@ -28,7 +28,7 @@ RSpec.describe "Pending join banner (drive-by re-consent)", type: :system do
 
   it "does not auto-join, and offers an explicit Join / Dismiss banner" do
     expect(page).to have_css("#pending-join-banner")
-    expect(page).to have_text(I18n.t("workspaces.pending_join_banner.message", workspace: join_workspace.name))
+    expect(page).to have_text(I18n.t("workspaces.pending_join_banner.message", workspace_name: join_workspace.name))
     expect(existing_user.memberships.kept.where(workspace: join_workspace)).not_to exist
   end
 
@@ -39,14 +39,14 @@ RSpec.describe "Pending join banner (drive-by re-consent)", type: :system do
   it "scopes role=status to the message, with both buttons outside the live region" do
     banner = find("#pending-join-banner")
     expect(banner["role"]).to eq("region")
-    expect(banner).to have_css("[role='status']", text: I18n.t("workspaces.pending_join_banner.message", workspace: join_workspace.name))
+    expect(banner).to have_css("[role='status']", text: I18n.t("workspaces.pending_join_banner.message", workspace_name: join_workspace.name))
     expect(banner).to have_no_css("[role='status'] button")
     expect(banner).to have_no_css("[role='status'] form")
   end
 
   it "Join admits the user and clears the banner" do
     within "#pending-join-banner" do
-      click_button I18n.t("workspaces.pending_join_banner.join", workspace: join_workspace.name)
+      click_button I18n.t("workspaces.pending_join_banner.join", workspace_name: join_workspace.name)
     end
     expect(page).not_to have_css("#pending-join-banner")
     expect(existing_user.memberships.kept.where(workspace: join_workspace)).to exist
@@ -67,7 +67,7 @@ RSpec.describe "Pending join banner (drive-by re-consent)", type: :system do
       # pairing (text-info/border-info-border) over btn-secondary's default
       # text-text-body, unproven on bg-info-surface (panel CP3).
       expect(page).to have_css("button.btn-secondary.text-info.border-info-border[type='submit']",
-        text: I18n.t("workspaces.pending_join_banner.join", workspace: join_workspace.name))
+        text: I18n.t("workspaces.pending_join_banner.join", workspace_name: join_workspace.name))
       expect(page).to have_css("button.btn-text[type='submit']",
         text: I18n.t("workspaces.pending_join_banner.dismiss"))
     end

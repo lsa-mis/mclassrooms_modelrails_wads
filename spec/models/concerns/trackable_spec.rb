@@ -111,5 +111,36 @@ RSpec.describe Trackable, type: :model do
         expect(log.workspace).to eq(workspace)
       end
     end
+
+    # A workspace IS the workspace its own creation row belongs to. It must
+    # not fall through to Current.workspace, which is nil at signup (the row
+    # is then unreachable by any workspace-scoped feed) and is the PREVIOUS
+    # workspace when a signed-in user creates a second one from inside the
+    # first (the row lands in the wrong tenant's feed). #1084.
+    it "attributes a workspace's own creation row to itself with no workspace context" do
+      user = create(:user)
+      with_session(user) do
+        Current.workspace = nil
+        workspace = Workspace.create!(name: "Fresh", created_by: user)
+
+        log = ActivityLog.where(trackable: workspace, action: "workspace.created").last
+        expect(log).to be_present
+        expect(log.workspace).to eq(workspace)
+      end
+    end
+
+    it "attributes a workspace's creation row to itself, not to the workspace the request was in" do
+      user = create(:user)
+      previous = create(:workspace)
+      with_session(user) do
+        Current.workspace = previous
+        workspace = Workspace.create!(name: "Second", created_by: user)
+
+        log = ActivityLog.where(trackable: workspace, action: "workspace.created").last
+        expect(log).to be_present
+        expect(log.workspace).to eq(workspace)
+        expect(log.workspace).not_to eq(previous)
+      end
+    end
   end
 end

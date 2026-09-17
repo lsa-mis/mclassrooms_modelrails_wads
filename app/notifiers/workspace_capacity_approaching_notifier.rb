@@ -35,7 +35,7 @@ class WorkspaceCapacityApproachingNotifier < ApplicationNotifier
         I18n.t(
           "notifications.workspace_capacity_approaching.message",
           locale: recipient_locale,
-          workspace: event.record.name,
+          workspace_name: event.record.name,
           metric: event.params[:metric],
           current: event.params[:current],
           limit: event.params[:limit]

@@ -1,10 +1,9 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 import "navigation_focus"
+import "overlays/cache_hygiene"
 
 import "lexxy"
-
-import "markdowndocs"
 
 // Wires Active Storage direct upload app-wide (MiClassrooms Phase 4 Task 11):
 // intercepts the `submit` event on any form containing an

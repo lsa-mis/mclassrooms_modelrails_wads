@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_15_151405) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -61,6 +61,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
     t.string "visibility", default: "workspace", null: false
     t.integer "workspace_id"
     t.index ["actor_id"], name: "index_activity_logs_on_actor_id"
+    t.index ["created_at"], name: "index_activity_logs_on_created_at"
     t.index ["trackable_type", "trackable_id", "created_at"], name: "index_activity_logs_on_trackable_and_created_at"
     t.index ["workspace_id", "created_at"], name: "index_activity_logs_on_workspace_id_and_created_at"
     t.check_constraint "visibility IN ('workspace','admin','personal')", name: "activity_logs_visibility_valid"
@@ -261,7 +262,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
     t.index ["role_id"], name: "index_memberships_on_role_id"
     t.index ["user_id", "last_accessed_at"], name: "index_memberships_on_user_id_and_last_accessed_at"
     t.index ["user_id", "workspace_id"], name: "index_memberships_on_user_id_and_workspace_id", unique: true
-    t.index ["user_id"], name: "index_memberships_on_user_id"
     t.index ["workspace_id"], name: "index_memberships_on_workspace_id"
   end
 
@@ -282,6 +282,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
 
   create_table "noticed_events", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "dispatched_at"
     t.string "idempotency_key"
     t.integer "notifications_count"
     t.json "params"
@@ -289,6 +290,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
     t.string "record_type"
     t.string "type"
     t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_noticed_events_undispatched", where: "dispatched_at IS NULL"
     t.index ["idempotency_key"], name: "index_noticed_events_on_idempotency_key", unique: true, where: "idempotency_key IS NOT NULL"
     t.index ["record_type", "record_id"], name: "index_noticed_events_on_record"
   end
@@ -306,6 +308,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
     t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_on_recipient"
     t.index ["recipient_type", "recipient_id"], name: "index_noticed_notifications_unread", where: "read_at IS NULL"
     t.check_constraint "recipient_type = 'User'", name: "recipient_type_user_only_v1"
+  end
+
+  create_table "operatorships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "discarded_at"
+    t.integer "granted_by_id"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["discarded_at"], name: "index_operatorships_on_discarded_at"
+    t.index ["granted_by_id"], name: "index_operatorships_on_granted_by_id"
+    t.index ["user_id"], name: "index_operatorships_on_user_id"
+    t.index ["user_id"], name: "index_operatorships_on_user_id_where_kept", unique: true, where: "discarded_at IS NULL"
   end
 
   create_table "reauthentication_challenges", force: :cascade do |t|
@@ -531,6 +545,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
     t.string "pending_email_token"
     t.integer "personal_workspace_id"
     t.integer "primary_color", default: 210
+    t.datetime "suspended_at"
     t.datetime "updated_at", null: false
     t.string "webauthn_handle"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
@@ -578,7 +593,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
     t.index ["created_by_id"], name: "index_workspace_join_links_on_created_by_id"
     t.index ["token_digest"], name: "index_workspace_join_links_on_token_digest", unique: true
     t.index ["workspace_id", "revoked_at"], name: "index_workspace_join_links_on_workspace_id_and_revoked_at"
-    t.index ["workspace_id"], name: "index_workspace_join_links_on_workspace_id"
     t.index ["workspace_id"], name: "index_workspace_join_links_unique_active_per_workspace", unique: true, where: "revoked_at IS NULL"
   end
 
@@ -633,6 +647,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
   add_foreign_key "notes", "users", column: "author_id"
   add_foreign_key "notes", "workspaces"
   add_foreign_key "noticed_notifications", "noticed_events", column: "event_id", on_delete: :cascade
+  add_foreign_key "operatorships", "users"
+  add_foreign_key "operatorships", "users", column: "granted_by_id"
   add_foreign_key "reauthentication_challenges", "users"
   add_foreign_key "roles", "workspaces"
   add_foreign_key "room_characteristics", "rooms"

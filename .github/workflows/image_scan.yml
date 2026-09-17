@@ -59,6 +59,7 @@ permissions:
 jobs:
   scan_image:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code

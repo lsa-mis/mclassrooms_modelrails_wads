@@ -136,6 +136,32 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
   end
 
+  describe "existing OAuth login for a suspended user" do
+    let!(:user) { create(:user, :no_authentications, :suspended, email_address: "suspended-oauth@example.com") }
+    let!(:auth) do
+      user.authentications.create!(
+        provider: "google",
+        uid: "suspended-oauth-123",
+        verified_at: Time.current
+      )
+    end
+
+    before do
+      OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+        provider: "google",
+        uid: "suspended-oauth-123",
+        info: { email: "suspended-oauth@example.com", first_name: "Sus", last_name: "Pended" },
+        credentials: { token: "token", refresh_token: nil, expires_at: nil }
+      )
+    end
+
+    it "refuses sign-in with the suspended alert" do
+      get "/auth/google_oauth2/callback"
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("sessions.create.suspended"))
+    end
+  end
+
   describe "OAuth does not link to unverified email accounts" do
     let!(:unverified_user) { create(:user, :unverified_email, email_address: "unverified@example.com") }
 
@@ -1102,6 +1128,25 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       post workspace_join_path(workspace_slug: join_workspace.slug, token: join_link.plaintext_token)
     end
 
+
+    # What Workspace::AdmissionError buys (#689): OauthLink's rescue enumerated
+    # the three admission outcomes by hand, so a fourth would escape the PORO
+    # and 500 the callback instead of becoming an :failed outcome.
+    context "when #admit raises an admission outcome this code predates" do
+      before do
+        stub_const("Workspace::FifthOutcome", Class.new(Workspace::AdmissionError))
+        allow_any_instance_of(Workspace).to receive(:admit).and_raise(Workspace::FifthOutcome)
+      end
+
+      it "reports a failed link rather than erroring out" do
+        get "/auth/google_oauth2/callback"
+
+        expect(response).to redirect_to(new_session_path)
+        expect(flash[:alert]).to eq(I18n.t("omniauth_callbacks.create.linking_failed"))
+        expect(Membership.joins(:user).where(workspace: join_workspace,
+                                             users: { email_address: "joinoauth@example.com" })).not_to exist
+      end
+    end
 
     it "creates the user, auto-verifies the authentication, and admits them as a member" do
       expect {

@@ -9,7 +9,7 @@ en:
       danger: "a security alert"
       warning: "an important update"
       info: "an account update"
-      success: "a workspace update"
+      success: "an update to your %{workspace}"
     preferences:
       timezone:
         heading: "Your timezone"
@@ -21,7 +21,7 @@ en:
       categories:
         security: "Security & sign-in"
         account_access: "Account & access"
-        workspace_activity: "Workspace activity"
+        workspace_activity: "%{Workspace} activity"
         billing: "Billing"
       notification_types:
         heading: "Notification types"
@@ -35,7 +35,7 @@ en:
             title: "Account & access"
             description: "Role changes and invitation reminders."
           workspace_activity:
-            title: "Workspace activity"
+            title: "%{Workspace} activity"
             description: "Members joining or changing roles."
           billing:
             title: "Billing"
@@ -94,28 +94,28 @@ en:
       update:
         saved_announcement: "Preferences saved"
     workspace_invitation_accepted:
-      message: "%{accepter} accepted your invitation to %{workspace}"
+      message: "%{accepter} accepted your invitation to %{workspace_name}"
     workspace_invitation_resent:
-      message: "You resent the invitation to %{invitee_email} for %{workspace}"
+      message: "You resent the invitation to %{invitee_email} for %{workspace_name}"
     workspace_invitation_declined:
-      message: "%{decliner_email} declined your invitation to %{workspace}"
+      message: "%{decliner_email} declined your invitation to %{workspace_name}"
     workspace_role_changed:
-      message: "Your role in %{workspace} changed to %{new_role}"
+      message: "Your role in %{workspace_name} changed to %{new_role}"
     workspace_invitation_expiring_soon:
       message: "Your invitation expires in %{hours_remaining} hours"
     workspace_created:
-      message: "You created %{workspace}."
+      message: "You created %{workspace_name}."
     workspace_joined:
-      message: "You joined %{workspace}."
+      message: "You joined %{workspace_name}."
     workspace_member_added:
-      message: "%{added_user_name} joined %{workspace}"
+      message: "%{added_user_name} joined %{workspace_name}"
     # Third-person event-log voice, and it branches on the EVENT rather than on
     # who is reading: the removed member sees the same sentence the owners do.
     workspace_member_removed:
-      removed: "%{user_name} was removed from %{workspace}"
-      left: "%{user_name} left %{workspace}"
+      removed: "%{user_name} was removed from %{workspace_name}"
+      left: "%{user_name} left %{workspace_name}"
     workspace_capacity_approaching:
-      message: "%{workspace} is approaching its %{metric} limit (%{current} of %{limit})"
+      message: "%{workspace_name} is approaching its %{metric} limit (%{current} of %{limit})"
     passkey_added:
       message: "A new passkey was added to your account, %{user_name}. If this wasn't you, review your passkeys now."
     password_changed:
@@ -134,7 +134,7 @@ en:
         unread: "Unread"
         security: "Security"
         account_access: "Access"
-        workspace_activity: "Workspace"
+        workspace_activity: "%{Workspace}"
         billing: "Billing"
       empty_all: "You're all caught up."
       item:
@@ -157,43 +157,43 @@ en:
       subject:
         daily: "Your daily %{app_name} digest"
         weekly: "Your weekly %{app_name} digest"
-      preheader: "%{count} updates from your workspaces."
+      preheader: "%{count} updates from your %{workspaces}."
       heading_daily: "Today's updates"
       heading_weekly: "This week's updates"
       action: "View"
       footer: "You can change digest cadence or pause notifications in your preferences."
     workspace_role_changed:
-      subject: "Your role in %{workspace} has changed"
-      heading: "Your role in %{workspace} has changed"
+      subject: "Your role in %{workspace_name} has changed"
+      heading: "Your role in %{workspace_name} has changed"
       greeting: "Hi %{name},"
-      body: "Your role in %{workspace} has changed to %{new_role}."
-      action: "Open workspace"
+      body: "Your role in %{workspace_name} has changed to %{new_role}."
+      action: "Open %{workspace}"
     workspace_invitation_expiring_soon:
       subject: "Your invitation is about to expire"
       heading: "Your invitation is about to expire"
       greeting: "Hi %{name},"
-      body: "Your invitation to %{workspace} expires in %{hours_remaining} hours. Accept it before then to avoid having to request a new one."
+      body: "Your invitation to %{workspace_name} expires in %{hours_remaining} hours. Accept it before then to avoid having to request a new one."
       action: "Accept invitation"
     workspace_member_added:
-      subject: "You've been added to %{workspace}"
-      heading: "Welcome to %{workspace}"
+      subject: "You've been added to %{workspace_name}"
+      heading: "Welcome to %{workspace_name}"
       greeting: "Hi %{name},"
-      body: "You've been added to %{workspace} as %{new_role}."
-      action: "Open workspace"
+      body: "You've been added to %{workspace_name} as %{new_role}."
+      action: "Open %{workspace}"
     # The one second-person surface of this event, and the only one the removed
     # member alone receives. No action link: the workspace is exactly where
     # they can no longer go.
     workspace_member_removed:
-      subject: "You've been removed from %{workspace}"
-      heading: "You've been removed from %{workspace}"
+      subject: "You've been removed from %{workspace_name}"
+      heading: "You've been removed from %{workspace_name}"
       greeting: "Hi %{name},"
-      body: "You no longer have access to %{workspace}."
+      body: "You no longer have access to %{workspace_name}."
     workspace_capacity_approaching:
-      subject: "%{workspace} is approaching its %{metric} limit"
-      heading: "%{workspace} is approaching its %{metric} limit"
+      subject: "%{workspace_name} is approaching its %{metric} limit"
+      heading: "%{workspace_name} is approaching its %{metric} limit"
       greeting: "Hi %{name},"
-      body: "%{workspace} is using %{current} of %{limit} %{metric}. To avoid hitting the cap, consider upgrading your plan or reviewing existing %{metric}."
-      action: "Manage workspace settings"
+      body: "%{workspace_name} is using %{current} of %{limit} %{metric}. To avoid hitting the cap, consider upgrading your plan or reviewing existing %{metric}."
+      action: "Manage %{workspace} settings"
     sign_in_from_new_device:
       subject: "New sign-in from %{os}"
       heading: "New sign-in to your account"

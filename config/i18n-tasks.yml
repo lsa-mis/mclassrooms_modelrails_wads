@@ -112,12 +112,10 @@ data:
     - ['workspaces.archive.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.archived_banner', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.brandings.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
-    - ['workspaces.context_banner.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.create.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.creation_disabled', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.destroy.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.edit.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
-    - ['workspaces.identity_bar.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.index.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.join_links.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.joins.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
@@ -126,12 +124,10 @@ data:
     - ['workspaces.members.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.new.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.not_found', 'config/locales/%{locale}/workspaces.%{locale}.yml']
-    - ['workspaces.overview.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.pending_join_banner.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.plans.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.settings.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.sidebar.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
-    - ['workspaces.switcher.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.unarchive.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.update.*', 'config/locales/%{locale}/workspaces.%{locale}.yml']
     - ['workspaces.projects.*', 'config/locales/%{locale}/projects.%{locale}.yml']
@@ -245,11 +241,17 @@ ignore_unused:
   # SECURITY_ACTIONS member and is pinned instead by its rendered text in
   # spec/requests/settings/sessions_spec.rb.
   - settings.sessions.activity.user.*
-  # Consumed by Rails/Active Model rather than an explicit t() call. Caveat
-  # worth knowing: this also means a key left behind by a deleted validation
-  # will never be reported. Removing a validation means removing its key by
-  # hand — the tool cannot see that one go stale.
+  # Same dynamic lookup, for the operatorship.granted/revoked pair — looked
+  # up unconditionally by action even though admin visibility keeps these
+  # rows off this particular (personal) page, same as above.
+  - settings.sessions.activity.operatorship.*
+  # Consumed by Rails/Active Model rather than an explicit t() call (errors.*
+  # via full_message, attributes.* via human_attribute_name). Caveat worth
+  # knowing: this also means a key left behind by a deleted validation or
+  # renamed attribute will never be reported — removing it means removing
+  # this key by hand.
   - activerecord.errors.*
+  - activerecord.attributes.*
   - errors.*
   - helpers.*
   - date.*

@@ -13,6 +13,15 @@
           label: t("workspaces.edit.name_label"),
           required: true %>
 
+    <%= form.submit t("workspaces.settings.edit.sections.identity_submit") %>
+  <% end %>
+
+  <%# The logo section is a SIBLING of the name form, never inside it. The
+      identity picker renders its own <form>; the HTML parser ignores a nested
+      <form> start tag but honours its </form>, which closes the OUTER form and
+      orphans every control after it — the submit button included, so the name
+      silently could not be saved. The picker posts on its own. %>
+  <div class="space-y-4">
     <div class="space-y-2">
       <p class="block text-sm font-medium text-text-body">
         <%= t("workspaces.brandings.edit.logo_label") %>
@@ -42,7 +51,5 @@
         <% end %>
       </div>
     </div>
-
-    <%= form.submit t("workspaces.settings.edit.sections.identity_submit") %>
-  <% end %>
+  </div>
 </section>

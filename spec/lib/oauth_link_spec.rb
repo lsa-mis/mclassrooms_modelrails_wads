@@ -240,6 +240,21 @@ RSpec.describe OauthLink do
       expect(Authentication.find_by(provider: "google", uid: "uid-123")).to be_nil
     end
 
+    it "leaves no orphan user or workspace when the transaction fails after user creation (#1044)" do
+      invitation = create(:invitation, :expired, email: "person@example.com")
+
+      outcome = nil
+      expect {
+        expect {
+          outcome = described_class.new(
+            google_hash(email_verified: true), signups_open: true, invitation_token: invitation.token
+          ).claim
+        }.not_to change(User, :count)
+      }.not_to change(Workspace, :count)
+
+      expect(outcome.code).to eq(:failed)
+    end
+
     it "leaves a still-valid join token parked for a pre-existing user (drive-by guard)" do
       create(:user, email_address: "person@example.com")
       allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies)

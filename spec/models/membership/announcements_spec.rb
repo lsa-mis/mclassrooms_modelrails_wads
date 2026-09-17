@@ -167,6 +167,47 @@ RSpec.describe Membership, type: :model do
         expect(membership.reload).not_to be_discarded
       end
 
+      # #929: reactivate! held no lock and no idempotence guard, so two callers
+      # each observing discarded_at set both cleared it and both ran the
+      # after_update_commit — two re-admit notifications and two audit rows for
+      # one re-admission. Two instances of the same discarded row is the honest
+      # single-process stand-in for two racing requests: a genuine two-thread
+      # spec on SQLite would only prove the writer lock, which was never the
+      # missing half.
+      describe "a second re-admission of the same row" do
+        def reactivation_rows
+          ActivityLog.where(action: "membership.updated", trackable: membership)
+            .select { |row| row.display_action == "membership.reactivated" }
+        end
+
+        before { ActivityLog.where(trackable: membership).delete_all }
+
+        it "dispatches one re-admit notification and writes one audit row" do
+          first = Membership.find(membership.id)
+          second = Membership.find(membership.id)
+
+          # The DISPATCH, not Noticed::Event's row count: the minute-bucket
+          # idempotency key already collapses the second event, and #929's whole
+          # argument is that the key is not a guard (#928 burns the bucket).
+          # Counting events would pass today, for the wrong reason.
+          expect(WorkspaceMemberAddedNotifier).to receive(:with).once.and_call_original
+
+          first.reactivate!
+          second.reactivate!
+
+          expect(reactivation_rows.size).to eq(1)
+        end
+
+        # The guard must not turn Workspace#admit's re-admit branch into a
+        # silent no-op: admit reaches reactivate! only when the existing
+        # membership is discarded, so the guard never fires there.
+        it "still reactivates through Workspace#admit's re-admit branch" do
+          expect {
+            workspace.admit(member, role: Role.system_default!("member"), granted_by: owner)
+          }.to change { membership.reload.kept? }.from(false).to(true)
+        end
+      end
+
       # track_creation is the only writer of grant provenance, and a
       # re-admission is an UPDATE, so re-granting a previously removed member
       # recorded who did it nowhere: `changes: {discarded_at: [...]}` and an

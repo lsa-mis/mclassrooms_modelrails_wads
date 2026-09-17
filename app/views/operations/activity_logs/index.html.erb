@@ -1,0 +1,36 @@
+<% content_for(:title) { t("operations.activity_logs.index.title") } %>
+<%= render "shared/settings_page_header",
+      title: t("operations.activity_logs.index.title"),
+      description: t("operations.activity_logs.index.description") %>
+
+<% if @activities.any? %>
+  <div class="mt-4 rounded-lg border border-border bg-surface p-4">
+    <%# role="list": Tailwind's preflight sets list-style:none, which drops
+        implicit list semantics in Safari/VoiceOver — axe has no rule for
+        this, so restore it explicitly. %>
+    <ol role="list" class="space-y-3">
+      <% @activities.each do |activity_log| %>
+        <%# The workspace goes INTO the row as its context local, not around it:
+            the partial renders the <li>, so wrapping it to add a heading gives
+            every entry its own one-item <ol>. %>
+        <%# operated_workspaces (Workspace.kept) can never resolve a discarded
+            workspace's slug — link only a kept one, same guard as
+            operations/users/show.html.erb's membership rows. %>
+        <%= render "activity_logs/activity_log",
+              activity_log: activity_log,
+              context: (if activity_log.workspace.nil?
+                t("operations.activity_logs.index.instance")
+              elsif activity_log.workspace.kept?
+                link_to(activity_log.workspace.name, operations_workspace_path(activity_log.workspace), class: "btn-text btn-text-interactive")
+              else
+                "#{activity_log.workspace.name} — #{lifecycle_status_label(activity_log.workspace)}"
+              end) %>
+      <% end %>
+    </ol>
+    <%# shared/_pagination is a card FOOTER (border-t px-4 py-3) — it belongs
+        inside the card div, like both sibling call sites. %>
+    <%= render "shared/pagination", pagy: @pagy %>
+  </div>
+<% else %>
+  <%= render "shared/empty_state", message: t("activity.empty") %>
+<% end %>

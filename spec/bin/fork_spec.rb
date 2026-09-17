@@ -12,6 +12,18 @@ load Rails.root.join("bin/fork")
 # only assertion that means anything — stubbing `system` would assert that we
 # called a string.
 RSpec.describe ForkFlow do
+  # #789 — `git -C <dir>` LOSES to an inherited GIT_DIR: with one set,
+  # `git -C x init` re-initialises $GIT_DIR — flipping core.bare when $GIT_DIR
+  # is a worktree gitdir — and `git -C x config` writes $GIT_DIR/config, which
+  # for a linked worktree is the SHARED repository config. Git hooks export
+  # GIT_DIR (man 5 githooks) and this suite runs under Lefthook, so the
+  # fixture's own writes landed in the developer's repository. A nil value
+  # deletes the key in the child, restoring `-C` precedence.
+  #
+  # ForkFlow::CLEAN_GIT_ENV rather than a second copy: the fixture and the script
+  # under test must clear the same set, and a constant defined in this describe
+  # block would land on Object and collide with template_invariants_spec.rb's.
+
   let(:workdir) { Pathname.new(Dir.mktmpdir) }
   let(:repo) { workdir.join("my_app") }
   # Must end in modelrails_base or TEMPLATE_REMOTE won't match and every remote
@@ -26,12 +38,13 @@ RSpec.describe ForkFlow do
   def git(*args, dir: repo)
     # -c user.* so commits work on a machine (or CI runner) with no global git
     # identity configured.
-    system("git", "-C", dir.to_s, "-c", "user.email=t@example.com", "-c", "user.name=T",
+    system(ForkFlow::CLEAN_GIT_ENV,
+           "git", "-C", dir.to_s, "-c", "user.email=t@example.com", "-c", "user.name=T",
            *args, out: File::NULL, err: File::NULL) || raise("git #{args.join(' ')} failed")
   end
 
   def capture_git(*args, dir: repo)
-    IO.popen([ "git", "-C", dir.to_s, *args ], err: File::NULL, &:read).to_s.strip
+    IO.popen(ForkFlow::CLEAN_GIT_ENV, [ "git", "-C", dir.to_s, *args ], err: File::NULL, &:read).to_s.strip
   end
 
   # Minimal skeleton rather than a copy of the real template: copying would
@@ -57,7 +70,8 @@ RSpec.describe ForkFlow do
   end
 
   def build_template_clone
-    system("git", "init", "--bare", "-q", template_bare.to_s) || raise("bare init failed")
+    system(ForkFlow::CLEAN_GIT_ENV, "git", "init", "--bare", "-q", template_bare.to_s) ||
+      raise("bare init failed")
     FileUtils.mkdir_p(repo)
     git("init", "-q", "-b", "main")
     # bin/fork makes its OWN commits, which do not inherit the `-c user.*` the
@@ -100,6 +114,107 @@ RSpec.describe ForkFlow do
   end
 
   before { build_template_clone }
+
+  # Read back inside the example, before the after-hook rm_rf deletes workdir,
+  # so the #789 guard below can tell "the decoy was written" apart from "the
+  # clone helper never got as far as configuring the fixture".
+  before { @fixture_user_name = capture_git("config", "--local", "--get", "user.name") }
+
+  # #789 — every git call in this file and in bin/fork is `-C`-scoped, and `-C`
+  # loses to an inherited GIT_DIR. Under Lefthook the suite runs inside a hook
+  # process, and hooks export GIT_DIR; from a linked worktree that value is
+  # absolute, so `git config` at local scope wrote the developer's REAL shared
+  # .git/config. This points GIT_DIR at a throwaway decoy for the whole example:
+  # if any spawn still honours it, the decoy's config changes and this fails.
+  #
+  # The snapshot has to be taken HERE, between the assignment and example.run —
+  # `before { build_template_clone }` runs inside example.run, so a snapshot in
+  # the example body would compare post-damage to post-damage and pass on every
+  # seed.
+  around do |example|
+    decoy = Dir.mktmpdir("fork-spec-git-dir-decoy")
+    original_git_dir = ENV["GIT_DIR"]
+    git_dir_set = false
+
+    # `begin` opens here, not after the setup: a raise from the containment
+    # check, the decoy init or the snapshot read would otherwise leak the
+    # mktmpdir. The env restore stays conditional on having actually set it.
+    begin
+      # realpath on BOTH sides: on macOS Dir.tmpdir is /var/... symlinked to
+      # /private/var/..., and a naive start_with? fails open on exactly the
+      # platform this repo is developed on.
+      tmp_root = Pathname.new(Dir.tmpdir).realpath.to_s
+      unless Pathname.new(decoy).realpath.to_s.start_with?(tmp_root)
+        raise "refusing to point GIT_DIR at #{decoy} — not under #{tmp_root}"
+      end
+
+      # Cleared here too: an ambient GIT_DIR is exactly the condition this
+      # guard exists for, and creating the decoy under one would re-initialise
+      # the developer's own repository instead.
+      system(ForkFlow::CLEAN_GIT_ENV, "git", "init", "-q", decoy, out: File::NULL, err: File::NULL) ||
+        raise("decoy init failed")
+      decoy_git = File.join(decoy, ".git")
+      decoy_config = File.join(decoy_git, "config")
+      decoy_before = File.read(decoy_config)
+
+      ENV["GIT_DIR"] = decoy_git
+      git_dir_set = true
+
+      example.run
+
+      expect(File.read(decoy_config)).to eq(decoy_before),
+        "GIT_DIR decoy repository was written: a git spawn in this file or in " \
+        "bin/fork honoured the inherited GIT_DIR instead of its own -C scope. " \
+        "In real use that GIT_DIR is the developer's own repository (#789)."
+      expect(@fixture_user_name).to eq("Fixture"),
+        "the fixture repo never received its local git identity, so the guard " \
+        "above proved nothing — the git spawns went somewhere else (#789)."
+    ensure
+      # ENV["X"] = nil deletes the key, which is the right restore when GIT_DIR
+      # was unset. `ensure`, not trust in example.run: the restore has to
+      # survive this hook's own raise and a SIGINT.
+      ENV["GIT_DIR"] = original_git_dir if git_dir_set
+      FileUtils.rm_rf(decoy)
+    end
+  end
+
+  # #789 canary — the guard above proves no spawn honours an inherited GIT_DIR;
+  # this watches the outcome directly, on the very file that was corrupted.
+  #
+  # --path-format=absolute because --git-common-dir is RELATIVE in a main
+  # checkout and would otherwise resolve against the worker's CWD. In a linked
+  # worktree it resolves to the MAIN checkout's .git — which is exactly the
+  # shared config `git config` at local scope writes, and exactly what #789 lost.
+  #
+  # Scoped to the keys this leak writes, and to --local, rather than the whole
+  # config: under Lefthook the window between the two hooks is minutes long, and
+  # a developer running `git config` in another terminal must not turn this red
+  # on innocent input. parallel_tests groups whole files, so one worker owns this
+  # file and the canary never races itself.
+  def checkout_config_canary
+    common_dir = IO.popen(
+      ForkFlow::CLEAN_GIT_ENV,
+      [ "git", "-C", Rails.root.to_s, "rev-parse", "--path-format=absolute", "--git-common-dir" ],
+      err: File::NULL, &:read
+    ).to_s.strip
+    return "(not a git checkout)" if common_dir.empty?
+
+    IO.popen(
+      ForkFlow::CLEAN_GIT_ENV,
+      [ "git", "--git-dir=#{common_dir}", "config", "--local", "--get-regexp",
+        '^(user\.|core\.bare|gc\.auto|maintenance\.auto|remote\.)' ],
+      err: File::NULL, &:read
+    ).to_s
+  end
+
+  before(:context) { @canary_before = checkout_config_canary }
+
+  after(:context) do
+    expect(checkout_config_canary).to eq(@canary_before),
+      "this spec file changed the git config of the checkout it was running in " \
+      "(#789). A git spawn escaped its -C scope — most likely an inherited " \
+      "GIT_DIR that some new call site does not clear."
+  end
 
   # -------------------------------------------------------------- name safety
 
@@ -305,6 +420,145 @@ RSpec.describe ForkFlow do
       run_fork(name: "my_app", yes: true)
 
       expect(capture_git("remote", "get-url", "origin")).to eq("git@github.com:me/not_modelrails_base.git")
+      expect(capture_git("remote")).not_to include("upstream")
+    end
+  end
+
+  # A synced mirror of the template (lsa-mis/modelrails_base_wads) is the
+  # template under another name, so TEMPLATE_REMOTE cannot know it. --template
+  # names it explicitly; the match is URL equality, never a looser pattern, so
+  # the anchoring guarantee above ("me/not_modelrails_base" is left alone) holds.
+  describe "--template (a mirror of the template under another name)" do
+    let(:mirror_bare) { workdir.join("modelrails_base_wads.git") }
+
+    before do
+      system(ForkFlow::CLEAN_GIT_ENV, "git", "init", "--bare", "-q", mirror_bare.to_s) ||
+        raise("mirror bare init failed")
+    end
+
+    # The GitHub Fork button path: origin is already the product, no upstream
+    # yet. bin/fork records the URL; bin/setup adds the remote in every clone.
+    it "records the template url in .fork.yml when nothing but origin exists" do
+      git("remote", "set-url", "origin", "git@github.com:me/my_app.git")
+
+      run_fork(name: "my_app", template: mirror_bare.to_s, yes: true)
+
+      expect(YAML.safe_load_file(repo.join(".fork.yml"))["template_url"]).to eq(mirror_bare.to_s)
+      expect(capture_git("remote")).not_to include("upstream")
+    end
+
+    # The clone-the-template path, with the mirror as origin. Equality is
+    # .git-insensitive: the remote has the suffix, the flag does not.
+    it "converts an origin equal to --template into a push-disabled upstream" do
+      git("remote", "set-url", "origin", mirror_bare.to_s)
+
+      run_fork(name: "my_app", template: mirror_bare.to_s.delete_suffix(".git"),
+               origin: "git@github.com:me/my_app.git", yes: true)
+
+      expect(capture_git("remote", "get-url", "upstream")).to eq(mirror_bare.to_s)
+      expect(capture_git("remote", "get-url", "--push", "upstream")).to eq("DISABLED")
+      expect(capture_git("remote", "get-url", "origin")).to eq("git@github.com:me/my_app.git")
+    end
+
+    it "treats an upstream equal to --template as already configured" do
+      git("remote", "set-url", "origin", "git@github.com:me/my_app.git")
+      git("remote", "add", "upstream", mirror_bare.to_s)
+      git("remote", "set-url", "--push", "upstream", "DISABLED")
+
+      run_fork(name: "my_app", template: mirror_bare.to_s, yes: true)
+
+      expect(YAML.safe_load_file(repo.join(".fork.yml"))["template_url"]).to eq(mirror_bare.to_s)
+      expect(capture_git("remote", "get-url", "upstream")).to eq(mirror_bare.to_s)
+    end
+
+    # Negative control for the design choice: without the flag, a name that
+    # merely starts with the template's is still nobody's template.
+    it "leaves a suffix-named origin alone when no --template is given" do
+      git("remote", "set-url", "origin", "git@github.com:me/modelrails_base_myapp.git")
+
+      run_fork(name: "my_app", yes: true)
+
+      expect(capture_git("remote", "get-url", "origin")).to eq("git@github.com:me/modelrails_base_myapp.git")
+      expect(capture_git("remote")).not_to include("upstream")
+    end
+  end
+
+  # Git carries no record of what a fork was forked from; GitHub does. When
+  # nothing names the template, bin/fork asks `gh` for origin's parent. The
+  # fake gh below answers only for the repo it is asked about, so a wrong
+  # owner/repo parse reads as "GitHub has no parent", not as a pass.
+  describe "deriving the template from GitHub" do
+    let(:bin_dir) { workdir.join("bin") }
+    let(:parent_url) { "git@github.com:org/modelrails_base_wads.git" }
+
+    def with_path(*dirs)
+      original = ENV["PATH"]
+      ENV["PATH"] = dirs.join(":")
+      yield
+    ensure
+      ENV["PATH"] = original
+    end
+
+    def install_fake_gh
+      bin_dir.mkpath
+      gh = bin_dir.join("gh")
+      gh.write("#!/bin/sh\ncase \"$*\" in\n  *repos/me/my_app*) echo \"#{parent_url}\" ;;\nesac\n")
+      gh.chmod(0o755)
+    end
+
+    def fork_config
+      YAML.safe_load_file(repo.join(".fork.yml"))
+    end
+
+    before { git("remote", "set-url", "origin", "git@github.com:me/my_app.git") }
+
+    it "records origin's GitHub parent as the template when gh can answer" do
+      install_fake_gh
+
+      with_path(bin_dir.to_s, ENV["PATH"]) { run_fork(name: "my_app", yes: true) }
+
+      expect(fork_config["template_url"]).to eq(parent_url)
+      expect(capture_git("remote")).not_to include("upstream")
+    end
+
+    it "prefers an explicit --template over GitHub's answer" do
+      install_fake_gh
+
+      with_path(bin_dir.to_s, ENV["PATH"]) { run_fork(name: "my_app", template: "git@github.com:org/other.git", yes: true) }
+
+      expect(fork_config["template_url"]).to eq("git@github.com:org/other.git")
+    end
+
+    it "records no template when GitHub reports no parent" do
+      install_fake_gh
+      git("remote", "set-url", "origin", "git@github.com:me/plain_repo.git")
+
+      with_path(bin_dir.to_s, ENV["PATH"]) { run_fork(name: "my_app", yes: true) }
+
+      expect(fork_config).not_to have_key("template_url")
+    end
+
+    # On the clone path origin IS the template, so its GitHub parent is the
+    # template's own parent — recording that would point upstream one hop too
+    # far. --origin is the signal for that path; --template names the mirror.
+    it "does not ask GitHub on the clone path (--origin given)" do
+      install_fake_gh
+
+      with_path(bin_dir.to_s, ENV["PATH"]) { run_fork(name: "my_app", origin: "git@github.com:me/other.git", yes: true) }
+
+      expect(fork_config).not_to have_key("template_url")
+    end
+
+    it "falls back to verify-by-hand when gh is not installed" do
+      # A PATH holding nothing but git: gh is absent the way it is on a machine
+      # that never installed it, not faked as failing.
+      git_binary = ENV["PATH"].split(":").map { |dir| File.join(dir, "git") }.find { |path| File.executable?(path) }
+      bin_dir.mkpath
+      bin_dir.join("git").make_symlink(git_binary)
+
+      with_path(bin_dir.to_s) { run_fork(name: "my_app", yes: true) }
+
+      expect(fork_config).not_to have_key("template_url")
       expect(capture_git("remote")).not_to include("upstream")
     end
   end
@@ -567,7 +821,12 @@ RSpec.describe ForkFlow do
       it "runs bin/setup without starting the dev server when accepted" do
         allow($stdin).to receive(:gets).and_return("\n") # bare Enter takes the default
 
-        expect(flow).to receive(:system).with("bin/setup", "--skip-server", hash_including(chdir: repo.to_s)).and_return(true)
+        # The env hash is positionally first (#789): bin/setup shells git itself,
+        # so it must not inherit a GIT_DIR either.
+        expect(flow).to receive(:system)
+          .with(hash_including("GIT_DIR" => nil), "bin/setup", "--skip-server",
+                hash_including(chdir: repo.to_s))
+          .and_return(true)
 
         flow.offer_setup!
       end

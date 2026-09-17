@@ -12,12 +12,27 @@ module Suspendable
     scope :suspended,     -> { where.not(suspended_at: nil) }
   end
 
+  # Guarded like Workspace#archive!/#discard!: lock-then-check inside the
+  # transaction so a double submit or two operators can't bump suspended_at
+  # twice or write two "locked" activity rows. `next` on the no-op saves
+  # nothing, so Broadcastable's refresh doesn't fire. Returns the outcome so
+  # callers can report it. See /docs/developer/architecture (Concurrency).
   def suspend!
-    update!(suspended_at: Time.current)
+    transaction do
+      lock!
+      next :already_suspended if suspended?
+      update!(suspended_at: Time.current)
+      :suspended
+    end
   end
 
   def unsuspend!
-    update!(suspended_at: nil)
+    transaction do
+      lock!
+      next :not_suspended unless suspended?
+      update!(suspended_at: nil)
+      :unsuspended
+    end
   end
 
   def suspended?

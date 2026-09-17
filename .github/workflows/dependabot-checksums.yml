@@ -55,6 +55,7 @@ jobs:
     # number in the git config email below.
     if: github.event.pull_request.user.id == 49699333
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Warn when the PAT is absent (GITHUB_TOKEN fallback cannot re-trigger CI)
         env:

@@ -12,7 +12,7 @@ class WorkspaceInvitationDeclinedNotifier < ApplicationNotifier
           "notifications.workspace_invitation_declined.message",
           locale: recipient_locale,
           decliner_email: event.record.email,
-          workspace: event.record.resolved_workspace&.name
+          workspace_name: event.record.resolved_workspace&.name
         )
       end
     end

@@ -63,7 +63,7 @@ class WorkspaceMemberRemovedNotifier < ApplicationNotifier
           "notifications.workspace_member_removed.#{self_removal? ? 'left' : 'removed'}",
           locale: recipient_locale,
           user_name: event.record.user.first_name,
-          workspace: event.record.workspace.name
+          workspace_name: event.record.workspace.name
         )
       end
     end

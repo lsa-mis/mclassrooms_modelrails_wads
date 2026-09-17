@@ -15,7 +15,10 @@ module AuthenticationHelpers
   # landed second, the token about to be clicked was already dead; the callback
   # rejected it and, since the session had begun, redirected to root_path —
   # the signed-in homepage carrying "invalid or has expired" that CI reported
-  # in #846, and in #796 three days before that.
+  # in #846, and in #796 three days before that. (Were that race to recur
+  # today, the GET would answer a signed-in owner with
+  # `authentication.already_signed_in` on their home path instead — the
+  # message changed with MagicLinkReplayable; the race it exposed did not.)
   #
   # #796 answered it with `wait: 10`. A timeout cannot fix a data race: it only
   # bets on which writer finishes first. Removing the second writer does fix

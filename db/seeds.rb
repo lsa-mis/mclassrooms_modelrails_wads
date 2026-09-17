@@ -34,7 +34,7 @@ if TenancyConfig.shared?
 
   # Operator vouches for the email (they supplied it); the password-set link
   # closes the loop by requiring inbox access.
-  owner.authentications.find_or_create_by!(provider: "email", uid: owner.email_address) do |auth|
+  owner.authentications.find_or_create_by!(provider: "email") do |auth|
     auth.email = owner.email_address
     auth.verified_at = Time.current
   end
@@ -42,6 +42,17 @@ if TenancyConfig.shared?
   owner_role = Role.find_by!(slug: "owner", workspace_id: nil)
   membership = workspace.memberships.find_or_create_by!(user: owner) { |m| m.role = owner_role }
   membership.update!(role: owner_role) unless membership.role_id == owner_role.id
+
+  # The bootstrap owner also operates the instance — see operations.md "Day
+  # one". Guarded on any operatorship row ever existing, kept or discarded:
+  # re-seeding must not resurrect a grant a break-glass revoke deliberately
+  # took away. A racing second seed loses to the partial unique index; treat
+  # that as already granted.
+  begin
+    Operatorship.grant!(user: owner) unless owner.operatorships.exists?
+  rescue ActiveRecord::RecordNotUnique
+    nil
+  end
 
   # Help the owner claim the account. In production we do NOT log a password
   # token: the link would be minted at deploy time (its short expiry clock

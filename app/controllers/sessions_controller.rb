@@ -16,8 +16,8 @@ class SessionsController < ApplicationController
     end
 
     if user&.authenticate(params[:password])
-      user.register_successful_login!
       start_new_session_for(user)
+      user.register_successful_login!
       redirect_to after_authentication_url, notice: t(".success")
     else
       user&.register_failed_login!

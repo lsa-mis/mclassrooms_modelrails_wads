@@ -260,6 +260,77 @@ RSpec.describe ApplicationNotifier, type: :notifier do
         }.not_to change(Noticed::Event, :count)
       end
     end
+
+    # #928: the actor exclusion in a `recipients` block can resolve to an empty
+    # set (single-owner workspace, owner acting on their own membership). Before
+    # the :skipped sentinel that dispatch still ran the gem's unconditional
+    # `save!`, which minted and consumed the minute-bucket idempotency key — so a
+    # genuine dispatch on the same record seconds later deduplicated away with
+    # nobody ever having been notified.
+    context "when the recipients block resolves to an empty set (#928)" do
+      # A stub with a `recipients` block whose result the example drives, so the
+      # empty and populated dispatches differ ONLY in the resolved set.
+      class StubAudienceNotifier < ApplicationNotifier
+        category :account_access
+
+        recipients { [ params[:audience] ].compact }
+
+        notification_methods do
+          def message = "stub-audience"
+          def url     = "/stub"
+        end
+      end unless defined?(StubAudienceNotifier)
+
+      it "returns :skipped without calling through to the gem's deliver" do
+        result = StubAudienceNotifier.with(record: resource, audience: nil).deliver(nil)
+        expect(result).to eq :skipped
+      end
+
+      it "writes no noticed_events row" do
+        expect {
+          StubAudienceNotifier.with(record: resource, audience: nil).deliver(nil)
+        }.not_to change(Noticed::Event, :count)
+      end
+
+      it "writes no noticed_notifications row" do
+        expect {
+          StubAudienceNotifier.with(record: resource, audience: nil).deliver(nil)
+        }.not_to change(Noticed::Notification, :count)
+      end
+
+      it "leaves the minute-bucket key unconsumed for a genuine dispatch on the same record" do
+        freeze_time do
+          skipped = StubAudienceNotifier.with(record: resource, audience: nil).deliver(nil)
+          delivered = StubAudienceNotifier.with(record: resource, audience: user).deliver(nil)
+
+          expect(skipped).to eq :skipped
+          expect(delivered).to eq :delivered
+        end
+      end
+
+      it "creates the notification row for the genuine dispatch that follows a skipped one" do
+        freeze_time do
+          StubAudienceNotifier.with(record: resource, audience: nil).deliver(nil)
+
+          expect {
+            StubAudienceNotifier.with(record: resource, audience: user).deliver(nil)
+          }.to change { Noticed::Notification.where(recipient: user, type: "StubAudienceNotifier::Notification").count }.by(1)
+        end
+      end
+
+      it "still deduplicates two genuine dispatches in the same bucket" do
+        freeze_time do
+          first = StubAudienceNotifier.with(record: resource, audience: user).deliver(nil)
+          second = StubAudienceNotifier.with(record: resource, audience: user).deliver(nil)
+          expect(first).to eq :delivered
+          expect(second).to eq :deduplicated
+        end
+      end
+
+      it "returns :skipped for an explicitly empty recipients argument too" do
+        expect(StubAccountAccessNotifier.with(record: resource).deliver([])).to eq :skipped
+      end
+    end
   end
 
   describe "concurrent dispatch resolution (Chris Oliver edge case)" do
@@ -370,6 +441,19 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       expect(notification.deliver_email_now?).to be false
     end
 
+    # The schema-default path, through the gate rather than through
+    # recipient_pref. Since #936 the answer comes from a set built by
+    # `User.where(...).includes(:preferences)`, where a user with no row
+    # preloads as nil — so the missing-row fallback has to survive the preload,
+    # not just a lazy `user.preferences` call.
+    it "is true for a recipient with no user_preferences row (schema defaults)" do
+      bare_user = create(:user)
+      StubAccountAccessNotifier.with(record: bare_user).deliver(bare_user)
+      notification = bare_user.notifications.where(type: "StubAccountAccessNotifier::Notification").last
+
+      expect(notification.deliver_email_now?).to be true
+    end
+
     it "is false when the preference resolves to the :digest sentinel (non-instant frequency)" do
       np = prefs.notification_preferences.deep_dup
       np["delivery_methods"]["email"]["frequency"] = "daily"
@@ -434,7 +518,7 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       # The schema default permits in_app for every category; the previous
       # `nil` wrapping returned false for everything except security. This
       # test locks in that the canonical default matrix is honored.
-      prefs = ApplicationNotifier.new.send(:preferences_for, bare_user)
+      prefs = ApplicationNotifier.new.preferences_for(bare_user)
 
       expect(prefs).to be_a(NotificationPreferences)
       expect(prefs.deliver_now?(category: "account_access", channel: "in_app")).to be true
@@ -448,7 +532,7 @@ RSpec.describe ApplicationNotifier, type: :notifier do
       user_prefs.update!(notification_preferences:
         user_prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
 
-      prefs = ApplicationNotifier.new.send(:preferences_for, user.reload)
+      prefs = ApplicationNotifier.new.preferences_for(user.reload)
 
       # Persisted DND flag honored — proves we read THROUGH to the user's row,
       # not a transient stand-in.

@@ -1,0 +1,27 @@
+<% content_for(:title) { t("operations.users.index.title") } %>
+<%= render "shared/settings_page_header",
+      title: t("operations.users.index.title"),
+      description: t("operations.users.index.description") %>
+
+<%= form_with url: operations_users_path, method: :get, class: "flex gap-3 items-end" do |form| %>
+  <div class="flex-1">
+    <%= form.label :q, t("operations.users.index.search_label"), class: "block text-sm font-medium text-text-heading" %>
+    <%# label: must match the visible <label> text above — SearchInputComponent
+        always emits its own aria-label (default "Search"), and a mismatched
+        accessible name is a 2.5.3 Label-in-Name failure. %>
+    <%= ui :search_input, name: "q", value: @query, id: "q",
+          label: t("operations.users.index.search_label"),
+          placeholder: t("operations.users.index.search_placeholder") %>
+  </div>
+  <%= form.submit t("operations.users.index.search"), class: "btn-primary" %>
+<% end %>
+
+<% if @query.present? %>
+  <div class="mt-6">
+    <% if @user %>
+      <%= link_to @user.full_name, operations_user_path(@user), class: "btn-text btn-text-interactive" %>
+    <% else %>
+      <%= render "shared/empty_state", message: t("operations.users.index.no_match") %>
+    <% end %>
+  </div>
+<% end %>

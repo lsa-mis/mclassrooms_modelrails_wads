@@ -22,7 +22,7 @@ RSpec.describe NotificationMailer, type: :mailer do
 
     it "uses a localized purpose-driven H1, NOT the greeting" do
       html = mail.html_part.body.encoded
-      heading = I18n.t("notification_mailer.workspace_role_changed.heading", workspace: "Acme")
+      heading = I18n.t("notification_mailer.workspace_role_changed.heading", workspace_name: "Acme")
       expect(html).to match(%r{<h1[^>]*>\s*#{Regexp.escape(heading)}\s*</h1>}m)
       # And the H1 must NOT be the greeting (recipient-name-first is wrong for skim).
       expect(html).not_to match(%r{<h1[^>]*>\s*Hi Ada,?\s*</h1>}m)
@@ -60,7 +60,7 @@ RSpec.describe NotificationMailer, type: :mailer do
 
     it "uses a localized purpose-driven H1, NOT the greeting" do
       html = mail.html_part.body.encoded
-      heading = I18n.t("notification_mailer.workspace_invitation_expiring_soon.heading", workspace: "Globex")
+      heading = I18n.t("notification_mailer.workspace_invitation_expiring_soon.heading", workspace_name: "Globex")
       expect(html).to match(%r{<h1[^>]*>\s*#{Regexp.escape(heading)}\s*</h1>}m)
       expect(html).not_to match(%r{<h1[^>]*>\s*Hi Grace,?\s*</h1>}m)
     end

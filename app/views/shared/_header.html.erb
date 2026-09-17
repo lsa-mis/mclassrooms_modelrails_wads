@@ -5,9 +5,9 @@
        class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <%= link_to main_app.root_path,
-            class: "flex items-center gap-2 min-h-11 hover:opacity-80 transition-opacity
+            class: "flex items-center gap-2 min-h-11 [&>svg]:h-6 hover:opacity-80 transition-opacity
                     focus-ring rounded" do %>
-        <%= render "shared/site_logo", size: :small, show_name: true %>
+        <%= render "shared/site_logo" %>
       <% end %>
 
       <%# Right cluster. v2 (2026-05-23): the standalone notifications bell
@@ -40,22 +40,19 @@
                 class: "hidden md:flex min-h-[44px] items-center px-3 rounded-lg
                         text-text-body hover:bg-surface-sunken focus-ring" %>
         <% end %>
-        <%# Navigation IA (Task 10): MiClassrooms' :shared posture is one
-            workspace for everyone — the switcher has nothing to switch
-            between, so it's suppressed via TenancyConfig rather than
-            deleted (a :personal-posture fork still gets it; its own
-            switcher-internals size>1 check is unchanged). %>
-        <% if authenticated? && !TenancyConfig.shared? %>
-          <%= render "shared/workspace_switcher" %>
-        <% end %>
+        <%# No workspace switcher here: it is the head of the workspace sidebar
+            (_workspace_switcher), and on phones the same switcher
+            renders above the section tabs (#1077). The workspace is named
+            only in workspace chrome; account pages carry no workspace context
+            by design and offer "All workspaces" from the user menu instead. %>
         <% if authenticated? && current_grant.admin? %>
           <%= render "shared/admin_nav" %>
         <% end %>
         <%= render "shared/user_menu", context: :desktop %>
 
         <%# Mobile menu button. Header-accordion pattern (Path Z) — tapping
-            expands the panel downward to reveal the global chrome (workspace
-            switcher, user menu, theme toggle) below. The sr-only label
+            expands the panel downward to reveal the global chrome (user menu,
+            theme toggle) below. The sr-only label
             provides the accessible name; aria-expanded flips between
             true/false on toggle. %>
         <%# The sr-only label flips between "Open menu" and "Close menu"
@@ -96,12 +93,12 @@
          data-action="click->mobile-menu#closeOnLinkClick"
          aria-label="<%= t("navigation.mobile_menu.aria_label") %>"
          class="hidden md:hidden pb-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
-      <%# Mobile accordion — global chrome only. Account menu (identity +
-          always-present account actions) leads; the Workspaces group (switcher
-          list, capped, + "All workspaces") renders below it so the fixed
-          account items keep a predictable position and a growing workspace list
-          never pushes them around. Each layout's page-level section sub-nav
-          renders as an in-page section-nav strip, not inside this panel. %>
+      <%# Mobile accordion — global chrome only: the account menu (identity +
+          always-present account actions, including "All workspaces") and the
+          theme toggle. The workspace switcher is not here: on a phone it
+          renders above the section tabs of workspace pages (#1077), and each
+          layout's page-level section sub-nav renders as an in-page
+          section-nav strip, not inside this panel. %>
       <div class="flex flex-col gap-2">
         <% if authenticated? %>
           <%= render "shared/user_menu", context: :mobile %>
@@ -112,9 +109,6 @@
                         text-sm text-text-body
                         hover:bg-surface-sunken hover:text-interactive-hover rounded
                         focus-ring" %>
-          <% unless TenancyConfig.shared? %>
-            <%= render "shared/workspace_switcher", mobile: true %>
-          <% end %>
           <% if current_grant.admin? %>
             <%= render "shared/admin_nav", mobile: true %>
           <% end %>

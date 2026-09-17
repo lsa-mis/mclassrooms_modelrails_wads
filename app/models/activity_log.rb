@@ -24,6 +24,11 @@ class ActivityLog < ApplicationRecord
     user.signed_in_new_device
     user.passkey_added
     user.passkey_removed
+    user.suspended
+    user.unsuspended
+    user.unlocked
+    operatorship.granted
+    operatorship.revoked
   ].freeze
 
   # The members whose writer records the device os in metadata (Authenticatable's
@@ -31,24 +36,25 @@ class ActivityLog < ApplicationRecord
   SECURITY_ACTIONS_WITH_OS = %w[user.signed_in_new_device].freeze
 
   # The one writer for security-tier rows (User password callbacks,
-  # WebauthnCredential, Authenticatable all route here). Two reasons it exists:
-  # the row shape lives in exactly one place, and an action outside
-  # SECURITY_ACTIONS raises instead of writing. Without the guard a drifted
-  # literal ("user.passkey_add") would still write a plausible-looking row that
-  # the sweep deletes at 12 months instead of the security floor — audit
-  # evidence lost silently, with the whole suite green.
+  # WebauthnCredential, Authenticatable, Operatorship all route here); the
+  # row shape lives in exactly one place. `actor:` and `visibility:` default
+  # to the self-event shape — the subject is the actor, personal visibility —
+  # and a writer whose actor is someone else (an operator acting on a user)
+  # overrides both, writing admin visibility so the row lands in the
+  # operations feed rather than the subject's account card.
   #
-  # ArgumentError is deliberate: a non-member action is a programmer error, so
-  # it propagates through Authenticatable's ActiveRecord-only rescue rather
-  # than being swallowed. This method does not choose the write guarantee —
-  # callers do, by rescuing or not.
-  def self.record_security_event!(action:, user:, metadata: {})
+  # A non-member action raises: a drifted literal ("user.passkey_add") would
+  # otherwise write a plausible row the sweep deletes at 12 months instead of
+  # the security floor, with the suite green. ArgumentError on purpose — a
+  # programmer error propagates rather than being swallowed; callers choose
+  # the write guarantee by rescuing or not.
+  def self.record_security_event!(action:, user:, actor: user, visibility: "personal", metadata: {})
     unless SECURITY_ACTIONS.include?(action)
       raise ArgumentError, "#{action.inspect} is not in ActivityLog::SECURITY_ACTIONS"
     end
 
-    create!(action: action, actor: user, trackable: user,
-            visibility: "personal", workspace_id: nil, metadata: metadata)
+    create!(action: action, actor: actor, trackable: user,
+            visibility: visibility, workspace_id: nil, metadata: metadata)
   end
 
   validates :action, presence: true
@@ -62,32 +68,62 @@ class ActivityLog < ApplicationRecord
   # returns "admin" through it — so a fork returning "personal" for a domain
   # event had its rows rendered under a security heading.
   # `visibility` is kept as a second, narrowing predicate rather than dropped:
-  # record_security_event! always writes personal, so a security action at any
-  # other visibility is malformed, and an existing spec deliberately pins that
-  # such a row stays out of this card.
+  # the self-event default is personal, but an operator-actor row
+  # (Operatorship's grant/revoke) is written at admin visibility on purpose,
+  # so it belongs in the operations feed, not this card — this predicate is
+  # what keeps it out.
   scope :security_events_for, ->(user) {
     where(action: SECURITY_ACTIONS, trackable: user, visibility: :personal)
       .order(created_at: :desc)
   }
   scope :recent, -> { order(created_at: :desc).limit(20) }
-  # The feed's loader — call it last in a chain
-  # (`ActivityLog.visible.for_workspace(w).recent.for_feed`). It returns an
-  # Array because the membership hop cannot be one `includes`: `trackable` is
-  # polymorphic and Membership is the only tracked model carrying `user`, so a
-  # blanket `preload(trackable: :user)` raises AssociationNotFoundError the
-  # first time an Invitation row shares the page. Restricting the hop
-  # to the membership slice also keeps the eager-load off pages that have no
-  # membership rows, where Bullet would report it as unused.
+  # Invariant I3 (decline-and-block): admin visibility alone doesn't keep a
+  # suppressed-delivery row from an inviter here, since the operator IS often
+  # the inviter. See operations.md "What the area does" (Activity).
+  INVITER_UNREADABLE_ACTIONS = %w[invitation.delivery_suppressed].freeze
+
+  # The operations feed: workspace and admin rows, never personal — an
+  # operator reading a user's own security events is a privacy decision the
+  # template leaves to a fork. id breaks the created_at tie: this is the app's
+  # only OFFSET-paginated feed, and rows written in one burst (bulk_invite!)
+  # share a timestamp, so without it a row can land on two pages or neither.
+  scope :for_operations_feed, -> {
+    where(visibility: %w[workspace admin])
+      .where.not(action: INVITER_UNREADABLE_ACTIONS)
+      .order(created_at: :desc, id: :desc)
+  }
+  # The feed's loader — call last in a chain
+  # (`ActivityLog.visible.for_workspace(w).recent.for_feed`). Returns an
+  # Array, not a Relation: `trackable` is polymorphic and only Membership
+  # carries `user`, so a blanket `preload(trackable: :user)` raises
+  # AssociationNotFoundError the moment a Project or Invitation row shares
+  # the page — the membership hop, and separately an operatorship row's User
+  # trackable, are preloaded on their own slice instead (#1120).
   def self.for_feed
     logs = includes(:actor).to_a
-    membership_rows = logs.select { |log| log.trackable_type == "Membership" }
-    return logs if membership_rows.empty?
-
-    ActiveRecord::Associations::Preloader.new(records: membership_rows, associations: :trackable).call
-    members = membership_rows.filter_map(&:trackable)
-    ActiveRecord::Associations::Preloader.new(records: members, associations: :user).call if members.any?
+    preload_trackables(logs, "Membership") do |members|
+      ActiveRecord::Associations::Preloader.new(records: members, associations: :user).call
+    end
+    preload_trackables(logs, "User")
     logs
   end
+
+  def self.preload_trackables(logs, type)
+    rows = logs.select { |log| log.trackable_type == type }
+    return if rows.empty?
+
+    ActiveRecord::Associations::Preloader.new(records: rows, associations: :trackable).call
+    return unless block_given?
+
+    # Reads the association only when a caller needs it — reading it
+    # unconditionally would mark the hop "used" to Bullet regardless of
+    # whether anything downstream did, permanently masking an unused eager
+    # load. The Membership slice above stays invisible to Bullet the same
+    # way, consumed only to feed the nested :user preload.
+    trackables = rows.filter_map(&:trackable)
+    yield trackables if trackables.any?
+  end
+  private_class_method :preload_trackables
 
   # The locale key the feed renders this row with — usually just `action`.
   # A deactivation, a self-removal and a reactivation all arrive as
@@ -97,11 +133,55 @@ class ActivityLog < ApplicationRecord
   # the status changes from the role change; the actor tells a removal from a
   # departure. A status change outranks a role change: `reactivate!` can carry
   # both, and losing or regaining access is the more consequential half.
-  # Unknown shapes fall through to `action`, which the partial's `default:`
-  # humanizes — true, if plain.
+  # A workspace lock/unlock is the same shape (Suspendable#suspend! is a
+  # guarded update! too), splitting workspace.updated on suspended_at
+  # instead of discarded_at.
+  # Unknown shapes fall through to `action` itself. The partial has no
+  # `default:` (the ModelRails/NoI18nDefault cop forbids it, #1022); in test
+  # (`raise_on_missing_translations`) a missing activity.actions label raises,
+  # while dev/prod render a "translation missing" marker instead.
+  # spec/code_smells/dynamic_i18n_keys_have_values_spec.rb is what keeps a
+  # missing label from shipping in the first place.
   def display_action
-    return action unless action == "membership.updated"
+    case action
+    when "membership.updated" then membership_display_action
+    when "workspace.updated"  then workspace_display_action
+    else action
+    end
+  end
 
+  # The member a membership row is ABOUT, which is not its actor: Trackable
+  # records the actor as whoever performed the change, so an owner removing
+  # someone produced a row whose only name was the owner's. An operatorship
+  # grant/revoke's trackable is a User directly, not a Membership —
+  # Operatorship is above the workspace layer (#1120): without this case the
+  # row read "granted a member operator access", naming neither party.
+  # nil for every other trackable, and for a membership that has since been
+  # hard-deleted — the partial supplies the neutral noun.
+  def display_member
+    return trackable&.full_name if trackable_type == "User"
+
+    tracked_membership&.user&.full_name
+  end
+
+  # The row's sentence subject, or nil when the row genuinely does not know
+  # one. membership.created is the only action whose subject is knowable
+  # WITHOUT an actor: the row is about the person who joined. Onboarding
+  # creates that membership in a User after_create, where Current.user cannot
+  # exist yet — it delegates to a session that starts only after the signup
+  # transaction commits. Every other action keeps the actor as subject; a nil
+  # actor there means a job or console did it, and "System" is the truth.
+  # Gated on the action for that reason: a bare actor-or-member fallback
+  # renders a nil-actor deactivation as "Dee deactivated Dee".
+  def display_subject
+    return actor.full_name if actor
+
+    display_member if display_action == "membership.created"
+  end
+
+  private
+
+  def membership_display_action
     transition = metadata.to_h.with_indifferent_access.dig(:changes, :discarded_at)
     return action if transition.blank?
     return "membership.reactivated" if transition.last.blank?
@@ -109,16 +189,12 @@ class ActivityLog < ApplicationRecord
     self_removal? ? "membership.left" : "membership.deactivated"
   end
 
-  # The member a membership row is ABOUT, which is not its actor: Trackable
-  # records the actor as whoever performed the change, so an owner removing
-  # someone produced a row whose only name was the owner's. nil for every other
-  # trackable, and for a membership that has since been hard-deleted — the
-  # partial supplies the neutral noun.
-  def display_member
-    tracked_membership&.user&.full_name
-  end
+  def workspace_display_action
+    transition = metadata.to_h.with_indifferent_access.dig(:changes, :suspended_at)
+    return action if transition.blank?
 
-  private
+    transition.last.blank? ? "workspace.unsuspended" : "workspace.suspended"
+  end
 
   def tracked_membership
     return nil unless trackable_type == "Membership"
