@@ -4,6 +4,14 @@ class User < ApplicationRecord
   module Suspension
     extend ActiveSupport::Concern
 
+    # Deliberately NOT Suspendable's scopes: that concern is pinned
+    # workspace-only (see the note on suspend! below), so the query side of a
+    # user hold lives here with the predicate it mirrors.
+    included do
+      scope :suspended,     -> { where.not(suspended_at: nil) }
+      scope :not_suspended, -> { where(suspended_at: nil) }
+    end
+
     def suspended? = suspended_at.present?
 
     # A credential-grade hold, not eviction: sign-in refused, sessions ended,

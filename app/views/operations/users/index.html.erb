@@ -3,9 +3,10 @@
       title: t("operations.users.index.title"),
       description: t("operations.users.index.description") %>
 
-<%= form_with url: operations_users_path, method: :get, class: "flex gap-3 items-end" do |form| %>
+<%# max-w-md: one query does not need the column. %>
+<%= form_with url: operations_users_path, method: :get, class: "flex gap-3 items-end max-w-md" do |form| %>
   <div class="flex-1">
-    <%= form.label :q, t("operations.users.index.search_label"), class: "block text-sm font-medium text-text-heading" %>
+    <%= form.label :q, t("operations.users.index.search_label"), class: "mb-1 block text-sm font-medium text-text-heading" %>
     <%# label: must match the visible <label> text above — SearchInputComponent
         always emits its own aria-label (default "Search"), and a mismatched
         accessible name is a 2.5.3 Label-in-Name failure. %>
@@ -16,12 +17,37 @@
   <%= form.submit t("operations.users.index.search"), class: "btn-primary" %>
 <% end %>
 
-<% if @query.present? %>
-  <div class="mt-6">
-    <% if @user %>
-      <%= link_to @user.full_name, operations_user_path(@user), class: "btn-text btn-text-interactive" %>
-    <% else %>
-      <%= render "shared/empty_state", message: t("operations.users.index.no_match") %>
-    <% end %>
-  </div>
+<%# What the filter could not do, said out loud. A list that silently drops
+    matches is worse than one that admits it: the operator cannot otherwise
+    tell "no more" from "not shown" (#1166's ruling). %>
+<% if @search&.names_skipped? %>
+  <p class="mt-4 text-sm text-text-body"><%= t("operations.users.index.names_skipped") %></p>
+<% elsif @search&.capped? %>
+  <p class="mt-4 text-sm text-text-body"><%= t("operations.users.index.capped", count: @search.users.size) %></p>
 <% end %>
+
+<div class="mt-6">
+  <% if @users.any? %>
+    <%= ui :list_group do %>
+      <% @users.each do |user| %>
+        <%= ui :list_group_item, class: "gap-4", data: { testid: "operations-user-row" } do %>
+          <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <%= link_to user.full_name, operations_user_path(user), class: "btn-cell-link btn-text-interactive" %>
+            <span class="text-text-body"><%= user.email_address %></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <%= render "operations/users/state_badges", user: user %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+    <%= render "shared/pagination", pagy: @pagy %>
+  <% elsif @query.present? %>
+    <%# No user by that query is not the end of the question: the ledger's
+        search also matches workspaces and projects. %>
+    <%= render "shared/empty_state", message: t("operations.users.index.no_match"),
+          action_text: t("operations.users.index.search_activity"), action_url: operations_activity_logs_path(q: @query) %>
+  <% else %>
+    <%= render "shared/empty_state", message: t("operations.users.index.empty") %>
+  <% end %>
+</div>

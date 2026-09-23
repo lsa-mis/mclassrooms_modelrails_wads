@@ -7,23 +7,82 @@ RSpec.describe "Operations users", type: :request do
 
   before { sign_in(operator) }
 
+  # #1135. This page was an exact-email lookup rendering a list of at most one
+  # row, which is a search-results shape for what was really a `find`. The
+  # issue proposed redirecting on a hit; the ruling was to make the list real
+  # instead, which dissolves the duplicated hit row rather than repairing it.
+  #
+  # Ordering is `created_at` desc and cannot be a name: first_name/last_name
+  # are non-deterministically encrypted, so an SQL sort reads ciphertext, and a
+  # keyed digest is not order-preserving. #1124's closing comment records why;
+  # do not re-derive it.
   describe "GET /operations/users" do
-    it "renders no user rows without a query" do
+    def rows_in(response) = Capybara.string(response.body).all("[data-testid='operations-user-row']")
+
+    it "lists every user newest first, without a query" do
       get operations_users_path
       expect(response).to have_http_status(:ok)
       html = Capybara.string(response.body)
-      expect(html).to have_no_text("Tess Target")
-      expect(html).to have_no_text("Otto Other")
+      expect(html).to have_text("Tess Target")
+      expect(html).to have_text("Otto Other")
     end
 
-    it "finds a user by exact email" do
+    it "orders by creation, newest first" do
+      newest = create(:user, first_name: "Nina", last_name: "Newest")
+      get operations_users_path
+      names = rows_in(response).map(&:text)
+      expect(names.first).to include("Nina Newest")
+      expect(names.join).to include("Tess Target")
+      expect(User.order(created_at: :desc).first).to eq(newest)
+    end
+
+    # `nav[aria-label='Pages']`, not a bare `nav[aria-label]`: the operations
+    # layout's own navigation is also a labelled nav, so the loose selector
+    # passed without a pager on the page at all.
+    it "paginates rather than rendering the whole instance" do
+      stub_const("Pagy::OPTIONS", Pagy::OPTIONS.merge(limit: 2))
+      create_list(:user, 3)
+      get operations_users_path
+
+      html = Capybara.string(response.body)
+      expect(html).to have_css("nav[aria-label='#{I18n.t('pagination.aria_label')}']")
+      expect(rows_in(response).size).to eq(2)
+    end
+
+    it "filters to the exact email match" do
       get operations_users_path(q: "Target@Example.com")
       html = Capybara.string(response.body)
       expect(html).to have_text("Tess Target")
       expect(html).to have_no_text("Otto Other")
     end
 
-    # .btn-text sets no colour of its own — .btn-text-interactive is what
+    # The filter's other half: names are matched by decrypting in Ruby, which
+    # is the only way this app can match inside a non-deterministic column.
+    it "filters by name, not only by address" do
+      get operations_users_path(q: "tess")
+      html = Capybara.string(response.body)
+      expect(html).to have_text("Tess Target")
+      expect(html).to have_no_text("Otto Other")
+    end
+
+    # Never a silent cap (#1166): a list that quietly drops matches is worse
+    # than one that admits it, because the operator cannot tell the difference
+    # between "no more" and "not shown".
+    it "says when names were too numerous to search" do
+      stub_const("User::Search::NAME_SEARCH_LIMIT", 0)
+      get operations_users_path(q: "tess")
+      expect(Capybara.string(response.body))
+        .to have_text(I18n.t("operations.users.index.names_skipped"))
+    end
+
+    it "says when the match list was capped" do
+      stub_const("User::Search::RESULT_LIMIT", 1)
+      get operations_users_path(q: "t")
+      expect(Capybara.string(response.body))
+        .to have_text(I18n.t("operations.users.index.capped", count: 1))
+    end
+
+    # .btn-cell-link sets no colour of its own — .btn-text-interactive is what
     # makes it read as a link rather than plain text (1.4.1).
     it "renders the found user's name link as visibly a link" do
       get operations_users_path(q: "Target@Example.com")
@@ -34,6 +93,30 @@ RSpec.describe "Operations users", type: :request do
     it "says so when nothing matches" do
       get operations_users_path(q: "nobody@example.com")
       expect(Capybara.string(response.body)).to have_text(I18n.t("operations.users.index.no_match"))
+    end
+
+    # Rewritten for the list, not deleted: the contract it carried — a row
+    # names the user, shows the address, and carries the state badges the
+    # user's page opens with — is the same contract, and it is the one that
+    # drifted (the old hit row was missing `locked_out` against this very
+    # example's description). The badges now come from a partial the show page
+    # renders too, so the two cannot disagree again.
+    it "renders a row with the address and every state badge the show page opens with" do
+      Operatorship.grant!(user: target)
+      target.update!(locked_at: Time.current)
+      get operations_users_path(q: target.email_address)
+
+      row = Capybara.string(response.body).find("[data-testid='operations-user-row']")
+      expect(row).to have_link("Tess Target", href: operations_user_path(target))
+      expect(row).to have_text(target.email_address)
+      expect(row).to have_css("span[data-variant='soft']", text: I18n.t("operations.users.show.operator"))
+      expect(row).to have_css("span[data-variant='soft']", text: I18n.t("operations.users.show.locked_out"))
+    end
+
+    it "hands a miss to the ledger, whose search also matches workspaces and projects" do
+      get operations_users_path(q: "nobody@example.com")
+      expect(Capybara.string(response.body)).to have_link(I18n.t("operations.users.index.search_activity"),
+        href: operations_activity_logs_path(q: "nobody@example.com"))
     end
   end
 
@@ -57,7 +140,7 @@ RSpec.describe "Operations users", type: :request do
         text: I18n.t("operations.users.show.reinstate"))
     end
 
-    # .btn-text sets no colour of its own — .btn-text-interactive is what
+    # .btn-cell-link sets no colour of its own — .btn-text-interactive is what
     # makes it read as a link rather than plain text (1.4.1).
     it "renders a membership's workspace name link as visibly a link" do
       workspace = create(:workspace, name: "Acme")
@@ -91,13 +174,55 @@ RSpec.describe "Operations users", type: :request do
         get operations_user_path(target)
         html = Capybara.string(response.body)
         expect(html).to have_text(I18n.t("operations.users.show.suspended"))
-        expect(html).to have_text(I18n.t("operations.users.show.suspended_since",
+        expect(html).to have_text(I18n.t("operations.users.show.suspended_since_html",
           time: I18n.l(target.reload.suspended_at.in_time_zone("America/Chicago"), format: :account_activity)))
         expect(html).to have_css("form[action='#{operations_user_suspension_path(target)}']",
           text: I18n.t("operations.users.show.reinstate"))
         expect(html).to have_no_css("form[action='#{operations_user_suspension_path(target)}']",
           text: I18n.t("operations.users.show.suspend"))
       end
+    end
+
+    # Every state is a badge on the name line, the sentences follow, and the
+    # controls share one row with the lockout clear (the transient state)
+    # before the destructive suspend/reinstate. The confirm names the person.
+    it "opens with the states as badges, the sentences after, and the controls in one row" do
+      freeze_time do
+        5.times { target.register_failed_login! }
+        target.suspend!(by: operator)
+        get operations_user_path(target)
+        html = Capybara.string(response.body)
+        header = html.find("main header")
+        expect(header).to have_css("span[data-variant='soft']", text: I18n.t("operations.users.show.suspended"))
+        expect(header).to have_css("span[data-variant='soft']", text: I18n.t("operations.users.show.locked_out"))
+        expect(html).to have_css("time[datetime='#{target.reload.suspended_at.iso8601}']")
+        actions = html.all("form[action='#{operations_user_lock_path(target)}'], form[action='#{operations_user_suspension_path(target)}']")
+        expect(actions.map { |form| form[:action] })
+          .to eq([ operations_user_lock_path(target), operations_user_suspension_path(target) ])
+        expect(html).to have_link(I18n.t("operations.users.show.view_activity"),
+          href: operations_activity_logs_path(q: target.email_address))
+        expect(html).to have_title(I18n.t("operations.area.page_title", name: "Tess Target"))
+      end
+    end
+
+    it "names the person in the suspend confirm" do
+      get operations_user_path(target)
+      form = Capybara.string(response.body).find("form[action='#{operations_user_suspension_path(target)}']")
+      expect(form[:"data-turbo-confirm"]).to eq(I18n.t("operations.users.show.suspend_confirm", name: "Tess Target"))
+    end
+
+    # A locked workspace is the one reason "they can't get in" the membership
+    # list would otherwise not show; an active one gets no chip.
+    it "badges a membership in a locked workspace and leaves an active one plain" do
+      locked = create(:workspace, name: "Frozen")
+      locked.suspend!
+      create(:membership, user: target, workspace: locked)
+      create(:membership, user: target, workspace: create(:workspace, name: "Open"))
+
+      get operations_user_path(target)
+      list = Capybara.string(response.body).find("#ops-user-memberships")
+      expect(list.find("li", text: "Frozen")).to have_css("span[aria-label='#{I18n.t("lifecycle_status.prefix")}: #{I18n.t("lifecycle_status.suspended")}']")
+      expect(list.find("li", text: "Open")).to have_no_css("span[aria-label^='#{I18n.t("lifecycle_status.prefix")}']")
     end
 
     it "shows the Operator badge, no Suspend form, and the revoke-first sentence linking to the roster" do
@@ -134,7 +259,7 @@ RSpec.describe "Operations users", type: :request do
       # Array#& keeps the receiver's order, so this reads the rendered order
       # and ignores the unrelated row.
       rendered = Capybara.string(response.body)
-                         .find("section[aria-labelledby='ops-user-memberships']")
+                         .find("#ops-user-memberships")
                          .all("li a").map(&:text)
       # Binary collation would read Acme, Delta, beta, zeta (uppercase first).
       # Case-insensitive alphabetical is Acme, beta, Delta, zeta.

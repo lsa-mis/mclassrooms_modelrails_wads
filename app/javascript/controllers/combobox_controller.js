@@ -9,7 +9,7 @@ import * as topLayer from "overlays/top_layer"
 // moving DOM focus off the input, Enter selects it, Escape closes. Filtering hides
 // non-matching options and toggles the empty-state live region.
 export default class extends Controller {
-  static targets = ["input", "hidden", "panel", "list", "option", "empty"]
+  static targets = ["input", "hidden", "panel", "list", "option", "empty", "status"]
 
   connect() {
     this._optionId = 0
@@ -46,14 +46,26 @@ export default class extends Controller {
     })
     const isEmpty = visible.length === 0
     this.emptyTarget.hidden = !isEmpty
-    // An empty listbox (no role="option" children at all) is hidden too —
-    // not just visually empty — so a screen reader lands on the visible
-    // role="status" sibling instead of an empty listbox with nothing to
-    // announce (aria-required-children stays satisfied either way, since
-    // the status message lives outside the listbox — see combobox_component.rb).
+    // A listbox whose every option is hidden advertises children it does not have, so
+    // it leaves the tree outright; the status message is a sibling and survives (#218).
     this.listTarget.hidden = isEmpty
+    this._announceCount(visible.length)
     // Keep the active option valid as the visible set narrows.
     this._setActive(visible[0] || null)
+  }
+
+  // What is on offer changed, and the newly active option alone does not say so.
+  // Written into a region that was already in the tree; only on a real change, so
+  // a keystroke that does not move the count stays silent.
+  _announceCount(count) {
+    if (!this.hasStatusTarget) return
+    const { resultsOneText, resultsOtherText, emptyText } = this.statusTarget.dataset
+    const text = count === 0
+      ? (emptyText || "")
+      : count === 1
+        ? (resultsOneText || "")
+        : (resultsOtherText || "").replace("%{count}", String(count))
+    if (this.statusTarget.textContent !== text) this.statusTarget.textContent = text
   }
 
   // ↑/↓/Home/End move the active option; Enter selects it; Escape closes. DOM
@@ -115,6 +127,10 @@ export default class extends Controller {
     this.hiddenTarget.value = comboboxValue
     this.inputTarget.value = comboboxLabel
     this._syncSelected()
+    // The hidden input is what the form submits, so a form listening for `change`
+    // has to hear the selection from it — a programmatic value assignment fires
+    // nothing on its own, and every other control in the form would be heard.
+    this.hiddenTarget.dispatchEvent(new Event("change", { bubbles: true }))
     this.close()
   }
 
@@ -122,9 +138,9 @@ export default class extends Controller {
     if (!this.element.contains(target)) this.close()
   }
 
-  // Focus leaving the widget dismisses it (APG combobox; #684). A pointer
-  // selection never gets here: keepFocus cancels the option's mousedown so the
-  // input keeps focus until the click lands.
+  // Focus leaving the widget dismisses it (APG combobox). A pointer selection never
+  // reaches here: keepFocus cancels the option's mousedown, so the input holds focus
+  // until the click lands and select() runs.
   closeOnFocusOut({ relatedTarget }) {
     if (relatedTarget && this.element.contains(relatedTarget)) return
     this.close()

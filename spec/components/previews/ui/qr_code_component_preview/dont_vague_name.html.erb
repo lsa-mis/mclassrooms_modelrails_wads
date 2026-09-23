@@ -1,5 +1,5 @@
 <%# ✗ "QR code" names the graphic but not its payload — a screen-reader user can't %>
 <%# tell where it leads. Describe the destination instead. %>
 <%= ui :qr_code,
-      src: "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://example.com",
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23fff'/%3E%3Cpath fill='%23000' d='M0 0h3v3H0zM5 0h3v3H5zM0 5h3v3H0zM1 1h1v1H1zM6 1h1v1H6zM1 6h1v1H1zM4 4h1v1H4zM6 4h1v1H6zM4 6h1v1H4zM7 7h1v1H7z'/%3E%3C/svg%3E",
       alt: "QR code" %>

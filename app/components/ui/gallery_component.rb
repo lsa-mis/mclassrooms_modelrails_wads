@@ -2,18 +2,9 @@
 
 module UI
   class GalleryComponent < ApplicationComponent
-    # Responsive image grid. With lightbox: true (default) each cell is a focusable
-    # <button> that opens a single shared native <dialog> (the `modal` controller —
-    # focus-trap/escape/restore for free). The `gallery` controller swaps the dialog
-    # image's src/alt/caption before `modal#open` runs, and — with more than one
-    # image — the dialog gains prev/next buttons and a counter bar
-    # (see `LightboxComponent`, standalone-renderable for bespoke consumers).
-    #
-    # Usage:
-    #   ui :gallery, cols: 3 do |g|
-    #     g.with_image(src: "/img/a.jpg", alt: "Photo A")
-    #     g.with_image(src: "/img/b.jpg", alt: "The coast", caption: "The coast")
-    #   end
+    # Responsive image grid.
+    # Usage, options and the accessibility contract: docs/components/gallery.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
     GRID_BASE = "grid gap-2"
     GRID_COLS = {

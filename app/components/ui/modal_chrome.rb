@@ -8,7 +8,8 @@ module UI
   # button, the scrollable body + description, and the footer slot. `dialog` (including
   # its `role: :alertdialog` confirm-gate mode), `sheet`, and `drawer` differ only in
   # panel shape (size classes vs. `role="alertdialog"` vs. side/offset classes) —
-  # everything else is byte-identical chrome.
+  # everything else is byte-identical chrome. Includers supply `panel` and `dialog_attrs`
+  # (called by the `dialog_tag` method).
   #
   # ## Single-writer rationale
   # Before this concern, each of the four templates hand-copied the same eleven methods.
@@ -78,10 +79,13 @@ module UI
       @html_attrs = html_attrs
     end
 
+    # merge_html_attrs, not a flat merge: a caller's `data:` would otherwise replace
+    # this hash wholesale and take data-controller with it, so the dialog would
+    # silently never open.
     def wrapper_attrs
       data = { controller: "modal" }
       data[:modal_open_value] = "true" if @open
-      { data: data, class: cn("inline", @extra_class) }.merge(@html_attrs)
+      merge_html_attrs({ data: data, class: cn("inline", @extra_class) }, @html_attrs)
     end
 
     def trigger_area

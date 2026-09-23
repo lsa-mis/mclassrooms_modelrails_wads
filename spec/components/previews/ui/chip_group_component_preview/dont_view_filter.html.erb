@@ -1,0 +1,8 @@
+<%# ✗ This changes what is DISPLAYED, not what is stored — it posts with the form
+    and carries an empty sentinel for a key the server never reads.
+    Use toggle_group for view state. %>
+<%= ui :chip_group, name: "filter[status]", label: "Filter by status",
+       items: [
+         { value: "open",   label: "Open", checked: true },
+         { value: "closed", label: "Closed" }
+       ] %>

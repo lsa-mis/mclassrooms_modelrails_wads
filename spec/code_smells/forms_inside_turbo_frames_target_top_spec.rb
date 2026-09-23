@@ -239,6 +239,26 @@ RSpec.describe "Code smell: forms inside Turbo frames" do
     expect(search[:frame]).to eq("members_results")
   end
 
+  # The guard trusts a quoted turbo_frame target on sight: it never checks that
+  # the name is the frame the form is actually inside, so a form naming some
+  # OTHER frame submits into a frame that is not on the page and fails silently
+  # (#1051). That is affordable only while exactly one site names a frame and it
+  # names its own. This census is the trigger: the day a second one lands, it
+  # fails here and the enclosing-frame question gets asked then, rather than
+  # waiting on a deferral nobody is watching.
+  it "has exactly one form naming its frame, and that name is its own frame" do
+    named = found[:named].map { |entry| [ entry[:site], entry[:frame] ] }
+
+    expect(named.size).to eq(1),
+      "the census now sees #{named.size} forms naming a frame:\n  " \
+      "#{named.map { |site, frame| "#{site} -> #{frame}" }.join("\n  ")}\n\n" \
+      "Each one needs the question this guard cannot answer: is that the frame " \
+      "the form is enclosed by? If yes, widen this example. If no, it submits " \
+      "into a frame that is not on the page and nothing will say so."
+
+    expect(named.first.last).to eq("members_results")
+  end
+
   it "reaches forms in partials rendered inside a frame, not just the frame's own template" do
     reached = (found[:top] + found[:named] + found[:bare]).map { |e| e[:site] }
 

@@ -1,0 +1,13 @@
+<%= ui :empty_state,
+       title: "No projects yet",
+       description: "Create your first project to get started." do |c| %>
+  <% c.with_icon do %>
+    <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  <% end %>
+  <% c.with_action do %>
+    <a href="#" class="btn-primary">New project</a>
+  <% end %>
+<% end %>

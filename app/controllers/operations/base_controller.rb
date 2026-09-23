@@ -23,8 +23,12 @@ module Operations
       head :not_found unless Current.user&.operator?
     end
 
-    def operated_workspaces
-      Current.user.operated_workspaces
+    def operated_workspaces(include_discarded: false)
+      Current.user.operated_workspaces(include_discarded: include_discarded)
+    end
+
+    def operated_users
+      Current.user.operated_users
     end
   end
 end

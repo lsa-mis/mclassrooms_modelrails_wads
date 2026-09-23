@@ -46,6 +46,27 @@ RSpec.describe "PendingJoins", type: :request do
       ).to eq 1
     end
 
+    # The resolver's checks run at page load; the write happens on submit. A
+    # link revoked in between passes the resolver and is never looked at again,
+    # because this action admits through the WORKSPACE rather than the LINK —
+    # so WorkspaceJoinLink#admit's posture re-check, which exists for exactly
+    # this window and re-reads committed state inside the write transaction,
+    # is skipped entirely (#1061).
+    it "refuses a link revoked between the resolver and the write" do
+      allow(WorkspaceJoinLink).to receive(:find_active).and_wrap_original do |original, *args|
+        original.call(*args).tap do |found|
+          WorkspaceJoinLink.find(found.id).revoke! if found
+        end
+      end
+
+      post pending_join_path
+
+      expect(user.memberships.kept.where(workspace: workspace)).not_to exist,
+        "the link was revoked before the write and the user was admitted anyway — " \
+        "the posture was checked when the page loaded and never re-read"
+      expect(session[:pending_join_token]).to be_nil
+    end
+
     it "reports the join as unavailable when the link was revoked in the meantime" do
       link.revoke!
 

@@ -9,30 +9,26 @@
 </div>
 
 <% if @workspaces.any? %>
-  <div class="rounded-lg border border-border bg-surface overflow-hidden">
-    <%# Only the name column links anywhere — the "content already
-        focusable throughout" exemption doesn't apply, so this needs the
-        same keyboard-reachable scroll region as the other overflowing
-        tables (workspaces/members, projects/memberships). %>
-    <%= ui :scroll_area, orientation: :horizontal, max_h: nil,
-          aria_label: t("operations.workspaces.index.caption") do %>
-    <table class="min-w-full text-sm">
-      <caption class="sr-only"><%= t("operations.workspaces.index.caption") %></caption>
-      <thead>
-        <tr class="text-left text-text-heading">
-          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.name") %></th>
-          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.status") %></th>
-          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.owner") %></th>
-          <th scope="col" class="px-4 py-3"><%= t("operations.workspaces.index.columns.members") %></th>
-        </tr>
-      </thead>
-      <tbody>
-        <%= render partial: "operations/workspaces/row", collection: @workspaces, as: :workspace %>
-      </tbody>
-    </table>
+  <%# scroll: — only the name column links anywhere, so the "content already
+      focusable throughout" exemption doesn't apply and the table needs the
+      same keyboard-reachable scroll region as the other overflowing tables
+      (workspaces/members, projects/memberships). mt-6 sm:mt-0: under sm the
+      New button is the last thing in the header column and the header's own
+      mb-8 no longer separates it from the table. %>
+  <%= render UI::TableComponent.new(caption: t("operations.workspaces.index.caption"), scroll: :horizontal, class: "mt-6 sm:mt-0") do |table| %>
+    <% table.with_header do %>
+      <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("operations.workspaces.index.columns.name") %></th>
+      <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("operations.workspaces.index.columns.status") %></th>
+      <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("operations.workspaces.index.columns.owner") %></th>
+      <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("operations.workspaces.index.columns.members") %></th>
     <% end %>
-    <%= render "shared/pagination", pagy: @pagy %>
-  </div>
+    <% table.with_body do %>
+      <%= render partial: "operations/workspaces/row", collection: @workspaces, as: :workspace %>
+    <% end %>
+    <% table.with_footer do %>
+      <%= render "shared/pagination", pagy: @pagy %>
+    <% end %>
+  <% end %>
 <% else %>
   <%= render "shared/empty_state", message: t("operations.workspaces.index.empty") %>
 <% end %>

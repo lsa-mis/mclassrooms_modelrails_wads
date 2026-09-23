@@ -14,6 +14,7 @@ RSpec.describe "Re-authentication interstitial", type: :system do
     expect(page).to have_text(I18n.t("settings.reauthentications.new.title"))
     expect(page).to have_button(I18n.t("settings.reauthentications.new.email_button"))
     expect(page).not_to have_field(I18n.t("settings.reauthentications.new.password_label"))
+    expect(page).to have_no_css("#reauth-choose-heading")
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
@@ -22,6 +23,26 @@ RSpec.describe "Re-authentication interstitial", type: :system do
     visit new_settings_reauthentication_path
     click_button I18n.t("settings.reauthentications.new.email_button")
     expect(page).to have_field(I18n.t("settings.reauthentications.new.code_label"))
+    expect(page).to have_text(
+      I18n.t("settings.reauthentications.new.code_sent_to",
+             email: user.email_address,
+             minutes: ReauthenticationChallenge::EXPIRY.in_minutes.to_i)
+    )
+    expect(page).to have_button(I18n.t("settings.reauthentications.new.resend_button"))
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+  end
+
+  it "sends a new code from the code-entry state, keeping the field in place" do
+    visit new_settings_reauthentication_path
+    click_button I18n.t("settings.reauthentications.new.email_button")
+    expect(page).to have_field(I18n.t("settings.reauthentications.new.code_label"))
+
+    click_button I18n.t("settings.reauthentications.new.resend_button")
+
+    expect(page).to have_text(I18n.t("settings.reauthentication_codes.create.sent"))
+    expect(page).to have_field(I18n.t("settings.reauthentications.new.code_label"))
+    expect(page).to have_button(I18n.t("settings.reauthentications.new.resend_button"))
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end

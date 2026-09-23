@@ -82,19 +82,20 @@ invitation *is* or whether it can be accepted.
 checks so a `false` self-identifies (a magic-link invitation has nothing to
 deliver, which is not a block and writes no row).
 
-Four invariants hold the design together:
+Four invariants hold the design together. Code that guards one cites it by
+number, so the numbers live here:
 
-- **Directional.** A block suppresses deliveries to the blocked-from address
+- **I1 — Directional.** A block suppresses deliveries to the blocked-from address
   only, never to the inviter. Inviter-facing notifiers (declined, accepted,
   resent) never consult blocks, so decline-and-block still delivers exactly
   one decline notification.
-- **Ghosts stay redeemable.** `acceptable?`, the `acceptable` scope, and
+- **I2 — Ghosts stay redeemable.** `acceptable?`, the `acceptable` scope, and
   `guard_acceptable!` never look at `suppressed_at`. A redemption error would
   hand the blocked inviter a detection oracle, and the accept page is fresh,
   informed consent — so a suppressed invitation can still be accepted by
   token (stored encrypted, never plaintext — see *Bearer Tokens in Request
   Logs*).
-- **No oracle in the inviter's surfaces.** A ghost is an ordinary pending row
+- **I3 — No oracle in the inviter's surfaces.** A ghost is an ordinary pending row
   in the members index; resend produces the same confirmation as a live
   invitation; and no activity row the inviter can read is written by
   suppression or by block creation. `bulk_invite!`'s counters stay symmetric
@@ -112,7 +113,7 @@ Four invariants hold the design together:
   would let a blocked re-invite succeed where an unblocked one is refused, once
   the first invitation ages out. Matched, both cases get the identical "already
   has a pending invitation" flash.
-- **`suppressed_at` has exactly three writers, all callback-free.**
+- **I4 — `suppressed_at` has exactly three writers, all callback-free.**
   Create-time on the bulk path (create attributes), retroactively at block
   creation (`update_column`), and the mailer guard (`update_column`) — never a
   callback-running `update!`. (`update_all` is the operator unblock's verb, not
@@ -225,7 +226,11 @@ The interstitial offers only the factors the user has (`User#available_reauth_fa
 password, a passkey (verified through `AuthenticateCeremony` **bound to the
 current user** — another account's passkey is rejected), or a one-time
 `ReauthenticationChallenge` code emailed and entered in-page (never a link, so
-it can't be replayed into a sign-in). All of it is tunable in
+it can't be replayed into a sign-in). That code lasts 10 minutes
+(`ReauthenticationChallenge::EXPIRY`); the interstitial derives its code-entry
+state from whether a live challenge exists, so once one expires the page offers
+to email a fresh one, and "Send a new code" supersedes the previous code at any
+time. All of it is tunable in
 `config/initializers/sessions.rb`; `reauth_enabled = false` makes the gate a
 no-op — except passkey enrollment and the operations area, which stay gated
 regardless: enrollment mints a durable, phishing-resistant credential and
@@ -380,7 +385,20 @@ Encryption column — a database dump or backup carries ciphertext, not
 addresses. Deterministic encryption (same plaintext, same bytes) is used only
 where a finder or a unique index needs the column; everything else takes the
 stronger non-deterministic cipher and cannot be searched or sorted in SQL —
-which is why the members page filters and sorts in Ruby (`WorkspaceRoster`).
+which is why the members page filters and sorts in Ruby (`WorkspaceRoster`),
+and why the operations activity ledger's search box resolves names the same
+way (`ActivityLog::Search`) under a user-count cap rather than in SQL.
+
+That Ruby pass decrypts every member row per search — on the order of 8 ms at
+500 members and 100 ms at 5,000. Measure your own: load a workspace's
+`WorkspaceRoster` in `bin/rails runner` and time `matching` at 1,000, 10,000
+and 100,000 members. A blind index does not rescue this, and it is worth being
+explicit about why, because it is the fix people reach for first: these
+searches are substring matches, and a keyed digest answers equality only. The
+day a workspace outgrows the Ruby pass, the choice is between narrowing the
+match to a prefix or exact address and adding a plaintext search column — a
+deliberate weakening of the posture this section describes. Either way it is a
+product decision, not a migration.
 
 | Column | Cipher | Why |
 | ------ | ------ | --- |

@@ -129,7 +129,7 @@
         button → bubble; Esc dismisses via the shared floating controller
         (WCAG 1.4.13). This replaces the old standalone info chip. %>
     <% pano_tip_id = "tip_load_panorama_#{room.id}" %>
-    <div class="group/tooltip relative inline-flex min-h-11 items-center"
+    <div class="group/tooltip relative inline-flex min-h-input items-center"
          style="anchor-name: --<%= pano_tip_id %>"
          data-controller="floating"
          data-action="keydown.esc->floating#dismiss mouseleave->floating#clearDismissed focusout->floating#clearDismissed">

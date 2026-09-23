@@ -1,17 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # BottomNav
-  #
-  # A fixed mobile bottom navigation bar (a `<nav>` landmark) — a row of icon+label
-  # destinations pinned to the bottom of the viewport.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a named `<nav>` landmark (i18n default "Bottom navigation",
-  #   override via `label:`), the AAA `focus-ring` on every item, and
-  #   `aria-current="page"` on the active item.
-  # - **You supply:** `items:` (`[{ label:, href:, active: (optional),
-  #   icon: (optional HTML string) }]`).
+  # A fixed mobile bottom navigation bar (a `<nav>` landmark) — a row of icon+label destinations pinned to the bottom of the viewport.
+  # Usage, options and the accessibility contract: docs/components/bottom_nav.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class BottomNavComponent < ApplicationComponent
     BASE = "fixed bottom-0 left-0 z-50 w-full border-t border-border bg-surface-raised"
 

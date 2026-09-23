@@ -19,7 +19,7 @@ RSpec.describe Membership, type: :model do
         event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
         expect(event).to be_present
         expect(event.record).to eq(membership)
-        expect(event.notifications.map(&:recipient)).to contain_exactly(member, owner)
+        expect(event.notifications.includes(:recipient).map(&:recipient)).to contain_exactly(member, owner)
       end
 
       it "does not notify when seeding a workspace's first owner" do
@@ -120,7 +120,7 @@ RSpec.describe Membership, type: :model do
 
         event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
         expect(event.record).to eq(membership)
-        expect(event.notifications.map(&:recipient)).to contain_exactly(member, owner)
+        expect(event.notifications.includes(:recipient).map(&:recipient)).to contain_exactly(member, owner)
       end
 
       it "excludes the actor who performed the re-admission" do

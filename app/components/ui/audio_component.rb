@@ -2,7 +2,9 @@
 
 module UI
   class AudioComponent < ApplicationComponent
-    # Add <source> elements via a.with_source(src:, type:)
+    # HTML5 <audio> element with multiple source formats and playback controls.
+    # Usage, options and the accessibility contract: docs/components/audio.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
     renders_many :sources, "UI::AudioComponent::SourceComponent"
 
     PRELOADS = %i[auto metadata none].freeze

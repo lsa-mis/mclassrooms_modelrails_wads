@@ -2,11 +2,16 @@
 require "fileutils"
 require "yaml"
 require "shellwords"
+require_relative "../lib/clean_git_env"
 
 APP_ROOT = File.expand_path("..", __dir__)
 
+# Every spawn here carries the GIT_DIR-clearing env (lib/clean_git_env.rb):
+# bin/fork already runs this script under it, and a developer running it from a
+# git hook would otherwise have its `git remote` calls answer for whatever
+# repository the hook belongs to (#789, #1056). Harmless for the non-git spawns.
 def system!(*args)
-  system(*args, exception: true)
+  system(CleanGitEnv::HASH, *args, exception: true)
 end
 
 FileUtils.chdir APP_ROOT do
@@ -34,11 +39,11 @@ FileUtils.chdir APP_ROOT do
       abort "bin/setup: .fork.yml is not valid YAML (#{e.message.lines.first.to_s.strip})"
     end
 
-  if fork_config.any? || system("git remote get-url upstream", out: File::NULL, err: File::NULL)
+  if fork_config.any? || system(CleanGitEnv::HASH, "git remote get-url upstream", out: File::NULL, err: File::NULL)
     puts "\n== Fork detected — applying per-clone setup =="
 
     template_url = fork_config["template_url"]
-    unless template_url.nil? || system("git remote get-url upstream", out: File::NULL, err: File::NULL)
+    unless template_url.nil? || system(CleanGitEnv::HASH, "git remote get-url upstream", out: File::NULL, err: File::NULL)
       system! "git remote add upstream #{template_url.shellescape}"
       system! "git remote set-url --push upstream DISABLED"
       puts "   upstream remote added (push disabled)"

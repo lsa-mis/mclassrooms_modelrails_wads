@@ -36,7 +36,9 @@ Every invitation email also carries a **Don't invite me again** link. It opens a
 
 A block stops **delivery only**. It does not cancel or invalidate anything: an invitation link you already have still works while that invitation is valid, and blocking does not stop that person creating invitations or reaching you any other way.
 
-Undoing a block is not self-serve yet — ask the people who run this app to lift it for you.
+To undo a block, go to **Settings → Blocked senders**. It lists everyone you've blocked from inviting the address you sign in with, and **Allow again** lifts the block — any invitation they already sent you is delivered, and they can invite you again. You can block them again from any invitation email.
+
+Blocks are per-address, so a block you made against a different address than the one you sign in with is not listed here, and a block made before you had an account is — it was keyed on the address all along. If you can't find a block you expect, ask the people who run this app.
 
 ---
 

@@ -1,29 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # DeviceMockup
-  #
-  # A decorative device frame — phone, tablet, or browser window — that wraps any
-  # content (a screenshot, an `<img>`, an iframe). The CHROME (bezel, notch,
-  # traffic-light dots, address bar) is purely presentational; the slotted CONTENT
-  # carries its own accessibility.
-  #
-  # ## Use when
-  # - You're showing a product screenshot or demo inside a recognizable device
-  #   shell for marketing/docs context.
-  #
-  # ## Don't use when
-  # - The frame would imply interactivity the content doesn't have — the mockup is
-  #   a static decorative wrapper, not a live device.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the frame is a plain `<div>` (no bogus role), and every purely
-  #   decorative chrome bit (notch, traffic-light dots, fake address bar) is
-  #   `aria-hidden` so assistive tech sees ONLY the slotted content. AAA semantic
-  #   tokens throughout (`bg-surface-sunken`/`border-border`/`text-text-*`) — no raw
-  #   palette colors. A valid `variant` is required (an unknown one raises in dev).
-  # - **You supply:** the framed content via the block, with its own a11y — real
-  #   `alt` text on a meaningful screenshot, or `alt: ""` for a decorative one.
+  # A decorative device frame — phone, tablet, or browser window — that wraps any content (a screenshot, an `<img>`, an iframe).
+  # Usage, options and the accessibility contract: docs/components/device_mockup.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class DeviceMockupComponent < ApplicationComponent
     VARIANTS = {
       phone: {

@@ -1,6 +1,7 @@
 require "rails_helper"
 
-# Invariant I3 of the decline-and-block feature (PR 4): the inviter must never
+# Invariant I3 of the decline-and-block feature (PR 4), defined in
+# app/docs/developer/security.md "Invitation blocks": the inviter must never
 # be able to confirm a block. `Invitation#record_suppressed_delivery` writes
 # the ONLY evidence of a suppressed delivery, and deliberately gives it
 # `visibility: "admin"` so it drops out of every inviter-facing feed. That
@@ -61,6 +62,17 @@ RSpec.describe "Code smell: invitation.delivery_suppressed stays admin-only" do
     expect(ActivityLog.for_operations_feed).not_to include(suppressed_row)
   end
 
+  # The workspace overview feed (#1154). Its project partition reaches this
+  # invitation's rows through the project, so an admin-tier row would arrive
+  # on the most-read page in the app if the scope ever stopped chaining
+  # .visible.
+  it "never appears in ActivityLog.for_workspace_feed" do
+    feed = ActivityLog.for_workspace_feed(workspace, projects: Project.where(id: project.id))
+
+    expect(feed).to include(visible_row)
+    expect(feed).not_to include(suppressed_row)
+  end
+
   # Naming the surfaces is what let the console ship past this guard: a scope
   # added later is invisible to a list of examples. Enumerate the read-surface
   # scopes instead and fail on any this spec does not cover, so the next one
@@ -69,7 +81,19 @@ RSpec.describe "Code smell: invitation.delivery_suppressed stays admin-only" do
     covered = %w[visible security_events_for for_operations_feed]
     # for_workspace and recent are composable fragments, not read surfaces:
     # neither filters visibility, and both are always chained onto one above.
-    fragments = %w[for_workspace recent]
+    # The ledger's five filters are the same shape: of_kind narrows the action
+    # prefix, involving the actor/subject, matching_any the records the search
+    # box resolved, within the created_at window, oldest_first only reorders,
+    # at_instance_level only drops workspace rows.
+    # by_workspace_name is the same shape as oldest_first: a reorder (plus the
+    # left join it orders on), no predicate of its own.
+    # None reads `visibility`, and Operations::ActivityLogsController chains
+    # every one of them onto for_operations_feed, which is covered above.
+    fragments = %w[
+      for_workspace recent
+      of_kind involving matching_any within oldest_first at_instance_level
+      by_workspace_name
+    ]
 
     declared = File.read(Rails.root.join("app/models/activity_log.rb"))
                    .scan(/^  scope :(\w+)/).flatten

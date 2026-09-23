@@ -5,7 +5,7 @@ en:
     invite:
       subject: "You've been invited to join %{app_name}"
       greeting: "Hello,"
-      body: "%{inviter} has invited you to %{app_name} as a %{role}. The %{workspace} is named on the page you land on when you accept or decline."
+      body: "%{inviter} has invited you to %{app_name} as %{role}. The %{workspace} is named on the page you land on when you accept or decline."
       accept_action: "Accept invitation"
       decline_action: "Decline invitation"
       block_action: "Don't invite me again"
@@ -45,7 +45,7 @@ en:
     expired_or_used: "This invitation has expired or has already been used."
     show:
       title: "You've been invited"
-      body: "%{inviter} invited you to join %{workspace_name} as a %{role}."
+      body: "%{inviter} invited you to join %{workspace_name} as %{role}."
       accept: "Accept invitation"
       sign_in: "Sign in to accept"
       register: "Create an account to accept"

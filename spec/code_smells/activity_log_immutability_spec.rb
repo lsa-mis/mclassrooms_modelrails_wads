@@ -19,7 +19,11 @@ RSpec.describe "Code smell: activity log immutability" do
   # level exactly like the dotted call, but the separator is `: ` rather than
   # `.` or `&:`. A guard that exists to make relation-level deletion a REVIEWED
   # decision has to see the association form too.
-  bypass_writes = /\b(?:ActivityLog|activity_logs)\b[^\n]*(?:(?:\.|&:)(?:update_all|delete_all|destroy_all|update_columns|upsert(?:_all)?)|dependent:\s*:(?:delete_all|destroy_all))\b/
+  # `:nullify` rides in the same alternation because it is the natural wrong
+  # fix for #1122 — actor_id carries a FK with no cleanup path, and nullifying
+  # on user deletion REWRITES audit rows to hide who acted. A row keeps its
+  # actor, or carries a snapshot; it does not quietly lose one.
+  bypass_writes = /\b(?:ActivityLog|activity_logs)\b[^\n]*(?:(?:\.|&:)(?:update_all|delete_all|destroy_all|update_columns|upsert(?:_all)?)|dependent:\s*:(?:delete_all|destroy_all|nullify))\b/
 
   # path => reason. Empty until the #438 retention job exists.
   # The documented door through the immutability guarantee — an entry here is
@@ -38,6 +42,33 @@ RSpec.describe "Code smell: activity log immutability" do
       "door. Cannot reach the security tier: record_security_event! hardcodes " \
       "workspace_id: nil, so no SECURITY_ACTIONS row is in the association's scope"
   }.freeze
+
+  # POSITIVE CONTROL — the example below asserts an EMPTY list, which is also
+  # what a broken pattern produces. Every spelling the guard claims to cover is
+  # planted here, so a regex that stops matching fails loudly instead of
+  # reporting a clean app.
+  it "sees every spelling it claims to cover" do
+    planted = [
+      "ActivityLog.update_all(action: \"x\")",
+      "activity_logs.delete_all",
+      "ActivityLog.destroy_all",
+      "activity_logs.update_columns(action: \"x\")",
+      "ActivityLog.upsert_all([])",
+      "workspace.activity_logs.in_batches(of: 100, &:delete_all)",
+      "has_many :activity_logs, dependent: :delete_all",
+      "has_many :activity_logs, dependent: :destroy_all",
+      "has_many :activity_logs, dependent: :nullify"
+    ]
+
+    missed = planted.reject { |line| line.match?(bypass_writes) }
+
+    expect(missed).to be_empty,
+      "the guard no longer recognises these, so the main example would pass on " \
+      "an app that does them:\n  #{missed.join("\n  ")}"
+
+    expect("workspace.projects.delete_all").not_to match(bypass_writes),
+      "the guard is matching relation writes that have nothing to do with the audit trail"
+  end
 
   it "no app or lib code rewrites or deletes activity log rows" do
     offenders = Dir[Rails.root.join("{app,lib}/**/*.rb")].flat_map do |file|

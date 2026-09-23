@@ -1,68 +1,92 @@
-<% content_for(:title) { @user.full_name } %>
-<%= render "shared/settings_page_header", title: @user.full_name, description: @user.email_address %>
-
-<div class="mt-4 flex flex-wrap items-center gap-2">
-  <% if @user.operator? %>
-    <%= ui :badge, t("operations.users.show.operator"), variant: :soft, tone: :info %>
-  <% end %>
-  <% if @user.suspended? %>
-    <%= ui :badge, t("operations.users.show.suspended"), variant: :soft, tone: :warning %>
-  <% end %>
+<% content_for(:title) { t("operations.area.page_title", name: @user.full_name) } %>
+<%# Every state the page acts on is a badge on the name line: the sentences
+    below say why each is there, and the one row after them holds every
+    control. Before, badge, sentence and button alternated down the page as
+    five separately-margined blocks. %>
+<% badges = capture do %>
+  <%= render "operations/users/state_badges", user: @user %>
+<% end %>
+<div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
+  <%= render "shared/settings_page_header", title: @user.full_name, description: @user.email_address, badges: badges %>
+  <%= ui :button, t("operations.users.show.view_activity"), variant: :outline, tone: :neutral,
+        href: operations_activity_logs_path(q: @user.email_address), class: "whitespace-nowrap" %>
 </div>
+
+<% suspendable = policy([ :operations, @user ]).suspend? %>
+<% if @user.locked? || @user.suspended? || !suspendable %>
+  <div class="space-y-2 text-sm text-text-body">
+    <% if @user.locked? %>
+      <p>
+        <%= t("operations.users.show.lockout",
+              count: User::MAX_FAILED_ATTEMPTS,
+              time: distance_of_time_in_words(Time.current, @user.locked_at + User::LOCK_DURATION)) %>
+      </p>
+    <% end %>
+    <% if @user.suspended? %>
+      <p>
+        <%= t("operations.users.show.suspended_since_html",
+              time: tag.time(viewer_local_timestamp(@user.suspended_at), datetime: @user.suspended_at.iso8601)) %>
+      </p>
+    <% elsif !suspendable %>
+      <%# The policy refuses operators; the sentence says why, with an in-prose
+          link (not .btn-text, which only reads as a control beside a button). %>
+      <p>
+        <%= t("operations.users.show.operator_unsuspendable_html",
+              link: link_to(t("operations.users.show.operator_access"), operations_operatorships_path,
+                            class: "text-interactive underline hover:no-underline focus-ring rounded",
+                            "aria-label": t("operations.users.show.operator_access_aria_label", name: @user.full_name))) %>
+      </p>
+    <% end %>
+  </div>
+<% end %>
 
 <%# button_to, not `ui :button href: data-turbo-method:` — without JS a link
     GETs a route with no GET handler, and ui :button can't render a form.
     class: repeats ButtonComponent::COMBOS' two AAA-proven cells
-    (btn-secondary, btn-danger). %>
-<% if @user.suspended? %>
-  <p class="mt-3 text-sm text-text-body">
-    <%= t("operations.users.show.suspended_since", time: viewer_local_timestamp(@user.suspended_at)) %>
-  </p>
-  <%= button_to t("operations.users.show.reinstate"), operations_user_suspension_path(@user),
-        method: :delete, class: "btn-secondary mt-3" %>
-<% elsif policy([ :operations, @user ]).suspend? %>
-  <%= button_to t("operations.users.show.suspend"), operations_user_suspension_path(@user),
-        method: :post, class: "btn-danger mt-3",
-        form: { data: { turbo_confirm: t("operations.users.show.suspend_confirm") } } %>
-<% else %>
-  <%# The policy refuses operators; the sentence says why, with an in-prose
-      link (not .btn-text, which only reads as a control beside a button). %>
-  <p class="mt-3 text-sm text-text-body">
-    <%= t("operations.users.show.operator_unsuspendable_html",
-          link: link_to(t("operations.users.show.operator_access"), operations_operatorships_path,
-                        class: "text-interactive underline hover:no-underline focus-ring rounded")) %>
-  </p>
+    (btn-secondary, btn-danger). Lockout first — the transient state an
+    operator is most often here for — and the destructive control last. %>
+<% if @user.locked? || @user.suspended? || suspendable %>
+  <div class="mt-4 flex flex-wrap items-center gap-3">
+    <% if @user.locked? %>
+      <%= button_to t("operations.users.show.clear_lockout"), operations_user_lock_path(@user),
+            method: :delete, class: "btn-secondary" %>
+    <% end %>
+    <% if @user.suspended? %>
+      <%= button_to t("operations.users.show.reinstate"), operations_user_suspension_path(@user),
+            method: :delete, class: "btn-secondary" %>
+    <% elsif suspendable %>
+      <%= button_to t("operations.users.show.suspend"), operations_user_suspension_path(@user),
+            method: :post, class: "btn-danger",
+            form: { data: { turbo_confirm: t("operations.users.show.suspend_confirm", name: @user.full_name) } } %>
+    <% end %>
+  </div>
 <% end %>
 
-<% if @user.locked? %>
-  <p class="mt-3 text-sm text-text-body">
-    <%= t("operations.users.show.lockout",
-          count: User::MAX_FAILED_ATTEMPTS,
-          time: distance_of_time_in_words(Time.current, @user.locked_at + User::LOCK_DURATION)) %>
-  </p>
-  <%= button_to t("operations.users.show.clear_lockout"), operations_user_lock_path(@user),
-        method: :delete, class: "btn-secondary mt-3" %>
-<% end %>
-
-<section aria-labelledby="ops-user-memberships" class="mt-6">
-  <h2 id="ops-user-memberships" class="text-lg font-semibold text-text-heading"><%= t("operations.users.show.memberships") %></h2>
+<%# A plain div, not a named <section>: the heading outlines it; the id scopes
+    specs to this list. %>
+<div id="ops-user-memberships" class="mt-8">
+  <h2 class="text-lg font-semibold text-text-heading"><%= t("operations.users.show.memberships") %></h2>
   <% if @memberships.any? %>
     <%= ui :list_group, class: "mt-3" do %>
       <% @memberships.each do |membership| %>
         <%# The row stays a static li with the link inside it, not a whole-row
             list_group_item href: the badge would then sit inside the <a> and
-            join its accessible name. hover:bg-surface: the row is not the
-            control, the link is, so it does not highlight — and the gem's
-            hover token under an interactive link measures below AAA. %>
-        <%= ui :list_group_item, class: "gap-4 hover:bg-surface" do %>
-          <%# operated_workspaces (Workspace.kept) can never resolve a discarded
-              workspace's slug — link only a kept one, or the operator lands on
-              a not-found redirect. %>
-          <% if membership.workspace.kept? %>
-            <%= link_to membership.workspace.name, operations_workspace_path(membership.workspace), class: "btn-text btn-text-interactive" %>
-          <% else %>
-            <span><%= membership.workspace.name %> — <%= lifecycle_status_label(membership.workspace) %></span>
-          <% end %>
+            join its accessible name. %>
+        <%= ui :list_group_item, class: "gap-4" do %>
+          <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <%# operated_workspaces (Workspace.kept) can never resolve a discarded
+                workspace's slug — link only a kept one, or the operator lands on
+                a not-found redirect. %>
+            <% if membership.workspace.kept? %>
+              <%= link_to membership.workspace.name, operations_workspace_path(membership.workspace), class: "btn-cell-link btn-text-interactive" %>
+            <% else %>
+              <span><%= membership.workspace.name %></span>
+            <% end %>
+            <%# Only a state worth knowing gets a chip: a locked workspace is the
+                one reason "they can't get in" that this page would otherwise
+                not show. %>
+            <%= lifecycle_status_badge(membership.workspace) unless membership.workspace.status == :active %>
+          </div>
           <%= ui :badge, membership.role.name, variant: :soft, tone: :neutral %>
         <% end %>
       <% end %>
@@ -72,4 +96,4 @@
       <%= render "shared/empty_state", message: t("operations.users.show.no_memberships") %>
     </div>
   <% end %>
-</section>
+</div>

@@ -5,11 +5,30 @@
 # query for the whole candidate set" — the SQL-level sibling of the mock-based
 # `.once` precedent in spec/lib/notification_broadcaster_spec.rb.
 module QueryCounting
-  def count_queries_touching(table)
+  def count_queries_touching(table, &block)
+    count_statements_touching(table, ->(_sql) { true }, &block)
+  end
+
+  # READS only. An N+1 is a read problem, and a loop that legitimately writes
+  # the same table once per record drowns that signal: the digest job updates
+  # `user_preferences` for every user it visits, so a preload removing every
+  # extra SELECT still leaves the total rising with the population. Counting
+  # all statements there would assert a contract the fix cannot satisfy (#1048).
+  def count_selects_touching(table, &block)
+    count_statements_touching(table, ->(sql) { sql.lstrip.match?(/\ASELECT\b/i) }, &block)
+  end
+
+  private
+
+  def count_statements_touching(table, predicate)
     count = 0
     callback = lambda do |_name, _start, _finish, _id, payload|
       next if payload[:name] == "SCHEMA" || payload[:cached]
-      count += 1 if payload[:sql].to_s.include?(table.to_s)
+
+      sql = payload[:sql].to_s
+      next unless sql.include?(table.to_s)
+
+      count += 1 if predicate.call(sql)
     end
     ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { yield }
     count

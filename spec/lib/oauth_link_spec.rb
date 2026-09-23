@@ -177,7 +177,14 @@ RSpec.describe OauthLink do
         expect(outcome.email).to eq("person@example.com")
         expect(outcome.spent_tokens).to contain_exactly(:invitation, :join)
 
-        auth = User.find_by(email_address: "person@example.com").authentications.sole
+        registrant = User.find_by(email_address: "person@example.com")
+        # The one signup path whose welcome no request spec pins (#924): here the
+        # welcome is dispatched before verification, which makes it the site a
+        # refactor is most likely to drop, silently.
+        expect(Noticed::Notification.where(recipient: registrant,
+                                           type: "WelcomeNotifier::Notification").count).to eq 1
+
+        auth = registrant.authentications.sole
         expect(auth.verified_at).to be_nil
         expect(auth.pending_invitation_token).to eq(invitation.token)
         expect(auth.pending_join_link_digest).to eq(WorkspaceJoinLink.digest("some-join-token"))

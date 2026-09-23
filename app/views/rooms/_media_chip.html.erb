@@ -14,14 +14,14 @@
                       end %>
 <div class="absolute top-3 right-3">
   <button type="button" data-media-stage-target="chipToPhotos" data-testid="media-chip"
-          class="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-surface-overlay py-1 pl-1 pr-3.5 text-sm font-semibold text-text-body shadow-sm focus-ring"
+          class="inline-flex min-h-input items-center gap-2 rounded-md border border-border bg-surface-overlay py-1 pl-1 pr-3.5 text-sm font-semibold text-text-body shadow-sm focus-ring"
           data-action="media-stage#showPhotos">
     <%= image_tag rails_representation_path(gallery.first.image.variant(:card)),
           alt: "", class: "h-8 w-11 rounded object-cover" %>
     <%= t("rooms.show.view_photos", count: gallery.size) %>
   </button>
   <button type="button" data-media-stage-target="chipToPano" hidden
-          class="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-surface-overlay py-1 pl-1 pr-3.5 text-sm font-semibold text-text-body shadow-sm focus-ring"
+          class="inline-flex min-h-input items-center gap-2 rounded-md border border-border bg-surface-overlay py-1 pl-1 pr-3.5 text-sm font-semibold text-text-body shadow-sm focus-ring"
           data-action="media-stage#showPano">
     <%= image_tag pano_swatch_path, alt: "", class: "h-8 w-11 rounded object-cover" %>
     <%= t("rooms.show.back_to_panorama") %>

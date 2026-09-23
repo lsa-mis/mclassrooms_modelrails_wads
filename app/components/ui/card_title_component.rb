@@ -1,18 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Card title
-  #
-  # The heading inside a card. It is a real heading element so it participates in
-  # the document outline — which means the CALLER owns its level. It defaults to
-  # `<h3>` (a card usually sits under an `<h2>` section), but you MUST pass `level:`
-  # whenever that default would skip or misorder the page's heading hierarchy.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** renders a real `<h1>`–`<h6>` (never a styled `<div>`) using
-  #   the `text-text-heading` token; an out-of-range `level:` fails loud in dev and
-  #   falls back to `<h3>` in production rather than emitting invalid markup.
-  # - **You supply:** the correct `level:` for where this card sits in the outline.
+  # The heading inside a card.
+  # Usage, options and the accessibility contract: docs/components/card.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   LEVELS = (1..6).freeze
   DEFAULT_LEVEL = 3
 

@@ -25,12 +25,12 @@
         data: { action: "change->filter-form#submitNow" } %>
 <% end %>
 <%# Inside a pill the row sizes to its content (inline-flex); standalone it is a
-    full-width 44px row. Either way min-h-11 keeps the AAA target floor. %>
+    full-width 44px row. Either way min-h-input keeps the AAA target floor. %>
 <% row_display = pill ? "inline-flex" : "flex" %>
 <% row = capture do %>
   <% if entry.long_description.present? %>
     <% tip_id = "tip_characteristics_#{entry.short_code}" %>
-    <div class="group/tooltip relative <%= row_display %> min-h-11 items-center"
+    <div class="group/tooltip relative <%= row_display %> min-h-input items-center"
          style="anchor-name: --<%= tip_id %>"
          data-controller="floating"
          data-action="keydown.esc->floating#dismiss mouseleave->floating#clearDismissed focusout->floating#clearDismissed">
@@ -41,7 +41,7 @@
       </span>
     </div>
   <% else %>
-    <div class="<%= row_display %> min-h-11 items-center">
+    <div class="<%= row_display %> min-h-input items-center">
       <%= checkbox %>
     </div>
   <% end %>
@@ -50,7 +50,7 @@
   <%# The native checkbox stays visible inside the pill — the border/tint is
       presentation, the checkbox is the control. has-checked tints the pill when
       its descendant checkbox is checked. %>
-  <span class="inline-flex items-center rounded-full border border-border px-3 sm:px-4 min-h-11
+  <span class="inline-flex items-center rounded-full border border-border px-3 sm:px-4 min-h-input
                transition-colors hover:bg-surface-sunken
                has-checked:border-interactive has-checked:bg-interactive-subtle">
     <%= row %>

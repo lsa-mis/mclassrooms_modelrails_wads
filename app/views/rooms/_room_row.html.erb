@@ -88,7 +88,7 @@
   <% remainder = chips.drop(RoomsHelper::CARD_TAG_LIMIT) %>
   <% if remainder.any? %>
     <details class="group relative z-20 mt-1">
-      <summary class="list-none min-h-11 inline-flex items-center gap-1 cursor-pointer
+      <summary class="list-none min-h-input inline-flex items-center gap-1 cursor-pointer
                       text-sm text-text-body focus-ring rounded
                       transition-colors hover:text-interactive">
         <%= t("rooms.row.more_features", count: remainder.size) %>

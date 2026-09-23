@@ -8,6 +8,16 @@ en:
     # hard-deleted. The row outlives it (activity is immutable), so the sentence
     # still has to name someone.
     unknown_member: "a member"
+    # The ledger's Kind filter labels — one per action family (ActivityLog::KINDS).
+    # Each names the derived verbs it hides so a rule-out never runs the wrong query.
+    kinds:
+      workspace: "%{Workspaces} (settings, locks)"
+      membership: "Members (roles, deactivations)"
+      invitation: "Invitations"
+      project: "%{Projects}"
+      resource: "Resources"
+      user: "Users (suspensions, lockouts)"
+      operatorship: "Operators"
     # Nested, never flat and dotted: I18n splits a requested key on "." and
     # walks the hash segment by segment, so a literal "membership.created" key
     # is unreachable and the renderer's `default:` silently humanizes instead

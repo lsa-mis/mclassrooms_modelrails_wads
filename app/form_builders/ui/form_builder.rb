@@ -24,7 +24,7 @@ module UI
   class FormBuilder < ActionView::Helpers::FormBuilder
     CHECKBOX_CLASSES = "size-5 rounded border-border-strong text-interactive focus-ring"
     # One row = ONE ≥44px target (WCAG 2.5.5): the label wraps input + caption.
-    CHECKBOX_ROW_CLASSES = "flex min-h-11 items-center gap-3 text-sm text-text-body"
+    CHECKBOX_ROW_CLASSES = "flex min-h-input items-center gap-3 text-sm text-text-body"
     LEGEND_CLASSES = "text-sm font-medium text-text-body"
 
     def text_field(method, options = {})
@@ -170,10 +170,25 @@ module UI
     end
     alias_method :collection_check_boxes, :collection_checkboxes
 
+    # description_method: names a method on each collection item supplying that
+    # option's supporting line — the collection-helper spelling of
+    # UI::RadioGroup's per-item `description:`. An option whose method returns
+    # blank renders exactly as it did before, so the option is purely additive.
+    # (#137)
     def collection_radio_buttons(method, collection, value_method, text_method, options = {}, html_options = {}, &block)
+      options = options.dup
+      description_method = options.delete(:description_method)
+
       collection_group(method, collection, value_method, text_method, options, html_options) do |opts, html_opts|
         super(method, collection, value_method, text_method, opts, html_opts) do |b|
-          collection_row { @template.safe_join([ b.radio_button, @template.content_tag(:span, b.text) ]) }
+          description = description_method && b.object.public_send(description_method).presence
+          next collection_row { @template.safe_join([ b.radio_button, @template.content_tag(:span, b.text) ]) } if description.blank?
+
+          id = field_id(method, b.value.to_s.gsub(/\W/, "_"), "description")
+          collection_row(description: description, description_id: id) do
+            @template.safe_join([ b.radio_button("aria-describedby" => id),
+                                  @template.content_tag(:span, b.text) ])
+          end
         end
       end
     end
@@ -249,8 +264,22 @@ module UI
       end
     end
 
-    def collection_row(&block)
-      @template.content_tag(:label, class: CHECKBOX_ROW_CLASSES, &block)
+    # A described row stacks the supporting line UNDER the label, never inside
+    # it: inside, it would join the control's accessible name and be announced
+    # as the option itself. The ps-8 indent aligns it with the caption — the
+    # input's size-5 (1.25rem) plus the row's gap-3 (0.75rem). Undescribed rows
+    # are the bare label, byte-for-byte as before. (#137)
+    def collection_row(description: nil, description_id: nil, &block)
+      label = @template.content_tag(:label, class: CHECKBOX_ROW_CLASSES, &block)
+      return label if description.blank?
+
+      @template.content_tag(:div) do
+        @template.safe_join([
+          label,
+          @template.content_tag(:p, description, id: description_id,
+            class: "ps-8 text-sm text-text-muted")
+        ])
+      end
     end
 
     def hint_paragraph(text, id:)

@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module UI
+  # The muted subtitle paragraph under a card's title.
+  # Usage, options and the accessibility contract: docs/components/card.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class CardDescriptionComponent < ApplicationComponent
     BASE = "text-text-muted text-sm"
 

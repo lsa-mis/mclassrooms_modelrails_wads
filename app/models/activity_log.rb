@@ -77,7 +77,8 @@ class ActivityLog < ApplicationRecord
       .order(created_at: :desc)
   }
   scope :recent, -> { order(created_at: :desc).limit(20) }
-  # Invariant I3 (decline-and-block): admin visibility alone doesn't keep a
+  # Invariant I3 (decline-and-block, defined in security.md "Invitation blocks"):
+  # admin visibility alone doesn't keep a
   # suppressed-delivery row from an inviter here, since the operator IS often
   # the inviter. See operations.md "What the area does" (Activity).
   INVITER_UNREADABLE_ACTIONS = %w[invitation.delivery_suppressed].freeze
@@ -92,8 +93,61 @@ class ActivityLog < ApplicationRecord
       .where.not(action: INVITER_UNREADABLE_ACTIONS)
       .order(created_at: :desc, id: :desc)
   }
+  # The operations ledger's Kind filter. One entry per action family the
+  # locale tree sentences know (spec/models/activity_log_filters_spec.rb pins
+  # the two lists together). Filters on the stored action prefix on purpose:
+  # a trackable_type predicate seeks the trackable index and then sorts the
+  # whole match in a temp B-tree, while a LIKE on action walks
+  # index_activity_logs_on_created_at in output order and stops at LIMIT.
+  # Under the 30-day default every Kind and Tier filter is a range seek on that
+  # index; on All-time each is a full ordered walk of it, the same cost class as
+  # the feed's COUNT. Re-EXPLAIN past ~5 M retained rows, where that crosses
+  # 100 ms — an (action, created_at) or (visibility, created_at) index buys
+  # nothing before then (#1165).
+  KINDS = %w[workspace membership invitation project resource user operatorship].freeze
+
+  scope :of_kind, ->(kind) { where(arel_table[:action].matches("#{kind}.%")) }
+  # Rows the person acted in or was the subject of: actor, a User trackable
+  # (operator actions on them), or a Membership of theirs. Widening on purpose —
+  # a rule-out question must see the superset.
+  scope :involving, ->(user) {
+    where(actor_id: user.id)
+      .or(where(trackable_type: "User", trackable_id: user.id))
+      .or(where(trackable_type: "Membership", trackable_id: user.memberships.select(:id)))
+  }
+  # The ledger search's filter: every record `ActivityLog::Search` resolved,
+  # OR'd into one predicate. Widening across the four kinds is the point — an
+  # operator ruling something out must see the superset, and a query that
+  # named a person and a workspace means either, not both.
+  scope :matching_any, ->(users:, workspaces:, projects:) {
+    clauses = []
+    if users.any?
+      ids = users.map(&:id)
+      clauses << where(actor_id: ids)
+      clauses << where(trackable_type: "User", trackable_id: ids)
+      clauses << where(trackable_type: "Membership", trackable_id: Membership.where(user_id: ids).select(:id))
+    end
+    clauses << where(workspace_id: workspaces.map(&:id)) if workspaces.any?
+    clauses << where(trackable_type: "Project", trackable_id: projects.map(&:id)) if projects.any?
+    clauses.reduce { |combined, clause| combined.or(clause) } || none
+  }
+  scope :within, ->(from, to) { where(created_at: from..to) }
+  scope :oldest_first, -> { reorder(created_at: :asc, id: :asc) }
+  # The ledger's other SQL sort: workspaces.name is the one plaintext name in
+  # the table (actor names are encrypted and cannot be ordered — see
+  # operations.md, "What it deliberately does not do"). Instance-level rows
+  # have no name and sit last in either direction, so "Instance" never reads
+  # as a name that sorted first. Direction is checked, not interpolated.
+  scope :by_workspace_name, ->(direction) {
+    raise ArgumentError, "direction must be asc or desc" unless %w[asc desc].include?(direction.to_s)
+
+    name = Arel.sql("LOWER(workspaces.name)")
+    left_joins(:workspace).reorder((direction.to_s == "asc" ? name.asc : name.desc).nulls_last, created_at: :desc, id: :desc)
+  }
+  scope :at_instance_level, -> { where(workspace_id: nil) }
+
   # The feed's loader — call last in a chain
-  # (`ActivityLog.visible.for_workspace(w).recent.for_feed`). Returns an
+  # (`ActivityLog.for_workspace_feed(w, projects:).recent.for_feed`). Returns an
   # Array, not a Relation: `trackable` is polymorphic and only Membership
   # carries `user`, so a blanket `preload(trackable: :user)` raises
   # AssociationNotFoundError the moment a Project or Invitation row shares
@@ -179,6 +233,14 @@ class ActivityLog < ApplicationRecord
     display_member if display_action == "membership.created"
   end
 
+  # Public because the ledger's details row reads it to name the member a
+  # membership row is about (app/views/operations/activity_logs/_row.html.erb).
+  def tracked_membership
+    return nil unless trackable_type == "Membership"
+
+    trackable
+  end
+
   private
 
   def membership_display_action
@@ -194,12 +256,6 @@ class ActivityLog < ApplicationRecord
     return action if transition.blank?
 
     transition.last.blank? ? "workspace.unsuspended" : "workspace.suspended"
-  end
-
-  def tracked_membership
-    return nil unless trackable_type == "Membership"
-
-    trackable
   end
 
   # The actor removed their own membership, so the row is a departure rather

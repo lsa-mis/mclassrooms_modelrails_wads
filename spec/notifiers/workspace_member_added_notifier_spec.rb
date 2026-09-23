@@ -91,7 +91,8 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
       workspace.admit(added_user, role: member_role, granted_by: owner_user_a)
 
       recipients = Noticed::Notification
-        .where(type: "#{described_class.name}::Notification").map(&:recipient)
+        .where(type: "#{described_class.name}::Notification")
+        .includes(:recipient).map(&:recipient)
       expect(recipients).to contain_exactly(added_user, owner_user_b)
     end
 
@@ -106,7 +107,8 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
       workspace.admit(added_user, role: member_role)
 
       recipients = Noticed::Notification
-        .where(type: "#{described_class.name}::Notification").map(&:recipient)
+        .where(type: "#{described_class.name}::Notification")
+        .includes(:recipient).map(&:recipient)
       expect(recipients).to contain_exactly(added_user, owner_user_a, owner_user_b)
     end
 
@@ -121,7 +123,8 @@ RSpec.describe WorkspaceMemberAddedNotifier, type: :notifier do
       workspace.admit(added_user, role: member_role, granted_by: owner_user_a)
 
       expect(
-        Noticed::Notification.where(type: "#{described_class.name}::Notification").map(&:recipient)
+        Noticed::Notification.where(type: "#{described_class.name}::Notification")
+          .includes(:recipient).map(&:recipient)
       ).to eq([ added_user ])
     end
   end

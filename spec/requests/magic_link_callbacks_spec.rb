@@ -378,9 +378,9 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         end
       end
 
-      # Task 5 (I2): archived and deleted must behave exactly like the
+      # Task 5: archived and deleted must behave exactly like the
       # suspended case above — silent no-op, signup still succeeds. This is a
-      # deliberate mechanism divergence from the invitation path (I1): an
+      # deliberate mechanism divergence from the invitation path: an
       # invitation FAILS the whole signup with a notice (the invitee already
       # has a specific stake in that workspace), whereas an open-link visitor
       # was never a member, so a silent drop is the only privacy-safe outcome.
@@ -462,7 +462,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         expect(user.memberships.kept).to exist
       end
 
-      # Task 5 (I1): breaks the invitation retry-loop. Invitation#accept!'s
+      # Task 5: breaks the invitation retry-loop. Invitation#accept!'s
       # widened guard rejects the parked invitation because its workspace is
       # archived, and commit_signup_atomically's rescue must clear
       # session[:pending_invitation_token] — otherwise a retry hits the

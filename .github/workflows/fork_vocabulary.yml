@@ -1,0 +1,74 @@
+name: Fork vocabulary
+
+# Weekly, not per-PR. The seam's promise is "a fork that renames its nouns
+# keeps this suite green", and the assertions that break it turn up anywhere —
+# models, views, system specs — so the useful run is the whole suite, which is
+# too slow to pay for on every pull request. Gate C
+# (spec/code_smells/spec_copy_assertions_use_i18n_spec.rb) stays the fast
+# per-PR lane and catches the shapes it knows; this catches the rest (#1112).
+#
+# NOTE for forks: this repository is public, and GitHub disables scheduled
+# workflows in a public repository after 60 days with no repository activity.
+# A private fork is not subject to that. See /docs/developer/getting-started.
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  suite_under_a_renamed_vocabulary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RAILS_ENV: test
+      CI: true
+      PARALLEL_TEST_PROCESSORS: "4"
+      # See ci.yml's test_shard job (#740): a fixed test-only value avoids the
+      # non-atomic local_secret race on a fresh runner. Not a secret.
+      SECRET_KEY_BASE: ci-test-only-dummy-secret-key-base-not-used-anywhere-real
+      VOCABULARY_OVERRIDE: spec/fixtures/vocabulary.course.yml
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        with:
+          bundler-cache: true
+
+      - name: Install libvips (Active Storage image variants)
+        timeout-minutes: 5
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips42t64
+
+      - name: Verify Chrome is available (Cuprite/ferrum connects to the runner's pre-installed browser)
+        run: google-chrome --version || chromium-browser --version || chromium --version
+
+      - name: Prepare parallel test databases
+        run: bundle exec rake "parallel:rake[db:prepare]"
+
+      - name: Set up gem source symlinks for Tailwind
+        run: bundle exec rake tailwind:setup_gem_sources
+
+      - name: Compile assets
+        run: bin/rails assets:precompile
+
+      - name: Run the suite under spec/fixtures/vocabulary.course.yml
+        # Unsharded: no frozen split seed to download, and the merged coverage
+        # floor is enforced here rather than deferred to a coverage_merge job.
+        run: bin/parallel-rspec
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: fork-vocabulary-failures
+          path: tmp/capybara
+          if-no-files-found: ignore

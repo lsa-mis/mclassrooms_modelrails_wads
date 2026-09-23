@@ -1,32 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Dropdown menu
-  #
-  # A button that opens a menu of actions, implementing the WAI-ARIA APG menu-button
-  # pattern via the `menu` Stimulus controller shipped alongside this component.
-  # Placement is CSS anchor positioning: the panel is `position: fixed` (so its
-  # containing block is the viewport), tethered to the trigger via `anchor-name`/
-  # `position-anchor`; `position-area` places it and `position-try-fallbacks` keeps it
-  # on-screen. The controller owns open/close and the keyboard model (roving tabindex,
-  # type-ahead, Escape/Tab/outside-click dismissal with focus restoration).
-  #
-  # ## Use when
-  # - A trigger opens a list of *commands/actions* (Edit, Duplicate, Delete…).
-  #
-  # ## Don't use when
-  # - You need *selection from a list* of values — use a listbox/`select`.
-  # - The content is a non-menu overlay (a form, rich detail) — use `popover`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a real `<button>` trigger with `aria-haspopup="menu"`,
-  #   `aria-expanded` (kept in sync) and `aria-controls`; a `role="menu"` panel named by
-  #   the trigger (`aria-labelledby`); items are `role="menuitem"` with roving tabindex;
-  #   keyboard nav (↑/↓ wrap skipping disabled, Home/End, type-ahead, Enter/Space
-  #   activate, Escape/Tab/outside-click close) with focus restored to the trigger.
-  # - **You supply:** a `with_trigger` slot (the button's visible label) and one or more
-  #   `with_item` slots. Icon-only triggers MUST pass `aria_label:` (the 0b axe proves
-  #   the accessible name).
+  # A button that opens a menu of actions, implementing the WAI-ARIA APG menu-button pattern via the `menu` Stimulus controller shipped alongside this component.
+  # Usage, options and the accessibility contract: docs/components/dropdown_menu.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class DropdownMenuComponent < ApplicationComponent
     renders_one :trigger
 
@@ -75,9 +52,9 @@ module UI
     # floor (2.5.5 AAA) from the one element this component guarantees is "a real <button>".
     # Utilities rather than `.btn-touch-target`, so they sit in Tailwind's utilities layer
     # and merge predictably instead of racing a component class on source order.
-    TRIGGER_BASE = "focus-ring min-h-[var(--form-input-height)]"
+    TRIGGER_BASE = "focus-ring min-h-input"
 
-    PANEL_BASE = "z-50 min-w-[8rem] overflow-hidden rounded-md border border-border " \
+    PANEL_BASE = "z-50 min-w-[8rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border border-border " \
                  "bg-surface-overlay p-1 text-text-body shadow-md outline-none"
 
     # Menu item: focus-visible AND hover share the same highlight (roving focus must be

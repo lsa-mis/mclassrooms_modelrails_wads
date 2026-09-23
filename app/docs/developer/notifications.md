@@ -37,7 +37,7 @@ One row per `(event, recipient)` pair. `recipient` is polymorphic (always `User`
 | `event_id` | FK to `noticed_events` |
 | `recipient_type` / `recipient_id` | Polymorphic recipient |
 | `type` | STI shape — e.g., `PasswordChangedNotifier::Notification` |
-| `read_at` | Nullable timestamp; the read/unread state |
+| `read_at` | Nullable timestamp; the read/unread state and nothing else — a *return to me later* state, if one is ever built, gets its own column rather than a `read_at` reset |
 
 There's a composite index `(recipient_id, read_at, created_at)` to back the `/account/notifications` index page (default sort + `?filter=unread`), the per-user unread breakdown that drives the bell indicator, and the cleanup job's `read_at < cutoff` scan.
 
@@ -268,7 +268,9 @@ So the job records its own arrival. A `before_perform` callback registered in `c
 
 Stamping at the start, not the end, is what keeps the sweep safe: an event whose job was *claimed* is already stamped, so the reconciler covers only the never-enqueued gap and can never re-run an event whose delivery legs already fanned out.
 
-**What the watermark does not cover**, stated plainly because it is easy to assume otherwise: a job that was claimed and then *raised*. `Noticed::EventJob` declares no `retry_on` — only `discard_on ActiveJob::DeserializationError` — and Solid Queue adds no retry policy of its own, so such a job lands in `solid_queue_failed_executions` and stays there until someone retries it by hand. A pruned worker process likewise *fails* its claimed executions rather than releasing them, and this app ships no Mission Control UI to notice either. The reconciler is not that safety net and cannot be: the row is stamped, so it is invisible to the sweep by design. Closing that gap is [#1065](https://github.com/dschmura/modelrails_base/issues/1065).
+**What the watermark does not cover**, stated plainly because it is easy to assume otherwise: a job that was claimed and then *raised*. The gem ships no retry policy — only `discard_on ActiveJob::DeserializationError` — so `config/initializers/noticed.rb` registers one: three attempts with a growing delay (#1065). Retrying re-runs `perform`, which is **not idempotent** — the fan-out is 1-3 delivery legs and a recipient may see a duplicate email. That trade is deliberate and the smaller harm: a duplicate is visible and annoying, a silently dropped security notification is neither.
+
+Two things remain uncovered. A job that exhausts its three attempts lands in `solid_queue_failed_executions`. So does a pruned worker process's claimed execution — Solid Queue *fails* those rather than releasing them, which no retry policy can see. The reconciler is not that safety net and cannot be: the row is stamped, so it is invisible to the sweep by design. What it does instead is **count** them: at the end of each run it logs a warning naming how many `Noticed::EventJob` executions are sitting in that table, because this app ships no Mission Control UI.
 
 ## Broadcast pipeline
 
@@ -295,7 +297,7 @@ All four use `broadcast_update_to`, never `broadcast_replace_to`. The partials r
 
 Why four targets: an earlier revision (D1) broadcast a standalone header bell — severity glyph plus a broadcast sr-only phrase inside the bell link's accessible name. That label frame is retired deliberately. The avatar and hamburger buttons now carry **static, identity-only** `aria-label`s; notification semantics are exposed through the user-menu Notifications row and the `aria-live` region instead. The enduring constraint: broadcast frames and live regions stay **outside** a focusable control's accessible-name path, so a control's name never mutates under an AT user mid-session.
 
-Each broadcast runs in its own `safe_broadcast` rescue scope. A failure on ONE surface must NOT abort the others: the real failure mode this prevents is a transient cable adapter hiccup or a partial-rendering exception in an early broadcast silently dropping the rest of the refresh, leaving the UI stale. Each failed broadcast is `Rails.logger.warn`'d and `Rails.error.report(handled: true)`'d with a `source: "NotificationBroadcaster.<surface>"` context tag (`indicator_avatar`, `indicator_hamburger`, `menu_count_row`, `aria_live`), so cable outages reach your error tracker per-surface.
+Each broadcast runs in its own `safe_broadcast` rescue scope. A failure on ONE surface must NOT abort the others: the real failure mode this prevents is a transient cable adapter hiccup or a partial-rendering exception in an early broadcast silently dropping the rest of the refresh, leaving the UI stale. Each failed broadcast is `Rails.logger.warn`'d and `Rails.error.report(handled: true)`'d with a `source: "NotificationBroadcaster.<surface>"` context tag (`indicator_avatar`, `indicator_hamburger`, `menu_count_row`, `aria_live`), so a cable outage is visible per-surface. Those reports reach the log through the subscriber in `config/initializers/error_subscriber.rb`; sending them to a real error tracker is a fork's job — add your tracker as a second subscriber and the logging one keeps working alongside it.
 
 Performance: the unread breakdown summary is computed ONCE at the top of `refresh_for` and passed to each receiving partial as a `summary:` local — avoids the redundant `unread_notification_breakdown` queries that would otherwise fire, one per partial that needs it.
 
@@ -406,7 +408,7 @@ Per-user retention enforcement. For every user:
 
 **No retention floor at this layer.** A security-category notification expires under the user's retention like any other row. The durable record of that event is its `ActivityLog` row, kept for at least `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR` (365 days) — see [Security event audit coverage](#security-event-audit-coverage).
 
-**Fault isolation**: each user's sweep runs under its own `rescue StandardError`, reported through `Rails.error` with the user id. That isolates a per-user data fault (a malformed preferences row). It does not isolate a systemic one — SQLite's writer lock is global — so a cycle in which every attempted user failed re-raises, and Solid Queue records a failure and retries.
+**Fault isolation**: each user's sweep runs under its own `rescue StandardError`, reported through `Rails.error` with the user id. That isolates a per-user data fault (a malformed preferences row). It does not isolate a systemic one — SQLite's writer lock is global — so a cycle in which every attempted user failed re-raises and Solid Queue records a failure. There is no retry policy on this job and none from the queue: the recovery is tomorrow's fresh sweep, which re-attempts every user from scratch because nothing is stamped as done. A *partial* failure raises nothing, so the job logs a one-line summary naming how many users it swept, how many failed, and the last error class — without it the run reads as clean (#944).
 
 **Batched deletion**: rows go out via `in_batches(of: 100, &:delete_all)` so the writer lock is released between rounds. Each yielded batch is derived from the scoped relation, so its DELETE still carries `read_at IS NOT NULL AND read_at < cutoff` and a row marked unread between the id SELECT and the DELETE is not deleted. That holds in both of `in_batches`' modes (`activerecord-8.1.3.1/lib/active_record/relation/batches.rb:440` for the id-list `rewhere`, `:457-458` for the range mode's `apply_finish_limit` on the same relation). A partial batch is re-entrant: the next run recomputes the cutoff.
 
@@ -470,9 +472,9 @@ These traversals are deliberately **not** Bullet-safelisted: safelist entries ar
 
 `lib/bullet_safelists.rb` (shared by the development and test configs) keeps a small set of entries specific to this surface. They're not "ignored warnings" — each documents a constraint:
 
-- **`WorkspaceMemberAddedNotifier::Notification` n_plus_one_query on `:recipient`** — Noticed v2's `EventJob` iterates `event.notifications.each` and accesses each notification's `recipient` (for the `deliver_by :email` lambda's `recipient_pref` check). The library doesn't expose a hook to eager-load `:recipient` on the notifications relation, so this is a structural constraint of the gem. Covers WorkspaceMemberAdded's fan-out to every workspace owner.
-- **`WorkspaceCapacityApproachingNotifier::Notification` n_plus_one_query on `:recipient`** — same delivery-layer rationale as above; capacity alerts dispatch to all workspace owners.
 - **`SignInFromNewDeviceNotifier` unused_eager_loading on `:record`** — the index page eager-loads `event.record` for every row because every other notifier's `#message` interpolates `event.record.<attr>`. SignInFromNewDevice reads only `event.params`, so when it's the only subtype in a result the include looks wasted. The safelist documents the deliberate trade-off rather than dropping eager-load for all rows.
+
+Two `:recipient` n_plus_one_query entries lived here until #1054 and are now gone. Their rationale was the `deliver_by :email` lambda's per-recipient `recipient_pref` check; #936 replaced that gate with one answered from the event's own permitted-id set, which reads no association. Nothing in `app/` or `lib/` reads `recipient` on a collection path any more — `recipient_pref` survives as an introspection shim with no caller outside specs — so the capacity entry was dead outright and the member-added one was held up only by spec-side reads, which now eager-load with `.includes(:recipient)`.
 
 ## Operational concerns
 
@@ -481,8 +483,8 @@ These traversals are deliberately **not** Bullet-safelisted: safelist entries ar
 Watch for:
 
 - **`Rails.error` reports tagged `source: "NotificationBroadcaster.refresh_for"`** — cable adapter outages or partial-render errors. Notification persistence is unaffected, but the real-time UX degrades to "next page load."
-- **`Solid Queue` job retries** on `DigestMailerJob` and `NotificationCleanupJob` — queue assignment lives in `config/recurring.yml`. Failed digest sends will retry per the queue's policy.
-- **`noticed_events` growth rate** — events are not pruned by `NotificationCleanupJob` (only `noticed_notifications` rows are). Long-lived events with retention'd-away notifications accumulate. Pruning of orphan events is a future cleanup.
+- **Job failures** on `DigestMailerJob` and `NotificationCleanupJob` — queue assignment lives in `config/recurring.yml`. Neither declares `retry_on` and Solid Queue adds no policy of its own, so a failed run lands in `solid_queue_failed_executions` and stays there; the recovery is the next scheduled run, not a retry. Watch `NotificationCleanupJob`'s `swept N of M users` warning for partial failures, which never raise.
+- **`noticed_events` growth rate** — `NotificationCleanupJob` prunes an event once it has no notifications left, in the same pass that deleted them. Pruning is **childless-only and never age-based**: deleting an event cascades to every recipient's row through the FK, so age is the one criterion that could take live notifications with it. Childlessness is decided by a subquery against `noticed_notifications`, never by `noticed_events.notifications_count`, which is deliberately stale (#811).
 
 ### Tuning
 

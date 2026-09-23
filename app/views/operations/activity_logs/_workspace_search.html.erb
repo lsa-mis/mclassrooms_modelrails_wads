@@ -1,0 +1,64 @@
+<%# The large-instance shape of the Workspace filter (#1166). No option list is
+    rendered here at all — that is the whole point, since the reach is every
+    tenant on the instance.
+
+    Zero new JavaScript and no new endpoint: this is a text field in the band's
+    existing GET form, resolved server-side in the same index action. The
+    trade-off is a round trip per search instead of client-side filtering, which
+    is the right trade at the scale that turns this shape on.
+
+    `workspace` (the slug) stays the applied filter in both shapes, so every
+    existing link and bookmark keeps working and the URL stays shareable. %>
+
+<%# The applied filter, named. On this path nothing else can show it: there is
+    no option list for a selected option to sit highlighted in. %>
+<% if @workspace %>
+  <div class="flex items-center justify-between gap-2 rounded-md border border-border-strong bg-transparent px-3 min-h-input">
+    <span class="truncate text-sm text-text-body"><%= t("operations.activity_logs.index.filters.workspace_applied", name: @workspace.name) %></span>
+    <%# _top like every other band control: clearing has to re-render this band,
+        which a frame-local swap cannot do. %>
+    <%= link_to operations_activity_logs_path(ledger_filter_params(workspace: nil, workspace_q: nil)),
+          data: { turbo_frame: "_top", focus_key: "workspace" },
+          class: "btn-text btn-text-interactive px-2 -mr-2 shrink-0" do %>
+      <span class="sr-only"><%= t("operations.activity_logs.index.filters.workspace_clear") %></span>
+      <span aria-hidden="true">&times;</span>
+    <% end %>
+  </div>
+<% else %>
+  <%= ui :search_input, name: "workspace_q", id: "workspace_q", value: @workspace_query,
+        label: t("operations.activity_logs.index.filters.workspace_search_label"),
+        placeholder: t("operations.activity_logs.index.filters.workspace_search_placeholder"),
+        autocomplete: "off", describedby: "workspace-q-hint",
+        data: { action: "input->search-form#search keydown->search-form#clear", focus_key: "workspace" } %>
+  <%# Why this control is a search rather than the list it is elsewhere, on the
+      control itself — an operator who used a smaller instance would otherwise
+      just find the dropdown missing. %>
+  <p id="workspace-q-hint" class="sr-only"><%= t("operations.activity_logs.index.filters.workspace_search_hint") %></p>
+<% end %>
+
+<%# Several matches: the page offers the choices rather than guessing. Applying
+    one of them would be applying a filter the operator did not choose. %>
+<% if @workspace_candidates.present? %>
+  <p class="mt-2 text-sm text-text-body"><%= t("operations.activity_logs.index.filters.workspace_choose") %></p>
+  <ul role="list" class="mt-1 flex flex-col">
+    <% @workspace_candidates.each do |candidate| %>
+      <li>
+        <%= link_to candidate.name,
+              operations_activity_logs_path(ledger_filter_params(workspace: candidate.slug, workspace_q: nil)),
+              data: { turbo_frame: "_top", role: "workspace-candidate" },
+              class: "btn-cell-link btn-text-interactive w-full mx-0 px-3" %>
+      </li>
+    <% end %>
+  </ul>
+  <%# Honest truncation: the count it did NOT show, not a silently short list. %>
+  <% if @workspace_match_count > @workspace_candidates.size %>
+    <p class="mt-1 text-sm text-text-body">
+      <%= t("operations.activity_logs.index.filters.workspace_more",
+            shown: @workspace_candidates.size, count: @workspace_match_count) %>
+    </p>
+  <% end %>
+<% elsif @workspace_query.present? && @workspace.nil? %>
+  <p class="mt-2 text-sm text-text-body">
+    <%= t("operations.activity_logs.index.filters.workspace_no_match", query: @workspace_query) %>
+  </p>
+<% end %>

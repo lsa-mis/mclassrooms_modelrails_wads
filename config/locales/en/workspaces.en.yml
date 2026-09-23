@@ -47,7 +47,6 @@ en:
       current_badge: "Current"
       other_workspaces_heading: "Other %{workspaces}"
       archived_heading: "Archived"
-      create_workspace_cta: "Create %{workspace}"
       filter:
         label: "Filter your %{workspaces}"
         placeholder: "Filter by name…"

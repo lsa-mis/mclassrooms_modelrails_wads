@@ -70,7 +70,7 @@
           <%= link_to find_a_room_path(saved_active ? @filter_params.to_h.except("saved") : @filter_params.to_h.merge("saved" => "1")),
                 data: { turbo_frame: "_top" },
                 "aria-current": (saved_active ? "true" : nil),
-                class: "text-sm min-h-11 inline-flex items-center gap-1 focus-ring rounded
+                class: "text-sm min-h-input inline-flex items-center gap-1 focus-ring rounded
                        #{saved_active ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" do %>
             <%# One span so the label is a single flex item — the parent's gap-1
                 otherwise spaced the parens off the count as "Saved rooms ( 0 )". %>
@@ -95,7 +95,7 @@
                 <%= link_to t("rooms.index.views.#{view_key}"), find_a_room_path(view: view_key),
                       data: { turbo_frame: "_top" },
                       "aria-current": (current_view == view_key ? "page" : nil),
-                      class: "text-sm min-h-11 min-w-11 justify-center inline-flex items-center focus-ring rounded
+                      class: "text-sm min-h-input min-w-11 justify-center inline-flex items-center focus-ring rounded
                              #{current_view == view_key ? 'font-semibold text-text-heading' : 'text-interactive underline hover:no-underline'}" %>
               <% end %>
             </nav>
@@ -115,7 +115,7 @@
               <%= link_to url,
                     data: { turbo_frame: "_top" },
                     class: "inline-flex items-center gap-1.5 rounded-full border border-border
-                           bg-surface-sunken px-4 min-h-11 text-sm text-text-body focus-ring
+                           bg-surface-sunken px-4 min-h-input text-sm text-text-body focus-ring
                            transition-colors hover:border-border-strong hover:text-text-heading" do %>
                 <span class="sr-only"><%= t("rooms.index.chips.remove") %></span><%= label %><span aria-hidden="true" class="font-semibold">×</span>
               <% end %>
@@ -126,7 +126,7 @@
           <%= link_to t("rooms.filters.reset"),
                 find_a_room_path(**clear_params),
                 data: { turbo_frame: "_top", action: "filter-form#markCleared" },
-                class: "shrink-0 min-h-11 inline-flex items-center text-sm font-medium text-interactive
+                class: "shrink-0 min-h-input inline-flex items-center text-sm font-medium text-interactive
                        underline hover:no-underline focus-ring rounded" %>
         </div>
       <% end %>
@@ -146,7 +146,7 @@
                   find_a_room_path,
                   data: { turbo_frame: "_top" },
                   class: "text-sm text-interactive underline hover:no-underline
-                         min-h-11 inline-flex items-center focus-ring rounded" %>
+                         min-h-input inline-flex items-center focus-ring rounded" %>
           <% end %>
         <% end %>
       </div>

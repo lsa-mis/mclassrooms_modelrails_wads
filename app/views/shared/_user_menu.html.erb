@@ -68,7 +68,7 @@
             <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,
                   role: "menuitem", tabindex: "-1",
                   data: { turbo_prefetch: "true", menu_target: "item", action: "click->menu#activate" },
-                  class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                  class: "flex items-center min-h-input px-4 py-2
                           text-sm text-text-body
                           hover:bg-surface hover:text-interactive
                           focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
@@ -79,7 +79,7 @@
           <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,
                 role: "menuitem", tabindex: "-1",
                 data: { menu_target: "item", action: "click->menu#activate" },
-                class: "w-full flex items-center min-h-[var(--form-input-height)] px-4 py-2
+                class: "w-full flex items-center min-h-input px-4 py-2
                         text-sm text-text-body
                         hover:bg-surface hover:text-interactive
                         focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading
@@ -112,7 +112,7 @@
         styles match the surrounding mobile menuitems. %>
     <%= link_to main_app.settings_notifications_path,
           data: { turbo_prefetch: "true" },
-          class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center justify-between gap-3 px-3 py-2
+          class: "mt-1 w-full min-h-input flex items-center justify-between gap-3 px-3 py-2
                   text-sm text-text-body
                   hover:bg-surface-sunken hover:text-interactive-hover rounded
                   focus-ring" do %>
@@ -139,11 +139,11 @@
         deliberately-disambiguated label as the desktop menu's copy. %>
     <%= link_to t("navigation.all_workspaces"), main_app.workspaces_path,
           data: { turbo_prefetch: "true" },
-          class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center px-3 py-2
+          class: "mt-1 w-full min-h-input flex items-center px-3 py-2
                   text-sm text-text-body
                   hover:bg-surface-sunken hover:text-interactive-hover rounded focus-ring" %>
     <%= button_to t("navigation.sign_out"), main_app.session_path, method: :delete,
-          class: "mt-1 w-full min-h-[var(--form-input-height)] flex items-center px-3 py-2
+          class: "mt-1 w-full min-h-input flex items-center px-3 py-2
                   text-sm text-text-body
                   hover:bg-surface-sunken hover:text-interactive-hover rounded
                   focus-ring cursor-pointer" %>
@@ -156,7 +156,7 @@
       enough to overflow a 320px viewport (T21c). Hidden below md, same as
       the sign-up button beside it in shared/_header. %>
   <%= link_to t("navigation.sign_in"), main_app.new_session_path,
-        class: "hidden md:flex min-h-[var(--form-input-height)] items-center text-text-body
+        class: "hidden md:flex min-h-input items-center text-text-body
                 hover:text-interactive-hover
                 focus-ring rounded px-2" %>
 <% end %>

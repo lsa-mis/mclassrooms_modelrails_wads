@@ -1,25 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Indicator
-  #
-  # A small status dot or count badge anchored to the corner of another element (an
-  # icon, an avatar, a button). Signals presence/state (online, unread) or a count
-  # (notifications). Presentational — it conveys nothing on its own to assistive tech.
-  #
-  # ## Use when
-  # - You need a corner dot or count overlaid on an icon/avatar/button.
-  #
-  # ## Don't use when
-  # - The dot is the ONLY carrier of meaning (a color-only signal) — give the
-  #   anchored element an accessible name/text so AT users get the same signal.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** AAA-contrast variant treatments (`text-text-on-interactive` on
-  #   filled dots, never raw `text-white`), and a valid `variant` is required — an
-  #   unknown one raises in development.
-  # - **You supply:** an accessible name/text on the anchored element when the dot
-  #   conveys state by color alone; the count text via `count:`.
+  # A small status dot or count badge anchored to the corner of another element (an icon, an avatar, a button).
+  # Usage, options and the accessibility contract: docs/components/indicator.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class IndicatorComponent < ApplicationComponent
     DOT_BASE = "absolute flex items-center justify-center rounded-full text-[10px] font-medium leading-none"
 

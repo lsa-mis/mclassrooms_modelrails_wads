@@ -3,14 +3,8 @@
 module UI
   class SidebarComponent < ApplicationComponent
     # Collapsible application sidebar with nav groups.
-    #
-    # Usage:
-    #   ui :sidebar do |s|
-    #     s.with_group(label: "Main") do |g|
-    #       g.with_item(label: "Dashboard", href: "/", icon: :home, active: true)
-    #       g.with_item(label: "Settings",  href: "/settings", icon: :settings)
-    #     end
-    #   end
+    # Usage, options and the accessibility contract: docs/components/sidebar.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
     RAIL_CLS = "group peer fixed inset-y-0 left-0 z-30 flex h-full flex-col " \
                "border-r border-border bg-surface-raised transition-[width] duration-300 " \
@@ -28,7 +22,7 @@ module UI
                   "transition-opacity group-data-[collapsed=true]:opacity-0 group-data-[collapsed=true]:h-0 " \
                   "group-data-[collapsed=true]:overflow-hidden group-data-[collapsed=true]:mb-0"
 
-    ITEM_CLS = "group/item flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors " \
+    ITEM_CLS = "group/item flex min-h-input items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors " \
                "overflow-hidden " \
                "group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-0 " \
                "hover:bg-surface-sunken hover:text-text-heading " \
@@ -44,7 +38,7 @@ module UI
     # Anchor positioning tethers the fixed bubble back to its item. Pre-Baseline browsers
     # take the `absolute` fallback and lose the hint to that clip — the accessible name is
     # unaffected, so this degrades a nicety, not the semantics.
-    RAIL_TOOLTIP = "pointer-events-none z-50 w-max max-w-48 rounded-md px-2 py-1 " \
+    RAIL_TOOLTIP = "pointer-events-none z-50 w-max max-w-[min(12rem,calc(100vw-2rem))] rounded-md px-2 py-1 " \
                    "bg-text-heading text-surface-raised text-xs whitespace-nowrap " \
                    "opacity-0 transition-opacity duration-150 " \
                    "group-hover/item:opacity-100 group-focus-within/item:opacity-100 " \
@@ -68,8 +62,14 @@ module UI
     # collapsed: initial collapsed state (default: false)
     # label:     accessible name for the <nav> landmark (default: i18n "Sidebar")
     # brand:     text shown in the header
-    # collapsed: initial collapsed state. Pass `sidebar_collapsed?` to honour the
-    #            visitor's remembered choice on the server and avoid a collapse flash.
+    # collapsed: initial collapsed state. To honour the visitor's remembered choice on
+    #            the first paint (rather than painting expanded and collapsing after),
+    #            read the cookie the toggle writes:
+    #
+    #              # app/helpers/application_helper.rb
+    #              def sidebar_collapsed? = cookies[:sidebar_collapsed] == "true"
+    #
+    #            then `ui :sidebar, collapsed: sidebar_collapsed?`.
     # remember:  persist the choice to a cookie the server can read back (default true)
     # label:     accessible name for the <nav> landmark
     def initialize(brand: nil, collapsed: false, remember: true, label: nil, id: nil, **html_attrs)
@@ -84,6 +84,7 @@ module UI
 
     def call
       content_tag(:aside,
+        id: @id,
         class: cn(RAIL_CLS, @extra_class),
         "data-collapsed": @collapsed.to_s,
         data: { controller: "sidebar", sidebar_remember_value: @remember.to_s },

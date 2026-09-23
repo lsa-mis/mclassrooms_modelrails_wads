@@ -3,14 +3,20 @@ require "rails_helper"
 # The switcher is workspace chrome: it heads the workspace sidebar rather than
 # the global header. Two consequences this file pins down — it renders on a
 # workspace page even for a user with a single workspace (it is the only place
-# the workspace is named), and it is absent from pages that carry no workspace
-# context at all.
+# the workspace is named), and it is absent from account-level pages such as
+# settings.
+#
+# "No workspace context" is NOT the rule, and saying so hid a real gap until
+# #1091: the workspaces index has no `Current.workspace` and still renders the
+# switcher, capped. Absence is about account-level pages, not about context.
 RSpec.describe "Workspace switcher placement", type: :request do
   let(:user) { create(:user) }                                  # :personal default → 1 workspace
   before { sign_in(user) }
 
+  # Both ids: the absence examples below prove nothing about the phone copy if
+  # they only look for the desktop id (#1091).
   def trigger_in(html)
-    Nokogiri::HTML(html).at_css("#workspace-switcher-button")
+    Nokogiri::HTML(html).at_css("#workspace-switcher-button, #workspace-switcher-button-mobile")
   end
 
   it "renders on a workspace page even with a single workspace" do

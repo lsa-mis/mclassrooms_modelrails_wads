@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module UI
+  # HTML5 `<video>` element with multiple source formats, track (caption) support, and sensible defaults.
+  # Usage, options and the accessibility contract: docs/components/video.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class VideoComponent < ApplicationComponent
     BASE = "max-w-full"
 

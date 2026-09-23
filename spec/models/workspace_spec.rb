@@ -119,7 +119,7 @@ RSpec.describe Workspace, type: :model do
       owner_b = create(:user)
       create(:membership, user: owner_a, workspace: workspace, role: owner_role)
       m2 = create(:membership, user: owner_b, workspace: workspace, role: owner_role)
-      m2.discard!
+      m2.update!(discarded_at: Time.current)
 
       expect(workspace.owners).to match_array([ owner_a ])
     end
@@ -134,7 +134,7 @@ RSpec.describe Workspace, type: :model do
       first = create(:membership, user: create(:user), workspace: workspace, role: owner_role)
       second = create(:membership, user: create(:user), workspace: workspace, role: owner_role)
       workspace.memberships.load
-      Membership.find(second.id).discard!
+      Membership.find(second.id).update!(discarded_at: Time.current)
 
       expect(workspace.owners).to contain_exactly(first.user)
     end

@@ -227,6 +227,18 @@ Runs the same checks plus additional linting:
 | `test` | Full RSpec with Cuprite, axe accessibility, screenshot artifacts on failure |
 | `docker_build` | Verifies the production `Dockerfile` builds successfully on every PR (catches build-time regressions that structural specs cannot). Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/developer/deployment). |
 
+### Gate 3: Scheduled lanes (not on push/PR)
+
+Three checks answer questions a per-PR run cannot, because what they watch changes without anyone committing. Each also runs on demand from the Actions tab (`workflow_dispatch`).
+
+| Workflow | When | What it checks |
+|----------|------|---------------|
+| `js_advisory` | Daily | The same importmap audit as `scan_js`, against `main` — an advisory published between pushes is otherwise invisible until the next PR happens to touch the tree. `scan_js` stays the required check; this is additive. |
+| `image_scan` | Weekly (plus Dockerfile-affecting PRs) | OS-package CVEs in the production image, which appear without any code change. |
+| `fork_vocabulary` | Weekly | The whole suite under `spec/fixtures/vocabulary.course.yml`, proving the promise that a fork renaming its nouns keeps this suite green. The per-PR gate catches literal-noun copy assertions in the shapes it knows; this catches the rest. |
+
+**Scheduled workflows switch themselves off in an inactive public repository.** GitHub disables them after 60 days with no repository activity — see [Events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows) (`schedule`). The condition is repository *visibility*, so a private fork is not affected; a public fork that goes quiet loses these three lanes silently and re-enables them with any repository activity.
+
 ### Development Workflow
 
 1. Create a feature branch: `git checkout -b my-feature`

@@ -20,7 +20,11 @@ module Operations
       # `deterministic: true`), so an SQL ORDER BY on either sorts
       # ciphertext, not names. Sort in Ruby on the decrypted values instead;
       # the eager loads below are unchanged, so this doesn't reintroduce a
-      # query per row.
+      # query per row. The sort is also why this list has no pagination: an
+      # in-memory sort cannot be offset-paginated, and a keyed digest of a name
+      # is not order-preserving, so the only SQL-orderable name key is a
+      # plaintext column — a security decision. Paginating this list means
+      # answering the ordering question first (#1124).
       @memberships = @workspace.memberships.kept.includes(:role, :user).to_a
         .sort_by { |m| [ m.user.last_name.to_s.downcase, m.user.first_name.to_s.downcase ] }
       @activities = @workspace.activity_logs.visible.recent.for_feed

@@ -286,6 +286,21 @@ RSpec.describe ApplicationNotifier, type: :notifier do
         expect(result).to eq :skipped
       end
 
+      # #1063: the gem aliases deliver_later to deliver INSIDE its own concern, so
+      # the alias holds a copy of the gem's body and never consults this class's
+      # override. The two spellings have to mean the same thing or the second one
+      # silently skips every guard the first one carries.
+      it "treats deliver_later as the same method" do
+        result = StubAudienceNotifier.with(record: resource, audience: nil).deliver_later(nil)
+        expect(result).to eq :skipped
+      end
+
+      it "writes no noticed_events row on deliver_later either" do
+        expect {
+          StubAudienceNotifier.with(record: resource, audience: nil).deliver_later(nil)
+        }.not_to change(Noticed::Event, :count)
+      end
+
       it "writes no noticed_events row" do
         expect {
           StubAudienceNotifier.with(record: resource, audience: nil).deliver(nil)

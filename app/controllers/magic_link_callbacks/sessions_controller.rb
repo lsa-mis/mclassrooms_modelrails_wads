@@ -15,12 +15,18 @@ module MagicLinkCallbacks
       user = token_record && User.find_by(email_address: token_record.email)
 
       unless user
-        if (replayed = replayed_sign_in)
+        if replayed_sign_in
           # Not a failure: this browser is signed in as the address the token
-          # belongs to, so the POST that spent it is the one that signed them in.
-          # Answering "invalid or has expired" here tells a signed-in user the
-          # opposite of what just happened (#846).
-          redirect_to magic_link_return_path(replayed), notice: t("magic_link_callbacks.show.signed_in")
+          # belongs to. Answering "invalid or has expired" tells a signed-in
+          # user the opposite of what just happened (#846).
+          #
+          # The same answer the GET callback has always given, and deliberately
+          # NOT the spent token's intent: `consumed_at` is written by
+          # superseding as well as by redemption, so a "spent" token may be one
+          # the user never clicked (#1083). Routing them to "set your password"
+          # on the strength of an ignored link states something that did not
+          # happen. A real redemption still honours its intent below.
+          redirect_to authenticated_home_path, notice: t("authentication.already_signed_in")
           return
         end
 

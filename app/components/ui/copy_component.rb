@@ -1,38 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Copy
-  #
-  # A readonly value with a button that copies it to the clipboard — a share link, a
-  # token, an ID — and confirms in two carriers: a check glyph and a pre-registered
-  # status region that assistive technology announces. Failure is honest: the value is
-  # selected and an assertive region says so; nothing ever claims a copy the browser
-  # did not confirm.
-  #
-  # ## Use when
-  # - The user needs to take a value with them: an invitation URL, an API token, an
-  #   identifier they will paste somewhere else.
-  #
-  # ## Don't use when
-  # - The value must be read or transcribed by a person rather than pasted — this
-  #   single-line input scrolls a long value; a readable display is a different shape.
-  # - The value is editable — this control is readonly by contract.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a real `<label for>` on the value; the trigger's accessible name is
-  #   "<action> <label>" so the visible "Copy" is a substring in every state (WCAG 2.5.3)
-  #   and never changes; two live regions — polite for success, assertive for failure —
-  #   exist empty from first render; 44 px targets from the input and button cells;
-  #   `focus-ring` outlines; no motion on the icon swap.
-  # - **You supply:** `label:` as the NOUN for the value ("Invitation link") — it is
-  #   interpolated into the accessible name and both announcements — and, if you
-  #   translate, the four `modelrails_ui.copy.*` keys in your locale file.
-  #
-  # ## Strings
-  # `modelrails_ui.copy.action` ("Copy", the visible text), `.button_label`
-  # ("%{action} %{label}"), `.copied` ("Copied %{label} to the clipboard"), `.failed`
-  # (a device-neutral instruction that names no key). Override per call with
-  # `copy_label:` / `copied_label:` / `failed_label:`.
+  # A readonly value with a button that copies it to the clipboard — a share link, a token, an ID — and confirms in two carriers: a check glyph and a pre-registered status region that assistive technology announces.
+  # Usage, options and the accessibility contract: docs/components/copy.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class CopyComponent < ApplicationComponent
     WRAPPER = "space-y-1"
     ROW = "flex items-center gap-2"

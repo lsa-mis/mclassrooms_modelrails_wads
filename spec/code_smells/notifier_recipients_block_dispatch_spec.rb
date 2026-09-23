@@ -27,8 +27,10 @@ require "rails_helper"
 # Both directions held by hand when this spec was written; nothing enforced
 # them. This does.
 #
-# Scanned shape: `SomeNotifier.with(...).deliver(...)` (line breaks anywhere
-# in it are fine) in app/ outside
+# Scanned shape: `SomeNotifier.with(...).deliver(...)` or `.deliver_later(...)`
+# — the two are one method (ApplicationNotifier re-points the gem's alias, #1063),
+# so the fence has to see both spellings or the second one drops out of every
+# check below in silence. Line breaks anywhere in it are fine. In app/ outside
 # app/notifiers. A dispatch assembled some other way (a bare `.deliver`, a
 # notifier held in a local) is not seen — widen the pattern if that shape
 # appears rather than working around it.
@@ -89,7 +91,7 @@ RSpec.describe "Code smell: notifier recipient dispatch matches its recipients b
         next unless after_with
 
         tail = source[after_with..]
-        deliver = tail.match(/\A\s*\.deliver\s*\(/)
+        deliver = tail.match(/\A\s*\.deliver(?:_later)?\s*\(/)
         next unless deliver
 
         argument_end = balanced_end(tail, deliver.end(0) - 1)

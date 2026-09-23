@@ -31,7 +31,23 @@ Opt-in, client-side draft recovery for long forms. As the user types, an encrypt
 
 - **Auth forms** (sign-in, password change, passkeys) — never.
 - **Auto-submit forms** — recovery dispatches `change`, which would trigger submission.
-- **Hidden-backed widgets** (rich text/Lexxy, custom hidden-input widgets) — only fields whose visible control is authoritative recover correctly. Draftable fields must be DOM descendants of the form (`form=`-attribute outsiders are excluded).
+- **Hidden-backed widgets** — a widget whose value lives in a bare hidden input with no visible control cannot recover: `recover()` never writes hidden fields back, and the announcement degrades to "could not be restored". Draftable fields must be DOM descendants of the form (`form=`-attribute outsiders are excluded).
+
+## Rich text (Lexxy)
+
+Lexxy **does** recover, and needs one extra action. `<lexxy-editor>` is a form-associated custom element: it carries the `name`, it participates in `FormData`, and its `value` setter re-renders the editor — so the generic restore path already handles it. What it does not do is emit `input` or `change`, so add its own event:
+
+```erb
+data: {
+  controller: "form-draft",
+  action: "input->form-draft#save change->form-draft#save lexxy:change->form-draft#save turbo:submit-end->form-draft#submitEnd"
+}
+```
+
+Two things to watch on a form with an editor:
+
+- **Mark hidden routing fields `data-form-draft-ignore`.** A hidden field with no visible sibling (a `type` discriminator carried from the URL, say) downgrades every restore to the partial announcement — telling the user content was left behind when the editor was in fact refilled.
+- **The restored count runs one high.** Lexxy's toolbar contains its own named `<select>`, which the serializer treats as a form field (modelrails_ui#262). The announcement is one field off; nothing else is affected.
 
 ## Security posture
 

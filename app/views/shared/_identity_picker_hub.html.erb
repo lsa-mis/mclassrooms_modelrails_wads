@@ -64,7 +64,7 @@
         below, which opens the OS dialog automatically with no photo yet. %>
     <div class="flex justify-center mb-2">
       <label for="<%= file_input_id %>"
-             class="btn-text-icon btn-text-interactive text-sm px-2 inline-flex items-center min-h-11 cursor-pointer">
+             class="btn-text-icon btn-text-interactive text-sm px-2 inline-flex items-center min-h-input cursor-pointer">
         <%= icon(:arrow_up_tray, size: :sm) %>
         <%= t("identity_picker.upload_new") %>
       </label>
@@ -137,7 +137,7 @@
           color exactly as the discs do. %>
       <%= render UI::RangeComponent.new(
             min: 0, max: 360, step: 1, value: identity.hue,
-            class: "hue-range w-full min-h-11",
+            class: "hue-range w-full min-h-input",
             autocomplete: "off",
             "aria-label": t("identity_picker.color_aria_label"),
             style: "--hue: #{identity.hue}",

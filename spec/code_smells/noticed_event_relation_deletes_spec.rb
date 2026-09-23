@@ -22,14 +22,20 @@ require "rails_helper"
 # when it exists. It must prune by NOT EXISTS against noticed_notifications,
 # never by the counter cache, which PR 5 left stale on purpose.
 RSpec.describe "Code smell: no relation-level deletes of Noticed::Event" do
-  allowed_files = [].freeze   # e.g. "app/jobs/noticed_event_prune_job.rb" (#811)
+  # The pre-registered #811 carve-out, now real. It is here as a DECLARATION,
+  # not because the pattern flags it: the prune is split across orphan_events
+  # and prune_orphan_events, so the single-line shape above does not see it —
+  # the blind spot this file's header names. Registering it anyway keeps the
+  # decision reviewed rather than accidental, and the contract example below
+  # makes the entry carry weight instead of being a rubber stamp.
+  allowed_files = { "app/jobs/notification_cleanup_job.rb" => "#811's childless-only orphan prune" }.freeze
 
   it "app/ and lib/ never delete or destroy Noticed::Event rows" do
     pattern = /Noticed::Event\b[^\n;]*\.(?:delete_all|destroy_all|delete|destroy)\b/
 
     offenders = Dir[Rails.root.join("{app,lib}/**/*.rb")].filter_map do |file|
       relative = file.delete_prefix("#{Rails.root}/")
-      next if allowed_files.include?(relative)
+      next if allowed_files.key?(relative)
 
       source = without_comments(File.read(file))
       source.each_line.with_index(1).filter_map do |line, number|
@@ -41,5 +47,28 @@ RSpec.describe "Code smell: no relation-level deletes of Noticed::Event" do
       "Relation-level deletes of Noticed::Event found:\n#{offenders.join("\n")}\n" \
       "An event delete cascades to every recipient's row. Sweep noticed_notifications instead, " \
       "or register a pruning job here by file name with its reason."
+  end
+
+  # An allow-list entry is permission to delete events, which is the most
+  # destructive thing in this subsystem. It has to keep earning that: the file
+  # must still exist, must still decide childlessness by asking
+  # noticed_notifications, and must never reach for notifications_count —
+  # PR 5 left that counter stale on purpose, so pruning on it would delete
+  # events that still have rows.
+  it "holds every registered file to the rule that earned it the exemption" do
+    problems = allowed_files.filter_map do |relative, reason|
+      path = Rails.root.join(relative)
+      next "#{relative}: registered for #{reason}, but the file is gone" unless path.exist?
+
+      source = without_comments(File.read(path))
+      if source.include?("notifications_count")
+        "#{relative}: prunes on the stale notifications_count counter cache"
+      elsif !source.include?("noticed_notifications") && !source.include?("Noticed::Notification")
+        "#{relative}: never asks noticed_notifications which events still have rows"
+      end
+    end
+
+    expect(problems).to be_empty,
+      "a registered exemption no longer describes what the file does:\n  #{problems.join("\n  ")}"
   end
 end

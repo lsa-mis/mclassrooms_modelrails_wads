@@ -83,7 +83,7 @@ RSpec.describe "Members table", type: :system do
     let!(:deactivated_user) { create(:user, first_name: "Deactivated", last_name: "Member") }
     let!(:deactivated_membership) { create(:membership, user: deactivated_user, workspace: workspace) }
 
-    before { deactivated_membership.discard! }
+    before { deactivated_membership.update!(discarded_at: Time.current) }
 
     it "shows deactivated badge for discarded members" do
       visit workspace_members_path(workspace)

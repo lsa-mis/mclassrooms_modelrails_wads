@@ -9,10 +9,13 @@
 #
 # Only the never-enqueued gap. An event whose job was claimed is already
 # stamped, so this sweep never touches it. What happens to that job afterwards
-# is not this job's business — and, to be exact about it, `Noticed::EventJob`
-# declares no `retry_on` (only `discard_on ActiveJob::DeserializationError`),
-# so a claimed job that raises lands in `solid_queue_failed_executions` and
-# waits for a manual retry. Closing that gap is #1065.
+# is not this job's business — `Noticed::EventJob` now carries its own retry
+# policy (config/initializers/noticed.rb, #1065), so a claimed job that raises
+# is retried three times before it lands in `solid_queue_failed_executions`.
+# What no retry can cover is a worker process that dies: Solid Queue FAILS a
+# pruned process's claimed executions rather than releasing them. This job
+# reports the count of both at the end of its run, because it is already
+# scheduled and this app ships no Mission Control UI.
 #
 # THE SWEEP STAMPS THE ROW ITSELF, before enqueuing. Its enqueue is the one
 # retry an event gets. Without the stamp, a delivery queue backed up past the
@@ -70,9 +73,43 @@ class NotificationDispatchReconcileJob < ApplicationJob
     end
 
     raise last_error if failed.positive? && failed == attempted
+
+    report_failed_event_jobs
+  end
+
+  # How many Noticed::EventJob executions are parked in Solid Queue's failed
+  # table. Public because the number is the contract — the message below is
+  # only how it reaches a human, and the queue tables do not exist in the test
+  # database, so this is the seam a spec can speak to.
+  def self.stuck_event_job_count
+    SolidQueue::Job.where(class_name: "Noticed::EventJob").joins(:failed_execution).count
   end
 
   private
+
+  # The retry policy (#1065) covers a job that raises. It cannot cover a worker
+  # process that dies: Solid Queue FAILS a pruned process's claimed executions
+  # rather than releasing them, so those never re-enter the queue — and this
+  # app ships no Mission Control UI to notice. This job already runs on a
+  # schedule and already writes a summary, so it is the cheapest honest place
+  # to say the number out loud.
+  #
+  # Rails.logger, not Rails.error.report: a standing count is an operational
+  # fact, not an error occurrence. Reporting it every cycle would turn the
+  # error stream into a gauge that never clears.
+  def report_failed_event_jobs
+    stuck = self.class.stuck_event_job_count
+    return unless stuck.positive?
+
+    Rails.logger.warn(
+      "#{self.class.name}: #{stuck} Noticed::EventJob execution(s) sitting in " \
+      "solid_queue_failed_executions — retries exhausted, or a worker died mid-claim; " \
+      "these need a hand"
+    )
+  rescue StandardError => e
+    # An observability read must never fail the reconcile it rides along with.
+    Rails.error.report(e, handled: true, context: { job: self.class.name, probe: "failed_event_jobs" })
+  end
 
   # Stamp, then enqueue — see the note above on why this order and not the
   # reverse. `update_column` skips callbacks and validations deliberately: this

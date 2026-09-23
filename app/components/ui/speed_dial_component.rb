@@ -3,24 +3,8 @@
 module UI
   class SpeedDialComponent < ApplicationComponent
     # Floating action button (FAB) that expands into a stack of sub-action buttons.
-    #
-    # ## Accessibility contract
-    # - The FAB is a **disclosure trigger**: it carries `aria-expanded` (synced to the
-    #   open state by the `speed-dial` controller) + `aria-controls` pointing at the
-    #   hidden action panel, and an i18n accessible name (it's an icon-only button).
-    # - The FAB and every action carry the AAA offset `focus-ring` (never a box-shadow
-    #   `ring`, which is clipped by `overflow:hidden` ancestors and vanishes in
-    #   forced-colors mode).
-    # - The `+` glyph is decorative (`aria-hidden`); the accessible name comes from
-    #   `aria-label`.
-    # - `position:` is fail-loud — an unknown value raises in dev rather than silently
-    #   falling back.
-    #
-    # Usage:
-    #   ui :speed_dial do |dial|
-    #     dial.with_action(label: "New document", href: "/docs/new")
-    #     dial.with_action(label: "Upload", data: { action: "..." })
-    #   end
+    # Usage, options and the accessibility contract: docs/components/speed_dial.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
     FAB_CLS = "relative z-50 inline-flex size-14 items-center justify-center rounded-full " \
               "bg-interactive text-text-on-interactive shadow-lg transition-transform " \

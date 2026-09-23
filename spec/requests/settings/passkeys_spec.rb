@@ -14,6 +14,7 @@ RSpec.describe "Settings::Passkeys", type: :request do
     cred = create(:webauthn_credential, user: user)
     delete settings_passkey_path(cred)
     expect(cred.reload).to be_discarded
+    expect(flash[:notice]).to eq(I18n.t("settings.passkeys.destroy.success"))
   end
 
   it "renders the Add a passkey control" do

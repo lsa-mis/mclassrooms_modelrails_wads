@@ -105,7 +105,7 @@ RSpec.describe UI::BadgeComponent, type: :component do
   it "renders a focus-ring on a linked (anchor) badge" do
     render_inline(described_class.new("Docs", href: "/docs"))
 
-    expect(page).to have_css("a.focus-ring.min-h-11")
+    expect(page).to have_css("a.focus-ring.min-h-input")
   end
 
   # data-variant/data-tone are a stable hook for callers (JS, specs, CSS) to target a

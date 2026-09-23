@@ -1,31 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Rating
-  #
-  # A static, read-only star rating — fills `value` of `max` stars to display a
-  # score (an average review, a satisfaction tally). For an *interactive* score
-  # the user sets, use `rating_input` instead.
-  #
-  # ## Use when
-  # - You're displaying a fixed score the user can't change (a product's average
-  #   rating, a past review's stars).
-  #
-  # ## Don't use when
-  # - The user picks the value — use `ui :rating_input` (labelled star buttons +
-  #   a hidden input).
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the whole control is a single labelled graphic
-  #   (`role="img"` + an i18n `aria-label`, e.g. "3 out of 5 stars") so AT
-  #   announces the *value*, not eleven mystery icons — color-filled stars alone
-  #   carry no accessible meaning (a 1.1.1 / 1.4.1 failure). The individual star
-  #   glyphs are decorative (`aria-hidden="true"`). Filled stars use the AAA-tuned
-  #   semantic `text-warning-icon` token (was raw `text-yellow-400`); stars are
-  #   GRAPHIC icons (WCAG 1.4.11 → 3:1, not 7:1 text) and the amber warning token
-  #   clears 3:1. The app 0b axe spec verifies the graphic contrast in a real
-  #   browser.
-  # - **You supply:** the `value:` to display and the `max:` star count.
+  # A static, read-only star rating — fills `value` of `max` stars to display a score (an average review, a satisfaction tally).
+  # Usage, options and the accessibility contract: docs/components/rating.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class RatingComponent < ApplicationComponent
     STAR_PATH = "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
 

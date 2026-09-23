@@ -1,43 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # QrCode
-  #
-  # A container that renders a QR code — either a pre-rendered image (`src:`) or raw
-  # SVG/HTML from a generator gem such as `rqrcode` (block).
-  #
-  # ## Use when
-  # - You need to display a scannable QR code and you already have the image URL or
-  #   the gem-generated SVG markup.
-  #
-  # ## Don't use when
-  # - You want a decorative graphic — a QR code is meaningful content (it encodes a
-  #   payload), so it always carries an accessible name; use `image`/`figure` for
-  #   ordinary imagery.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the wrapper is a single labelled graphic (`role="img"` +
-  #   `aria-label`), so BOTH the `src:` and the block (raw-SVG) paths announce a real
-  #   name to assistive tech — not a silent, unlabelled `<svg>` (WCAG 1.1.1 / 4.1.2).
-  #   The inner `<img>` is marked decorative (`alt=""`) because the wrapper already
-  #   carries the name, avoiding a double announcement. Caller `html_attrs` merge
-  #   first; the `role`/`aria-label` apply as overrides so a caller can't strip the
-  #   accessible name (mirrors `chart`/`rating`).
-  # - **You supply:** a meaningful `alt:` that describes what the code encodes
-  #   (e.g. "QR code linking to example.com"), not a bare "QR code".
-  #
-  # ## Parameters
-  # - `src:` pre-rendered image URL; renders an `<img>` when provided (optional)
-  # - `alt:` accessible name for the code — describe what it encodes (default: "QR code")
-  # - `size:` pixel dimensions of the `<img>` (ignored for block content; default: 200)
-  # - `**html_attrs:` forwarded to the wrapper `<div>`
-  #
-  # ## Usage (in an ERB view)
-  #   ui :qr_code, src: qr_url, alt: "QR code linking to example.com"
-  #
-  #   ui :qr_code, alt: "QR code linking to example.com" do
-  #     RQRCode::QRCode.new("https://example.com").as_svg(viewbox: true).html_safe
-  #   end
+  # A container that renders a QR code — either a pre-rendered image (`src:`) or raw SVG/HTML from a generator gem such as `rqrcode` (block).
+  # Usage, options and the accessibility contract: docs/components/qr_code.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class QrCodeComponent < ApplicationComponent
     # bg-surface (a semantic token, not raw `bg-white`) + p-3 quiet zone keeps the
     # code on a light, high-contrast field that scanners need, in both themes.

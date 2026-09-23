@@ -1,34 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Drawer
-  #
-  # A native `<dialog>` bottom sheet — full-width, pinned to the bottom edge,
-  # sliding up on open. A lightweight mobile-friendly overlay for secondary
-  # actions and supplemental content. Behavior lives in the `modal` Stimulus
-  # controller with slide-up/down transform values.
-  #
-  # ## Use when
-  # - A bottom sheet is the right pattern for mobile-friendly secondary actions
-  #   or content that slides in from the bottom edge.
-  # - You need a supplemental overlay that doesn't require center-stage emphasis.
-  #
-  # ## Don't use when
-  # - A centered confirm gate is needed — use `dialog` with `role: :alertdialog`.
-  # - A side panel is needed — use `sheet`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** native `<dialog>` with `role="dialog"` and `aria-modal="true"`,
-  #   `aria-labelledby` wired to the heading, `aria-describedby` when `description:`
-  #   is given, a 44px accessible close button (`btn-touch-target`), focus trap +
-  #   restore via the `modal` controller, and native Escape via the controller's
-  #   cancel handler. The drag handle is purely decorative (`aria-hidden`).
-  # - **You supply:** a `title:` (required — ViewComponent raises if omitted; it is
-  #   the accessible name). Actions belong in the `footer` slot. With `wrapper: true`
-  #   (default) the `trigger` slot is the open button; `wrapper: false` renders ONLY
-  #   the `<dialog>` for embedding in an existing `data-controller="modal"` structure.
-  #
-  # Chrome lives in UI::ModalChrome — single owner.
+  # A native `<dialog>` bottom sheet — full-width, pinned to the bottom edge, sliding up on open.
+  # Usage, options and the accessibility contract: docs/components/drawer.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class DrawerComponent < ApplicationComponent
     include UI::ModalChrome
 

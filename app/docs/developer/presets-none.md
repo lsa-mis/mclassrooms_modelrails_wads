@@ -77,7 +77,7 @@ New users under `:none` are funneled through a mandatory first-run onboarding wi
 
 **Guard.** `RequiresOnboarding#require_onboarding` fires as a `before_action` on every authenticated HTML request. It redirects to `onboarding_path` when all three conditions hold:
 
-- `TenancyConfig.none?` — the guard is completely inert in `:personal`, `:shared`, and `:single_tenant` postures.
+- `TenancyConfig.none?` — the guard is completely inert in the `:personal` and `:shared` postures (the single-tenant preset uses `:shared`).
 - `Current.user.onboarded?` is false — `users.onboarded_at` is nil.
 - `request.format.html?` — background XHR/JSON requests (e.g. the timezone beacon) pass through.
 

@@ -83,8 +83,14 @@ RSpec.describe Membership, type: :model do
   describe "Discardable" do
     let(:membership) { create(:membership) }
 
-    it "can be discarded" do
-      membership.discard!
+    # #1120: a bare discard! skips the last-owner guard and can leave a workspace
+    # with nobody able to administer it. Removal has one door.
+    it "does not expose discard! — removal goes through deactivate!" do
+      expect { membership.discard! }.to raise_error(NoMethodError, /private method/)
+    end
+
+    it "is discarded by deactivate!" do
+      membership.deactivate!(removed_by: nil)
       expect(membership).to be_discarded
     end
   end
@@ -137,7 +143,7 @@ RSpec.describe Membership, type: :model do
     it "rolls back the deactivation if it would leave the workspace ownerless" do
       owner_a = create(:membership, :owner, workspace: workspace)
       owner_b = create(:membership, :owner, workspace: workspace)
-      owner_a.discard!  # workspace now has 1 kept owner: owner_b
+      owner_a.deactivate!(removed_by: nil)  # workspace now has 1 kept owner: owner_b
 
       # Bypass pre-flight to simulate a racer whose validate_not_last_owner!
       # passed against stale state.
@@ -210,7 +216,7 @@ RSpec.describe Membership, type: :model do
       membership.deactivate!(removed_by: owner)
 
       expect {
-        travel_to(2.minutes.from_now) { membership.discard! }
+        travel_to(2.minutes.from_now) { membership.update!(discarded_at: Time.current) }
       }.not_to change { removal_events.count }
     end
   end
@@ -219,7 +225,7 @@ RSpec.describe Membership, type: :model do
     let(:membership) { create(:membership) }
 
     it "reactivates a deactivated member" do
-      membership.discard!
+      membership.deactivate!(removed_by: nil)
       membership.reactivate!
       expect(membership.reload).not_to be_discarded
     end
@@ -230,7 +236,7 @@ RSpec.describe Membership, type: :model do
     # future refactor adds an admittable?/archived? guard to reactivate!, this
     # fails and forces that decision back into the open.
     it "reactivates a member even when the workspace is archived" do
-      membership.discard!
+      membership.deactivate!(removed_by: nil)
       membership.workspace.archive!
 
       expect { membership.reactivate! }.not_to raise_error
@@ -309,7 +315,7 @@ RSpec.describe Membership, type: :model do
     end
 
     describe ".filter_by_status" do
-      before { carol_membership.discard! }
+      before { carol_membership.update!(discarded_at: Time.current) }
 
       it "filters active members" do
         results = workspace.memberships.filter_by_status("active")

@@ -2,9 +2,9 @@
 
 module UI
   class AvatarComponent < ApplicationComponent
-    # Matches the host app's AvatarHelper presentation: AVATAR_SIZES, rounded-full,
-    # and hue-tinted initials. The app's avatar_for helper keeps the model logic
-    # (avatar_source / Active Storage / gravatar / primary_color) and renders this.
+    # Matches the host app's AvatarHelper presentation: AVATAR_SIZES, rounded-full, and hue-tinted initials.
+    # Usage, options and the accessibility contract: docs/components/avatar.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
     SIZES = {
       xs: { css: "w-6 h-6",   text: "text-xs" },
       sm: { css: "w-8 h-8",   text: "text-xs" },

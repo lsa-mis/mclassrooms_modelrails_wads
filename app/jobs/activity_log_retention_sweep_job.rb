@@ -19,6 +19,11 @@ class ActivityLogRetentionSweepJob < ApplicationJob
   SECURITY_RETENTION_FLOOR = 365.days
 
   def perform
+    # Batching on rowid rather than created_at is deliberate: old rows carry the
+    # low ids, so each batch finds them first and stops at its limit. The only
+    # full walk is the empty final batch — 20.5 ms per million retained rows,
+    # per tier, per weekly run. The created_at index exists (#1127) but earns
+    # nothing here (#1047).
     ActivityLog.where(created_at: ...RETENTION_WINDOW.ago)
                .where.not(action: ActivityLog::SECURITY_ACTIONS)
                .in_batches(of: 100, &:delete_all)

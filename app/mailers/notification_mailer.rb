@@ -1,4 +1,16 @@
 class NotificationMailer < ApplicationMailer
+  # A suspended user is bounced before they reach a workspace, so every mail
+  # here invites an action they cannot take. Security mail is skipped too:
+  # they cannot act on that either, and a reset on reinstatement recovers it
+  # through the same address. One rule rather than a per-class exemption —
+  # the disclosure principle is recorded in /docs/developer/operations (#1132).
+  #
+  # `response_body = ""` rather than `throw :abort`: a before_action's throw is
+  # uncaught on Rails 8.1 (AbstractController's terminator checks `performed?`
+  # and does not `catch(:abort)`), the same deviation InvitationMailer
+  # documents. Same intent — the message is never built.
+  before_action :abort_when_recipient_suspended
+
   # Mailer methods invoked by Noticed via `deliver_by :email, mailer: ..., method: ...`.
   # Noticed dispatches through ActionMailer's parameterized API:
   #   NotificationMailer.with(notification:, record:, recipient:, **event_params).workspace_role_changed
@@ -161,5 +173,10 @@ class NotificationMailer < ApplicationMailer
       to: user.email_address,
       subject: t("notification_mailer.digest.subject.#{@cadence}", app_name: @app_name)
     )
+  end
+  private
+
+  def abort_when_recipient_suspended
+    self.response_body = "" if params[:recipient]&.suspended?
   end
 end

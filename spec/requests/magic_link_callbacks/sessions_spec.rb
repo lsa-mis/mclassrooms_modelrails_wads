@@ -54,24 +54,49 @@ RSpec.describe "Magic Link Callback Sessions", type: :request do
     # the user IS signed in, and is told the opposite. In CI that surfaced as
     # `sign_in_via_form` failing inside an unrelated spec.
     describe "a replayed sign-in POST" do
-      it "answers what the first POST answered, not an expiry alert" do
+      it "tells a signed-in owner they are signed in, not that the link expired" do
         token = MagicLinkToken.create_for_email(user.email_address)
         post magic_link_callback_session_path(token)
 
         post magic_link_callback_session_path(token)
 
-        expect(response).to redirect_to(root_path)
+        expect(response).to redirect_to(root_path) # authenticated_home_path for a non-client-only user
         expect(flash[:alert]).to be_blank
-        expect(flash[:notice]).to eq(I18n.t("magic_link_callbacks.show.signed_in"))
+        expect(flash[:notice]).to eq(I18n.t("authentication.already_signed_in"))
       end
 
-      it "honors the spent token's intent, so a replay lands where the first POST did" do
+      # This used to assert the replay honoured the spent token's intent. It
+      # cannot: `consumed_at` is written both by redemption AND by superseding,
+      # so a "spent" token may be one the user never clicked (#1083). Routing
+      # them to "set your password" because of a link they ignored states
+      # something that did not happen.
+      #
+      # The GET callback has always answered `already_signed_in` and gone to
+      # the authenticated home. The POST is the one that disagreed; it now
+      # matches. Intent routing is untouched for a REAL redemption — only the
+      # replay, where the intent may never have been acted on, drops it.
+      it "does not route a replay by the spent token's intent" do
         token = MagicLinkToken.create_for_email(user.email_address, intent: "set_password")
         post magic_link_callback_session_path(token)
 
         post magic_link_callback_session_path(token)
 
-        expect(response).to redirect_to(edit_settings_password_path)
+        expect(response).to redirect_to(root_path) # authenticated_home_path for a non-client-only user
+      end
+
+      # A superseded link is the reachable case the moment replay detection
+      # reaches the GET: request a link, ignore it, request another, sign in,
+      # then click the first email. It was never redeemed, so the answer must
+      # not claim it was.
+      it "answers the same for a superseded link the user never clicked" do
+        superseded = MagicLinkToken.create_for_email(user.email_address, intent: "set_password")
+        current = MagicLinkToken.create_for_email(user.email_address)
+        post magic_link_callback_session_path(current)
+
+        post magic_link_callback_session_path(superseded)
+
+        expect(response).to redirect_to(root_path) # authenticated_home_path for a non-client-only user
+        expect(flash[:notice]).to eq(I18n.t("authentication.already_signed_in"))
       end
 
       it "starts no second session" do

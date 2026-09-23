@@ -2,32 +2,9 @@
 
 module UI
   class ButtonComponent < ApplicationComponent
-    # Applies the app's .btn-* classes (app/assets/tailwind/application.css @layer
-    # components). This app-local copy intentionally diverges from modelrails_ui's
-    # self-contained (raw-utility) ButtonComponent: this app owns its design tokens,
-    # so the component points at the canonical CSS classes instead of re-listing them.
-    #
-    # Two-axis API (converged-conventions B2):
-    #
-    #   variant: :solid | :outline | :text   (shape, default :solid)
-    #   tone:    :primary | :neutral | :danger  (signal, default :primary)
-    #
-    # Only AAA-proven (variant, tone) cells exist (COMBOS) — an unproven cell raises
-    # in dev/test and falls back to [:solid, :primary] in prod (the combo-guard: a new
-    # fill is an untested text-on-* pairing). The proven cells:
-    #
-    #   [:solid,   :primary]  filled brand     (.btn-primary)
-    #   [:solid,   :danger]   filled danger    (.btn-danger)
-    #   [:outline, :neutral]  bordered neutral (.btn-secondary)
-    #   [:text,    :primary]  text/link brand  (.btn-text-interactive trio)
-    #   [:text,    :danger]   text/link danger (.btn-text-danger trio)
-    #
-    # Legacy flat `variant:` values are still accepted via SHIM (back-compat,
-    # byte-identical output): primary, secondary, danger, destructive, text,
-    # text_interactive, text_danger. When a legacy value is passed, `tone:` is ignored.
-    #
-    # size: :default | :icon — :icon (A8) is a 44×44 square (WCAG 2.5.5): adds min-w
-    # and drops horizontal padding (min-h is already carried by the .btn-* classes).
+    # Applies the app's .btn-* classes (app/assets/tailwind/application.css @layer components).
+    # Usage, options and the accessibility contract: docs/components/button.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
     # The proven (variant, tone) cells. Keys are [variant, tone]; values are the app's
     # canonical .btn-* classes (byte-identical to the former flat VARIANTS values).

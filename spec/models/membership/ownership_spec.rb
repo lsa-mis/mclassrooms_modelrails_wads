@@ -13,8 +13,7 @@ RSpec.describe Membership, type: :model do
     end
 
     it "answers role identity only — a discarded owner membership is still owner?" do
-      membership = create(:membership, :owner)
-      membership.discard!
+      membership = create(:membership, :owner, :deactivated)
 
       expect(membership.owner?).to be true
     end
@@ -111,7 +110,7 @@ RSpec.describe Membership, type: :model do
 
     it "excludes discarded owners, non-owner roles, and owners of other workspaces" do
       owner = create(:membership, :owner, workspace: workspace)
-      create(:membership, :owner, workspace: workspace).discard!
+      create(:membership, :owner, :deactivated, workspace: workspace)
       create(:membership, :admin, workspace: workspace)
       create(:membership, :owner, workspace: create(:workspace))
 

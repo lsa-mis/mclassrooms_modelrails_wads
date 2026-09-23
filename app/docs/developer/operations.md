@@ -86,20 +86,56 @@ so set a password in that first window if outbound mail isn't wired up yet.
   Owner role. See [The operator becomes the owner](#the-operator-becomes-the-owner)
   below — this is deliberate. Creation honors `TENANCY_WORKSPACE_CREATION`
   the same as the tenant-side flow; the operations area does not bypass it.
-- **Users** (`/operations/users`) — a search box, not a browsable list: look
-  a user up by their exact email address (names are encrypted
-  non-deterministically and can't be searched or sorted in SQL — see
-  [Security: Personal Data at Rest](security#personal-data-at-rest)). From a
-  user's page, let a locked-out account try again, or suspend or reinstate
-  them (sign-in is refused and sessions end; memberships and roles are
-  untouched). An operator can't be suspended from here — revoke their
-  operator access first; `rails users:suspend` is the unguarded break-glass
-  path. See [Suspension keeps memberships](#suspension-keeps-memberships)
-  below.
-- **Activity** (`/operations/activity_logs`) — every workspace's activity,
-  newest first, paginated. Personal security events (password changes,
-  passkeys, new devices) never appear here — that split is the same `admin`
-  vs. `personal` visibility the rest of the app already uses.
+- **Users** (`/operations/users`) — a paginated list of everyone with an
+  account, **newest first**, with a filter over it. The order is `created_at`
+  and cannot be a name: names are encrypted non-deterministically, so an SQL
+  sort reads ciphertext and a keyed digest is not order-preserving — the only
+  SQL-orderable name key would be a plaintext column, which is a security
+  decision, not an oversight (see
+  [Security: Personal Data at Rest](security#personal-data-at-rest)). The
+  filter has two branches for the same reason: an exact match on the
+  deterministically-encrypted address, and a bounded decrypt-and-match pass
+  over names (`User::Search`, which the activity ledger's search box shares).
+  Both caps are stated on the page rather than applied quietly — if there were
+  too many accounts to search names, or the match list stopped at its limit,
+  it says so. When nothing matches, the page offers the activity ledger's
+  search, which also matches workspaces and projects. A user's page opens with their states as badges
+  (operator, suspended, sign-in blocked), says since when, and holds every
+  control in one row: let a locked-out account try again, or suspend or
+  reinstate them (sign-in is refused and sessions end; memberships and roles
+  are untouched). A membership in a locked workspace is badged, since that
+  is the other reason someone cannot get in. "View activity" opens the
+  ledger narrowed to them, and a ledger row's details link back to this
+  page. An operator can't be suspended from here — revoke their operator
+  access first; `rails users:suspend` is the unguarded break-glass path. See
+  [Suspension keeps memberships](#suspension-keeps-memberships) below.
+- **Activity** (`/operations/activity_logs`) — every workspace's activity as a
+  ledger: newest first, the last 30 days by default, filterable by one search
+  box, workspace or the instance level, kind, and date range; sortable by
+  time or by workspace name (instance-level rows sit last either way); 25 to
+  500 rows a page. The search box resolves an email address, a
+  person's name, a workspace or a project, and shows the rows for any of them
+  — an email matches exactly (the column is deterministically encrypted),
+  everything else matches anywhere in the text. Names are matched after
+  decryption in Ruby, the same technique as the members page
+  (`ActivityLog::Search`, `WorkspaceRoster` — see
+  [Security: Personal Data at Rest](security#personal-data-at-rest)), so they
+  are searched only on instances under `User::Search::NAME_SEARCH_LIMIT`
+  users (2,000); above that the summary says names were not searched and the
+  box answers exact addresses only. Filters apply as you change them. Each row
+  opens to the change it recorded, the record it is about, its tier, the
+  person's own page, and links that narrow the ledger to that person or to
+  that workspace. Controls that must navigate the whole page (sort, rows,
+  the pager, a range preset, a pivot) hand focus back to themselves — or to
+  the choice just made — in the new document (`data-focus-key`, read by
+  `navigation_focus.js`), so a keyboard user is not walked back to the top
+  after every sort. Two things the page says on its face and that an
+  operator ruling something out must remember: locks and deactivations are
+  stored as workspace and member *updates* (filter by those kinds), and rows
+  are written best-effort, so an empty result is not proof. Personal security
+  events (password changes, passkeys, new devices) never appear here — that
+  split is the same `admin` vs. `personal` visibility the rest of the app
+  already uses.
 
   One kind of `admin` row is excluded on top of that split: a suppressed
   invitation delivery. Those rows are the only evidence that a recipient
@@ -119,11 +155,54 @@ so set a password in that first window if outbound mail isn't wired up yet.
   members — that's a member's job. Grant yourself a membership the ordinary
   way if you need to do it (or, for a workspace you just created for an
   unknown owner, you're already in it).
+- Sort the ledger by who acted. Actor names are encrypted with the
+  non-deterministic cipher, so SQL cannot order by them, and a sort that
+  loads and decrypts the whole result only works under the 500-row cap — a
+  header that works on some filters and not others is worse than none. To
+  see one person's rows, search for them (the row details offer that pivot);
+  time and workspace are the two sorts. The question a Who sort is usually
+  reached for — *who has been busiest here* — is answered instead by the
+  **Most active** strip above the table: a count per person over whatever
+  filter is applied, which states the answer rather than asking you to eyeball
+  which alphabetical block is tallest across pages.
 - Scope an operator to some workspaces rather than all of them. An
   operator's reach is the whole instance today — `operated_workspaces` is
   every kept workspace, with no notion of "some." A scoped-operator arc that
   narrows this is planned, not built.
 - Impersonate a user.
+
+## The Workspace filter changes shape as you grow
+
+On a small instance the Workspace filter is a dropdown of every workspace.
+Past `Operations::ActivityLogsController::WORKSPACE_PICKER_LIMIT` (100) it
+becomes a search box instead, and the list is not rendered at all.
+
+That switch is automatic, and it is automatic **because you are a fork**. An
+operator's reach is every kept workspace on the instance, so the dropdown grew
+with your business and was re-sent on every full-page navigation — and sorting
+and paging both are. Nobody is watching your instance for the day that starts to
+hurt, so the page watches for itself.
+
+What it does *not* do is quietly shorten the list. A workspace missing from a
+capped dropdown would be unselectable with nothing on screen to say so, which
+trades a slow page for a wrong one. When the search offers more matches than it
+shows, it states the number it left out.
+
+Searching is server-side and matches a name fragment or an exact slug.
+Workspace names are plaintext, so this is ordinary SQL — unlike people's
+names, which are encrypted and searched the slower way described above. A search
+matching exactly one workspace applies the filter; several offer you the
+choice rather than guessing; none says so.
+
+Ordinary SQL, but not an indexed one: a name *fragment* is a `LIKE '%term%'`,
+which no index can serve, so each search examines every kept workspace — about
+0.11 ms per thousand, so 11.4 ms at 100,000 workspaces. That is well under the
+cost of the encrypted-name pass it sits beside. Past roughly 500,000 tenants,
+the answer is prefix matching or FTS5 — a product decision about what a search
+means, not a migration.
+
+`?workspace=<slug>` keeps working on both shapes, so links and bookmarks survive
+the switch.
 
 ## The operator becomes the owner
 
@@ -142,7 +221,12 @@ anyone else. Nothing removes them automatically — not on acceptance, not
 ever. Hand off deliberately, the same way any owner would: transfer
 ownership or leave the workspace once the new owner is in place. An operator
 who creates workspaces regularly and never hands off accumulates
-memberships this way; tracked as #1118.
+memberships this way. That is decided, not outstanding: filtering the switcher
+would need membership provenance the schema does not carry, and auto-leaving on
+acceptance cannot tell an operator's interim ownership from an owner inviting a
+co-owner. If operators are ever scoped to particular workspaces, hand-off stops
+being only untidy — a stale interim membership would confer real access rather
+than redundant access — so it becomes an acceptance criterion of that arc.
 
 ## Suspension keeps memberships
 
@@ -151,6 +235,18 @@ are all left exactly as they were. A suspended sole owner still owns their
 workspace, and reinstating them restores that access with no further
 repair. While they're suspended, that workspace simply has no active
 owner able to sign in — that's the point of a hold, not a gap in it.
+
+## Who learns about a hold
+
+One rule, applied in all three directions, so there is no per-surface exemption to keep straight:
+
+- **The person, at the moment of impact.** The sign-in attempt that is refused says so. That is the only moment the information is actionable for them.
+- **Tenants, never.** A hold is between the operator and that person. Their memberships, roles and rows are untouched, and no workspace-facing surface marks them as held — a member list that showed it would disclose an account-level decision to people with no part in it.
+- **Operators, always.** The operations user page names the state, says since when, and holds the controls.
+
+**Mail follows the same rule: a suspended address receives none.** Not the digest (filtered in the candidate scope, so a held account costs no work), not workspace notifications, and **not security mail either** — password changed, sign-in from a new device. That last one is deliberate and is the part worth arguing with: a suspended user cannot act on a security notice, because the sign-in that would let them act is exactly what is refused. A reset on reinstatement recovers the same ground through the same address. The alternative — exempting security mail — buys a notification nobody can use in exchange for a second rule and a class of mail that must be kept straight forever.
+
+The same principle settles what an operator's action on a user records: personal-visibility rows, never workspace-visible ones.
 
 ## How it stays safe
 

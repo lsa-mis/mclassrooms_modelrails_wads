@@ -11,11 +11,13 @@
     deleted-record row is plain text, never a dead href. %>
 <% destination = notification.render_safe_or_placeholder { notification.url } %>
 <% linkable = destination.present? && destination != t("notifications.placeholder") %>
-<li id="<%= dom_id(notification) %>"
-    data-notification-type="<%= notification.type %>"
-    class="px-4 py-4 flex flex-col gap-3
-           sm:px-6
-           sm:flex-row sm:items-start sm:justify-between">
+<%# The row's chrome is the component's, not this partial's: the same list
+    shape carried three different paddings before #1119. `id` stays because
+    update.turbo_stream.erb replaces this row by dom_id. %>
+<%= ui :list_group_item,
+       id: dom_id(notification),
+       data: { notification_type: notification.type },
+       class: "flex-col items-start gap-3 sm:flex-row" do %>
   <div class="min-w-0 flex-1">
     <p class="text-sm <%= notification.read_at? ? "text-text-body" : "text-text-heading font-medium" %>">
       <%# Read state reaches AT as text (#763) — the font-weight swap above is
@@ -54,4 +56,4 @@
             class: "btn-secondary text-sm" %>
     <% end %>
   </div>
-</li>
+<% end %>

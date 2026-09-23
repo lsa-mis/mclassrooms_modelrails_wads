@@ -1,36 +1,11 @@
 # frozen_string_literal: true
 
 module UI
-  # # DataTable
-  #
-  # A sortable, filterable table with client-side search and pagination. The
-  # markup is the static scaffold; all interaction (filter / sort / paginate)
-  # lives in the `data-table` Stimulus controller that ships alongside.
-  #
-  # ## Use when
-  # - You have a bounded, already-loaded set of rows the user benefits from
-  #   searching, sorting, or paging through entirely on the client.
-  #
-  # ## Don't use when
-  # - The dataset is large or server-paginated — client-side filtering only sees
-  #   the rows already in the DOM. Render a server-driven table instead.
-  # - The "table" is really a layout grid — use semantic layout, not <table>.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** sortable columns are real keyboard-operable `<button>`s
-  #   (Enter/Space activate; the bare `<th>` is not focusable), each wrapped in a
-  #   `th[aria-sort]` the controller flips to `ascending`/`descending`/`none`;
-  #   a visually-hidden `role="status"` live region announces the result count
-  #   after filtering; all controls (search, sort headers, pager) meet the AAA
-  #   44px target floor; and every user-facing string is localized.
-  # - **You supply:** a `caption:` — a table without an accessible name leaves
-  #   screen-reader users without context. Pass one whenever practical.
-  #
-  # No fail-loud variant guard: this component has no enum/variant axis. Its
-  # inputs are open-ended data (`columns:`, `rows:`, `per_page:`), not a closed
-  # set to validate against, so there is nothing to coerce.
+  # A sortable, filterable table with client-side search and pagination.
+  # Usage, options and the accessibility contract: docs/components/data_table.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class DataTableComponent < ApplicationComponent
-    WRAPPER    = "w-full overflow-auto rounded-lg border border-border"
+    WRAPPER    = "w-full overflow-auto rounded-lg border border-border bg-surface-raised"
     TOOLBAR    = "flex items-center gap-3 border-b border-border bg-surface-raised px-4 py-3"
     # h-11 keeps the search control at the AAA 44px target floor (WCAG 2.5.5).
     SEARCH_CLS = "flex h-11 flex-1 items-center gap-2 rounded-md border border-border-strong bg-surface-raised " \
@@ -44,7 +19,7 @@ module UI
     TH_CLS     = "h-11 px-4 text-left align-middle font-medium text-text-muted whitespace-nowrap"
     # The sort trigger is a real <button>: focusable + Enter/Space-activatable
     # for free. It spans the cell (left-aligned) and fills the >=44px height.
-    SORT_BTN   = "flex min-h-11 w-full items-center gap-1 -mx-4 px-4 text-left font-medium " \
+    SORT_BTN   = "flex min-h-input w-full items-center gap-1 -mx-4 px-4 text-left font-medium " \
                  "cursor-pointer select-none hover:text-text-heading focus-ring transition-colors"
     TR_CLS     = "border-t border-border transition-colors hover:bg-surface-sunken/30"
     TD_CLS     = "px-4 py-3 align-middle"
@@ -145,11 +120,11 @@ module UI
       label    = col[:label] || key.humanize
       sortable = col.fetch(:sortable, false)
 
-      return content_tag(:th, label, class: TH_CLS) unless sortable
+      return content_tag(:th, label, scope: "col", class: TH_CLS) unless sortable
 
       # Sortable: th[aria-sort] (the controller flips it) wrapping a focusable
       # button that carries the sort action + key param.
-      content_tag(:th, sort_button(key, label), class: TH_CLS, "aria-sort": "none")
+      content_tag(:th, sort_button(key, label), scope: "col", class: TH_CLS, "aria-sort": "none")
     end
 
     def sort_button(key, label)

@@ -1,29 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # ScrollArea
-  #
-  # A fixed-height (or fixed-width) scrollable container with a thin, themed
-  # scrollbar styled via CSS custom properties — no plugin needed under Tailwind v4.
-  #
-  # ## Use when
-  # - Long content must live in a bounded box (a list, a code block, a panel) that
-  #   the user scrolls within.
-  #
-  # ## Don't use when
-  # - The content is already focusable throughout (e.g. a list of links/buttons) —
-  #   the browser scrolls to follow focus, so the region need not be a tab stop.
-  #   Pass `focusable: false` to opt out of the extra tab stop in that case.
-  #
-  # ## Accessibility contract
-  # - **Guarantees (WCAG 2.1.1 keyboard):** when the region is focusable (the
-  #   default), the scroll container is a tab stop (`tabindex="0"`) so keyboard-only
-  #   users can focus it and arrow-scroll, carries a visible focus indicator (the
-  #   `focus-ring` utility, never `focus:ring-*`), and is a named landmark
-  #   (`role="region"` + accessible name) so AT announces what scrolls.
-  # - **You supply:** an accessible name via `aria_label:` OR `aria_labelledby:`.
-  #   A focusable scroll region with no name is unannounced — so this fails loud
-  #   rather than ship a nameless tab stop.
+  # A fixed-height (or fixed-width) scrollable container with a thin, themed scrollbar styled via CSS custom properties — no plugin needed under Tailwind v4.
+  # Usage, options and the accessibility contract: docs/components/scroll_area.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ScrollAreaComponent < ApplicationComponent
     ORIENTATIONS = {
       vertical:   "overflow-y-auto",

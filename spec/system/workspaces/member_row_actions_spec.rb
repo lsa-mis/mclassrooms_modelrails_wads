@@ -28,18 +28,6 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
     "##{ActionView::RecordIdentifier.dom_id(membership)}"
   end
 
-  # Cuprite leaves the synthetic pointer where it last clicked, so a restored
-  # page is audited with a row button held in :hover. That state blends
-  # `text-danger`/`text-success` through the app-wide `hover:opacity-80` idiom
-  # down to 5.0–6.4:1 — a REAL AAA hole, but in a pattern that spans 7 sites
-  # including a UI component, so it is #1068 rather than half-fixed here.
-  # Parking on the page heading (inert text, no hover style) audits the resting
-  # state every other system spec audits. Delete this helper when #1068 lands —
-  # left in place afterwards it would quietly protect the same regression.
-  def park_pointer
-    find("h1", match: :first).hover
-  end
-
   def click_row_action(membership, label)
     within(row_for(membership)) { click_button label }
   end
@@ -52,7 +40,6 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
     expect(page).to have_text(I18n.t("workspaces.members.destroy.deactivated"))
     expect(page).to have_css(row_for(member_membership),
                              text: I18n.t("workspaces.members.index.deactivated"))
-    park_pointer
 
     # #912: the state this fix creates — the full-page render Turbo would
     # otherwise have discarded — is audited, not just the pristine index. The
@@ -67,7 +54,7 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
   end
 
   it "shows the reactivated notice after Reactivate" do
-    member_membership.discard!
+    member_membership.update!(discarded_at: Time.current)
     visit workspace_members_path(workspace)
 
     click_row_action(member_membership, I18n.t("workspaces.members.index.reactivate"))
@@ -75,7 +62,6 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
     expect(page).to have_text(
       I18n.t("workspaces.members.reactivations.create.reactivated")
     )
-    park_pointer
   end
 
   it "shows the transferred notice after Transfer ownership" do
@@ -86,7 +72,6 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
     expect(page).to have_text(
       I18n.t("workspaces.members.ownership_transfers.create.transferred")
     )
-    park_pointer
   end
 
   # The branch that forces `_top` rather than merely preferring it: leaving
@@ -125,7 +110,6 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
         I18n.t("workspaces.members.destroy.cannot_deactivate_last_owner")
       )
       expect(owner_membership.reload.discarded_at).to be_nil
-      park_pointer
     end
   end
 end

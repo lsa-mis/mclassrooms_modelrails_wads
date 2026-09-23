@@ -44,6 +44,7 @@ RSpec.describe SettingsNavigationHelper, type: :helper do
         I18n.t("settings.sidebar.items.notifications"),
         I18n.t("settings.sidebar.items.security"),
         I18n.t("settings.sidebar.items.passkeys"),
+        I18n.t("settings.sidebar.items.invitation_blocks"),
         I18n.t("settings.sidebar.items.sessions"),
         I18n.t("settings.sidebar.items.appearance")
       ])

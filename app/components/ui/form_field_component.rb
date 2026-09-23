@@ -1,44 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Form Field
-  #
-  # Wraps a caption + control + optional hint and error into one AAA-correct field:
-  # it binds the `<label for>` to the control, gives the hint/error real ids that the
-  # control references via `aria-describedby`, and injects `invalid`/`required` into
-  # the control. The control arrives as a block, so the component yields its field
-  # context (`input_attrs`) and the caller spreads it onto any control:
-  #
-  #   <%= ui :form_field, label: "Email", hint: "We'll never share it.",
-  #         error: @user.errors[:email].first, required: true do |f| %>
-  #     <%= ui :input, type: "email", name: "user[email]", **f.input_attrs %>
-  #   <% end %>
-  #
-  # ## Use when
-  # - You're composing a single labelled field by hand (a one-off form, or a control
-  #   the form builder (`UI::FormBuilder`) doesn't cover). For model-backed forms,
-  #   prefer the builder — it already does this wiring.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a `<label for=id>` bound to the control; hint/error rendered with
-  #   ids `#{id}-hint`/`#{id}-error`; and `input_attrs` carrying `id` +
-  #   `describedby` (**error-first**, then hint — `[error, hint]` — front-loading the
-  #   correction for AT users now that the hint sits below the control) + `invalid`
-  #   (on error) + `required`. The required marker is a decorative aria-hidden `*` on
-  #   the Label — the caption never carries the requirement.
-  # - **No live region:** the error `<p>` is plain markup, not `role="alert"`. A
-  #   field-level live region never fires on a server-rendered response — the region
-  #   has to exist before its content changes to announce anything. The focused
-  #   `ErrorSummary` component is the actual announcement mechanism.
-  # - **You supply:** the control inside the block, spread with `**f.input_attrs` so it
-  #   adopts the field's id and aria wiring. Rendering a native (non-ViewComponent)
-  #   control instead? Use `html_input_attrs`, which translates the same wiring into
-  #   real `aria-*` attributes.
-  # - **Id fallback:** without an explicit `id:`, the id is derived from `label` (so
-  #   repeated renders of the same field agree, which Turbo morphing and HTML
-  #   snapshot tests depend on) — pass explicit ids when two fields on one page share
-  #   a label. `UI::FormBuilder` always supplies an id, so this only matters when
-  #   composing a field by hand.
+  # Wraps a caption + control + optional hint and error into one AAA-correct field: it binds the `<label for>` to the control, gives the hint/error real ids that the control references via `aria-describedby`, and injects `invalid`/`required` into the control.
+  # Usage, options and the accessibility contract: docs/components/form_field.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class FormFieldComponent < ApplicationComponent
     # data-slot adjacency rhythm (the Catalyst model): label→control 12px,
     # control→description 8px, description→description 4px. Self-contained Tailwind

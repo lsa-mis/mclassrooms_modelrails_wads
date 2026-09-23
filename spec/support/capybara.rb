@@ -39,7 +39,27 @@ CUPRITE_DRIVER_OPTIONS = {
   #
   # Applied only when actually running as root. --no-sandbox gives up a real
   # security boundary, and on a developer's own machine there is no reason to.
-  **(Process.uid.zero? ? { browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil } } : {})
+  # The test browser resolves no third-party host. `Network.setBlockedURLs` is
+  # NOT enough: it stops subresources but not an IFRAME'S OWN DOCUMENT, so with
+  # it in place `youtube.com/embed/...` still returned 200 — measured. Resolving
+  # the host to nothing stops everything, and off-host traffic on the embed
+  # preview drops from 12 requests to one that fails (#1233).
+  #
+  # These are the hosts the component previews reach. The app itself reaches
+  # none: its CSP is `font_src :self, :data`, so it self-hosts fonts, and OAuth
+  # is mocked. A suite that quietly depends on the public internet fails as a
+  # broken component rather than as a network problem, and it refused a push
+  # twice in one evening (#1207).
+  #
+  # NOTE the merge below rather than a second `browser_options:` key — as root
+  # (the devcontainer) a second key would REPLACE this one and silently restore
+  # the network.
+  browser_options: {
+    "host-resolver-rules" =>
+      "MAP *.youtube.com ~NOTFOUND, MAP *.google.com ~NOTFOUND, MAP fonts.gstatic.com ~NOTFOUND"
+  }.merge(
+    Process.uid.zero? ? { "no-sandbox" => nil, "disable-dev-shm-usage" => nil } : {}
+  )
 }.freeze
 
 CUPRITE_SCREEN_SIZE = [ 1400, 1400 ].freeze

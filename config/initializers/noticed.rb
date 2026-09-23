@@ -17,11 +17,20 @@
 # `NotificationDispatchReconcileJob` covers only the never-enqueued gap and can
 # never re-run an event whose delivery legs already fanned out.
 #
-# What that deliberately does NOT cover: a claimed job that then raises.
-# `Noticed::EventJob` declares no `retry_on` (only
-# `discard_on ActiveJob::DeserializationError`), so it lands in
-# `solid_queue_failed_executions` and waits for a manual retry — there is no
-# automatic recovery and no dashboard here. Closing that is #1065.
+# A claimed job that then raises is covered by the retry policy registered
+# below (#1065). The gem ships none — only `discard_on
+# ActiveJob::DeserializationError` — so such a job used to land in
+# `solid_queue_failed_executions` and wait for a hand, and this app ships no
+# dashboard to notice. Three attempts with a growing delay, because the faults
+# worth retrying here are transient (a busy Solid Queue database, a mail host
+# refusing a connection).
+#
+# Retrying re-runs `perform`, which is NOT idempotent: the fan-out is 1-3
+# delivery legs and a recipient may see a duplicate email. That trade is
+# deliberate and the smaller harm — a duplicate is visible and annoying, a
+# silently dropped security notification is neither. What retry_on still
+# cannot see is process death: Solid Queue FAILS a pruned worker's claimed
+# executions rather than releasing them, so those never re-enter the queue.
 #
 # `before_perform` rather than an override: the gem hardcodes `EventJob` at
 # `Deliverable#deliver`, so no subclass can be substituted. `update_column`
@@ -39,5 +48,7 @@ Rails.application.config.to_prepare do
     Noticed::EventJob.before_perform do |job|
       job.arguments.first&.update_column(:dispatched_at, Time.current)
     end
+
+    Noticed::EventJob.retry_on StandardError, wait: :polynomially_longer, attempts: 3
   end
 end

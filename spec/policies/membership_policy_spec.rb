@@ -98,7 +98,7 @@ RSpec.describe MembershipPolicy do
     end
 
     it "denies leaving when the user is the last owner" do
-      owner_membership_other.discard!
+      owner_membership_other.update!(discarded_at: Time.current)
       record.update!(role: Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" })
       expect(policy.destroy?).to be(false)
     end
@@ -228,7 +228,7 @@ RSpec.describe MembershipPolicy do
       let(:record) { create(:membership, :owner, user: owner_user, workspace: workspace) }
       before do
         create(:membership, :admin, user: user, workspace: workspace)
-        record.discard!
+        record.update!(discarded_at: Time.current)
       end
 
       it "denies reactivate (admin cannot restore an owner)" do
@@ -241,7 +241,7 @@ RSpec.describe MembershipPolicy do
       let(:record) { create(:membership, user: member_user, workspace: workspace) }
       before do
         create(:membership, :admin, user: user, workspace: workspace)
-        record.discard!
+        record.update!(discarded_at: Time.current)
       end
 
       it "allows reactivate" do

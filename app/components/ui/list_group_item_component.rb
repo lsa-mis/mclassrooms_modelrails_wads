@@ -1,22 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # ListGroupItem
-  #
-  # A single row inside a `list_group`. Semantics follow interactivity: a static
-  # row is a plain `<li>`; a navigable row is an `<a>` wrapped in its `<li>` (an
-  # `<a>` is not a valid direct child of `<ul>`). A clickable row is a real focusable
-  # element, never a `<div>` with a click handler.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** AAA-contrast tokens (`text-text-heading`/`text-text-muted` on
-  #   `bg-surface`; the active row is a solid `bg-interactive` fill with adaptive
-  #   `text-text-on-interactive`). Link rows are real `<a>` elements inside `<li>`,
-  #   carry the `focus-ring` utility, and — when active — `aria-current="page"`.
-  #   A non-interactive row is never made focusable. An unknown `variant` raises
-  #   in development.
-  # - **You supply:** the row text (positional arg, `label:`, or slot content); an
-  #   `href:` to make the row a link; `active: true` to mark the current row.
+  # A single row inside a `list_group`.
+  # Usage, options and the accessibility contract: docs/components/list_group.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ListGroupItemComponent < ApplicationComponent
     BASE = "flex items-center justify-between px-4 py-3 text-sm"
 
@@ -25,16 +12,28 @@ module UI
     LINK = "focus-ring transition-colors"
 
     VARIANTS = {
-      default: "text-text-heading hover:bg-surface-sunken",
+      default: "text-text-heading",
       active:  "bg-interactive text-text-on-interactive",
-      muted:   "text-text-muted hover:bg-surface-sunken"
+      muted:   "text-text-muted"
+    }.freeze
+
+    # Hover belongs to interactivity, not to colour variant, so it is applied only
+    # in link_row — a static <li> highlighting full-width promises a click target
+    # that does not exist (#191). Keyed by variant rather than folded into LINK
+    # because LINK also dresses ACTIVE rows: an active row hovering to
+    # bg-surface-sunken keeps text-text-on-interactive, which is white text on a
+    # near-white surface in the light theme. The empty cell is the point.
+    HOVER = {
+      default: "hover:bg-surface-sunken",
+      active:  "",
+      muted:   "hover:bg-surface-sunken"
     }.freeze
 
     def initialize(label = nil, href: nil, active: false, variant: :default, **html_attrs)
       @label = label || html_attrs.delete(:label)
       @href = href
-      @active = active
-      @variant = coerce_variant(active ? :active : variant.to_sym)
+      @active = coerce_active(active, href)
+      @variant = coerce_variant(@active ? :active : variant.to_sym)
       @extra_class = html_attrs.delete(:class)
       @html_attrs = html_attrs
     end
@@ -51,7 +50,7 @@ module UI
       content_tag(:li) do
         content_tag(:a, body,
           href: @href,
-          class: cn(BASE, LINK, VARIANTS.fetch(@variant), @extra_class),
+          class: cn(BASE, LINK, VARIANTS.fetch(@variant), HOVER.fetch(@variant), @extra_class),
           "aria-current": (@active ? "page" : nil),
           **@html_attrs)
       end
@@ -66,6 +65,24 @@ module UI
 
     def body
       content.presence || @label
+    end
+
+    # `active` marks the CURRENT page among navigable rows, so it needs somewhere to
+    # navigate. Without href: the row is a plain <li> wearing the solid interactive
+    # fill on something that cannot be focused or activated — and static_row rightly
+    # declines aria-current, so it reads as current to sighted users and is silent to
+    # assistive technology. Same posture as coerce_variant: loud in dev/test, degrade
+    # in production rather than 500 a page (#196).
+    def coerce_active(active, href)
+      return active if !active || href
+
+      unless defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
+        raise ArgumentError,
+          "UI::ListGroupItemComponent: active: true needs an href:. " \
+          "Add href:, or drop active: — a static row cannot be the current page."
+      end
+
+      false
     end
 
     # Fail loud on an unknown variant in development/test so misuse is caught

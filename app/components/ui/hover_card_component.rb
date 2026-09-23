@@ -1,30 +1,13 @@
 # frozen_string_literal: true
 
 module UI
-  # # Hover Card
-  #
-  # A rich, supplemental card revealed on hover **and** keyboard focus of its trigger,
-  # driven by the `floating` controller's hover-intent: a short close-delay lets the
-  # pointer cross the trigger→card gap so the card's interactive content stays
-  # reachable and clickable. Escape closes and returns focus to the trigger.
-  #
-  # ## Use when
-  # - A link/avatar benefits from a supplemental preview (profile, definition) whose
-  #   content is ALSO reachable elsewhere (the card is an enhancement, not the only path).
-  #
-  # ## Don't use when
-  # - The content is a primary interactive surface — use `popover` (click) or a `dialog`.
-  # - It's a short text hint — use `tooltip`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** opens on hover AND focus; the hover-intent close-delay keeps the
-  #   card reachable, so its content is clickable and Tab-reachable; Escape closes and
-  #   returns focus to the trigger; `role="group"` + `aria-label` when `label:` is given.
-  # - **You supply:** a `with_trigger` slot (a focusable link/button) and the card content.
+  # A rich, supplemental card revealed on hover **and** keyboard focus of its trigger, driven by the `floating` controller's hover-intent: a short close-delay lets the pointer cross the trigger→card gap so the card's interactive content stays reachable and clickable.
+  # Usage, options and the accessibility contract: docs/components/hover_card.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class HoverCardComponent < ApplicationComponent
     renders_one :trigger
 
-    CARD_BASE = "z-50 w-64 rounded-lg border border-border bg-surface-overlay p-4 text-sm " \
+    CARD_BASE = "z-50 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface-overlay p-4 text-sm " \
                 "text-text-body shadow-md " \
                 "invisible opacity-0 transition-opacity duration-200 " \
                 "group-data-[state=open]:visible group-data-[state=open]:opacity-100"
@@ -65,8 +48,10 @@ module UI
 
     private
 
+    # merge_html_attrs, not a flat merge: a caller's `data:` would otherwise replace
+    # this hash wholesale and take data-controller with it.
     def wrapper_attrs
-      {
+      merge_html_attrs({
         class: cn("group relative inline-block", @extra_class),
         style: "anchor-name: --#{@id}",
         data: {
@@ -75,7 +60,7 @@ module UI
                    "focusin->floating#hoverOpen focusout->floating#hoverClose " \
                    "keydown.esc->floating#hoverEscape"
         }
-      }.merge(@html_attrs)
+      }, @html_attrs)
     end
 
     def card

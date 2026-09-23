@@ -14,6 +14,6 @@
   <%= turbo_stream_from @workspace %>
 
   <%= render "shared/activity_feed",
-        activities: ActivityLog.visible.for_workspace(@workspace).recent.for_feed,
+        activities: @activities,
         top_margin: (@workspace.archived? ? "mt-8" : "mt-0") %>
 </div>

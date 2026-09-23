@@ -1,23 +1,11 @@
 # frozen_string_literal: true
 
 module UI
-  # # Breadcrumb
-  #
-  # A breadcrumb trail (`<nav aria-label>` + ordered list). The last item is the current page
-  # (`aria-current="page"`, not a link); earlier items are links separated by a decorative
-  # (`aria-hidden`) separator.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** `<nav>` named by `label:` (i18n, default "Breadcrumb"); an `<ol>` of crumbs;
-  #   the current page is `aria-current="page"` and not a link; separators are `aria-hidden`;
-  #   links get a visible `:focus-visible` ring.
-  # - **You supply:** `items:` (`[{ label:, href: }, …, { label: }]` — the LAST item, with no
-  #   `href`, is the current page).
+  # A breadcrumb trail (`<nav aria-label>` + ordered list).
+  # Usage, options and the accessibility contract: docs/components/breadcrumb.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class BreadcrumbComponent < ApplicationComponent
-    # inline-flex + min-h-11: 44px AAA target floor (2.5.5) — text-sm crumb
-    # links measured ~20px tall (2026-07-13 gate upgrade, backlog #10). The
-    # hit area grows; the text baseline is unchanged.
-    LINK = "inline-flex min-h-11 min-w-11 items-center rounded-sm text-text-muted transition-colors " \
+    LINK = "inline-flex min-h-input min-w-11 items-center rounded-sm text-text-muted transition-colors " \
            "hover:text-text-heading " \
            "focus-ring focus-visible:text-text-heading"
     CURRENT = "font-medium text-text-heading"
@@ -69,6 +57,7 @@ module UI
         safe_join(shown.each_with_index.map { |item, i|
           item == :ellipsis ? ellipsis : crumb(item, i == shown.size - 1)
         }),
+        role: "list",
         class: cn("flex flex-wrap items-center gap-1.5 break-words text-sm text-text-muted sm:gap-2.5", @list_class))
     end
 

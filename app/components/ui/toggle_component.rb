@@ -1,26 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Toggle
-  #
-  # A two-state press button — an `<button type="button">` carrying `aria-pressed`
-  # (and a mirrored `data-state`) that flips on click. Use it for a standalone
-  # on/off control (bold, mute, pin), not as a checkbox replacement in a form.
-  #
-  # ## Use when
-  # - You need a single, instantly-applied on/off action with no separate submit.
-  #
-  # ## Don't use when
-  # - It's a form field whose value posts on submit — use a checkbox/switch input.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a real interactive element with `aria-pressed` reflecting the
-  #   pressed state, and a 44px-minimum touch target at every size (AAA 2.5.5).
-  # - **You supply:** an accessible name — visible text/content, or an `aria-label:`
-  #   for an icon-only toggle — and a valid `size` (an unknown one raises in development).
-  #
-  # ## Sizes
-  # `default` · `sm` · `lg` — all rendered >=44px tall (the AAA target-size floor).
+  # A two-state press button — an `<button type="button">` carrying `aria-pressed` (and a mirrored `data-state`) that flips on click.
+  # Usage, options and the accessibility contract: docs/components/toggle.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ToggleComponent < ApplicationComponent
     # Hover and selected are intentionally DISTINCT surfaces so clicking to select
     # gives immediate feedback (the prior version painted both `bg-surface-sunken`,
@@ -34,7 +17,7 @@ module UI
            "data-[state=off]:hover:bg-surface-sunken data-[state=off]:hover:text-text-body " \
            "focus-ring " \
            "disabled:pointer-events-none disabled:opacity-50 " \
-           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger  " \
+           "aria-invalid:border-2 aria-invalid:border-danger " \
            "data-[state=on]:bg-interactive-subtle data-[state=on]:text-interactive " \
            "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 

@@ -1,25 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Spinner
-  #
-  # An animated busy indicator for indeterminate waits. Carries `role="status"` and
-  # an sr-only label so screen-reader users are told something is loading.
-  #
-  # ## Use when
-  # - You need to signal an indeterminate, short-lived wait (a button submitting, a
-  #   panel fetching). For determinate progress, use `progress` instead.
-  #
-  # ## Don't use when
-  # - The wait is determinate (you know the percentage) — use `progress`.
-  # - You strip the sr-only text — without it the spin is invisible to AT.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** `role="status"` plus an sr-only loading label (i18n via
-  #   `t` with an English default), so the spin is announced, not silent.
-  # - **You supply:** nothing required; override the label via the
-  #   `modelrails_ui.spinner.loading` locale key. (The spin is intentionally NOT
-  #   motion-reduce-suppressed — a spinner with no motion conveys nothing.)
+  # An animated busy indicator for indeterminate waits.
+  # Usage, options and the accessibility contract: docs/components/spinner.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class SpinnerComponent < ApplicationComponent
     BASE = "inline-block animate-spin rounded-full border-2 border-current border-t-transparent"
 

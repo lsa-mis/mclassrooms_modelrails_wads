@@ -2,15 +2,15 @@
 
 module UI
   class FileInputComponent < ApplicationComponent
-    # Matches the host app's FILE_FIELD_CLASSES (state-independent). a11y params
-    # added so the builder can wire aria-invalid/describedby — closing the gap
-    # where the app's plain file_field skipped ARIA.
+    # Matches the host app's FILE_FIELD_CLASSES (state-independent). a11y params added so the builder can wire aria-invalid/describedby — closing the gap where the app's plain file_field skipped ARIA.
+    # Usage, options and the accessibility contract: docs/components/file_input.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
     BASE = "block w-full text-sm text-text-body " \
            "file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium " \
            "file:bg-interactive file:text-text-on-interactive hover:file:bg-interactive-hover " \
-           "file:cursor-pointer file:min-h-[var(--form-input-height)] " \
+           "file:cursor-pointer file:min-h-input " \
            "disabled:cursor-not-allowed disabled:opacity-50 " \
-           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger"
+           "aria-invalid:border-2 aria-invalid:border-danger "
 
     # Per-file pill for the show_selection list: the badge chip shape plus the
     # proven [:soft, :primary] color cell (bg-interactive-subtle + text-interactive
@@ -94,7 +94,7 @@ module UI
 
     # Starts hidden; the controller un-hides it only while it holds pills.
     def selection_list
-      content_tag(:ul, nil, hidden: true, class: "mt-2 flex flex-wrap gap-1.5",
+      content_tag(:ul, nil, role: "list", hidden: true, class: "mt-2 flex flex-wrap gap-1.5",
         data: { file_input_target: "list" })
     end
 

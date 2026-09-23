@@ -31,37 +31,37 @@
     </p>
     <div class="flex flex-col gap-1">
       <%= link_to t("navigation.admin.buildings"), main_app.buildings_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+            class: "min-h-input flex items-center px-2 py-2
                     text-sm text-text-body
                     hover:bg-surface-sunken hover:text-interactive-hover rounded
                     focus-ring" %>
       <%= link_to t("navigation.admin.announcements"), main_app.admin_announcements_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+            class: "min-h-input flex items-center px-2 py-2
                     text-sm text-text-body
                     hover:bg-surface-sunken hover:text-interactive-hover rounded
                     focus-ring" %>
       <%= link_to t("navigation.admin.editor_assignments"), main_app.admin_editor_assignments_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+            class: "min-h-input flex items-center px-2 py-2
                     text-sm text-text-body
                     hover:bg-surface-sunken hover:text-interactive-hover rounded
                     focus-ring" %>
       <%= link_to t("navigation.admin.bulk_upload"), main_app.new_admin_bulk_upload_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+            class: "min-h-input flex items-center px-2 py-2
                     text-sm text-text-body
                     hover:bg-surface-sunken hover:text-interactive-hover rounded
                     focus-ring" %>
       <%= link_to t("navigation.admin.characteristic_display_rules"), main_app.admin_characteristic_display_rules_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+            class: "min-h-input flex items-center px-2 py-2
                     text-sm text-text-body
                     hover:bg-surface-sunken hover:text-interactive-hover rounded
                     focus-ring" %>
       <%= link_to t("navigation.admin.unit_display_names"), main_app.admin_unit_display_names_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+            class: "min-h-input flex items-center px-2 py-2
                     text-sm text-text-body
                     hover:bg-surface-sunken hover:text-interactive-hover rounded
                     focus-ring" %>
       <%= link_to t("navigation.admin.sync_scope_rules"), main_app.admin_sync_scope_rules_path,
-            class: "min-h-[var(--form-input-height)] flex items-center px-2 py-2
+            class: "min-h-input flex items-center px-2 py-2
                     text-sm text-text-body
                     hover:bg-surface-sunken hover:text-interactive-hover rounded
                     focus-ring" %>
@@ -89,7 +89,7 @@
       <%= link_to t("navigation.admin.buildings"), main_app.buildings_path,
             role: "menuitem", tabindex: "-1",
             data: { menu_target: "item", action: "click->menu#activate" },
-            class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+            class: "flex items-center min-h-input px-4 py-2
                     text-sm text-text-body
                     hover:bg-surface hover:text-interactive
                     focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
@@ -97,7 +97,7 @@
         <%= link_to t("navigation.admin.announcements"), main_app.admin_announcements_path,
               role: "menuitem", tabindex: "-1",
             data: { menu_target: "item", action: "click->menu#activate" },
-              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+              class: "flex items-center min-h-input px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
                       focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
@@ -106,7 +106,7 @@
         <%= link_to t("navigation.admin.editor_assignments"), main_app.admin_editor_assignments_path,
               role: "menuitem", tabindex: "-1",
             data: { menu_target: "item", action: "click->menu#activate" },
-              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+              class: "flex items-center min-h-input px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
                       focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
@@ -115,7 +115,7 @@
         <%= link_to t("navigation.admin.bulk_upload"), main_app.new_admin_bulk_upload_path,
               role: "menuitem", tabindex: "-1",
             data: { menu_target: "item", action: "click->menu#activate" },
-              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+              class: "flex items-center min-h-input px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
                       focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
@@ -124,7 +124,7 @@
         <%= link_to t("navigation.admin.characteristic_display_rules"), main_app.admin_characteristic_display_rules_path,
               role: "menuitem", tabindex: "-1",
             data: { menu_target: "item", action: "click->menu#activate" },
-              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+              class: "flex items-center min-h-input px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
                       focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
@@ -133,7 +133,7 @@
         <%= link_to t("navigation.admin.unit_display_names"), main_app.admin_unit_display_names_path,
               role: "menuitem", tabindex: "-1",
             data: { menu_target: "item", action: "click->menu#activate" },
-              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+              class: "flex items-center min-h-input px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
                       focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>
@@ -142,7 +142,7 @@
         <%= link_to t("navigation.admin.sync_scope_rules"), main_app.admin_sync_scope_rules_path,
               role: "menuitem", tabindex: "-1",
             data: { menu_target: "item", action: "click->menu#activate" },
-              class: "flex items-center min-h-[var(--form-input-height)] px-4 py-2
+              class: "flex items-center min-h-input px-4 py-2
                       text-sm text-text-body
                       hover:bg-surface hover:text-interactive
                       focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading" %>

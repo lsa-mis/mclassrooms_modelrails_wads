@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module UI
+  # The padded body of a card.
+  # Usage, options and the accessibility contract: docs/components/card.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class CardContentComponent < ApplicationComponent
     BASE = "px-6"
 

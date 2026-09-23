@@ -1,34 +1,11 @@
 # frozen_string_literal: true
 
 module UI
-  # # Tooltip
-  #
-  # A small text bubble describing the element it wraps. Shows on hover **and**
-  # keyboard focus; the wrapper is focusable and `aria-describedby` wires the bubble
-  # to it. Escape dismisses (WCAG 1.4.13) via the shared `floating` controller.
-  #
-  # Placement uses CSS anchor positioning: the bubble is `position: fixed` (so its
-  # containing block is the viewport, letting it float free of the wrapper) and tethered
-  # to the wrapper via `anchor-name`/`position-anchor`; `position-area` places it and
-  # `position-try-fallbacks` auto-flips it on viewport overflow — no JS. On browsers
-  # without anchor positioning (pre-Baseline 2026) it falls back to `absolute` offsets.
-  #
-  # ## Use when
-  # - You need a short, non-interactive hint describing a single focusable trigger
-  #   (an icon button, a truncated label).
-  #
-  # ## Don't use when
-  # - The content is interactive or rich — use `hover_card`.
-  # - You wrap an already-interactive control — put `aria-describedby` on that control
-  #   instead (this component makes its own wrapper the focusable trigger).
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** shows on hover AND focus; `role="tooltip"` bubble wired via
-  #   `aria-describedby`; Escape dismisses without moving focus; `pointer-events-none`
-  #   so the bubble never traps the pointer.
-  # - **You supply:** `text:` (the hint) and the trigger content (icon/word).
+  # A small text bubble describing the element it wraps.
+  # Usage, options and the accessibility contract: docs/components/tooltip.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class TooltipComponent < ApplicationComponent
-    BUBBLE_BASE = "z-50 w-max max-w-xs rounded-md px-3 py-1.5 text-xs text-balance " \
+    BUBBLE_BASE = "z-50 w-max max-w-[min(20rem,calc(100vw-2rem))] rounded-md px-3 py-1.5 text-xs text-balance " \
                   "bg-text-heading text-surface-raised whitespace-normal " \
                   "pointer-events-none opacity-0 transition-opacity duration-200 " \
                   "group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 " \
@@ -52,7 +29,7 @@ module UI
     }.freeze
 
     # Public API for the documented "describe an existing interactive control"
-    # pattern (see "Do not use when"): callers build their own group/tooltip
+    # pattern (see "Don't use when"): callers build their own group/tooltip
     # wrapper + aria-describedby and reuse the bubble exactly.
     def self.bubble_classes(side: :top)
       "#{BUBBLE_BASE} #{POSITIONS.fetch(side)}"
@@ -78,13 +55,10 @@ module UI
     private
 
     def wrapper_attrs
-      {
-        # focus-ring: the wrapper is TABBABLE (tabindex below) — a focusable
-        # element with no visible focus indicator fails WCAG 2.4.7 (found on
-        # the pano pane's info chip, 2026-07-13; applies to every usage).
-        # min-h-11: the wrapper is a TABBABLE target — the 44px AAA floor
-        # applies to it like any focusable (a11y gate, 2026-07-13).
-        class: cn("group/tooltip relative inline-flex min-h-11 items-center rounded-md focus-ring", @extra_class),
+      # merge_html_attrs, not a flat merge: a caller's `data:` would otherwise
+      # replace this hash wholesale and take data-controller with it.
+      merge_html_attrs({
+        class: cn("group/tooltip relative inline-flex min-h-input items-center rounded-md focus-ring", @extra_class),
         style: "anchor-name: --#{@id}",
         tabindex: "0",
         "aria-describedby": @id,
@@ -92,7 +66,7 @@ module UI
           controller: "floating",
           action: "keydown.esc->floating#dismiss mouseleave->floating#clearDismissed focusout->floating#clearDismissed"
         }
-      }.merge(@html_attrs)
+      }, @html_attrs)
     end
 
     def bubble

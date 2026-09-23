@@ -6,19 +6,24 @@
 <%# Model-less form_with, same shape as operations/users/index.html.erb's
     search form: form.label + a bare ui :input (no field group, so no
     data-slot is needed) + form.submit. %>
-<%= form_with url: operations_operatorships_path, method: :post, class: "mt-4 flex gap-3 items-end max-w-md" do |form| %>
+<%= form_with url: operations_operatorships_path, method: :post, class: "flex gap-3 items-end max-w-md" do |form| %>
   <div class="flex-1">
-    <%= form.label :email, t("operations.operatorships.index.grant_label"), class: "block text-sm font-medium text-text-heading" %>
+    <%= form.label :email, t("operations.operatorships.index.grant_label"), class: "mb-1 block text-sm font-medium text-text-heading" %>
     <%= ui :input, type: "email", name: "email", id: "email", autocomplete: "email" %>
   </div>
   <%= form.submit t("operations.operatorships.index.grant"), class: "btn-primary" %>
 <% end %>
 
-<%= ui :list_group, class: "mt-4" do %>
+<%= ui :list_group, class: "mt-6" do %>
   <% @operatorships.each do |operatorship| %>
-    <%= ui :list_group_item, class: "gap-4" do %>
-      <span><%= operatorship.user.full_name %></span>
-      <span class="text-text-body">
+    <%# Three children stack under sm — side by side they wrapped the name and
+        the sentence to two ragged lines each around a Revoke pinned right. %>
+    <%= ui :list_group_item, class: "flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4" do %>
+      <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <span><%= operatorship.user.full_name %></span>
+        <span class="text-text-body"><%= operatorship.user.email_address %></span>
+      </div>
+      <span class="text-text-body sm:flex-1">
         <%# The <time> element's CONTENT is the absolute date, not a relative
             "time ago" string — that's what's announced to screen readers and
             shown to sighted users. %{date} carries that <time> markup

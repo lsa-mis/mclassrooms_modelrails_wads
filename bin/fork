@@ -23,6 +23,7 @@
 
 require "optparse"
 require "yaml"
+require_relative "../lib/clean_git_env"
 
 class ForkFlow
   VERSION = "1.0.0"
@@ -54,18 +55,7 @@ class ForkFlow
   # A nil value deletes the key in the child process, restoring `-C` precedence.
   # Passed as the first argument to every spawn — including bin/setup, which
   # shells git itself.
-  CLEAN_GIT_ENV = {
-    "GIT_DIR" => nil,
-    "GIT_WORK_TREE" => nil,
-    "GIT_INDEX_FILE" => nil,
-    "GIT_COMMON_DIR" => nil,
-    "GIT_OBJECT_DIRECTORY" => nil,
-    "GIT_NAMESPACE" => nil,
-    "GIT_CONFIG" => nil,
-    "GIT_CONFIG_GLOBAL" => nil,
-    "GIT_CONFIG_SYSTEM" => nil,
-    "GIT_CONFIG_COUNT" => nil
-  }.freeze
+  CLEAN_GIT_ENV = ::CleanGitEnv::HASH
 
   # Single source of truth: which files carry template identity, and the exact
   # token in each. Static so spec/code_smells can assert the tokens still exist

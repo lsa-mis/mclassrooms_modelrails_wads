@@ -1,36 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Iframe
-  #
-  # A responsive embedded-frame wrapper (`<iframe>`), optionally aspect-ratio
-  # constrained, with lazy loading and sandboxing on by default.
-  #
-  # ## Use when
-  # - Embedding external content (a map, video, document, or third-party widget)
-  #   and you want a responsive, sandboxed frame with an explicit accessible name.
-  #
-  # ## Don't use when
-  # - The content is first-party imagery or video you control — use `image` or a
-  #   native `<video>`; an iframe is for cross-document/embedded content.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** `title:` is REQUIRED and must be non-blank — every iframe
-  #   carries an accessible name (a title-less iframe is a hard WCAG failure, and
-  #   unlike an image there is no "decorative" exception). An invalid `loading:`
-  #   falls back to `:lazy`.
-  # - **You supply:** a real `title:` describing the embedded content (e.g.
-  #   "Map of the office location", "Product demo video").
-  #
-  # ## Parameters
-  # - `src:`     URL to embed (required)
-  # - `title:`   accessible name describing the iframe content (required, non-blank)
-  # - `loading:` :lazy (default) | :eager | :auto
-  # - `sandbox:` space-separated token string, or `true` for strict defaults;
-  #              pass `false` to disable sandboxing entirely (not recommended)
-  # - `aspect:`  CSS aspect-ratio value, e.g. "16/9", "4/3" (wraps in a div);
-  #              omit if you set explicit width/height
-  # - `width:`/`height:` explicit pixel dimensions (applied to the `<iframe>`)
+  # A responsive embedded-frame wrapper (`<iframe>`), optionally aspect-ratio constrained, with lazy loading and sandboxing on by default.
+  # Usage, options and the accessibility contract: docs/components/iframe.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class IframeComponent < ApplicationComponent
     BASE = "w-full border-0"
 

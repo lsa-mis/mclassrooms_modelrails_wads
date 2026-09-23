@@ -116,7 +116,7 @@
             aria-haspopup="true"
             aria-expanded="false"
             aria-label="<%= t("a11y_sim.trigger_aria_label") %>"
-            class="inline-flex items-center gap-2 min-h-[var(--form-input-height)] px-3 py-2 text-xs rounded-md
+            class="inline-flex items-center gap-2 min-h-input px-3 py-2 text-xs rounded-md
                    bg-warning-surface border border-dashed border-warning
                    text-text-body font-medium
                    hover:brightness-105
@@ -151,7 +151,7 @@
                 data-a11y-sim-description="<%= t("a11y_sim.descriptions.#{mode}") %>"
                 data-mode="<%= mode %>"
                 data-active="<%= mode == "normal" ? "true" : "false" %>"
-                class="w-full flex items-center gap-3 min-h-[var(--form-input-height)] px-3 py-2.5 text-sm text-text-body text-left
+                class="w-full flex items-center gap-3 min-h-input px-3 py-2.5 text-sm text-text-body text-left
                        hover:bg-surface-sunken
                        focus:outline-none focus-visible:bg-surface-sunken focus-visible:text-text-heading
                        data-[active=true]:bg-interactive-subtle

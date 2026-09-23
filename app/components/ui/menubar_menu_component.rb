@@ -1,13 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Menubar menu
-  #
-  # One top-level menu of a `menubar`: a bar-item button (`role="menuitem"`,
-  # `aria-haspopup="menu"`) plus its submenu (`role="menu"`). The submenu IS a `menu`
-  # controller (reused via EXTRA_STIMULUS) — same item model + behavior as `dropdown_menu`;
-  # positioning is CSS anchor positioning (the panel tethers to the bar item). Always used
-  # inside `UI::MenubarComponent` (`with_menu`), never standalone.
+  # One top-level menu of a `menubar`: a bar-item button (`role="menuitem"`, `aria-haspopup="menu"`) plus its submenu (`role="menu"`).
+  # Usage, options and the accessibility contract: docs/components/menubar.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class MenubarMenuComponent < ApplicationComponent
     # Submenu items — identical model to dropdown_menu (menuitem button/anchor, disabled,
     # separator, href; caller data:/class: merge without clobbering wiring; el splats last).
@@ -41,7 +37,7 @@ module UI
 
     # Submenu panel — CSS anchor positioning (bottom_start, below the bar item, start-aligned,
     # flip-to-stay-on-screen), the same shape as dropdown_menu's bottom_start placement.
-    PANEL = "z-50 min-w-[12rem] overflow-hidden rounded-md border border-border bg-surface-overlay p-1 text-text-body shadow-md outline-none mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
+    PANEL = "z-50 min-w-[12rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border border-border bg-surface-overlay p-1 text-text-body shadow-md outline-none mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
 
     # Submenu item — identical to dropdown_menu's ITEM (focus-visible highlight + aria-disabled
     # treatment + SVG normalisation).

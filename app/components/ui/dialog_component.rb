@@ -1,36 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Dialog
-  #
-  # A native `<dialog>` modal — focus-trapped, `aria-modal`, with native Escape
-  # (cancel event) and `::backdrop`. The native element is chosen over a div so
-  # focus-trapping and the inert background come for free. Behavior lives in the
-  # `modal` Stimulus controller shipped alongside this component.
-  #
-  # ## Use when
-  # - You need a focus-trapped modal for a confirmation, form, or detail overlay.
-  # - A choice must be confirmed before proceeding — pass `role: :alertdialog` for an
-  #   assertive confirm gate that screen readers announce immediately (destructive or
-  #   irreversible actions: delete, reset, revoke access).
-  # - You are building a custom wrapper (pass `wrapper: false` and own the
-  #   `data-controller="modal"` element + trigger).
-  #
-  # ## Don't use when
-  # - The action is a destructive non-GET — keep the submit in a `button_to` form;
-  #   the dialog is the container, not the action mechanism.
-  # - You need a non-blocking notification — use the toast / notification system.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** native `<dialog>` semantics (`role="dialog"`, `aria-modal="true"`),
-  #   `aria-labelledby` wired to the heading, `aria-describedby` when `description:` is
-  #   given, an accessible close button, and focus trap + restore via the `modal`
-  #   controller.
-  # - **You supply:** a `title:` (required — it is the accessible name). With
-  #   `wrapper: true` (default) the `trigger` slot is the open button; `wrapper: false`
-  #   requires you to wire `data-controller="modal"` and a trigger yourself.
-  #
-  # Chrome lives in UI::ModalChrome — single owner.
+  # A native `<dialog>` modal — focus-trapped, `aria-modal`, with native Escape (cancel event) and `::backdrop`.
+  # Usage, options and the accessibility contract: docs/components/dialog.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class DialogComponent < ApplicationComponent
     include UI::ModalChrome
 

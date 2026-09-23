@@ -1,0 +1,95 @@
+<%# locals: (activity_log:) -%>
+<% admin = activity_log.visibility == "admin" %>
+<% actor_email = activity_log.actor&.email_address %>
+<% member = activity_log.trackable_type == "User" ? activity_log.trackable : activity_log.tracked_membership&.user %>
+<%# align-baseline, not align-middle: closed rows share one baseline through their
+    44px boxes, and an opened <details> grows DOWNWARD instead of re-centring the
+    cell and floating its neighbours. %>
+<tr class="border-t border-border h-12 align-baseline">
+  <td class="px-4 py-0 align-baseline text-sm text-text-muted tabular-nums whitespace-nowrap<%= " border-l-2 border-border-strong" if admin %>">
+    <%= ledger_time(activity_log.created_at) %>
+  </td>
+  <td class="px-4 py-0 align-baseline whitespace-nowrap">
+    <% if activity_log.workspace.nil? %>
+      <%= t("operations.activity_logs.index.instance") %>
+    <% elsif activity_log.workspace.kept? %>
+      <%# _top like every other link in the frame — and here it is load-bearing
+          twice over: the workspace page has no activity_results frame, so a
+          frame-local click renders Turbo's "Content missing" instead. %>
+      <%= link_to activity_log.workspace.name, operations_workspace_path(activity_log.workspace),
+            data: { turbo_frame: "_top" }, class: "btn-cell-link btn-text-interactive" %>
+    <% else %>
+      <span class="inline-flex items-center gap-2"><%= activity_log.workspace.name %> <%= lifecycle_status_badge(activity_log.workspace) %></span>
+    <% end %>
+  </td>
+  <%# No weight here: the sentence carries the row's one step of emphasis, and a
+      human name in bold beside a plain "System" read as two kinds of row. %>
+  <td class="px-4 py-0 align-baseline whitespace-nowrap">
+    <%= activity_log.display_subject || t("operations.activity_logs.index.system") %>
+  </td>
+  <td class="px-4 py-0 align-baseline">
+    <details>
+      <summary class="cursor-pointer min-h-input flex items-center gap-2 focus-ring rounded">
+        <svg class="size-4 shrink-0 text-text-muted transition-transform [details[open]_&]:rotate-90"
+             aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7" />
+        </svg>
+        <span class="font-medium text-text-heading"><%= t("activity.actions.#{activity_log.display_action}", member: activity_log.display_member || t("activity.unknown_member")) %></span>
+        <span class="sr-only"><%= t("operations.activity_logs.index.details.suffix") %></span>
+      </summary>
+      <dl class="mt-2 mb-3 ml-6 grid grid-cols-1 gap-x-3 gap-y-1 text-sm text-text-muted sm:grid-cols-[8rem_1fr]">
+        <%# Rendered verbatim. The only thing keeping a secret off this line is
+            Trackable::SENSITIVE_ATTRIBUTES, applied at write time — there is no
+            filter here, and none is wanted: a column that must not reach an
+            operator must not reach the row either (#1171). %>
+        <% changes = activity_log.metadata.to_h["changes"].to_h %>
+        <% if changes.any? %>
+          <dt class="font-semibold"><%= t("operations.activity_logs.index.details.change") %></dt>
+          <dd><%= changes.map { |k, v| "#{k}: #{Array(v).join(" → ")}" }.join(" · ") %></dd>
+        <% end %>
+        <dt class="font-semibold"><%= t("operations.activity_logs.index.details.about") %></dt>
+        <dd>
+          <%= activity_log.trackable_type %> #<%= activity_log.trackable_id %>
+          <% if member %>
+            ·
+            <%# The person's own operations page — the other half of the
+                user-page → ledger link. %>
+            <%= link_to member.full_name, operations_user_path(member),
+                  data: { turbo_frame: "_top" }, class: "btn-cell-link btn-text-interactive" %>
+            ·
+            <%# _top: the pivot sets the search box, which the band outside the
+                frame has to show — a frame-local swap would leave it blank.
+                aria-label: two "only ‹email›" links can share a row (member and
+                actor), and out of context the text says nothing about what it
+                narrows; the visible words stay inside the name (2.5.3). %>
+            <%= link_to t("operations.activity_logs.index.details.only_person", email: member.email_address),
+                  operations_activity_logs_path(ledger_filter_params(q: member.email_address)),
+                  data: { turbo_frame: "_top", focus_key: "q" }, class: "btn-cell-link btn-text-interactive",
+                  "aria-label": t("operations.activity_logs.index.details.only_person_aria_label", email: member.email_address) %>
+          <% end %>
+          <% if activity_log.workspace&.kept? %>
+            ·
+            <%= link_to t("operations.activity_logs.index.details.only_workspace"),
+                  operations_activity_logs_path(ledger_filter_params(workspace: activity_log.workspace.slug)),
+                  data: { turbo_frame: "_top", focus_key: "workspace" }, class: "btn-cell-link btn-text-interactive",
+                  "aria-label": t("operations.activity_logs.index.details.only_workspace_aria_label", name: activity_log.workspace.name) %>
+          <% end %>
+        </dd>
+        <dt class="font-semibold"><%= t("operations.activity_logs.index.details.tier") %></dt>
+        <dd><%= admin ? t("operations.activity_logs.index.details.tier_admin") : t("operations.activity_logs.index.details.tier_workspace") %></dd>
+        <dt class="font-semibold"><%= t("operations.activity_logs.index.details.recorded") %></dt>
+        <dd>
+          <%= l(activity_log.created_at.in_time_zone(@zone), format: :ledger_full) %>
+          (<%= time_ago_in_words(activity_log.created_at) %> <%= t("activity.ago") %>)
+          · <%= t("operations.activity_logs.index.details.stored_as", action: activity_log.action) %>
+          <% if actor_email %>
+            · <%= link_to t("operations.activity_logs.index.details.only_person", email: actor_email),
+                  operations_activity_logs_path(ledger_filter_params(q: actor_email)),
+                  data: { turbo_frame: "_top", focus_key: "q" }, class: "btn-cell-link btn-text-interactive",
+                  "aria-label": t("operations.activity_logs.index.details.only_person_aria_label", email: actor_email) %>
+          <% end %>
+        </dd>
+      </dl>
+    </details>
+  </td>
+</tr>

@@ -1,28 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Footer
-  #
-  # A page/site footer — the `<footer>` contentinfo landmark with optional link
-  # columns (each a heading + a real `<ul>` of `<a>`), an optional block-content
-  # area, and an optional copyright row below a divider.
-  #
-  # ## Use when
-  # - Closing a page with site-wide navigation (product / company / legal columns),
-  #   social/legal links, and a copyright line.
-  #
-  # ## Don't use when
-  # - You only need an inline list of links inside an article — that isn't the
-  #   page's contentinfo landmark. Use a plain `<ul>`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a `<footer>` (contentinfo landmark); each column is a real
-  #   heading + `<ul>`/`<li>`/`<a>`; links carry the `focus-ring` utility (a visible
-  #   AAA focus outline); AAA-contrast text on `bg-surface-raised`. Pass `label:`
-  #   (i18n) to name the landmark when a page has more than one footer.
-  # - **You supply:** `columns:` (`[{ title:, links: [{ label:, href: }] }]`) and/or
-  #   block content and/or `copyright:`. Every link needs a human-readable `label:`
-  #   (its accessible name) and an `href:`.
+  # A page/site footer — the `<footer>` contentinfo landmark with optional link columns (each a heading + a real `<ul>` of `<a>`), an optional block-content area, and an optional copyright row below a divider.
+  # Usage, options and the accessibility contract: docs/components/footer.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class FooterComponent < ApplicationComponent
     BASE = "border-t bg-surface-raised"
     LINK = "rounded-sm text-sm text-text-muted transition-colors " \
@@ -68,7 +49,7 @@ module UI
     def column(col)
       content_tag(:div) do
         concat content_tag(:h3, col[:title], class: "mb-3 text-sm font-semibold text-text-heading")
-        concat content_tag(:ul, class: "space-y-2") {
+        concat content_tag(:ul, role: "list", class: "space-y-2") {
           safe_join((col[:links] || []).map { |link|
             content_tag(:li) { content_tag(:a, link[:label], href: link[:href], class: LINK) }
           })

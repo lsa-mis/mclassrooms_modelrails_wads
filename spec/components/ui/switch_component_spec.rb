@@ -54,7 +54,7 @@ RSpec.describe UI::SwitchComponent, type: :component do
   it "renders a clickable track label meeting the 44px target" do
     render_inline(described_class.new(id: "notify_switch"))
 
-    expect(page).to have_css("label.min-h-11.min-w-11")
+    expect(page).to have_css("label.min-h-input.min-w-11")
   end
 
   it "sets aria-invalid on the input when invalid" do
@@ -69,12 +69,15 @@ RSpec.describe UI::SwitchComponent, type: :component do
     expect(page).not_to have_css("input[aria-invalid]")
   end
 
-  # The TRACK carries a peer-aria-invalid danger ring so an invalid switch is visible
-  # (the peer input gets aria-invalid; the later-sibling track reacts).
-  it "renders a peer-aria-invalid danger ring on the track" do
+  # The TRACK carries a peer-aria-invalid danger BORDER so an invalid switch is
+  # visible (the peer input gets aria-invalid; the later-sibling track reacts).
+  # A border rather than a ring because forced-colors does not paint a
+  # box-shadow, and this control had NO invalid state there at all before
+  # (modelrails_ui #258).
+  it "thickens the track's border for the peer-aria-invalid state" do
     render_inline(described_class.new(name: "notifications"))
 
-    expect(page).to have_css('span.peer-aria-invalid\\:ring-danger')
+    expect(page).to have_css('span.peer-aria-invalid\\:border-2.peer-aria-invalid\\:border-danger')
   end
 
   it "sets aria-describedby on the input when describedby is given" do

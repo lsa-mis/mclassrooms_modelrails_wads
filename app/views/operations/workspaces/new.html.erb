@@ -1,5 +1,6 @@
 <% content_for(:title) { t("operations.workspaces.new.title") } %>
-<%= render "shared/settings_page_header", title: t("operations.workspaces.new.title") %>
+<%= render "shared/settings_page_header", title: t("operations.workspaces.new.title"),
+      description: t("operations.workspaces.new.description") %>
 
 <%= form_with model: @workspace, url: operations_workspaces_path, class: "mt-4 max-w-md space-y-4" do |form| %>
   <%= form.error_summary %>

@@ -153,3 +153,89 @@ issue #461 fires on the next mailer edit), the `.highlight` Rouge palette
 technology is not exercised at all — axe reads the DOM/ARIA that AT
 consumes, which is strong evidence and still not the same as a screen-reader
 session.
+
+## The Manual Screen-Reader Pass
+
+The gate ends where your obligation begins. This is the procedure for the part
+no suite performs — run it before you publish an accessibility statement, and
+again whenever a form, overlay or live region changes shape.
+
+It is a procedure, not a tutorial. It assumes you can drive a screen reader and
+tells you what *correct* sounds like on the four surfaces where this app's
+narration is non-obvious.
+
+### Setup
+
+macOS with Safari. VoiceOver toggles with **Cmd+F5**; the rotor is **VO+U**
+(navigate landmarks, headings and links); "read from here" is **VO+A**.
+
+Record the OS, Safari and VoiceOver versions at the top of every result. A pass
+without versions cannot be compared to the next one, which is the whole point of
+recording it.
+
+### The four surfaces
+
+**A. A form that failed to submit.** Any form rendering `form.error_summary` —
+registration with both name fields blank, or the onboarding workspace and
+project steps with the name blank, are the three used previously.
+
+The markup pairs two things deliberately: the focus target is a **role-less**
+container carrying `tabindex="-1"` and `autofocus`, and its child carries
+`role="alert"`. An assertive live region next to a focus move is exactly the
+arrangement that produces a double announcement on some readers, so that is the
+thing under test.
+
+After submitting, touch nothing. Correct sounds like: the heading
+("N errors prevented this from being saved") **once**; then the list — the `ul`
+keeps `list-disc` so list semantics survive — with each item read as a link.
+Tab lands on the first link. Enter moves to the field and announces its label,
+that it is invalid, and its inline error.
+
+It fails if there is silence, if the heading is announced **twice**, or if focus
+lands on `<body>` or on a field rather than the summary.
+
+*Baseline, observed 2026-09-08 (VoiceOver/Safari): behaved as expected — no
+double announcement and no silence. NVDA/Firefox has never been run.*
+
+**B. A toast or a flash.** The container (`shared/_toasts.html.erb`) is
+`role="region"` with `aria-live="polite"` and an `aria-label`, present and empty
+from first render.
+
+A toast streamed in after load is spoken **once**, politely, and focus does not
+move. A flash rendered *with* the page is a different case: it arrived inside
+the region rather than being inserted into it, so it is **not** spoken
+spontaneously, and is reached through the rotor's landmark list instead. That
+second expectation was settled from the accessibility tree rather than from a
+real reader (#901) — record what actually happens, and if it diverges, the
+recording is the finding.
+
+**C. A modal opening and closing.** A native `<dialog>` with `aria-modal="true"`
+and `aria-labelledby` pointing at its title, opened via `showModal`.
+
+Correct: the title then "dialog", then the first focusable control. VoiceOver
+cannot reach content behind it. Escape closes it and focus returns to the
+trigger. That return is native `showModal` behaviour rather than anything this
+app implements — record it rather than assuming it.
+
+**D. The command palette.** A combobox: the input keeps DOM focus with
+`aria-expanded="true"`, options live in a sibling `role="listbox"`, and a
+`role="status"` region reports the result count.
+
+Correct: the input is announced as a combobox; each arrow key speaks the newly
+highlighted option by name; Enter activates it; Escape closes and returns focus
+to the trigger. **The exact phrasing here is unverified** — deriving it from the
+DOM is guesswork, and producing it is what this run is for.
+
+### Recording a result
+
+Per surface: the trigger, then the transcript **in order and verbatim**, then
+what was silent, then pass or fail against each lettered check above. Versions
+at the top. One follow-up issue per failure, citing the letter. Paste the record
+into the issue that asked for the pass — an unrecorded pass is a pass nobody can
+check.
+
+### The standing caveat
+
+VoiceOver and NVDA disagree about live regions and about focus after a Turbo
+render. **A VoiceOver-only pass is evidence, not proof**, and a close-out that
+rests on one reader has to say which one.

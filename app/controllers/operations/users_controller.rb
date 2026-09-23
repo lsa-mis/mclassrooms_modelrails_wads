@@ -2,13 +2,9 @@ module Operations
   class UsersController < BaseController
     def index
       authorize [ :operations, User ]
-      # Exact email only: email_address is deterministically encrypted (#902)
-      # so equality search works; names aren't. Not the trust boundary —
-      # `show` still resolves any id, and enumeration only matters once an
-      # operator's reach is a real subset. See operations.md "What it
-      # deliberately does not do" (scoped operators).
       @query = params[:q].to_s.strip
-      @user = @query.present? ? User.find_by(email_address: @query) : nil
+      @search = User::Search.resolve(@query, scope: operated_users) if @query.present?
+      @pagy, @users = pagy(:offset, listing.order(created_at: :desc))
     end
 
     def show
@@ -24,5 +20,16 @@ module Operations
       @memberships = @user.memberships.kept.includes(:role, :workspace).references(:workspace)
         .order(Arel.sql("LOWER(workspaces.name)"))
     end
+
+    private
+      # The filter narrows an already-paginated relation rather than replacing
+      # it: `User::Search` resolves ids in Ruby (names are non-deterministically
+      # encrypted), and feeding those back through `where(id:)` keeps ordering
+      # and pagination in SQL, where `created_at` lives.
+      def listing
+        return operated_users unless @search
+
+        operated_users.where(id: @search.ids)
+      end
   end
 end

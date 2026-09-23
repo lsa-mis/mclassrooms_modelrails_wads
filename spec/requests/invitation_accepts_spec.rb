@@ -11,6 +11,25 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(response.body).to include(CGI.escapeHTML(workspace.name))
     end
 
+    # #1151: role names come from the roles table and workspaces can define
+    # their own, so no hard-coded article can be right for all of them.
+    it "names the role without an article that may not fit it" do
+      owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+      owner_invitation = create(:invitation, invitable: workspace, role: owner_role)
+
+      get accept_invitation_path(token: owner_invitation.token)
+
+      expect(response.body).to include(
+        ERB::Util.html_escape(
+          I18n.t("invitation_accepts.show.body",
+                 inviter: owner_invitation.invited_by.full_name,
+                 workspace_name: workspace.name,
+                 role: "Owner")
+        )
+      )
+      expect(response.body).not_to include("a Owner")
+    end
+
     it "renders the register link as a brand-outline button" do
       get accept_invitation_path(token: invitation.token)
       expect(Capybara.string(response.body)).to have_css("a.btn-outline-primary.w-full",

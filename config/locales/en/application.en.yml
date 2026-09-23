@@ -5,6 +5,12 @@ en:
       # activity card's `title`). Long-form on purpose: it is read once, when
       # the relative time was not precise enough to answer the question.
       account_activity: "%B %-d, %Y at %-l:%M %p %Z"
+      ledger: "%-d %b %H:%M:%S"
+      ledger_full: "%a %-d %b %Y, %H:%M:%S"
+  date:
+    formats:
+      ledger_day: "%-d %b %Y"
+      ledger_short: "%-d %b"
   application:
     skip_to_content: "Skip to main content"
   markdowndocs:
