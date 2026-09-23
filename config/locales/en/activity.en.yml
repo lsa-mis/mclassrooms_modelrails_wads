@@ -18,6 +18,13 @@ en:
       resource: "Resources"
       user: "Users (suspensions, lockouts)"
       operatorship: "Operators"
+      # Fork-owned families (Curation::Apply rows); the sentences sit below.
+      announcement: "Announcements"
+      characteristic_display_rule: "Characteristic display rules"
+      editor_assignment: "Editor assignments"
+      room: "Rooms (bulk media uploads)"
+      sync_scope_rule: "Sync scope rules"
+      unit_display_name: "Unit display names"
     # Nested, never flat and dotted: I18n splits a requested key on "." and
     # walks the hash segment by segment, so a literal "membership.created" key
     # is unreachable and the renderer's `default:` silently humanizes instead

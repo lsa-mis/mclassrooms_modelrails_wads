@@ -107,8 +107,6 @@ module UI
     end
 
     def radio_label(item, id)
-      # min-h-11: input+label union is the pointer target (44px AAA floor,
-      # 2026-07-13 gate; matches UI::CheckboxComponent).
       content_tag(:label, item[:label],
         for: id,
         class: "inline-flex min-h-input items-center text-sm font-medium")

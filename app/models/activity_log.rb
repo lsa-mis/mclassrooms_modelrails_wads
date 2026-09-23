@@ -104,7 +104,13 @@ class ActivityLog < ApplicationRecord
   # the feed's COUNT. Re-EXPLAIN past ~5 M retained rows, where that crosses
   # 100 ms — an (action, created_at) or (visibility, created_at) index buys
   # nothing before then (#1165).
-  KINDS = %w[workspace membership invitation project resource user operatorship].freeze
+  # Fork: the six families Curation::Apply writes (announcement,
+  # characteristic_display_rule, editor_assignment, room, sync_scope_rule,
+  # unit_display_name) join the template's list; activity_log_filters_spec
+  # pins this list to the activity.actions locale tree.
+  KINDS = %w[workspace membership invitation project resource user operatorship
+             announcement characteristic_display_rule editor_assignment room
+             sync_scope_rule unit_display_name].freeze
 
   scope :of_kind, ->(kind) { where(arel_table[:action].matches("#{kind}.%")) }
   # Rows the person acted in or was the subject of: actor, a User trackable
