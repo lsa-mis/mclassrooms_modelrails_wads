@@ -195,45 +195,6 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
-    # WorkspacePolicy#show? is membership.present?, so the overview fed every
-    # member every workspace-visibility row — including rows about projects
-    # ProjectPolicy#show? refuses them. The two policies disagreed about what a
-    # non-member of a project may read (#1154).
-    #
-    # Counted, not name-matched: the row renders the ACTOR and a localized
-    # sentence, never the project's name (ActivityLog#display_subject is the
-    # actor). The issue's "by project name and actor" is half right — what
-    # leaks is that something happened in a project you cannot open, and by
-    # whom, which is why the assertion is how many project rows reach the page.
-    describe "GET /workspaces/:slug overview feed scope" do
-      let(:workspace) { create(:workspace) }
-      let(:member) { create(:user) }
-      let(:project_row) { I18n.t("activity.actions.project.created") }
-
-      before do
-        create(:membership, :owner, user: user, workspace: workspace)
-        @mine = create(:project, workspace: workspace, name: "Visible Alpha")
-        @theirs = create(:project, workspace: workspace, name: "Hidden Beta")
-      end
-
-      it "shows a Member only the project rows they can open" do
-        create(:membership, user: member, workspace: workspace)
-        create(:project_membership, project: @mine, user: member)
-
-        sign_in(member)
-        get workspace_path(workspace)
-
-        expect(response.body.scan(project_row).size).to eq(1),
-          "the overview reported activity for a project this member cannot open"
-      end
-
-      it "still shows an owner every project row" do
-        get workspace_path(workspace)
-
-        expect(response.body.scan(project_row).size).to eq(2)
-      end
-    end
-
     describe "PATCH /workspaces/:slug" do
       let(:workspace) { create(:workspace) }
       let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }

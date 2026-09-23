@@ -24,6 +24,14 @@ RSpec.describe "Operations activity ledger workspace picker", type: :request do
   def small_instance = stub_const("Operations::ActivityLogsController::WORKSPACE_PICKER_LIMIT", 50)
   def large_instance = stub_const("Operations::ActivityLogsController::WORKSPACE_PICKER_LIMIT", 1)
 
+  # Fork: a labelled row is a workspace rename (and rename back, so the name
+  # the picker searches is unchanged); its changes metadata carries the label.
+  def labelled_row(workspace, name)
+    original = workspace.name
+    workspace.update!(name: name)
+    workspace.update!(name: original)
+  end
+
   def picker(body) = Capybara.string(body).find("[data-filter=workspace]", visible: :all)
 
   # --- the small path: unchanged ------------------------------------------
@@ -69,7 +77,7 @@ RSpec.describe "Operations activity ledger workspace picker", type: :request do
   it "applies the filter when a search names exactly one workspace" do
     alpha = create(:workspace, name: "Alpha")
     create(:workspace, name: "Beta")
-    create(:project, workspace: alpha).update!(name: "Alpha plan")
+    labelled_row(alpha, "Alpha plan")
     large_instance
 
     get operations_activity_logs_path(workspace_q: "alph")
@@ -120,8 +128,8 @@ RSpec.describe "Operations activity ledger workspace picker", type: :request do
   it "still filters by slug on the large path, so existing links keep working" do
     alpha = create(:workspace, name: "Alpha")
     beta = create(:workspace, name: "Beta")
-    create(:project, workspace: alpha).update!(name: "Alpha plan")
-    create(:project, workspace: beta).update!(name: "Beta plan")
+    labelled_row(alpha, "Alpha plan")
+    labelled_row(beta, "Beta plan")
     large_instance
 
     get operations_activity_logs_path(workspace: alpha.slug)

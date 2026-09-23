@@ -23,11 +23,6 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
   # were flashes that had always existed and only became visible when the scan
   # learned the other two spellings, so they were debt already, not new.
   unasserted_flashes = [
-    "clientside.area.resource_unavailable",
-    "clientside.area.unavailable",
-    "clientside.invitations.disabled",
-    "clientside.invitations.invalid",
-    "clientside.settings.saved",
     "email_verification_resends.create.no_email_auth",
     "email_verification_resends.create.rate_limited",
     "email_verification_resends.create.success",
@@ -39,13 +34,8 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     "omniauth_callbacks.create.pending_in_progress",
     "omniauth_callbacks.create.pending_resent",
     "omniauth_callbacks.create.unverified_email_pending",
-    "onboarding.projects.create.success",
-    "onboarding.teams.create.no_emails",
-    "onboarding.teams.create.sent",
     "onboarding.workspaces.create.success",
     "onboardings.update.complete",
-    "project_tools.disabled",
-    "project_tools.settings.saved",
     "sessions.create.failure",
     "sessions.create.oauth_failure",
     "sessions.create.rate_limited",
@@ -64,16 +54,15 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     "workspaces.joins.create.already_member",
     "workspaces.joins.create.joined",
     "workspaces.joins.create.register_first",
-    "workspaces.projects.invitations.create.success",
-    "workspaces.projects.resources.destroy.success",
-    "workspaces.projects.resources.update.success",
-    "workspaces.settings.update.success"
+    "workspaces.settings.update.success",
 
-    # No MClassrooms fork entries. The twelve admin flashes parked here when
-    # this gate arrived are all asserted now — see spec/requests/admin/. If a
-    # fork block is ever needed again, put it at the END of the array:
-    # upstream's own burn-down edits land alphabetically mid-array, so a
-    # trailing block keeps merging cleanly instead of colliding every sync.
+    # MClassrooms fork entries, at the END of the array on purpose: upstream's
+    # own burn-down edits land alphabetically mid-array, so a trailing block
+    # merges cleanly instead of colliding every sync. Two stale-form flashes
+    # (a floor or a gallery changed under an editor) await request-spec
+    # assertions in the buildings/rooms edit flows.
+    "buildings.edit.stale_floor",
+    "rooms.edit.stale_gallery"
   ].freeze
 
   def locale_values

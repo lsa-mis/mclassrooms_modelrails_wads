@@ -46,7 +46,7 @@ RSpec.describe RoleResolver do
   end
 
   it "nullifies editor grants when the membership is discarded" do
-    membership_with(:viewer).discard!
+    membership_with(:viewer).deactivate!
     create(:editor_assignment, user: user, unit: unit)
     expect(described_class.for(user).editor?).to be false
   end

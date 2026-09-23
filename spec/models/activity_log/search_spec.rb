@@ -85,15 +85,4 @@ RSpec.describe ActivityLog::Search do
 
     expect(described_class.resolve("ac_e", reach: reach).workspaces.map(&:id)).to eq([ literal.id ])
   end
-
-  it "matches a project by name, inside the reach only" do
-    acme = create(:workspace, name: "Acme Robotics")
-    beta = create(:workspace, name: "Beta Works")
-    launch = create(:project, workspace: acme, name: "Launch plan")
-    create(:project, workspace: beta, name: "Launch elsewhere")
-
-    expect(described_class.resolve("launch plan", reach: reach).projects.map(&:id)).to eq([ launch.id ])
-    narrowed = described_class.resolve("launch", reach: Workspace.where(id: acme.id))
-    expect(narrowed.projects.map(&:id)).to eq([ launch.id ])
-  end
 end

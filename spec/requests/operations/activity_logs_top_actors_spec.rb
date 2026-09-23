@@ -25,13 +25,12 @@ RSpec.describe "Operations activity ledger top actors", type: :request do
     Current.session = nil
   end
 
-  # Renames, not creations: a workspace has a project limit, and a rename is the
-  # cheapest way to mint an attributed row. Each rename is exactly one activity
-  # row actored by `user`, so the count the strip shows is `times`.
-  def busy(user, workspace, times, project: nil)
-    project ||= create(:project, workspace: workspace)
-    acting_as(user) { times.times { |i| project.update!(name: "P#{user.id}-#{i}") } }
-    project
+  # Renames mint attributed rows (fork: of the workspace itself, there being no
+  # Project domain). Each rename is exactly one activity row actored by
+  # `user`, so the count the strip shows is `times`.
+  def busy(user, workspace, times)
+    acting_as(user) { times.times { |i| workspace.update!(name: "P#{user.id}-#{i}") } }
+    workspace
   end
 
   it "names the busiest people for the current filter, with their counts" do
@@ -82,7 +81,7 @@ RSpec.describe "Operations activity ledger top actors", type: :request do
     workspace = create(:workspace)
     ada = create(:user, first_name: "Ada", last_name: "Lovelace")
     busy(ada, workspace, 1)
-    create(:project, workspace: workspace).update!(name: "Unattributed") # no Current.user
+    workspace.update!(name: "Unattributed") # no Current.user
 
     get operations_activity_logs_path
 
@@ -93,8 +92,7 @@ RSpec.describe "Operations activity ledger top actors", type: :request do
   it "shows only the few busiest, not everyone who appears" do
     workspace = create(:workspace)
     stub_const("Operations::ActivityLogsController::TOP_ACTORS", 2)
-    project = create(:project, workspace: workspace)
-    3.times { |i| busy(create(:user, first_name: "P#{i}", last_name: "Erson"), workspace, i + 1, project: project) }
+    3.times { |i| busy(create(:user, first_name: "P#{i}", last_name: "Erson"), workspace, i + 1) }
 
     get operations_activity_logs_path
 
@@ -117,7 +115,7 @@ RSpec.describe "Operations activity ledger top actors", type: :request do
 
   it "says nothing at all when no row has an actor" do
     workspace = create(:workspace)
-    create(:project, workspace: workspace).update!(name: "Unattributed")
+    workspace.update!(name: "Unattributed")
 
     get operations_activity_logs_path
 

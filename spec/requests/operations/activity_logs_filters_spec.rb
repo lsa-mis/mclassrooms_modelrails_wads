@@ -7,16 +7,16 @@ RSpec.describe "Operations activity ledger filters", type: :request do
 
   def rows(body) = Capybara.string(body).all("tbody tr")
 
-  # A `project.created` row names nothing the page can show: Trackable writes
-  # no metadata for a creation and the sentence is "created the <project>".
-  # A RENAME does — its `changes` metadata carries the name, which the details
-  # row renders — so these examples label a row by renaming its project, the
-  # one per-record handle the ledger actually puts on the page. Returns the
-  # rename's own activity row.
+  # Fork: no Project domain, so the one per-record handle the ledger puts on
+  # the page is a WORKSPACE rename — its `changes` metadata carries the name,
+  # which the details row renders. Renamed and renamed back, so the searches
+  # and sorts that key on the workspace's own name keep working. Returns the
+  # rename-back row, whose changes still carry the label.
   def plan_named(workspace, name)
-    project = create(:project, workspace: workspace)
-    project.update!(name: name)
-    project.activities.order(:created_at, :id).last
+    original = workspace.name
+    workspace.update!(name: name)
+    workspace.update!(name: original)
+    workspace.activities.order(:created_at, :id).last
   end
 
   # ActivityLog#readonly? blocks instance-level update_column too (it is
@@ -37,7 +37,9 @@ RSpec.describe "Operations activity ledger filters", type: :request do
 
   it "applies the 30-day window by default and widens on range=all" do
     workspace = create(:workspace, name: "Alpha")
-    backdate(plan_named(workspace, "Old plan"), 40.days.ago)
+    plan_named(workspace, "Old plan")
+    # Both rename rows carry the label (fork handle), so both move.
+    workspace.activities.each { |row| backdate(row, 40.days.ago) }
 
     get operations_activity_logs_path
     expect(response).to have_http_status(:ok)
@@ -73,7 +75,7 @@ RSpec.describe "Operations activity ledger filters", type: :request do
     get operations_activity_logs_path
     expect(Capybara.string(response.body)).to have_text(joined)
 
-    get operations_activity_logs_path(kind: "project")
+    get operations_activity_logs_path(kind: "workspace")
     expect(response.body).to include("Alpha plan")
     expect(Capybara.string(response.body)).to have_no_text(joined)
 
@@ -116,7 +118,7 @@ RSpec.describe "Operations activity ledger filters", type: :request do
     )
   end
 
-  it "resolves a workspace name fragment and a project name" do
+  it "resolves a workspace name fragment" do
     alpha = create(:workspace, name: "Acme Robotics")
     beta  = create(:workspace, name: "Beta Works")
     plan_named(alpha, "Alpha plan")
@@ -128,11 +130,6 @@ RSpec.describe "Operations activity ledger filters", type: :request do
     expect(Capybara.string(response.body)).to have_text(
       I18n.t("operations.activity_logs.index.summary.matching", query: "robot", names: "Acme Robotics")
     )
-
-    # A project name reaches the project's OWN rows, wherever they sit.
-    get operations_activity_logs_path(q: "beta plan")
-    expect(response.body).to include("Beta plan")
-    expect(response.body).not_to include("Alpha plan")
   end
 
   it "says so when a query matches nothing, rather than looking like an empty instance" do
@@ -266,7 +263,7 @@ RSpec.describe "Operations activity ledger filters", type: :request do
     workspace = create(:workspace, name: "Alpha")
     plan_named(workspace, "Alpha plan")
 
-    get operations_activity_logs_path(kind: "project")
+    get operations_activity_logs_path(kind: "workspace")
     frame = Capybara.string(response.body).find("turbo-frame#activity_results", visible: :all)
     links = frame.all("a", visible: :all)
 
@@ -403,22 +400,22 @@ RSpec.describe "Operations activity ledger filters", type: :request do
   # lie. ledger_filter_params allow-lists the filter keys for that reason.
   it "keeps foreign query params out of the links it builds" do
     workspace = create(:workspace)
-    create(:project, workspace: workspace, name: "Alpha plan")
+    plan_named(workspace, "Alpha plan")
 
-    get operations_activity_logs_path(limit: "10", foo: "bar", kind: "project")
+    get operations_activity_logs_path(limit: "10", foo: "bar", kind: "workspace")
     rows_links = Capybara.string(response.body)
       .all("nav[aria-label='#{I18n.t('operations.activity_logs.index.rows.label')}'] a")
       .map { |link| link[:href] }
 
     expect(rows_links.size).to eq(Operations::ActivityLogsController::ROWS.size)
-    expect(rows_links).to all(include("kind=project"))
+    expect(rows_links).to all(include("kind=workspace"))
     expect(rows_links.join(" ")).not_to include("limit=")
     expect(rows_links.join(" ")).not_to include("foo=")
   end
 
   it "paginates through countish so the page param carries the memoized count" do
     workspace = create(:workspace)
-    3.times { |i| create(:project, workspace: workspace, name: "Plan #{i}") }
+    3.times { |i| workspace.update!(name: "Plan #{i}") }
 
     rows_nav = "nav[aria-label='#{I18n.t('operations.activity_logs.index.rows.label')}']"
 

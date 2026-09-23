@@ -13,10 +13,10 @@ RSpec.describe ActivityLog, "ledger filters" do
   describe ".of_kind" do
     it "filters on the stored action prefix" do
       workspace = create(:workspace)
-      create(:project, workspace: workspace)
+      create(:workspace)
 
-      kinds = described_class.of_kind("project").pluck(:action)
-      expect(kinds).to all(start_with("project."))
+      kinds = described_class.of_kind("workspace").pluck(:action)
+      expect(kinds).to all(start_with("workspace."))
       expect(kinds).not_to be_empty
       expect(described_class.of_kind("membership").pluck(:action)).to all(start_with("membership."))
     end
@@ -62,7 +62,7 @@ RSpec.describe ActivityLog, "ledger filters" do
       acting_as(create(:user)) { membership.update!(role: Role.system_default!("admin")) }
       described_class.record_security_event!(action: "user.unlocked", user: actor,
                                              actor: create(:user), visibility: "admin")
-      acting_as(actor) { create(:project, workspace: workspace) }
+      acting_as(actor) { workspace.update!(name: "Renamed by actor") }
 
       scoped = described_class.matching_any(users: [ actor ], workspaces: [], projects: [])
       expect(scoped.where(actor_id: actor.id)).to exist
@@ -72,25 +72,20 @@ RSpec.describe ActivityLog, "ledger filters" do
                .where(trackable: membership)).not_to exist
     end
 
-    it "matches a workspace's rows and a project's own rows" do
+    it "matches a workspace's rows" do
       acme = create(:workspace)
       beta = create(:workspace)
-      project = create(:project, workspace: acme)
 
       by_workspace = described_class.matching_any(users: [], workspaces: [ acme ], projects: [])
       expect(by_workspace.pluck(:workspace_id).uniq).to eq([ acme.id ])
       expect(by_workspace.where(workspace_id: beta.id)).not_to exist
-
-      by_project = described_class.matching_any(users: [], workspaces: [], projects: [ project ])
-      expect(by_project.where(trackable: project)).to exist
-      expect(by_project.where(trackable_type: "Workspace")).not_to exist
     end
 
     it "ORs the groups rather than intersecting them" do
       acme = create(:workspace)
       beta = create(:workspace)
       person = create(:user)
-      acting_as(person) { create(:project, workspace: beta) }
+      acting_as(person) { beta.update!(name: "Renamed by person") }
 
       scoped = described_class.matching_any(users: [ person ], workspaces: [ acme ], projects: [])
       expect(scoped.where(workspace_id: acme.id)).to exist
@@ -107,13 +102,13 @@ RSpec.describe ActivityLog, "ledger filters" do
   describe ".within and .oldest_first" do
     it "bounds by created_at and can reverse the feed order" do
       workspace = create(:workspace)
-      old = create(:project, workspace: workspace).activities.first
+      old = workspace.activities.order(:id).first
       # ActivityLog#readonly? blocks instance-level update_column too (it's
       # persisted?-gated, not save-path-specific) — go relation-level, same
       # door the retention sweep job uses (spec/code_smells/activity_log_immutability_spec.rb).
       described_class.where(id: old.id).update_all(created_at: 40.days.ago)
       old.reload
-      recent = create(:project, workspace: workspace).activities.first
+      recent = create(:workspace).activities.order(:id).first
 
       scoped = described_class.for_operations_feed.within(30.days.ago, Time.current)
       expect(scoped).to include(recent)
@@ -134,7 +129,8 @@ RSpec.describe ActivityLog, "ledger filters" do
                                               trackable: create(:user), workspace: nil)
       first_alpha = alpha.activity_logs.first
       described_class.where(id: first_alpha.id).update_all(created_at: 2.days.ago)
-      newer_alpha = create(:project, workspace: alpha).activities.first
+      create(:membership, workspace: alpha)
+      newer_alpha = alpha.activity_logs.order(:id).last
 
       scope = described_class.for_operations_feed.where(id: [ beta.activity_logs, alpha.activity_logs, instance_row ].flatten.map(&:id))
       ascending = scope.by_workspace_name("asc").to_a

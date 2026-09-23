@@ -31,13 +31,15 @@ RSpec.describe "Operations activity ledger", type: :system do
 
   def within_results(&) = within("turbo-frame#activity_results", &)
 
-  # A `project.created` row names nothing the page can show: Trackable writes
-  # no metadata for a creation and the sentence is "created the <project>".
-  # A RENAME does — its `changes` metadata carries the name, which the details
-  # <dl> renders — so a plan is created and then renamed. Same handle the
-  # request specs use (spec/requests/operations/activity_logs_filters_spec.rb).
+  # Fork: no Project domain, so the handle is a WORKSPACE rename — its
+  # `changes` metadata carries the name, which the details <dl> renders —
+  # renamed and renamed back so the workspace's own name stays what the
+  # searches and the row locator expect. Same handle the request specs use
+  # (spec/requests/operations/activity_logs_filters_spec.rb).
   def plan_named(workspace, name)
-    create(:project, workspace: workspace).update!(name: name)
+    original = workspace.name
+    workspace.update!(name: name)
+    workspace.update!(name: original)
   end
 
   # Acting AS someone is a session, not an assignment: Current.user delegates
@@ -53,7 +55,8 @@ RSpec.describe "Operations activity ledger", type: :system do
   # plus the sentence. The project's NAME cannot be the locator: it lives
   # inside the closed <details>, which is exactly what opening the row proves.
   def rename_row
-    find("tbody tr", text: /Acme Robotics.*#{Regexp.escape(I18n.t("activity.actions.project.updated"))}/m)
+    # `first`, not `find`: the rename-and-back handle leaves two such rows.
+    first("tbody tr", text: /Acme Robotics.*#{Regexp.escape(I18n.t("activity.actions.workspace.updated"))}/m, minimum: 1)
   end
 
   # The band's one range control states the APPLIED window: a preset reads its
@@ -116,14 +119,14 @@ RSpec.describe "Operations activity ledger", type: :system do
     # driver (and navigation_focus.js's correct "focus is parked" fallback)
     # instead of the frame swap.
     cdp_execute("document.getElementById('kind').focus()")
-    select I18n.t("activity.kinds.project"), from: "kind"
+    select I18n.t("activity.kinds.workspace"), from: "kind"
 
-    within_results { expect(page).to have_css("h2", text: I18n.t("activity.kinds.project")) }
-    expect(page).to have_current_path(/kind=project/)
+    within_results { expect(page).to have_css("h2", text: I18n.t("activity.kinds.workspace")) }
+    expect(page).to have_current_path(/kind=workspace/)
     # The filter form sits OUTSIDE the frame precisely so the swap never takes
     # focus off the control that caused it.
     expect(page.evaluate_script("document.activeElement.id")).to eq("kind")
-    expect(page).to have_css("#activity_results_status", text: I18n.t("activity.kinds.project"), visible: :all)
+    expect(page).to have_css("#activity_results_status", text: I18n.t("activity.kinds.workspace"), visible: :all)
     within_results { expect(page).to have_no_text(I18n.t("activity.actions.membership.created")) }
     expect(axe_clean_in_both_themes?).to be(true), axe_violations_in_both_themes.join("\n")
   end
@@ -250,13 +253,13 @@ RSpec.describe "Operations activity ledger", type: :system do
   it "keeps the rest of the filter state when the range changes, and vice versa" do
     visit operations_activity_logs_path
     cdp_execute("document.getElementById('kind').focus()")
-    select I18n.t("activity.kinds.project"), from: "kind"
-    within_results { expect(page).to have_css("h2", text: I18n.t("activity.kinds.project")) }
+    select I18n.t("activity.kinds.workspace"), from: "kind"
+    within_results { expect(page).to have_css("h2", text: I18n.t("activity.kinds.workspace")) }
 
     # A range click must carry the Kind that was applied through the frame.
     click_button I18n.t("operations.activity_logs.index.ranges_menu.30d")
     click_button I18n.t("operations.activity_logs.index.ranges_menu.all")
-    expect(page).to have_current_path(/kind=project/)
+    expect(page).to have_current_path(/kind=workspace/)
     expect(page).to have_current_path(/range=all/)
     within_results { expect(page).to have_css("h2", text: I18n.t("operations.activity_logs.index.ranges_long.all")) }
 
