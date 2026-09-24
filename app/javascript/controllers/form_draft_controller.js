@@ -193,12 +193,11 @@ export default class extends Controller {
         })
     }
 
-    // Honest announcement (#479): a draft key whose ONLY matching fields are
-    // hidden (a Lexxy-style editor's backing input) can never be written
-    // back — the content sits in localStorage, unreachable. Routine hidden
-    // skips (the Rails checkbox hidden-"0" pair) have a visible sibling and
-    // are NOT unrecoverable. A screen-reader user must never hear a clean
-    // "restored" while the document body stayed empty.
+    // serializeForm uses FormData, which INCLUDES hidden inputs, while the loop above
+    // refuses to write them back — so a key whose ONLY fields are hidden (a rich-text
+    // editor's backing input) is content that can never land, and a bare count would
+    // tell a reader the draft came back whole. A routine hidden skip — the Rails
+    // checkbox hidden-"0" pair — has a visible sibling and is NOT that case (#220).
     const unrecoverableKeys = Object.keys(draft.data).filter((name) => {
       const fields = this.element.querySelectorAll(`[name="${CSS.escape(name)}"]`)
       return fields.length > 0 &&
@@ -214,6 +213,7 @@ export default class extends Controller {
       message = this.statusText(touched === 1 ? "restoredOne" : "restoredOther")
         .replace("%{count}", String(touched))
     }
+
     this.announce(message)
     this.hideNotice()
     this.focusFirstField()

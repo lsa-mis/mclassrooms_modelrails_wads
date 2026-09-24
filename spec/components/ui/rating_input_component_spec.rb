@@ -35,7 +35,7 @@ RSpec.describe UI::RatingInputComponent, type: :component do
     render_inline(described_class.new(value: 0, max: 5))
 
     # AAA 2.5.5: each star is a >=44px hit target even though the visual star is 24px.
-    expect(page).to have_css("button[type='button'].min-h-11.min-w-11", count: 5)
+    expect(page).to have_css("button[type='button'].min-h-input.min-w-11", count: 5)
   end
 
   it "uses the semantic warning token for filled stars" do

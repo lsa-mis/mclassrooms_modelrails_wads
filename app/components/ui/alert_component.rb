@@ -1,33 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Alert
-  #
-  # An inline contextual message banner — NOT the flash/toast pipeline. Renders a
-  # `<div>` live region with semantics matched to its urgency and an AAA-tuned color
-  # treatment.
-  #
-  # ## Use when
-  # - You need an inline, in-page message tied to surrounding content: a form-level
-  #   error summary, a destructive-action warning, an empty-state notice.
-  #
-  # ## Don't use when
-  # - It's an ephemeral flash/notice — that's the app's toast system (`shared/_toasts`).
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a live region matched to urgency — `role="status"`/`aria-live="polite"`
-  #   for the neutral tone (and `info`/`success`/`warning`), `role="alert"`/
-  #   `aria-live="assertive"` for `danger` — AAA-contrast text on the banner surface,
-  #   and a tone-matched severity icon (`aria-hidden`, a redundant non-color cue per
-  #   WCAG 1.4.1 — pass `icon: false` to suppress it).
-  # - **You supply:** a title and/or description (kwargs or the `alert_title` /
-  #   `alert_description` slots) and a valid `tone` (an unknown one raises in development).
-  #
-  # ## Tone
-  # An alert is always a filled banner — it has no shape axis, only a tone:
-  # `neutral` · `info` · `success` · `warning` · `danger`
-  # (`variant:` is accepted as a deprecated alias for `tone:` — `default`→`neutral`,
-  # `destructive`→`danger`, the rest 1:1.)
+  # An inline contextual message banner — NOT the flash/toast pipeline.
+  # Usage, options and the accessibility contract: docs/components/alert.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class AlertComponent < ApplicationComponent
     OUTER_CLASSES = "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border " \
                     "px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*5)_1fr] " \

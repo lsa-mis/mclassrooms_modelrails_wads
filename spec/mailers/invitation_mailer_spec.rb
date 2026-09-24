@@ -14,6 +14,24 @@ RSpec.describe InvitationMailer, type: :mailer do
       expect(mail.body.encoded).to include(invitation.token)
     end
 
+    # #1151: the same article bug as the accept page, in the copy that reaches
+    # the invitee first.
+    it "names the role without an article that may not fit it" do
+      owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
+      owner_invitation = create(:invitation, role: owner_role)
+
+      mail = described_class.with(invitation: owner_invitation).invite
+
+      # workspace is supplied by the vocabulary backend hook, not the call site.
+      expect(mail.body.encoded).to include(
+        I18n.t("invitation_mailer.invite.body",
+               inviter: owner_invitation.invited_by.email_address,
+               app_name: I18n.t("application.name"),
+               role: "Owner")
+      )
+      expect(mail.body.encoded).not_to include("a Owner")
+    end
+
     # D4: the invitee has consented to nothing yet, so the invitation does not
     # disclose the workspace's name. It appears once, on the accept/decline page.
     it "does not disclose the workspace name in the body" do
@@ -68,6 +86,22 @@ RSpec.describe InvitationMailer, type: :mailer do
         described_class.with(invitation: invitation).invite.deliver_later
       end
       expect(ActionMailer::Base.deliveries.size).to eq(1)
+    end
+
+    # A hold is between the operator and that person, and a suspended user
+    # cannot act on anything this mail invites them to do — the request is
+    # bounced before it reaches a workspace. Sending it anyway discloses
+    # nothing useful and invites an action that cannot be taken (#1132).
+    it "delivers nothing to a suspended address" do
+      invitation = create(:invitation)
+      create(:user, email_address: invitation.email, suspended_at: Time.current)
+
+      perform_enqueued_jobs do
+        described_class.with(invitation: invitation).invite.deliver_later
+      end
+
+      expect(ActionMailer::Base.deliveries).to be_empty,
+        "an invitation reached a suspended address"
     end
 
     it "does not deliver, stamp, or record for magic links (T12)" do

@@ -17,15 +17,15 @@
     </h2>
     <p class="mt-4 text-text-body"><%= t("pages.privacy.authoritative.description") %></p>
     <%# Standalone policy links, so each needs a 44px-min touch target (2.5.5
-        AAA) — min-h-11 + inline-flex, the same pattern the footer links use. %>
+        AAA) — min-h-input + inline-flex, the same pattern the footer links use. %>
     <ul class="mt-4 space-y-1">
       <li>
         <%= link_to t("pages.privacy.authoritative.privacy_notice"), "https://umich.edu/about/privacy/",
-              class: "inline-flex items-center min-h-11 text-interactive underline hover:no-underline focus-ring rounded" %>
+              class: "inline-flex items-center min-h-input text-interactive underline hover:no-underline focus-ring rounded" %>
       </li>
       <li>
         <%= link_to t("pages.privacy.authoritative.spg"), "https://spg.umich.edu/policy/601.41",
-              class: "inline-flex items-center min-h-11 text-interactive underline hover:no-underline focus-ring rounded" %>
+              class: "inline-flex items-center min-h-input text-interactive underline hover:no-underline focus-ring rounded" %>
       </li>
     </ul>
   </div>

@@ -123,6 +123,32 @@ RSpec.describe "Notification preferences", type: :system do
         text: I18n.t("notifications.preferences.update.saved_announcement"), visible: :all)
       expect(user.preferences.reload.notification_preferences.dig("quiet_hours", "enabled")).to eq(true)
     end
+
+    # The day chips carry one auto-submit action on the form rather than one per
+    # chip: `change` bubbles and the controller resolves the form from
+    # event.target. Nothing else proves a chip click reaches the server, so
+    # without this the wiring could be dropped and only the warning tests —
+    # which are pure client-side — would still pass.
+    it "persists a day chip when it is clicked" do
+      user.preferences!.update!(
+        notification_preferences: user.preferences.notification_preferences.merge(
+          "quiet_hours" => { "enabled" => true, "active_days" => %w[monday] }
+        )
+      )
+      visit edit_settings_notification_preferences_path
+
+      tuesday = find(
+        'input[type="checkbox"][name="notification_preferences[quiet_hours][active_days][]"][value="tuesday"]',
+        visible: :all
+      )
+      find("label[for='#{tuesday[:id]}']").click
+
+      expect(page).to have_css("#notifications-live",
+        text: I18n.t("notifications.preferences.update.saved_announcement"), visible: :all)
+      expect(
+        user.preferences.reload.notification_preferences.dig("quiet_hours", "active_days")
+      ).to contain_exactly("monday", "tuesday")
+    end
   end
 
   describe "toggle visual feedback" do
@@ -246,7 +272,14 @@ RSpec.describe "Notification preferences", type: :system do
       expect(page).not_to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
 
       # Click the Monday chip label to uncheck the underlying sr-only checkbox.
-      find('label[for="quiet-hours-active-day-monday"]').click
+      # The chip id comes from UI::ChipGroupComponent, so locate the checkbox by
+      # the name/value the form actually posts and follow its label, rather than
+      # hardcoding an id the component owns.
+      monday = find(
+        'input[type="checkbox"][name="notification_preferences[quiet_hours][active_days][]"][value="monday"]',
+        visible: :all
+      )
+      find("label[for='#{monday[:id]}']").click
 
       expect(page).to have_text(I18n.t("notifications.preferences.quiet_hours.empty_days_warning"))
     end
@@ -272,10 +305,10 @@ RSpec.describe "Notification preferences", type: :system do
     end
 
     # When the deceptive empty-active-days state is visible, the warning
-    # explains what's wrong. SR users navigating the day-chip fieldset
-    # have no signal the warning is tied to *this* fieldset — fix via
-    # fieldset[aria-describedby] pointing at the warning's id.
-    it "the Quiet Hours day-chip fieldset references the empty-days warning via aria-describedby" do
+    # explains what's wrong. SR users navigating the day-chip group have
+    # no signal the warning is tied to *this* group — fix via the group's
+    # aria-describedby pointing at the warning's id.
+    it "the Quiet Hours day-chip group references the empty-days warning via aria-describedby" do
       user.preferences!.update!(
         notification_preferences: user.preferences.notification_preferences.merge(
           "quiet_hours" => { "enabled" => true, "active_days" => [] }
@@ -283,12 +316,12 @@ RSpec.describe "Notification preferences", type: :system do
       )
       visit edit_settings_notification_preferences_path
 
-      fieldset = find("fieldset", text: I18n.t("notifications.preferences.quiet_hours.active_days_label"))
-      described_by_id = fieldset["aria-describedby"]
-      expect(described_by_id).to be_present, "fieldset must point at the warning so SR users link the two"
+      group = find('[role="group"][aria-labelledby="quiet-hours-active-days-label"]', visible: :all)
+      described_by_id = group["aria-describedby"]
+      expect(described_by_id).to be_present, "day-chip group must point at the warning so SR users link the two"
       # visible: :all, matching the sibling lookups of this same element at
       # the top and bottom of this block. What this example asserts is a
-      # WIRING relationship — the fieldset points at the warning — for which
+      # WIRING relationship — the group points at the warning — for which
       # visibility is irrelevant. Without it the lookup waited on JS and
       # flaked on loaded shards (#837).
       warning = find("##{described_by_id}", visible: :all)

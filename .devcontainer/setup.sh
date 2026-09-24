@@ -39,18 +39,10 @@ echo "=== Running bin/setup ==="
 # cleanly; the dev runs the server when ready).
 bin/setup --skip-server
 
-# Solid Queue's tables live in a separate `queue` database
-# (config.solid_queue.connects_to). bin/setup's db:prepare creates and loads it
-# on truly-empty storage, but a *preserved* workspace — a container Rebuild
-# (vs. delete-and-recreate), or a prior `bin/dev` whose bin/jobs auto-created an
-# empty queue file — leaves db:prepare on its no-op migrate path (db/queue_migrate
-# is empty; the queue uses schema-load, not migrations), so the solid_queue_*
-# tables never appear and bin/jobs crashes the whole `bin/dev` on boot. Self-heal:
-# if the table is missing, reset the queue DB from its schema.
-if ! bin/rails runner 'exit(SolidQueue::Process.connection.table_exists?("solid_queue_processes") ? 0 : 1)' >/dev/null 2>&1; then
-  echo "=== Solid Queue schema missing — resetting the queue database ==="
-  bin/rails db:reset:queue
-fi
+# The Solid Queue self-heal this script used to carry now runs inside db:prepare
+# and db:migrate for everyone (lib/tasks/queue_schema.rake, #1148) — bin/setup
+# above has already done it. It lived here alone until then, so a developer
+# outside a devcontainer met the failure with no repair and no explanation.
 
 echo "=== Installing Chromium for Cuprite system specs ==="
 # System specs drive real headless Chrome via Cuprite/ferrum (pure-Ruby CDP —

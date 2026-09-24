@@ -1,53 +1,14 @@
 # frozen_string_literal: true
 
 module UI
-  # # Badge
-  #
-  # A small status/category label — a compact, non-interactive pill that tags a
-  # surrounding item (a status, a count, a category). Renders a `<span>` by default,
-  # or an `<a>` when `href:` is given (a clickable tag/filter link).
-  #
-  # ## Use when
-  # - You need a short inline label that classifies or annotates nearby content:
-  #   a status pill ("Active"), a category tag, a small count.
-  #
-  # ## Don't use when
-  # - It's a real action — use `UI::ButtonComponent` (or `button_to` for non-GET).
-  #   A badge is presentational; `href:` is for navigation/filtering, not actions.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** AAA-contrast text on 9 of the 10 shipped cells' surfaces
-  #   (`soft`/`neutral` pending this app's 0b axe row), including the
-  #   adaptive signal treatments (`danger`/`success`/`info`/`warning`) which stay
-  #   legible in dark mode.
-  # - **You supply:** if the badge conveys status that isn't already in the
-  #   surrounding text (e.g. a color-coded "danger" pill), give it an accessible
-  #   name so screen-reader users get the same signal. A valid `(variant, tone)`
-  #   cell is required — an unproven one raises in development.
-  #
-  # ## Axes (converged-conventions B2)
-  # Two axes: `variant:` (shape) × `tone:` (signal).
-  # - `variant: :solid | :soft | :outline | :ghost | :link` (default `:solid`)
-  # - `tone: :primary | :neutral | :info | :success | :warning | :danger` (default `:primary`)
-  #
-  # Only the 10 cells in `COMBOS` ship — 9 are AAA-proven; the 10th, `[:soft, :neutral]`
-  # (a muted chip for draft-style pills, no colored border/text), whose AAA proof lands
-  # with this app's 0b axe row (gem CI disables `color-contrast`; see
-  # `docs/testing.md`). Every signal lives on the SOFT variant as a TINTED chip — note
-  # `[:soft, :danger]` is the badge "danger" (there is NO solid-danger badge fill;
-  # `variant: :solid, tone: :danger` is unproven and raises).
-  #
-  # ## Legacy shim (deprecated flat `variant:` → `[variant, tone]`)
-  # The historical flat values still work, byte-identically, via `SHIM`:
-  # `default`→`[solid,primary]`, `secondary`→`[soft,primary]`, `info`→`[soft,info]`,
-  # `success`→`[soft,success]`, `warning`→`[soft,warning]`, `danger`→`[soft,danger]`,
-  # `destructive`→`[soft,danger]`, `outline`→`[outline,neutral]`, `ghost`→`[ghost,neutral]`,
-  # `link`→`[link,primary]`. (`danger`/`destructive` map to the SOFT chip — NOT solid.)
+  # A small status/category label — a compact, non-interactive pill that tags a surrounding item (a status, a count, a category).
+  # Usage, options and the accessibility contract: docs/components/badge.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class BadgeComponent < ApplicationComponent
     BASE = "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full " \
            "border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap " \
            "transition-colors " \
-           "aria-invalid:border-danger-border " \
+           "aria-invalid:border-2 aria-invalid:border-danger " \
            "[&>svg]:pointer-events-none [&>svg]:size-3"
 
     # The 10 shipped cells, keyed `[variant, tone]` — 9 AAA-proven, plus `[:soft, :neutral]`
@@ -97,10 +58,7 @@ module UI
       if href
         @html_attrs[:href] = href
         @tag ||= :a
-        # A LINK badge is a pointer target — the 44px AAA floor applies
-        # (2026-07-13 gate). Static badges stay compact pills. focus-ring
-        # rides here too now that BASE dropped it (only links are focusable).
-        @extra_class = [ @extra_class, "min-h-11 focus-ring" ].compact.join(" ")
+        @extra_class = [ @extra_class, "min-h-input focus-ring" ].compact.join(" ")
       end
     end
 

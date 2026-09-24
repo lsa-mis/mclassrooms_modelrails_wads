@@ -69,6 +69,11 @@ class WorkspacesController < ApplicationController
 
   def show
     authorize @workspace
+
+    # Fork: every Trackable here is workspace-level (Workspace, Membership,
+    # Invitation), so upstream's project-partitioned feed (#1154) has
+    # nothing to partition; workspace visibility is the whole rule.
+    @activities = ActivityLog.visible.for_workspace(@workspace).recent.for_feed
   end
 
   # Workspace Profile (identity: name, logo, primary_color, logo_source).

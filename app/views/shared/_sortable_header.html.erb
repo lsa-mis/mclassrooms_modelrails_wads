@@ -1,6 +1,10 @@
-<%# locals: (title:, column:, current_sort:, current_direction:, url:) %>
+<%# locals: (title:, column:, current_sort:, current_direction:, url:, frame: nil, th_class: "text-left py-3 px-2") %>
 <%# Renders the full <th> so aria-sort (the screen-reader sortability contract,
-    ARIA 1.2) stays adjacent to the link that drives it. %>
+    ARIA 1.2) stays adjacent to the link that drives it. frame: names the
+    Turbo Frame the sort link targets; nil (a link already inside the frame it
+    should swap, or a full-page table) emits no data-turbo-frame at all (#1164).
+    data-focus-key: a sort that navigates the whole page lands focus back on
+    this link (navigation_focus.js); inside a frame it is inert. %>
 <%
   active = current_sort == column
   next_direction = active && current_direction == "asc" ? "desc" : "asc"
@@ -9,21 +13,24 @@
               else
                 "none"
               end
-  arrow = if active
-            current_direction == "asc" ? "↑" : "↓"
-          else
-            ""
-          end
 %>
-<th scope="col" aria-sort="<%= aria_sort %>" class="text-left py-3 px-2">
+<th scope="col" aria-sort="<%= aria_sort %>" class="<%= th_class %>">
   <%= link_to url.call(sort: column, direction: next_direction),
-        data: { turbo_frame: "members_results" },
-        class: "group inline-flex min-h-11 min-w-11 items-center gap-1 text-sm font-medium text-text-muted
+        data: { turbo_frame: frame, focus_key: "sort-#{column}" }.compact,
+        class: "flex min-h-input w-full items-center gap-1 text-sm font-medium text-text-muted
                 hover:text-interactive-hover
                 focus-ring rounded" do %>
     <%= title %>
-    <% if arrow.present? %>
-      <span aria-hidden="true" class="text-interactive"><%= arrow %></span>
+    <%# The resting glyph IS the affordance: a sortable header that shows
+        nothing until hover is indistinguishable from a plain one, and no
+        phone has hover. Decorative throughout — aria-sort on the <th> is
+        what assistive tech reads, and it already said which headers sort. %>
+    <% if active %>
+      <%= icon :chevron_down, size: :sm, data: { sort_indicator: aria_sort },
+            class: "shrink-0 text-interactive#{" rotate-180" if current_direction == "asc"}" %>
+    <% else %>
+      <%= icon :chevron_up_down, size: :sm, data: { sort_indicator: "none" },
+            class: "shrink-0 text-text-muted" %>
     <% end %>
   <% end %>
 </th>

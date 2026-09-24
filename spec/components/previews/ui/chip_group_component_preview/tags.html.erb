@@ -1,0 +1,7 @@
+<%# Whole words already read correctly, so no aria_label override. %>
+<%= ui :chip_group, name: "post[tags]", label: "Tags",
+       items: [
+         { value: "ruby",   label: "Ruby", checked: true },
+         { value: "rails",  label: "Rails" },
+         { value: "design", label: "Design" }
+       ] %>

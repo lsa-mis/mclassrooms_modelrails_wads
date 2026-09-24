@@ -1,11 +1,12 @@
 <%# locals: (message:, action_text: nil, action_url: nil) -%>
-<div class="py-12 px-8 rounded-lg border-2 border-dashed border-border text-center">
-  <%= icon(:information_circle, size: :lg, class: "mx-auto text-text-muted mb-3") %>
-  <p class="text-text-heading font-medium"><%= message %></p>
+<%= ui :empty_state, title: message do |c| %>
+  <% c.with_icon { icon(:information_circle) } %>
   <% if action_text && action_url %>
-    <%= link_to action_text, action_url,
-          class: "inline-flex items-center mt-4 px-4 py-2 rounded-md text-sm font-medium
-                  text-interactive hover:text-interactive-hover
-                  focus-ring" %>
+    <% c.with_action do %>
+      <%= link_to action_text, action_url,
+            class: "inline-flex items-center px-4 py-2 min-h-input rounded-md text-sm font-medium
+                    text-interactive hover:text-interactive-hover
+                    focus-ring" %>
+    <% end %>
   <% end %>
-</div>
+<% end %>

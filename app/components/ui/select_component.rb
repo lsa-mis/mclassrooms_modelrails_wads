@@ -1,48 +1,24 @@
 # frozen_string_literal: true
 
 module UI
-  # # Select
-  #
-  # A styled native `<select>`; you supply options + an external form `<label for>`
-  # (an `id` is always emitted so the label can target it), and on error
-  # `invalid: true` + `describedby:`.
-  #
-  # ## Use when
-  # - You need a single-choice dropdown from a known, finite list of options.
-  #
-  # ## Don't use when
-  # - The control needs free-text entry or async search — that's a combobox, not a
-  #   native `<select>`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** AAA border/focus-ring tokens, an `id` ALWAYS emitted on the
-  #   `<select>`, `aria-invalid="true"` when `invalid: true`, and `aria-describedby`
-  #   wired when `describedby:` is supplied.
-  # - **You supply:** the visible label as an EXTERNAL `<label for="<id>">` — unlike
-  #   checkbox, this component does NOT bundle a label (a `<select>` is conventionally
-  #   labeled by a separate form label). On error, pass `invalid: true` and point
-  #   `describedby:` at the error element's id.
-  #
-  # ## Customizable Select (progressive enhancement)
-  # In browsers that support `appearance: base-select` (Chromium, Safari 26+) the
-  # `.ui-select` hook restyles the OPEN picker to match the design system — the same
-  # overlay/border/shadow as the combobox, a tinted checkmark on the selected row,
-  # and a flipping picker-icon. Everywhere else it falls back to the untouched native
-  # control. Pure CSS + one class; no JS, no markup change. See `modelrails_ui.css`.
-  #
-  # No fail-loud guard — there's no enum axis to validate.
+  # A styled native `<select>`; you supply options + an external form `<label for>` (an `id` is always emitted so the label can target it), and on error `invalid: true` + `describedby:`.
+  # Usage, options and the accessibility contract: docs/components/select.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class SelectComponent < ApplicationComponent
-    # min-w alongside min-h, one spelling of the 2.5.5 floor (#983): `w-full`
-    # pins nothing, so a select in a flex row with a sibling button — the
-    # members table's inline role editor is the live case — takes only the
-    # leftover space. It measured 29px at phone width and 43px on a CI members
-    # table, while its height was never at risk.
-    BASE = "flex min-h-[var(--form-input-height)] min-w-[var(--form-input-height)] w-full rounded-md border border-border-strong bg-transparent px-3 py-1 text-sm shadow-sm " \
+    # min-w alongside min-h, one spelling of the 2.5.5 floor: `w-full` pins
+    # nothing, so a select in a flex row with a sibling button takes only the
+    # leftover space. A host app's inline role editor measured 29px at phone
+    # width and 43px in CI, while its height was never at risk.
+    BASE = "flex min-h-input min-w-[var(--form-input-height)] w-full rounded-md border border-border-strong bg-transparent px-3 py-1 text-sm shadow-sm " \
            "outline-none focus-visible:border-border-focus focus-ring " \
-           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger " \
+           "aria-invalid:border-2 aria-invalid:border-danger " \
            "disabled:cursor-not-allowed disabled:opacity-50"
 
-    # options: array of strings, or [value, label] pairs, or { value: label } hash
+    # options: array of strings, or [value, label] pairs, or { value => label } hash,
+    #   or OPTGROUPS as { "Group" => [[value, label], …] } — a hash whose values are
+    #   arrays. Pair order stays [value, label] to match the flat array shape; Rails'
+    #   grouped_options_for_select uses [label, value], but a caller adding groups
+    #   should not have to flip pairs they already wrote.
     #   invalid:     sets `aria-invalid="true"` (absent when false)
     #   describedby: sets `aria-describedby` (link to the error/hint element id)
     def initialize(options: [], selected: nil, include_blank: false, invalid: false, describedby: nil, **html_attrs)
@@ -79,19 +55,43 @@ module UI
 
     def option_tags
       tags = []
+      # The blank belongs to the select, never to the first group.
       tags << content_tag(:option, "", value: "") if @include_blank
-      normalized_options.each do |(val, label)|
+      tags.concat(grouped? ? optgroup_tags : option_elements(normalized_options))
+      tags
+    end
+
+    def optgroup_tags
+      @options.map do |group, opts|
+        content_tag(:optgroup, safe_join(option_elements(pairs(opts))), label: group.to_s)
+      end
+    end
+
+    def option_elements(normalized)
+      normalized.map do |(val, label)|
         attrs = { value: val }
         attrs[:selected] = true if val.to_s == @selected.to_s
-        tags << content_tag(:option, label, **attrs)
+        content_tag(:option, label, **attrs)
       end
-      tags
+    end
+
+    # A Hash whose VALUES are all Arrays is optgroups; a Hash of scalars is the
+    # flat `{ value => label }` shape. That is what keeps the grouped shape
+    # backward compatible — the two cannot be confused, since a flat hash's values
+    # are the labels themselves. An empty hash is flat (it renders nothing either
+    # way, and `all?` on empty would otherwise claim it is grouped).
+    def grouped?
+      @options.is_a?(Hash) && @options.any? && @options.each_value.all?(Array)
+    end
+
+    def pairs(opts)
+      opts.map { |o| o.is_a?(Array) ? o : [ o, o ] }
     end
 
     def normalized_options
       case @options
       when Hash  then @options.map { |v, l| [ v, l ] }
-      when Array then @options.map { |o| o.is_a?(Array) ? o : [ o, o ] }
+      when Array then pairs(@options)
       else []
       end
     end

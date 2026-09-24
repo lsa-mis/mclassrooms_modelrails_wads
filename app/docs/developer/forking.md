@@ -261,6 +261,7 @@ on every sync.
 | `.rubocop/app.yml` | Your RuboCop overrides — turn a house cop off here, with the reason ([Getting started](getting-started#turning-a-house-cop-off-in-your-fork)) |
 | `config/markdowndocs_categories.local.yml` | Registers your own docs pages on this `/docs` index |
 | `app/assets/tailwind/tokens/_brand.css` | Brand-color overrides — swap the primary palette family ([Theming](theming)) |
+| `config/initializers/project_tools.rb` | The template's project-tools registry seam; this fork carries no Project domain, so the file is absent here |
 | `app/views/shared/_site_mark.html.erb` | The brand mark — a file that is one `<svg>` ([Extending](extending#customizing-the-site-logo)) |
 | `public/icon.svg`, `public/icon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `public/favicon.ico` | The favicon and PWA icon set — same artwork, same filenames and sizes ([Getting started](getting-started#favicon-and-pwa-icons)) |
 | `config/vocabulary.local.yml` | Your product's nouns — any subset; `config/vocabulary.yml` fills the rest ([i18n](i18n#vocabulary)) |

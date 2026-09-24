@@ -153,6 +153,25 @@ RSpec.describe "Account Notifications", type: :request do
         expect(response).to have_http_status(:ok)
       end
 
+      # The third padding of #1119: this row carried px-4 py-4 with an sm:px-6
+      # step, inside the same list chrome the workspaces rows use. One row
+      # shape, one padding — the component owns it.
+      it "uses the shared list-row padding, with no breakpoint step of its own" do
+        event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {}, record: user)
+        Noticed::Notification.create!(event: event, recipient: user,
+                                      type: "PasswordChangedNotifier::Notification")
+
+        get settings_notifications_path
+        rows = Capybara.string(response.body).all("li[data-notification-type]")
+
+        expect(rows).not_to be_empty, "no notification rows rendered, so this asserts nothing"
+        rows.each do |row|
+          classes = row[:class].to_s.split
+          expect(classes).to include("px-4", "py-3")
+          expect(classes).not_to include("sm:px-6")
+        end
+      end
+
       it "paginates with Pagy at 25 per page" do
         # Create 30 notifications via direct insert (faster than dispatch).
         event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {}, record: user)

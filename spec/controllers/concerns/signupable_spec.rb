@@ -92,7 +92,7 @@ RSpec.describe Signupable, type: :controller do
 
       post :create, params: { email_address: "retry@example.com" }
 
-      # I1: the token must be dropped on any NotAcceptable (expired/revoked/
+      # The token must be dropped on any NotAcceptable (expired/revoked/
       # non-admittable) — otherwise a retry re-parks the same dead token and
       # rejects forever. The invitation itself stays in the DB (accept! guards
       # before marking consumed), reclaimable via a fresh emailed link.

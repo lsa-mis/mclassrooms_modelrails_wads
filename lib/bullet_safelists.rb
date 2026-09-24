@@ -98,20 +98,14 @@ module BulletSafelists
   # --- N+1 query ------------------------------------------------------------
 
   def apply_n_plus_one
-    # DELIVERY-LAYER ONLY: Noticed v2's EventJob iterates `event.notifications.each`
-    # and the gem exposes no hook to eager-load `:recipient` on that relation. Only the
-    # delivery-iteration path is whitelisted — a resolver-layer N+1 (e.g.
-    # WorkspaceMemberAddedNotifier#recipients eager-loads :user explicitly) will still
-    # trip Bullet correctly.
-    #
-    # STALE RATIONALE, KEPT ON PURPOSE (#1054): the original reason was the email
-    # lambda's per-recipient gate, and #936 removed it — the gate now answers from the
-    # event's own permitted-id set and reads no association. The capacity entry looks
-    # dead and the member-added one survives only on spec-side `recipient` reads, but
-    # removing either needs a full-suite proof and a decision about those reads, so both
-    # stay until #1054 settles it. Do not delete them here.
-    Bullet.add_safelist(type: :n_plus_one_query, class_name: "WorkspaceMemberAddedNotifier::Notification", association: :recipient)
-    Bullet.add_safelist(type: :n_plus_one_query, class_name: "WorkspaceCapacityApproachingNotifier::Notification", association: :recipient)
+    # Empty on purpose. Two `:recipient` entries lived here until #1054: the
+    # original reason was the email lambda's per-recipient gate, which #936
+    # removed — the gate now answers from the event's own permitted-id set and
+    # reads no association. Nothing in app/ or lib/ reads the association on a
+    # collection path any more (`recipient_pref` has no caller outside specs),
+    # so the capacity entry was dead and the member-added one survived only on
+    # spec-side reads, which now eager-load it. A safelist is global: keeping
+    # either would blind Bullet to a real N+1 on every other surface.
 
     # The notifications index's second-level traversals off the polymorphic
     # `event.record` are handled by the `record_preloads` pipeline

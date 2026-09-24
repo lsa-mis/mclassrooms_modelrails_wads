@@ -207,18 +207,18 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility", type: :component d
 
     # Closes #717: base's old checkbox rendered the input and label as two
     # separate siblings, no single element carrying a full 44px target. The
-    # new contract wraps input + caption in ONE label.min-h-11 — one row is
+    # new contract wraps input + caption in ONE label.min-h-input — one row is
     # one target.
     it "wraps a single checkbox's input and caption in one 44px label target (closes #717)" do
       result = parse(builder.checkbox(:first_name, label: "I agree"))
-      expect(result).to have_css("label.min-h-11 input[type='checkbox']")
-      expect(result).to have_css("label.min-h-11", text: "I agree")
+      expect(result).to have_css("label.min-h-input input[type='checkbox']")
+      expect(result).to have_css("label.min-h-input", text: "I agree")
     end
 
     it "wraps every collection row in one 44px label target (closes #717)" do
       roles = [ [ "1", "Admin" ], [ "2", "Editor" ] ]
       result = parse(builder.collection_checkboxes(:first_name, roles, :first, :last))
-      expect(result.all("fieldset label.min-h-11 input[type='checkbox']").size).to eq(2)
+      expect(result.all("fieldset label.min-h-input input[type='checkbox']").size).to eq(2)
     end
   end
 

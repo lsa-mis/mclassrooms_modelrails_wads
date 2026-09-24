@@ -1,26 +1,14 @@
 # frozen_string_literal: true
 
 module UI
-  # # Navbar
-  #
-  # A responsive top navigation bar (a `<nav>` landmark) — a brand, inline desktop links, an
-  # optional right-aligned action area (block content), and a mobile disclosure: a hamburger
-  # toggles a stacked menu panel. The disclosure follows the WAI-ARIA APG disclosure pattern
-  # (aria-expanded/controls + Escape + outside-click), driven by the `navbar` Stimulus controller.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** `<nav>` named by `label:` (i18n default "Main"); the hamburger is a
-  #   `<button>` with synced `aria-expanded` + `aria-controls`; the mobile panel toggles
-  #   `hidden`; Escape closes it (focus returns to the toggle); an outside click closes it; the
-  #   active link carries `aria-current="page"`.
-  # - **You supply:** `items:` (`[{ label:, href:, active: }]`); optional `brand:`/`brand_href:`;
-  #   optional block content for the right action area.
-  # - **Scope:** the action-area block is desktop-only; the mobile menu shows `items:` only.
+  # A responsive top navigation bar (a `<nav>` landmark) — a brand, inline desktop links, an optional right-aligned action area (block content), and a mobile disclosure: a hamburger toggles a stacked menu panel.
+  # Usage, options and the accessibility contract: docs/components/navbar.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class NavbarComponent < ApplicationComponent
     LINK_BASE = "text-sm font-medium transition-colors hover:text-text-heading"
     LINK_IDLE = "text-text-muted"
     LINK_ACTIVE = "text-text-heading"
-    MOBILE_LINK = "flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-surface-sunken hover:text-text-heading"
+    MOBILE_LINK = "flex min-h-input items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-surface-sunken hover:text-text-heading"
 
     # brand/brand_href: optional brand link. items: nav links. label: the <nav> accessible name
     # (i18n; defaults to t("ui.navbar.label", default: "Main")). Block content → right action area.
@@ -63,7 +51,7 @@ module UI
       return "" unless @brand
 
       content_tag(:a, @brand, href: @brand_href,
-        class: "mr-2 flex min-h-11 min-w-11 items-center font-semibold text-text-heading")
+        class: "mr-2 flex min-h-input min-w-11 items-center font-semibold text-text-heading")
     end
 
     def desktop_menu
@@ -92,7 +80,7 @@ module UI
       content_tag(:div, content, class: "hidden items-center gap-2 md:flex")
     end
 
-    HAMBURGER_CLASS = "inline-flex min-h-11 min-w-11 items-center justify-center rounded-md p-2 " \
+    HAMBURGER_CLASS = "inline-flex min-h-input min-w-11 items-center justify-center rounded-md p-2 " \
                       "text-text-muted hover:bg-surface-sunken hover:text-text-heading md:hidden"
 
     def hamburger

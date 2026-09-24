@@ -39,4 +39,31 @@ RSpec.describe ReauthenticationChallenge, type: :model do
       expect(described_class.where(user: user).pluck(:code_digest)).not_to include(code)
     end
   end
+
+  describe ".pending_for?" do
+    it "is false with no challenge at all" do
+      expect(described_class.pending_for?(user)).to be(false)
+    end
+
+    it "is true while an unconsumed code is still live" do
+      described_class.issue_for(user)
+      expect(described_class.pending_for?(user)).to be(true)
+    end
+
+    it "is false once the code has expired" do
+      described_class.issue_for(user)
+      travel(described_class::EXPIRY + 1.minute) { expect(described_class.pending_for?(user)).to be(false) }
+    end
+
+    it "is false once the code has been consumed" do
+      code = described_class.issue_for(user)
+      described_class.consume(user: user, code: code)
+      expect(described_class.pending_for?(user)).to be(false)
+    end
+
+    it "does not see another user's live code" do
+      described_class.issue_for(create(:user))
+      expect(described_class.pending_for?(user)).to be(false)
+    end
+  end
 end

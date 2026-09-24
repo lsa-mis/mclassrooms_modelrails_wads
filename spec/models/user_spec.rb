@@ -239,6 +239,36 @@ RSpec.describe User, type: :model do
     end
   end
 
+  # The sibling of #operated_workspaces, and the reason the users index does
+  # not start from `User.all`: today every operator reaches every user, and
+  # scoped operators (#1123) must be a one-line change here rather than a hunt
+  # through controllers (#1135).
+  describe "#operated_users" do
+    let(:user) { create(:user) }
+
+    it "reaches nobody, as a relation, without an operatorship" do
+      expect(user).not_to be_operator
+      expect(user.operated_users).to be_empty
+      expect(user.operated_users).to be_a(ActiveRecord::Relation)
+    end
+
+    it "reaches every user once granted, suspended included and itself among them" do
+      suspended_user = create(:user).tap { |u| u.suspend!(by: user) }
+      other = create(:user)
+      Operatorship.grant!(user: user)
+
+      expect(user.reload).to be_operator
+      expect(user.operated_users).to include(user, other, suspended_user)
+    end
+
+    it "loses reach when the operatorship is revoked" do
+      Operatorship.grant!(user: user).revoke!
+
+      expect(user.reload).not_to be_operator
+      expect(user.operated_users).to be_empty
+    end
+  end
+
   describe "#granted_operatorships" do
     it "carries every operatorship a user has granted, keyed by granted_by_id" do
       granter = create(:user)

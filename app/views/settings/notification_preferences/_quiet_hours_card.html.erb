@@ -63,50 +63,44 @@
     <%# Active-days picker: which weekdays the QH window applies on.
         Missing active_days key on a user's row (legacy data) is treated as
         all-7-days by the value object; render as all-checked here too so
-        the displayed state matches runtime behavior. The hidden ""-value
-        field at the top of the form ensures the active_days param is
-        always submitted as an array (so when zero boxes are checked, the
-        controller still sees `active_days=[""]` and strips the sentinel
-        to land on `[]`). -%>
-    <%# `aria-describedby` points at the empty-days warning below so SR
-        users navigating into the fieldset hear the explanation when
-        the deceptive state is active (warning's text content is only
-        present when the warning is visible). -%>
-    <fieldset aria-describedby="quiet-hours-empty-days-warning">
-      <legend class="block text-sm font-medium text-text-heading mb-2">
+        the displayed state matches runtime behavior. The component emits
+        the ""-value sentinel itself, so active_days is always submitted as
+        an array (zero boxes checked still reaches the controller as
+        `active_days=[""]`, which strips down to `[]`).
+
+        No <fieldset> around this: the component IS the group (role=group),
+        and wrapping it in a second grouping container makes a reader
+        announce the same set twice. It takes its name from the visible
+        label and points at the empty-days warning itself, so SR users
+        entering the group hear the explanation when the deceptive state is
+        active.
+
+        auto-submit is wired once on the form rather than on each chip:
+        `change` bubbles, and the controller resolves the form from
+        event.target. -%>
+    <% current_active = prefs.dig("quiet_hours", "active_days") || NotificationPreferences::DAYS_OF_WEEK %>
+    <div>
+      <p id="quiet-hours-active-days-label"
+         class="text-sm font-medium text-text-heading mb-2">
         <%= t("notifications.preferences.quiet_hours.active_days_label") %>
-      </legend>
+      </p>
       <%= form_with url: settings_notification_preferences_path,
             method: :patch,
-            data: { controller: "auto-submit" },
-            class: "flex flex-wrap gap-2" do |f| %>
-        <input type="hidden"
-               name="notification_preferences[quiet_hours][active_days][]"
-               value="">
-        <% current_active = prefs.dig("quiet_hours", "active_days") || NotificationPreferences::DAYS_OF_WEEK %>
-        <% NotificationPreferences::DAYS_OF_WEEK.each do |day| %>
-          <% day_id = "quiet-hours-active-day-#{day}" %>
-          <% checked = current_active.include?(day) %>
-          <label for="<%= day_id %>"
-                 class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] px-2 rounded-md
-                        border border-border-strong cursor-pointer text-sm font-medium
-                        bg-surface text-text-body
-                        has-[:checked]:bg-interactive has-[:checked]:text-text-on-interactive
-                        has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-interactive-focus">
-            <input type="checkbox"
-                   id="<%= day_id %>"
-                   name="notification_preferences[quiet_hours][active_days][]"
-                   value="<%= day %>"
-                   <% if checked %>checked<% end %>
-                   data-action="change->auto-submit#submit"
-                   class="sr-only">
-            <span aria-label="<%= t("notifications.preferences.quiet_hours.days_full.#{day}") %>">
-              <%= t("notifications.preferences.quiet_hours.days.#{day}") %>
-            </span>
-          </label>
-        <% end %>
+            data: { controller: "auto-submit", action: "change->auto-submit#submit" } do |f| %>
+        <%= ui :chip_group,
+               name: "notification_preferences[quiet_hours][active_days]",
+               labelledby: "quiet-hours-active-days-label",
+               describedby: "quiet-hours-empty-days-warning",
+               items: NotificationPreferences::DAYS_OF_WEEK.map { |day|
+                 {
+                   value: day,
+                   label: t("notifications.preferences.quiet_hours.days.#{day}"),
+                   aria_label: t("notifications.preferences.quiet_hours.days_full.#{day}"),
+                   checked: current_active.include?(day)
+                 }
+               } %>
       <% end %>
-    </fieldset>
+    </div>
 
     <%# Deceptive-state warning: surfaced by `quiet-hours-warning` Stimulus
         controller when QH is enabled but no days are checked. Initial

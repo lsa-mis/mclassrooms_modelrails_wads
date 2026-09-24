@@ -1,28 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Resizable
-  #
-  # Drag-to-resize panel layout — two (or more) panels separated by a draggable
-  # **window splitter**. The handle is the APG window-splitter pattern: a
-  # focusable `role="separator"` the user can grab with the mouse OR move with the
-  # keyboard.
-  #
-  # Usage:
-  #   ui :resizable, direction: :horizontal do |r|
-  #     r.with_panel(min: 20, default: 30) { left_content }
-  #     r.with_panel { right_content }
-  #   end
-  #
-  # ## Accessibility contract
-  # - **Guarantees (WCAG 2.1.1 keyboard):** every handle is a focusable
-  #   `role="separator"` tab stop carrying the `focus-ring` indicator (the offset
-  #   outline, never `focus:ring-*`), a named splitter (`aria-label`, i18n default),
-  #   the `aria-orientation` it splits across, and the `aria-valuenow/valuemin/
-  #   valuemax` range its controller keeps in sync. Arrow keys (← → for a
-  #   horizontal split, ↑ ↓ for a vertical one) resize it; Home/End jump to the
-  #   min/max. Pointer users still drag it.
-  # - **You supply:** panels (each with optional `min`/`max`/`default` percentages).
+  # Drag-to-resize panel layout — two (or more) panels separated by a draggable **window splitter**.
+  # Usage, options and the accessibility contract: docs/components/resizable.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ResizableComponent < ApplicationComponent
     # direction: which axis the panels lay out along. A :horizontal split puts
     # panels side-by-side, so the splitter bar itself is *vertical*.

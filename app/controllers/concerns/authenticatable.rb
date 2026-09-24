@@ -83,10 +83,10 @@ module Authenticatable
 
     # Session keys that must survive login. Everything else in the pre-auth
     # session hash is dropped at the privilege boundary (reset_session below).
-    # Deliberately NOT preserved: current_workspace_id (re-derived per request),
-    # return_to_after_reauthentication and reauthentication_code_sent (only set
-    # while already authenticated, never during initial sign-in). A fork adding
-    # its own pre-auth key registers it here.
+    # Deliberately NOT preserved: current_workspace_id (re-derived per request)
+    # and return_to_after_reauthentication (only set while already
+    # authenticated, never during initial sign-in). A fork adding its own
+    # pre-auth key registers it here.
     SESSION_KEYS_SURVIVING_LOGIN = %i[
       return_to_after_authenticating pending_invitation_token pending_join_token
       okta_id_token
@@ -159,6 +159,11 @@ module Authenticatable
     # simple — the digest only needs to be deterministic, not gold-standard
     # device fingerprinting. Order matters (iOS check precedes "Mac" because
     # Mobile Safari UAs contain "Macintosh"-like substrings on iPad).
+    #
+    # These six strings are DIGEST INPUTS, not display labels: renaming one
+    # invalidates every fingerprint already stored for that platform, and those
+    # users get a new-device alert for the device they have always used. Pinned
+    # by spec/requests/known_device_os_labels_spec.rb (#643).
     def parse_os_from_user_agent(user_agent)
       case user_agent
       when /iPhone|iPad|iPod/      then "iOS"

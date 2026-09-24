@@ -1,40 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Map / Area
-  #
-  # An image map: an `<img usemap>` paired with a `<map>` of clickable `<area>`
-  # hotspots. Image maps are a legacy mechanism — prefer overlaid links/buttons or
-  # an inline SVG with `<a>` regions when you can. When you genuinely need an
-  # `<area>`-based map, this component enforces the accessibility contract that
-  # makes one usable.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the base `<img>` carries `alt:` and a `usemap` wired to the
-  #   `<map name>`; every interactive `<area href>` is forced to carry a non-blank
-  #   `alt` (its accessible name) — an unnamed hotspot raises rather than ship a
-  #   nameless link to assistive tech (WCAG 2.4.4 / 4.1.2).
-  # - **You supply:** real `alt:` for the image, and an `alt:` for every linked
-  #   area. Non-interactive areas (no `href`) may omit `alt`.
-  #
-  # Usage:
-  #   ui :map_area,
-  #     src: "/map.png", alt: "Office floor plan",
-  #     width: 800, height: 600,
-  #     areas: [
-  #       { shape: :rect,   coords: "0,0,200,150",   href: "/room/1", alt: "Room 1" },
-  #       { shape: :circle, coords: "400,300,50",    href: "/room/2", alt: "Room 2" },
-  #       { shape: :poly,   coords: "10,10,50,10,30,40", href: "/room/3", alt: "Room 3" }
-  #     ]
-  #
-  # area keys:
-  #   shape:   :rect | :circle | :poly | :default (required)
-  #   coords:  coordinate string (required for rect/circle/poly)
-  #   href:    link target (omit for non-interactive areas)
-  #   alt:     accessible label — REQUIRED whenever href is present
-  #   title:   tooltip text
-  #   target:  link target, e.g. "_blank"
-  #   rel:     link rel attribute
+  # An image map: an `<img usemap>` paired with a `<map>` of clickable `<area>` hotspots.
+  # Usage, options and the accessibility contract: docs/components/map_area.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class MapAreaComponent < ApplicationComponent
     WRAPPER_CLS = "relative inline-block"
 

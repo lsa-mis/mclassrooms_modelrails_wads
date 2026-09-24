@@ -43,6 +43,11 @@ en:
       empty: "No results found."
       placeholder: "Type a command or search…"
       input_label: "Search commands"
+    table:
+      # Names the table's horizontal scroll region (scroll: :horizontal) —
+      # distinct from the caption so a screen reader does not hear the same
+      # words twice at the region and again at the table.
+      scroll_region: "%{name}, scrolls sideways"
     data_table:
       results: "%{count} results"
       page: "Page %{page} of %{pages} (%{rows} rows)"

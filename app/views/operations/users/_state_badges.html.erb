@@ -1,0 +1,15 @@
+<%# locals: (user:) -%>
+<%# The states an operator acts on, in one place. The index row and the show
+    header both render this: they had drifted to two badges against three, and
+    the row was missing `locked_out` against its own spec's description, which
+    is what #1135 was reporting. Role badges are NOT here — those belong to a
+    membership, not to the person. -%>
+<% if user.operator? %>
+  <%= ui :badge, t("operations.users.show.operator"), variant: :soft, tone: :info %>
+<% end %>
+<% if user.suspended? %>
+  <%= ui :badge, t("operations.users.show.suspended"), variant: :soft, tone: :warning %>
+<% end %>
+<% if user.locked? %>
+  <%= ui :badge, t("operations.users.show.locked_out"), variant: :soft, tone: :warning %>
+<% end %>

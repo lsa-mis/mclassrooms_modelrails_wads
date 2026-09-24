@@ -22,11 +22,10 @@
        aria-labelledby="workspace-switcher-button<%= id_suffix %>"
        class="absolute left-0 right-0 mt-1 rounded-lg bg-surface-raised border border-border shadow-lg z-50 py-1">
     <% if workspaces.size > 1 %>
-      <%# capped: the phone copy pins the current workspace first and shows at
-          most five (the hamburger's old bound), so a long list cannot run the
-          dropdown off a 375px screen; "All workspaces" below is the overflow.
-          Recency sort only inside this 2+ branch — it materializes the relation. %>
-      <% shown = capped ? ([ workspace ].compact + workspaces_by_recency(workspaces).reject { |w| workspace && w.id == workspace.id }).first(5) : workspaces %>
+      <%# Called only inside this 2+ branch: the recency sort materializes the
+          relation, and outside a render Bullet flags the icon includes as an
+          unused eager-load. The cap and the pinning live in the helper (#1091). %>
+      <% shown = switcher_menu_workspaces(workspaces, current: workspace, capped: capped) %>
       <% shown.each do |candidate| %>
         <% is_current = workspace && candidate.id == workspace.id %>
         <% membership = candidate.memberships.detect { |m| m.user_id == Current.user.id } %>

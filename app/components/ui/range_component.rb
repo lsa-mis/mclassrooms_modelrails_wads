@@ -1,40 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Range
-  #
-  # A styled native `input[type="range"]` slider over the standard min/max/step/value
-  # attributes, with AAA accent and focus-ring tokens. The slider has no built-in
-  # visible label, so you supply one externally (an `id` is always emitted so the
-  # `<label for>` can target it), and on error `invalid: true` + `describedby:`.
-  #
-  # ## Use when
-  # - The user picks a value from a continuous, bounded numeric range and an
-  #   approximate position is acceptable (volume, brightness, zoom).
-  #
-  # ## Don't use when
-  # - An exact value matters or the range is unbounded — use a number input.
-  # - The choice is a small set of discrete options — use a select or radio_group.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** AAA accent/focus-ring tokens, an `id` ALWAYS emitted on the
-  #   `<input>`, `aria-invalid="true"` when `invalid: true`, and `aria-describedby`
-  #   wired when `describedby:` is supplied. The thumb target size is UA-controlled
-  #   (native range), so the app's axe gate is the AAA target-size authority here.
-  # - **You supply:** the visible label as an EXTERNAL `<label for="<id>">` — a native
-  #   slider is conventionally labeled by a separate form label. On error, pass
-  #   `invalid: true` and point `describedby:` at the error element's id.
-  #
-  # ## Optional value readout (`show_value: true`)
-  # By default this renders a bare native slider. Pass `show_value: true` to also
-  # render an associated `<output for="<id>">` that mirrors the current value. The
-  # `<output>` is an implicit `role="status"` live region, kept in sync with the
-  # slider by the tiny `range` Stimulus controller (`range_controller.js`): the
-  # input carries `data-action="input->range#sync"` and both elements are
-  # `data-range-target`s. The SSR text starts at `value:` (or the native midpoint
-  # when `value:` is nil) and the controller resyncs on connect.
-  #
-  # No fail-loud guard — there's no enum axis to validate.
+  # A styled native `input[type="range"]` slider over the standard min/max/step/value attributes, with AAA accent and focus-ring tokens.
+  # Usage, options and the accessibility contract: docs/components/range.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class RangeComponent < ApplicationComponent
     # 2.5.5: the INTERACTION box is 44px tall (h-11) so the whole control is a
     # 44px pointer target — but transparent, so the VISIBLE track stays slim.
@@ -43,11 +12,19 @@ module UI
     # 44px pill — 2026-07-13 review). The thumb is 20px (up from 16) for a
     # more grabbable handle, centered on the slim track (webkit `-mt-1.5` =
     # -(20-8)/2 offsets the thumb onto the 8px runnable-track).
+    #
+    # The track carries the invalid state, and carries it as a BORDER: the ring
+    # this replaces was not painted in forced-colors mode, and a colour swap
+    # would not survive it either, since the system repaints every border the
+    # same. The control's own box is transparent, so the edge has to go on the
+    # track pseudo-element rather than the input (modelrails_ui #258).
     BASE = "w-full h-11 cursor-pointer appearance-none bg-transparent outline-none " \
-           "focus-ring rounded aria-invalid:ring-1 aria-invalid:ring-danger " \
+           "focus-ring rounded " \
            "disabled:pointer-events-none disabled:opacity-50 " \
            "[&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-surface-sunken " \
            "[&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-surface-sunken " \
+           "aria-invalid:[&::-webkit-slider-runnable-track]:border-2 aria-invalid:[&::-webkit-slider-runnable-track]:border-danger " \
+           "aria-invalid:[&::-moz-range-track]:border-2 aria-invalid:[&::-moz-range-track]:border-danger " \
            "[&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:appearance-none " \
            "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-interactive " \
            "[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface-raised " \

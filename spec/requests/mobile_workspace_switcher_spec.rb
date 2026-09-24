@@ -7,8 +7,12 @@ require "rails_helper"
 # It renders above the section tabs on WORKSPACE pages (#1077), a second copy
 # of the sidebar switcher carrying a `-mobile` id suffix — the sidebar copy is
 # display:none below md, not absent. It replaced the inline list that lived in
-# the hamburger, so the workspaces index no longer carries a switcher at all
-# (the index IS the switcher; see workspace_switcher_spec for that placement).
+# the hamburger.
+#
+# The workspaces index renders it too, and differently: no current workspace and
+# `capped: true` (workspaces/index.html.erb), so the list is the five most
+# recently used rather than all of them. #1090 reversed the earlier decision that
+# the index carried no switcher; this header said otherwise until #1091.
 # Everything here asserts on the raw body: the mobile copy is md:hidden, so it
 # is in the DOM at every width.
 RSpec.describe "Mobile workspace switcher", type: :request do
@@ -52,6 +56,23 @@ RSpec.describe "Mobile workspace switcher", type: :request do
       workspace_items = items.reject { |a| a["href"] == workspaces_path }
       expect(workspace_items.size).to eq(5)
       expect(workspace_items.first["href"]).to eq(workspace_path(personal))
+      expect(items.map { |a| a["href"] }).to include(workspaces_path)
+    end
+
+    # #1091: every other example here visits a workspace page, where there IS a
+    # current workspace to pin. The index renders the same partial with
+    # `workspace: nil`, and until this example nothing exercised that branch with
+    # enough workspaces for the cap to do anything — all the index examples ran
+    # with two, where `.first(5)` is a no-op.
+    it "caps the index dropdown too, where there is no current workspace to pin" do
+      5.times { create(:membership, :owner, user: user, workspace: create(:workspace)) }
+      user.reload
+
+      get workspaces_path
+
+      items = mobile_menu_items(response.body)
+      workspace_items = items.reject { |a| a["href"] == workspaces_path }
+      expect(workspace_items.size).to eq(5)
       expect(items.map { |a| a["href"] }).to include(workspaces_path)
     end
 

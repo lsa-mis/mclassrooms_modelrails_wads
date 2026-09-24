@@ -16,7 +16,7 @@ module Settings
 
     def new
       @factors = Current.user.available_reauth_factors
-      @code_sent = session[:reauthentication_code_sent].present?
+      @code_sent = ReauthenticationChallenge.pending_for?(Current.user)
     end
 
     def create
@@ -42,7 +42,6 @@ module Settings
 
     def verify_code
       if ReauthenticationChallenge.consume(user: Current.user, code: params[:code])
-        session.delete(:reauthentication_code_sent)
         succeed
       else
         redirect_to new_settings_reauthentication_path,

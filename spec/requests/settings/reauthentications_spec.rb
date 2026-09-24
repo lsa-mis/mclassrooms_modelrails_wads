@@ -25,6 +25,83 @@ RSpec.describe "Settings::Reauthentications", type: :request do
     end
   end
 
+  describe "GET /settings/reauthentication (emailed-code state)" do
+    let(:user) { create(:user, :passwordless) }
+    let(:sent_sentence) do
+      I18n.t("settings.reauthentications.new.code_sent_to",
+             email: user.email_address,
+             minutes: ReauthenticationChallenge::EXPIRY.in_minutes.to_i)
+    end
+
+    before { sign_in(user) }
+
+    it "shows the code field, where the code went, and a way to send a new one while a challenge is pending" do
+      ReauthenticationChallenge.issue_for(user)
+      get new_settings_reauthentication_path
+
+      html = Capybara.string(response.body)
+      expect(html).to have_field(I18n.t("settings.reauthentications.new.code_label"))
+      expect(html).to have_text(sent_sentence)
+      expect(html).to have_css("form[action='#{settings_reauthentication_code_path}'] button",
+                               text: I18n.t("settings.reauthentications.new.resend_button"))
+    end
+
+    it "returns to the email-a-code state once the challenge has expired" do
+      ReauthenticationChallenge.issue_for(user)
+
+      travel 11.minutes do
+        get new_settings_reauthentication_path
+
+        html = Capybara.string(response.body)
+        expect(html).to have_button(I18n.t("settings.reauthentications.new.email_button"))
+        expect(html).to have_no_field(I18n.t("settings.reauthentications.new.code_label"))
+      end
+    end
+
+    it "still offers a new code after a wrong code bounces back to the page" do
+      ReauthenticationChallenge.issue_for(user)
+      post settings_reauthentication_path, params: { code: "000000" }
+      follow_redirect!
+
+      html = Capybara.string(response.body)
+      expect(html).to have_field(I18n.t("settings.reauthentications.new.code_label"))
+      expect(html).to have_css("form[action='#{settings_reauthentication_code_path}'] button",
+                               text: I18n.t("settings.reauthentications.new.resend_button"))
+    end
+
+    it "keeps the resend button out of the code form, which a nested form would silently break" do
+      ReauthenticationChallenge.issue_for(user)
+      get new_settings_reauthentication_path
+
+      expect(response.body).not_to match(%r{<form\b(?:(?!</form>).)*<form\b}m)
+    end
+  end
+
+  describe "GET /settings/reauthentication (factor-choice chrome)" do
+    it "heads the choice and rules off the email factor for a user with more than one" do
+      user = create(:user)
+      sign_in(user)
+      get new_settings_reauthentication_path
+
+      html = Capybara.string(response.body)
+      expect(html).to have_css("#reauth-choose-heading")
+      expect(html).to have_css("[role='group'][aria-labelledby='reauth-choose-heading']")
+      expect(html).to have_css(".page-container .border-t")
+    end
+
+    it "shows neither heading nor divider to a user whose only factor is the emailed code" do
+      user = create(:user, :passwordless)
+      sign_in(user)
+      get new_settings_reauthentication_path
+
+      html = Capybara.string(response.body)
+      expect(html).to have_no_css("#reauth-choose-heading")
+      expect(html).to have_no_css("[role='group'][aria-labelledby='reauth-choose-heading']")
+      expect(html).to have_no_css(".page-container .border-t")
+      expect(html).to have_button(I18n.t("settings.reauthentications.new.email_button"))
+    end
+  end
+
   describe "POST /settings/reauthentication (password factor)" do
     let(:user) { create(:user) }
     before { sign_in(user) }

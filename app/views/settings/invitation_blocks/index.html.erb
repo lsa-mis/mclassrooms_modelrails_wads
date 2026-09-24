@@ -1,0 +1,48 @@
+<% content_for(:title) { t("settings.invitation_blocks.index.title") } %>
+<div class="page-container">
+  <%= render "shared/settings_page_header",
+        title: t("settings.invitation_blocks.index.title"),
+        description: t("settings.invitation_blocks.index.description") %>
+
+  <% if @invitation_blocks.any? %>
+    <ul role="list" class="mt-8 space-y-4">
+      <% @invitation_blocks.each do |block| %>
+        <%# A nameless inviter falls back to the address; full_name is
+            "first last", so it is whitespace-only rather than blank when both
+            halves are missing — .presence handles that. %>
+        <% sender = block.inviter.full_name.presence || block.inviter.email_address %>
+        <li class="flex items-center justify-between p-4 border border-border rounded-lg">
+          <div>
+            <p class="font-medium text-text-heading"><%= sender %></p>
+            <p class="text-sm text-text-muted">
+              <%= t("settings.invitation_blocks.index.blocked_on", time: time_ago_in_words(block.created_at)) %>
+            </p>
+          </div>
+
+          <div class="action-group">
+            <div data-controller="modal" class="inline">
+              <button type="button"
+                      class="btn-touch-target btn-text text-sm focus-ring"
+                      aria-label="<%= t("settings.invitation_blocks.index.allow_aria_label", sender: sender) %>"
+                      data-action="click->modal#open">
+                <%= t("settings.invitation_blocks.index.allow_button") %>
+              </button>
+              <%# variant is passed because the partial DEFAULTS to :danger,
+                  and this undoes a block rather than destroying anything. %>
+              <%= render "shared/confirm_dialog",
+                        title: t("settings.invitation_blocks.index.allow_title", sender: sender),
+                        message: t("settings.invitation_blocks.index.allow_message"),
+                        confirm_text: t("settings.invitation_blocks.index.allow_button"),
+                        confirm_url: settings_invitation_block_path(block),
+                        confirm_method: :delete,
+                        variant: :info %>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <%= ui :empty_state, variant: :outlined, class: "mt-8",
+           title: t("settings.invitation_blocks.index.empty_state") %>
+  <% end %>
+</div>

@@ -1,0 +1,36 @@
+<%# "Who has been busiest here" — the question a Who sort would have answered
+    badly even if it were possible (it is not; actor names are encrypted). A sort
+    clusters names alphabetically and then asks the reader to spot which block is
+    tallest, across pages. A count states it.
+
+    Counts come from a grouped count over the whole filtered scope, so they are
+    the number of rows that MATCHED, not the number on this page. Read them as
+    "Ada did 30 of the things this filter describes", not "30 are visible". %>
+<div data-role="top-actors" class="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2">
+  <h2 class="text-sm font-semibold text-text-heading"><%= t("operations.activity_logs.index.top_actors.label") %></h2>
+  <ul role="list" class="flex flex-wrap items-center gap-2">
+    <% @top_actors.each do |actor, count| %>
+      <li data-role="top-actor">
+        <%# A way INTO the ledger, not a decoration on top of it — and through the
+            same `q` pivot the row details use, so there is one way to narrow to a
+            person rather than two that behave differently.
+
+            _top: the pivot sets the search box, which lives in the band OUTSIDE
+            the results frame; a frame-local swap would leave the box blank while
+            the rows changed underneath it.
+
+            aria-label: out of context "Ada Lovelace 30" says nothing about what
+            following it does. The visible words stay inside the name (2.5.3). %>
+        <%= link_to operations_activity_logs_path(ledger_filter_params(q: actor.email_address)),
+              data: { turbo_frame: "_top", focus_key: "q" },
+              class: "inline-flex min-h-input items-center gap-2 rounded-full border border-border px-3 py-1 " \
+                     "text-sm text-text-body hover:bg-surface-sunken focus-ring",
+              "aria-label": t("operations.activity_logs.index.top_actors.entry_aria_label",
+                              name: actor.full_name, count: count) do %>
+          <span><%= actor.full_name %></span>
+          <span class="tabular-nums font-semibold text-text-heading"><%= count %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</div>

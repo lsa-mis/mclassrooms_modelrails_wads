@@ -26,6 +26,10 @@ RSpec.describe "Workspace Invitations", type: :request do
           }
         }.to change(Invitation, :count).by(1)
           .and have_enqueued_mail(InvitationMailer, :invite)
+
+        # sent:/skipped:, not count: — the message reports both halves, because
+        # the address cap is never applied silently (D13).
+        expect(flash[:notice]).to eq(I18n.t("workspaces.invitations.create.sent", sent: 1, skipped: 0))
       end
 
       it "creates batch invitations" do

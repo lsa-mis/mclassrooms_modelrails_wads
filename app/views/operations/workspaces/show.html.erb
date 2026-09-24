@@ -1,37 +1,19 @@
-<% content_for(:title) { @workspace.name } %>
-<%# shared/settings_page_header has no slot for inline content beside the
-    title, so the lifecycle signal — the design system's badge treatment,
-    not prose — needs a small bespoke header; same type scale as the shared
-    partial. The badge's own text ("Locked") carries no "this is a status"
-    context on its own, so it gets an explicit aria-label rather than
-    relying on surrounding text. Built by string concatenation, not an i18n
-    %{status} interpolation: lifecycle_status_label already returns a
-    translated string, so it doesn't need one. %>
-<header class="mb-8">
-  <div class="flex items-center gap-3">
-    <h1 class="text-2xl font-semibold text-text-heading"><%= @workspace.name %></h1>
-    <%= ui :badge, lifecycle_status_label(@workspace), variant: :soft, tone: :neutral,
-          "aria-label": "#{t('operations.workspaces.show.status_prefix')}: #{lifecycle_status_label(@workspace)}" %>
-  </div>
-  <%# button_to, not `ui :button href: data-turbo-method:` — this app's own
-      convention for a destructive confirm, and without JS a link GETs a
-      route with no GET handler. ui :button can't fill in: it renders an
-      <a>/<button>, never a <form>. class: repeats ButtonComponent::COMBOS'
-      own output for the two AAA-proven cells (btn-danger, btn-secondary). %>
-  <div class="mt-4">
-    <% if @workspace.suspended? %>
-      <%= button_to t("operations.workspaces.show.unsuspend"), operations_workspace_suspension_path(@workspace),
-            method: :delete, class: "btn-secondary" %>
-    <% else %>
-      <%= button_to t("operations.workspaces.show.suspend"), operations_workspace_suspension_path(@workspace),
-            method: :post, class: "btn-danger",
-            form: { data: { turbo_confirm: t("operations.workspaces.show.suspend_confirm") } } %>
-    <% end %>
-  </div>
-</header>
+<% content_for(:title) { t("operations.area.page_title", name: @workspace.name) } %>
+<%# Same header row as the workspaces index: the name line (badge inline, via
+    the partial's badges: local) and, opposite it, the one link that is
+    navigation rather than a state change. The lock control is not here — it
+    closes the page in its own section, below what an operator reads first. %>
+<div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
+  <%= render "shared/settings_page_header", title: @workspace.name, badges: lifecycle_status_badge(@workspace) %>
+  <%= ui :button, t("operations.workspaces.show.view_activity"), variant: :outline, tone: :neutral,
+        href: operations_activity_logs_path(workspace: @workspace.slug), class: "whitespace-nowrap" %>
+</div>
 
-<section aria-labelledby="ops-members-heading" class="mt-6">
-  <h2 id="ops-members-heading" class="text-lg font-semibold text-text-heading"><%= t("operations.workspaces.show.members") %></h2>
+<%# A plain div, not a named <section>: the heading already outlines it, and a
+    landmark per list put five regions on a page with two short lists. The id
+    scopes specs to this list. %>
+<div id="ops-members">
+  <h2 class="text-lg font-semibold text-text-heading"><%= t("operations.workspaces.show.members") %></h2>
   <% if @memberships.any? %>
     <%= ui :list_group, class: "mt-3" do %>
       <% @memberships.each do |membership| %>
@@ -46,6 +28,30 @@
       <%= render "shared/empty_state", message: t("operations.workspaces.show.no_members") %>
     </div>
   <% end %>
-</section>
+</div>
 
 <%= render "shared/activity_feed", activities: @activities %>
+
+<%# The one destructive control on the page, last and under its own heading
+    with the consequence stated beside it — not the first thing after the
+    title. button_to, not `ui :button href: data-turbo-method:` — this app's
+    own convention for a destructive confirm, and without JS a link GETs a
+    route with no GET handler. ui :button can't fill in: it renders an
+    <a>/<button>, never a <form>. class: repeats ButtonComponent::COMBOS'
+    own output for the two AAA-proven cells (btn-danger, btn-secondary). %>
+<div class="mt-8 border-t border-border pt-6">
+  <h2 class="text-lg font-semibold text-text-heading"><%= t("operations.workspaces.show.access") %></h2>
+  <% if @workspace.suspended? %>
+    <p class="mt-1 text-sm text-text-body">
+      <%= t("operations.workspaces.show.locked_since_html",
+            time: tag.time(viewer_local_timestamp(@workspace.suspended_at), datetime: @workspace.suspended_at.iso8601)) %>
+    </p>
+    <%= button_to t("operations.workspaces.show.unsuspend"), operations_workspace_suspension_path(@workspace),
+          method: :delete, class: "btn-secondary mt-3" %>
+  <% else %>
+    <p class="mt-1 text-sm text-text-body"><%= t("operations.workspaces.show.lock_hint") %></p>
+    <%= button_to t("operations.workspaces.show.suspend"), operations_workspace_suspension_path(@workspace),
+          method: :post, class: "btn-danger mt-3",
+          form: { data: { turbo_confirm: t("operations.workspaces.show.suspend_confirm", name: @workspace.name) } } %>
+  <% end %>
+</div>

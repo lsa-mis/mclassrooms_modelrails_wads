@@ -528,8 +528,23 @@ module AxeAccessibility
   # document. Waits for all of it to clear so the audit sees the page the
   # user lands on; false if it never did within the budget, in which case
   # the audit runs anyway and its report says why.
+  # One quiet moment is not a settled page: a frame swap that advances history
+  # clears aria-busy, and only then does Turbo start the history visit and mark
+  # <html> busy again. So each time the page goes quiet, look again after
+  # QUIET_FOR and only believe it if it is still quiet.
+  QUIET_FOR = 0.15
+
   def wait_for_turbo_to_settle(wait: Capybara.default_max_wait_time)
-    page.has_no_css?("[aria-busy='true']", wait: wait)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + wait
+
+    loop do
+      remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      return false if remaining <= 0
+      return false unless page.has_no_css?("[aria-busy='true']", wait: remaining)
+
+      sleep QUIET_FOR
+      return true if page.has_no_css?("[aria-busy='true']", wait: 0)
+    end
   end
 
   # Real (non-memoized) audits this example has run — the observability handle
@@ -557,16 +572,38 @@ module AxeAccessibility
     Object.new
   end
 
+  # Keeps the violations it saw, keyed on its own arguments, so the paired
+  # failure message can report THIS audit rather than running its own. Before
+  # #1189 the message re-audited, and a violation that cleared in between
+  # produced a failure with no rule, no selector and no theme.
   def axe_clean?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
-    results = run_axe_audit(options, exclude: exclude, include: include)
-    results["violations"].empty?
+    violations = axe_violations_now(options, exclude: exclude, include: include)
+    (@__axe_seen_violations ||= {})[axe_capture_key(options, exclude, include)] = violations
+    violations.empty?
   end
 
   # Color-contrast violations include the ancestor-chain / theme / animation
   # debug payload captured by `run_axe_audit`.
   def axe_violations(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+    key = axe_capture_key(options, exclude, include)
+    seen = (@__axe_seen_violations ||= {})
+    return seen[key] if seen.key?(key)
+
+    axe_violations_now(options, exclude: exclude, include: include)
+  end
+
+  # Always audits. The capturing wrappers above and below decide when to reuse.
+  def axe_violations_now(options, exclude:, include:)
     results = run_axe_audit(options, exclude: exclude, include: include)
     Array(results["violations"]).map { |v| format_violation(v) }
+  end
+
+  # Arguments, not page state: the message twin always receives exactly the
+  # arguments its check did (verified across all 195 paired call sites), so this
+  # key hits at every existing site. A standalone call with no preceding check
+  # misses and audits as before.
+  def axe_capture_key(options, exclude, include)
+    [ options, exclude, include ]
   end
 
   # Color-contrast violations surface the diagnostic payload (`_debug` on each
@@ -621,15 +658,21 @@ module AxeAccessibility
 
   def axe_clean_in_both_themes?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
     ensure_light_mode
-    light_clean = axe_clean?(options, exclude: exclude, include: include)
+    light = axe_violations_now(options, exclude: exclude, include: include).map { |v| "[LIGHT]#{v}" }
     ensure_dark_mode
-    dark_clean = axe_clean?(options, exclude: exclude, include: include)
-    light_clean && dark_clean
+    dark = axe_violations_now(options, exclude: exclude, include: include).map { |v| "[DARK]#{v}" }
+
+    (@__axe_seen_both_themes ||= {})[axe_capture_key(options, exclude, include)] = light + dark
+    (light + dark).empty?
   end
 
   # Combined violations from both light and dark mode passes, prefixed with the
   # active theme so failure output makes the offending mode obvious.
   def axe_violations_in_both_themes(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+    key = axe_capture_key(options, exclude, include)
+    seen = (@__axe_seen_both_themes ||= {})
+    return seen[key] if seen.key?(key)
+
     ensure_light_mode
     light = axe_violations(options, exclude: exclude, include: include).map { |v| "[LIGHT]#{v}" }
     ensure_dark_mode

@@ -1,24 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Progress
-  #
-  # A determinate progress bar — a filled track communicating a known percentage
-  # toward completion. For indeterminate waits, use `spinner` instead.
-  #
-  # ## Use when
-  # - You can express progress as a value between 0 and `max` (upload %, steps done).
-  #
-  # ## Don't use when
-  # - The wait is indeterminate — use `spinner`.
-  # - The bar has no accessible name and no nearby text — pass `label:` so screen
-  #   readers can announce what is progressing.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** `role="progressbar"` with `aria-valuenow`/`min`/`max`, the
-  #   value clamped to 0–100% so a bad value never overflows the track.
-  # - **You supply:** `label:` when no visible text names the bar (it becomes the
-  #   `aria-label` / accessible name).
+  # A determinate progress bar — a filled track communicating a known percentage toward completion.
+  # Usage, options and the accessibility contract: docs/components/progress.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ProgressComponent < ApplicationComponent
     # Bar-vs-track graphic contrast: bg-interactive fill over a bg-interactive/20
     # track. CI-verify the 3:1 non-text graphic contrast for this pairing.

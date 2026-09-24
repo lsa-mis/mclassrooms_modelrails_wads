@@ -107,6 +107,8 @@ Mix in the same concerns the built-in models use, only as needed:
 
 Workspace and Membership already use all three; copy whichever match your model.
 
+If your `Trackable` model has a column that must stay secret — an API key, a webhook signing secret — add it to `Trackable::SENSITIVE_ATTRIBUTES`. That list is the only thing standing between a changed column and the operations activity ledger, which renders changes verbatim, and `activity_logs.metadata` is plain JSON, so an unlisted secret is stored unencrypted for the whole retention window. Being encrypted on your own model does not exempt a column: encrypted-at-rest and secret are different questions, which is why the list is declared by hand rather than derived.
+
 #### Per-model traits
 
 A concern that belongs to one model is a **trait**, and it lives with its model, not in `app/models/concerns/`: `app/models/user/avatar.rb` reopens the class and nests the module —

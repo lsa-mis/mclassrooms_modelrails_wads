@@ -1,30 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Navigation menu
-  #
-  # A horizontal site-navigation bar (the WAI-ARIA APG **navigation-menu**, i.e. a
-  # `<nav>` of links where some entries open a **disclosure** flyout — NOT a
-  # `role="menu"` widget). Each flyout trigger is a real `<button>` whose
-  # `aria-expanded` is kept in sync (and `aria-controls` points at its panel) by the
-  # component-owned `navigation-menu` Stimulus controller; the panel is hover/click
-  # managed with outside-click dismissal.
-  #
-  # ## Use when
-  # - Top-level site navigation where some sections reveal a small set of links.
-  #
-  # ## Don't use when
-  # - You need a *command/action menu* (Edit, Delete…) — use `dropdown_menu`.
-  # - You need an application rail with grouped sections — use `sidebar`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a **named** `<nav>` landmark (i18n default, override via `label:`);
-  #   flyout triggers are real `<button>`s carrying `aria-expanded` (synced) +
-  #   `aria-controls` → their `id`'d panel (the disclosure pattern); the AAA offset
-  #   `focus-ring` on every trigger, link and panel link; `aria-current="page"` on the
-  #   active link; the chevron is decorative (`aria-hidden`).
-  # - **You supply:** items (label, optional href, optional active) and — for flyout
-  #   items — the panel links via the slot block.
+  # A horizontal site-navigation bar (the WAI-ARIA APG **navigation-menu**, i.e. a `<nav>` of links where some entries open a **disclosure** flyout — NOT a `role="menu"` widget).
+  # Usage, options and the accessibility contract: docs/components/navigation_menu.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class NavigationMenuComponent < ApplicationComponent
     ROOT = "relative flex max-w-max flex-1 items-center"
 
@@ -55,15 +34,17 @@ module UI
     # viewport) tethered to the trigger via `anchor-name`/`position-anchor`. Being
     # viewport-positioned is what lets the panel be promoted to the top layer, so a
     # sticky/backdrop-blur ancestor cannot bury it (app/javascript/overlays/top_layer.js).
-    CONTENT = "z-50 min-w-48 overflow-hidden rounded-md border bg-surface-overlay p-1 text-text-body shadow mt-1.5 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
+    CONTENT = "z-50 min-w-48 max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border bg-surface-overlay p-1 text-text-body shadow mt-1.5 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
 
-    # Styled link inside a flyout panel. min-h-11: a navigation link (not a
-    # role="menuitem" widget interior), so the 44px AAA floor (2.5.5)
-    # applies. justify-center (not items-center — this is flex-col, so the
-    # main axis is vertical) keeps single-line content vertically centered
-    # as the row grows to meet the floor, without pulling multi-line
-    # title+description content off its left edge.
-    PANEL_LINK = "flex min-h-11 flex-col justify-center gap-1 rounded-sm p-2 text-sm transition-all focus-ring " \
+    # Styled link inside a flyout panel. A navigation LINK, not the interior of a
+    # role="menuitem" widget, so the 44px AAA floor (2.5.5) applies to it the same
+    # way it does to TRIGGER and LINK_CLS above — which use a fixed h-11 because
+    # they are single-line. This one stacks a title over an optional description,
+    # so it takes min-h-input instead: a floor, not a cap. justify-center (the MAIN
+    # axis here, since the container is flex-col) centres single-line content as
+    # the row grows to meet the floor; items-center would pull a two-line link off
+    # its left edge.
+    PANEL_LINK = "flex min-h-input flex-col justify-center gap-1 rounded-sm p-2 text-sm transition-all focus-ring " \
                  "hover:bg-surface-sunken hover:text-text-heading " \
                  "aria-[current]:bg-surface-sunken/50 aria-[current]:text-text-heading"
 
@@ -85,7 +66,7 @@ module UI
         class: cn(ROOT, @extra_class),
         "aria-label": @label || I18n.t("modelrails_ui.navigation_menu.nav_label", default: "Main"),
         **@html_attrs) do
-        content_tag(:ul, class: cn(LIST, JUSTIFY.fetch(@align))) do
+        content_tag(:ul, role: "list", class: cn(LIST, JUSTIFY.fetch(@align))) do
           safe_join(items.map { |item| content_tag(:li, item, class: "relative") })
         end
       end

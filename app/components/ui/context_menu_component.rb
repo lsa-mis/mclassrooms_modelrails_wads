@@ -1,29 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Context menu
-  #
-  # A menu of actions opened by right-clicking — or Shift+F10 / the ContextMenu key while
-  # the host has keyboard focus — on a host region, implementing the WAI-ARIA APG menu
-  # pattern via the shared `menu` Stimulus controller. Positioning is JS: the panel is
-  # `fixed` and the controller's `openAt` sets `top`/`left` from the pointer (or the host's
-  # rect for the keyboard path). The keyboard model (roving tabindex, type-ahead,
-  # Escape/Tab/outside-click dismissal with focus restore) is identical to `dropdown_menu`.
-  #
-  # ## Use when
-  # - A region (a row, a card, a canvas, a file tile) exposes contextual actions on right-click.
-  #
-  # ## Don't use when
-  # - A visible trigger button should open the menu — use `dropdown_menu`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the host is focusable (`tabindex="0"`) with `aria-haspopup="menu"`,
-  #   `aria-expanded` (kept in sync) and `aria-controls`; opens on `contextmenu` AND
-  #   Shift+F10 / the ContextMenu key (WCAG 2.1.1 keyboard parity); a `role="menu"` panel
-  #   named by the host (or `label:`); `role="menuitem"` items with roving tabindex;
-  #   Escape/Tab/outside-click close with focus restored to the host.
-  # - **You supply:** a `with_trigger` slot (the right-clickable region) and one or more
-  #   `with_item` slots.
+  # A menu of actions opened by right-clicking — or Shift+F10 / the ContextMenu key while the host has keyboard focus — on a host region, implementing the WAI-ARIA APG menu pattern via the shared `menu` Stimulus controller.
+  # Usage, options and the accessibility contract: docs/components/context_menu.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ContextMenuComponent < ApplicationComponent
     renders_one :trigger
 
@@ -108,7 +88,7 @@ module UI
         # get button semantics, not just the Shift+F10 / ContextMenu-key path
         # (openContextKey). Right-click still opens at the pointer (openAt).
         role: "button",
-        class: "select-none inline-flex min-h-11 min-w-11 items-center",
+        class: "select-none inline-flex min-h-input min-w-11 items-center",
         tabindex: "0",
         "aria-haspopup": "menu",
         "aria-expanded": "false",

@@ -74,12 +74,17 @@ RSpec.describe "Form draft round trip", type: :system do
     within("#harness-main") { expect(page).to have_text(I18n.t("form_draft.notice")) }
   end
 
-  it "announces honestly when hidden-backed (rich text) content cannot be restored" do
-    # #479: simulate a Lexxy-style editor — content lives in a hidden input
-    # with no visible sibling. The draft captures it (hidden values are
-    # serialized by design), but recover() can never write it back, and the
-    # announcement must say so instead of reporting a clean restore while the
-    # longest content on the page silently stays empty.
+  it "announces honestly when hidden-backed content cannot be restored" do
+    # A field whose only control is a hidden input with no visible sibling.
+    # The draft captures it (hidden values are serialized by design), but
+    # recover() can never write it back, and the announcement must say so
+    # instead of reporting a clean restore while content silently stays empty.
+    #
+    # This is NOT Lexxy — #479 measured the real editor and found a
+    # form-associated custom element with a working value setter, which
+    # recovers like any other field (spec/system/form_drafts/lexxy_recovery_spec.rb).
+    # What is left here is the genuine case: a widget backed by a bare hidden
+    # input, which is what the original design mistook Lexxy for.
     visit "/draft_harness"
     page.execute_script(<<~JS)
       document.querySelector("#harness-main").insertAdjacentHTML("beforeend",
@@ -96,7 +101,7 @@ RSpec.describe "Form draft round trip", type: :system do
     within("#harness-main") { click_button I18n.t("form_draft.recover") }
 
     status = find('#harness-main [data-form-draft-target="status"]', visible: :all)
-    expect(status).to have_text("Rich text content was not restored", wait: 3)
+    expect(status).to have_text("could not be restored", wait: 3)
     expect(status).to have_text("Draft restored")
   end
 

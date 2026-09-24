@@ -209,7 +209,8 @@ RSpec.describe Workspace, type: :model do
       end
 
       def recipients_of(notifier)
-        Noticed::Notification.where(type: "#{notifier}::Notification").map(&:recipient)
+        Noticed::Notification.where(type: "#{notifier}::Notification")
+          .includes(:recipient).map(&:recipient)
       end
 
       it "keeps the granter out of the member-added fan-out" do
@@ -266,7 +267,7 @@ RSpec.describe Workspace, type: :model do
 
     it "does not count discarded memberships" do
       workspace = create(:workspace, max_members: 1)
-      create(:membership, workspace: workspace).discard!
+      create(:membership, :deactivated, workspace: workspace)
 
       expect(workspace.at_capacity?).to be false
     end

@@ -12,6 +12,7 @@ en:
         notifications: "Notifications"
         security: "Security"
         passkeys: "Passkeys"
+        invitation_blocks: "Blocked senders"
         sessions: "Active devices"
         appearance: "Appearance"
         members: "Members"

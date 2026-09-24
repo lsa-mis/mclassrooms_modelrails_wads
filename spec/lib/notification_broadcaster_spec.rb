@@ -8,7 +8,10 @@ RSpec.describe NotificationBroadcaster do
       # All four use broadcast_update_to: each frame target is a <turbo-frame>
       # whose partial renders the frame's CONTENTS, so update (swap inner, keep
       # the frame element) is correct — replace would strip the frame and freeze
-      # the surface after the first refresh.
+      # the surface after the first refresh. Forbidden, not merely unexercised —
+      # that freeze is the #279 regression.
+      expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
+
       expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(
         [ user, :notifications ],
         target: "notifications_indicator_avatar",

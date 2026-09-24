@@ -9,16 +9,6 @@
     <%= render "shared/header" %>
     <%= render "shared/toasts" %>
 
-    <%# Persistent banner: an operator must never mistake an operations screen
-        for a workspace screen. variant: :default resolves to bg-surface-raised
-        — this body's own fill — so it would sit invisible against the page;
-        :info actually separates it. Wrapped in the same max-w-5xl column as
-        nav/main so it doesn't run bare edge-to-edge as the only unboxed
-        <body> child. %>
-    <div class="max-w-5xl mx-auto px-6 pt-4">
-      <%= ui :banner, t("operations.area.banner"), variant: :info %>
-    </div>
-
     <%
       # WCAG 2.4.8 Location (AAA). The current-page cue matches
       # shared/_settings_sidebar_item — filled surface + weight + heading
@@ -32,22 +22,44 @@
         [ t("operations.nav.operators"), operations_operatorships_path ]
       ]
     %>
-    <nav aria-label="<%= t("operations.area.nav_label") %>" class="border-b border-border">
-      <%# role="list": same preflight list-style:none trap as the activity
-          feed's <ol>. %>
-      <ul role="list" class="max-w-5xl mx-auto px-6 py-2 flex gap-4 text-sm">
-        <% nav_items.each do |label, path| %>
-          <% current = current_page?(path) %>
-          <li>
-            <%= link_to label, path,
-                  class: "btn-text btn-text-interactive#{" bg-surface-sunken font-semibold text-text-heading" if current}",
-                  "aria-current": (current ? "page" : nil) %>
-          </li>
-        <% end %>
-      </ul>
-    </nav>
+    <%# The bordered row is a plain <div>, not the <nav>: the where-you-are strip
+        is its own landmark and a landmark nested inside the navigation would be
+        reached only by walking into it. Two siblings, one row. %>
+    <div class="border-b border-border">
+      <%# The column wrapper carries the page gutter; the <ul> pulls back by the
+          links' own px-3 (-mx-3) so the first item's TEXT sits on the gutter
+          rather than its padding box, and gap-1 keeps the filled current-page
+          cue reading as one band. %>
+      <div class="max-w-5xl mx-auto px-6 py-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+        <nav aria-label="<%= t("operations.area.nav_label") %>">
+          <%# role="list": same preflight list-style:none trap as the activity
+              feed's <ol>. %>
+          <ul role="list" class="flex gap-1 -mx-3 text-sm">
+            <% nav_items.each do |label, path| %>
+              <% current = current_page?(path) %>
+              <li>
+                <%= link_to label, path,
+                      class: "btn-text btn-text-interactive px-3#{" bg-surface-sunken font-semibold text-text-heading" if current}",
+                      "aria-current": (current ? "page" : nil) %>
+              </li>
+            <% end %>
+          </ul>
+        </nav>
 
-    <main id="main-content" tabindex="-1" class="flex-1 max-w-5xl w-full mx-auto px-6 pb-16">
+        <%# An operator must never mistake an operations screen for a workspace
+            screen, but the boxed banner this replaces spent a 70px band saying
+            so. role="region" + its own name keeps the statement a landmark a
+            screen reader can reach directly — the guarantee UI::Banner gave —
+            while the sentence rides the nav row and gives the page back. %>
+        <p role="region" aria-label="<%= t("operations.area.banner_label") %>"
+           class="flex items-center gap-2 text-sm text-text-body">
+          <%= icon(:information_circle, size: :sm, class: "shrink-0 text-info-icon") %>
+          <%= t("operations.area.banner") %>
+        </p>
+      </div>
+    </div>
+
+    <main id="main-content" tabindex="-1" class="flex-1 max-w-5xl w-full mx-auto px-6 pt-6 pb-16">
       <%= yield %>
     </main>
 

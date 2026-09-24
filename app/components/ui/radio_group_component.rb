@@ -1,31 +1,16 @@
 # frozen_string_literal: true
 
 module UI
-  # # RadioGroup
-  #
-  # A labelled radio group — a `role="radiogroup"` wrapping one native
-  # `<input type="radio">` per option, each tied to its own `<label for>`.
-  #
-  # ## Use when
-  # - You need a single-choice control over a small, fixed set of options
-  #   (a billing plan, a visibility level, a notification cadence).
-  #
-  # ## Don't use when
-  # - There are many options or they're loaded dynamically — use `ui :select`.
-  # - The choice is binary on/off — use `ui :toggle` or `ui :checkbox`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the group exposes an accessible name (`aria-label` from `label:`,
-  #   or `aria-labelledby` from `labelledby:`), each option's `<label for>` matches its
-  #   input `id`, and on error the group carries `aria-invalid="true"` plus an
-  #   `aria-describedby` link to the error/hint element.
-  # - **You supply:** a group `label:` (or `labelledby:`), `items:` as
-  #   `[{ value:, label:, checked?:, disabled?: }]`, and on error `invalid:` +
-  #   `describedby:` pointing at a sibling element that holds the message.
-  #
-  # No fail-loud guard — there is no enum axis to validate.
+  # A labelled radio group — a `role="radiogroup"` wrapping one native `<input type="radio">` per option, each tied to its own `<label for>`.
+  # Usage, options and the accessibility contract: docs/components/radio_group.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class RadioGroupComponent < ApplicationComponent
-    # items: [{ value:, label:, checked: (optional), disabled: (optional) }]
+    # items: [{ value:, label:, description: (optional), checked: (optional),
+    #           disabled: (optional) }]
+    #
+    #   description: a supporting line for THAT option. Rendered beside the label
+    #   and linked to the input with aria-describedby, so it is announced after the
+    #   option's name rather than becoming part of it.
     #
     # Group accessibility/form params, mirroring the shared form-control API:
     #   label:       sets the group's accessible name via `aria-label`
@@ -72,29 +57,59 @@ module UI
     end
 
     def radio_item(item)
-      id = "#{@name}_#{item[:value].to_s.gsub(/\W/, "_")}"
-      content_tag(:div, class: "flex items-center gap-2") do
-        concat radio_input(item, id)
-        concat radio_label(item, id)
+      id = radio_id(item[:value])
+      described = item[:description].present?
+      # items-start only when there is a description to stack: an undescribed row
+      # keeps the centred alignment it has always had.
+      content_tag(:div, class: cn("flex gap-2", described ? "items-start" : "items-center")) do
+        concat radio_input(item, id, described ? description_id(id) : nil)
+        concat(described ? described_label(item, id) : radio_label(item, id))
       end
     end
 
-    def radio_input(item, id)
+    # `workspace[join_policy]` + `invite` → `workspace_join_policy_invite`. The
+    # NAME is sanitised as well as the value: a Rails field name is the ordinary
+    # case here and it is full of brackets, which are legal in an HTML5 id but do
+    # not parse in a CSS id selector — `#workspace[join_policy]_invite` reads as
+    # `#workspace` plus an attribute condition, so every consumer of the id has to
+    # know to escape it. Runs collapse to one underscore and the edges are trimmed
+    # so the bracket syntax leaves no doubled or trailing separators. Same rule as
+    # chip_group's `chip_id`. The posted name itself is untouched — Rails needs the
+    # brackets to parse the params. (#247)
+    def radio_id(value)
+      base = @name.to_s.gsub(/\W+/, "_").gsub(/\A_+|_+\z/, "")
+      "#{base}_#{value.to_s.gsub(/\W+/, "_")}"
+    end
+
+    def description_id(id) = "#{id}_description"
+
+    # The description is a SIBLING of the label, never inside it. Inside, it would
+    # become part of the radio's accessible name and be read as the option itself;
+    # as a sibling linked by aria-describedby it is announced after the name, which
+    # is what a supporting line is for (#137).
+    def described_label(item, id)
+      content_tag(:div, class: "grid") do
+        concat radio_label(item, id)
+        concat content_tag(:p, item[:description], id: description_id(id),
+          class: "text-sm text-text-muted")
+      end
+    end
+
+    def radio_input(item, id, describedby = nil)
       attrs = { type: "radio", name: @name, value: item[:value], id: id,
                 class: "h-4 w-4 border border-interactive text-interactive accent-interactive " \
                        "focus-ring " \
                        "disabled:cursor-not-allowed disabled:opacity-50" }
       attrs[:checked] = true if item[:checked]
       attrs[:disabled] = true if item[:disabled]
+      attrs["aria-describedby"] = describedby if describedby
       content_tag(:input, nil, **attrs)
     end
 
     def radio_label(item, id)
-      # min-h-11: input+label union is the pointer target (44px AAA floor,
-      # 2026-07-13 gate; matches UI::CheckboxComponent).
       content_tag(:label, item[:label],
         for: id,
-        class: "inline-flex min-h-11 items-center text-sm font-medium")
+        class: "inline-flex min-h-input items-center text-sm font-medium")
     end
   end
 end

@@ -1,0 +1,12 @@
+# A renamed fork's vocabulary, used to prove the seam's promise rather than
+# assert it: "a fork that renames its nouns keeps the template's suite green."
+#
+# Deliberately shares no letters with the template's words. A rename to
+# something like "workspace" -> "worksite" would leave an assertion on the
+# literal "work" passing, and the whole point is to catch assertions that
+# only hold because the placeholder and the word happen to agree here.
+#
+# Read by spec/support/vocabulary_override.rb when VOCABULARY_OVERRIDE names
+# this file. Nothing loads it otherwise. See /docs/developer/forking.
+workspace: { singular: "course", plural: "courses" }
+project:   { singular: "team",   plural: "teams" }

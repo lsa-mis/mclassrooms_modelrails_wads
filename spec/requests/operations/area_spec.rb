@@ -163,9 +163,16 @@ RSpec.describe "Operations area", type: :request do
       expect(session[:return_to_after_reauthentication]).to eq(operations_workspaces_path)
     end
 
-    it "renders the operations banner so the area is unmistakable" do
+    # The statement shares the nav row now instead of owning a boxed band, but
+    # it stays a named landmark — that is what lets a screen-reader user jump
+    # to "where am I" without reading the nav. Both halves asserted: a <p> that
+    # lost role=region would still pass a text-only check.
+    it "renders the operations banner as a named landmark so the area is unmistakable" do
       get operations_workspaces_path
-      expect(Capybara.string(response.body)).to have_text(I18n.t("operations.area.banner"))
+      html = Capybara.string(response.body)
+      expect(html).to have_text(I18n.t("operations.area.banner"))
+      expect(html).to have_css(%(p[role="region"][aria-label="#{I18n.t("operations.area.banner_label")}"]),
+        text: I18n.t("operations.area.banner"))
     end
 
     # The same preflight list-style:none trap as the activity feed's <ol> —

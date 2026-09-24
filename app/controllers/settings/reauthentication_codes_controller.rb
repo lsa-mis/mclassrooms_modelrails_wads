@@ -13,7 +13,6 @@ module Settings
     def create
       code = ReauthenticationChallenge.issue_for(Current.user)
       ReauthenticationMailer.code(Current.user, code).deliver_later
-      session[:reauthentication_code_sent] = true
       redirect_to new_settings_reauthentication_path, notice: t(".sent")
     end
   end

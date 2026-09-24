@@ -145,4 +145,67 @@ RSpec.describe InvitationBlock, type: :model do
         .to change(described_class, :count).by(1)
     end
   end
+
+  # #812. Unblocking was a two-statement console recipe, and the second
+  # statement is the one that gets forgotten: destroying the block alone leaves
+  # the stamped invitation invisible to `bulk_invite!`'s duplicate check, which
+  # skips only UNSUPPRESSED pending rows — so every later invite to that
+  # address mints another pending duplicate. One transaction, one method.
+  describe ".unblock!" do
+    let(:workspace) { create(:workspace) }
+
+    it "removes the block and clears the stamps this inviter set on that address" do
+      invitation = create(:invitation, email: "undo@example.com", invitable: workspace, invited_by: inviter)
+      described_class.block!(inviter: inviter, email: "undo@example.com")
+      expect(invitation.reload.suppressed_at).to be_present
+
+      expect { described_class.unblock!(inviter: inviter, email: "undo@example.com") }
+        .to change(described_class, :count).by(-1)
+
+      expect(invitation.reload.suppressed_at).to be_nil
+    end
+
+    # The asymmetry that makes the second statement easy to forget: a stamp can
+    # outlive its block row (an earlier unblock that cleared only the block), so
+    # the method must not depend on finding one.
+    it "clears a stamp whose block row is already gone" do
+      invitation = create(:invitation, email: "orphan@example.com", invitable: workspace, invited_by: inviter)
+      described_class.block!(inviter: inviter, email: "orphan@example.com")
+      described_class.where(inviter: inviter, email: "orphan@example.com").delete_all
+
+      described_class.unblock!(inviter: inviter, email: "orphan@example.com")
+
+      expect(invitation.reload.suppressed_at).to be_nil
+    end
+
+    it "leaves another inviter's block and stamps alone" do
+      other_inviter = create(:user)
+      mine = create(:invitation, email: "shared@example.com", invitable: workspace, invited_by: inviter)
+      theirs = create(:invitation, email: "shared@example.com", invitable: create(:workspace), invited_by: other_inviter)
+      described_class.block!(inviter: inviter, email: "shared@example.com")
+      described_class.block!(inviter: other_inviter, email: "shared@example.com")
+
+      described_class.unblock!(inviter: inviter, email: "shared@example.com")
+
+      expect(mine.reload.suppressed_at).to be_nil
+      expect(theirs.reload.suppressed_at).to be_present
+      expect(described_class.exists?(inviter: other_inviter, email: "shared@example.com")).to be(true)
+    end
+
+    it "is idempotent when there is nothing to undo" do
+      expect { described_class.unblock!(inviter: inviter, email: "never@example.com") }
+        .not_to change(described_class, :count)
+    end
+
+    # Same reason the stamping writes are callback-free (invariant I4):
+    # clearing the flag is not a workspace-feed event, and an activity row an
+    # inviter could read is a block oracle.
+    it "writes no activity rows" do
+      create(:invitation, email: "quiet@example.com", invitable: workspace, invited_by: inviter)
+      described_class.block!(inviter: inviter, email: "quiet@example.com")
+
+      expect { described_class.unblock!(inviter: inviter, email: "quiet@example.com") }
+        .not_to change(ActivityLog, :count)
+    end
+  end
 end

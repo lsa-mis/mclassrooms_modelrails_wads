@@ -27,7 +27,7 @@ RSpec.describe "Overlay trigger accessibility floor", type: :component do
 
       classes = page.find(selector, visible: :all)[:class]
       expect(classes).to include("focus-ring")
-      expect(classes).to include("min-h-[var(--form-input-height)]")
+      expect(classes).to include("min-h-input")
     end
 
     it "still applies the caller's own classes" do

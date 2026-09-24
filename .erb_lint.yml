@@ -43,8 +43,20 @@ linters:
   # Enforces CLAUDE-stated invariant "all UI text uses I18n locale keys"
   # (#498) — enabled after fixing 7 real untranslated strings (the consent
   # banner's required-marker and six markdowndocs override strings) and
-  # inline-disabling 9 presentational glyphs (&middot;, arrows, "100%") that
+  # inline-disabling the presentational glyphs (&middot;, arrows, "100%") that
   # are not language. New hardcoded copy fails the lint with the key to add.
+  #
+  # Those glyphs stay disabled per site, each carrying the (#498) rationale —
+  # 7 sites today, and an 8th is the signal to reconsider centralizing them
+  # behind a helper (#623). Two of the seven draw an icon as text where the icon
+  # set already has the SVG (▾ → chevron_down, ✓ → check_circle), so reaching
+  # for `icon(...)` deletes those directives as a by-product and puts the glyph
+  # on the icon size scale; ▴ has no counterpart and would need one drawn.
+  #
+  # If NoUnusedDisable is ever enabled, move the rationale into its own `<%# %>`
+  # first: that rule splits the comment on commas and reads the prose after the
+  # linter name as part of the rule name, so it reports all seven as unused. The
+  # disable itself matches by substring and keeps working either way.
   HardCodedString:
     enabled: true
     # Lookbook preview templates and the test-harness views are fixtures,

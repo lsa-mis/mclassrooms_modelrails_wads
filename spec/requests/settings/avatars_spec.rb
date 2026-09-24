@@ -25,6 +25,7 @@ RSpec.describe "Account Avatars", type: :request do
         expect(user.avatar).to be_attached
         expect(user.avatar_source).to eq("upload")
         expect(response).to redirect_to(edit_settings_profile_path)
+        expect(flash[:notice]).to eq(I18n.t("settings.avatars.update.success"))
       end
 
       it "rejects invalid content type" do
@@ -306,6 +307,7 @@ RSpec.describe "Account Avatars", type: :request do
         expect(user.avatar).not_to be_attached
         expect(user.avatar_source).to eq("initials")
         expect(response).to redirect_to(edit_settings_profile_path)
+        expect(flash[:notice]).to eq(I18n.t("settings.avatars.destroy.success"))
       end
 
       it "handles destroy gracefully when no avatar is attached" do

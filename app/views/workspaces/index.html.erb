@@ -38,7 +38,10 @@
     <section class="mt-8" data-test="current-workspace-row" aria-label="<%= t('workspaces.index.current_badge') %>">
       <ul class="flex flex-col gap-2">
         <% if @current_membership.workspace.suspended? %>
-          <%= render "workspaces/locked_row", workspace: @current_membership.workspace %>
+          <%# Chrome from the container, matching the neighbouring _row (#1119). %>
+          <li class="p-3 rounded-lg border border-border" data-test="locked-workspace-row">
+            <%= render "workspaces/locked_row", workspace: @current_membership.workspace %>
+          </li>
         <% else %>
           <%= render "workspaces/row", membership: @current_membership, current: true %>
         <% end %>
@@ -72,7 +75,9 @@
       <ul class="flex flex-col gap-2" data-test="other-workspaces-list">
         <% @other_memberships.each do |membership| %>
           <% if membership.workspace.suspended? %>
-            <%= render "workspaces/locked_row", workspace: membership.workspace %>
+            <li class="p-3 rounded-lg border border-border" data-test="locked-workspace-row">
+              <%= render "workspaces/locked_row", workspace: membership.workspace %>
+            </li>
           <% else %>
             <%= render "workspaces/row", membership: membership, current: false %>
           <% end %>
@@ -91,18 +96,18 @@
       <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
         <%= t("workspaces.index.archived_heading") %>
       </h2>
-      <%# UI::ListGroup (#735): one divided container; locked_row renders as a
-          plain li inside it (the group owns border and dividers). %>
+      <%# UI::ListGroup (#735): one divided container that owns the border and
+          dividers, so every row here is a list_group_item and none carries
+          chrome of its own (#1119). %>
       <%= ui :list_group do %>
         <% @archived_memberships.each do |membership| %>
           <% if membership.workspace.suspended? %>
-            <%= render "workspaces/locked_row", workspace: membership.workspace %>
+            <%= ui :list_group_item, class: "flex-col items-start gap-1",
+                   data: { test: "locked-workspace-row" } do %>
+              <%= render "workspaces/locked_row", workspace: membership.workspace %>
+            <% end %>
           <% else %>
-            <%# hover:bg-surface: the row is not the control, the Restore button
-                is, so it must not highlight like one — and the gem's row hover
-                puts the button's text-interactive at 6.85:1, below AAA
-                (modelrails_ui#197). %>
-            <%= ui :list_group_item, class: "gap-4 hover:bg-surface" do %>
+            <%= ui :list_group_item, class: "gap-4" do %>
               <div class="min-w-0">
                 <p class="font-medium text-text-heading truncate"><%= membership.workspace.name %></p>
                 <p class="text-sm text-text-muted"><%= lifecycle_status_label(membership.workspace) %></p>
@@ -123,16 +128,6 @@
             message: t("workspaces.index.empty"),
             action_text: TenancyConfig.workspace_creation_enabled? ? t("workspaces.index.new_workspace") : nil,
             action_url: TenancyConfig.workspace_creation_enabled? ? new_workspace_path : nil %>
-    </div>
-  <% end %>
-
-  <% if TenancyConfig.workspace_creation_enabled? %>
-    <div class="mt-12 text-center">
-      <%= link_to t("workspaces.index.create_workspace_cta"), new_workspace_path,
-            class: "btn-touch-target inline-flex items-center px-4 py-2 rounded-md
-                    text-sm font-medium text-interactive
-                    hover:bg-surface-sunken
-                    focus-ring" %>
     </div>
   <% end %>
 </div>

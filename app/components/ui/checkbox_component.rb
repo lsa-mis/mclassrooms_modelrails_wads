@@ -1,36 +1,14 @@
 # frozen_string_literal: true
 
 module UI
-  # # Checkbox
-  #
-  # A single labelled native checkbox — the form-control pattern-setter for the
-  # library (radio_group and switch copy its `invalid:` / `describedby:` / id-fallback
-  # API). Renders a native `<input type="checkbox">` so it inherits the browser's
-  # keyboard operability and form semantics for free.
-  #
-  # ## Use when
-  # - A single on/off choice tied to a label: "Accept terms", "Remember me",
-  #   "Email me about updates".
-  #
-  # ## Don't use when
-  # - It's an immediate-effect setting toggle with no form submit — use `switch`.
-  # - You have a mutually-exclusive set of options — use `radio_group`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a labelled, keyboard-operable checkbox with an AAA focus ring.
-  #   The control always carries an `id` (falling back from `id` → sanitized `name`
-  #   → object-based id) so the `<label for=...>` association never breaks, and the
-  #   clickable label provides the larger pointer target (AAA 2.5.5 target-size).
-  # - **You supply:** a `label` and, on error, `invalid: true` (sets `aria-invalid`)
-  #   plus `describedby:` pointing at the error message's id.
-  #
-  # No variant axis (single appearance), so there is no `coerce_variant` fail-loud
-  # guard here — unlike the enum-driven components (alert, button).
+  # A single labelled native checkbox — the form-control pattern-setter for the library (radio_group and switch copy its `invalid:` / `describedby:` / id-fallback API).
+  # Usage, options and the accessibility contract: docs/components/checkbox.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class CheckboxComponent < ApplicationComponent
     BASE = "peer size-4 shrink-0 rounded-[4px] border border-border-strong shadow-xs transition-shadow outline-none " \
            "focus-ring " \
            "disabled:cursor-not-allowed disabled:opacity-50 " \
-           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger  " \
+           "aria-invalid:border-2 aria-invalid:border-danger " \
            "checked:border-interactive checked:bg-interactive checked:text-text-on-interactive " \
            " "
 
@@ -87,15 +65,11 @@ module UI
     # The label is the input's peer sibling so `peer-disabled:` style hooks apply,
     # and it is the larger clickable pointer target that satisfies AAA 2.5.5 — the
     # visual control stays size-4 (16px) by design; do not bloat it.
-    # min-h-11 + inline-flex: the CLAIM above was aspirational — a text-sm
-    # label measures ~16px tall, so input+label union was 100x16, far under
-    # the 44px floor (2026-07-13 gate upgrade, backlog #10). The hit area
-    # grows invisibly; text baseline unchanged.
     def label_tag
       content_tag(:label,
         @label,
         for: @id,
-        class: "inline-flex min-h-11 items-center text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-50")
+        class: "inline-flex min-h-input items-center text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-50")
     end
   end
 end

@@ -2,7 +2,11 @@ en:
   operations:
     area:
       banner: "Instance operations — you are above the %{workspaces}, not inside one."
+      banner_label: "Where you are"
       nav_label: "Operations"
+      # Browser-tab title for a record page: "Acme — Operations" is telling
+      # apart from the workspace-side "Acme" in a tab list (2.4.2).
+      page_title: "%{name} — Operations"
     nav:
       workspaces: "%{Workspaces}"
       users: "Users"
@@ -21,14 +25,21 @@ en:
           owner: "Owner"
           members: "Members"
       show:
-        status_prefix: "Status"
         members: "Members"
         no_members: "No members yet."
+        view_activity: "View activity"
+        access: "Access"
+        lock_hint: "Locking blocks everyone in it until you unlock it. Nothing is deleted."
+        # _html: %{time} carries a <time> element.
+        locked_since_html: "Locked since %{time}. Everyone in it is blocked until you unlock it."
         suspend: "Lock this %{workspace}"
-        suspend_confirm: "Everyone in it is blocked until you unlock it. Nothing is deleted."
+        # A native confirm shows this sentence and nothing else, so it names
+        # the action and the record (3.3.6) — the operatorship confirm's shape.
+        suspend_confirm: "Lock %{name}? Everyone in it is blocked until you unlock it. Nothing is deleted."
         unsuspend: "Unlock this %{workspace}"
       new:
         title: "New %{workspace}"
+        description: "The owner's address gets the %{workspace}: an existing account becomes its owner at once; a new one is invited as owner and you hold it until they accept."
         name: "Name"
         owner_email: "Owner's email address"
         submit: "Create %{workspace}"
@@ -42,22 +53,34 @@ en:
     users:
       index:
         title: "Users"
-        description: "Look a user up by their exact email address."
-        search_label: "Email address"
+        description: "Everyone with an account on this instance, newest first."
+        search_label: "Name or email address"
         search_placeholder: "someone@example.com"
         search: "Search"
-        no_match: "No user has that email address."
+        empty: "Nobody has an account on this instance yet."
+        no_match: "No user matches that name or address."
+        search_activity: "Search the activity ledger instead"
+        names_skipped: "Too many accounts to search names — this matched on the exact email address only."
+        capped:
+          one: "Showing the first match. There may be more."
+          other: "Showing the first %{count} matches. There may be more."
       show:
         operator: "Operator"
         suspended: "Suspended"
-        suspended_since: "since %{time}"
+        locked_out: "Sign-in blocked"
+        # _html: %{time} carries a <time> element.
+        suspended_since_html: "Suspended since %{time}."
+        view_activity: "View activity"
         memberships: "Memberships"
         no_memberships: "No memberships yet."
         reinstate: "Reinstate"
         suspend: "Suspend"
-        suspend_confirm: "This ends their sessions and blocks sign-in until you reinstate them. Their %{workspaces} and roles stay as they are."
+        # Names the action and the person: a native confirm shows nothing else.
+        suspend_confirm: "Suspend %{name}? This ends their sessions and blocks sign-in until you reinstate them. Their %{workspaces} and roles stay as they are."
         operator_unsuspendable_html: "Operators can't be suspended. Revoke their %{link} first."
         operator_access: "operator access"
+        # The in-prose link's full purpose (2.4.9); contains the visible text.
+        operator_access_aria_label: "Revoke %{name}'s operator access"
         lockout: "Sign-in blocked after %{count} failed attempts — clears in %{time}."
         clear_lockout: "Let them try again"
       locks:
@@ -71,8 +94,94 @@ en:
     activity_logs:
       index:
         title: "Activity across the instance"
-        description: "Newest first, every %{workspace}. Personal security events are not shown here."
         instance: "Instance"
+        system: "System"
+        caption: "Activity across the instance, filtered"
+        about:
+          label: "About these results"
+          best_effort: "Rows are written best-effort, so an empty result rules nothing out on its own."
+          derived: "Locks and deactivations are stored as %{workspace} and member updates — filter by those kinds."
+          names: "Names are matched after decryption on instances under %{limit} users; above that, search by exact email address."
+        top_actors:
+          label: "Most active"
+          entry_aria_label: "Show only activity by %{name} (%{count} in this view)"
+        filters:
+          label: "Filter activity"
+          search_label: "Search by email, name, %{workspace} or %{project}"
+          search_placeholder: "Search"
+          search_hint: "An email address matches exactly; a name, %{workspace} or %{project} matches anywhere in the text."
+          workspace_label: "%{Workspace}"
+          workspace_any: "Any %{workspace}"
+          workspace_search_label: "Search %{workspaces}"
+          workspace_search_placeholder: "Search %{workspaces}"
+          workspace_search_hint: "This instance has too many %{workspaces} to list. Type a name to find one."
+          workspace_no_match: "No %{workspace} matches “%{query}”."
+          workspace_choose: "More than one %{workspace} matches — choose one:"
+          workspace_more: "Showing %{shown} of %{count}. Narrow the search to see the rest."
+          workspace_applied: "Filtered to %{name}"
+          workspace_clear: "Clear %{workspace} filter"
+          kind_label: "Kind"
+          kind_any: "Any kind"
+          range_label: "Date range"
+        ranges:
+          custom_trigger: "%{from} – %{to}"
+          popover_label: "Between two dates"
+          popover_zone: "Times in %{zone}"
+          from: "From date"
+          to: "To date, inclusive"
+          use: "Use this range"
+        # Two cases of the same four windows, and they are not
+        # interchangeable: ranges_menu.* labels CONTROLS (the range trigger and
+        # its four preset buttons), ranges_long.* reads mid-sentence in the
+        # results summary ("14 events · last 30 days") and in
+        # ActivityLedgerHelper#ledger_range_label.
+        ranges_menu:
+          24h: "Last 24 hours"
+          7d: "Last 7 days"
+          30d: "Last 30 days"
+          all: "All time"
+        ranges_long:
+          24h: "last 24 hours"
+          7d: "last 7 days"
+          30d: "last 30 days"
+          all: "all time"
+        summary:
+          events:
+            zero: "No events"
+            one: "1 event"
+            other: "%{count} events"
+          matching: "matching “%{query}”: %{names}"
+          no_match: "nothing matches “%{query}”"
+          names_skipped: "names not searched on this instance"
+          more: "+%{count}"
+          name_separator: ", "
+          clear: "Clear filters"
+          separator: " · "
+        columns:
+          when: "When"
+          workspace: "%{Workspace}"
+          who: "Who"
+          what: "What"
+        details:
+          suffix: ", details"
+          change: "Change"
+          about: "About"
+          tier: "Tier"
+          recorded: "Recorded"
+          stored_as: "stored as %{action}"
+          only_person: "only %{email}"
+          # Link purpose out of context (2.4.9); the visible text is inside it.
+          only_person_aria_label: "Show only activity involving %{email}"
+          only_workspace: "only this %{workspace}"
+          only_workspace_aria_label: "Show only activity in %{name}"
+          tier_admin: "Admin"
+          tier_workspace: "%{Workspace}"
+        rows:
+          label: "Rows"
+          all: "All"
+          showing: "Showing %{from}–%{to} of %{count}"
+          capped: "Showing the first %{limit} of %{count} — narrow the range"
+        empty: "No events match these filters."
     operatorships:
       index:
         title: "Operators"

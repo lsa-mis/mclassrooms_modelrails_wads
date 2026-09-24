@@ -88,6 +88,8 @@
   /* Toast pill */
   --color-surface-toast: var(--color-surface-toast);
   --color-text-on-toast: var(--color-text-on-toast);
+  --color-info-icon-on-toast: var(--color-info-icon-on-toast);
+  --color-success-icon-on-toast: var(--color-success-icon-on-toast);
 
   /* Toast positioning */
   --toast-pill-top: var(--toast-pill-top);
@@ -99,8 +101,8 @@
   --modal-animation-duration: var(--modal-animation-duration);
 
   /* Sizing — registers `min-h-input`: the named 44px form-control floor
-     (WCAG 2.2 AAA target size). Prefer it over `min-h-11` or
-     `min-h-[var(--form-input-height)]` so the invariant has ONE spelling. */
+     (WCAG 2.2 AAA target size). Prefer it over `min-h-input` or
+     `min-h-input` so the invariant has ONE spelling. */
   --min-height-input: var(--form-input-height);
 }
 
@@ -240,7 +242,7 @@ summary::-webkit-details-marker { display: none; }
     /* min 44px both axes: text buttons measured ~20px tall (short labels
        ~26px wide) — under the AAA target floor (WCAG 2.5.5). Invisible
        hit-area growth. */
-    @apply inline-flex min-h-11 min-w-11 items-center justify-center font-medium rounded;
+    @apply inline-flex min-h-input min-w-11 items-center justify-center font-medium rounded;
     @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
     @apply hover:bg-interactive-subtle;
   }
@@ -253,21 +255,38 @@ summary::-webkit-details-marker { display: none; }
      as .btn-text, which since #772 shares this cue rather than owning a
      separate one. */
   .btn-text-icon {
-    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 font-medium rounded;
+    @apply inline-flex min-h-input min-w-11 items-center justify-center gap-2 font-medium rounded;
     @apply focus-ring transition-colors disabled:opacity-50 disabled:pointer-events-none;
     @apply hover:bg-interactive-subtle;
   }
 
   /* Compound rather than bare .btn-text-danger: the tone must out-specify the
      base's hover tint, not merely follow it in source order. */
+  /* -surface, NOT -hover, though a -hover token exists and is the obvious
+     reach: text-danger on danger-hover (~red-100) measures 6.85:1 light and
+     6.96:1 dark, under the 7:1 floor. Measured with axe on a hovered control,
+     not computed. The pale tint is the price of AAA here. */
   .btn-text.btn-text-danger,
   .btn-text-icon.btn-text-danger {
     @apply hover:bg-danger-surface;
   }
 
+  /* Success mirrors danger for the same reason: an opacity fade on a signal
+     already near the AAA floor lands under it (text-success at 80% measured
+     5.02:1 against the row surface), and a darker text token is not available
+     either — so the cue is a tinted background here too (#1068). */
+  .btn-text.btn-text-success,
+  .btn-text-icon.btn-text-success {
+    @apply hover:bg-success-surface;
+  }
+
   /* Color variants. Apply alongside .btn-text or .btn-text-icon. */
   .btn-text-danger {
     @apply text-danger;
+  }
+
+  .btn-text-success {
+    @apply text-success;
   }
 
   .btn-text-interactive {
@@ -277,10 +296,18 @@ summary::-webkit-details-marker { display: none; }
   /* Inline text link — the one link treatment for in-page actions (audit:
      this exact class string was hand-rolled 7+ times across the rooms views). */
   .link-inline {
-    @apply text-interactive underline hover:no-underline min-h-11 inline-flex items-center focus-ring rounded;
+    @apply text-interactive underline hover:no-underline min-h-input inline-flex items-center focus-ring rounded;
   }
 
-    /* Trailing button-group container; --space-action-group-gap keeps inline spacing
+  /* A link inside a table cell: 44px target, left-aligned, text on the cell's own
+     edge (-mx-2 px-2). Not .btn-text — that one centres and is fenced to action rows. */
+  .btn-cell-link {
+    @apply inline-flex items-center justify-start -mx-2 px-2 rounded;
+    @apply focus-ring transition-colors hover:bg-interactive-subtle;
+    min-height: var(--form-input-height);
+  }
+
+  /* Trailing button-group container; --space-action-group-gap keeps inline spacing
      consistent. whitespace-nowrap: in width-constrained containers (an overflowing
      table cell) flex children otherwise shrink below content width and wrap their
      own labels — the #769 bug class, and a 2.5.5 target-size loss (#692). */

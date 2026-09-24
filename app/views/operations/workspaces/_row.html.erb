@@ -1,12 +1,16 @@
 <%# locals: (workspace:) -%>
-<tr class="border-t border-border">
-  <td class="px-4 py-3 font-medium">
-    <%= link_to workspace.name, operations_workspace_path(workspace), class: "btn-text btn-text-interactive" %>
-  </td>
-  <td class="px-4 py-3"><%= lifecycle_status_label(workspace) %></td>
+<%# whitespace-nowrap on every cell: a w-full table whose cells may wrap never
+    outgrows its box, so at phone width the columns compressed to two-line
+    names instead of scrolling. th scope=row: the name is the row's identity,
+    so cell-by-cell navigation hears it. %>
+<tr class="border-t border-border h-12 align-middle">
+  <th scope="row" class="px-4 py-0 align-middle text-left font-medium whitespace-nowrap">
+    <%= link_to workspace.name, operations_workspace_path(workspace), class: "btn-cell-link btn-text-interactive" %>
+  </th>
+  <td class="px-4 py-0 align-middle whitespace-nowrap"><%= lifecycle_status_badge(workspace) %></td>
   <%# Workspace#owner (singular) consumes the controller's memberships
       preload when loaded; #owners (plural) is always a fresh query and
       would N+1 this list. See /docs/developer/architecture (Owner Lookup). %>
-  <td class="px-4 py-3 text-text-body"><%= workspace.owner&.full_name %></td>
-  <td class="px-4 py-3 text-text-body"><%= workspace.memberships.select(&:kept?).size %></td>
+  <td class="px-4 py-0 align-middle text-text-body whitespace-nowrap"><%= workspace.owner&.full_name %></td>
+  <td class="px-4 py-0 align-middle text-text-body whitespace-nowrap"><%= workspace.memberships.select(&:kept?).size %></td>
 </tr>

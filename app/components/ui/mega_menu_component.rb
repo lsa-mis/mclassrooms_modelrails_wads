@@ -1,29 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Mega menu
-  #
-  # A disclosure button that reveals a full-width panel of grouped *navigation
-  # links* (columns of titled link lists). Open/close is owned by the component's
-  # own `mega-menu` Stimulus controller (a simple disclosure toggle).
-  #
-  # ## Menu-vs-nav semantics (deliberate)
-  # This is a **disclosure + navigation region**, NOT the WAI-ARIA `menu` pattern,
-  # so it does NOT reuse the shared `menu` controller (which `dropdown_menu`/`menubar`
-  # consume). `role="menu"`/`menuitem` is for a list of *commands* with a roving-tabindex
-  # arrow-key model; this panel holds ordinary `<a>` navigation links that must keep
-  # native Tab/anchor behavior. Forcing `role=menu` here would impose a keyboard model
-  # the links don't honour and remove them from the link/landmark trees. So: a real
-  # `<button>` disclosure (`aria-expanded` + `aria-haspopup` + `aria-controls`) reveals a
-  # named `<nav>` region of links.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a real `<button>` trigger with `aria-haspopup`, synced
-  #   `aria-expanded`, and `aria-controls` pointing at the panel; the panel is a named
-  #   `<nav>` landmark (`aria-label` ← the trigger label); the AAA `focus-ring` on the
-  #   trigger and every link; outside-click dismissal; the chevron is decorative
-  #   (`aria-hidden`).
-  # - **You supply:** a `label:` (trigger text) and one or more `with_column` blocks.
+  # A disclosure button that reveals a full-width panel of grouped *navigation links* (columns of titled link lists).
+  # Usage, options and the accessibility contract: docs/components/mega_menu.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
   class MegaMenuComponent < ApplicationComponent
     TRIGGER_CLS = "focus-ring inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-surface-raised " \
@@ -143,7 +123,7 @@ module UI
       def call
         content_tag(:div, **@html_attrs) do
           concat content_tag(:p, @heading, class: MegaMenuComponent::COLUMN_HEADING) if @heading
-          concat(content_tag(:ul, class: "space-y-1") {
+          concat(content_tag(:ul, role: "list", class: "space-y-1") {
             safe_join(@items.map { |item| render_item(item) })
           })
         end

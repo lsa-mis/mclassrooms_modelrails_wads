@@ -1,0 +1,50 @@
+name: JS advisory
+
+# The per-PR scan_js job audits JavaScript advisories only when someone
+# pushes, so an advisory published between commits stays invisible until the
+# next PR happens to touch the tree. This closes that window against main
+# (#1041).
+#
+# Additive, not a relocation: scan_js remains a required ruleset context and
+# is untouched. Both lanes run the same audit command, including the bounded
+# retry and the REGISTRY UNREACHABLE message (#984), so a registry timeout
+# does not read as a vulnerability here either — spec/ci/scan_js_workflow_spec.rb
+# enumerates every workflow carrying the audit and holds all of them to that.
+#
+# NOTE for forks: this repository is public, and GitHub disables scheduled
+# workflows in a public repository after 60 days with no repository activity.
+# A private fork is not subject to that. See /docs/developer/getting-started.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan_js_scheduled:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        with:
+          bundler-cache: true
+
+      - name: Install libvips (loaded at Rails boot via active_storage_validations)
+        timeout-minutes: 5
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips42t64
+
+      - name: Scan for security vulnerabilities in JavaScript dependencies
+        run: |
+          for i in 1 2 3; do bin/importmap audit && exit 0; [ "$i" -lt 3 ] && sleep $((i * 20)); done
+          echo "::error::REGISTRY UNREACHABLE after 3 attempts — audit did not run (#984)"; exit 1

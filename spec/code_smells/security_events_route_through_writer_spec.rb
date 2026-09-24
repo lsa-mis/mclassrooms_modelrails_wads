@@ -58,6 +58,19 @@ RSpec.describe "Code smell: security events route through record_security_event!
       "allowed_direct_writes in this spec, with its reason."
   end
 
+  # POSITIVE CONTROL — the example below asserts an empty list, which a pattern
+  # that matches nothing also produces. These are the two shapes that must stay
+  # distinguishable: an action written as a string, and a predicate that merely
+  # contains one.
+  it "matches an action string and not a predicate that contains one" do
+    pattern = Regexp.union(
+      ActivityLog::SECURITY_ACTIONS.map { |action| /["']#{Regexp.escape(action)}["']/ }
+    )
+
+    expect('ActivityLog.create!(action: "user.suspended")').to match(pattern)
+    expect("raise User::SuspendedError if auth.user.suspended?").not_to match(pattern)
+  end
+
   it "carries no stale exemptions" do
     live_files = ruby_sources
       .select { |file| File.read(file).match?(direct_writes) }
@@ -75,7 +88,15 @@ RSpec.describe "Code smell: security events route through record_security_event!
   # must satisfy this on its own (it names the literal and calls the writer); a
   # split that separates the two breaks this example, and should.
   it "every file naming a security action routes it through the writer" do
-    action_literal = Regexp.union(ActivityLog::SECURITY_ACTIONS)
+    # QUOTED, because the bare literal is a substring of ordinary Ruby: the
+    # action `user.suspended` sits inside `auth.user.suspended?`, an ordinary
+    # predicate call that names no action at all. An unquoted match reported
+    # that as a file writing security rows without the writer. The rule is
+    # about action STRINGS, so the pattern says so rather than the call sites
+    # bending around it.
+    action_literal = Regexp.union(
+      ActivityLog::SECURITY_ACTIONS.map { |action| /["']#{Regexp.escape(action)}["']/ }
+    )
 
     offenders = ruby_sources.filter_map do |file|
       relative = Pathname(file).relative_path_from(Rails.root).to_s

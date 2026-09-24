@@ -1,38 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Timeline
-  #
-  # A vertical, chronological sequence of events — each with a marker dot, an
-  # optional time, a title, and optional body. Rendered as a semantic ordered
-  # list because the order is meaningful.
-  #
-  # ## Use when
-  # - Showing an activity feed, audit trail, release history, or any dated
-  #   sequence where the order carries meaning.
-  #
-  # ## Don't use when
-  # - The order is arbitrary (a set of unrelated rows) — use a `list_group`.
-  # - You're building non-semantic `<div>` steps with a hand-drawn line; that
-  #   loses the list/sequence semantics for assistive tech (see the Don't below).
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a real `<ol>` of `<li>` (the sequence is announced as an
-  #   ordered list); the connector line and marker dots are decorative
-  #   (`aria-hidden`); event times are perceivable text, emitted as `<time>` with
-  #   an optional machine-readable `datetime`; AAA-contrast tokens throughout; a
-  #   valid item `variant` is required — an unknown one raises in development.
-  # - **You supply:** the event `title:` (and optional `date:`/`datetime:`,
-  #   `description:`, or block body) per item; titles are plain text, so the
-  #   surrounding heading outline stays yours to control.
-  #
-  # Usage:
-  #   ui :timeline do |t|
-  #     t.with_item(date: "Jan 2025", title: "Project started")
-  #     t.with_item(date: "Feb 2025", datetime: "2025-02", title: "Milestone reached",
-  #                 description: "Foundation phase complete", variant: :success)
-  #     t.with_item(date: "Mar 2025", title: "Issue detected", variant: :danger)
-  #   end
+  # A vertical, chronological sequence of events — each with a marker dot, an optional time, a title, and optional body.
+  # Usage, options and the accessibility contract: docs/components/timeline.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class TimelineComponent < ApplicationComponent
     renders_many :items, "UI::TimelineComponent::ItemComponent"
 
@@ -47,9 +18,19 @@ module UI
     end
 
     def call
-      content_tag(:ol, class: cn(BASE, @extra_class), **@html_attrs) do
+      content_tag(:ol, **list_attrs) do
         safe_join(items)
       end
+    end
+
+    # Preflight strips the marker and Safari/VoiceOver drop the implicit list role
+    # with it, so `role="list"` is load-bearing. Keys are stringified before the
+    # caller's attrs merge: `content_tag` does not de-duplicate `:role` against
+    # `"role"` — it emits both and lets the browser choose.
+    def list_attrs
+      attrs = { "role" => "list", "class" => cn(BASE, @extra_class) }
+      @html_attrs.each { |key, value| attrs[key.to_s] = value }
+      attrs
     end
 
     class ItemComponent < ApplicationComponent

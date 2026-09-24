@@ -61,7 +61,7 @@ RSpec.describe "Workspace Members", type: :request do
 
       it "renders member and invitation status pills through UI::Badge (canonical chip look)" do
         deactivated_membership = add_member
-        deactivated_membership.discard!
+        deactivated_membership.update!(discarded_at: Time.current)
         create(:invitation, invitable: workspace, email: "pillcheck@example.com", invited_by: user)
 
         get workspace_members_path(workspace)
@@ -110,7 +110,7 @@ RSpec.describe "Workspace Members", type: :request do
         let!(:deactivated_user) { create(:user, first_name: "Deactivated", last_name: "User") }
         let!(:deactivated_membership) { add_member(user: deactivated_user) }
 
-        before { deactivated_membership.discard! }
+        before { deactivated_membership.update!(discarded_at: Time.current) }
 
         it "filters active members" do
           get workspace_members_path(workspace, status: "active")
@@ -310,9 +310,10 @@ RSpec.describe "Workspace Members", type: :request do
         expect(target_membership.reload.role).to eq(admin_role)
       end
 
-      it "redirects to members list" do
+      it "redirects to members list and says the change was saved" do
         patch workspace_member_path(workspace, target_membership), params: { membership: { role_id: admin_role.id } }
         expect(response).to redirect_to(workspace_members_path(workspace))
+        expect(flash[:notice]).to eq(I18n.t("workspaces.members.update.success"))
       end
     end
 
@@ -376,7 +377,7 @@ RSpec.describe "Workspace Members", type: :request do
 
       it "refuses an admin reactivating a deactivated owner and leaves it discarded" do
         deactivated_owner = create(:membership, :owner, user: create(:user), workspace: workspace)
-        deactivated_owner.discard!
+        deactivated_owner.update!(discarded_at: Time.current)
         post workspace_member_reactivation_path(workspace, deactivated_owner)
         expect(deactivated_owner.reload).to be_discarded
         expect(response).to have_http_status(:redirect)
@@ -464,7 +465,7 @@ RSpec.describe "Workspace Members", type: :request do
     describe "POST /workspaces/:workspace_slug/members/:id/reactivation" do
       let!(:target_membership) { add_member }
 
-      before { target_membership.discard! }
+      before { target_membership.update!(discarded_at: Time.current) }
 
       it "reactivates the member" do
         post workspace_member_reactivation_path(workspace, target_membership)
@@ -526,7 +527,7 @@ RSpec.describe "Workspace Members", type: :request do
       end
 
       it "denies reactivate" do
-        target_membership.discard!
+        target_membership.update!(discarded_at: Time.current)
         post workspace_member_reactivation_path(workspace, target_membership)
         expect(target_membership.reload).to be_discarded
       end

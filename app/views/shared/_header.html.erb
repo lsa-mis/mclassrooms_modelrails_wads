@@ -5,7 +5,7 @@
        class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <%= link_to main_app.root_path,
-            class: "flex items-center gap-2 min-h-11 [&>svg]:h-6 hover:opacity-80 transition-opacity
+            class: "flex items-center gap-2 min-h-input [&>svg]:h-6 hover:opacity-80 transition-opacity
                     focus-ring rounded" do %>
         <%= render "shared/site_logo" %>
       <% end %>
@@ -105,7 +105,7 @@
           <%# Same primary-entry-point link as the desktop cluster above,
               styled to match the surrounding mobile menu items. %>
           <%= link_to t("navigation.find_a_room"), main_app.find_a_room_path,
-                class: "min-h-[var(--form-input-height)] flex items-center px-3 py-2
+                class: "min-h-input flex items-center px-3 py-2
                         text-sm text-text-body
                         hover:bg-surface-sunken hover:text-interactive-hover rounded
                         focus-ring" %>
@@ -114,7 +114,7 @@
           <% end %>
         <% else %>
           <%= link_to t("navigation.sign_in"), main_app.new_session_path,
-                class: "min-h-[var(--form-input-height)] flex items-center px-2 text-text-body
+                class: "min-h-input flex items-center px-2 text-text-body
                         hover:text-interactive-hover rounded
                         focus-ring" %>
           <% if signups_open? %>

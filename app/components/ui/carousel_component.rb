@@ -2,15 +2,9 @@
 
 module UI
   class CarouselComponent < ApplicationComponent
-    # Slide carousel (APG "basic" pattern): prev/next + slide-picker dots, all real
-    # <button>s with ≥44px targets. Autoplay (when > 0) is WCAG 2.2.2 compliant — a
-    # pause/play toggle, pause on hover/focus, disabled under prefers-reduced-motion.
-    #
-    # Usage:
-    #   ui :carousel, label: "Featured photos" do |c|
-    #     c.with_slide { image_tag "slide1.jpg" }
-    #     c.with_slide { image_tag "slide2.jpg" }
-    #   end
+    # Slide carousel (APG "basic" pattern): prev/next + slide-picker dots, all real <button>s with ≥44px targets.
+    # Usage, options and the accessibility contract: docs/components/carousel.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
     TRACK_CLS = "flex transition-transform duration-300 motion-reduce:transition-none"
     # w-full (definite, not min-w-full) so a percentage-width child resolves against

@@ -1,42 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Banner
-  #
-  # A prominent page-level announcement strip — a promo, cookie notice, or system
-  # message that spans the top of a page or section. Renders a labelled `region`
-  # landmark and, when `dismissible:`, a real `<button>` to close it.
-  #
-  # ## Use when
-  # - A standalone, page-level announcement: "We just shipped 2.0", a cookie
-  #   consent strip, a scheduled-maintenance heads-up.
-  #
-  # ## Don't use when
-  # - It's an inline message tied to surrounding content (a form-error summary, an
-  #   empty-state notice) — use `alert`, which carries `role="alert"`/`status`.
-  # - It's an ephemeral flash — use the app's toast system.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a `role="region"` landmark named by an i18n `aria-label` (so
-  #   assistive tech can find and skip it), AAA-contrast text, and — when
-  #   `dismissible:` — a real focusable `<button>` with an i18n accessible name
-  #   ("Dismiss") and the `focus-ring` utility. A banner is NOT a live region: it
-  #   is present on load, not announced, so it carries no `role="alert"`/`status`.
-  # - **You supply:** the message (positional, `message:`/`label:`, or slot) and a
-  #   valid `variant` (an unknown one raises in development).
-  #
-  # ## Dismiss behavior
-  # When `dismissible:`, the banner root carries `data-controller="banner"` and the
-  # trailing close button fires `banner#dismiss`, which removes the strip (immediate,
-  # so it behaves under prefers-reduced-motion). The controller ships co-located
-  # (`banner_controller.js`) and is auto-registered by the generator. Persistence
-  # across page loads (a stable id + storage policy) is the host app's call — extend
-  # the controller if you need it.
-  #
-  # ## Variants
-  # `default` · `info` · `success` · `warning` · `destructive`
-  # Signal variants use the tinted-surface treatment (`bg-<signal>-surface` +
-  # `border-<signal>-border` + `text-<signal>`), never a solid signal fill.
+  # A prominent page-level announcement strip — a promo, cookie notice, or system message that spans the top of a page or section.
+  # Usage, options and the accessibility contract: docs/components/banner.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class BannerComponent < ApplicationComponent
     BASE = "flex items-center gap-3 rounded-lg border p-4 text-sm"
 
@@ -50,6 +17,20 @@ module UI
       success:     "bg-success-surface border-success-border text-success",
       warning:     "bg-warning-surface border-warning-border text-warning",
       destructive: "bg-danger-surface border-danger-border text-danger"
+    }.freeze
+
+    # The dismiss control tints on hover rather than fading. An opacity fade
+    # reads as DISABLED — the rule already beside .btn-text-icon — and on a
+    # tinted chip it drags the icon toward the surface behind it, the one
+    # direction that loses contrast on the control most likely to be clicked in
+    # a hurry. Keyed by variant because the ground differs per tone; the icon is
+    # non-text, so the floor here is 3:1, not 7:1 (modelrails_ui #256).
+    DISMISS_HOVER = {
+      default:     "hover:bg-surface-sunken",
+      info:        "hover:bg-info-hover",
+      success:     "hover:bg-success-hover",
+      warning:     "hover:bg-warning-hover",
+      destructive: "hover:bg-danger-hover"
     }.freeze
 
     # message:     banner text — positional, `message:`, or `label:` keyword, or block content
@@ -98,7 +79,8 @@ module UI
       content_tag(:button, dismiss_icon,
         type: "button",
         "aria-label": dismiss_label,
-        class: "-m-2 shrink-0 rounded-md inline-flex min-h-11 min-w-11 items-center justify-center text-current hover:opacity-80 focus-ring",
+        class: cn("-m-2 shrink-0 rounded-md inline-flex min-h-input min-w-11 items-center justify-center text-current focus-ring transition-colors",
+                  DISMISS_HOVER.fetch(@variant, DISMISS_HOVER[:default])),
         data: { action: "banner#dismiss" })
     end
 

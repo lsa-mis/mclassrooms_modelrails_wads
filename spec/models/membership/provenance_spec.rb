@@ -23,7 +23,7 @@ RSpec.describe Membership, type: :model do
 
     it "refuses the same combination on #reactivate!" do
       membership = create(:membership, workspace: workspace, role: member_role)
-      membership.discard!
+      membership.deactivate!(removed_by: nil)
 
       expect {
         membership.reactivate!(granted_by: granter, self_join: true)

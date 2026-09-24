@@ -6,13 +6,22 @@ class PendingJoinsController < ApplicationController
   # POST /pending_join — accept the parked join (explicit re-consent for a
   # pre-existing user who wasn't auto-joined).
   def create
-    workspace = pending_join_workspace
-    if workspace.nil?
+    link = pending_join_link
+    if link.nil?
       clear_pending_join
       return redirect_to root_path, alert: t(".unavailable")
     end
 
-    workspace.admit(Current.user, role: workspace.default_self_join_role, self_join: true)
+    workspace = link.workspace
+
+    # Through the LINK, not the workspace: admit re-reads both records inside
+    # the write transaction and no-ops on a link revoked since the page loaded
+    # (#1061). nil is that refusal, not an error.
+    if link.admit(Current.user).nil?
+      clear_pending_join
+      return redirect_to root_path, alert: t(".unavailable")
+    end
+
     clear_pending_join
     redirect_to workspace_path(workspace), notice: t(".joined", workspace_name: workspace.name)
   rescue Workspace::AlreadyMember, Workspace::AtCapacity

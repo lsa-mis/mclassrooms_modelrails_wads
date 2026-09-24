@@ -33,29 +33,37 @@ class ApplicationController < ActionController::Base
   end
 
   # A join token parked in the session (open-link Flow B) that resolves to a
-  # workspace the signed-in user could join but isn't in yet. Surfaced as a
+  # link the signed-in user could join through but hasn't yet. Surfaced as a
   # dismissible banner so a pre-existing user re-consents to the join instead of
   # being force-joined — the drive-by-join guard's other half. nil when there's
   # nothing actionable to offer.
-  def pending_join_workspace
-    return @pending_join_workspace if defined?(@pending_join_workspace)
+  #
+  # Returns the LINK, not just its workspace: everything this resolves is read
+  # at page-load time, and the accepting action has to re-check posture inside
+  # its own write. It cannot call WorkspaceJoinLink#admit without the link
+  # (#1061).
+  def pending_join_link
+    return @pending_join_link if defined?(@pending_join_link)
 
-    @pending_join_workspace = resolve_pending_join_workspace
+    @pending_join_link = resolve_pending_join_link
+  end
+
+  def pending_join_workspace
+    pending_join_link&.workspace
   end
 
   private
 
-  def resolve_pending_join_workspace
+  def resolve_pending_join_link
     return nil unless Current.user
 
     token = session[:pending_join_token]
     return nil if token.blank?
 
-    workspace = WorkspaceJoinLink.find_active(token)&.workspace
-    return nil unless workspace&.accepting_open_joins?
-    return nil if workspace.memberships.kept.exists?(user: Current.user)
+    link = WorkspaceJoinLink.find_active(token)
+    return nil unless link&.workspace&.joinable_by?(Current.user)
 
-    workspace
+    link
   end
 
   # Backs Pundit's pundit_user and is consumed by mounted engines (e.g.

@@ -61,6 +61,31 @@ RSpec.describe "AAA teardown audit", type: :system do
     page.execute_script("document.getElementById('axe-busy-form').remove()")
   end
 
+  # The race this wait exists for, and the reason one check is not enough: a
+  # frame swap that advances history goes quiet, and only THEN does Turbo start
+  # the history visit and mark <html> busy again. Returning on the first quiet
+  # moment handed axe a document mid-visit, which it reports as
+  # aria-allowed-attr on <html>.
+  it "keeps waiting when the page goes quiet and then busy again" do
+    visit root_path
+    page.execute_script(<<~JS)
+      const html = document.documentElement;
+      window.__busyCycles = 0;
+      const busy = () => { window.__busyCycles += 1; html.setAttribute("aria-busy", "true"); };
+      const idle = () => html.removeAttribute("aria-busy");
+      busy();
+      setTimeout(idle, 100);
+      setTimeout(busy, 200);
+      setTimeout(idle, 600);
+    JS
+
+    expect(wait_for_turbo_to_settle).to be(true)
+    # Both busy periods are over, not only the first: a wait that returned at
+    # the first quiet moment would see one.
+    expect(page.evaluate_script("window.__busyCycles")).to eq(2)
+    expect(page.evaluate_script("document.documentElement.hasAttribute('aria-busy')")).to be(false)
+  end
+
   it "gives up on work that never settles and lets the audit report it" do
     visit root_path
     page.execute_script("document.documentElement.setAttribute('aria-busy', 'true')")

@@ -15,6 +15,9 @@ RSpec.describe "Operations operatorships", type: :request do
     expect(html).to have_text("Opal Operator")
     expect(html).to have_text("Sam Second")
     expect(html).to have_text("Gil Granter")
+    # Two Sams are told apart by their address, which is also what the grant
+    # form above takes.
+    expect(html).to have_text(second.email_address)
   end
 
   # The roster's whole job is who-granted-what-when, so N identically-named

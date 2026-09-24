@@ -23,6 +23,15 @@ class ReauthenticationChallenge < ApplicationRecord
     code
   end
 
+  # Whether the user has a code they could still enter. The interstitial derives
+  # its code-entry state from this rather than from a session flag, so an
+  # expired or consumed code returns the page to offering a fresh one.
+  def self.pending_for?(user)
+    return false unless user
+
+    where(user_id: user.id, consumed_at: nil).where("expires_at > ?", Time.current).exists?
+  end
+
   # Atomic, single-use, user-bound (see Consumable#consume_matching): concurrent
   # verifies serialize to one winner and a wrong guess never consumes the
   # challenge. Returns whether this code was the one that consumed it.

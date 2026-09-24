@@ -48,3 +48,10 @@ Metrics/ClassLength:
   Exclude:
     - "db/migrate/**/*"
     - "spec/**/*"
+    # Vendored from modelrails_ui by its generators. A size complaint here is
+    # unactionable: shortening the file is fork divergence, and the next
+    # `modelrails_ui:add` reverts it. Length is the gem's cost to carry, and it
+    # holds the line upstream with its own lints. Everything the app writes is
+    # still measured — these two trees are the copy-out seam, nothing else.
+    - "app/components/ui/**/*"
+    - "app/form_builders/ui/**/*"

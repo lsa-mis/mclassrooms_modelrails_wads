@@ -91,16 +91,41 @@ RSpec.describe "Static pages", type: :system do
       expect(page).to have_css("[data-toast-pill-target='progress']")
     end
 
-    it "preserves theme preference across fresh page loads via cookie" do
+    # The whole chain in one example: toggle writes the cookie, the server
+    # renders it back onto <html>, and the inline script paints it.
+    #
+    # The last link is the one that used to go unproven. `html.dark` at the end
+    # of a load says nothing about WHEN the class landed — theme_controller
+    # applies it too, just late enough to flash the wrong theme first, which is
+    # the entire reason _theme_script.html.erb exists (#624). So a recorder
+    # injected ahead of every page script notes the readyState at the moment
+    # `dark` first appears: "loading" means the inline script did it, anything
+    # later means the deferred module did and the flash is back.
+    it "preserves theme preference across fresh page loads, and paints it before the modules run" do
       visit root_path
       # Cycle to dark: system → light → dark
       find("[data-controller='theme-toggle']").click
       find("[data-controller='theme-toggle']").click
       expect(page).to have_css("html.dark")
 
+      cdp = page.driver.browser.page
+      recorder = cdp.command("Page.addScriptToEvaluateOnNewDocument", source: <<~JS)
+        new MutationObserver(function () {
+          var el = document.documentElement;
+          if (el && el.classList.contains("dark") && !window.__darkAppliedAt) {
+            window.__darkAppliedAt = document.readyState;
+          }
+        }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: [ "class" ] });
+      JS
+
       # Full page load (not Turbo) — cookie should restore dark mode
       visit root_path
       expect(page).to have_css("html[data-theme-theme-value='dark']")
+      expect(page).to have_css("html.dark")
+      expect(page.evaluate_script("window.__darkAppliedAt")).to eq("loading")
+    ensure
+      cdp&.command("Page.removeScriptToEvaluateOnNewDocument",
+        identifier: recorder["identifier"])
     end
   end
 

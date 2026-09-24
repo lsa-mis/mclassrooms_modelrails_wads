@@ -1,14 +1,25 @@
 <%# locals: (revealed: false) -%>
 <%#
-  Draft-recovery notice; render INSIDE a form_with carrying
-  data-controller="form-draft" — see /docs/developer/form-drafts.
-  The visible chip is navigation-only: announcements go through the
-  always-present sr-only status region (un-hiding a populated live region
-  announces unreliably), and the strings ride data attributes because
-  Stimulus has no I18n. `revealed:` is for previews/render-tests only.
-  DELIBERATELY NOT UI::Alert (#731): Alert bakes role=status + aria-live onto
-  the chip, recreating exactly the unreliable-reveal announcement this
-  split-region design exists to avoid.
+  Draft-recovery notice. Render INSIDE a form_with carrying
+  data-controller="form-draft" (see the form_draft docs page). Two pieces:
+
+  1. The visible warning chip — navigation-only, hidden until the controller
+     reveals it. NOT the announcement path (un-hiding a populated live region
+     announces unreliably).
+  2. The stable sr-only status region — always present, empty at render; the
+     controller writes announcements into it. Announcement strings ride data
+     attributes because Stimulus has no I18n.
+
+  `revealed:` exists for previews/render-tests only; production callers use
+  the default.
+
+  FORK DIVERGENCE — no `default:` on any t() call. The gem's template ships
+  inline defaults, which is right for a gem: a host that has not filed the
+  keys still renders text. This app's rule is stricter (ModelRails/NoI18nDefault,
+  enforced by erb_lint) because a default silences both i18n gates, so a missing
+  key looks healthy forever. Every key here is defined in
+  config/locales/en/form_drafts.en.yml. Re-running the add generator restores
+  the defaults and fails the push — strip them again.
 -%>
 <%= tag.div data: { form_draft_target: "notice" },
       hidden: !revealed,

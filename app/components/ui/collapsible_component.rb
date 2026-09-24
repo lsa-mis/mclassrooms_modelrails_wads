@@ -2,25 +2,10 @@
 
 module UI
   # CSS-only collapse via a native <details>/<summary> disclosure.
-  #
-  # trigger slot: content for the summary row (button, icon, label, etc.)
-  # open:         render pre-expanded (default: false)
-  # disabled:     the disclosure is announced as disabled and cannot be operated.
-  #               <details> has no `disabled` attribute, so this is aria-disabled +
-  #               out of the tab order + pointer-inert. An already-open disclosure
-  #               stays open: disabling blocks the control, it does not collapse
-  #               content out from under the reader.
-  #
-  # Accessibility contract:
-  # - Native <details>/<summary> carries the disclosure semantics — the summary is
-  #   focusable and toggles on Enter/Space, and the browser manages aria-expanded.
-  # - The summary owns the AAA focus indicator via `focus-ring` (an offset outline,
-  #   never a box-shadow ring: a ring is clipped by overflow-hidden ancestors and
-  #   vanishes in forced-colors mode — a 2.4.7 failure).
-  # - The native webkit disclosure marker is hidden so caller-supplied trigger markup
-  #   owns the open/closed affordance.
+  # Usage, options and the accessibility contract: docs/components/collapsible.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class CollapsibleComponent < ApplicationComponent
-    SUMMARY_CLS = "flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 " \
+    SUMMARY_CLS = "flex min-h-input cursor-pointer list-none items-center justify-between gap-2 " \
                   "[&::-webkit-details-marker]:hidden focus-ring"
     CONTENT_CLS = "mt-2"
 

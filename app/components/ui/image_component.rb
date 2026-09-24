@@ -1,33 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Image
-  #
-  # A responsive `<img>` wrapper that enforces an `alt` decision at the call site and
-  # supports lazy loading, `srcset`/`sizes`, and intrinsic dimensions.
-  #
-  # ## Use when
-  # - You're rendering content imagery and want lazy-loading + responsive sources
-  #   with the accessibility decision (alt text vs. decorative) made explicitly.
-  #
-  # ## Don't use when
-  # - The image is an icon inside a button/link — there the accessible name comes
-  #   from the control, and an inline SVG/icon helper is the better fit.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** `alt:` is REQUIRED, forcing an explicit decision at every call
-  #   site; an invalid `loading:` falls back to `:lazy`.
-  # - **You supply:** real `alt:` text for meaningful images, or `alt: ""` (the
-  #   correct decorative signal) for purely decorative ones. `alt` is NOT a caption —
-  #   keep it a terse equivalent; use `figure` for captions.
-  #
-  # ## Parameters
-  # - `src:` image URL (required)
-  # - `alt:` alternative text (required; `""` marks the image decorative)
-  # - `srcset:` responsive set, e.g. "img-sm.jpg 640w, img-lg.jpg 1280w"
-  # - `sizes:` media conditions, e.g. "(max-width: 640px) 100vw, 50vw"
-  # - `loading:` :lazy (default) | :eager | :auto
-  # - `width:`/`height:` native dimensions (prevents layout shift)
+  # A responsive `<img>` wrapper that enforces an `alt` decision at the call site and supports lazy loading, `srcset`/`sizes`, and intrinsic dimensions.
+  # Usage, options and the accessibility contract: docs/components/image.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ImageComponent < ApplicationComponent
     BASE = "max-w-full"
 

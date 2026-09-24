@@ -86,7 +86,7 @@ RSpec.describe UI::DataTableComponent, type: :component do
     render_default
 
     # The header button fills the (>=44px) cell height.
-    expect(page).to have_css("th button.min-h-11")
+    expect(page).to have_css("th button.min-h-input")
   end
 
   # --- AAA semantic tokens, not raw Tailwind ---------------------------------
@@ -147,5 +147,28 @@ RSpec.describe UI::DataTableComponent, type: :component do
     render_default
 
     expect(page).not_to have_css("caption")
+  end
+
+  # --- header scope (modelrails_ui #200) --------------------------------------
+
+  # Without `scope`, assistive tech falls back to a heuristic to associate a data
+  # cell with its header. The heuristic usually works, so axe passes either way —
+  # which is exactly why this has to be asserted rather than audited. Every
+  # hand-rolled table in this app states the scope; the primitive should not be
+  # the one place that does not.
+  it "declares scope on every header cell" do
+    render_default
+
+    expect(page).to have_css("th", count: 3, visible: :all)
+    expect(page).to have_css("th[scope=col]", count: 3, visible: :all)
+  end
+
+  # The fixture covers both branches of th_cell: two sortable, one not. Asserted
+  # separately so a fix to one branch cannot satisfy a single total.
+  it "declares scope on the sortable and non-sortable branches alike" do
+    render_default
+
+    expect(page).to have_css("th[scope=col][aria-sort]", count: 2, visible: :all)
+    expect(page).to have_css("th[scope=col]:not([aria-sort])", count: 1, visible: :all)
   end
 end

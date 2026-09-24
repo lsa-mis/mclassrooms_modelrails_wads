@@ -16,7 +16,7 @@
     <%# The input is this label's next sibling so Tab order matches visual
         order (2.4.3, #912); native label activation opens the OS dialog. %>
     <label for="<%= file_input_id %>"
-           class="btn-text-icon btn-text-interactive text-sm px-2 inline-flex items-center min-h-11 cursor-pointer">
+           class="btn-text-icon btn-text-interactive text-sm px-2 inline-flex items-center min-h-input cursor-pointer">
       <%= icon(:arrow_up_tray, size: :sm) %>
       <%= t("identity_picker.upload_new") %>
     </label>

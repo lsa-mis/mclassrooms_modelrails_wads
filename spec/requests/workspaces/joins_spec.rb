@@ -39,6 +39,25 @@ RSpec.describe "Workspaces::Joins (Flow A: authenticated user joins via link)", 
       expect(response).to redirect_to(workspace_path(workspace))
     end
 
+    # The posture is checked in the before_action and the write happens after
+    # it. A revoke landing in that window is invisible, because this action
+    # admits through the WORKSPACE rather than the LINK it already holds — so
+    # WorkspaceJoinLink#admit's re-read of committed state, written for exactly
+    # this window, never runs (#1061).
+    #
+    # Revoking from inside the last guard is what makes the window real: the
+    # check has passed on the state it saw, and the link is revoked before the
+    # write begins.
+    it "refuses a link revoked between the posture check and the write" do
+      allow_any_instance_of(Workspace).to receive(:accepting_open_joins?).and_wrap_original do |original|
+        original.call.tap { |open| link.revoke! if open }
+      end
+
+      expect {
+        post workspace_join_path(workspace, token: link.plaintext_token)
+      }.not_to change(workspace.memberships, :count)
+    end
+
     # Nobody is notified about their own action: the joiner is the actor here,
     # so member-added goes to the owner only and the joiner is oriented by
     # WorkspaceJoinedNotifier instead.

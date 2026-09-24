@@ -1,14 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # Presentational `role="group"` wrapper that segments its children into a single
-  # control: it collapses the inner corners and overlaps the borders so adjacent
-  # buttons read as one bar. Purely visual — it owns no state, JS, or keyboard
-  # behaviour; the children (UI::Button et al.) carry their own a11y contract.
-  #
-  # `aria_label:` is optional: a group benefits from an accessible name, but a
-  # button group is often already labelled by surrounding context, so it is left
-  # to the caller rather than required.
+  # Presentational `role="group"` wrapper that segments its children into a single control: it collapses the inner corners and overlaps the borders so adjacent buttons read as one bar.
+  # Usage, options and the accessibility contract: docs/components/button_group.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ButtonGroupComponent < ApplicationComponent
     BASE = "inline-flex rounded-md shadow-sm " \
            "[&>*]:rounded-none " \

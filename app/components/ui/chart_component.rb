@@ -1,54 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Chart
-  #
-  # A data-visualization wrapper — renders a `<canvas>` wired to
-  # `chart_controller.js` (a thin adapter for Chart.js). The Chart.js library
-  # itself is NOT bundled; add it to your importmap before use:
-  #
-  #   # config/importmap.rb
-  #   bin/importmap pin chart.js   (downloads to vendor/javascript — production CSP allows no CDN)
-  #
-  # ## Usage
-  #   ui :chart, type: :bar, label: "Quarterly revenue vs. costs",
-  #     labels: ["Jan", "Feb", "Mar"],
-  #     datasets: [
-  #       { label: "Revenue", data: [100, 200, 150] },
-  #       { label: "Costs",   data: [80,  140, 110] }
-  #     ]
-  #
-  # ## Options
-  #   type:     :bar | :line | :pie | :doughnut | :radar | :polarArea (default: :bar).
-  #             An unknown type FAILS LOUD (raises ArgumentError) — no silent fallback.
-  #   label:    a one-line summary of what the chart shows (REQUIRED for AT — see
-  #             the accessibility contract). Falls back to an i18n default.
-  #   labels:   array of x-axis / category labels
-  #   datasets: array of dataset hashes ({ label:, data: [...] }); snake_case keys
-  #             are camelized for Chart.js (background_color: → backgroundColor:).
-  #             Series with no explicit color are auto-assigned from an AAA-tuned
-  #             OKLCH palette (DEFAULT_SERIES) — never a raw hex.
-  #   options:  hash merged into Chart.js `options` (e.g. { responsive: false })
-  #
-  # ## Accessibility contract
-  # A `<canvas>` is an opaque bitmap — pixels carry no semantics, so a chart drawn
-  # to it is invisible to assistive tech (a WCAG 1.1.1 non-text-content failure).
-  # We give AT TWO things, mirroring the WAI/APG "complex image" pattern:
-  #
-  # - **Guarantees:**
-  #   1. The canvas is a labelled graphic: `role="img"` + an `aria-label` summary
-  #      (from `label:`, i18n-defaulted) so AT announces *what the chart is*, not an
-  #      anonymous canvas. The component owns this — a caller can't clobber it.
-  #   2. A **visually-hidden data table** (`.sr-only`) renders the same numbers as
-  #      a real `<table>` (caption + `<th scope>` row/column headers), wired to the
-  #      canvas via `aria-describedby`. Screen-reader users get the actual data, not
-  #      just the summary — the textual equivalent the bitmap can't provide.
-  #   - Decorative SVG/canvas chrome is `aria-hidden`; the only AT-visible content
-  #     is the label + the table.
-  # - **You supply:** a meaningful `label:` and well-formed `datasets:` (each with a
-  #   `label:` so the table columns are named). Color is optional — the palette is
-  #   AAA-tuned by default; if you override, keep series ≥3:1 against the surface
-  #   (WCAG 1.4.11, graphics) and don't rely on color alone to distinguish series.
+  # A data-visualization wrapper — renders a `<canvas>` wired to `chart_controller.js` (a thin adapter for Chart.js).
+  # Usage, options and the accessibility contract: docs/components/chart.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class ChartComponent < ApplicationComponent
     TYPES = %w[bar line pie doughnut radar polarArea].freeze
 

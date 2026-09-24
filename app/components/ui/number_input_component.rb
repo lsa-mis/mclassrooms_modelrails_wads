@@ -1,50 +1,19 @@
 # frozen_string_literal: true
 
 module UI
-  # # Number Input
-  #
-  # A native `<input type="number">` with AAA field styling and the shared
-  # form-control ARIA wiring (`invalid:` / `describedby:` / `required:`).
-  #
-  # **Not what `f.number_field` renders.** `UI::FormBuilder#number_field` renders
-  # `UI::InputComponent` with `type: "number"`, not this component. Reach for
-  # `ui :number_input` when composing a field by hand outside a `form_with`, or as
-  # the control a host form builder's own `number_field` override chooses to wrap.
-  #
-  # ## Use when
-  # - You need a numeric entry (quantity, price, age) with `min` / `max` / `step`
-  #   constraints, outside a `form_with` block.
-  # - You are assembling a custom form builder that wraps this component yourself.
-  #
-  # ## Don't use when
-  # - You are inside a `form_with` block — call `f.number_field :attr` instead so the
-  #   label, error message, and ARIA associations come for free.
-  # - You need a slider with a visible range — use `ui :range`.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** AAA border and focus-ring tokens, a `min-h-[var(--form-input-height)]`
-  #   44 px touch target, an `id` always emitted so an external `<label for=...>` can
-  #   target it, `aria-invalid="true"` when `invalid: true`, `aria-describedby` wired
-  #   when `describedby:` is supplied, and `required` + `aria-required="true"` when
-  #   `required: true`.
-  # - **You supply (when standalone):** a visible `<label>` associated via `for:/id:`,
-  #   and a `name:` attribute. The form builder supplies both automatically.
-  #
-  # The WebKit spin-buttons are intentionally hidden (`[appearance:textfield]` +
-  # `::-webkit-*-spin-button`); there are NO custom +/- stepper buttons, so the only
-  # interactive target is the field itself (held at the 44px floor above). With no
-  # variant axis (single appearance) there is also no `coerce_variant` fail-loud guard
-  # here, unlike the enum-driven components (alert, button).
+  # A native `<input type="number">` with AAA field styling and the shared form-control ARIA wiring (`invalid:` / `describedby:` / `required:`).
+  # Usage, options and the accessibility contract: docs/components/number_input.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class NumberInputComponent < ApplicationComponent
-    # `min-h-[var(--form-input-height)]` (44px) replaces the old fixed `h-9` (36px)
+    # `min-h-input` (44px) replaces the old fixed `h-9` (36px)
     # so the control meets the AAA 2.5.5 target-size floor and aligns with sibling
     # form fields. All colors are AAA semantic tokens — no raw Tailwind palette.
     BASE = "block w-full min-w-0 rounded-md border border-border-strong bg-transparent px-3 py-1 text-base shadow-xs " \
-           "min-h-[var(--form-input-height)] " \
+           "min-h-input " \
            "transition-[color,box-shadow] outline-none " \
            "placeholder:text-text-muted " \
            "focus-visible:border-border-focus focus-ring " \
-           "aria-invalid:border-danger-border aria-invalid:ring-2 aria-invalid:ring-danger " \
+           "aria-invalid:border-2 aria-invalid:border-danger " \
            "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 " \
            "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none " \
            "md:text-sm"

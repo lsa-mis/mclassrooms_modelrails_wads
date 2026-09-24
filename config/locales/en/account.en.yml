@@ -81,6 +81,18 @@ en:
         empty_state: "You haven't added any passkeys yet. Add one above to sign in with your device."
       destroy:
         success: "Passkey removed."
+    invitation_blocks:
+      index:
+        title: "Blocked senders"
+        description: "People you've told not to invite you again. Blocking is per-sender and per-address, so this lists blocks on the address you sign in with."
+        blocked_on: "Blocked %{time} ago"
+        allow_button: "Allow again"
+        allow_aria_label: "Allow invitations from %{sender} again"
+        allow_title: "Allow invitations from %{sender} again?"
+        allow_message: "They'll be able to invite you again, and any invitation they already sent you will be delivered. You can block them again from any invitation email."
+        empty_state: "You haven't blocked anyone. The “Don't invite me again” link in an invitation email adds a sender here."
+      destroy:
+        success: "Unblocked. That sender can invite you again."
     sessions:
       index:
         title: "Active devices"
@@ -135,7 +147,9 @@ en:
         passkey_error: "Passkey verification failed. Try another method."
         email_button: "Email me a confirmation code"
         code_label: "Enter the 6-digit code we emailed you"
+        code_sent_to: "Sent to %{email}. It expires in %{minutes} minutes."
         code_submit: "Confirm"
+        resend_button: "Send a new code"
       create:
         no_factor: "Choose a way to confirm your identity."
         wrong_password: "That password is incorrect."

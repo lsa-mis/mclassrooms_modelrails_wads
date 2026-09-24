@@ -48,6 +48,32 @@ If a class from a gem template still isn't compiling, verify the symlink target 
 
 **Fix**: Override the gem's templates at `app/views/<engine_name>/...` using your design tokens (`bg-surface-raised`, `text-text-heading`, etc.). Rails view resolution prefers `app/views/` over engine view paths, so the host's overrides take precedence at render time. See the Markdowndocs Integration section of [architecture.md](/docs/developer/architecture#markdowndocs-gem-integration) for how this is wired in this app.
 
+## `db/queue_schema.rb` shows as modified, or `bin/jobs` crashes `bin/dev` at boot
+
+Two symptoms, one cause. Solid Queue's tables live in a separate `queue`
+database, loaded from `db/queue_schema.rb` rather than from migrations —
+`db/queue_migrate` is deliberately empty.
+
+Rails decides a database is already initialized by checking whether
+`schema_migrations` exists. A queue database that has that table and nothing
+else answers yes, so the schema load is skipped, there are no migrations to run,
+and the dump that follows `db:migrate` writes the empty result over the
+committed schema file. `bin/jobs` then finds no `solid_queue_processes` table
+and takes `bin/dev` down with it.
+
+You reach that state by ordinary means: `bin/jobs` auto-creates the queue file,
+and a preserved workspace — a devcontainer Rebuild rather than a
+delete-and-recreate — keeps it.
+
+Current checkouts repair this automatically: `db:prepare` and `db:migrate` both
+load the queue schema first when the tables are missing. On an older checkout,
+restore the file and reload the database by hand:
+
+```bash
+git checkout db/queue_schema.rb
+bin/rails db:reset:queue
+```
+
 ## Operations
 
 Recipes for running the app, rather than for developing it. These arrive as support tickets.
@@ -67,14 +93,17 @@ invitation = Invitation.where(email: "invitee@example.com").order(created_at: :d
 5. **Rate limit** — a resend can be swallowed by `Workspaces::InvitationsController#resend`'s limit of 10 per 3 minutes. The sender sees an alert, but a ticket rarely quotes it.
 6. **Queue or transport** — the `deliver_later` job never ran (check Solid Queue) or the mail bounced at the provider.
 
-**Unblocking is two statements, not one:**
+**Unblocking is one call, because it is two statements:**
 
 ```ruby
-InvitationBlock.destroy_by(inviter: inviter, email: email)
-Invitation.pending.where(invited_by: inviter, email: email).update_all(suppressed_at: nil)
+InvitationBlock.unblock!(inviter: inviter, email: email)
 ```
 
-`destroy_by`, not `find_by(...).destroy` — the stamp can outlive its block row (an earlier unblock that cleared only the block), and a `NoMethodError` on `nil` is the wrong thing to hand someone already debugging.
+It destroys the block and clears the stamps in one transaction. Prefer it to running the two statements by hand — a recipe whose second half gets forgotten is how the next inconsistent row is made.
+
+The blocked person can also do this themselves at **Settings → Blocked senders**, which is the same call ([Invitations](/docs/user/invitations)). Reach for the console only when the block names an address that is not the one they sign in with, or no account at all.
+
+Inside, `destroy_by` rather than `find_by(...).destroy` — the stamp can outlive its block row (an earlier unblock that cleared only the block), and a `NoMethodError` on `nil` is the wrong thing to hand someone already debugging.
 
 Destroying the block alone leaves the stamped invitation invisible to `bulk_invite!`'s duplicate check — which skips only *unsuppressed* pending rows — so every later invite to that address mints another pending duplicate. `update_all` is right here for the same reason the stamping writes are callback-free: clearing the flag is not a workspace-feed event.
 

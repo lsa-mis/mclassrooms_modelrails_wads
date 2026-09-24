@@ -2,23 +2,9 @@
 
 module UI
   class EmbedComponent < ApplicationComponent
-    # Embeds third-party content. Pass url: — the provider is detected
-    # automatically from the domain. For Google Maps you may also use query:.
-    #
-    # Usage:
-    #   ui :embed, url: "https://youtu.be/dQw4w9WgXcQ"
-    #   ui :embed, url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    #   ui :embed, url: "https://vimeo.com/148751763"
-    #   ui :embed, url: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh"
-    #   ui :embed, url: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
-    #   ui :embed, url: "https://www.loom.com/share/abc123def456"
-    #   ui :embed, url: "https://soundcloud.com/artist/track"
-    #   ui :embed, url: "https://x.com/jack/status/20"
-    #   ui :embed, url: "https://t.me/telegram/193"
-    #   ui :embed, url: "https://www.facebook.com/watch/?v=123456"
-    #   ui :embed, url: "https://www.google.com/maps/place/Eiffel+Tower"
-    #   ui :embed, url: "https://yandex.ru/maps/213/moscow/?ll=37.617685,55.755814&z=10"
-    #   ui :embed, query: "Eiffel Tower, Paris"   # Google Maps — search query
+    # Embeds third-party content.
+    # Usage, options and the accessibility contract: docs/components/embed.md in the
+    # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
     PROVIDERS = {
       youtube:     { aspect: "16/9", sandbox: "allow-scripts allow-same-origin allow-presentation allow-popups" },

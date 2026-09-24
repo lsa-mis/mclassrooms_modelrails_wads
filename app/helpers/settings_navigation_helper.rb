@@ -43,6 +43,12 @@ module SettingsNavigationHelper
         icon: :shield_check, active: current_page?(settings_connected_accounts_path) },
       { label: t("settings.sidebar.items.passkeys"), href: settings_passkeys_path,
         icon: :finger_print, active: current_page?(settings_passkeys_path) },
+      # Always shown, not gated on having a block: the page answers "is anyone
+      # blocked?" for the curious as well as the mis-clicker, and gating it
+      # would cost a query on every settings render to hide a link most people
+      # never need anyway (#812).
+      { label: t("settings.sidebar.items.invitation_blocks"), href: settings_invitation_blocks_path,
+        icon: :no_symbol, active: current_page?(settings_invitation_blocks_path) },
       { label: t("settings.sidebar.items.sessions"), href: settings_sessions_path,
         icon: :computer_desktop, active: current_page?(settings_sessions_path) },
       { label: t("settings.sidebar.items.appearance"), href: edit_settings_theme_preference_path,

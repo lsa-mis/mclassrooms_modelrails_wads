@@ -181,6 +181,13 @@ class ApplicationNotifier < Noticed::Event
     :deduplicated
   end
 
+  # The gem aliases deliver_later to deliver inside its own concern, so the alias
+  # holds a COPY of the gem's body and never reaches the override above — the
+  # instance form would skip the sentinels and the empty-set guard, and mint the
+  # idempotency key on a dispatch nobody receives (#1063, the #928 failure mode).
+  # Re-pointing it here restores the gem's own contract: two names, one method.
+  alias_method :deliver_later, :deliver
+
   # A missing row falls back to a transient `UserPreferences.new`, not nil —
   # wrapping nil default-denies every new user.
   # See /docs/developer/notifications (Preference resolution and the missing-row fallback).

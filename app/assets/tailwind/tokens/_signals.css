@@ -13,14 +13,14 @@
   --color-danger-icon:     oklch(63.7% 0.237 25.331);   /* ~red-500 */
   --color-danger-hover:    oklch(93.6% 0.032 17.717);   /* ~red-100 */
   --color-danger-progress: oklch(70.4% 0.191 22.216);   /* ~red-400 */
-  --color-danger-border:   oklch(80.8% 0.114 19.571);   /* ~red-300 */
+  --color-danger-border:   oklch(66.2% 0.114 19.571);   /* 3.1:1 on `surface`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 
   /* --- Warning (amber) --- */
   --color-warning:          oklch(41.4% 0.112 45.904);   /* ~amber-900 (yellow hues need extra darkness for AAA — amber-800's L=47.3 still under 7:1 against amber-50 due to high relative luminance of yellow at fixed L) */
   --color-warning-surface:  oklch(98.1% 0.029 95.724);   /* ~amber-50 */
   --color-warning-icon:     oklch(76.6% 0.163 70.08);    /* ~amber-500 */
   --color-warning-hover:    oklch(95.4% 0.064 86.375);   /* ~amber-100 */
-  --color-warning-border:   oklch(87.9% 0.125 85.859);   /* ~amber-300 */
+  --color-warning-border:   oklch(65.1% 0.125 85.859);   /* 3.1:1 on `surface`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 
   /* --- Success (green) --- */
   --color-success:          oklch(39.3% 0.095 152.535);  /* ~green-900 (AAA 7:1 on green-50; green-800 was borderline due to higher relative luminance of green at fixed L) */
@@ -28,7 +28,7 @@
   --color-success-icon:     oklch(72.3% 0.219 149.579);  /* ~green-500 */
   --color-success-hover:    oklch(96.2% 0.044 156.743);  /* ~green-100 */
   --color-success-progress: oklch(79.2% 0.209 151.711);  /* ~green-400 */
-  --color-success-border:   oklch(87.1% 0.15 154.449);   /* ~green-300 */
+  --color-success-border:   oklch(63.2% 0.15 154.449);   /* 3.1:1 on `surface`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 
   /* --- Info (sky) --- */
   --color-info:          oklch(39.1% 0.09 240.876);   /* ~sky-900 (AAA 7:1 on sky-50 + on white surface) */
@@ -36,7 +36,7 @@
   --color-info-icon:     oklch(71.4% 0.168 237.674);  /* ~sky-500 */
   --color-info-hover:    oklch(95.1% 0.026 236.824);  /* ~sky-100 */
   --color-info-progress: oklch(79.6% 0.15 235.169);   /* ~sky-400 */
-  --color-info-border:   oklch(86.2% 0.084 237.323);  /* ~sky-300 */
+  --color-info-border:   oklch(64.5% 0.084 237.323);   /* 3.1:1 on `surface`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 }
 
 .dark {
@@ -47,14 +47,14 @@
   --color-danger-icon:     oklch(82.5% 0.16 22);        /* matches --color-danger for AAA + warm-red character — keep both in sync */
   --color-danger-hover:    oklch(29.6% 0.093 25.166);   /* ~red-900 */
   --color-danger-progress: oklch(63.7% 0.237 25.331);   /* ~red-500 */
-  --color-danger-border:   oklch(44.4% 0.177 26.899);   /* ~red-700 */
+  --color-danger-border:   oklch(57.8% 0.177 26.899);   /* 3.1:1 on `surface-raised`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 
   /* --- Warning (amber) --- */
   --color-warning:          oklch(82.7% 0.174 78.604);   /* ~amber-400 */
   --color-warning-surface:  oklch(27.9% 0.077 45.635);   /* ~amber-950 */
   --color-warning-icon:     oklch(82.7% 0.174 78.604);   /* ~amber-400 */
   --color-warning-hover:    oklch(31.1% 0.091 50.601);   /* ~amber-900 */
-  --color-warning-border:   oklch(55.4% 0.163 48.998);   /* ~amber-700 */
+  --color-warning-border:   oklch(57.1% 0.163 48.998);   /* 3.1:1 on `surface-raised`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 
   /* --- Success (green) --- */
   --color-success:          oklch(79.2% 0.209 151.711);  /* ~green-400 */
@@ -62,7 +62,7 @@
   --color-success-icon:     oklch(79.2% 0.209 151.711);  /* ~green-400 */
   --color-success-hover:    oklch(29.3% 0.094 153.051);  /* ~green-900 */
   --color-success-progress: oklch(72.3% 0.219 149.579);  /* ~green-500 */
-  --color-success-border:   oklch(46.2% 0.141 148.96);   /* ~green-700 */
+  --color-success-border:   oklch(54.2% 0.141 148.96);   /* 3.1:1 on `surface-raised`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 
   /* --- Info (sky) --- */
   --color-info:          oklch(79.6% 0.15 235.169);   /* ~sky-400 */
@@ -70,5 +70,5 @@
   --color-info-icon:     oklch(79.6% 0.15 235.169);   /* ~sky-400 */
   --color-info-hover:    oklch(28.3% 0.088 260.031);  /* ~sky-900 */
   --color-info-progress: oklch(71.4% 0.168 237.674);  /* ~sky-500 */
-  --color-info-border:   oklch(45.1% 0.146 256.823);  /* ~sky-700 */
+  --color-info-border:   oklch(56.0% 0.146 256.823);   /* 3.1:1 on `surface-raised`, the worst ground in this theme. Carries the chip's EDGE: a tinted chip's fill is ~1.06:1 against the page and cannot darken (its text holds 7:1), so the border is the only boundary an alert, banner, toast or badge has. Hue and chroma unchanged; lightness repositioned to clear the 3:1 non-text floor (modelrails_ui #257). */
 }

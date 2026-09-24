@@ -18,6 +18,29 @@ RSpec.describe LifecycleHelper, type: :helper do
     expect(helper.lifecycle_status_label(workspace)).to eq("Deleted")
   end
 
+  # One status treatment for the operations pages: the same soft badge whether
+  # the record is a page title, a table cell or a membership row, with an
+  # explicit "Status:" accessible name because the word alone ("Locked")
+  # carries no context. A lock is the one state an operator acts on, so it
+  # alone takes the warning tint — the tone the user page already gives
+  # "Suspended".
+  describe "#lifecycle_status_badge" do
+    it "renders the label as a soft badge named as a status" do
+      workspace = create(:workspace)
+      html = Capybara.string(helper.lifecycle_status_badge(workspace))
+      badge = html.find("span[data-variant='soft']", text: "Active")
+      expect(badge[:"data-tone"]).to eq("neutral")
+      expect(badge[:"aria-label"]).to eq("#{I18n.t('lifecycle_status.prefix')}: Active")
+    end
+
+    it "tints a locked record as a warning" do
+      workspace = create(:workspace)
+      workspace.suspend!
+      badge = Capybara.string(helper.lifecycle_status_badge(workspace)).find("span[data-variant='soft']", text: "Locked")
+      expect(badge[:"data-tone"]).to eq("warning")
+    end
+  end
+
   it "defines all four lifecycle_status keys (no titleize fallback possible)" do
     %w[active archived suspended discarded].each do |status|
       expect(I18n.exists?("lifecycle_status.#{status}")).to be(true),

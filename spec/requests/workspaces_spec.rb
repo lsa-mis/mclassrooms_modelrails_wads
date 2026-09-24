@@ -21,6 +21,39 @@ RSpec.describe "Workspaces", type: :request do
         expect(response.body).to include(CGI.escapeHTML(workspace.name))
       end
 
+      # The header action and a bottom "Create" CTA both pointed at the same
+      # page. The bottom one outlived the layout that justified it — a long
+      # scroll where the header action had gone off-screen — and now sits a
+      # few rows below its twin (#1092).
+      it "offers one route to the new-workspace page, not two" do
+        workspace = create(:workspace)
+        create(:membership, :owner, user: user, workspace: workspace)
+
+        get workspaces_path
+
+        expect(Capybara.string(response.body)).to have_link(href: new_workspace_path, count: 1)
+      end
+
+      # Three paddings inside identical list chrome, two of them in the same
+      # <ul>: the plain rows carry p-3 from _row, the locked row hard-coded
+      # p-4, and the archived branch took the component's px-4 py-3. The
+      # partial renders in three different containers, so no single padding on
+      # the partial can be right — the container owns the chrome (#1119).
+      it "gives a locked row the same chrome as the rows beside it" do
+        held = create(:workspace, name: "Held Co")
+        create(:membership, :owner, user: user, workspace: held)
+        neighbour = create(:workspace, name: "Fine Co")
+        create(:membership, :owner, user: user, workspace: neighbour)
+        held.suspend!
+
+        get workspaces_path
+        page = Capybara.string(response.body)
+
+        locked = page.find("[data-test='locked-workspace-row']")
+        expect(locked[:class].to_s.split).to include("p-3", "rounded-lg", "border"),
+          "the locked row does not share the chrome of the rows it sits with"
+      end
+
       it "does not show other users' workspaces" do
         other_workspace = create(:workspace, name: "Secret Workspace")
         get workspaces_path
@@ -120,9 +153,13 @@ RSpec.describe "Workspaces", type: :request do
         expect(membership.role.slug).to eq("owner")
       end
 
-      it "redirects to the workspace" do
+      it "redirects to the workspace and says it was created" do
         post workspaces_path, params: { workspace: { name: "New Workspace" } }
         expect(response).to redirect_to(workspace_path(Workspace.find_by!(name: "New Workspace")))
+        # By key, not by sentence: the point is which key was selected. A
+        # redirect-only assertion walks the path and proves nothing about what
+        # the user reads (#526).
+        expect(flash[:notice]).to eq(I18n.t("workspaces.create.success"))
       end
     end
 
@@ -162,9 +199,10 @@ RSpec.describe "Workspaces", type: :request do
       let(:workspace) { create(:workspace) }
       let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
 
-      it "updates the workspace name" do
+      it "updates the workspace name and says the profile was updated" do
         patch workspace_path(workspace), params: { workspace: { name: "Updated Name" } }
         expect(workspace.reload.name).to eq("Updated Name")
+        expect(flash[:notice]).to eq(I18n.t("workspaces.update.success"))
       end
     end
 
@@ -314,9 +352,10 @@ RSpec.describe "Workspaces", type: :request do
         expect(workspace.reload).to be_discarded
       end
 
-      it "redirects to workspaces index" do
+      it "redirects to workspaces index and says it was deleted" do
         delete workspace_path(workspace)
         expect(response).to redirect_to(workspaces_path)
+        expect(flash[:notice]).to eq(I18n.t("workspaces.destroy.success"))
       end
     end
 
@@ -360,6 +399,33 @@ RSpec.describe "Workspaces", type: :request do
         sign_in(member)
         get edit_workspace_path(workspace)
         expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    # Through the real render, not the helper: the bug was a link in a page a
+    # Member was shown, and the fix only counts if what ships in the markup
+    # changed (#1153).
+    describe "the workspace nav's Settings link" do
+      it "points a Member at a page they can open, not the one they are refused" do
+        workspace = create(:workspace, personal: false)
+        member = create(:user)
+        create(:membership, user: member, workspace: workspace)
+        sign_in(member)
+
+        get workspace_path(workspace)
+
+        expect(response.body).to include(workspace_members_path(workspace))
+        expect(response.body).not_to include("href=\"#{edit_workspace_path(workspace)}\""),
+          "the nav still offers a Member the Profile page, which ProfilePolicy refuses them"
+      end
+
+      it "still points an Owner at the Profile page" do
+        workspace = create(:workspace, personal: false)
+        create(:membership, :owner, user: user, workspace: workspace)
+
+        get workspace_path(workspace)
+
+        expect(response.body).to include("href=\"#{edit_workspace_path(workspace)}\"")
       end
     end
 

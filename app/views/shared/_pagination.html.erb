@@ -7,6 +7,6 @@
             to: pagy.to,
             count: pagy.count) %>
     </p>
-    <%== pagy.series_nav(aria_label: t("pagination.aria_label")) %>
+    <%= render "shared/pager", pagy: pagy %>
   </div>
 <% end %>

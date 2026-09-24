@@ -76,7 +76,9 @@ module Settings
     # attempted a duplicate (#865). Finding the row never downgrades one that
     # is already verified; the model assigns uid on create (#903).
     def ensure_pending_email_authentication!
-      Current.user.authentications.find_or_create_by!(provider: "email")
+      Current.user.authentications.find_or_create_by!(provider: "email") do |auth|
+        auth.email = Current.user.email_address
+      end
     end
 
     def password_params

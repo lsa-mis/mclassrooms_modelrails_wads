@@ -137,4 +137,41 @@ RSpec.describe NotificationMailer, type: :mailer do
       expect(mail.text_part.body.encoded).to include(settings_connected_accounts_url)
     end
   end
+  # A suspended user is bounced before they reach a workspace, so every one of
+  # these mails invites an action they cannot take. The skip covers SECURITY
+  # mail too (password changed, new device): they cannot act on that either,
+  # and a reset on reinstatement recovers it through the same address. One
+  # rule, deliberately, rather than a mail-class exemption to keep straight
+  # (#1132, decision recorded in operations.md).
+  describe "a suspended recipient" do
+    let(:workspace) { create(:workspace, name: "Acme") }
+    let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
+    let(:suspended) { create(:user, email_address: "held@example.com", suspended_at: Time.current) }
+    let(:membership) { create(:membership, user: suspended, workspace: workspace, role: admin_role) }
+
+    it "builds no message for an ordinary notification" do
+      mail = described_class.with(notification: nil, recipient: suspended, record: membership)
+                            .workspace_role_changed
+
+      expect(mail.to).to be_blank, "a workspace notification reached a suspended recipient"
+    end
+
+    it "builds no message for security mail either" do
+      mail = described_class.with(notification: nil, recipient: suspended, record: suspended,
+                                  ip_address: "203.0.113.1", user_agent: "probe")
+                            .sign_in_from_new_device
+
+      expect(mail.to).to be_blank, "security mail reached a suspended recipient"
+    end
+
+    it "still delivers to an active recipient" do
+      active = create(:user, email_address: "ada@example.com")
+      active_membership = create(:membership, user: active, workspace: workspace, role: admin_role)
+
+      mail = described_class.with(notification: nil, recipient: active, record: active_membership)
+                            .workspace_role_changed
+
+      expect(mail.to).to eq([ active.email_address ])
+    end
+  end
 end

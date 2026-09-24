@@ -323,7 +323,8 @@ RSpec.describe Invitation, type: :model do
     let(:invitation) { create(:invitation, invitable: workspace, invited_by: inviter, email: "invitee@example.com") }
 
     def recipients_of(notifier_type)
-      Noticed::Notification.where(type: "#{notifier_type}::Notification").map(&:recipient)
+      Noticed::Notification.where(type: "#{notifier_type}::Notification")
+        .includes(:recipient).map(&:recipient)
     end
 
     describe "accepted (after_update_commit)" do

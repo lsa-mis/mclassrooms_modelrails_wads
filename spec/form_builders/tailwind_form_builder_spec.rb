@@ -155,8 +155,8 @@ RSpec.describe TailwindFormBuilder, type: :component do
   describe "#checkbox (canonical) and #check_box (alias)" do
     it "renders one 44px label-wrapped target containing the input and caption" do
       result = parse(builder.checkbox(:first_name, label: "I agree"))
-      expect(result).to have_css("label.min-h-11 input[type='checkbox']")
-      expect(result).to have_css("label.min-h-11", text: "I agree")
+      expect(result).to have_css("label.min-h-input input[type='checkbox']")
+      expect(result).to have_css("label.min-h-input", text: "I agree")
     end
 
     it "produces identical output via the check_box alias" do
@@ -185,7 +185,7 @@ RSpec.describe TailwindFormBuilder, type: :component do
 
     it "renders every collection row as a 44px label-wrapped target" do
       result = parse(builder.collection_checkboxes(:first_name, roles, :first, :last))
-      expect(result.all("fieldset label.min-h-11 input[type='checkbox']").size).to eq(2)
+      expect(result.all("fieldset label.min-h-input input[type='checkbox']").size).to eq(2)
     end
 
     it "collection_check_boxes alias produces identical output to collection_checkboxes" do
@@ -198,7 +198,7 @@ RSpec.describe TailwindFormBuilder, type: :component do
       user.errors.add(:first_name, "pick one")
       result = parse(builder.collection_radio_buttons(:first_name, roles, :first, :last))
       expect(result).to have_css("fieldset[aria-describedby='user_first_name-error']")
-      expect(result.all("fieldset label.min-h-11 input[type='radio'][aria-invalid='true']").size).to eq(2)
+      expect(result.all("fieldset label.min-h-input input[type='radio'][aria-invalid='true']").size).to eq(2)
     end
 
     # v0.13.0 contract fix (gem #145): required left in html_options would emit

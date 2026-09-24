@@ -1,41 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Command palette
-  #
-  # A search-as-you-type palette: a text input that filters a list of actions,
-  # shown over a dimming scrim and centered like a modal dialog. Opened on a
-  # `with_trigger` click or the global `⌘K` / `Ctrl+K` shortcut; filtering and
-  # keyboard navigation live in the `command` Stimulus controller shipped
-  # alongside this component.
-  #
-  # ## Use when
-  # - You need a keyboard-first launcher to jump to pages or fire actions
-  #   (the spotlight / ⌘K pattern).
-  #
-  # ## Don't use when
-  # - A trigger opens a short list of *actions* with no search — use
-  #   `dropdown_menu` (the APG menu-button pattern).
-  # - You're selecting a value to submit in a form — use a `select`/listbox.
-  #
-  # ## Accessibility contract (WAI-ARIA APG combobox + listbox)
-  # - **Guarantees:** the search input is a `role="combobox"` with
-  #   `aria-expanded`, `aria-controls` (→ the list) and `aria-autocomplete="list"`;
-  #   the list is a named `role="listbox"`; the controller promotes each
-  #   `[data-command-value]` item to `role="option"` with a stable id and tracks
-  #   the highlighted option via `aria-activedescendant` (DOM focus stays on the
-  #   input — ↑/↓ move the active option, Enter activates it, Escape closes).
-  #   The input and items carry the AAA `focus-ring`; the empty-state message is
-  #   an i18n-labelled live region.
-  # - **You supply:** an optional `with_trigger` slot and the grouped item markup
-  #   (use the exposed `GROUP_WRAPPER` / `GROUP` / `ITEM` / `SHORTCUT` /
-  #   `SEPARATOR` constants). Each actionable item must carry a
-  #   `data-command-value` (the text the filter scores against). Optional
-  #   `data-command-keywords` adds synonyms an item can be found by without
-  #   showing them in its label ("configuration" finding Settings).
-  #
-  # ## Sizes
-  # `sm` · `md` · `lg` — the centered panel's max width.
+  # A search-as-you-type palette: a text input that filters a list of actions, shown over a dimming scrim and centered like a modal dialog.
+  # Usage, options and the accessibility contract: docs/components/command.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class CommandComponent < ApplicationComponent
     renders_one :trigger
 
@@ -46,10 +14,12 @@ module UI
               "overflow-hidden rounded-lg border border-border bg-surface-overlay shadow-lg"
     SEARCH  = "flex h-10 w-full items-center gap-2 border-b border-border px-3"
     # The input keeps DOM focus (combobox pattern) and carries the AAA offset
-    # focus-ring itself; min-h-11 holds the 44px target floor (WCAG 2.5.5 AAA).
+    # focus-ring itself; min-h-input holds the 44px target floor (WCAG 2.5.5
+    # AAA) and, being the form-control token, moves with --form-input-height
+    # rather than stranding this input at 44 when a fork retunes it.
     # Both were regressions caught by the open-state audit (#463): the old
     # comment claimed a row-level ring no CSS actually painted.
-    INPUT   = "flex-1 min-h-11 bg-transparent text-sm text-text-body outline-none focus-ring placeholder:text-text-muted"
+    INPUT   = "flex-1 min-h-input bg-transparent text-sm text-text-body outline-none focus-ring placeholder:text-text-muted"
     LIST    = "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto p-1"
     EMPTY   = "py-6 text-center text-sm text-text-muted"
 

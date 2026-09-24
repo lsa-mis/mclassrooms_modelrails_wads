@@ -19,8 +19,8 @@ export default class extends Controller {
   }
 
   open() {
-    // No-op unless the panel is anchor-positioned (`position: fixed`); top_layer.js
-    // refuses anything still on the pre-Baseline `absolute` fallback.
+    // No-op unless anchor-positioned (`position: fixed`); top_layer.js refuses the
+    // pre-Baseline `absolute` fallback, where promotion would tear the panel off-screen.
     this.popoverTarget.dataset.open = "true"
     topLayer.enable(this.popoverTarget)
     topLayer.show(this.popoverTarget)
@@ -41,20 +41,14 @@ export default class extends Controller {
   hourUp()   { this.#stepHour(1) }
   hourDown() { this.#stepHour(-1) }
 
-  // role="spinbutton" PROMISES ArrowUp/ArrowDown to AT users — the hour and
-  // minute fields wired only change-> handlers, so the promise was empty
-  // (caught by the keyboard-driven spec, #463). AM/PM already had its own
-  // keydown; these give the numeric fields the same contract.
-  hourKeydown(e)   { this.#arrowStep(e, () => this.hourUp(), () => this.hourDown()) }
-  minuteKeydown(e) { this.#arrowStep(e, () => this.minuteUp(), () => this.minuteDown()) }
-
-  #arrowStep(event, up, down) {
-    if (event.key === "ArrowUp") { event.preventDefault(); up() }
-    else if (event.key === "ArrowDown") { event.preventDefault(); down() }
-  }
-
   minuteUp()   { this.#stepMinute(this.stepValue) }
   minuteDown() { this.#stepMinute(-this.stepValue) }
+
+  // ↑/↓ on the hour and minute spinbuttons, routed through the same methods the ▲/▼
+  // steppers call so wrap-around, `step:` and the aria-value* sync cannot diverge
+  // between the two paths (#219).
+  hourKeydown(e)   { this.#arrowStep(e, () => this.hourUp(), () => this.hourDown()) }
+  minuteKeydown(e) { this.#arrowStep(e, () => this.minuteUp(), () => this.minuteDown()) }
 
   // ↑/↓ on the AM/PM spinbutton toggle it (the role=spinbutton keyboard contract).
   ampmKeydown(e) {
@@ -75,6 +69,11 @@ export default class extends Controller {
 
   hourChanged()   { this.#clampInput(this.hourTarget, 0, this.formatValue === "h12" ? 12 : 23); this.#commit() }
   minuteChanged() { this.#clampInput(this.minuteTarget, 0, 59); this.#commit() }
+
+  #arrowStep(event, up, down) {
+    if (event.key === "ArrowUp") { event.preventDefault(); up() }
+    else if (event.key === "ArrowDown") { event.preventDefault(); down() }
+  }
 
   #stepHour(delta) {
     const max = this.formatValue === "h12" ? 12 : 23

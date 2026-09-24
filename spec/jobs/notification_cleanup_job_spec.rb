@@ -127,6 +127,22 @@ RSpec.describe NotificationCleanupJob, type: :job do
         expect(Noticed::Notification.where(id: old_for_other.id)).not_to exist
       end
 
+      # A partial systemic failure is the gap: two of three users failing is not
+      # `failed == attempted`, so nothing raises — and with the per-user reports
+      # going to Rails.error, the run ends looking like a clean sweep. The job
+      # has to say what it actually did (#944).
+      it "says how much of the sweep succeeded when only some users failed" do
+        corrupt_retention_for(user)
+        corrupt_retention_for(other_user)
+        third = create(:user)
+        third.create_preferences!
+        allow(Rails.error).to receive(:report)
+
+        expect(Rails.logger).to receive(:warn).with(/swept 1 of 3 users \(2 failed; last: TypeError\)/)
+
+        expect { described_class.perform_now }.not_to raise_error
+      end
+
       it "re-raises when every attempted user failed, so the queue records a failure" do
         corrupt_retention_for(user)
         corrupt_retention_for(other_user)
@@ -180,5 +196,64 @@ RSpec.describe NotificationCleanupJob, type: :job do
 
   it "runs on the low queue" do
     expect(described_class.queue_name).to eq("low")
+  end
+
+  # An event whose last notification retention took away is a ledger row about
+  # nobody — it can never be read, rendered, or counted toward anyone's list.
+  # Pruning is CHILDLESS-ONLY and never age-based: deleting an event cascades
+  # to every recipient's row through the FK, so "old" is the one criterion
+  # that could take live notifications with it (#811).
+  describe "orphan event pruning" do
+    let(:recipient) { create(:user) }
+
+    def event_with_notification(read_at: nil, created_at: Time.current)
+      event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {},
+                                     record: recipient, created_at: created_at)
+      Noticed::Notification.create!(
+        event: event, recipient: recipient, type: "PasswordChangedNotifier::Notification",
+        read_at: read_at, created_at: created_at
+      )
+      event
+    end
+
+    it "keeps an event that still has a notification, however old" do
+      event = event_with_notification(created_at: 5.years.ago)
+
+      described_class.perform_now
+
+      expect(Noticed::Event.exists?(event.id)).to be(true),
+        "age is not a pruning criterion — this event still belongs to somebody's list"
+    end
+
+    it "prunes an event whose last notification this run deleted" do
+      recipient.create_preferences!(timezone: "UTC")
+      event = event_with_notification(read_at: 1.year.ago, created_at: 1.year.ago)
+
+      described_class.perform_now
+
+      expect(Noticed::Notification.exists?(event_id: event.id)).to be(false)
+      expect(Noticed::Event.exists?(event.id)).to be(false),
+        "the sweep emptied this event and then left the ledger row behind"
+    end
+
+    it "prunes a childless event that is one second old" do
+      event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {},
+                                     record: recipient, created_at: 1.second.ago)
+
+      described_class.perform_now
+
+      expect(Noticed::Event.exists?(event.id)).to be(false),
+        "childless is the whole criterion; waiting for an orphan to age proves nothing " \
+        "and only delays the delete"
+    end
+
+    it "asks the notifications table, not the counter cache" do
+      sql = described_class.orphan_events.to_sql
+
+      expect(sql).not_to include("notifications_count"),
+        "noticed_events.notifications_count was deliberately left stale, so pruning on it " \
+        "would delete events that still have rows"
+      expect(sql).to include("noticed_notifications")
+    end
   end
 end

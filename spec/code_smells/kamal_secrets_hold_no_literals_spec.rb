@@ -18,8 +18,10 @@ RSpec.describe "Kamal secrets files hold references, never literals" do
   # ["<path>-common", "<path>[.<destination>]"], default path ".kamal/secrets".
   let(:secrets_files) { Dir[Rails.root.join(".kamal/secrets*")].sort }
 
+  # CleanGitEnv::HASH: a spawn that inherits GIT_DIR answers for whatever
+  # repository that points at — from a git hook, not this one (#789, #1056).
   def tracked?(path)
-    system("git", "ls-files", "--error-unmatch", path.to_s,
+    system(CleanGitEnv::HASH, "git", "ls-files", "--error-unmatch", path.to_s,
            out: File::NULL, err: File::NULL)
   end
 
@@ -29,8 +31,11 @@ RSpec.describe "Kamal secrets files hold references, never literals" do
   end
 
   it "assigns every key a $-reference, never an inline value" do
+    scanned = 0
     violations = secrets_files.flat_map do |file|
       next [] unless tracked?(file)
+
+      scanned += 1
 
       relative = file.delete_prefix("#{Rails.root}/")
       File.readlines(file).each_with_index.filter_map do |line, index|
@@ -44,6 +49,13 @@ RSpec.describe "Kamal secrets files hold references, never literals" do
         "#{relative}:#{index + 1} — #{key.strip} is assigned a literal"
       end
     end
+
+    # Without this the guard passes vacuously whenever `git ls-files` fails — a
+    # redirected GIT_DIR being one way — because every file drops out of the scan
+    # and an empty violations list reads as success (#1056).
+    expect(scanned).to be_positive,
+      "no Kamal secrets file was actually scanned: #{secrets_files.size} file(s) found, all skipped " \
+      "as untracked. If `git ls-files` is failing, this guard is not checking anything."
 
     expect(violations).to be_empty, <<~MESSAGE
       Tracked Kamal secrets files must assign references, not literals:

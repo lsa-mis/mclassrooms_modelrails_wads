@@ -67,8 +67,7 @@
       <% end %>
     </ul>
   <% else %>
-    <div class="mt-8 rounded-lg border border-border bg-surface p-6 text-center">
-      <p class="text-sm text-text-muted"><%= t("settings.passkeys.index.empty_state") %></p>
-    </div>
+    <%= ui :empty_state, variant: :outlined, class: "mt-8",
+           title: t("settings.passkeys.index.empty_state") %>
   <% end %>
 </div>

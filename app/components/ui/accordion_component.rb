@@ -2,11 +2,8 @@
 
 module UI
   # A stack of native <details> disclosure rows.
-  #
-  # Two APIs: an `items:` array shorthand (each `{ title:, content:, open? }`) and a
-  # `with_item` slot for block content. `exclusive: true` makes opening one row close
-  # the rest via the `accordion` Stimulus controller — progressive enhancement, so
-  # without JS every row still opens and closes independently.
+  # Usage, options and the accessibility contract: docs/components/accordion.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class AccordionComponent < ApplicationComponent
     renders_many :items, "UI::AccordionItemComponent"
 

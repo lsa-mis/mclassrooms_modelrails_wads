@@ -1,38 +1,9 @@
 # frozen_string_literal: true
 
 module UI
-  # # Calendar
-  #
-  # A single-month date grid: a prev/next month header over a 6×7 grid of day
-  # buttons. Selected/today dates are highlighted; `min`/`max` disable days
-  # outside the range. The month label and grid contents are kept in sync by the
-  # `calendar` Stimulus controller (prev/next paging + roving-tabindex arrow-key
-  # navigation across the grid).
-  #
-  # ## Use when
-  # - You need an inline month picker the user navigates by mouse OR keyboard.
-  #
-  # ## Don't use when
-  # - You only need a native date field — use `<input type="date">` (the OS picker
-  #   is already accessible and localized).
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the month is a `role="grid"` with an accessible name (the
-  #   month/year caption); the weekday header is a `role="row"` of
-  #   `role="columnheader"` cells; each day is a `role="gridcell"` wrapping a real
-  #   `<button>` whose accessible name is the full localized date ("15 June 2026");
-  #   the selected day carries `aria-selected="true"`, today carries
-  #   `aria-current="date"`; exactly one day is in the tab order (roving tabindex)
-  #   and the controller moves focus with ←/→ (day), ↑/↓ (week), Home/End (row
-  #   ends), PageUp/PageDown (month); prev/next are i18n-labelled `<button>`s (not
-  #   icon-only-unlabelled); and every control carries the AAA offset `focus-ring`.
-  # - **You supply:** `selected:`/`month:` Dates and optional `min:`/`max:` bounds.
-  #
-  # selected:       Date or nil — highlighted day
-  # month:          Date — controls which month is shown (defaults to today)
-  # name:           form field name for the hidden input (if used in a form)
-  # min/max:        Date bounds for disabled days
-  # weekday_start:  :sunday (default) or :monday — first column of the grid
+  # A single-month date grid: a prev/next month header over a 6×7 grid of day buttons.
+  # Usage, options and the accessibility contract: docs/components/calendar.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
   class CalendarComponent < ApplicationComponent
     CONTAINER  = "w-fit rounded-lg border border-border bg-surface-overlay p-4 text-sm shadow"

@@ -2,15 +2,8 @@
 
 module UI
   # A single accordion row, rendered as a native <details>/<summary> disclosure.
-  #
-  # Accessibility contract:
-  # - Native <details>/<summary> carries the disclosure semantics — the summary is
-  #   focusable and toggles on Enter/Space, and the browser manages aria-expanded.
-  # - The summary owns the AAA focus indicator via `focus-ring` (an offset outline,
-  #   never a box-shadow ring: a ring is clipped by overflow-hidden ancestors and
-  #   vanishes in forced-colors mode — a 2.4.7 failure).
-  # - The chevron is decorative (state is conveyed by the native disclosure), so it
-  #   is aria-hidden; the native webkit marker is hidden so it doesn't double up.
+  # Usage, options and the accessibility contract: docs/components/accordion.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class AccordionItemComponent < ApplicationComponent
     SUMMARY_CLASSES = "flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium " \
                       "cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:underline focus-ring"

@@ -27,7 +27,15 @@ module Workspaces
     private
 
     def admit_authenticated_user
-      @workspace.admit(Current.user, role: @workspace.default_self_join_role, self_join: true)
+      # Through the LINK, not the workspace: admit re-reads both records inside
+      # the write transaction, so a revoke landing between the before_action's
+      # posture check and this write is refused rather than admitted (#1061).
+      # nil is that refusal — the same neutral error the lookup gives, so an
+      # outsider still cannot tell which condition failed.
+      if @link.admit(Current.user).nil?
+        return redirect_to root_path, alert: t("workspaces.joins.invalid_or_revoked")
+      end
+
       redirect_to workspace_path(@workspace), notice: t("workspaces.joins.create.joined", workspace_name: @workspace.name)
     rescue Workspace::AlreadyMember
       # Already in: no-op, land them in the workspace.

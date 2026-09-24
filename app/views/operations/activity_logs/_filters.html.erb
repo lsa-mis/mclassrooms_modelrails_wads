@@ -1,0 +1,143 @@
+<%# One GET form, no Apply: every control submits on change (search-form#submit,
+    the members-page pattern) into the results frame. The form stays OUTSIDE
+    the frame so focus never leaves the control that changed.
+
+    The date-range group sits OUTSIDE the <form> element and reaches it by
+    form="activity_filters" instead. Two things fall out of that, both wanted:
+    its submitters carry the LIVE control values rather than fields frozen at
+    page load, and a date pick never bubbles a `change` to the form, so the
+    popover cannot submit itself between the two dates being chosen. %>
+<div class="flex flex-col gap-3 lg:flex lg:flex-row lg:flex-wrap lg:items-center">
+  <%= form_with url: operations_activity_logs_path, method: :get, id: "activity_filters",
+        data: { controller: "search-form", turbo_frame: "activity_results", turbo_action: "advance",
+                action: "change->search-form#submit" },
+        aria: { label: t("operations.activity_logs.index.filters.label") },
+        class: "flex w-full flex-col gap-3 sm:grid sm:grid-cols-2 lg:flex lg:flex-row lg:flex-1 lg:items-center min-w-0" do |form| %>
+    <%# The form's default button: Enter in a text or date field clicks the FIRST
+        submit button in tree order, which would otherwise be the range panel's
+        first preset — so Enter in the search box silently applied a 24h
+        window. Nameless, it submits the hidden `range` as-is; "Use this range"
+        stays the only way to commit typed dates. `hidden`, not `sr-only`: a
+        rendered 1x1 focusable fails the axe gate (2.5.5, 2.4.7), and a
+        non-rendered button is still the default. %>
+    <button type="submit" hidden></button>
+
+    <%# Seeded from the RESOLVED state, never raw params: a submit without a
+        submitter (any control's change) carries the current window forward, so
+        typing a search does not silently drop a sort or a page size.
+        id: nil on every one of them — hidden_field_tag derives an id from the
+        name, and `id="from"`/`id="rows"` would shadow the visible control of
+        that name, leaving the real input's <label for> pointing at a hidden
+        field (and so at no accessible name at all).
+        No from/to here: the popover's date inputs are the carriers, and they
+        are always in the submission. %>
+    <%= hidden_field_tag :range, @range.key, id: nil %>
+    <%= hidden_field_tag :sort, @sort, id: nil unless @sort == Operations::ActivityLogsController::DEFAULT_SORT %>
+    <%= hidden_field_tag :direction, @direction, id: nil if @direction == "asc" %>
+    <%= hidden_field_tag :rows, @rows, id: nil unless @rows == Operations::ActivityLogsController::DEFAULT_ROWS %>
+
+    <%# No <label for> here either: SearchInputComponent always emits its own
+        aria-label, so a second sr-only <label> of the same text would be a
+        duplicate name for one control. The `label:` IS the sr-only label.
+        input->search: the form's change->submit fires for a text field only
+        on blur or Enter, so typing alone never searched — the members page's
+        debounced wiring, with Escape clearing the box. %>
+    <div class="w-full min-w-0 lg:flex-1 lg:basis-44 lg:max-w-56">
+      <%= ui :search_input, name: "q", id: "q", value: @query,
+            label: t("operations.activity_logs.index.filters.search_label"),
+            placeholder: t("operations.activity_logs.index.filters.search_placeholder"),
+            autocomplete: "off", describedby: "q-hint",
+            data: { action: "input->search-form#search keydown->search-form#clear", focus_key: "q" } %>
+      <%# What this control matches, on the control itself rather than in a
+          page footnote nobody reads before typing a name. %>
+      <p id="q-hint" class="sr-only"><%= t("operations.activity_logs.index.filters.search_hint") %></p>
+    </div>
+
+    <%# Two shapes for one control (#1166). Under WORKSPACE_PICKER_LIMIT it is the
+        option list it has always been. Over it the list is NOT rendered — the
+        reach is every tenant on the instance, so the list grew with the
+        business and rode along on every full-page navigation. Capping it was
+        not an option: a workspace missing from a capped list is unselectable
+        with nothing to say so. %>
+    <div class="w-full min-w-0 lg:flex-1 lg:basis-44 lg:max-w-56" data-filter="workspace">
+      <% if @workspace_picker_search %>
+        <%= render "operations/activity_logs/workspace_search" %>
+      <% else %>
+        <%# No <label for> here: the combobox's own id lands on its WRAPPER, not on
+            a labelable control, so a `for` would dangle. Its accessible name is the
+            `label:` it carries onto the role=combobox input and the listbox. %>
+        <%= ui :combobox, name: "workspace", id: "workspace", value: @workspace_param, data: { focus_key: "workspace" },
+              label: t("operations.activity_logs.index.filters.workspace_label"),
+              placeholder: t("operations.activity_logs.index.filters.workspace_any"),
+              options: [ { value: "", label: t("operations.activity_logs.index.filters.workspace_any") },
+                         { value: "instance", label: t("operations.activity_logs.index.instance") } ] + @workspace_options %>
+      <% end %>
+    </div>
+
+    <div class="w-full min-w-0 lg:flex-1 lg:basis-44 lg:max-w-56">
+      <%= form.label :kind, t("operations.activity_logs.index.filters.kind_label"), class: "sr-only" %>
+      <%# The kind labels are sentences, not words: clipped rather than wrapped so
+          the select keeps the band's one control height. %>
+      <%= ui :select, name: "kind", id: "kind", selected: @kind,
+            class: "min-h-input overflow-hidden text-ellipsis whitespace-nowrap",
+            options: [ [ "", t("operations.activity_logs.index.filters.kind_any") ] ] +
+                     ActivityLog::KINDS.map { |k| [ k, t("activity.kinds.#{k}") ] } %>
+    </div>
+  <% end %>
+
+  <%# ONE range control, the toolbar pattern: the trigger reads the applied window
+      and the five choices live in its panel, so the band holds four controls of
+      one height rather than a button bar that outgrew the row. Every submitter and
+      link in here targets _top — a range change has to re-render this band (the
+      hidden range field, and which choice reads aria-current), which a frame swap
+      cannot do. %>
+  <%# id: the page holds two popovers now (the card's caveats is the other), so
+      the panel — and through aria-controls its trigger — carries a stable
+      handle rather than a generated one. %>
+  <%= render UI::PopoverComponent.new(label: t("operations.activity_logs.index.ranges.popover_label"), align: :end,
+        id: "activity_range", class: "w-full lg:ml-auto lg:w-auto",
+        trigger_attrs: { data: { focus_key: "range" } },
+        trigger_class: "inline-flex w-full items-center justify-between gap-2 rounded-md border border-border-strong bg-transparent px-3 py-1 text-sm text-text-body shadow-sm cursor-pointer hover:bg-surface-sunken focus-visible:border-border-focus lg:w-auto lg:min-w-52 lg:max-w-64") do |pop| %>
+    <% pop.with_trigger do %>
+      <span class="truncate"><%= @range.custom? ? ledger_range_label : t("operations.activity_logs.index.ranges_menu.#{@range.key}") %></span>
+      <svg class="size-4 shrink-0 text-text-muted" aria-hidden="true" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    <% end %>
+    <%# data-focus-key on the panel: its submitters navigate the whole page, and
+        the trigger (same key, first in the DOM) is where focus lands after. %>
+    <div class="flex flex-col gap-3" data-focus-key="range">
+      <%# Submitters, not links: the band is OUTSIDE the results frame and so is
+          not re-rendered by a frame-local search/workspace/kind change. A link's
+          href is frozen at page load, which silently dropped the Kind applied
+          through the frame; submitting the band carries the LIVE control values. %>
+      <nav aria-label="<%= t("operations.activity_logs.index.filters.range_label") %>" class="flex flex-col">
+        <% ActivityLog::Range::KEYS.without("custom").each do |key| %>
+          <%= button_tag t("operations.activity_logs.index.ranges_menu.#{key}"),
+                type: "submit", name: "range", value: key, form: "activity_filters",
+                data: { turbo_frame: "_top" },
+                class: "btn-cell-link w-full mx-0 px-3#{" bg-surface-sunken font-semibold text-text-heading" if @range.key == key}",
+                aria: { current: ("true" if @range.key == key) } %>
+        <% end %>
+      </nav>
+
+      <div class="flex flex-col gap-3 border-t border-border pt-3">
+        <p class="text-sm text-text-muted"><%= t("operations.activity_logs.index.ranges.popover_zone", zone: @zone.name) %></p>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <%= label_tag :from, t("operations.activity_logs.index.ranges.from"), class: "block text-sm font-medium mb-1" %>
+            <%= ui :input, type: "date", name: "from", id: "from", form: "activity_filters", value: @range.from_date&.iso8601 %>
+          </div>
+          <div>
+            <%= label_tag :to, t("operations.activity_logs.index.ranges.to"), class: "block text-sm font-medium mb-1" %>
+            <%= ui :input, type: "date", name: "to", id: "to", form: "activity_filters", value: @range.to_date&.iso8601 %>
+          </div>
+        </div>
+        <%= button_tag t("operations.activity_logs.index.ranges.use"), type: "submit",
+              name: "range", value: "custom", form: "activity_filters",
+              data: { turbo_frame: "_top" }, class: "btn-primary w-full" %>
+      </div>
+    </div>
+  <% end %>
+</div>

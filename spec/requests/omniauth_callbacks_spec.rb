@@ -205,7 +205,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
   end
 
-  describe "OAuth creates user without a password (I1)" do
+  describe "OAuth creates user without a password" do
     before do
       OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
         provider: "google",
@@ -223,7 +223,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
   end
 
-  describe "OAuth with missing last_name falls back to 'User' (I3)" do
+  describe "OAuth with missing last_name falls back to 'User'" do
     before do
       OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
         provider: "google",

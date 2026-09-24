@@ -13,19 +13,25 @@ Rails.application.config.toasts = ActiveSupport::InheritableOptions.new(
     info: {
       tier: :pill,
       icon: :information_circle,
-      icon_color: "text-info-icon",
+      # -on-toast, not -icon: the pill inverts and the page-ground icon token
+      # does not follow it (#1236).
+      icon_color: "text-info-icon-on-toast",
       progress: "bg-info-progress"
     },
     success: {
       tier: :pill,
       icon: :check_circle,
-      icon_color: "text-success-icon",
+      icon_color: "text-success-icon-on-toast",
       progress: "bg-success-progress"
     },
     warning: {
       tier: :card,
       icon: :exclamation_triangle,
-      icon_color: "text-warning-icon",
+      # The tone's AAA TEXT token, not -icon: an amber-500 icon on amber-50
+      # measured 2.06:1 against the 3:1 non-text floor, while the message
+      # beside it sat at 8.62:1 on the same ground. The gem's own alert already
+      # answers this by letting its icon inherit `text-current` (#1236).
+      icon_color: "text-warning",
       bg: "bg-warning-surface",
       border: "border-warning-border",
       text: "text-warning",
@@ -34,7 +40,7 @@ Rails.application.config.toasts = ActiveSupport::InheritableOptions.new(
     danger: {
       tier: :card,
       icon: :exclamation_circle,
-      icon_color: "text-danger-icon",
+      icon_color: "text-danger",
       bg: "bg-danger-surface",
       border: "border-danger-border",
       text: "text-danger",
@@ -44,13 +50,13 @@ Rails.application.config.toasts = ActiveSupport::InheritableOptions.new(
     notice: {
       tier: :pill,
       icon: :check_circle,
-      icon_color: "text-success-icon",
+      icon_color: "text-success-icon-on-toast",
       progress: "bg-success-progress"
     },
     alert: {
       tier: :card,
       icon: :exclamation_triangle,
-      icon_color: "text-warning-icon",
+      icon_color: "text-warning",
       bg: "bg-warning-surface",
       border: "border-warning-border",
       text: "text-warning",
@@ -59,7 +65,7 @@ Rails.application.config.toasts = ActiveSupport::InheritableOptions.new(
     error: {
       tier: :card,
       icon: :exclamation_circle,
-      icon_color: "text-danger-icon",
+      icon_color: "text-danger",
       bg: "bg-danger-surface",
       border: "border-danger-border",
       text: "text-danger",

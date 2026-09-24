@@ -1,5 +1,7 @@
 en:
   lifecycle_status:
+    # Accessible-name prefix on the status badge (lifecycle_status_badge).
+    prefix: "Status"
     active: "Active"
     archived: "Archived"
     suspended: "Locked"

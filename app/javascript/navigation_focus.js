@@ -49,3 +49,42 @@ document.addEventListener("turbo:load", () => {
   // viewports (surfaced as a transparent-over-media audit failure).
   if (target) target.focus({ preventScroll: true })
 })
+
+// Focus return for controls that must navigate the whole page (a sort, a page
+// size, a pager link, a date-range preset, a pivot into the search box). A
+// frame swap keeps focus on the control that changed; a full visit cannot, and
+// landing on #main-content after every sort cost a keyboard user the walk back
+// to the header (WCAG 2.4.3). The control carries — or sits inside an element
+// carrying — data-focus-key, naming the element to land on in the NEW
+// document. The key is remembered at click time and applied at
+// turbo:before-render as an `autofocus` on the new body, so Turbo's own
+// autofocus contract (and the fallback above) does the focusing: one move, one
+// announcement. Inside a keyed container the target is whichever child is now
+// aria-current (the page size just chosen, the pager's current page) or,
+// failing that, its first focusable descendant; a bare container gets
+// tabindex="-1" so it can take focus at all.
+const FOCUSABLE = "a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea, [tabindex]"
+let pendingFocusKey = null
+
+document.addEventListener("click", (event) => {
+  const keyed = event.target.closest?.("[data-focus-key]")
+  pendingFocusKey = keyed ? keyed.dataset.focusKey : null
+})
+
+document.addEventListener("turbo:before-render", (event) => {
+  // The cached preview renders first and the real response after it; the key
+  // is spent on the real one.
+  if (!pendingFocusKey || event.detail.isPreview) return
+  const key = pendingFocusKey
+  pendingFocusKey = null
+
+  const keyed = event.detail.newBody.querySelector(`[data-focus-key="${CSS.escape(key)}"]`)
+  if (!keyed) return
+  const target = keyed.matches("[aria-current]") || keyed.matches(FOCUSABLE)
+    ? keyed
+    : keyed.querySelector("[aria-current]") || keyed.querySelector(FOCUSABLE) || keyed
+  if (!target.matches(FOCUSABLE)) target.setAttribute("tabindex", "-1")
+  target.setAttribute("autofocus", "")
+})
+
+document.addEventListener("turbo:load", () => { pendingFocusKey = null })

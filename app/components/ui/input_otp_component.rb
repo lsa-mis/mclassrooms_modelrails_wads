@@ -1,38 +1,13 @@
 # frozen_string_literal: true
 
 module UI
-  # # InputOtp
-  #
-  # A one-time-passcode entry: a labelled `role="group"` of N single-character
-  # inputs that auto-advance on entry, walk with Arrow/Backspace keys, and accept a
-  # full-code paste (the `input-otp` Stimulus controller spreads pasted digits
-  # across the cells). Each cell is `inputmode="numeric"` +
-  # `autocomplete="one-time-code"` so mobile keyboards stay numeric and the browser
-  # / OS can autofill an SMS code.
-  #
-  # ## Use when
-  # - You are confirming a code delivered out of band (SMS / email / authenticator)
-  #   on a verification screen, posted as `name[0]…name[N-1]` inside a `form_with`.
-  #
-  # ## Don't use when
-  # - The secret is a free-form password — use `ui :input, type: "password"`.
-  # - The value is a single field the user reads off, not digit-by-digit — a plain
-  #   `ui :input` is simpler and announces better.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** the cell group exposes an accessible name (`role="group"` +
-  #   i18n `aria-label`, default "One-time passcode") so a screen-reader user knows
-  #   what the row of fields is for; each cell carries a per-digit i18n label
-  #   ("Digit N of total") so position-in-sequence is announced; and every cell is
-  #   `inputmode="numeric"` + `autocomplete="one-time-code"` for numeric keypads and
-  #   OS autofill. Focus is the AAA offset `focus-ring` (never a clipped box-shadow
-  #   ring). `length` must be a positive integer — a non-positive value fails loud.
-  # - **You supply:** the field `name:` (cells post as `name[0]…name[length-1]`),
-  #   the digit `length:`, and an optional `separator:`.
+  # A one-time-passcode entry: a labelled `role="group"` of N single-character inputs that auto-advance on entry, walk with Arrow/Backspace keys, and accept a full-code paste (the `input-otp` Stimulus controller spreads pasted digits across the cells).
+  # Usage, options and the accessibility contract: docs/components/input_otp.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class InputOtpComponent < ApplicationComponent
     CELL_CLS = "h-12 w-11 rounded-md border border-border-strong bg-surface-raised text-text-heading " \
                "text-center text-lg font-medium shadow-xs transition-colors focus-ring " \
-               "aria-invalid:border-danger aria-invalid:ring-2 aria-invalid:ring-danger " \
+               "aria-invalid:border-2 aria-invalid:border-danger " \
                "disabled:pointer-events-none disabled:opacity-50"
 
     WRAPPER_CLS = "flex items-center gap-2"

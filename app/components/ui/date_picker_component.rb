@@ -1,53 +1,30 @@
 # frozen_string_literal: true
 
 module UI
-  # # Date Picker
-  #
-  # A disclosure button that opens an inline calendar popover, driven by the
-  # `date-picker` Stimulus controller shipped alongside this component. The button is
-  # the accessible control (it carries the selected-date label); the calendar grid
-  # itself is owned by `UI::CalendarComponent` (this component does not re-implement it).
-  #
-  # ## Use when
-  # - A form needs a single date and a month-grid affordance is friendlier than a bare
-  #   `<input type="date">`.
-  #
-  # ## Don't use when
-  # - You only need a native date field with no custom calendar — use `input` with
-  #   `type: "date"`.
-  # - You need a range (two bounds) — compose two pickers or a range calendar.
-  #
-  # ## Accessibility contract
-  # - **Guarantees:** a real `<button>` trigger with `aria-haspopup="dialog"`,
-  #   `aria-expanded` (kept in sync by the controller), and `aria-controls` → the
-  #   popover id; the popover is a `role="dialog"` named by `label:`; a visible caption
-  #   `<label>`-style heading and a format hint wired via `aria-describedby`; the
-  #   decorative calendar icon is `aria-hidden`; Escape and outside-click close the
-  #   popover and return focus to the trigger. The trigger carries the offset
-  #   `focus-ring` (never a box-shadow ring).
-  # - **You supply:** an optional `label:` (the field caption / popover name; defaults
-  #   to an i18n string) and a `name:` if the value must post back.
-  #
-  # value:       Date or nil — initial selected date
-  # name:        form field name for the hidden input
-  # label:       visible caption + popover/trigger accessible name (i18n default)
-  # placeholder: trigger text when no date is selected (i18n default)
-  # format:      :long | :short | :iso — Ruby strftime for the initial label AND the
-  #              format hint shown to the user (fail-loud on an unknown key)
-  # min/max:     Date bounds passed to the calendar
+  # A typeable date field with a calendar popover beside it, driven by the `date-picker` Stimulus controller shipped alongside this component.
+  # Usage, options and the accessibility contract: docs/components/date_picker.md in the
+  # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class DatePickerComponent < ApplicationComponent
     WRAPPER = "relative inline-block"
     CAPTION = "mb-1.5 block text-sm font-medium text-text-heading"
     HINT_CLS = "mt-1.5 block text-sm text-text-muted"
-    TRIGGER = "flex h-9 w-48 cursor-pointer items-center gap-2 rounded-md border border-border-strong " \
-               "bg-surface-raised px-3 text-sm text-text-heading shadow-xs focus-ring transition " \
+    # The typed path is the PRIMARY control; the calendar is the secondary one.
+    # h-11/w-11 on the trigger keeps it at the AAA 44px target floor now that it is
+    # icon-only rather than a full-width labelled button.
+    GROUP = "flex items-stretch gap-1"
+    INPUT = "h-11 w-40 rounded-md border border-border-strong bg-surface-raised px-3 text-sm " \
+            "text-text-heading shadow-xs focus-ring transition " \
+            "aria-[invalid=true]:border-2 aria-[invalid=true]:border-danger "
+    TRIGGER = "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md " \
+               "border border-border-strong bg-surface-raised text-text-heading shadow-xs focus-ring transition " \
                "aria-expanded:border-border-focus"
+    ERROR_CLS = "mt-1.5 block text-sm text-danger"
     ICON_CLS = "size-4 shrink-0 text-text-muted"
     # Placement is CSS anchor positioning: `position: fixed` (containing block = the
     # viewport) tethered to the trigger via `anchor-name`/`position-anchor`. Being
     # viewport-positioned is what lets the panel be promoted to the top layer, so a
     # sticky/backdrop-blur ancestor cannot bury it (app/javascript/overlays/top_layer.js).
-    POPOVER = "z-50 hidden w-max rounded-lg border border-border bg-surface-overlay p-0 shadow-md data-[open=true]:block mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
+    POPOVER = "z-50 hidden w-max max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface-overlay p-0 shadow-md data-[open=true]:block mt-1 supports-[position-area:bottom]:fixed supports-[position-area:bottom]:[position-area:bottom_span-right] supports-[position-area:bottom]:[position-try-fallbacks:flip-block] not-supports-[position-area:bottom]:absolute not-supports-[position-area:bottom]:top-full not-supports-[position-area:bottom]:left-0"
 
     # strftime patterns and the human-readable format hint, keyed by `format:`.
     FORMATS = {
@@ -75,12 +52,19 @@ module UI
       content_tag(:div,
         class: cn(WRAPPER, @extra_class),
         style: "anchor-name: --#{@id}",
-        data: { controller: "date-picker" }.merge(caller_data),
+        data: {
+          controller: "date-picker",
+          date_picker_invalid_message_value: I18n.t("modelrails_ui.date_picker.invalid",
+            pattern: format_hint, default: "Enter a date as %{pattern}."),
+          date_picker_range_message_value: I18n.t("modelrails_ui.date_picker.out_of_range",
+            default: "That date is outside the allowed range.")
+        }.merge(caller_data),
         **@html_attrs) do
         concat caption
         concat hidden_input if @name
-        concat trigger_button
+        concat content_tag(:div, safe_join([ text_input, trigger_button ]), class: GROUP)
         concat hint
+        concat error_region
         concat calendar_popover
       end
     end
@@ -88,11 +72,16 @@ module UI
     private
 
     def trigger_id = "#{@id}-trigger"
+    def input_id = "#{@id}-input"
+    def error_id = "#{@id}-error"
     def popover_id = "#{@id}-popover"
     def hint_id = "#{@id}-hint"
 
+    # Bound to the TEXT INPUT, not the trigger. `<label for>` may only name a
+    # labelable element, so pointing it at a <button> named nothing at all — and
+    # left the control a person actually types into unlabelled.
     def caption
-      content_tag(:label, @label, id: "#{@id}-caption", class: CAPTION, for: trigger_id)
+      content_tag(:label, @label, id: "#{@id}-caption", class: CAPTION, for: input_id)
     end
 
     def hint
@@ -102,29 +91,64 @@ module UI
 
     def format_hint = FORMATS.fetch(@format)[:hint]
 
+    # The typed path. The hidden input stays canonical — this box is parsed on
+    # commit and written back formatted — so a caller reads one value whichever
+    # way it was set.
+    #
+    # `change` and Enter, never `input`: parsing per keystroke rewrites the box
+    # under someone who is still typing.
+    def text_input
+      tag.input(
+        type: "text",
+        id: input_id,
+        value: @value&.strftime(FORMATS.fetch(@format)[:strftime]),
+        placeholder: @placeholder,
+        inputmode: "numeric",
+        autocomplete: "off",
+        spellcheck: "false",
+        "aria-describedby": "#{hint_id} #{error_id}",
+        "aria-invalid": "false",
+        class: INPUT,
+        data: {
+          date_picker_target: "input",
+          date_picker_format: @format.to_s,
+          date_picker_min: @min&.iso8601,
+          date_picker_max: @max&.iso8601,
+          action: "change->date-picker#commit keydown->date-picker#commitOnEnter"
+        }.compact
+      )
+    end
+
+    # Present and EMPTY from first render: a live region inserted already carrying
+    # its text is inserted-with-content, and assistive tech drops it.
+    def error_region
+      content_tag(:span, nil, id: error_id, class: ERROR_CLS, role: "status", "aria-live": "polite",
+        data: { date_picker_target: "error" })
+    end
+
     def hidden_input
       tag.input(type: "hidden", name: @name,
         value: @value&.iso8601,
         data: { date_picker_target: "hidden" })
     end
 
+    # Icon-only now that the caption names the input, so it needs a name of its
+    # own — and one that says what it DOES, since "Due date" is already taken by
+    # the field beside it.
     def trigger_button
-      label_text = @value ? @value.strftime(FORMATS.fetch(@format)[:strftime]) : @placeholder
-      content_tag(:button, type: "button",
+      content_tag(:button, calendar_icon,
+        type: "button",
         id: trigger_id,
         class: TRIGGER,
         "aria-expanded": "false",
         "aria-haspopup": "dialog",
         "aria-controls": popover_id,
-        "aria-label": @label,
-        "aria-describedby": hint_id,
+        "aria-label": I18n.t("modelrails_ui.date_picker.open_calendar", name: @label,
+          default: "Open calendar for %{name}"),
         data: {
           date_picker_target: "trigger",
           action: "click->date-picker#toggle keydown->date-picker#triggerKeydown"
-        }) do
-        concat calendar_icon
-        concat content_tag(:span, label_text, data: { date_picker_target: "label" })
-      end
+        })
     end
 
     def calendar_popover

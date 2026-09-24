@@ -26,7 +26,7 @@ RSpec.describe UI::NumberInputComponent, type: :component do
   it "meets the 44px touch target" do
     render_inline(described_class.new(name: "qty"))
 
-    expect(page).to have_css('input.min-h-\\[var\\(--form-input-height\\)\\]')
+    expect(page).to have_css("input.min-h-input")
   end
 
   # id-fallback: an id is always emitted so an external <label for=...> can target it.

@@ -1,6 +1,13 @@
-# A spent magic-link token plus a live session for THAT SAME address means
-# this browser already completed the flow: the request that spent the token
-# is the one that signed them in. A second presentation of it is ordinary — a
+# A SPENT magic-link token plus a live session for THAT SAME address.
+#
+# "Spent" means `consumed_at` is set, which happens two ways: the token was
+# redeemed, or a newer link superseded it unused. This module cannot tell them
+# apart, and neither can its callers — giving redemption its own column is
+# #1083. Every answer built on it therefore has to be true of BOTH, which is
+# why a replay says "you are already signed in" and goes to the authenticated
+# home rather than honouring an intent that may never have been acted on.
+#
+# A second presentation of a spent token is ordinary — a
 # double-clicked confirm button, a browser retrying a POST, a re-clicked
 # email, a prefetcher — and answering "invalid or has expired" tells a
 # signed-in user the opposite of what just happened (#846 on the sign-in POST;
@@ -21,11 +28,13 @@ module MagicLinkReplayable
 
   private
 
-  # The spent token this same browser already redeemed, or nil. Returns the
-  # record, not a boolean: the sign-in path needs its intent to land the
-  # replay where the first POST did. Takes the token as an argument because
-  # the two controllers name the param differently — reading params in here
-  # would silently no-op for one of them.
+  # The spent token belonging to this browser's address, or nil. Takes the
+  # token as an argument because the two controllers name the param
+  # differently — reading params in here would silently no-op for one of them.
+  #
+  # Every caller now reads this as a predicate. It still returns the record
+  # because the row is what the address comparison is made of, not because
+  # anyone routes on it.
   def replayed_by_owner(token)
     return nil unless authenticated?
 

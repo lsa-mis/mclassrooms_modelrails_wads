@@ -4,7 +4,9 @@
     project feeds pass nothing and render exactly as before. It lives inside
     this <li> because the row IS the list item: a caller that wraps this
     partial to add its own context makes every entry a nested one-item list. -%>
-<li class="flex items-start gap-3 text-sm">
+<%# Stacked under sm: a relative time beside a wrapping sentence left the
+    sentence four lines deep in a 390px column. %>
+<li class="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-3">
   <div class="flex-1">
     <% if context %>
       <div class="font-medium text-text-heading"><%= context %></div>
