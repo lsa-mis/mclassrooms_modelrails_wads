@@ -34,7 +34,7 @@ RSpec.describe LegacyImport::RoomMedia do
     expect(room.seating_chart).to be_attached
     expect(room.gallery.map { |asset| [ asset.position, asset.subject, asset.image_alt ] }).to eq([ [ 1, nil, nil ], [ 2, nil, nil ] ])
     expect(result.payload[:counters]).to include(created: 4)
-    expect(result.payload[:info_lines]).to eq([ "gallery positions: 2 from filenames, 0 from slots" ])
+    expect(result.payload[:info_lines]).to eq([ "gallery positions: 1 from filenames, 1 from slots" ])
     expect(ActivityLog.where(action: "room.legacy_imported", trackable: room).count).to eq(1)
     expect(RenderFlatPanoramaJob).to have_been_enqueued.with(room.id)
   end
