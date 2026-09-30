@@ -20,6 +20,14 @@ accumulates here too, newest first.
 
 ### Added
 
+- **Legacy import** — `bin/rails legacy:import EXPORT= WORKSPACE= [DRY_RUN=1] [ONLY=]`
+  carries mi_classrooms' hand-curated content into the rebuild: building photos,
+  floor plans, room panoramas, seating charts and six-still galleries; notes and
+  alerts (credited to a Legacy import account with an attribution line);
+  announcements; nicknames, coordinates and hidden rooms. Legacy wins where an
+  image differs, curated fields fill only where blank, nothing the sync owns is
+  created or written, and every run writes an unmatched/replaced/errors report.
+  Safe to re-run.
 - **Flat panorama renders** — the room page's pre-load image is now a rectilinear
   render of the panorama matching the 360° viewer's camera exactly, instead of the
   raw equirectangular image squashed to 1024×512, so clicking **Load 360° view** no
