@@ -39,6 +39,17 @@ RSpec.describe LegacyImport::RoomMedia do
     expect(RenderFlatPanoramaJob).to have_been_enqueued.with(room.id)
   end
 
+  it "reports a file that no longer matches the manifest checksum and leaves the room unchanged" do
+    media("room_panorama", "room.jpg")
+    export = legacy_export
+    FileUtils.cp(file_fixture("avatar.png"), export.file(export.media("Room").first["path"]))
+
+    result = described_class.call(export:, workspace:, actor:, dry_run: false)
+
+    expect(result.payload[:error_lines]).to contain_exactly(a_string_including("does not match the manifest checksum"))
+    expect(room.reload.panorama).not_to be_attached
+  end
+
   it "skips everything on a second run" do
     media("room_panorama", "room.jpg")
     media("room_image", "avatar.png")

@@ -90,4 +90,36 @@ RSpec.describe LegacyImport::Runner do
 
     expect(result.errors.first).to match(/manifest\.json not found/)
   end
+
+  it "fails cleanly when the Legacy import account cannot be created" do
+    allow(LegacyImport::Account).to receive(:resolve).and_raise(ActiveRecord::RecordInvalid.new(User.new))
+
+    result = nil
+    expect { result = run }.not_to change { [ Note.count, ActivityLog.count ] }
+
+    expect(result).not_to be_success
+    expect(result.errors.first).to match(/\ALegacy import account could not be created: ActiveRecord::RecordInvalid: /)
+    expect(room.reload.nickname).to be_nil
+  end
+
+  it "fails before any write on an invalid manifest" do
+    export_tree.write!
+    File.write(File.join(@legacy_export_root, "media/manifest.json"), "{not json")
+
+    result = nil
+    expect { result = described_class.call(export_path: @legacy_export_root, workspace:) }.not_to change { [ ActivityLog.count, User.count ] }
+
+    expect(result.errors.first).to match(/manifest\.json/)
+    expect(room.reload.nickname).to be_nil
+  end
+
+  describe "Report.totals" do
+    it "sums errors, unmatched and replaced counters across every phase" do
+      phase = ->(counters) { Result.success(counters: LegacyImport::Tally::OUTCOMES.index_with(0).merge(counters)) }
+      result = Result.success(results: { "A" => phase.(errors: 1, unmatched: 2), "B" => phase.(errors: 2, replaced: 4, created: 9) })
+
+      expect(LegacyImport::Report.totals(result)).to eq(errors: 3, unmatched: 2, replaced: 4)
+      expect(LegacyImport::Report.totals(Result.failure("boom", results: {}))).to eq(errors: 0, unmatched: 0, replaced: 0)
+    end
+  end
 end

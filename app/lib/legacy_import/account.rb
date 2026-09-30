@@ -3,7 +3,9 @@
 module LegacyImport
   # The one user every imported note is credited to. The .invalid TLD
   # (RFC 2606) can never receive mail, and the account has no password and no
-  # OAuth identity, so nobody can sign in as it.
+  # OAuth identity, so nobody can sign in as it. Creating it runs normal
+  # onboarding: it joins the shared workspace as a viewer, owners get a
+  # member-added notification, and a gravatar job is enqueued.
   module Account
     EMAIL = "legacy-import@mclassrooms.invalid"
 

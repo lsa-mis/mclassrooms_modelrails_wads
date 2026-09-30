@@ -41,6 +41,20 @@ RSpec.describe LegacyImport::Export do
     expect { described_class.new(@legacy_export_root) }.to raise_error(described_class::Missing, /manifest\.json not found/)
   end
 
+  it "raises Invalid at new for a manifest that is not JSON" do
+    export_tree.write!
+    File.write(File.join(@legacy_export_root, "media/manifest.json"), "{not json")
+
+    expect { described_class.new(@legacy_export_root) }.to raise_error(described_class::Invalid, /manifest\.json/)
+  end
+
+  it "raises Invalid at new for a manifest without files" do
+    export_tree.write!
+    File.write(File.join(@legacy_export_root, "media/manifest.json"), JSON.generate("version" => 1))
+
+    expect { described_class.new(@legacy_export_root) }.to raise_error(described_class::Invalid, /manifest\.json.*files/)
+  end
+
   it "raises Missing for an absent data file" do
     export = legacy_export
     export_tree.remove("curated/data/notes.ndjson")

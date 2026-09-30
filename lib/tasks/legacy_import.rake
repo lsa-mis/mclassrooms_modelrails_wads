@@ -27,7 +27,8 @@ namespace :legacy do
 
     puts "Legacy import#{' (DRY RUN — nothing written)' if dry_run} — workspace \"#{slug}\""
     puts LegacyImport::Report.table(result)
-    puts "report: #{report_dir}"
+    totals = LegacyImport::Report.totals(result)
+    puts "#{totals[:errors]} errors, #{totals[:unmatched]} unmatched, #{totals[:replaced]} replaced — see #{report_dir}"
     abort "legacy:import failed: #{result.errors.join('; ')}" unless result.success?
   end
 end

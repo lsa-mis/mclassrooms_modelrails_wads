@@ -16,6 +16,11 @@ module LegacyImport
       [ header, *rows, *results.values.flat_map { |phase| phase.payload[:info_lines] } ].join("\n")
     end
 
+    def self.totals(result)
+      counters = result.payload.fetch(:results, {}).values.map { |phase| phase.payload[:counters] }
+      { errors: counters.sum { |c| c[:errors] }, unmatched: counters.sum { |c| c[:unmatched] }, replaced: counters.sum { |c| c[:replaced] } }
+    end
+
     def self.write(result, dir:)
       results = result.payload.fetch(:results, {})
       FileUtils.mkdir_p(dir)

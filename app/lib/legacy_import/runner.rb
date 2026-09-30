@@ -34,7 +34,7 @@ module LegacyImport
 
       export = Export.new(@export_path)
       Current.set(workspace: @workspace) { run(export) }
-    rescue Export::Missing => e
+    rescue Export::Missing, Export::Invalid => e
       Result.failure(e.message)
     end
 
@@ -43,7 +43,11 @@ module LegacyImport
     def populated? = Room.exists?(workspace: @workspace) && Building.exists?(workspace: @workspace)
 
     def run(export)
-      actor = Account.resolve(dry_run: @dry_run)
+      actor = begin
+        Account.resolve(dry_run: @dry_run)
+      rescue StandardError => e
+        return Result.failure("Legacy import account could not be created: #{e.class}: #{e.message}", results: {})
+      end
       results = {}
       PHASES.select { |name, _| @only.include?(name) }.values.flatten.each do |service|
         name = service.name.demodulize

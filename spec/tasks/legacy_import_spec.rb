@@ -41,7 +41,7 @@ RSpec.describe "legacy:import" do
     output = run(EXPORT: @legacy_export_root, WORKSPACE: "legacy-rake", REPORT_DIR: @report_dir)
 
     expect(room.reload.panorama).to be_attached
-    expect(output).to include("RoomMedia", "gallery positions:")
+    expect(output).to include("RoomMedia", "gallery positions:", "0 errors, 0 unmatched, 0 replaced — see ")
     expect(Dir.children(@report_dir)).to contain_exactly("unmatched.txt", "replaced.txt", "errors.txt", "summary.json")
     expect(JSON.parse(File.read(File.join(@report_dir, "summary.json")))).to include("success" => true)
   end

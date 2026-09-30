@@ -15,7 +15,11 @@ module LegacyImport
 
     # Assign-only; the caller's Curate block saves once, inside its transaction.
     def self.attachable(export, entry)
-      { io: StringIO.new(export.file(entry.fetch("path")).binread),
+      path = export.file(entry.fetch("path"))
+      bytes = path.binread
+      raise Export::Mismatch, "#{path} does not match the manifest checksum" unless Digest::MD5.base64digest(bytes) == entry.fetch("checksum")
+
+      { io: StringIO.new(bytes),
         filename: entry.fetch("filename"), content_type: entry.fetch("content_type") }
     end
 
