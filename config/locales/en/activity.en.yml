@@ -91,6 +91,11 @@ en:
         revoked: "revoked editor access"
       room:
         media_bulk_uploaded: "bulk-uploaded room media"
+        legacy_imported: "imported room media from the legacy app"
+      building:
+        legacy_imported: "imported a building photo from the legacy app"
+      floor:
+        legacy_imported: "imported a floor plan from the legacy app"
       sync_scope_rule:
         created: "added a sync scope rule"
         updated: "updated a sync scope rule"

@@ -20,11 +20,11 @@ module LegacyImport
         building = Building.find_by(workspace: @workspace, bldrecnbr: entry.fetch("record_id").to_s)
         next @tally.unmatched!(Export.describe(entry)) if building.nil?
 
-        write(building, :photo, entry, "building.legacy_imported")
+        write(building, :photo, entry, action: "building.legacy_imported")
       end
       @export.media("Floor").each do |entry|
         floor = find_floor(entry)
-        write(floor, :plan, entry, "floor.legacy_imported") if floor
+        write(floor, :plan, entry, action: "floor.legacy_imported") if floor
       end
       @tally.to_result
     end
@@ -44,7 +44,7 @@ module LegacyImport
       floor
     end
 
-    def write(record, slot, entry, action)
+    def write(record, slot, entry, action:)
       outcome = SlotWriter.outcome(SlotWriter.checksum(record.public_send(slot)), entry.fetch("checksum"))
       return @tally.count(:skipped) if outcome == :skipped
 
