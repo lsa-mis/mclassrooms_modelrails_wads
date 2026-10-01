@@ -10,13 +10,11 @@ RSpec.describe LegacyImport::Fields do
 
   around { |example| Current.set(workspace:) { example.run } }
 
-  def call(dry_run: false) = described_class.call(export: legacy_export, workspace:, actor:, dry_run:)
-
   it "fills blank curated room and building columns" do
     export_tree.row(:rooms, rmrecnbr: "2000123", nickname: "Aud 3", ada_seat_count: 4, visible: true)
                .row(:buildings, bldrecnbr: "1005058", nickname: "MLB", latitude: 42.2765, longitude: -83.7397, visible: true)
 
-    result = call
+    result = run_importer
 
     expect(room.reload).to have_attributes(nickname: "Aud 3", ada_seat_count: 4, hidden_at: nil)
     expect(building.reload).to have_attributes(nickname: "MLB", latitude: BigDecimal("42.2765"), longitude: BigDecimal("-83.7397"))
@@ -28,7 +26,7 @@ RSpec.describe LegacyImport::Fields do
     room.update!(nickname: "Kept")
     export_tree.row(:rooms, rmrecnbr: "2000123", nickname: "Legacy", visible: true)
 
-    result = call
+    result = run_importer
 
     expect(room.reload.nickname).to eq("Kept")
     expect(result.payload[:counters]).to include(skipped: 1, updated: 0)
@@ -37,7 +35,7 @@ RSpec.describe LegacyImport::Fields do
   it "hides a room the legacy app hid, crediting the import account" do
     export_tree.row(:rooms, rmrecnbr: "2000123", visible: false)
 
-    call
+    run_importer
 
     expect(room.reload.hidden_at).to be_present
     expect(room.hidden_by).to eq(actor)
@@ -47,7 +45,7 @@ RSpec.describe LegacyImport::Fields do
     room.update!(in_feed: false)
     export_tree.row(:rooms, rmrecnbr: "2000123", visible: false)
 
-    call
+    run_importer
 
     expect(room.reload.hidden_at).to be_nil
   end
@@ -58,7 +56,7 @@ RSpec.describe LegacyImport::Fields do
     export_tree.row(:rooms, rmrecnbr: "2000123", nickname: "Aud 3", ada_seat_count: 4, visible: false,
                             room_number: "9999", instructional_seat_count: 1)
 
-    call
+    run_importer
 
     expect(room.reload.attributes.slice(*sync_owned)).to eq(before)
   end
@@ -69,7 +67,7 @@ RSpec.describe LegacyImport::Fields do
                .row(:rooms, rmrecnbr: "9999999", nickname: "Gone", visible: true)
                .row(:buildings, bldrecnbr: "1999999", nickname: "Gone", visible: true)
 
-    result = call
+    result = run_importer
 
     expect(result.payload[:unmatched_lines]).to contain_exactly("Room\t#{other.rmrecnbr}", "Room\t9999999", "Building\t1999999")
     expect(other.reload.nickname).to be_nil
@@ -79,7 +77,7 @@ RSpec.describe LegacyImport::Fields do
     export_tree.row(:rooms, rmrecnbr: "2000123", nickname: "Aud 3", visible: false)
 
     result = nil
-    expect { result = call(dry_run: true) }.not_to change(ActivityLog, :count)
+    expect { result = run_importer(dry_run: true) }.not_to change(ActivityLog, :count)
 
     expect(room.reload).to have_attributes(nickname: nil, hidden_at: nil)
     expect(result.payload[:counters]).to include(updated: 1)

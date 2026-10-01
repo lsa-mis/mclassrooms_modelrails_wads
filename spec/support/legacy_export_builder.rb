@@ -64,4 +64,9 @@ RSpec.shared_context "legacy export" do
   let(:export_tree) { LegacyExportBuilder::Tree.new(@legacy_export_root) }
 
   def legacy_export = LegacyImport::Export.new(export_tree.write!)
+
+  # The importer under test against the example's export; each spec supplies workspace and actor.
+  def run_importer(dry_run: false, actor: self.actor)
+    described_class.call(export: legacy_export, workspace:, actor:, dry_run:)
+  end
 end

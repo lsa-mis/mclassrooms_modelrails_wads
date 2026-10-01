@@ -13,21 +13,19 @@ RSpec.describe LegacyImport::RoomMedia do
 
   around { |example| Current.set(workspace:) { example.run } }
 
-  def call(dry_run: false) = described_class.call(export: legacy_export, workspace:, actor:, dry_run:)
-
-  def media(attachment_name, fixture, filename: nil, record_id: 2_196_067)
+  def room_file(attachment_name, fixture, filename: nil, record_id: 2_196_067)
     export_tree.media(model: "Room", record_id:, attachment_name:, fixture:, filename: filename || File.basename(fixture))
   end
 
   def md5(io_or_bytes) = Digest::MD5.base64digest(io_or_bytes)
 
   it "attaches panorama, seating chart and gallery in one audited transaction" do
-    media("room_panorama", "room.jpg")
-    media("room_layout", "seating_chart.pdf")
-    media("room_image", "avatar.png", filename: "PHARM 1300 Image 1 2026.jpeg")
-    media("gallery_image1", "equirect.png", filename: "PHARM 1300 Image 2 2026.jpeg")
+    room_file("room_panorama", "room.jpg")
+    room_file("room_layout", "seating_chart.pdf")
+    room_file("room_image", "avatar.png", filename: "PHARM 1300 Image 1 2026.jpeg")
+    room_file("gallery_image1", "equirect.png", filename: "PHARM 1300 Image 2 2026.jpeg")
 
-    result = call
+    result = run_importer
 
     room.reload
     expect(room.panorama).to be_attached
@@ -40,7 +38,7 @@ RSpec.describe LegacyImport::RoomMedia do
   end
 
   it "reports a file that no longer matches the manifest checksum and leaves the room unchanged" do
-    media("room_panorama", "room.jpg")
+    room_file("room_panorama", "room.jpg")
     export = legacy_export
     FileUtils.cp(file_fixture("avatar.png"), export.file(export.media("Room").first["path"]))
 
@@ -51,20 +49,20 @@ RSpec.describe LegacyImport::RoomMedia do
   end
 
   it "skips everything on a second run" do
-    media("room_panorama", "room.jpg")
-    media("room_image", "avatar.png")
-    call
+    room_file("room_panorama", "room.jpg")
+    room_file("room_image", "avatar.png")
+    run_importer
 
-    result = call
+    result = run_importer
 
     expect(result.payload[:counters]).to include(created: 0, replaced: 0, skipped: 2)
   end
 
   it "replaces a different still but keeps the alt text and subject a person chose" do
     create(:media_asset, owner: room, position: 1, subject: "front", image_alt: "Lectern and screen")
-    media("room_image", "equirect.png")
+    room_file("room_image", "equirect.png")
 
-    result = call
+    result = run_importer
 
     asset = room.reload.gallery.sole
     expect(md5(asset.image.download)).to eq(md5(file_fixture("equirect.png").binread))
@@ -74,9 +72,9 @@ RSpec.describe LegacyImport::RoomMedia do
 
   it "replaces a different panorama and reports it" do
     room.panorama.attach(io: file_fixture("equirect.png").open, filename: "old.png")
-    media("room_panorama", "room.jpg")
+    room_file("room_panorama", "room.jpg")
 
-    result = call
+    result = run_importer
 
     expect(md5(room.reload.panorama.download)).to eq(md5(file_fixture("room.jpg").binread))
     expect(result.payload[:counters]).to include(replaced: 1)
@@ -86,11 +84,11 @@ RSpec.describe LegacyImport::RoomMedia do
   # .jpg, Marcel would fall back to the extension and the panorama would pass.
   it "rolls back a room whose file is rejected and imports the others" do
     other = create(:room, building:, rmrecnbr: "2196068")
-    media("room_image", "avatar.png")
-    media("room_panorama", "stray.txt")
-    media("room_image", "avatar.png", record_id: 2_196_068)
+    room_file("room_image", "avatar.png")
+    room_file("room_panorama", "stray.txt")
+    room_file("room_image", "avatar.png", record_id: 2_196_068)
 
-    result = call
+    result = run_importer
 
     expect(result.payload[:error_lines]).to contain_exactly(a_string_starting_with("Room\t2196067"))
     expect(room.reload.gallery).to be_empty
@@ -100,15 +98,15 @@ RSpec.describe LegacyImport::RoomMedia do
 
   it "retries a failed room on the next run and skips the rooms that finished" do
     other = create(:room, building:, rmrecnbr: "2196068")
-    media("room_image", "avatar.png")
-    media("room_panorama", "room.jpg")
-    media("room_image", "avatar.png", record_id: 2_196_068)
+    room_file("room_image", "avatar.png")
+    room_file("room_panorama", "room.jpg")
+    room_file("room_image", "avatar.png", record_id: 2_196_068)
     panorama_path = Pathname(@legacy_export_root).join("media/room/2196067/room_panorama/room.jpg")
     panorama_path.delete
 
-    first = call
+    first = run_importer
     FileUtils.cp(file_fixture("room.jpg"), panorama_path)
-    second = call
+    second = run_importer
 
     expect(first.payload[:error_lines]).to contain_exactly(a_string_including("not found"))
     expect(second.payload[:error_lines]).to be_empty
@@ -119,21 +117,21 @@ RSpec.describe LegacyImport::RoomMedia do
 
   it "reports rooms that are not in this workspace and leaves another workspace's room alone" do
     elsewhere = create(:room, building: create(:building))
-    media("room_image", "avatar.png", record_id: elsewhere.rmrecnbr.to_i)
-    media("room_image", "avatar.png", record_id: 9_999_999)
+    room_file("room_image", "avatar.png", record_id: elsewhere.rmrecnbr.to_i)
+    room_file("room_image", "avatar.png", record_id: 9_999_999)
 
     result = nil
-    expect { result = call }.not_to change(MediaAsset, :count)
+    expect { result = run_importer }.not_to change(MediaAsset, :count)
 
     expect(result.payload[:unmatched_lines].size).to eq(2)
   end
 
   it "writes nothing on dry run" do
-    media("room_panorama", "room.jpg")
-    media("room_image", "avatar.png")
+    room_file("room_panorama", "room.jpg")
+    room_file("room_image", "avatar.png")
 
     result = nil
-    expect { result = call(dry_run: true) }.not_to change { [ MediaAsset.count, ActiveStorage::Attachment.count, ActivityLog.count ] }
+    expect { result = run_importer(dry_run: true) }.not_to change { [ MediaAsset.count, ActiveStorage::Attachment.count, ActivityLog.count ] }
 
     expect(result.payload[:counters]).to include(created: 2)
   end

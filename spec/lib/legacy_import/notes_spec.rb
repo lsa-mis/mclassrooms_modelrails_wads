@@ -9,8 +9,6 @@ RSpec.describe LegacyImport::Notes do
   let(:building) { create(:building, workspace:, bldrecnbr: "1005058") }
   let!(:room) { create(:room, building:, rmrecnbr: "2031968") }
 
-  def call(dry_run: false, as: actor) = described_class.call(export: legacy_export, workspace:, actor: as, dry_run:)
-
   def note_row(legacy_id, **attrs)
     { legacy_id:, parent_legacy_id: nil, notable_type: "Room", notable_key: "2031968",
       author_email: "dcran@umich.edu", alert: false, body_html: "<div>Call (734) 615-0100</div>",
@@ -20,7 +18,7 @@ RSpec.describe LegacyImport::Notes do
   it "creates a note credited to the import account, with attribution and the legacy dates" do
     export_tree.row(:notes, note_row(1, alert: true))
 
-    call
+    run_importer
 
     note = Note.sole
     expect(note).to have_attributes(notable: room, author: actor, alert: true, parent: nil,
@@ -32,7 +30,7 @@ RSpec.describe LegacyImport::Notes do
   it "resolves a building note by bldrecnbr" do
     export_tree.row(:notes, note_row(2, notable_type: "Building", notable_key: "1005058"))
 
-    call
+    run_importer
 
     expect(Note.sole.notable).to eq(building)
   end
@@ -42,7 +40,7 @@ RSpec.describe LegacyImport::Notes do
                .row(:notes, note_row(2, parent_legacy_id: 1, created_at: "2022-03-01T10:00:00Z"))
                .row(:notes, note_row(3, parent_legacy_id: 99, created_at: "2022-03-02T10:00:00Z"))
 
-    result = call
+    result = run_importer
 
     parent = Note.find_by(parent_id: nil)
     expect(Note.where(parent:).count).to eq(1)
@@ -51,10 +49,10 @@ RSpec.describe LegacyImport::Notes do
 
   it "skips notes it already imported" do
     export_tree.row(:notes, note_row(1))
-    call
+    run_importer
 
     result = nil
-    expect { result = call }.not_to change(Note, :count)
+    expect { result = run_importer }.not_to change(Note, :count)
 
     expect(result.payload[:counters]).to include(skipped: 1, created: 0)
   end
@@ -62,7 +60,7 @@ RSpec.describe LegacyImport::Notes do
   it "reports a note whose room is not in this workspace" do
     export_tree.row(:notes, note_row(1, notable_key: "9999999"))
 
-    expect(call.payload[:unmatched_lines]).to eq([ "Note\t1\tRoom 9999999" ])
+    expect(run_importer.payload[:unmatched_lines]).to eq([ "Note\t1\tRoom 9999999" ])
   end
 
   # The ordinary note at the end is the control: without it, this example
@@ -71,7 +69,7 @@ RSpec.describe LegacyImport::Notes do
     allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to)
     export_tree.row(:notes, note_row(1))
 
-    call
+    run_importer
 
     expect(Note.count).to eq(1)
     expect(Turbo::StreamsChannel).not_to have_received(:broadcast_prepend_to)
@@ -83,7 +81,7 @@ RSpec.describe LegacyImport::Notes do
     export_tree.row(:notes, note_row(1))
 
     result = nil
-    expect { result = call(dry_run: true, as: LegacyImport::Account.build) }.not_to change(Note, :count)
+    expect { result = run_importer(dry_run: true, actor: LegacyImport::Account.build) }.not_to change(Note, :count)
 
     expect(result.payload[:counters]).to include(created: 1)
   end

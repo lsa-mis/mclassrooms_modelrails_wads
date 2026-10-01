@@ -9,8 +9,6 @@ RSpec.describe LegacyImport::BuildingMedia do
 
   around { |example| Current.set(workspace:) { example.run } }
 
-  def call(dry_run: false) = described_class.call(export: legacy_export, workspace:, actor:, dry_run:)
-
   def photo(fixture = "avatar.png", record_id: 1_000_054)
     export_tree.media(model: "Building", record_id:, attachment_name: "building_image", fixture:, record_label: "EAST QUADRANGLE")
   end
@@ -27,7 +25,7 @@ RSpec.describe LegacyImport::BuildingMedia do
   it "attaches a building photo and writes one audit row" do
     photo
 
-    result = call
+    result = run_importer
 
     expect(building.reload.photo).to be_attached
     expect(Digest::MD5.base64digest(building.photo.download)).to eq(Digest::MD5.base64digest(file_fixture("avatar.png").binread))
@@ -39,7 +37,7 @@ RSpec.describe LegacyImport::BuildingMedia do
     attach_photo("avatar.png")
     photo
 
-    result = call
+    result = run_importer
 
     expect(result.payload[:counters]).to include(skipped: 1, created: 0, replaced: 0)
   end
@@ -48,7 +46,7 @@ RSpec.describe LegacyImport::BuildingMedia do
     attach_photo("equirect.png")
     photo("avatar.png")
 
-    result = call
+    result = run_importer
 
     expect(Digest::MD5.base64digest(building.reload.photo.download)).to eq(Digest::MD5.base64digest(file_fixture("avatar.png").binread))
     expect(result.payload[:replaced_lines]).to contain_exactly(a_string_ending_with("\tAUTHORED ALT — review"))
@@ -58,7 +56,7 @@ RSpec.describe LegacyImport::BuildingMedia do
     ground = create(:floor, building:, label: "G")
     plan("0G")
 
-    expect { call }.not_to change(Floor, :count)
+    expect { run_importer }.not_to change(Floor, :count)
 
     expect(ground.reload.plan).to be_attached
   end
@@ -67,7 +65,7 @@ RSpec.describe LegacyImport::BuildingMedia do
     plan("09")
 
     result = nil
-    expect { result = call }.not_to change(Floor, :count)
+    expect { result = run_importer }.not_to change(Floor, :count)
 
     expect(result.payload[:unmatched_lines]).to contain_exactly(a_string_starting_with("Floor\t7\tEAST QUADRANGLE floor 09"))
   end
@@ -77,7 +75,7 @@ RSpec.describe LegacyImport::BuildingMedia do
     create(:floor, building:, label: "1")
     plan("01")
 
-    result = call
+    result = run_importer
 
     expect(result.payload[:unmatched_lines]).to contain_exactly(a_string_ending_with("\tambiguous building name"))
   end
@@ -85,7 +83,7 @@ RSpec.describe LegacyImport::BuildingMedia do
   it "reports a photo whose building is not in this workspace" do
     photo(record_id: 1_999_999)
 
-    result = call
+    result = run_importer
 
     expect(result.payload[:unmatched_lines]).to contain_exactly(a_string_starting_with("Building\t1999999"))
   end
@@ -107,7 +105,7 @@ RSpec.describe LegacyImport::BuildingMedia do
   it "attaches nothing on dry run" do
     photo
 
-    result = call(dry_run: true)
+    result = run_importer(dry_run: true)
 
     expect(building.reload.photo).not_to be_attached
     expect(result.payload[:counters]).to include(created: 1)
