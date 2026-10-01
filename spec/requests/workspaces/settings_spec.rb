@@ -31,6 +31,7 @@ RSpec.describe "Workspace Settings", type: :request do
       it "redirects with success message" do
         patch workspace_settings_path(workspace), params: { workspace: { max_members: 10 } }
         expect(response).to redirect_to(edit_workspace_settings_path(workspace))
+        expect(flash[:notice]).to eq(I18n.t("workspaces.settings.update.success"))
       end
     end
 

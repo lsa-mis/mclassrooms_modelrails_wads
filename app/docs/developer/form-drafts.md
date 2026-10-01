@@ -44,10 +44,9 @@ data: {
 }
 ```
 
-Two things to watch on a form with an editor:
+One thing to watch on a form with an editor:
 
 - **Mark hidden routing fields `data-form-draft-ignore`.** A hidden field with no visible sibling (a `type` discriminator carried from the URL, say) downgrades every restore to the partial announcement — telling the user content was left behind when the editor was in fact refilled.
-- **The restored count runs one high.** Lexxy's toolbar contains its own named `<select>`, which the serializer treats as a form field (modelrails_ui#262). The announcement is one field off; nothing else is affected.
 
 ## Security posture
 

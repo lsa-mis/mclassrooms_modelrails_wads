@@ -14,9 +14,7 @@ class PendingJoinsController < ApplicationController
 
     workspace = link.workspace
 
-    # Through the LINK, not the workspace: admit re-reads both records inside
-    # the write transaction and no-ops on a link revoked since the page loaded
-    # (#1061). nil is that refusal, not an error.
+    # Through the link: admit re-checks inside the write; nil is refusal (#1061).
     if link.admit(Current.user).nil?
       clear_pending_join
       return redirect_to root_path, alert: t(".unavailable")

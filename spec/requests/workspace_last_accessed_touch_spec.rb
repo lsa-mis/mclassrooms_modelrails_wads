@@ -1,15 +1,7 @@
 require "rails_helper"
 
-# Every workspace-scoped request stamps memberships.last_accessed_at. There are
-# 20 controllers including WorkspaceScoped, so unguarded this is one write per
-# page load on a single-writer SQLite database, serialized behind every other
-# write — while every reader of the stamp (the workspaces sort, the row's "last
-# seen" phrasing, the switcher's recency order) tolerates minute granularity
-# (#171).
-#
-# The contract is about the WRITE, not the statement: a guarded update_all still
-# issues its UPDATE, it just matches zero rows and appends no WAL. So these
-# examples watch the stamp rather than counting queries.
+# The stamp writes at most once per window (#171). A guarded UPDATE still runs,
+# matching no rows, so these watch the stamp rather than counting queries.
 RSpec.describe "Workspace last-accessed touch", type: :request do
   let(:user) { create(:user) }
   let(:workspace) { create(:workspace) }
@@ -22,8 +14,7 @@ RSpec.describe "Workspace last-accessed touch", type: :request do
     first = membership.reload.last_accessed_at
     expect(first).to be_present
 
-    # Well inside the window, and far enough that an unguarded touch would move
-    # the stamp by a visible minute rather than by microseconds.
+    # Inside the window, and far enough that a stray touch moves a whole minute.
     travel 1.minute do
       expect { get workspace_path(workspace) }
         .not_to change { membership.reload.last_accessed_at }

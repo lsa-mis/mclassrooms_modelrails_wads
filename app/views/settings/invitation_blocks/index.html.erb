@@ -7,9 +7,7 @@
   <% if @invitation_blocks.any? %>
     <ul role="list" class="mt-8 space-y-4">
       <% @invitation_blocks.each do |block| %>
-        <%# A nameless inviter falls back to the address; full_name is
-            "first last", so it is whitespace-only rather than blank when both
-            halves are missing — .presence handles that. %>
+        <%# full_name is whitespace when both halves are nil; .presence catches it. %>
         <% sender = block.inviter.full_name.presence || block.inviter.email_address %>
         <li class="flex items-center justify-between p-4 border border-border rounded-lg">
           <div>
@@ -27,8 +25,7 @@
                       data-action="click->modal#open">
                 <%= t("settings.invitation_blocks.index.allow_button") %>
               </button>
-              <%# variant is passed because the partial DEFAULTS to :danger,
-                  and this undoes a block rather than destroying anything. %>
+              <%# Not the partial's :danger default: this undoes a block. %>
               <%= render "shared/confirm_dialog",
                         title: t("settings.invitation_blocks.index.allow_title", sender: sender),
                         message: t("settings.invitation_blocks.index.allow_message"),

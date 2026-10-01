@@ -25,10 +25,7 @@ module Operations
     def build_ledger_summary
       parts = [ t("operations.activity_logs.index.summary.events", count: @pagy.count) ]
       parts.concat(ledger_search_parts) if @query
-      # @workspace can be nil while the param stands: a slug that resolves to
-      # nothing is a filter that matched nothing, and the summary says which
-      # slug was asked for rather than dropping the filter from the sentence
-      # (#1170).
+      # @workspace is nil for an unresolved slug; the summary still names it (#1170).
       parts << ledger_workspace_label if @workspace_param
       parts << t("activity.kinds.#{@kind}") if @kind
       parts << ledger_range_label

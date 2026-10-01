@@ -3,11 +3,7 @@ class BackfillDigestNextDueAt < ActiveRecord::Migration[8.1]
   # rather than holding one giant write lock for the full population.
   disable_ddl_transaction!
 
-  # Frozen (#449): migrations replay from zero on every fresh clone and must not
-  # reference live app classes. This one reached UserPreferences through
-  # .unscoped, which the fence could not see until it walked receiver chains
-  # (#942) — so it read as the house pattern while being the thing the house
-  # pattern exists to prevent.
+  # Frozen (#449): migrations must not reference live app classes.
   class MigrationUserPreferences < ActiveRecord::Base
     self.table_name = "user_preferences"
   end

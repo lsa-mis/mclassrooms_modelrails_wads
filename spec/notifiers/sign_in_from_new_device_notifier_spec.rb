@@ -10,15 +10,6 @@ RSpec.describe SignInFromNewDeviceNotifier, type: :notifier do
   let(:user_agent) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15" }
   let(:os) { "Macintosh" }
 
-  # Same draining utility used by the other Notifier specs — Noticed enqueues
-  # an EventJob, then a per-channel delivery-method job, then ActionMailer's
-  # MailDeliveryJob. perform_enqueued_jobs is non-recursive, so we drain in
-  # sequence.
-  def drain_noticed_jobs
-    perform_enqueued_jobs(only: Noticed::EventJob)
-    perform_enqueued_jobs(only: Noticed::DeliveryMethods::Email)
-  end
-
   describe ".category" do
     it "is :security" do
       expect(described_class.category_name).to eq "security"

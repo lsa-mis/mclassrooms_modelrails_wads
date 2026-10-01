@@ -286,10 +286,7 @@ RSpec.describe ApplicationNotifier, type: :notifier do
         expect(result).to eq :skipped
       end
 
-      # #1063: the gem aliases deliver_later to deliver INSIDE its own concern, so
-      # the alias holds a copy of the gem's body and never consults this class's
-      # override. The two spellings have to mean the same thing or the second one
-      # silently skips every guard the first one carries.
+      # deliver_later must mean deliver: the gem's alias copies its own body (#1063).
       it "treats deliver_later as the same method" do
         result = StubAudienceNotifier.with(record: resource, audience: nil).deliver_later(nil)
         expect(result).to eq :skipped
@@ -551,7 +548,7 @@ RSpec.describe ApplicationNotifier, type: :notifier do
 
       # Persisted DND flag honored — proves we read THROUGH to the user's row,
       # not a transient stand-in.
-      expect(prefs.do_not_disturb?).to be true
+      expect(prefs.quiet_hours_active?).to be true
     end
   end
 

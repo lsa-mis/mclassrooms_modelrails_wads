@@ -21,25 +21,18 @@ RSpec.describe "ChatBubble component accessibility", type: :system do
   # collides across scoped 0b specs → axe scopes to the wrong selector).
   let(:scope) { [ "#cb-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "sent: announces the speaker via an sr-only direction label; AAA in both themes" do
     visit "/rails/view_components/ui/chat_bubble_component/sent"
 
     expect(page).to have_css("#cb-scope .sr-only", text: "said", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "received: announces the speaker via an sr-only direction label; AAA in both themes" do
     visit "/rails/view_components/ui/chat_bubble_component/received"
 
     expect(page).to have_css("#cb-scope .sr-only", text: "said", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "with_meta: shows author + timestamp and keeps the sr-only label; AAA in both themes" do
@@ -48,6 +41,6 @@ RSpec.describe "ChatBubble component accessibility", type: :system do
     expect(page).to have_css("#cb-scope .sr-only", text: "said", visible: :all)
     expect(page).to have_text("Ada Lovelace")
     expect(page).to have_text("10:32 AM")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

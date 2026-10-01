@@ -21,23 +21,7 @@ module WorkspaceScoped
     redirect_to workspaces_path, alert: t("workspaces.not_found")
   end
 
-  # Stamps `memberships.last_accessed_at = NOW` for the (current user,
-  # current workspace) pair on every workspace-scoped request. Powers the
-  # "most-recently-accessed" sort + pinned-current row on workspaces#index.
-  #
-  # At most one UPDATE per five-minute window — no callback cascade, no
-  # validations, no broadcasts. Silently swallows failures via Rails.error.report
-  # so a connection blip on the touch doesn't 500 the user's page. Same posture
-  # as NotificationBroadcaster#safe_broadcast (lib/notification_broadcaster.rb).
-  #
-  # The staleness predicate is the whole point: unguarded this wrote on every
-  # workspace-scoped request across 20 controllers, which is a WAL page per page
-  # load on a single-writer database. Measured, a guarded no-op UPDATE appends
-  # zero WAL bytes and keeps the same index plan. Every reader of this stamp —
-  # the workspaces sort, the row's "last seen" phrasing, the switcher's recency
-  # order — tolerates minute granularity, so five minutes costs them nothing.
-  # Not the Rails.cache debounce the issue proposed: Solid Cache is another
-  # SQLite database, which moves the query rather than removing it (#171).
+  # At most one stamp per TOUCH_WINDOW (#171); a failed touch is reported, never raised.
   TOUCH_WINDOW = 5.minutes
 
   def touch_membership_last_accessed

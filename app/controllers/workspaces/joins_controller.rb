@@ -27,11 +27,7 @@ module Workspaces
     private
 
     def admit_authenticated_user
-      # Through the LINK, not the workspace: admit re-reads both records inside
-      # the write transaction, so a revoke landing between the before_action's
-      # posture check and this write is refused rather than admitted (#1061).
-      # nil is that refusal — the same neutral error the lookup gives, so an
-      # outsider still cannot tell which condition failed.
+      # Through the link: admit re-checks inside the write; nil is the neutral refusal (#1061).
       if @link.admit(Current.user).nil?
         return redirect_to root_path, alert: t("workspaces.joins.invalid_or_revoked")
       end

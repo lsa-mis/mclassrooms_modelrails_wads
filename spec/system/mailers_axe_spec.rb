@@ -20,7 +20,7 @@ RSpec.describe "Mailer templates", type: :system do
 
   def deliver_in_app(notifier, record, recipient)
     notifier.with(record: record).deliver(recipient)
-    recipient.notifications.reload.last
+    recipient.notifications.order(:id).last
   end
 
   mails = {
@@ -68,7 +68,7 @@ RSpec.describe "Mailer templates", type: :system do
     },
     "NotificationMailer#sign_in_from_new_device" => -> {
       SignInFromNewDeviceNotifier.with(record: user, user_agent: "Mozilla/5.0 (Macintosh) Safari/605.1", os: "macOS").deliver(user)
-      notification = user.notifications.reload.last
+      notification = user.notifications.order(:id).last
       NotificationMailer.with(notification: notification, recipient: user, record: user).sign_in_from_new_device
     },
     "NotificationMailer#digest" => -> {

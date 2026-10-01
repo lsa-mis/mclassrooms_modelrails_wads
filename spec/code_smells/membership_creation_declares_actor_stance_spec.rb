@@ -44,10 +44,6 @@ RSpec.describe "Code smell: membership creation declares its actor stance" do
       "seeds the very first owner of a just-created workspace"
   }.freeze
 
-  def ruby_sources
-    Dir[Rails.root.join("{app,lib}/**/*.rb")]
-  end
-
   # without_comments / balanced_end come from spec/support/source_scanning.rb,
   # shared with the recipients-block fence.
   def enclosing_method(source, index)

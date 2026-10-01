@@ -18,26 +18,8 @@ RSpec.describe "Code smell: every locale interpolation token is supplied" do
     ada alt building caption description floor label min n original owner
     position room students total value
   ]
-  # ^ The second list: fork (MClassrooms) tokens the directory's views,
-  # helpers and mailers supply (buildings, rooms, media, ui locale files).
-  # ^ from Step 1's measurement, minus the eight vocabulary tokens, sorted.
-  # `link`: app/views/operations/users/show.html.erb supplies a link_to for
-  # operations.users.show.operator_unsuspendable_html.
-  # `zone`: the activity ledger's filters partial passes the operator's time
-  # zone name to ...index.ranges.popover_zone.
-  # `shown`: the ledger's workspace search partial passes how many candidates it
-  # rendered alongside `count`, the number that matched
-  # (...index.filters.workspace_more) — an honest cap states both.
-  # `sender`: app/views/settings/invitation_blocks/index.html.erb supplies the
-  # blocking inviter's name (or address) to ...index.allow_aria_label/_title.
-  # `query` / `names`: Operations::ActivityLedgerHelper#ledger_search_parts
-  # supplies the needle and the records it resolved to
-  # (...index.summary.matching / .no_match).
-  # Two of these are filled client-side, not by a Ruby caller: `count` in
-  # form_draft.restored_other and `name` in identity_picker.js.color_announce
-  # are supplied by JavaScript, not a translation call argument — something
-  # still supplies them, so they belong on this list rather than the
-  # vocabulary's.
+  # Non-vocabulary tokens a caller supplies, the second list from the fork's buildings, rooms
+  # and media views; `count` and `name` come from JavaScript.
   js_filled_keys = %w[form_draft.restored_other identity_picker.js.color_announce]
 
   def tokens_in(path)

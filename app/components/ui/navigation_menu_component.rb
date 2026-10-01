@@ -44,7 +44,7 @@ module UI
     # axis here, since the container is flex-col) centres single-line content as
     # the row grows to meet the floor; items-center would pull a two-line link off
     # its left edge.
-    PANEL_LINK = "flex min-h-input flex-col justify-center gap-1 rounded-sm p-2 text-sm transition-all focus-ring " \
+    PANEL_LINK = "flex min-h-input flex-col justify-center gap-1 rounded-sm p-2 text-sm motion-safe:transition-all focus-ring " \
                  "hover:bg-surface-sunken hover:text-text-heading " \
                  "aria-[current]:bg-surface-sunken/50 aria-[current]:text-text-heading"
 
@@ -166,7 +166,7 @@ module UI
           fill: "none",
           stroke: "currentColor",
           "stroke-width": "2",
-          class: "relative top-[1px] ml-1 size-3 transition-transform duration-200 " \
+          class: "relative top-[1px] ml-1 size-3 motion-safe:transition-transform duration-200 " \
                  "group-data-[state=open]:rotate-180",
           "aria-hidden": "true")
       end

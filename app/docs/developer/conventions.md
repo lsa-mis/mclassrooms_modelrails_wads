@@ -52,6 +52,15 @@ The form is a **one-line gist plus a pointer** to the PR, doc, or issue
 carrying the full story. If the explanation is growing into an essay, the
 essay belongs in a doc page (rule 2) with the gist-and-pointer left behind.
 
+A Lefthook pre-commit check (`bin/comment-block-check`) refuses any comment
+block over two lines (a gist and a pointer) that the commit touches, so a block
+cannot grow past that one review round at a time. CI runs the same check over
+a pull request's whole diff (`bin/comment-block-check --range`), so a skipped
+hook, or a fork without Lefthook, meets it there. Two kinds of file are exempt:
+gem-vendored files, which regenerate from the gem, and Lookbook preview classes
+under `spec/components/previews/`, whose comments are the notes Lookbook renders
+rather than commentary on code.
+
 ### The test a comment must pass
 
 > A comment survives review only if it states a constraint the code itself
@@ -80,3 +89,21 @@ A longer comment that passes the test can survive — a header documenting a
 claim-exception matrix that lives in one place precisely because it used to
 drift across two, for example. The bar isn't length; it's whether the code
 could say it instead.
+
+## Docs index their code
+
+A page here that explains a feature lists the code behind it in its front
+matter, grouped by feature:
+
+```yaml
+code:
+  signup:
+    - app/controllers/magic_link_callbacks_controller.rb
+    - app/views/sessions/
+```
+
+That gives two lookups. Starting on a feature, search `app/docs` for its name
+followed by a colon (`signup:`) to find every page that explains it and the
+files each one covers. Changing a file, search `app/docs` for its path to find
+the pages that may need updating. A page lists only what its own text covers,
+and `spec/docs/code_index_spec.rb` fails when a listed path no longer exists.

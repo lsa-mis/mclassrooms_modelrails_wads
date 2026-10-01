@@ -14,29 +14,20 @@ RSpec.describe "Docs (markdowndocs gem)", type: :system do
       expect(page).to have_css("article", text: /Getting Started/i)
     end
 
-    # The show page renders user-authored Markdown that includes fenced code
-    # blocks. Those code blocks pick up the host's Rouge syntax-highlighting
-    # palette (--syntax-builtin, --syntax-comment, --syntax-name, --syntax-string,
-    # --syntax-tag, etc.) declared in app/assets/tailwind/application.css.
-    #
-    # All foreground syntax tokens are tuned to clear WCAG 2.2 AAA (7:1) against
-    # the surface background — L* ≤ 38% on light mode, L* ≥ 85% on dark mode.
-    # The two specs below run the RAW audit (`exclude: []`) so .highlight
-    # (Rouge syntax tokens) is in scope despite the default deferral — and the
-    # consent banner is audited alongside, since #462 lifted its exclusion.
-    # They lock in the AAA token contract.
+    # Fenced code picks up the Rouge palette (_syntax.css). These audit the rendered page;
+    # spec/code_smells/syntax_contrast_spec.rb holds every token to 7:1 on every ground.
     it "passes axe-core at WCAG 2.2 AAA in light mode (Rouge syntax tokens)" do
       visit "/docs/developer/getting-started"
       ensure_light_mode
-      expect(axe_clean?(axe_options, exclude: [])).to be(true),
-        "Light-mode AAA violations:\n#{axe_violations(axe_options, exclude: []).join("\n")}"
+      expect(axe_clean?(axe_options)).to be(true),
+        "Light-mode AAA violations:\n#{axe_violations(axe_options).join("\n")}"
     end
 
     it "passes axe-core at WCAG 2.2 AAA in dark mode (Rouge syntax tokens)" do
       visit "/docs/developer/getting-started"
       ensure_dark_mode
-      expect(axe_clean?(axe_options, exclude: [])).to be(true),
-        "Dark-mode AAA violations:\n#{axe_violations(axe_options, exclude: []).join("\n")}"
+      expect(axe_clean?(axe_options)).to be(true),
+        "Dark-mode AAA violations:\n#{axe_violations(axe_options).join("\n")}"
     end
 
     # The mobile sidebar uses a Stimulus action instead of inline onclick so it

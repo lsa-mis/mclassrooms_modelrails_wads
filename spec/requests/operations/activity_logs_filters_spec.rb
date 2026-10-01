@@ -28,13 +28,6 @@ RSpec.describe "Operations activity ledger filters", type: :request do
 
   # Acting AS someone is a session, not an assignment: Current.user delegates
   # to Current.session (spec/models/activity_log_filters_spec.rb's pattern).
-  def acting_as(user)
-    Current.session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
-    yield
-  ensure
-    Current.session = nil
-  end
-
   it "applies the 30-day window by default and widens on range=all" do
     workspace = create(:workspace, name: "Alpha")
     plan_named(workspace, "Old plan")
@@ -256,6 +249,17 @@ RSpec.describe "Operations activity ledger filters", type: :request do
     )
   end
 
+  it "honours a limit off the query string, capped at the all-rows ceiling" do
+    stub_const("Operations::ActivityLogsController::ALL_ROWS", 3)
+    5.times { create(:workspace) }
+
+    get operations_activity_logs_path(limit: "2")
+    expect(rows(response.body).size).to eq(2)
+
+    get operations_activity_logs_path(limit: "100")
+    expect(rows(response.body).size).to eq(3)
+  end
+
   # The filter band lives OUTSIDE the results frame, so a frame-local swap
   # cannot re-render it. Every link inside the frame therefore navigates the
   # whole page; only control CHANGES stay frame-local (for focus).
@@ -431,12 +435,8 @@ RSpec.describe "Operations activity ledger filters", type: :request do
     expect(html).to have_css("#{rows_nav} a[aria-current='true']", text: Operations::ActivityLogsController::DEFAULT_ROWS)
     expect(html).to have_no_css("#{rows_nav} a[aria-current='true']", text: "25")
   end
-  # A discarded workspace's rows stay in the feed — for_workspace is a plain
-  # where(workspace:) and does not care about lifecycle — but the filter
-  # resolved slugs through operated_workspaces, which is Workspace.kept. So
-  # those rows could be read in the unfiltered ledger and never isolated, and
-  # an unresolvable slug silently became "no filter at all", answering with
-  # every workspace's rows instead of saying the filter matched nothing (#1170).
+  # A discarded workspace's rows can be isolated, and an unresolved slug matches
+  # nothing rather than everything (#1170).
   describe "a workspace filter that resolves to nothing" do
     it "answers with the empty state, not with every workspace's rows" do
       other = create(:workspace, name: "Loud Co")
@@ -461,8 +461,7 @@ RSpec.describe "Operations activity ledger filters", type: :request do
 
       get operations_activity_logs_path(workspace: gone.slug)
 
-      # Scoped to the table: the workspace picker lists every name, so the
-      # page body always mentions both.
+      # Scoped to the table: the picker lists every name.
       rows = Capybara.string(response.body).find("table").text
       expect(rows).to include(gone.name),
         "a discarded workspace's own rows cannot be isolated by its slug"

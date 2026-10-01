@@ -9,8 +9,6 @@ require "rails_helper"
 #
 # So the warning was telling the truth about nothing, on a path that works.
 RSpec.describe "Stacked dialogs", type: :system do
-  def press(key) = page.driver.browser.keyboard.type(key)
-
   # `close()` animates out before the dialog actually closes, so this has to be a WAITING
   # matcher. A bare `page.all(...).length` reads the pre-animation state and reports a
   # failure that is really just impatience.
@@ -42,16 +40,16 @@ RSpec.describe "Stacked dialogs", type: :system do
   end
 
   it "closes only the topmost on Escape, leaving the one beneath open" do
-    press(:Escape)
+    cdp_press(:Escape)
 
     expect_open_dialogs(1)
   end
 
   it "closes the remaining dialog on a second Escape" do
-    press(:Escape)
+    cdp_press(:Escape)
     expect_open_dialogs(1)
 
-    press(:Escape)
+    cdp_press(:Escape)
 
     expect_open_dialogs(0)
   end

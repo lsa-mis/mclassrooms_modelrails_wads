@@ -19,24 +19,17 @@ RSpec.describe "ScrollArea component accessibility", type: :system do
   # axe would scope to the wrong selector ("No elements found for include").
   let(:scope) { [ "[role='region']" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: the vertical region is a named, focus-ringed tab stop and passes AAA in both themes" do
     visit "/rails/view_components/ui/scroll_area_component/default"
 
     expect(page).to have_css("[role='region'][tabindex='0'][aria-label].focus-ring")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "horizontal: the horizontal region is a named, focus-ringed tab stop and passes AAA in both themes" do
     visit "/rails/view_components/ui/scroll_area_component/horizontal"
 
     expect(page).to have_css("[role='region'][tabindex='0'][aria-label].focus-ring")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

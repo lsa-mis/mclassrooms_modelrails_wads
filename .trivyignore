@@ -2,20 +2,11 @@
 # Every entry needs a rationale and a `Revisit:` trigger — enforced by
 # spec/code_smells/template_invariants_spec.rb.
 
-# json 2.18.0 ships INSIDE Ruby 4.0.4 as a default gem; Gemfile.lock pins the
-# fixed json (>= 2.19.2) and Bundler activates it at runtime, so the vulnerable
-# copy is dormant. Unfixable until a Ruby patch release replaces the default gem.
-# Revisit: on the next Ruby 4.0.x patch (bump .tool-versions), or 2026-09-01.
+# json 2.18.0 still ships INSIDE Ruby 4.0.7 as a default gem (re-checked on the
+# 4.0.7 bump); Gemfile.lock pins the fixed json (>= 2.19.2) and Bundler activates
+# it at runtime, so the vulnerable copy is dormant until a Ruby patch replaces it.
+# Revisit: on the next Ruby 4.0.x patch (bump .tool-versions), or 2026-12-01.
 CVE-2026-33210
-
-# net-imap 0.6.2 ships with Ruby 4.0.4 (bundled gem); Gemfile.lock pins the
-# fixed net-imap (>= 0.6.4) and Bundler activates it at runtime. The app sends
-# mail via SMTP and never opens IMAP connections. Same Ruby-patch dependency.
-# Revisit: on the next Ruby 4.0.x patch (bump .tool-versions), or 2026-09-01.
-CVE-2026-42257
-CVE-2026-42258
-CVE-2026-42245
-CVE-2026-42246
 
 # Go stdlib v1.26.5 baked into thruster's precompiled binary (0.1.23 in the
 # lock; 0.1.25, the newest release, verified built on the SAME go1.26.5).
@@ -41,9 +32,3 @@ CVE-2026-56858
 CVE-2026-56859
 CVE-2026-56860
 CVE-2026-56862
-
-# resolv 0.7.0 ships with Ruby 4.0.6 (default gem); the Gemfile pins the fixed
-# resolv (>= 0.7.2) and Bundler activates it at runtime, so the vulnerable
-# copy is dormant. Same Ruby-patch dependency as json and net-imap above.
-# Revisit: on the next Ruby 4.0.x patch (bump .tool-versions), or 2026-10-15.
-CVE-2026-80212

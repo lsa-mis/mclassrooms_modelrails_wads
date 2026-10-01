@@ -13,8 +13,8 @@ module UI
     }.freeze
 
     TRIGGER_CLS = "group relative block w-full cursor-zoom-in overflow-hidden rounded-md focus-ring"
-    IMG_CLS     = "h-full w-full object-cover transition-transform duration-300 " \
-                  "group-hover:scale-105 motion-reduce:transition-none"
+    IMG_CLS     = "h-full w-full object-cover motion-safe:transition-transform duration-300 " \
+                  "group-hover:scale-105"
     # Caption sits on a solid tinted surface (AAA), not white text over a gradient image.
     CAP_CLS     = "absolute inset-x-0 bottom-0 bg-surface-overlay/95 px-3 py-2 text-sm text-text-body " \
                   "opacity-0 transition-opacity group-hover:opacity-100 motion-reduce:transition-none"

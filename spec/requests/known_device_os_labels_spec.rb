@@ -1,21 +1,8 @@
 require "rails_helper"
 
-# These six strings are DIGEST INPUTS, not display labels.
-#
-# `User.browser_digest(user_agent, os)` hashes the OS label together with the
-# version-stripped User-Agent, and the result is the stored device fingerprint.
-# So renaming one of these — "Macintosh" to "macOS", say — does not change a
-# label anybody sees. It silently invalidates every fingerprint already stored
-# for that platform, and every affected user is told they signed in from a new
-# device the next time they sign in from the device they have always used.
-#
-# The parser is private, so this pins the labels through the public path that
-# consumes them: sign in with a representative User-Agent and assert the
-# recorded digest is the one built from the expected label (#643).
+# These labels are digest inputs: renaming one re-alerts every user on that
+# platform. Pinned through the public sign-in path (#643).
 RSpec.describe "Known-device OS labels", type: :request do
-  # Representative User-Agent per branch, in the order the parser tests them —
-  # the iOS check deliberately precedes the Mac check, because an iPad UA
-  # contains a "Macintosh"-like substring and would otherwise label as Mac.
   {
     "iOS" => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 " \
       "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
@@ -45,9 +32,7 @@ RSpec.describe "Known-device OS labels", type: :request do
     end
   end
 
-  # Android UAs contain "Linux", and iPad UAs contain "Mac OS X". Both would
-  # take the wrong branch if the case order were ever rearranged, so the order
-  # is pinned rather than assumed.
+  # Branch order pinned: Android UAs contain Linux, iPad UAs contain Mac OS X.
   it "prefers the more specific platform when a User-Agent matches two branches" do
     password = "SecureP@ssw0rd!"
     android = create(:user, password: password, password_confirmation: password)

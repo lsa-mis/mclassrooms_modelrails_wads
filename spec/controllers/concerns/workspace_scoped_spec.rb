@@ -30,10 +30,7 @@ RSpec.describe WorkspaceScoped, type: :request do
 
     it "silently swallows touch failures (Rails.error.report)" do
       allow(Membership).to receive(:where).and_call_original
-      # Inject a failure on the touch query only. The double answers `where` with
-      # itself because the touch chains a staleness predicate onto this relation
-      # (#171) — the property under test is that the failure is swallowed, not
-      # how many links the chain has.
+      # `where` returns itself because the touch chains a staleness predicate (#171).
       bad_relation = double("ActiveRecord::Relation")
       allow(bad_relation).to receive(:where).and_return(bad_relation)
       allow(bad_relation).to receive(:update_all).and_raise(ActiveRecord::StatementInvalid, "boom")

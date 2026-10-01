@@ -14,6 +14,12 @@ pre-commit:
       glob: "*.rb"
       run: mise exec -- bundle exec rubocop --force-exclusion --autocorrect {staged_files}
       stage_fixed: true
+    comment_blocks:
+      glob: "*.{rb,rake,erb,js,css,yml,yaml}"
+      run: mise exec -- bin/comment-block-check {staged_files}
+    schema_parity:
+      glob: "db/schema.rb"
+      run: mise exec -- bin/rails runner spec/migrations/support/fresh_migrate_probe.rb
 
 pre-push:
   # Sequential ordering with stop-on-first-failure. Critical because

@@ -1,20 +1,8 @@
 require "rails_helper"
 
-# Self-test for the failure MESSAGE, not for the audit (#1189).
-#
-# Every a11y call site is a pair: `expect(axe_clean_in_both_themes?).to be(true),
-# axe_violations_in_both_themes.join("\n")`. The message is a positional argument,
-# so Ruby evaluates it eagerly on every run — and before this fix it ran its own
-# pair of audits. A violation present during the check and gone by the message
-# produced a failure with an EMPTY message: no rule, no selector, no theme.
-#
-# Deterministically empty rather than occasionally, because the memo is keyed on
-# a DOM fingerprint: a transient is by definition a page that changed, so the
-# message's audits always missed the memo and re-audited a now-clean page.
+# The failure MESSAGE names a violation that was gone by the time it ran (#1189).
 RSpec.describe "Axe transient violation message", type: :system do
-  # Planting stops when the block ends, so the unconditional teardown audit
-  # (axe_accessibility.rb's after-hook) sees the real, clean page and does not
-  # fail the example on our own fixture.
+  # Planting ends with the block, so the teardown audit sees the real page.
   def planting(id, only_first: false)
     calls = 0
     active = true
@@ -59,8 +47,7 @@ RSpec.describe "Axe transient violation message", type: :system do
     end
   end
 
-  # The message must not buy its accuracy with extra audits on green runs, which
-  # is what the memo existed to prevent in the first place (#855).
+  # No extra audits on a green run (#855).
   it "adds no audits to a green run" do
     visit root_path
     ensure_light_mode

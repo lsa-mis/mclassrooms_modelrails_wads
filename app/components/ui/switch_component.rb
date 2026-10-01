@@ -30,13 +30,13 @@ module UI
     # the same (modelrails_ui #258).
     TRACK   = "pointer-events-none absolute inset-0 rounded-full border border-border-strong shadow-xs " \
               "peer-aria-invalid:border-2 peer-aria-invalid:border-danger " \
-              "transition-all bg-surface-sunken peer-checked:bg-interactive peer-checked:border-transparent " \
+              "motion-safe:transition-all bg-surface-sunken peer-checked:bg-interactive peer-checked:border-transparent " \
               "peer-focus-visible:[outline:2px_solid_var(--color-interactive-focus)] peer-focus-visible:[outline-offset:2px] " \
               "peer-disabled:opacity-50"
     # shadow-sm: the thumb is the card's own surface color, so without an
     # edge it vanishes against the unchecked track in both themes.
     THUMB   = "pointer-events-none absolute inset-y-0 left-px my-auto z-10 block size-4 rounded-full " \
-              "bg-surface-raised shadow-sm ring-0 transition-transform " \
+              "bg-surface-raised shadow-sm ring-0 motion-safe:transition-transform " \
               "translate-x-0 peer-checked:translate-x-[calc(100%-2px)]"
 
     def initialize(label: nil, checked: false, invalid: false, describedby: nil, **html_attrs)

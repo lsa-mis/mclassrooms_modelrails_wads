@@ -22,6 +22,12 @@ RSpec.describe "Redundant single-column indexes" do
     # client_accesses here; those tables do not exist in this fork.
     "workspace_join_links" => [
       [ "index_workspace_join_links_on_workspace_id", "index_workspace_join_links_on_workspace_id_and_revoked_at", %w[workspace_id revoked_at] ]
+    ],
+    "noticed_notifications" => [
+      [ "index_noticed_notifications_on_recipient", "index_noticed_notifications_on_recipient_read_created",
+        %w[recipient_type recipient_id read_at created_at] ],
+      [ "index_noticed_notifications_unread", "index_noticed_notifications_on_recipient_read_created",
+        %w[recipient_type recipient_id read_at created_at] ]
     ]
   }.freeze
 

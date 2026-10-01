@@ -9,14 +9,6 @@ RSpec.describe "Menu submenus", type: :system do
   let(:sub_trigger) { "[data-submenu-target=trigger]" }
   let(:sub_panel) { "[data-submenu-target=panel]" }
 
-  def press(key)
-    page.driver.browser.keyboard.type(key)
-  end
-
-  def focused
-    page.evaluate_script("document.activeElement.textContent.trim()")
-  end
-
   before do
     visit "/rails/view_components/ui/dropdown_menu_component/submenus"
     find("[data-menu-target=trigger]").click
@@ -24,48 +16,48 @@ RSpec.describe "Menu submenus", type: :system do
   end
 
   it "keeps the sub-trigger in the parent's arrow-key rotation" do
-    press(:Down) # Edit -> Share
+    cdp_press(:Down) # Edit -> Share
 
-    expect(focused).to include("Share")
+    expect(focused_text).to include("Share")
   end
 
   it "opens the submenu on ArrowRight and moves focus into it" do
-    press(:Down)
-    press(:Right)
+    cdp_press(:Down)
+    cdp_press(:Right)
 
     expect(page).to have_css(sub_panel)
-    expect(focused).to eq("Email")
+    expect(focused_text).to eq("Email")
     expect(find(sub_trigger)["aria-expanded"]).to eq("true")
   end
 
   it "closes on ArrowLeft and returns focus to the sub-trigger" do
-    press(:Down)
-    press(:Right)
+    cdp_press(:Down)
+    cdp_press(:Right)
     expect(page).to have_css(sub_panel)
 
-    press(:Left)
+    cdp_press(:Left)
 
     expect(page).to have_no_css(sub_panel)
-    expect(focused).to include("Share")
+    expect(focused_text).to include("Share")
   end
 
   it "closes only the submenu on Escape, leaving the parent menu open" do
-    press(:Down)
-    press(:Right)
+    cdp_press(:Down)
+    cdp_press(:Right)
 
-    press(:Escape)
+    cdp_press(:Escape)
 
     expect(page).to have_no_css(sub_panel)
     expect(page).to have_css("[data-menu-target=menu]")
   end
 
   it "navigates within the submenu" do
-    press(:Down)
-    press(:Right)
+    cdp_press(:Down)
+    cdp_press(:Right)
 
-    press(:Down)
+    cdp_press(:Down)
 
-    expect(focused).to eq("Copy link")
+    expect(focused_text).to eq("Copy link")
   end
 
   # Closing the PARENT while a submenu is open used to leave the submenu popover-open with
@@ -73,8 +65,8 @@ RSpec.describe "Menu submenus", type: :system do
   # showed the submenu already expanded.
   describe "when the parent menu closes with a submenu open" do
     before do
-      press(:Down)
-      press(:Right)
+      cdp_press(:Down)
+      cdp_press(:Right)
       expect(page).to have_css(sub_panel)
       find("[data-menu-target=trigger]").click # toggle the parent shut
       expect(page).to have_no_css("[data-menu-target=menu]")

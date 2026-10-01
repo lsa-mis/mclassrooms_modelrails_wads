@@ -79,17 +79,41 @@ RSpec.describe "Sessions", type: :request do
           password: "SecureP@ssw0rd123!"
         }
         expect(response).to redirect_to(root_path)
+        expect(flash[:notice]).to eq(I18n.t("sessions.create.success"))
       end
     end
 
     context "with invalid credentials" do
+      # Distinguishes a wrong password from a lockout, same destination (#526).
       it "rejects the sign in" do
         post session_path, params: {
           email_address: user.email_address,
           password: "wrongpassword"
         }
         expect(response).to redirect_to(new_session_path)
+        expect(flash[:alert]).to eq(I18n.t("sessions.create.failure"))
       end
+    end
+  end
+
+  # Both land on new_session_path like a wrong password (#526).
+  describe "POST /session — refusals that share a destination" do
+    it "says it was rate limited once the limit is exceeded" do
+      # An over-limit increment fires the limiter without a persistent cache.
+      allow(Rails.cache).to receive(:increment).and_return(11)
+
+      post session_path, params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" }
+
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("sessions.create.rate_limited"))
+    end
+
+    # Same destination as every refusal, so only the alert identifies it.
+    it "says an OAuth handshake failed" do
+      get omniauth_failure_path
+
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("sessions.create.oauth_failure"))
     end
   end
 
@@ -101,6 +125,7 @@ RSpec.describe "Sessions", type: :request do
       }
       delete session_path
       expect(response).to redirect_to(new_session_path)
+      expect(flash[:notice]).to eq(I18n.t("sessions.destroy.success"))
     end
   end
 

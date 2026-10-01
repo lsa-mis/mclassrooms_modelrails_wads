@@ -1,12 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Accessibility simulation drop-up", type: :system do
-  def dismiss_cookie_banner
-    page.execute_script(<<~JS)
-      document.querySelectorAll('[data-controller="biscuit"]').forEach(el => el.remove());
-    JS
-  end
-
   def trigger_button
     find("button[aria-label='#{I18n.t('a11y_sim.trigger_aria_label')}']")
   end

@@ -1,92 +1,57 @@
 # frozen_string_literal: true
 
-# Wraps the user_preferences.notification_preferences JSONB column with
-# typed accessors for the new parallel-list shape (Phase 1 redesign).
-#
-# JSONB shape:
-#   notification_types: { security, account_access, workspace_activity,
-#                         billing }  → booleans
-#   delivery_methods:   { in_app: { enabled },
-#                         email:  { enabled, frequency: instant|daily|weekly } }
-#   quiet_hours:        { enabled, start: "HH:MM", end: "HH:MM", allow_urgent }
-#   retention_days:     Integer (30/60/90/180/365); the reader defaults an
-#                       absent key and caps an explicit null
+# Typed accessors over user_preferences.notification_preferences; the JSONB shape
+# is documented in /docs/developer/notifications (its Schema section).
 class NotificationPreferences
   CATEGORIES = %w[security account_access workspace_activity billing].freeze
-  # Digest is folded into Email channel's frequency selector — no longer a channel.
+  # Digest is the email channel's frequency, not a channel of its own.
   CHANNELS   = %w[in_app email].freeze
   EMAIL_FREQUENCIES = %w[instant daily weekly].freeze
-  # Lowercase day names used in quiet_hours.active_days. Matches the output
-  # of `Time#strftime("%A").downcase` so day-membership checks are direct
-  # string comparisons.
+  # The form of `Time#strftime("%A").downcase`, so day membership is a string comparison.
   DAYS_OF_WEEK = %w[monday tuesday wednesday thursday friday saturday sunday].freeze
   SECURITY_CATEGORY = "security"
-  # Validation constants used by #merge. Live on the value object (not the
-  # controller) because they describe schema semantics.
+  # Schema semantics live on the value object, not the controller.
   HH_MM_REGEX = /\A([01]\d|2[0-3]):([0-5]\d)\z/
   ALLOWED_RETENTION_DAYS = [ 30, 60, 90, 180, 365 ].freeze
-  # The reader owns these, not the column default and not the migration (PR 5,
-  # D9): rolling deploys and unlocked whole-column preference saves can put a
-  # nil back after the backfill, so the value object must never return one.
+  # The reader owns these, not the column default or the migration (PR 5, D9): a rolling
+  # deploy or a whole-column save can put a nil back after the backfill.
   DEFAULT_RETENTION_DAYS = 90    # absent key — a row written without the choice
   NEVER_CAP_DAYS = 365           # explicit null — the retired "Never" choice, capped
 
-  # Raised by #merge when a partial-change hash violates the JSONB schema.
-  # Caller catches and responds 422 — see Settings::NotificationPreferencesController#update.
+  # Raised by #merge; the controller answers 422 (Settings::NotificationPreferencesController#update).
   class InvalidChange < StandardError; end
 
-  # `user:` is optional but required for quiet_hours_active? / next_due_at
-  # to read the user's timezone. Callers that only need
-  # deliver_now?/digest_enabled? etc. may pass user: nil.
+  # `user:` is optional: quiet_hours_active? and next_due_at read its timezone; nothing else does.
   def initialize(jsonb_hash, user: nil)
     @data = jsonb_hash || {}
     @user = user
   end
 
-  # Strictly "send through this channel right now". A false answer says
-  # nothing about WHY (opted out, quiet hours, or deferred to digest) —
-  # callers that care about the digest case ask defer_to_digest?.
-  # Accepts String or Symbol arguments.
+  # "Send through this channel right now." A false answer says nothing about why;
+  # a caller that cares about the digest case asks defer_to_digest?.
   def deliver_now?(category:, channel:)
     allow?(category: category, channel: channel) == true
   end
 
-  # Strictly "email is queued for the digest pipeline instead of sending
-  # now". Never true for in_app or for security (always instant).
+  # "Email is queued for the digest instead of sending now." Never true for in_app or security.
   def defer_to_digest?(category:, channel:)
     allow?(category: category, channel: channel) == :digest
   end
 
-  # Whether quiet hours are currently suppressing non-security delivery.
-  # Wraps midnight if start > end (e.g., 22:00..07:00). Falls back to
-  # Time.zone if the user has no timezone set — never raises.
-  #
-  # Per-weekday filter via `quiet_hours.active_days`:
-  #   - Missing key (legacy data) → behaves as all 7 days active.
-  #   - Empty array → quiet hours never active (no days selected).
-  #   - Non-empty array → only suppress on listed days. Check is against the
-  #     CURRENT calendar day in the user's timezone — overnight windows
-  #     (22:00..07:00) on a non-active day get no suppression in the wrap,
-  #     even if the time-of-day falls inside the window's wrap portion.
+  # Wraps midnight when start > end; falls back to Time.zone. active_days: a missing key means
+  # all seven (legacy rows), an empty list means never, checked against today in the user's zone.
   def quiet_hours_active?(now: Time.current)
     qh = @data["quiet_hours"] || {}
     return false unless qh["enabled"] == true
 
     zone = user_time_zone
-
-    active_days = qh["active_days"]
-    if active_days.is_a?(Array)
-      today = zone.now.strftime("%A").downcase
-      return false unless active_days.include?(today)
-    end
+    return false unless quiet_day?(qh["active_days"], zone)
 
     s = qh["start"] || "22:00"
     e = qh["end"]   || "07:00"
 
-    # The picker's full range (00:00–23:59) means all-day quiet hours. The
-    # half-open [s, e) comparison below would otherwise leave a 1-minute hole
-    # at 23:59 (DND off) — a real UX gap, and the source of a class of flaky
-    # notifier specs that set this window to mean "DND always on".
+    # The picker's full range means all day; the half-open compare below would leave a
+    # one-minute hole at 23:59.
     return true if s == "00:00" && e == "23:59"
 
     cur = zone.now.strftime("%H:%M")
@@ -97,19 +62,8 @@ class NotificationPreferences
     end
   end
 
-  # Back-compat alias from v1's flat DND boolean.
-  def do_not_disturb?
-    quiet_hours_active?
-  end
-
-  # Quiet hours enabled with zero days selected: the toggle reads "Enabled"
-  # while quiet_hours_active? can never be true. The settings screen warns
-  # about that state, and this is the single owner of what it means — the ERB
-  # renders the warning from here and quiet_hours_warning_controller.js
-  # maintains it live, so neither can drift into its own definition.
-  #
-  # A MISSING active_days key is legacy data meaning all seven days (see the
-  # per-weekday filter above), so only an explicitly emptied list is deceptive.
+  # Enabled with zero days selected reads "Enabled" while never active. The ERB warning and
+  # quiet_hours_warning_controller.js both render from this one definition.
   def quiet_hours_deceptive?
     qh = @data["quiet_hours"] || {}
     return false unless qh["enabled"] == true
@@ -134,8 +88,7 @@ class NotificationPreferences
     end
   end
 
-  # The system picks the hour (8am local). v2 removes user-configurability
-  # — the IA shift folded digest controls into email frequency only.
+  # Fixed since v2 folded digest controls into email frequency (notifications.md).
   def digest_hour_local
     8
   end
@@ -158,20 +111,8 @@ class NotificationPreferences
 
   def to_h = @data.deep_dup
 
-  # Returns a new NotificationPreferences with `changes` validated,
-  # coerced, and deep-merged into the underlying JSONB hash. The receiver
-  # is unchanged — no half-applied state if validation raises mid-way.
-  #
-  # `changes` is the parameter shape posted from the preferences form:
-  # nested string-keyed hash with values that may need type coercion
-  # (the form submits strings; the JSONB column wants booleans / ints).
-  #
-  # Raises NotificationPreferences::InvalidChange on:
-  #   - retention_days not in ALLOWED_RETENTION_DAYS
-  #   - notification_types key outside CATEGORIES
-  #   - delivery_methods.email.frequency outside EMAIL_FREQUENCIES
-  #   - quiet_hours.start/end not matching HH:MM
-  #   - quiet_hours.active_days not an Array, or containing unknown days
+  # A new object with `changes` validated, coerced and deep-merged; the receiver is untouched,
+  # so an InvalidChange raised mid-way leaves no half-applied state.
   def merge(changes)
     return self if changes.blank?
 
@@ -181,8 +122,7 @@ class NotificationPreferences
     self.class.new(@data.deep_dup.deep_merge!(prepared), user: @user)
   end
 
-  # Whether the given changes would alter digest scheduling (email cadence).
-  # Drives the recompute_digest_due_at decision in the controller.
+  # Drives the controller's recompute_digest_due_at decision.
   def digest_changed_by?(changes)
     changes&.dig("delivery_methods", "email", "frequency").present? ||
       changes&.dig(:delivery_methods, :email, :frequency).present?
@@ -190,12 +130,8 @@ class NotificationPreferences
 
   private
 
-  # Returns true, false, or the :digest sentinel (email deferred to the
-  # digest pipeline). The tri-state is an internal encoding — the public
-  # surface is the deliver_now?/defer_to_digest? predicate pair, so no
-  # caller ever needs to know `true` must be compared strictly. Coerces
-  # String/Symbol arguments so callers never need to know the JSONB blob
-  # is string-keyed.
+  # true, false, or :digest. Internal: the public surface is the deliver_now?/defer_to_digest?
+  # pair, so no caller compares against the sentinel.
   def allow?(category:, channel:)
     category = category.to_s
     channel  = channel.to_s
@@ -210,10 +146,15 @@ class NotificationPreferences
     true
   end
 
-  # UserPreferences#time_zone owns the name→zone fallback; this only covers
-  # the "no user / no preferences row attached" construction case.
+  # UserPreferences#time_zone owns the name→zone fallback; this covers the no-user case.
   def user_time_zone
     @user&.preferences&.time_zone || Time.zone
+  end
+
+  def quiet_day?(active_days, zone)
+    return true unless active_days.is_a?(Array)
+
+    active_days.include?(zone.now.strftime("%A").downcase)
   end
 
   def recognized?(category, channel)
@@ -225,8 +166,8 @@ class NotificationPreferences
     category == SECURITY_CATEGORY
   end
 
-  # In-app security is always-on; email honors an explicit channel opt-out —
-  # a user who disabled email entirely accepts that security alerts won't email.
+  # In-app security is always on; a user who disabled email entirely accepts that
+  # security alerts will not email.
   def security_delivery_allowed?(channel)
     channel != "email" || @data.dig("delivery_methods", "email", "enabled") != false
   end
@@ -239,8 +180,6 @@ class NotificationPreferences
     @data.dig("delivery_methods", channel, "enabled") == true
   end
 
-  # Non-instant email frequency queues for the digest pipeline instead of
-  # sending now.
   def deferred_to_digest?(channel)
     channel == "email" && email_frequency != "instant"
   end
@@ -267,10 +206,8 @@ class NotificationPreferences
       if qh.key?("active_days")
         days = qh["active_days"]
         raise InvalidChange unless days.is_a?(Array)
-        # Strip Rails' hidden-empty-sentinel that the day-picker form always
-        # includes so active_days is submitted as an array even when zero
-        # boxes are checked. Empty array post-strip = user selected zero
-        # days = quiet hours effectively off (value object treats it so).
+        # Rails' hidden-empty sentinel rides along so the day picker posts an array even with
+        # no boxes checked; stripped, an empty list means zero days.
         days = days.reject(&:blank?)
         raise InvalidChange unless (days - DAYS_OF_WEEK).empty?
         qh["active_days"] = days
@@ -288,17 +225,13 @@ class NotificationPreferences
     value.to_i
   end
 
-  # Recursively coerce "true"/"false" strings to actual booleans so the
-  # JSONB column doesn't get string values for boolean toggles. Also
-  # coerces digest.hour_local to integer if numeric-string.
+  # The form posts strings; the column wants booleans.
   def coerce_booleans!(hash)
     hash.each do |key, value|
       case value
       when "true"  then hash[key] = true
       when "false" then hash[key] = false
       when Hash    then coerce_booleans!(value)
-      else
-        hash[key] = value.to_i if key == "hour_local" && value.is_a?(String) && value.match?(/\A\d+\z/)
       end
     end
   end

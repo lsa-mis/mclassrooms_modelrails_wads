@@ -22,9 +22,7 @@ RSpec.describe "Account Theme Preferences", type: :request do
         expect(flash[:notice]).to eq(I18n.t("settings.theme_preferences.update.success"))
       end
 
-      # Both branches redirect to the same place, so only the message tells a
-      # rejected theme from an accepted one — which is the whole reason a
-      # redirect-only assertion is not enough (#526).
+      # Same redirect either way; only the message differs (#526).
       it "rejects an unknown theme with an alert, to the same destination" do
         patch settings_theme_preference_path, params: { user_preferences: { theme: "chartreuse" } }
 

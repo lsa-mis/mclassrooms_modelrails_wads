@@ -1,14 +1,7 @@
 require "rails_helper"
 
-# In the template the vocabulary tokens resolve to the same words, so a spec
-# asserting "Create a workspace" stays green here — and goes red in every fork
-# that renamed. Assert copy through I18n.t so the same spec passes in both.
-# Model names (Workspace, workspace.name, :workspace factories) are not copy.
-#
-# Port this to a house RuboCop cop when a FOURTH literal shape appears (#1115).
-# Three are already here — matcher, text: option, sentence — and a third noun
-# needs no port: the nouns are derived from Vocabulary::NOUNS and an example
-# below proves a new one is guarded the day it is added.
+# Assert copy through I18n.t so a fork that renamed its nouns stays green.
+# Port to a RuboCop cop when a FOURTH literal shape appears (#1115).
 RSpec.describe "Code smell: spec copy assertions go through I18n.t" do
   matcher = /\b(have_content|have_text|have_button|have_link|have_title|have_field|click_(?:link|button|on)|fill_in)(?:\(\s*|\s+)(["'])((?:(?!\2).)*)\2/
   text_option = /\btext:\s*(["'])((?:(?!\1).)*)\1/
@@ -30,10 +23,10 @@ RSpec.describe "Code smell: spec copy assertions go through I18n.t" do
   # fake key or desync the assertion from what's actually rendered. Keep this
   # list a decision, not a fossil.
   allowed = {
-    "spec/system/ui/card_component_spec.rb:42" => "preview fixture text, not app copy",
-    "spec/system/ui/card_component_spec.rb:43" => "preview fixture text, not app copy",
+    "spec/system/ui/card_component_spec.rb:35" => "preview fixture text, not app copy",
+    "spec/system/ui/card_component_spec.rb:36" => "preview fixture text, not app copy",
     "spec/system/ui/dialog_component_spec.rb:60" => "preview fixture text, not app copy",
-    "spec/system/ui/timeline_component_spec.rb:34" => "preview fixture text, not app copy",
+    "spec/system/ui/timeline_component_spec.rb:27" => "preview fixture text, not app copy",
     "spec/views/shared/section_nav_strip_spec.rb:13" => "arbitrary local passed to a generic partial spec, not app copy",
     "spec/config/vocabulary_fork_spec.rb:38" => "type: :config spec asserting the template's real key against a deliberately absent override — proves defaults are template-owned, not app copy a rename must survive",
     "spec/config/vocabulary_interpolation_spec.rb:39" => "backend-hook mechanism spec; an around block pins the vocabulary to the template's words on purpose",
@@ -42,8 +35,8 @@ RSpec.describe "Code smell: spec copy assertions go through I18n.t" do
     "spec/config/vocabulary_interpolation_spec.rb:48" => "backend-hook mechanism spec; an around block pins the vocabulary to the template's words on purpose",
     "spec/config/vocabulary_interpolation_spec.rb:60" => "backend-hook mechanism spec; an around block pins the vocabulary to the template's words on purpose",
     "spec/config/vocabulary_interpolation_spec.rb:76" => "backend-hook mechanism spec; an around block pins the vocabulary to the template's words on purpose",
-    "spec/requests/settings/connected_accounts_spec.rb:623" => "not_to include: regression guard for a literal message already fixed to go through I18n.t — can never render again, in any fork",
-    "spec/requests/workspaces_spec.rb:60" => "a workspace's name set by the factory (\"Secret Workspace\"), not UI copy"
+    "spec/requests/settings/connected_accounts_spec.rb:620" => "not_to include: regression guard for a literal message already fixed to go through I18n.t — can never render again, in any fork",
+    "spec/requests/workspaces_spec.rb:53" => "a workspace's name set by the factory (\"Secret Workspace\"), not UI copy"
   }
 
   def offenders_in(path, matcher, text_option, sentence_matcher, noun, allowed = {})
@@ -78,10 +71,7 @@ RSpec.describe "Code smell: spec copy assertions go through I18n.t" do
       "Read: /docs/developer/i18n (Vocabulary).\n  #{offenders.join("\n  ")}"
   end
 
-  # The allow-list is keyed by file:line and consulted BEFORE the matcher runs
-  # (`next if allowed[location]` above), so an entry whose line has moved, or
-  # whose offence was fixed, silently protects whatever now sits at that line.
-  # Nothing fails; the list just quietly stops describing the code (#1114).
+  # A file:line entry that moved silently protects whatever sits there now (#1114).
   it "keeps no allow-list entry that has gone stale" do
     stale = allowed.keys.reject do |location|
       file, line = location.split(":")

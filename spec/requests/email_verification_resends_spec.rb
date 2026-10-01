@@ -19,6 +19,17 @@ RSpec.describe "Email Verification Resends", type: :request do
         expect {
           post email_verification_resend_path
         }.to have_enqueued_mail(AuthenticationMailer, :verification_email)
+
+        expect(response).to redirect_to(new_email_verification_path)
+        expect(flash[:notice]).to eq(I18n.t("email_verification_resends.create.success"))
+      end
+
+      it "says it was rate limited once the limit is exceeded, and sends nothing" do
+        allow(Rails.cache).to receive(:increment).and_return(6)
+
+        expect { post email_verification_resend_path }.not_to have_enqueued_mail
+        expect(response).to redirect_to(new_email_verification_path)
+        expect(flash[:alert]).to eq(I18n.t("email_verification_resends.create.rate_limited"))
       end
 
       describe "POST when user has no email authentication" do
@@ -29,7 +40,7 @@ RSpec.describe "Email Verification Resends", type: :request do
         it "redirects with alert" do
           post email_verification_resend_path
           expect(response).to redirect_to(root_path)
-          expect(flash[:alert]).to be_present
+          expect(flash[:alert]).to eq(I18n.t("email_verification_resends.create.no_email_auth"))
         end
       end
 

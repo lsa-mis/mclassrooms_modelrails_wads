@@ -8,6 +8,9 @@ vendor/* linguist-vendored
 config/credentials/*.yml.enc diff=rails_credentials
 config/credentials.yml.enc diff=rails_credentials
 
+# Parallel pull requests each append under [Unreleased]; union keeps every side's lines.
+CHANGELOG.md merge=union
+
 # Fork-owned paths — downstream forks rewrite these wholesale; upstream
 # freezes them. With the driver active in a fork (bin/setup runs
 # `git config merge.ours.driver true` when an upstream remote exists),

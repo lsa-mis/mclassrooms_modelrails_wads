@@ -2,38 +2,8 @@
 
 require "rails_helper"
 
-# `Noticed::Deliverable#deliver` is `recipients ||= evaluate_recipients`
-# (noticed-3.0.0, app/models/concerns/noticed/deliverable.rb:87). So an
-# explicit recipient argument does not ADD to the notifier's `recipients`
-# block — it REPLACES it, and the block never runs.
-#
-# For this app that block is not a convenience: it is where in-app delivery is
-# gated. `permitted_in_app` (ApplicationNotifier) is the only thing standing
-# between a dispatch and a `noticed_notifications` row, because Noticed v2
-# auto-saves those rows and there is no `:database` delivery method left to
-# hang a conditional on. It is also where the actor is dropped, so nobody is
-# notified about their own action.
-#
-# Passing a recipient to a block-declaring notifier therefore delivers to
-# someone who opted out, in quiet hours, or who is the actor — silently. No
-# exception, no log line, nothing red. The inverse is just as quiet: a notifier
-# with NO block, dispatched as `deliver(nil)`, resolves to zero recipients, so
-# `ApplicationNotifier#deliver` returns :skipped and writes no rows at all.
-# (The :skipped guard is #928's — before it, the gem's unconditional `save!`
-# wrote the event row and burned its idempotency key even with no recipients.
-# It makes a mis-dispatch harmless rather than corrupting; it does not make one
-# correct, which is what this spec is for.)
-#
-# Both directions held by hand when this spec was written; nothing enforced
-# them. This does.
-#
-# Scanned shape: `SomeNotifier.with(...).deliver(...)` or `.deliver_later(...)`
-# — the two are one method (ApplicationNotifier re-points the gem's alias, #1063),
-# so the fence has to see both spellings or the second one drops out of every
-# check below in silence. Line breaks anywhere in it are fine. In app/ outside
-# app/notifiers. A dispatch assembled some other way (a bare `.deliver`, a
-# notifier held in a local) is not seen — widen the pattern if that shape
-# appears rather than working around it.
+# An explicit recipient REPLACES a notifier's recipients block, skipping its opt-out
+# gate; no block plus deliver(nil) sends nothing. See /docs/developer/notifications.
 RSpec.describe "Code smell: notifier recipient dispatch matches its recipients block" do
   # Locals, not constants: a constant here lands on Object, where another spec
   # file's same-named constant clobbers it whenever CI shards both into one

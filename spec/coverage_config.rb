@@ -25,4 +25,11 @@ module CoverageConfig
   # default 10-minute window is shorter than a full suite, which would silently
   # drop early workers from the merge and under-report coverage.
   MERGE_TIMEOUT = 3600
+
+  # The floor is a whole-suite number: a run given fewer files than the suite
+  # has is measured but not held to it (#1315).
+  def self.floor_for(files_to_run, all_spec_files)
+    expand = ->(files) { files.map { |file| File.expand_path(file) }.to_set }
+    expand.call(files_to_run) >= expand.call(all_spec_files) ? MINIMUM : 0
+  end
 end

@@ -8,6 +8,8 @@ en:
     # hard-deleted. The row outlives it (activity is immutable), so the sentence
     # still has to name someone.
     unknown_member: "a member"
+    # A pre-snapshot row whose actor was deleted: a person, never `system:` (#1122).
+    departed_actor: "a former member"
     # The ledger's Kind filter labels — one per action family (ActivityLog::KINDS).
     # Each names the derived verbs it hides so a rule-out never runs the wrong query.
     kinds:

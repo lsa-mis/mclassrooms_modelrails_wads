@@ -105,7 +105,7 @@ module UI
         fill: "none",
         stroke: "currentColor",
         "stroke-width": "2",
-        class: "size-3 transition-transform duration-200 data-[state=open]:rotate-180",
+        class: "size-3 motion-safe:transition-transform duration-200 data-[state=open]:rotate-180",
         "aria-hidden": "true",
         data: { mega_menu_target: "chevron" })
     end

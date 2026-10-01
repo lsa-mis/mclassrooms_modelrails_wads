@@ -36,10 +36,5 @@
       </span>
     <% end %>
   </span>
-  <%# An icon, not a text glyph. This was U+25BE — the "small" down-pointing
-      triangle — which is drawn well inside its em box and sized by whatever
-      font the platform picks, so it read visibly smaller than the user-menu
-      chevron a few pixels away, which has always been an icon. The helper
-      sets aria-hidden itself when given no aria_label (#1224). %>
   <%= icon :chevron_down, size: :sm, class: "shrink-0 text-text-muted" %>
 </button>

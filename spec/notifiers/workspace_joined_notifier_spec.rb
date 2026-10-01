@@ -45,14 +45,6 @@ RSpec.describe "Self-join notifications", type: :notifier do
     Noticed::Notification.where(recipient: user, type: "WorkspaceJoinedNotifier::Notification")
   end
 
-  # Drain only the Noticed pipeline: a bare drain would also run the user
-  # factory's CheckGravatarJob.
-  def drain_noticed_jobs
-    perform_enqueued_jobs(only: Noticed::EventJob)
-    perform_enqueued_jobs(only: Noticed::DeliveryMethods::Email)
-    perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob)
-  end
-
   describe "a fresh self-join" do
     it "does not notify the self-joiner about their own join" do
       workspace.admit(joiner, role: member_role, self_join: true)
@@ -113,7 +105,7 @@ RSpec.describe "Self-join notifications", type: :notifier do
 
     it "sends no email at all — the joiner is already in the app, the owners are digest-only" do
       workspace.admit(joiner, role: member_role, self_join: true)
-      drain_noticed_jobs
+      drain_noticed_jobs(deliver_mail: true)
 
       expect(ActionMailer::Base.deliveries).to be_empty
     end

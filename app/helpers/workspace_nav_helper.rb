@@ -1,7 +1,5 @@
 module WorkspaceNavHelper
-  # Explicit, though views get every helper by default: the Settings item is
-  # derived from the settings sub-nav, and a helper spec mixes in only the
-  # module it describes.
+  # Explicit so the helper spec gets the sub-nav that Settings derives from.
   include SettingsNavigationHelper
 
   # Which workspace section the current request belongs to. Today only
@@ -38,11 +36,7 @@ module WorkspaceNavHelper
       { label: t("workspaces.sidebar.overview"), href: workspace_path(workspace),
         icon: :home, active: current_page?(workspace_path(workspace)) }
     ]
-    # Derived from the sub-nav, not asserted: this item used to link to the
-    # Profile page for everyone, and Workspaces::ProfilePolicy gates that on
-    # manage_settings — so a Member saw Settings, clicked it, and was refused
-    # (#1153). The sub-nav already gates each entry, so its first surviving
-    # item is a destination this user can actually open.
+    # The first sub-nav item this user can open, so Settings never refuses (#1153).
     settings = workspace_settings_nav_items
     if settings.any?
       items << { label: t("workspaces.sidebar.settings"), href: settings.first[:href],

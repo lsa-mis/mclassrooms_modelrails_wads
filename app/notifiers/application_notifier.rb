@@ -181,11 +181,7 @@ class ApplicationNotifier < Noticed::Event
     :deduplicated
   end
 
-  # The gem aliases deliver_later to deliver inside its own concern, so the alias
-  # holds a COPY of the gem's body and never reaches the override above — the
-  # instance form would skip the sentinels and the empty-set guard, and mint the
-  # idempotency key on a dispatch nobody receives (#1063, the #928 failure mode).
-  # Re-pointing it here restores the gem's own contract: two names, one method.
+  # The gem's alias copies its own deliver and would bypass the override (#1063).
   alias_method :deliver_later, :deliver
 
   # A missing row falls back to a transient `UserPreferences.new`, not nil —
@@ -261,8 +257,8 @@ class ApplicationNotifier < Noticed::Event
                       .pluck(:recipient_id)
     return if recipient_ids.empty?
 
-    # Per-user iteration so one bad broadcast cannot poison the rest; each
-    # call is self-rescuing.
+    # Per user, so one bad broadcast cannot stop the rest. Undebounced (#1200); two daily
+    # sweeps can repeat a recipient, so debounce when a bulk path appears.
     User.where(id: recipient_ids).find_each do |user|
       NotificationBroadcaster.refresh_for(user, announcement_key: "notifications.bell.arrival_announcement",
                                           severity: self.class.severity_name)

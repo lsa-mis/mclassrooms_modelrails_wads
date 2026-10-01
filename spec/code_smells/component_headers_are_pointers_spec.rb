@@ -114,6 +114,26 @@ RSpec.describe "Component headers are pointers" do
     expect(pointer?("kbd", prose_above_pointer)).to be(false)
   end
 
+  # Bundler resolves the development-only gem without loading it.
+  let(:gem_docs) do
+    spec = Bundler.definition.specs.find { |s| s.name == "modelrails_ui" }
+    Pathname(spec.full_gem_path).join("docs/components")
+  end
+
+  it "points every vendored component at a doc in the pinned gem that says when to use it" do
+    offenders = Dir.glob(Rails.root.join("app/components/ui/*_component.rb")).filter_map do |file|
+      name = File.basename(file, "_component.rb")
+      doc = gem_docs.join("#{doc_parent.fetch(name, name)}.md")
+      next "#{name}: no #{doc.basename} in the pinned gem" unless doc.exist?
+
+      missing = [ "## When to use", "## When not to use" ].reject { |heading| doc.read.include?(heading) }
+      "#{name}: #{doc.basename} lacks #{missing.join(' and ')}" if missing.any?
+    end
+
+    expect(offenders).to be_empty,
+      "A pointer leads to a doc in the pinned modelrails_ui that does not say when to use the component:\n  #{offenders.join("\n  ")}"
+  end
+
   it "keeps no markdown-heading comment in any vendored component" do
     # A nested `#` inside a commented code sample is not a heading — every real
     # header title/section line has exactly one space after the comment marker

@@ -14,10 +14,6 @@ RSpec.describe "Tabs component accessibility", type: :system do
     find("button[role='tab']", text: text)
   end
 
-  def focused_text
-    page.evaluate_script("document.activeElement.textContent.trim()")
-  end
-
   it "renders tabs and the active panel passes AAA in both themes" do
     expect(page).to have_css("[role='tablist'][aria-label='Account settings']")
     expect(page).to have_css("button[role='tab']", count: 3)

@@ -9,11 +9,7 @@ module QueryCounting
     count_statements_touching(table, ->(_sql) { true }, &block)
   end
 
-  # READS only. An N+1 is a read problem, and a loop that legitimately writes
-  # the same table once per record drowns that signal: the digest job updates
-  # `user_preferences` for every user it visits, so a preload removing every
-  # extra SELECT still leaves the total rising with the population. Counting
-  # all statements there would assert a contract the fix cannot satisfy (#1048).
+  # Reads only: a loop that legitimately writes per record would drown the signal (#1048).
   def count_selects_touching(table, &block)
     count_statements_touching(table, ->(sql) { sql.lstrip.match?(/\ASELECT\b/i) }, &block)
   end

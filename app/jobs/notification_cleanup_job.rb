@@ -15,19 +15,8 @@
 class NotificationCleanupJob < ApplicationJob
   queue_as :low
 
-  # Which events are orphans — public because it is the contract, not an
-  # implementation detail: CHILDLESS-ONLY, never age-based. Deleting an event
-  # cascades to every recipient's row through the FK, so age is the one
-  # criterion that could take live notifications with it. An event from years
-  # ago whose notification is still unread belongs to somebody's list; an
-  # event with no rows belongs to nobody and can never be read, rendered, or
-  # counted (#811).
-  #
-  # Asked of noticed_notifications, never of noticed_events.notifications_count,
-  # which was deliberately left stale — pruning on that counter would delete
-  # events that still have rows. NOT IN is sound here only because
-  # noticed_notifications.event_id is NOT NULL; a nullable column would make
-  # the predicate unknown and match nothing.
+  # Childless-only, never age-based (#811): deleting an event cascades to its
+  # notifications. NOT IN is safe only because event_id is NOT NULL.
   def self.orphan_events
     Noticed::Event.where.not(id: Noticed::Notification.select(:event_id))
   end
@@ -43,12 +32,7 @@ class NotificationCleanupJob < ApplicationJob
       attempted += 1
       cleanup_for(user)
     rescue StandardError => e
-      # Per-user data faults (a malformed preferences row) cost that user's
-      # sweep, not the cycle. A systemic fault — SQLite's writer lock is
-      # global — fails every user and is re-raised below, so Solid Queue
-      # records a failure instead of a clean run. There is no retry policy on
-      # this job: the recovery is tomorrow's fresh sweep, which re-attempts
-      # every user from scratch because nothing here is stamped as done.
+      # A per-user fault costs that user; a systemic one fails all and re-raises below.
       failed += 1
       last_error = e
       Rails.error.report(e, handled: true, context: { user_id: user.id, job: self.class.name })
@@ -56,10 +40,7 @@ class NotificationCleanupJob < ApplicationJob
 
     raise last_error if failed.positive? && failed == attempted
 
-    # A PARTIAL failure raises nothing — two of three users failing is not
-    # `failed == attempted` — and the per-user reports go to Rails.error, so
-    # without this line the run reads as a clean sweep to anyone watching the
-    # queue (#944). Said once, with the shape of the damage.
+    # A partial failure raises nothing, so it is logged here (#944).
     if failed.positive?
       Rails.logger.warn(
         "[#{self.class.name}] swept #{attempted - failed} of #{attempted} users " \
@@ -67,10 +48,7 @@ class NotificationCleanupJob < ApplicationJob
       )
     end
 
-    # After the loop, so events this run just emptied are pruned in the same
-    # pass. Skipped when every user failed: nothing was deleted, and the fault
-    # is systemic (SQLite's writer lock is global), so the prune would only
-    # raise a second error over the first.
+    # After the loop so newly emptied events go too; skipped when every user failed.
     prune_orphan_events
   end
 

@@ -15,10 +15,6 @@ RSpec.describe "Menubar component accessibility", type: :system do
     find("button[role='menuitem']", text: text)
   end
 
-  def focused_text
-    page.evaluate_script("document.activeElement.textContent.trim()")
-  end
-
   it "renders a menubar and opens a submenu that passes AAA in both themes" do
     expect(page).to have_css("[role='menubar'][aria-label='Main']")
     expect(page).to have_css("button[role='menuitem'][aria-haspopup='menu']", minimum: 3)

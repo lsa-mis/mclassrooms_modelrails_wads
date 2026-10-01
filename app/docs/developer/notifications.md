@@ -107,6 +107,10 @@ end
 | `WorkspaceCapacityApproachingNotifier` | `billing` | `warning` | Sweep job finds a workspace approaching its plan limit |
 | `WelcomeNotifier` | `account_access` | `info` | A real registration completes — `MagicLinkCallbacksController#create`, or either signup branch of `OauthLink` |
 
+**Member removal is `account_access`, not `workspace_activity`, on purpose.** Removal used to be silent; a removed member found out by hitting a wall (#933). The category is the user's opt-out axis, and `workspace_activity` is the chattiest one, carrying every join and every workspace created. A member who had muted it would learn they lost access through neither channel, which is the silence this notifier exists to end. `WorkspaceRoleChangedNotifier` sits in `account_access` for the same reason: it changes this person's access, it is not workspace news.
+
+Its copy varies by channel, not by reader. The in-app row is third-person event-log voice for everyone who receives it, the removed member included, and it branches on the event: a member who removed themselves "left", anyone else "was removed". The email is the only second-person surface, and only the removed member gets one. Its link goes to the workspaces index, not the workspace: the workspace is exactly where the removed member can no longer go, the index is the one destination true for every recipient, and reading nothing off the record means a deleted workspace cannot break it.
+
 ### Category → notifier types
 
 `ApplicationNotifier.notification_types_for(category)` returns the `Noticed::Notification` STI type strings for that category — used by `NotificationsController#index` for `?category=foo` filtering, and by `NotificationCleanupJob` for retention-floor enforcement. The suffix-free variant `ApplicationNotifier.notifier_class_names_for(category)` returns the parent Notifier class names.
@@ -260,6 +264,23 @@ Callers can pass `idempotency_key: "custom"` to override the default. If neither
 
 Callers (e.g., `Workspaces::Invitations::ResendsController#create`) branch on this to choose flash copy. A caller that branches on `:deduplicated` treats `:skipped` like `:delivered` unless it says otherwise — which is correct where the dispatch carries an explicit, known-present recipient and `:skipped` cannot occur.
 
+## Coalescing — not built; the recipe
+
+Idempotency answers "is this the same dispatch?". Coalescing answers "should the recipient experience distinct events as one item?" — every event still exists, the attention row is shared. Nothing below is implemented. The trigger is a notifier whose volume is not bounded by a human action (#807); the current roster is account and security events, so the template does not carry the machinery speculatively. When the trigger fires, the write path must carry all of the following. Each was found necessary in the 2026-08-25 lifecycle design, and dropping one produces a specific bug named alongside it.
+
+- **A unique key namespaced by notifier class.** Two notifiers coalescing on the same record must not share a row.
+- **A single-statement counter increment**, `coalesced_event_count = coalesced_event_count + 1`, on a nullable column populated only for coalescing rows. The name `unread_count` was rejected: it double-represents read state and collides with what `User#unread_notification_breakdown` means.
+- **A `read_at` reset on each coalesced arrival**, so the item returns to unread.
+- **A mark-read compare-and-swap keyed on `event_id`.** A stale `event_id` re-renders the row instead of marking a newer arrival read.
+- **`RecordNotUnique` scoped to the coalescing insert**, distinct from the outer idempotency rescue that returns `:deduplicated`.
+- **The gem-internal write order, pinned to noticed 3.0.0:** `validate!` → transaction → `notifications_count=` → `save!` → `insert_all!` → `EventJob` enqueue. The enqueue must follow the `event_id` re-point, or email fans out over the wrong `has_many`.
+- **One decision between manual `notifications_count` assignment and a counter cache.** Both at once double-count.
+- **The write path returns the touched row ids**, so `broadcast_notifications_arrival` does not silently no-op for a re-pointed row.
+- **`mark_all_read` zeroes the counter.**
+- **The bell decides once whether it counts rows or sums counters.**
+- **A `category :security` notifier that declares coalescing raises at boot.** Security events are never merged.
+- **The key is record plus recipient set, not record alone.** The actor rule above excludes the actor from recipients, and a member re-admitted to a workspace is notified again, so the same record can legitimately produce two items with different audiences.
+
 ## Dispatch reliability
 
 What is atomic is the ledger: `Noticed::Deliverable#deliver` writes the event row, its `idempotency_key`, and every recipient's notification row in one transaction. What is *not* atomic is the delivery job — noticed enqueues `Noticed::EventJob` after that transaction returns, and Solid Queue writes to a separate SQLite database in production, so it never could be. If the enqueue fails (Solid Queue's database busy past its timeout, a full disk) or the process dies in the gap, the recipient sees the notification in the bell, the key is burned so a retry inside the same bucket dedupes away, and the email and broadcast legs never run.
@@ -270,7 +291,7 @@ Stamping at the start, not the end, is what keeps the sweep safe: an event whose
 
 **What the watermark does not cover**, stated plainly because it is easy to assume otherwise: a job that was claimed and then *raised*. The gem ships no retry policy — only `discard_on ActiveJob::DeserializationError` — so `config/initializers/noticed.rb` registers one: three attempts with a growing delay (#1065). Retrying re-runs `perform`, which is **not idempotent** — the fan-out is 1-3 delivery legs and a recipient may see a duplicate email. That trade is deliberate and the smaller harm: a duplicate is visible and annoying, a silently dropped security notification is neither.
 
-Two things remain uncovered. A job that exhausts its three attempts lands in `solid_queue_failed_executions`. So does a pruned worker process's claimed execution — Solid Queue *fails* those rather than releasing them, which no retry policy can see. The reconciler is not that safety net and cannot be: the row is stamped, so it is invisible to the sweep by design. What it does instead is **count** them: at the end of each run it logs a warning naming how many `Noticed::EventJob` executions are sitting in that table, because this app ships no Mission Control UI.
+Two things remain uncovered. A job that exhausts its three attempts lands in `solid_queue_failed_executions`. So does a pruned worker process's claimed execution — Solid Queue *fails* those rather than releasing them, which no retry policy can see. The reconciler is not that safety net and cannot be: the row is stamped, so it is invisible to the sweep by design. What it does instead is **count** them: when any `Noticed::EventJob` execution is sitting in that table, the run ends by logging a warning naming how many (`report_failed_event_jobs`); a clean run logs nothing for it. This app ships no Mission Control UI, so that warning is the whole signal (#1266).
 
 ## Broadcast pipeline
 

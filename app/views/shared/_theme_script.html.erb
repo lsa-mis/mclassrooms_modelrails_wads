@@ -1,19 +1,5 @@
-<%# Deviation: the only inline script tag in a view. It must set the `dark` class
-    on the html root BEFORE first paint, so it cannot live in the `theme` Stimulus
-    controller (importmap modules are deferred and would paint the wrong theme
-    first). Nonce keeps it CSP-compliant.
-
-    It is also where theme resolution is DEFINED. It used to be written twice —
-    here and in theme_controller.js#applyTheme — so a change to one could leave
-    the other painting a different answer for the window before Stimulus boots,
-    which is a paint flash no spec would see (#624). The controller now calls
-    `window.ModelRails.themeIsDark`, and this script always runs first: both are
-    rendered by shared/_layout_head, and a code-smell spec pins that every
-    layout instantiating the `theme` controller also renders this partial.
-
-    Its one input is the data attribute, which is `current_user_theme` — so a
-    fork that changes where that reads (cookie, session, DB) changes this
-    script's input too, and nothing here needs to know about it. -%>
+<%# The only inline script: sets `dark` before first paint and defines
+    window.ModelRails.themeIsDark for theme_controller (#624). -%>
 <script nonce="<%= content_security_policy_nonce %>">
   (function() {
     window.ModelRails = window.ModelRails || {};

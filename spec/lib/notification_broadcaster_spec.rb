@@ -5,11 +5,7 @@ RSpec.describe NotificationBroadcaster do
 
   describe ".refresh_for (v2 — avatar + hamburger indicator dots + user-menu count row)" do
     it "broadcasts all four v2 surfaces: avatar dot, hamburger dot, menu count row, aria-live" do
-      # All four use broadcast_update_to: each frame target is a <turbo-frame>
-      # whose partial renders the frame's CONTENTS, so update (swap inner, keep
-      # the frame element) is correct — replace would strip the frame and freeze
-      # the surface after the first refresh. Forbidden, not merely unexercised —
-      # that freeze is the #279 regression.
+      # update, never replace: replace strips the frame and freezes the surface (#279).
       expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
 
       expect(Turbo::StreamsChannel).to receive(:broadcast_update_to).with(

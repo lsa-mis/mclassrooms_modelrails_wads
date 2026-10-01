@@ -137,12 +137,7 @@ RSpec.describe NotificationMailer, type: :mailer do
       expect(mail.text_part.body.encoded).to include(settings_connected_accounts_url)
     end
   end
-  # A suspended user is bounced before they reach a workspace, so every one of
-  # these mails invites an action they cannot take. The skip covers SECURITY
-  # mail too (password changed, new device): they cannot act on that either,
-  # and a reset on reinstatement recovers it through the same address. One
-  # rule, deliberately, rather than a mail-class exemption to keep straight
-  # (#1132, decision recorded in operations.md).
+  # A suspended user gets none of this mail, security mail included (#1132).
   describe "a suspended recipient" do
     let(:workspace) { create(:workspace, name: "Acme") }
     let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }

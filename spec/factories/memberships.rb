@@ -8,10 +8,7 @@ FactoryBot.define do
       role { Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner"; r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true } } }
     end
 
-    # Deactivated as fixture STATE. Sets the column directly on purpose: the
-    # domain verb is deactivate!, and an example that only needs a removed member
-    # should not run the last-owner guard, the workspace lock and the
-    # project-membership cascade to get one.
+    # Fixture state set directly; deactivate! runs guards an example may not need.
     trait :deactivated do
       discarded_at { Time.current }
     end

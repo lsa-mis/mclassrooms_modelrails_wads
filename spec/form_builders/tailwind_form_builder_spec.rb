@@ -12,10 +12,6 @@ RSpec.describe TailwindFormBuilder, type: :component do
   let(:user) { User.new }
   let(:builder) { described_class.new(:user, user, vc_test_controller.view_context, {}) }
 
-  def parse(html)
-    Capybara.string(html.to_s)
-  end
-
   describe "#text_field" do
     it "binds the label, the control, and its id together" do
       result = parse(builder.text_field(:first_name))

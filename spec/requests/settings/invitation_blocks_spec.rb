@@ -1,14 +1,6 @@
 require "rails_helper"
 
-# #812. Blocks are created from the unauthenticated decline page — including by
-# people with no account — and removal had only an operator door: a
-# two-statement console recipe in the troubleshooting doc. A person who
-# mis-clicked had no undo they could reach themselves.
-#
-# The reach is the ADDRESS, not the account: blocks are email-keyed and
-# account-independent, so this lists the blocks naming the signed-in user's own
-# address. A block made before they had an account shows up; one made against a
-# previous address deliberately does not (it never followed them).
+# Self-serve undo for a block, keyed on the signed-in user's own address (#812).
 RSpec.describe "Settings::InvitationBlocks", type: :request do
   let(:user) { create(:user) }
   let(:inviter) { create(:user, first_name: "Dana", last_name: "Sender") }
@@ -49,8 +41,7 @@ RSpec.describe "Settings::InvitationBlocks", type: :request do
       get settings_invitation_blocks_path
 
       expect(response).to have_http_status(:ok)
-      # Compared as TEXT, not as a body substring: the copy carries an
-      # apostrophe and curly quotes, which reach the response escaped.
+      # As text: the copy's apostrophe and curly quotes reach the body escaped.
       expect(Nokogiri::HTML(response.body).text)
         .to include(I18n.t("settings.invitation_blocks.index.empty_state"))
     end
@@ -70,18 +61,12 @@ RSpec.describe "Settings::InvitationBlocks", type: :request do
 
       expect(response).to redirect_to(settings_invitation_blocks_path)
       expect(InvitationBlock.exists?(block.id)).to be(false)
-      # The half a console recipe forgets: without it the stamped row stays
-      # invisible to bulk_invite!'s duplicate check and every later invite
-      # mints a duplicate instead of sending.
+      # The stamp is cleared too, or bulk_invite! mints duplicates.
       expect(invitation.reload.suppressed_at).to be_nil
     end
 
-    # Not-found, not forbidden: a refusal would confirm the id names a real
-    # block, telling the requester that an address they do not own has blocked
-    # someone. Scoping the `find` is what makes the two indistinguishable —
-    # this app answers a missing record with its generic not-found alert, and
-    # a Pundit refusal with a different alert and a different destination, so
-    # asserting the ALERT is what proves the requester cannot tell them apart.
+    # A foreign id gets the same not-found alert as a missing one: asserting the ALERT
+    # proves the requester cannot tell a real block from none (#812).
     it "answers a block belonging to another address as not-found, not forbidden" do
       block = create(:invitation_block, inviter: inviter, email: "not-mine@example.com")
 

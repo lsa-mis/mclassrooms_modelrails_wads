@@ -155,15 +155,8 @@ module Authenticatable
       Rails.logger.warn("[new-device-detection] swallowed error for user=#{user.id}: #{e.class}: #{e.message}")
     end
 
-    # Coarse-grained OS label derived from the User-Agent string. Intentionally
-    # simple — the digest only needs to be deterministic, not gold-standard
-    # device fingerprinting. Order matters (iOS check precedes "Mac" because
-    # Mobile Safari UAs contain "Macintosh"-like substrings on iPad).
-    #
-    # These six strings are DIGEST INPUTS, not display labels: renaming one
-    # invalidates every fingerprint already stored for that platform, and those
-    # users get a new-device alert for the device they have always used. Pinned
-    # by spec/requests/known_device_os_labels_spec.rb (#643).
+    # Digest inputs: renaming one re-alerts every user on that platform; iOS precedes
+    # Mac. Pinned by spec/requests/known_device_os_labels_spec.rb (#643).
     def parse_os_from_user_agent(user_agent)
       case user_agent
       when /iPhone|iPad|iPod/      then "iOS"

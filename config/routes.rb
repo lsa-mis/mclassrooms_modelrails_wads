@@ -78,9 +78,7 @@ Rails.application.routes.draw do
     resource :reauthentication, only: [ :new, :create ]
     resource :reauthentication_code, only: [ :create ]
     resources :passkeys, only: [ :index, :destroy ]
-    # Self-serve undo for "Don't invite me again" (#812). Keyed on the address,
-    # not the account — the blocks listed are the ones naming this user's own
-    # email, including any made before they had an account.
+    # Self-serve undo for "Don't invite me again", keyed on the address (#812).
     resources :invitation_blocks, only: [ :index, :destroy ]
     resources :connected_accounts, only: [ :index, :destroy ] do
       # Resending the verification email is a resend, created (#1007).

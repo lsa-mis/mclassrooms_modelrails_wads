@@ -27,10 +27,7 @@ Rails.application.config.toasts = ActiveSupport::InheritableOptions.new(
     warning: {
       tier: :card,
       icon: :exclamation_triangle,
-      # The tone's AAA TEXT token, not -icon: an amber-500 icon on amber-50
-      # measured 2.06:1 against the 3:1 non-text floor, while the message
-      # beside it sat at 8.62:1 on the same ground. The gem's own alert already
-      # answers this by letting its icon inherit `text-current` (#1236).
+      # The tone's AAA text token, not -icon: -icon on the -surface fails 3:1 (#1236).
       icon_color: "text-warning",
       bg: "bg-warning-surface",
       border: "border-warning-border",

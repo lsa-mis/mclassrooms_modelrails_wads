@@ -6,21 +6,12 @@ class IconRegistry
 
   class << self
     def find(name, style: nil)
-      name = name.to_sym
-      if style
-        cache[[ name, style.to_sym ]] || raise(NotFound, "Icon '#{name}' not found in #{style} style")
-      else
-        cache[[ name, :outline ]] || cache[[ name, :solid ]] || raise(NotFound, "Icon '#{name}' not found")
-      end
+      keys_for(name, style).filter_map { |key| cache[key] }.first ||
+        raise(NotFound, "Icon '#{name}' not found#{" in #{style} style" if style}")
     end
 
     def exists?(name, style: nil)
-      name = name.to_sym
-      if style
-        cache.key?([ name, style.to_sym ])
-      else
-        cache.key?([ name, :outline ]) || cache.key?([ name, :solid ])
-      end
+      keys_for(name, style).any? { |key| cache.key?(key) }
     end
 
     def available_icons
@@ -36,6 +27,11 @@ class IconRegistry
     end
 
     private
+
+    def keys_for(name, style)
+      styles = style ? [ style.to_sym ] : STYLES
+      styles.map { |candidate| [ name.to_sym, candidate ] }
+    end
 
     def cache
       @cache ||= load_all_icons

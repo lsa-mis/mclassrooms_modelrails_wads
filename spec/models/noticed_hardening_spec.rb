@@ -61,12 +61,22 @@ RSpec.describe "Noticed hardening" do
     end
   end
 
-  describe "partial unread index" do
-    it "exists with the correct WHERE clause" do
-      indexes = ActiveRecord::Base.connection.indexes("noticed_notifications")
-      unread = indexes.find { |i| i.name == "index_noticed_notifications_unread" }
-      expect(unread).not_to be_nil
-      expect(unread.where).to include("read_at IS NULL")
+  describe "index use once the redundant pair is gone (#1199)" do
+    let(:recipient) { User.new(id: 1) }
+
+    it "serves the unread filter from the recipient_read_created index" do
+      plan = Noticed::Notification.where(recipient: recipient, read_at: nil).explain.inspect
+
+      expect(plan).to include("USING INDEX index_noticed_notifications_on_recipient_read_created")
+    end
+
+    it "seeks the inbox on the recipient_read_created index and sorts in a temp B-tree" do
+      inbox = Noticed::Notification.where(recipient: recipient)
+        .order(Arel.sql("noticed_notifications.read_at IS NULL DESC"), created_at: :desc).limit(25)
+      plan = inbox.explain.inspect
+
+      expect(plan).to include("USING INDEX index_noticed_notifications_on_recipient_read_created")
+      expect(plan).to include("USE TEMP B-TREE FOR ORDER BY")
     end
   end
 end

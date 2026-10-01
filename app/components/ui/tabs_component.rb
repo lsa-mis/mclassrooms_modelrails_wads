@@ -8,7 +8,7 @@ module UI
     renders_many :tabs, "UI::TabsItemComponent"
 
     TABLIST = "inline-flex h-9 items-center justify-center rounded-lg bg-surface-sunken p-1 text-text-muted"
-    TRIGGER = "inline-flex min-h-input items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-all focus-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[state=active]:bg-surface-raised data-[state=active]:text-text-heading data-[state=active]:shadow"
+    TRIGGER = "inline-flex min-h-input items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium motion-safe:transition-all focus-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[state=active]:bg-surface-raised data-[state=active]:text-text-heading data-[state=active]:shadow"
     PANEL = "mt-2 focus-ring"
 
     ORIENTATIONS = %i[horizontal vertical].freeze

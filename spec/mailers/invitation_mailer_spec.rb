@@ -14,8 +14,7 @@ RSpec.describe InvitationMailer, type: :mailer do
       expect(mail.body.encoded).to include(invitation.token)
     end
 
-    # #1151: the same article bug as the accept page, in the copy that reaches
-    # the invitee first.
+    # The article bug (#1151), in the invitee's first copy.
     it "names the role without an article that may not fit it" do
       owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
       owner_invitation = create(:invitation, role: owner_role)
@@ -88,10 +87,7 @@ RSpec.describe InvitationMailer, type: :mailer do
       expect(ActionMailer::Base.deliveries.size).to eq(1)
     end
 
-    # A hold is between the operator and that person, and a suspended user
-    # cannot act on anything this mail invites them to do — the request is
-    # bounced before it reaches a workspace. Sending it anyway discloses
-    # nothing useful and invites an action that cannot be taken (#1132).
+    # A suspended invitee cannot act on it (#1132).
     it "delivers nothing to a suspended address" do
       invitation = create(:invitation)
       create(:user, email_address: invitation.email, suspended_at: Time.current)

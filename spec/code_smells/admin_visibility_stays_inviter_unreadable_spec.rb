@@ -1,15 +1,7 @@
 require "rails_helper"
 
-# Invariant I3 of the decline-and-block feature (PR 4), defined in
-# app/docs/developer/security.md "Invitation blocks": the inviter must never
-# be able to confirm a block. `Invitation#record_suppressed_delivery` writes
-# the ONLY evidence of a suppressed delivery, and deliberately gives it
-# `visibility: "admin"` so it drops out of every inviter-facing feed. That
-# safety was established by inspection alone (#913) — nothing asserted it, and
-# the inviter is frequently a workspace owner or admin, precisely the
-# "admin"-tier audience. This spec makes the property durable: it fails the
-# day any of these three read surfaces starts rendering admin rows, rather
-# than waiting for an admin console to ship the oracle.
+# Invariant I3 (security.md, Invitation blocks): an inviter must never read the
+# admin-visibility suppression row (#913). Fails if any read surface shows admin rows.
 RSpec.describe "Code smell: invitation.delivery_suppressed stays admin-only" do
   let(:workspace) { create(:workspace) }
   let(:inviter) { create(:user) }

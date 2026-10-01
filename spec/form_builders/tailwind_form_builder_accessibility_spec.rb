@@ -6,10 +6,6 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility", type: :component d
   let(:user) { User.new }
   let(:builder) { described_class.new(:user, user, vc_test_controller.view_context, {}) }
 
-  def parse(html)
-    Capybara.string(html.to_s)
-  end
-
   # ---------------------------------------------------------------------------
   # aria-required — never native `required`
   # ---------------------------------------------------------------------------
@@ -205,10 +201,7 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility", type: :component d
       expect(result).to have_css("input[type='submit'].btn-primary")
     end
 
-    # Closes #717: base's old checkbox rendered the input and label as two
-    # separate siblings, no single element carrying a full 44px target. The
-    # new contract wraps input + caption in ONE label.min-h-input — one row is
-    # one target.
+    # One label wraps input and caption: one row, one 44px target (#717).
     it "wraps a single checkbox's input and caption in one 44px label target (closes #717)" do
       result = parse(builder.checkbox(:first_name, label: "I agree"))
       expect(result).to have_css("label.min-h-input input[type='checkbox']")

@@ -15,10 +15,6 @@ RSpec.describe "Dropdown menu component accessibility", type: :system do
     expect(page).to have_css("[role='menu']:not([hidden])")
   end
 
-  def focused_text
-    page.evaluate_script("document.activeElement.textContent.trim()")
-  end
-
   %w[basic positioned inside_stacking_context checkable_items submenus].each do |scenario|
     it "#{scenario}: opens a menu that passes AAA in both themes" do
       visit "/rails/view_components/ui/dropdown_menu_component/#{scenario}"

@@ -30,6 +30,9 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
         expect {
           post workspace_join_links_path(workspace)
         }.to change(workspace.join_links.active, :count).by(1)
+
+        expect(response).to redirect_to(edit_workspace_settings_path(workspace))
+        expect(flash[:notice]).to eq(I18n.t("workspaces.join_links.create.rotated"))
       end
 
       it "atomically rotates — revokes any existing active link and creates a new one" do
@@ -106,6 +109,8 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
       it "revokes (soft-removes) the link" do
         delete workspace_join_link_path(workspace, link)
         expect(link.reload).to be_revoked
+        expect(response).to redirect_to(edit_workspace_settings_path(workspace))
+        expect(flash[:notice]).to eq(I18n.t("workspaces.join_links.destroy.revoked"))
       end
     end
 

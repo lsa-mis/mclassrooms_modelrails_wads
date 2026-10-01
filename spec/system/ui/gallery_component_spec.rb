@@ -16,19 +16,12 @@ require "rails_helper"
 RSpec.describe "Gallery component accessibility", type: :system do
   let(:scope) { [ "[data-test='gallery']" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: three focusable button triggers + the shared dialog; AAA in both themes" do
     visit "/rails/view_components/ui/gallery_component/default"
 
     expect(page).to have_css("[data-test='gallery'] button[aria-label]", count: 3)
     expect(page).to have_css("dialog[data-modal-target='dialog']", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "opens the lightbox via keyboard and moves focus into the dialog (2.1.1)" do

@@ -55,6 +55,18 @@ RSpec.describe "activity_logs/_activity_log", type: :view do
       expect(html).to have_text("Ada Owner deactivated Dee Member", normalize_ws: true)
     end
 
+    # render_row builds unsaved rows, so the subject above is the live actor;
+    # a persisted row reads its snapshot, which only this example exercises.
+    it "names the actor from the row's snapshot once persisted, even after a rename" do
+      log = create(:activity_log, action: "membership.updated", metadata: deactivation_metadata,
+                                  actor: ada, trackable: dees_membership)
+      ada.update!(first_name: "Renamed")
+
+      render partial: "activity_logs/activity_log", locals: { activity_log: log.reload }
+
+      expect(rendered).to have_text("Ada Owner deactivated Dee Member", normalize_ws: true)
+    end
+
     it "reads as a departure when the actor is the member themselves" do
       html = render_row(
         action: "membership.updated",

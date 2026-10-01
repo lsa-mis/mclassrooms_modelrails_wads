@@ -18,18 +18,14 @@ class MagicLinkToken < ApplicationRecord
     Digest::SHA256.hexdigest(token.to_s)
   end
 
-  # Atomically issues a magic link token for the given email. Supersedes any
-  # prior unconsumed token (expired or active) so at most one is valid at a
-  # time. The partial unique index on (email) WHERE consumed_at IS NULL makes
-  # the supersede race-safe across connections: if two threads both pass the
-  # supersede UPDATE, only one INSERT wins. Returns the plaintext token to
-  # email, or nil for the losing thread — the winner already emailed the one
-  # valid link, and the plaintext is unrecoverable from the digest.
+  # Supersedes any prior unconsumed token so at most one is valid; the partial unique index on
+  # (email) WHERE consumed_at IS NULL makes that race-safe, and the losing INSERT returns nil.
   def self.create_for_email(email, intent: nil)
     token = SecureRandom.urlsafe_base64(32)
 
     transaction do
-      where(email: email, consumed_at: nil).update_all(consumed_at: Time.current)
+      now = Time.current
+      where(email: email, consumed_at: nil).update_all(consumed_at: now, superseded_at: now)
       create!(token_digest: digest(token), email: email, expires_at: 15.minutes.from_now, intent: intent)
     end
     token
@@ -42,13 +38,8 @@ class MagicLinkToken < ApplicationRecord
       &.then { |record| record.expires_at > Time.current && record.consumed_at.nil? ? record : nil }
   end
 
-  # The spent row for a token, or nil: the read half of replay detection,
-  # kept here so MagicLinkReplayable's address fence has exactly one lookup
-  # to guard rather than a copy per controller. Predicate-only — never
-  # consumes. "Spent" is consumed_at present, which also covers a link that
-  # was superseded unused; telling those apart is #1083. The blank guard is
-  # what stops a controller reading the wrong param name from silently
-  # digesting "" and never matching — a green suite with a dead feature.
+  # The read half of replay detection: spent is consumed_at present, redeemed or superseded (see
+  # #redeemed?). The blank guard stops a wrong param name from digesting "" and never matching.
   def self.find_spent(token)
     return nil if token.blank?
 
@@ -64,13 +55,7 @@ class MagicLinkToken < ApplicationRecord
     find_by(token_digest: token_digest)
   end
 
-  def consume!
-    rows_updated = self.class.where(id: id, consumed_at: nil).update_all(consumed_at: Time.current)
-    if rows_updated > 0
-      reload
-      true
-    else
-      false
-    end
+  def redeemed?
+    consumed_at.present? && superseded_at.nil?
   end
 end

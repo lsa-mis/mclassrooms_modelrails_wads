@@ -5,6 +5,10 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  ignore:
+    # Bumped by hand with the re-vendor pre-flight; Dependabot's default cooldown
+    # proposed this git-tag gem as a downgrade three times (#665, #888, #1261).
+    - dependency-name: modelrails_ui
 - package-ecosystem: github-actions
   directory: "/"
   schedule:

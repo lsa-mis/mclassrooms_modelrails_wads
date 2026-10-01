@@ -24,6 +24,18 @@ export function serializeForm(form) {
     .querySelectorAll("input[type=password], [data-form-draft-ignore]")
     .forEach((el) => el.name && skipped.add(el.name))
 
+  // A named control INSIDE another named control belongs to that control, not
+  // to the form. A rich-text editor is a form-associated custom element that
+  // carries its own toolbar in its light DOM, and that toolbar has named
+  // controls of its own — Lexxy's code-language <select>, for one. Serializing
+  // them made the restored-field count read high, announcing "3 fields
+  // updated" to a screen reader user who had filled two (#262).
+  //
+  // In ordinary Rails markup this cannot fire: `input` is void, and `select`
+  // contains `option`s, which carry no name. It matches only the case it is
+  // for.
+  form.querySelectorAll("[name] [name]").forEach((el) => el.name && skipped.add(el.name))
+
   const formData = new FormData(form)
   const data = {}
   for (const name of descendantNames) {

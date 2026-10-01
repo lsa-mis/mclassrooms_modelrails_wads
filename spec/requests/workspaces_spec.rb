@@ -21,10 +21,7 @@ RSpec.describe "Workspaces", type: :request do
         expect(response.body).to include(CGI.escapeHTML(workspace.name))
       end
 
-      # The header action and a bottom "Create" CTA both pointed at the same
-      # page. The bottom one outlived the layout that justified it — a long
-      # scroll where the header action had gone off-screen — and now sits a
-      # few rows below its twin (#1092).
+      # One create action, in the header (#1092).
       it "offers one route to the new-workspace page, not two" do
         workspace = create(:workspace)
         create(:membership, :owner, user: user, workspace: workspace)
@@ -34,11 +31,7 @@ RSpec.describe "Workspaces", type: :request do
         expect(Capybara.string(response.body)).to have_link(href: new_workspace_path, count: 1)
       end
 
-      # Three paddings inside identical list chrome, two of them in the same
-      # <ul>: the plain rows carry p-3 from _row, the locked row hard-coded
-      # p-4, and the archived branch took the component's px-4 py-3. The
-      # partial renders in three different containers, so no single padding on
-      # the partial can be right — the container owns the chrome (#1119).
+      # The container owns the row chrome, one padding across all three lists (#1119).
       it "gives a locked row the same chrome as the rows beside it" do
         held = create(:workspace, name: "Held Co")
         create(:membership, :owner, user: user, workspace: held)
@@ -156,9 +149,7 @@ RSpec.describe "Workspaces", type: :request do
       it "redirects to the workspace and says it was created" do
         post workspaces_path, params: { workspace: { name: "New Workspace" } }
         expect(response).to redirect_to(workspace_path(Workspace.find_by!(name: "New Workspace")))
-        # By key, not by sentence: the point is which key was selected. A
-        # redirect-only assertion walks the path and proves nothing about what
-        # the user reads (#526).
+        # By key, not by sentence: which key was selected is the point (#526).
         expect(flash[:notice]).to eq(I18n.t("workspaces.create.success"))
       end
     end
@@ -402,9 +393,7 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
-    # Through the real render, not the helper: the bug was a link in a page a
-    # Member was shown, and the fix only counts if what ships in the markup
-    # changed (#1153).
+    # Through the real render: the fix counts only if the shipped markup changed (#1153).
     describe "the workspace nav's Settings link" do
       it "points a Member at a page they can open, not the one they are refused" do
         workspace = create(:workspace, personal: false)

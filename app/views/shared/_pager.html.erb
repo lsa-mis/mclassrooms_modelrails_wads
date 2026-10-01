@@ -1,15 +1,6 @@
 <%# locals: (pagy:, frame: nil) -%>
-<%# The one place pagy.series_nav is called. Two surfaces rendered it with
-    different arguments — the shared pagination partial plain, the operations
-    ledger with a hand-written `anchor_string` so its links escape the Turbo
-    frame — which is one call with two spellings and no way to keep them
-    honest (#1169).
-
-    `frame:` is the seam: absent, the pager behaves exactly as before; set,
-    every link carries that frame target. `anchor_string` is pagy's raw-
-    attribute hook, so the value is built with `tag.attributes` rather than
-    interpolated — a frame name can then never close the attribute and add
-    one of its own. -%>
+<%# The one pagy.series_nav call (#1169). `frame:` targets every link, built with
+    tag.attributes so a frame name cannot escape the attribute. -%>
 <% if pagy.pages > 1 %>
   <%== pagy.series_nav(
          aria_label: t("pagination.aria_label"),

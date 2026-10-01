@@ -2,19 +2,8 @@
 
 require "rails_helper"
 
-# Request spec: the phone's workspace switcher in the rendered HTML.
-#
-# It renders above the section tabs on WORKSPACE pages (#1077), a second copy
-# of the sidebar switcher carrying a `-mobile` id suffix — the sidebar copy is
-# display:none below md, not absent. It replaced the inline list that lived in
-# the hamburger.
-#
-# The workspaces index renders it too, and differently: no current workspace and
-# `capped: true` (workspaces/index.html.erb), so the list is the five most
-# recently used rather than all of them. #1090 reversed the earlier decision that
-# the index carried no switcher; this header said otherwise until #1091.
-# Everything here asserts on the raw body: the mobile copy is md:hidden, so it
-# is in the DOM at every width.
+# The phone switcher on workspace pages (#1077) and, capped, on the index (#1090).
+# Asserted on the raw body: the mobile copy is md:hidden, not absent.
 RSpec.describe "Mobile workspace switcher", type: :request do
   let(:user) { create(:user) }
   let!(:second_workspace) do
@@ -59,11 +48,7 @@ RSpec.describe "Mobile workspace switcher", type: :request do
       expect(items.map { |a| a["href"] }).to include(workspaces_path)
     end
 
-    # #1091: every other example here visits a workspace page, where there IS a
-    # current workspace to pin. The index renders the same partial with
-    # `workspace: nil`, and until this example nothing exercised that branch with
-    # enough workspaces for the cap to do anything — all the index examples ran
-    # with two, where `.first(5)` is a no-op.
+    # The index's branch: no current workspace, and enough workspaces to cap (#1091).
     it "caps the index dropdown too, where there is no current workspace to pin" do
       5.times { create(:membership, :owner, user: user, workspace: create(:workspace)) }
       user.reload

@@ -53,27 +53,8 @@ RSpec.describe "Design-system CSS layer discipline" do
       "or delete it."
   end
 
-  # The sibling failure, and a shipped one rather than a hypothetical:
-  # min-h-input was registered with a "prefer it" comment and 81 legacy spellings
-  # accreted anyway, because nothing failed. Documenting a preference did not work,
-  # so this asserts it (#1105).
-  #
-  # Not cosmetic. --form-input-height is the documented retune knob, so a fork that
-  # sets it to 48px moves every min-h-input and leaves every min-h-11 at 44 — the
-  # page silently splits into two heights.
-  #
-  # app/components/ui/** used to be excluded: those files are vendored from
-  # modelrails_ui, and this scan was to widen "once the gem-side sweep lands".
-  # It landed in v0.23.0 (gem #252, 32 sites across 26 files), so the exclusion
-  # is gone and the vendored copies are held to the same rule as the app's own.
-  #
-  # ONE exemption, and it is not an input. mega_menu's ITEM_CLS is a navigation
-  # LINK at the 2.5.5 target floor; --form-input-height is the form-control
-  # knob, so a fork retuning it should move every input and leave a nav link
-  # where it is. A path, not a file:line — a line number goes stale the moment
-  # anything is inserted above it.
-  # `let`, not a bare constant: a SCREAMING_CASE constant in a describe block
-  # lands on Object and collides across parallel workers (#607).
+  # min-h-input everywhere, vendored components included (#1105): a fork retuning
+  # --form-input-height must move every input. mega_menu's nav link is exempt.
   let(:nav_target_floor) { "app/components/ui/mega_menu_component.rb" }
 
   it "spells the input-height floor as min-h-input, not as a raw value" do
@@ -91,8 +72,7 @@ RSpec.describe "Design-system CSS layer discipline" do
       "that retunes --form-input-height leaves them behind:\n  #{offenders.join("\n  ")}"
   end
 
-  # The exemption has to keep naming something, or it silently becomes a
-  # no-op entry nobody removes.
+  # The exemption must keep naming something, or it is a dead entry.
   it "keeps the one nav-target-floor exemption pointing at a real use" do
     path = Rails.root.join(nav_target_floor)
 

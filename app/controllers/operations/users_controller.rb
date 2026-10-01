@@ -22,10 +22,7 @@ module Operations
     end
 
     private
-      # The filter narrows an already-paginated relation rather than replacing
-      # it: `User::Search` resolves ids in Ruby (names are non-deterministically
-      # encrypted), and feeding those back through `where(id:)` keeps ordering
-      # and pagination in SQL, where `created_at` lives.
+      # Names resolve in Ruby; where(id:) keeps order and paging in SQL.
       def listing
         return operated_users unless @search
 

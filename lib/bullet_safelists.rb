@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
-# Shared Bullet safelists for development + test. They drifted once — dev.rb
-# carried 2 of the set while test.rb had them all, so false positives fired in
-# dev but were invisible to the suite. Loaded via `require_relative` from the
-# env configs, which run before Zeitwerk autoloading is active.
-# See /docs/developer/testing (Bullet safelists live in one file).
+# Shared by development and test, loaded by require_relative before Zeitwerk is active. Each entry's
+# trade-off: /docs/developer/testing (Bullet safelists live in one file).
 module BulletSafelists
   module_function
 
@@ -16,43 +13,21 @@ module BulletSafelists
   # --- Unused eager loading -------------------------------------------------
 
   def apply_unused_eager_loading
-    # ActiveStorage touches attachment records via includes(:record) for a bulk
-    # SQL touch (touch_attachment_records); the objects are never accessed in Ruby,
-    # so Bullet's "avoidable eager loading" is a framework false positive.
+    # Framework false positive: ActiveStorage's bulk touch includes :record but never reads it.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "ActiveStorage::Attachment", association: :record)
 
-    # The notifications index eager-loads `event.record` for every row
-    # (`includes(:recipient, event: :record)`) because ~all notifier subtypes'
-    # `#message` interpolate `event.record.<attr>`. SignInFromNewDeviceNotifier is
-    # the lone exception — its `#message` reads only `event.params` — so when it's
-    # the only subtype on the page the `:record` include is unused. Keep the preload
-    # (N+1 guard for the common case); accept the false positive for a device-only page.
+    # The notifications index preloads event.record for every subtype; this one's message never reads it.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "SignInFromNewDeviceNotifier", association: :record)
 
-    # The members index eager-loads Invitation :role for the combined
-    # invitation+membership table. Invitations sort to the FRONT of the
-    # combined array, so any page ≥ 2 (and any filter matching zero
-    # invitations) renders no invitation rows and that request's preload goes
-    # unused. Keeping the preload is the N+1 guard for every page that DOES
-    # render invitation rows; the #124/#125 boundary specs exercise exactly
-    # the slices that trip this false positive.
+    # Members index: unused on pages that render no invitation rows (#124/#125).
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Invitation", association: :role)
 
-    # The workspace sidebar switcher preloads `memberships: [:role, { user: :avatar_attachment }]`
-    # so `workspace_icon_for` can fall back to the personal-workspace owner's avatar
-    # without N+1ing. The fallback is conditional (skipped when a workspace has its own
-    # logo, or under the :none sidebar posture), leaving legs of the chain "unused" on
-    # those rows. Also covers Workspace#owners' loaded?-aware short-circuit on the
-    # workspaces index. Intentionally pessimistic — cheaper than an N+1 on the rows that
-    # DO need it — so safelist every leg.
+    # Sidebar switcher's owner-avatar fallback: conditional per row, so any leg can go unused.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Membership", association: :user)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Membership", association: :role)
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "User", association: :avatar_attachment)
 
-    # WorkspacesController#index queries memberships first then joins+preloads workspace
-    # to sort by memberships.last_accessed_at; Bullet reads the includes-side preload as
-    # redundant against the join alias, but the view needs the preloaded workspace per
-    # row to render name + icon without an N+1.
+    # Workspaces index: Bullet misreads this preload as redundant against the join it sorts by.
     Bullet.add_safelist(type: :unused_eager_loading, class_name: "Membership", association: :workspace)
 
     # RoomSearch#results (Find a Room, phase 3 Tasks 2 + 5) preloads the associations
@@ -98,20 +73,7 @@ module BulletSafelists
   # --- N+1 query ------------------------------------------------------------
 
   def apply_n_plus_one
-    # Empty on purpose. Two `:recipient` entries lived here until #1054: the
-    # original reason was the email lambda's per-recipient gate, which #936
-    # removed — the gate now answers from the event's own permitted-id set and
-    # reads no association. Nothing in app/ or lib/ reads the association on a
-    # collection path any more (`recipient_pref` has no caller outside specs),
-    # so the capacity entry was dead and the member-added one survived only on
-    # spec-side reads, which now eager-load it. A safelist is global: keeping
-    # either would blind Bullet to a real N+1 on every other surface.
-
-    # The notifications index's second-level traversals off the polymorphic
-    # `event.record` are handled by the `record_preloads` pipeline
-    # (ApplicationNotifier.preload_records), not safelists: Bullet safelists
-    # are GLOBAL (class + association, app-wide), so a "this page accepts it"
-    # entry would also blind Bullet to genuine N+1s on every other surface.
-    # Guard spec: spec/requests/settings/notifications_record_preloads_spec.rb.
+    # Empty on purpose (#1054): a safelist is global and would hide a real N+1 on every other page.
+    # The notifications index uses ApplicationNotifier.preload_records instead.
   end
 end

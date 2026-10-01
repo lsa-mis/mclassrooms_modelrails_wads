@@ -69,9 +69,7 @@
   <% if @memberships.any? %>
     <%= ui :list_group, class: "mt-3" do %>
       <% @memberships.each do |membership| %>
-        <%# The row stays a static li with the link inside it, not a whole-row
-            list_group_item href: the badge would then sit inside the <a> and
-            join its accessible name. %>
+        <%# Link inside a static li, so the badge stays out of the link's name. %>
         <%= ui :list_group_item, class: "gap-4" do %>
           <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
             <%# operated_workspaces (Workspace.kept) can never resolve a discarded
