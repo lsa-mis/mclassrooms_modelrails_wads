@@ -1,10 +1,7 @@
 require "rails_helper"
 
 RSpec.describe WorkspaceSwitcherHelper, type: :helper do
-  # These examples call the preloading helpers directly and never render, so
-  # Bullet sees the chip's logo/role includes as an unused eager-load. The
-  # includes are load-bearing in the real render; it is the absence of a render
-  # that is unusual here.
+  # Called without a render, so Bullet sees the chip's includes as unused.
   shared_context "helper call without a render" do
     around do |example|
       if defined?(Bullet) && Bullet.enable?
@@ -21,8 +18,7 @@ RSpec.describe WorkspaceSwitcherHelper, type: :helper do
     end
   end
 
-  # #931: the switcher listed a workspace the user had been removed from,
-  # offering a chip that led straight into the refusal loop.
+  # A removed workspace is not offered (#931).
   describe "#switcher_workspaces" do
     let(:user) { create(:user) }
 
@@ -30,7 +26,6 @@ RSpec.describe WorkspaceSwitcherHelper, type: :helper do
       allow(Current).to receive(:user).and_return(user)
     end
 
-    # The helper eager-loads the chip's logo and role for the header render.
     include_context "helper call without a render"
 
     it "omits a workspace whose membership was deactivated and keeps the active one" do
@@ -43,9 +38,7 @@ RSpec.describe WorkspaceSwitcherHelper, type: :helper do
       expect(helper.switcher_workspaces).not_to include(removed)
     end
   end
-  # #1091: this list was a 159-character line inside the partial, so the cap and
-  # the recency order had no reachable seam and no coverage. Every request example
-  # ran with two workspaces, where `.first(5)` is a no-op.
+  # The cap and recency order (#1091).
   describe "#switcher_menu_workspaces" do
     let(:user) { create(:user) }
 
@@ -53,8 +46,7 @@ RSpec.describe WorkspaceSwitcherHelper, type: :helper do
 
     include_context "helper call without a render"
 
-    # Six, so the cap does something. Access times ascending by name, and two
-    # left unaccessed so the alphabetical tiebreak is exercised too.
+    # Six, so the cap acts; two unaccessed, so the alphabetical tiebreak runs.
     def build_six
       %w[Alpha Bravo Charlie Delta Echo Foxtrot].each_with_index.map do |name, i|
         workspace = create(:workspace, name: name)
@@ -68,8 +60,6 @@ RSpec.describe WorkspaceSwitcherHelper, type: :helper do
       build_six
       shown = helper.switcher_menu_workspaces(helper.switcher_workspaces, current: nil, capped: true)
 
-      # Accessed ones first, newest access first. Alpha was accessed an hour ago
-      # and Delta four hours ago, so Alpha leads.
       expect(shown.size).to eq(5)
       expect(shown.map(&:name).first(4)).to eq(%w[Alpha Bravo Charlie Delta])
     end
@@ -78,10 +68,7 @@ RSpec.describe WorkspaceSwitcherHelper, type: :helper do
       build_six
       shown = helper.switcher_menu_workspaces(helper.switcher_workspaces, current: nil, capped: true)
 
-      # Four accessed workspaces lead, so exactly one unaccessed slot is left and
-      # it goes to the alphabetically first. Derived rather than hard-coded: the
-      # user factory also creates a personal workspace, whose name comes from a
-      # generated first name and can sort anywhere.
+      # Derived: the factory's personal workspace name can sort anywhere.
       accessed = shown.first(4)
       unaccessed = (helper.switcher_workspaces.to_a - accessed).map(&:name).sort
 

@@ -24,19 +24,6 @@ RSpec.describe "GET /find-a-room", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # `create(:user)` itself triggers User#onboard_workspace (after_create),
-  # which — under the :shared posture stubbed above — auto-joins `workspace`
-  # with TenancyConfig.shared_join_role before this method ever runs. Creating
-  # a second Membership for the same (user, workspace) pair would violate the
-  # user_id/workspace_id uniqueness index, so this reuses and re-roles the
-  # auto-created membership instead of inserting a new one.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   describe "unauthenticated" do
     it "redirects to sign-in instead of rendering rooms" do
       get find_a_room_path
@@ -441,16 +428,6 @@ RSpec.describe "GET /rooms/:id", type: :request do
   before do
     allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
-  end
-
-  # Same reuse-and-re-role pattern as the Find-a-Room spec above (see that
-  # file's comment): `create(:user)` auto-joins `workspace` via
-  # `User#onboard_workspace` under the :shared posture stubbed here.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
   end
 
   let(:building) { create(:building, workspace: workspace) }
@@ -883,14 +860,6 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # Same reuse-and-re-role pattern as the sibling describe blocks above.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:building) { create(:building, workspace: workspace) }
   let(:floor) { create(:floor, building: building, workspace: workspace, label: "2") }
   let!(:room) { create(:room, building: building, workspace: workspace, floor: floor, facility_code: "MLB1001") }
@@ -1018,13 +987,6 @@ RSpec.describe "GET /rooms/:id/edit", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:building) { create(:building, workspace: workspace) }
   let!(:room) { create(:room, building: building, workspace: workspace, facility_code: "MLB1001") }
 
@@ -1084,13 +1046,6 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
   before do
     allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
-  end
-
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
   end
 
   let(:building) { create(:building, workspace: workspace) }
@@ -1252,6 +1207,7 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       }.not_to raise_error
 
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(flash[:alert]).to eq(I18n.t("rooms.edit.stale_gallery"))
       expect(room.reload.nickname).to eq("Old Name")
       expect(room.gallery.reload).to be_empty
       expect(foreign_image.reload.position).to eq(3)

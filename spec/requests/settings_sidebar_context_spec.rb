@@ -13,15 +13,13 @@ require "rails_helper"
 #
 # Uses Capybara.string (no browser) to parse real rendered HTML.
 RSpec.describe "Settings sidebar context routing", type: :request do
+  include_context "settings sidebar items"
+
   let(:user) { create(:user) }
 
   def sidebar(body)
     Capybara.string(body)
             .find("aside[aria-label='#{I18n.t("settings.sidebar.aria_label")}']")
-  end
-
-  def item(key)
-    I18n.t("settings.sidebar.items.#{key}")
   end
 
   before { sign_in(user) }

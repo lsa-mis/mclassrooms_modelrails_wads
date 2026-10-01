@@ -83,8 +83,7 @@ RSpec.describe Membership, type: :model do
   describe "Discardable" do
     let(:membership) { create(:membership) }
 
-    # #1120: a bare discard! skips the last-owner guard and can leave a workspace
-    # with nobody able to administer it. Removal has one door.
+    # A bare discard! skips the last-owner guard (#1120).
     it "does not expose discard! — removal goes through deactivate!" do
       expect { membership.discard! }.to raise_error(NoMethodError, /private method/)
     end

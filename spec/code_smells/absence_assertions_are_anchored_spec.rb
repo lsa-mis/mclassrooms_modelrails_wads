@@ -22,8 +22,6 @@ require "rails_helper"
 # whose own body anchors (found by scanning `def` blocks here and in
 # spec/support — e.g. `sign_in_via_form`, the `open_modal` family).
 RSpec.describe "Absence assertions are anchored" do
-  def block_start_pattern = /^\s*(it|specify|scenario|before|after|def)\b/
-
   def navigation_pattern = /^\s*visit\b|page\.refresh/
 
   def negative_matcher_pattern = /\.to have_no_\w+|not_to have_\w+|to_not have_\w+/
@@ -32,10 +30,6 @@ RSpec.describe "Absence assertions are anchored" do
     /\.to[ ]have_(?!no_)\w+|
      \b(find|find_button|find_link|find_field|click_button|click_link|click_on|
         fill_in|uncheck|check|choose|select|attach_file|within)[\s(]/x
-  end
-
-  def blocks_in(source)
-    source.each_line.with_index(1).slice_before { |line, _| line.match?(block_start_pattern) }
   end
 
   # Names of methods whose body contains an anchor — calling one anchors the

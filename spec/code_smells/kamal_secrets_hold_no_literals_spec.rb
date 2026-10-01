@@ -50,9 +50,7 @@ RSpec.describe "Kamal secrets files hold references, never literals" do
       end
     end
 
-    # Without this the guard passes vacuously whenever `git ls-files` fails — a
-    # redirected GIT_DIR being one way — because every file drops out of the scan
-    # and an empty violations list reads as success (#1056).
+    # POSITIVE CONTROL: a failing `git ls-files` would empty the scan (#1056).
     expect(scanned).to be_positive,
       "no Kamal secrets file was actually scanned: #{secrets_files.size} file(s) found, all skipped " \
       "as untracked. If `git ls-files` is failing, this guard is not checking anything."

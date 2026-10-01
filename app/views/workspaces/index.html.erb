@@ -38,7 +38,6 @@
     <section class="mt-8" data-test="current-workspace-row" aria-label="<%= t('workspaces.index.current_badge') %>">
       <ul class="flex flex-col gap-2">
         <% if @current_membership.workspace.suspended? %>
-          <%# Chrome from the container, matching the neighbouring _row (#1119). %>
           <li class="p-3 rounded-lg border border-border" data-test="locked-workspace-row">
             <%= render "workspaces/locked_row", workspace: @current_membership.workspace %>
           </li>
@@ -96,9 +95,6 @@
       <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
         <%= t("workspaces.index.archived_heading") %>
       </h2>
-      <%# UI::ListGroup (#735): one divided container that owns the border and
-          dividers, so every row here is a list_group_item and none carries
-          chrome of its own (#1119). %>
       <%= ui :list_group do %>
         <% @archived_memberships.each do |membership| %>
           <% if membership.workspace.suspended? %>

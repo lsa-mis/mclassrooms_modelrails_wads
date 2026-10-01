@@ -6,9 +6,7 @@ require "rails_helper"
 # decides whether moving focus also reveals the panel. Base shipped automatic +
 # horizontal only; both remain the defaults, so existing call sites are unaffected.
 RSpec.describe "Tabs keyboard model", type: :system do
-  def press(key) = page.driver.browser.keyboard.type(key)
   def selected = page.find("[role=tab][aria-selected=true]").text
-  def focused = page.evaluate_script("document.activeElement.textContent.trim()")
 
   describe "horizontal + automatic (the defaults)" do
     before do
@@ -17,14 +15,14 @@ RSpec.describe "Tabs keyboard model", type: :system do
     end
 
     it "moves and activates with ArrowRight" do
-      press(:Right)
+      cdp_press(:Right)
 
       expect(selected).to eq("Password")
     end
 
     # The control that proves the vertical case below is not vacuous.
     it "ignores ArrowDown" do
-      press(:Down)
+      cdp_press(:Down)
 
       expect(selected).to eq("Profile")
     end
@@ -37,13 +35,13 @@ RSpec.describe "Tabs keyboard model", type: :system do
     end
 
     it "moves and activates with ArrowDown" do
-      press(:Down)
+      cdp_press(:Down)
 
       expect(selected).to eq("Password")
     end
 
     it "ignores ArrowRight" do
-      press(:Right)
+      cdp_press(:Right)
 
       expect(selected).to eq("Profile")
     end
@@ -56,15 +54,15 @@ RSpec.describe "Tabs keyboard model", type: :system do
     end
 
     it "moves focus without revealing the panel" do
-      press(:Right)
+      cdp_press(:Right)
 
-      expect(focused).to eq("Password")
+      expect(focused_text).to eq("Password")
       expect(selected).to eq("Profile")
     end
 
     it "reveals the focused panel on Enter" do
-      press(:Right)
-      press(:Enter)
+      cdp_press(:Right)
+      cdp_press(:Enter)
 
       expect(selected).to eq("Password")
     end

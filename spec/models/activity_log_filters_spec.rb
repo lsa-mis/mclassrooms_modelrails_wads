@@ -48,13 +48,6 @@ RSpec.describe ActivityLog, "ledger filters" do
   describe ".matching_any" do
     # Acting AS someone is a session, not an assignment: Current.user delegates
     # to Current.session.
-    def acting_as(user)
-      Current.session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
-      yield
-    ensure
-      Current.session = nil
-    end
-
     it "matches a user as actor, as trackable, and through a membership of theirs" do
       actor = create(:user)
       workspace = create(:workspace)

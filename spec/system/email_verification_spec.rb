@@ -4,11 +4,6 @@ RSpec.describe "Email verification", type: :system do
   let(:authentication) { create(:authentication) } # pending (verified_at nil)
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(axe_options)).to(be(true),
-      "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}")
-  end
-
   def tab_to_verify_button
     cdp_execute("document.activeElement && document.activeElement.blur()")
     reached = (1..10).any? do
@@ -25,7 +20,7 @@ RSpec.describe "Email verification", type: :system do
     expect(page).to have_text(I18n.t("email_verifications.show.title"))
     expect(page).to have_button(I18n.t("email_verifications.show.button", email: authentication.user.email_address))
     expect(page).to have_link(I18n.t("email_verifications.show.cancel"))
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(axe_options)
 
     expect(authentication.reload).not_to be_verified
   end

@@ -16,15 +16,14 @@
       <input type="hidden" name="theme" data-theme-toggle-target="themeInput">
     <% end %>
   <% end %>
+  <%# :icon renders only on the header bar, so it takes the chrome tokens. %>
   <button
     type="button"
     data-action="click->theme-toggle#cycle"
     data-theme-toggle-target="button"
     aria-label="<%= t("navigation.toggle_theme") %>"
-    class="<%= style == :icon ? "min-h-input min-w-[var(--form-input-height)] flex items-center justify-center" : "min-h-input flex items-center gap-2 px-2" %>
-           text-text-body
-           hover:text-interactive-hover
-           focus-ring rounded"
+    class="<%= style == :icon ? "min-h-input min-w-[var(--form-input-height)] flex items-center justify-center text-on-chrome hover:text-on-chrome-hover focus-ring-chrome" : "min-h-input flex items-center gap-2 px-2 text-text-body hover:text-interactive-hover focus-ring" %>
+           rounded"
   >
     <%= icon(:sun, class: "hidden", data: { theme_toggle_target: "lightIcon" }) %>
     <%= icon(:moon, class: "hidden", data: { theme_toggle_target: "darkIcon" }) %>

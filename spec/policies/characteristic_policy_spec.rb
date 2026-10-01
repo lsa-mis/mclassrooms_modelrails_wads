@@ -10,14 +10,14 @@ RSpec.describe CharacteristicPolicy do
 
   before { Current.workspace = workspace }
 
-  def membership_with(slug)
+  def member_with_role(slug)
     user = create(:user)
     create(:membership, user: user, workspace: workspace, role: Role.system_default!(slug))
     user
   end
 
-  let(:admin_user) { membership_with("admin") }
-  let(:viewer_user) { membership_with("viewer") }
+  let(:admin_user) { member_with_role("admin") }
+  let(:viewer_user) { member_with_role("viewer") }
   let(:no_membership_user) { create(:user) }
 
   describe "#glossary?" do

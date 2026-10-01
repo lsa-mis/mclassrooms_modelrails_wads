@@ -6,21 +6,6 @@
 module AxeAccessibility
   AXE_SOURCE = Axe::Configuration.instance.jslib.freeze
 
-  # Selectors excluded from axe checks by default. These mark UI surfaces with
-  # known AAA-contrast debt that is tracked separately and not allowed to gate
-  # unrelated work:
-  #
-  # - .highlight        Rouge syntax-highlighting palette
-  #                     (--syntax-builtin/-comment/-name/-string/-tag) sits at
-  #                     AA. Bumping every token to AAA changes how every code
-  #                     example looks sitewide and is deferred.
-  #
-  # A spec that specifically needs to audit an excluded element should pass an
-  # explicit `exclude:` value. Pass `[]` for the raw, unfiltered audit.
-  DEFERRED_AAA_EXCLUDES = [
-    ".highlight"
-  ].freeze
-
   # Ledger for the teardown audit (#912). The after(:each) hook at the bottom
   # of this file writes one entry per system example: :audited, or :blank when
   # the example ended with no page. VisitTracking records which examples
@@ -92,9 +77,6 @@ module AxeAccessibility
     rules: AXE_RULE_OVERRIDES
   }.freeze
 
-  # `exclude` defaults to DEFERRED_AAA_EXCLUDES so tests don't fail on tracked
-  # debt. Pass an explicit array (or `[]`) to override.
-  #
   # `include` scopes the audit to one or more DOM subtrees (axe `context`
   # selectors). Use it to audit a single COMPONENT rather than the whole page —
   # e.g. a preview-host page whose minimal layout emits `best-practice`
@@ -107,7 +89,7 @@ module AxeAccessibility
   # chain computed styles, theme state, in-flight animations) so failure
   # messages reveal the cascade reality at scan time. See §2b flake
   # investigation for the motivating case.
-  def run_axe_audit(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+  def run_axe_audit(options = {}, exclude: [], include: nil)
     # A caller's runOnly tags are ADDED to the cumulative set, never swapped
     # for it (#829). `||=` meant a caller-supplied value replaced AXE_TAG_SET
     # outright, so the 32 system specs passing ["wcag2aaa"] audited the three
@@ -572,11 +554,8 @@ module AxeAccessibility
     Object.new
   end
 
-  # Keeps the violations it saw, keyed on its own arguments, so the paired
-  # failure message can report THIS audit rather than running its own. Before
-  # #1189 the message re-audited, and a violation that cleared in between
-  # produced a failure with no rule, no selector and no theme.
-  def axe_clean?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+  # Stores the violations so the paired message reports this audit (#1189).
+  def axe_clean?(options = {}, exclude: [], include: nil)
     violations = axe_violations_now(options, exclude: exclude, include: include)
     (@__axe_seen_violations ||= {})[axe_capture_key(options, exclude, include)] = violations
     violations.empty?
@@ -584,7 +563,7 @@ module AxeAccessibility
 
   # Color-contrast violations include the ancestor-chain / theme / animation
   # debug payload captured by `run_axe_audit`.
-  def axe_violations(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+  def axe_violations(options = {}, exclude: [], include: nil)
     key = axe_capture_key(options, exclude, include)
     seen = (@__axe_seen_violations ||= {})
     return seen[key] if seen.key?(key)
@@ -598,10 +577,7 @@ module AxeAccessibility
     Array(results["violations"]).map { |v| format_violation(v) }
   end
 
-  # Arguments, not page state: the message twin always receives exactly the
-  # arguments its check did (verified across all 195 paired call sites), so this
-  # key hits at every existing site. A standalone call with no preceding check
-  # misses and audits as before.
+  # Keyed on arguments: each message twin receives its check's exact arguments.
   def axe_capture_key(options, exclude, include)
     [ options, exclude, include ]
   end
@@ -656,7 +632,7 @@ module AxeAccessibility
     lines.join("\n")
   end
 
-  def axe_clean_in_both_themes?(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+  def axe_clean_in_both_themes?(options = {}, exclude: [], include: nil)
     ensure_light_mode
     light = axe_violations_now(options, exclude: exclude, include: include).map { |v| "[LIGHT]#{v}" }
     ensure_dark_mode
@@ -668,7 +644,7 @@ module AxeAccessibility
 
   # Combined violations from both light and dark mode passes, prefixed with the
   # active theme so failure output makes the offending mode obvious.
-  def axe_violations_in_both_themes(options = {}, exclude: DEFERRED_AAA_EXCLUDES, include: nil)
+  def axe_violations_in_both_themes(options = {}, exclude: [], include: nil)
     key = axe_capture_key(options, exclude, include)
     seen = (@__axe_seen_both_themes ||= {})
     return seen[key] if seen.key?(key)
@@ -678,6 +654,13 @@ module AxeAccessibility
     ensure_dark_mode
     dark = axe_violations(options, exclude: exclude, include: include).map { |v| "[DARK]#{v}" }
     light + dark
+  end
+
+  def expect_aaa_in_both_themes(options = {}, include: nil)
+    expect(axe_clean_in_both_themes?(options, include: include)).to(
+      be(true),
+      axe_violations_in_both_themes(options, include: include).join("\n")
+    )
   end
 
   # Force the document into light mode by setting the theme controller's value

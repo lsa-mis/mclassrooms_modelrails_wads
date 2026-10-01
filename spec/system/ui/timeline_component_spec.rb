@@ -20,20 +20,13 @@ RSpec.describe "Timeline component accessibility", type: :system do
   # and axe would scope to the wrong selector ("No elements found for include").
   let(:scope) { [ "#tl-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: renders an ordered sequence of events and passes AAA in both themes" do
     visit "/rails/view_components/ui/timeline_component/default"
 
     expect(page).to have_css("#tl-scope ol > li", count: 3)
     expect(page).to have_css("#tl-scope ol > li", text: "Project kickoff")
     expect(page).to have_css("#tl-scope ol > li", text: "v1.0 launched")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "variants: renders semantic signal dots along the sequence and passes AAA in both themes" do
@@ -42,7 +35,7 @@ RSpec.describe "Timeline component accessibility", type: :system do
     expect(page).to have_css("#tl-scope ol > li", count: 4)
     expect(page).to have_css("#tl-scope ol > li", text: "Tests passed")
     expect(page).to have_css("#tl-scope ol > li", text: "Deploy failed")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "with_datetime: renders machine-readable <time datetime> and passes AAA in both themes" do
@@ -51,6 +44,6 @@ RSpec.describe "Timeline component accessibility", type: :system do
     expect(page).to have_css("#tl-scope ol > li", count: 3)
     expect(page).to have_css("#tl-scope time[datetime]", count: 3)
     expect(page).to have_css("#tl-scope time[datetime='2025-01']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

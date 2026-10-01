@@ -8,7 +8,7 @@ module UI
     # Bar-vs-track graphic contrast: bg-interactive fill over a bg-interactive/20
     # track. CI-verify the 3:1 non-text graphic contrast for this pairing.
     TRACK = "relative h-2 w-full overflow-hidden rounded-full bg-interactive/20"
-    BAR = "h-full w-full flex-1 bg-interactive transition-all"
+    BAR = "h-full w-full flex-1 bg-interactive motion-safe:transition-all"
 
     # value: current progress (clamped to 0..max)
     # max:   the value representing 100%

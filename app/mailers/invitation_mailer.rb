@@ -31,10 +31,7 @@ class InvitationMailer < ApplicationMailer
   def abort_unless_deliverable
     invitation = params[:invitation]
 
-    # A held account cannot accept anything this invites them to, and the hold
-    # is between the operator and that person — so the mail is skipped and, on
-    # purpose, NOT stamped as a suppression: a suppression row is evidence
-    # about the inviter's block, and this is not that (#1132).
+    # Skipped but NOT stamped: a suppression row is evidence of a block (#1132).
     if User.suspended.exists?(email_address: invitation.email)
       self.response_body = ""
       return

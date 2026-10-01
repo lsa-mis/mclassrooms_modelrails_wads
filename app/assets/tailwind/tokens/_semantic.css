@@ -71,21 +71,24 @@
   --color-border-strong: var(--neutral-300);
   --color-border-focus:  var(--primary-800);
 
+  /* --- Chrome (header bar): today's tokens until _brand.css sets the family ---
+     var() resolves on <html>, where .dark lives, so these follow the theme. */
+  --color-chrome:           var(--color-surface-raised);
+  --color-chrome-border:    var(--color-border);
+  --color-on-chrome:        var(--color-text-body);
+  --color-on-chrome-strong: var(--color-text-heading);
+  --color-on-chrome-muted:  var(--color-text-muted);
+  --color-on-chrome-hover:  var(--color-interactive-hover);
+  --color-chrome-mark:      var(--color-on-chrome-strong);
+  --color-chrome-focus:     var(--color-interactive-focus);
+  --chrome-border-width:    1px;
+
   /* --- Toast (inverted overlay pill) --- */
   --color-surface-toast: oklch(20.5% 0.016 265.755 / 90%);  /* neutral-900 @ 90% */
   --color-text-on-toast: oklch(100% 0 0);                     /* white */
 
-  /* The pill INVERTS, so its foreground tokens must invert too. text-on-toast
-     already does; the severity icon did not, and rode the page-ground
-     --color-*-icon instead — which in dark mode painted a green-400 tuned for a
-     dark surface onto a near-white pill at 1.32:1, against a 3:1 non-text floor
-     (#1236). These hold the OPPOSITE theme's signal TEXT value, for the same
-     reason text-on-toast holds white here: the light theme's pill is dark, so
-     it takes the dark theme's token. Reusing an AAA text value rather than
-     inventing an icon value means the floor is cleared with margin
-     (6.75-7.69:1 both themes) and there is no new number to keep tuned.
-     They must move with --color-info / --color-success in the OTHER block;
-     spec/code_smells/toast_contrast_spec.rb asserts exactly that. */
+  /* The pill inverts, so its icons take the OPPOSITE theme's AAA text value
+     (#1236); toast_contrast_spec keeps them in step with the signal tokens. */
   --color-info-icon-on-toast:    oklch(79.6% 0.15 235.169);   /* = .dark --color-info */
   --color-success-icon-on-toast: oklch(79.2% 0.209 151.711);  /* = .dark --color-success */
 
@@ -149,8 +152,7 @@
   --color-surface-toast: oklch(96.8% 0.007 264.536 / 90%);   /* neutral-100 @ 90% */
   --color-text-on-toast: var(--neutral-900);
 
-  /* The pill is LIGHT in this theme, so its icon takes the LIGHT theme's
-     signal text value — the mirror of the :root block. See the note there. */
+  /* Light pill in this theme: the light theme's text value. See :root. */
   --color-info-icon-on-toast:    oklch(39.1% 0.09 240.876);   /* = :root --color-info */
   --color-success-icon-on-toast: oklch(39.3% 0.095 152.535);  /* = :root --color-success */
 }

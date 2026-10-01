@@ -20,25 +20,18 @@ RSpec.describe "Iframe component accessibility", type: :system do
   # axe would scope to the wrong selector ("No elements found for include").
   let(:scope) { [ "#if-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: renders a titled iframe and passes AAA in both themes" do
     visit "/rails/view_components/ui/iframe_component/default"
 
     expect(page).to have_css("#if-scope iframe[title='Map of central London']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "responsive: renders an aspect-constrained titled iframe and passes AAA in both themes" do
     visit "/rails/view_components/ui/iframe_component/responsive"
 
     expect(page).to have_css("#if-scope iframe[title='Product demo video']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   # The "don't" page renders no iframe at all (the component refuses to), so
@@ -53,6 +46,6 @@ RSpec.describe "Iframe component accessibility", type: :system do
     # actual title-less iframe.
     expect(page).to have_css("#if-scope pre[tabindex='0'][role='region']")
     expect(page).to have_no_css("#if-scope iframe")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

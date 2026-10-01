@@ -75,11 +75,6 @@ RSpec.describe Sync::UpdateRooms do
 
   def phase = run.sync_phases.find_by!(key: "rooms")
 
-  # See update_campuses_spec.rb's identical helper: an untouched counter is
-  # ABSENT from the hash, not present-and-zero, so #fetch(..., 0) has teeth
-  # either way.
-  def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
-
   def stub_departments_feed
     stub_um_get("/bf/Department/v2/DeptData", fixture: "departments.json",
       query: { "$start_index" => "0", "$count" => "1000" })
@@ -88,13 +83,6 @@ RSpec.describe Sync::UpdateRooms do
   def stub_department_fallback
     stub_um_get("/bf/Department/v2/DeptData", fixture: "department_190100.json",
       query: { "DeptDescription" => "LSA - Chemistry" })
-  end
-
-  def stub_rooms_feed
-    stub_um_get("/bf/Buildings/v2/RoomInfo/1005046", fixture: "rooms_1005046.json",
-      query: { "$start_index" => "0", "$count" => "1000" })
-    stub_um_get("/bf/Buildings/v2/RoomInfo/1005090", fixture: "rooms_1005090.json",
-      query: { "$start_index" => "0", "$count" => "1000" })
   end
 
   describe "all room types (Brief §14.2)" do

@@ -17,10 +17,6 @@ RSpec.describe "Context menu component accessibility", type: :system do
     find("[data-menu-target='trigger']")
   end
 
-  def focused_text
-    page.evaluate_script("document.activeElement.textContent.trim()")
-  end
-
   def open_by_right_click
     host.right_click
     expect(page).to have_css("[role='menu']:not([hidden])")

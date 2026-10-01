@@ -1,38 +1,20 @@
 require "rails_helper"
 
-# Every spawn of `git` under bin/ and spec/ clears the GIT_DIR family first.
-#
-# #789: a `-C <dir>`-scoped git call LOSES to an inherited GIT_DIR. Git hooks
-# export one (man 5 githooks), so a spawn reached from a hook operates on
-# whatever repository the hook belongs to — reading the wrong index, or writing
-# the wrong config, in a repository nobody was looking at.
-#
-# #1057 fixed eight sites by hand. Two days later a new spec shelled to git bare
-# and nobody noticed, which is the second incident of the class and the reason
-# this exists rather than another round of careful reviewing (#1056).
-#
-# It reads the CALL, not the line: a spawn's env can sit on the line after the
-# opening paren, which is how a same-line regex miscounts this file set.
+# Every git spawn under bin/ and spec/ clears the GIT_DIR family (#789, #1056).
+# Reads the whole call, since the env can sit on the line after the paren.
 RSpec.describe "Code smell: git spawns clear the GIT_DIR family" do
-  # A `let`, not a constant: a bare constant in a describe block lands on Object
-  # and collides across parallel workers (no_object_level_spec_constants_spec).
   let(:spawn_tokens) do
     %w[system system! IO.popen Open3.capture2 Open3.capture3 Open3.capture2e Process.spawn]
   end
 
   # Returns [offenders, env_carrying_count] for one source string.
   def scan(raw)
-    # Comment lines first: this file set explains git's behaviour in prose, and
-    # `git -C x init` inside a comment is documentation, not a spawn. Counting
-    # those is how earlier hand-counts of this same problem came out too high.
+    # Comment lines dropped first: prose about git is not a spawn.
     source = raw.lines.reject { |line| line.strip.start_with?("#") }.join
     offenders = []
     carrying = 0
 
-    # Backticks and %x() — the whole body is the command. Quoted strings are
-    # blanked first: prose like "If `git ls-files` is failing" lives inside a
-    # message string, and reading it as a spawn is the same over-count that
-    # comment prose caused.
+    # Quoted strings blanked first, for the same reason.
     without_strings = source.gsub(/"[^"\n]*"|'[^'\n]*'/) { |m| " " * m.length }
     without_strings.scan(/`([^`\n]*)`|%x[({\[]([^)}\]\n]*)[)}\]]/) do |backtick, percent|
       body = (backtick || percent).to_s
@@ -47,7 +29,7 @@ RSpec.describe "Code smell: git spawns clear the GIT_DIR family" do
         close = balanced_end(source, open_paren)
         next unless close
 
-        args = source[(open_paren + 1)...close].to_s
+        args = source[(open_paren + 1)...(close - 1)].to_s
         if args.match?(/clean_?git_?env/i)
           carrying += 1
           next
@@ -63,26 +45,13 @@ RSpec.describe "Code smell: git spawns clear the GIT_DIR family" do
     [ offenders, carrying ]
   end
 
-  # Walks to the paren that closes the one at `open_index`, so a call spanning
-  # several lines is read whole.
-  def balanced_end(source, open_index)
-    depth = 0
-    source[open_index..].each_char.with_index do |char, offset|
-      depth += 1 if char == "("
-      depth -= 1 if char == ")"
-      return open_index + offset if depth.zero?
-    end
-    nil
-  end
-
   def source_files
     (Dir[Rails.root.join("bin/*")].select { |f| File.file?(f) } +
       Dir[Rails.root.join("spec/**/*.rb")])
       .reject { |f| f.end_with?("spec/code_smells/git_spawns_clear_git_env_spec.rb") }
   end
 
-  # POSITIVE CONTROL 1 — a walker that sees nothing must not pass. The env-carrying
-  # sites are the population this guard is claiming to have inspected.
+  # POSITIVE CONTROL 1: a walker that sees nothing must not pass.
   it "sees the git spawns that already carry the env" do
     carrying = source_files.sum { |f| scan(File.read(f)).last }
 

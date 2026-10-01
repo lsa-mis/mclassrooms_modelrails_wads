@@ -13,10 +13,6 @@ RSpec.describe UI::InputComponent, "field styling parity with TailwindFormBuilde
   let(:user) { User.new }
   let(:builder) { TailwindFormBuilder.new(:user, user, vc_test_controller.view_context, {}) }
 
-  def parse(html)
-    Capybara.string(html.to_s)
-  end
-
   it "applies the same base chrome classes in normal state as the builder's text_field" do
     render_inline(described_class.new(name: "user[first_name]"))
     direct_class = page.find("input")[:class]

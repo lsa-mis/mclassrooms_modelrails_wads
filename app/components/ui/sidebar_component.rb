@@ -14,7 +14,7 @@ module UI
 
     TOGGLE_CLS = "inline-flex size-11 shrink-0 items-center justify-center rounded-md " \
                  "text-text-muted hover:bg-surface-sunken hover:text-text-heading " \
-                 "focus-ring transition"
+                 "focus-ring motion-safe:transition"
 
     NAV_CLS = "flex-1 overflow-y-auto px-2 py-3"
 
@@ -129,7 +129,7 @@ module UI
         content_tag(:path, nil, d: "m15 18-6-6 6-6", "stroke-linecap": "round", "stroke-linejoin": "round"),
         xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24",
         fill: "none", stroke: "currentColor", "stroke-width": "2",
-        class: "size-4 transition-transform group-data-[collapsed=true]:rotate-180",
+        class: "size-4 motion-safe:transition-transform group-data-[collapsed=true]:rotate-180",
         "aria-hidden": "true")
     end
 

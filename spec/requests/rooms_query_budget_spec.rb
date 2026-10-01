@@ -29,16 +29,6 @@ RSpec.describe "GET /find-a-room query budget", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # Same reuse-and-re-role pattern as spec/requests/rooms_spec.rb: `create(:user)`
-  # auto-joins `workspace` via User#onboard_workspace under the stubbed :shared
-  # posture, so re-role the auto-created membership instead of inserting a second.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   # Matches the SQL CharacteristicFilterGroups.data_version issues: a COUNT or
   # MAX aggregate against either room_characteristics or
   # characteristic_display_rules. Ordinary row-fetch queries against those

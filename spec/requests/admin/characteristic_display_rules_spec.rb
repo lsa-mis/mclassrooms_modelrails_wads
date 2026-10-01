@@ -23,26 +23,6 @@ RSpec.describe "Admin characteristic display rules", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # `create(:user)` itself triggers User#onboard_workspace (after_create),
-  # which — under the :shared posture stubbed above — auto-joins `workspace`
-  # with TenancyConfig.shared_join_role before this method ever runs. Reuses
-  # and re-roles that auto-created membership instead of inserting a second
-  # one for the same (user, workspace) pair.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
-  # An "editor" per RoleResolver is a viewer-role Membership PLUS an
-  # EditorAssignment for some unit (app/lib/role_resolver.rb#editor?).
-  def editor_actor
-    user = membership_with("viewer")
-    create(:editor_assignment, user: user, unit: create(:unit, workspace: workspace))
-    user
-  end
-
   # CodeNormalizer downcases and strips every non-alphanumeric character, so
   # what goes in as "PHYSLAB" is stored — and rendered — as "physlab". Chosen
   # to be distinctive: asserting on a short code that collides with an

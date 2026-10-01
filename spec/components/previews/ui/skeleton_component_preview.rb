@@ -14,7 +14,7 @@ module UI
   # - The region has no `aria-busy`/live status — SR users get no loading signal.
   #
   # ## Accessibility contract
-  # - **Guarantees:** `aria-hidden="true"` and `motion-reduce:animate-none`.
+  # - **Guarantees:** `aria-hidden="true"` and `motion-safe:animate-pulse`.
   # - **You supply:** an `aria-busy`/live region on the container; size via `class:`.
   # @logical_path Feedback & Status
   class SkeletonComponentPreview < ViewComponent::Preview

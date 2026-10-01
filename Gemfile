@@ -9,10 +9,8 @@ ruby file: ".tool-versions"
 # drop the floor — spec/code_smells/template_invariants_spec.rb fails if the
 # requirement ever admits a vulnerable release again.
 gem "rails", "~> 8.1.3", ">= 8.1.3.1"
-# resolv 0.7.0 ships inside Ruby 4.0.6 as a default gem with CVE-2026-80212
-# (denial of service via uncontrolled recursion); pinning the fixed release
-# makes Bundler activate it at runtime. The dormant default copy stays in the
-# image and is accepted in .trivyignore with a revisit trigger.
+# Security floor: resolv < 0.7.2 carries CVE-2026-80212. Ruby 4.0.7 ships 0.7.2
+# as the default gem; the pin keeps a fork's fresh resolve from landing below it.
 gem "resolv", ">= 0.7.2"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
@@ -155,7 +153,7 @@ gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
 
 gem "biscuit-rails", "~> 0.3.0"
 
-gem "lexxy", "~> 0.9.32"
+gem "lexxy", "~> 1.0"
 
 # Runtime dependency: the vendored app/components/ui/* are ViewComponents and are
 # loaded in production. This MUST stay a top-level gem — modelrails_ui (below) only
@@ -182,7 +180,7 @@ group :development do
   # moment the branch moves). Dev-only, so no production/runtime impact.
   # Setup: run `rails g modelrails_ui:agent_rules` to scaffold your local agent rules
   # (.modelrails_ui/ + a CLAUDE.md import — kept local, like CLAUDE.md itself).
-  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.23.0"
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.24.0"
 
   # Living documentation / component explorer for the vendored UI::* components
   # (scaffolded by `rails g modelrails_ui:lookbook`). Mounted at /lookbook in

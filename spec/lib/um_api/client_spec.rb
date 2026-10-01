@@ -18,22 +18,6 @@ require "rails_helper"
 # fallback and the default TokenCache reads UM_API_TOKEN_URL the same way.
 # Every example uses the REAL UmApi::TokenCache (via stub_um_token) so the
 # scope->bearer-token plumbing is exercised end to end, not mocked away.
-#
-# ThrottleSpy stands in for `rate_limiter:` — it records how many times
-# #throttle! was called instead of doing any real throttling, so specs can
-# assert "throttle! ran before every request" without a real RateLimiter's
-# 400-call budget or real sleeps getting in the way.
-class ThrottleSpy
-  attr_reader :calls
-
-  def initialize
-    @calls = 0
-  end
-
-  def throttle!
-    @calls += 1
-  end
-end
 
 RSpec.describe UmApi::Client do
   around do |example|

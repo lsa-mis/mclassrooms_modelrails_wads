@@ -24,6 +24,17 @@ RSpec.describe "Cookie classification" do
   end
 
   it "is mirrored in the security doc" do
-    classification.each_key { |name| expect(doc).to include("`#{name}`") }
+    classification.each_key { |name| expect(doc_for_app(app_name)).to include("`#{name}`") }
+  end
+
+  it "still lists the session cookie after a fork renames the app" do
+    expect(doc_for_app("my_app")).to include("`_my_app_session`")
+  end
+
+  # The doc names Rails' default session key by pattern (railties' setup_default_session_store).
+  let(:app_name) { Rails.application.railtie_name.chomp("_application") }
+
+  def doc_for_app(name)
+    doc.gsub("`_<app_name>_session`", "`_#{name}_session`")
   end
 end

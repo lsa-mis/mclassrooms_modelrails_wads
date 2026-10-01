@@ -9,11 +9,7 @@ require "rails_helper"
 # strings follow its rename only if they use the placeholder too.
 RSpec.describe "Code smell: locale values use the vocabulary placeholders" do
   fork_owned = %w[brand.en.yml pages.en.yml]
-  # The literal is the word, not the noun. Keep this list a decision, not a fossil.
-  # This list is empty, so it cannot go stale yet; the staleness example that
-  # spec_copy_assertions_use_i18n_spec.rb carries (#1114) lands here with the
-  # first entry added, since a file:line key is silent by construction once it
-  # stops matching.
+  # A decision, not a fossil. The first entry brings #1114's staleness example.
   allowed = {
     # "file.en.yml:LINE" => "reason the bare noun on this line is not app copy"
   }

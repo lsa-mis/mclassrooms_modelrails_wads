@@ -104,16 +104,8 @@ RSpec.describe NotificationDispatchReconcileJob, type: :job do
       end
     end
   end
-  # retry_on covers a job that raises. It cannot cover a worker process that
-  # dies: Solid Queue FAILS a pruned process's claimed executions rather than
-  # releasing them, so those never re-enter the queue and nothing in this app
-  # would otherwise say so (#1065).
-  #
-  # The queue tables do not exist in the test database, so the chain is stubbed
-  # rather than populated. That is a real limitation and worth naming: what
-  # these pin is the MESSAGE and the never-fail property, not the query. The
-  # query itself was verified by hand against a database that does have those
-  # tables (one failed Noticed::EventJob row -> count 1).
+  # Dead workers' failed executions are counted (#1065). The queue tables are absent
+  # in test, so this pins the message, not the query.
   describe "failed EventJob reporting" do
     def stub_stuck_count(count)
       allow(described_class).to receive(:stuck_event_job_count).and_return(count)
@@ -135,10 +127,7 @@ RSpec.describe NotificationDispatchReconcileJob, type: :job do
       described_class.perform_now
     end
 
-    # The count is observability riding along with a recovery job. A probe that
-    # cannot read the queue database must not take the reconcile down with it —
-    # which is not hypothetical here: in test those tables are absent, so this
-    # path runs on every other example in this file.
+    # The probe must not fail the reconcile; in test it always errors (no queue tables).
     it "never lets the probe fail the reconcile" do
       allow(described_class).to receive(:stuck_event_job_count)
         .and_raise(ActiveRecord::StatementInvalid, "queue db gone")

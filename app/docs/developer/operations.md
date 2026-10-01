@@ -170,6 +170,10 @@ so set a password in that first window if outbound mail isn't wired up yet.
   every kept workspace, with no notion of "some." A scoped-operator arc that
   narrows this is planned, not built.
 - Impersonate a user.
+- Find a departed actor. The filters resolve people through `users`, so once
+  an account is gone the rows that still carry its name are reachable only by
+  scrolling: `actor_name` is encrypted with the non-deterministic cipher, the
+  same reason there is no Who sort.
 
 ## The Workspace filter changes shape as you grow
 
@@ -244,9 +248,9 @@ One rule, applied in all three directions, so there is no per-surface exemption 
 - **Tenants, never.** A hold is between the operator and that person. Their memberships, roles and rows are untouched, and no workspace-facing surface marks them as held — a member list that showed it would disclose an account-level decision to people with no part in it.
 - **Operators, always.** The operations user page names the state, says since when, and holds the controls.
 
-**Mail follows the same rule: a suspended address receives none.** Not the digest (filtered in the candidate scope, so a held account costs no work), not workspace notifications, and **not security mail either** — password changed, sign-in from a new device. That last one is deliberate and is the part worth arguing with: a suspended user cannot act on a security notice, because the sign-in that would let them act is exactly what is refused. A reset on reinstatement recovers the same ground through the same address. The alternative — exempting security mail — buys a notification nobody can use in exchange for a second rule and a class of mail that must be kept straight forever.
+**Mail follows the same rule wherever the app chooses the recipient: a suspended address gets no notification, no digest, and no invitation.** `NotificationMailer` drops any message whose recipient is suspended (`abort_when_recipient_suspended`), which covers workspace notifications and the security notices that ride the same path — password changed, sign-in from a new device — neither of which can occur while sign-in is refused anyway. The digest's candidate scope is `User.not_suspended` (`DigestMailerJob`), so a held account costs no work, and `InvitationMailer#abort_unless_deliverable` skips a suspended address without stamping a suppression row. Mail that answers a request typed at the sign-in screen is the exception: a magic link or a password-reset link **is still sent** to a suspended address (`MagicLinksController#create`, `PasswordResetsController#create`), because those endpoints deliberately answer every address the same way rather than reveal which accounts exist; the link it carries is refused at redemption (`Authenticatable`, `User::SuspendedError`). Withholding security mail is the deliberate part and worth arguing with: a suspended user cannot act on a security notice, because the sign-in that would let them act is exactly what is refused. A reset on reinstatement recovers the same ground through the same address. The alternative — exempting security mail — buys a notification nobody can use in exchange for a second rule and a class of mail that must be kept straight forever.
 
-The same principle settles what an operator's action on a user records: personal-visibility rows, never workspace-visible ones.
+The same principle settles what an operator's action on a user records: `User::Suspension#suspend!` and `#unsuspend!` write their audit rows at **admin** visibility (`ActivityLog.record_security_event!` with `visibility: "admin"`), so the operations ledger shows them and neither a workspace surface nor the person's own security feed, which reads only personal rows, ever does.
 
 ## How it stays safe
 

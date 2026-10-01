@@ -11,8 +11,7 @@ RSpec.describe "Invitation Accepts", type: :request do
       expect(response.body).to include(CGI.escapeHTML(workspace.name))
     end
 
-    # #1151: role names come from the roles table and workspaces can define
-    # their own, so no hard-coded article can be right for all of them.
+    # Roles are workspace-defined, so no hard-coded article fits them (#1151).
     it "names the role without an article that may not fit it" do
       owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
       owner_invitation = create(:invitation, invitable: workspace, role: owner_role)

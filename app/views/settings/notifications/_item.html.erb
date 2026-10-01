@@ -11,9 +11,7 @@
     deleted-record row is plain text, never a dead href. %>
 <% destination = notification.render_safe_or_placeholder { notification.url } %>
 <% linkable = destination.present? && destination != t("notifications.placeholder") %>
-<%# The row's chrome is the component's, not this partial's: the same list
-    shape carried three different paddings before #1119. `id` stays because
-    update.turbo_stream.erb replaces this row by dom_id. %>
+<%# `id` stays: update.turbo_stream.erb replaces this row by dom_id. %>
 <%= ui :list_group_item,
        id: dom_id(notification),
        data: { notification_type: notification.type },

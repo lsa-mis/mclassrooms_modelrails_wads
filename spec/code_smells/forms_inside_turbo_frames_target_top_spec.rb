@@ -239,13 +239,8 @@ RSpec.describe "Code smell: forms inside Turbo frames" do
     expect(search[:frame]).to eq("members_results")
   end
 
-  # The guard trusts a quoted turbo_frame target on sight: it never checks that
-  # the name is the frame the form is actually inside, so a form naming some
-  # OTHER frame submits into a frame that is not on the page and fails silently
-  # (#1051). That is affordable only while exactly one site names a frame and it
-  # names its own. This census is the trigger: the day a second one lands, it
-  # fails here and the enclosing-frame question gets asked then, rather than
-  # waiting on a deferral nobody is watching.
+  # Census for #1051's trigger: the guard trusts a quoted frame target, which holds
+  # only while one site names a frame. A second site fails here.
   it "has exactly one form naming its frame, and that name is its own frame" do
     named = found[:named].map { |entry| [ entry[:site], entry[:frame] ] }
 

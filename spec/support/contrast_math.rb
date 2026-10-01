@@ -1,27 +1,15 @@
 # frozen_string_literal: true
 
-# WCAG contrast, computed from the design tokens as they ship.
-#
-# This exists because **axe measures TEXT contrast only** — it has no non-text
-# rule — so nothing in the accessibility gate can tell whether an icon, a
-# border or any other graphic object is visible against the surface it sits on.
-# That blind spot let the signal chip borders sit under the floor until someone
-# measured them by hand (modelrails_ui#257) and let a success toast ship at
-# 1.32:1 (#1236). Both fixes needed the same arithmetic, so it lives here once
-# rather than in each spec — two copies of a colour-space conversion is exactly
-# the drift these guards exist to prevent.
+# WCAG contrast computed from the shipped tokens, because axe measures text only
+# (modelrails_ui#257, #1236).
 module ContrastMath
-  # WCAG 2.x thresholds. AAA text is 7:1; a graphic object or UI component
-  # boundary answers to 1.4.11's 3:1 instead.
+  # AAA text is 7:1; a graphic object or component boundary is 3:1 (WCAG 1.4.11).
   NON_TEXT_FLOOR = 3.0
   AAA_TEXT_FLOOR = 7.0
 
   module_function
 
-  # An `oklch(L% C H)` triple -> linear sRGB in 0..1.
-  #
-  # Clamped, not gamut-mapped: a token outside sRGB would be clipped by the
-  # browser too, so clipping here measures what a screen actually shows.
+  # oklch -> linear sRGB, clamped as the browser clips it.
   def oklch_to_rgb(lightness_percent, chroma, hue_degrees)
     l = lightness_percent / 100.0
     rad = hue_degrees * Math::PI / 180
@@ -49,17 +37,12 @@ module ContrastMath
     (([ a, b ].max + 0.05) / ([ a, b ].min + 0.05)).round(2)
   end
 
-  # Composite a translucent colour over its backdrop. A token carrying an alpha
-  # must be measured as composited — reading the raw value flatters it, which
-  # is how the toast pill's icon looked fine on paper.
+  # A translucent token is measured composited; its raw value flatters it.
   def composite(foreground, alpha, backdrop)
     foreground.each_with_index.map { |v, i| (v * alpha) + (backdrop[i] * (1 - alpha)) }
   end
 
-  # Every `--color-<name>: oklch(...)` in a stylesheet, in source order. The
-  # app writes its light theme first and its dark theme second, so index 0 is
-  # light and index 1 is dark — asserted by the callers' own controls rather
-  # than assumed here.
+  # Every --color-<name>: oklch(...) in source order: light first, then dark.
   def token_values(css, name)
     css.scan(/--color-#{Regexp.escape(name)}:\s*oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)/)
        .map { |triple| triple.map(&:to_f) }

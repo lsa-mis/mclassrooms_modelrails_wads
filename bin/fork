@@ -114,6 +114,8 @@ class ForkFlow
   ].freeze
 
   UI_GEM_LINE  = /modelrails_ui|\.modelrails_ui/i
+  # Code namespaces upstream owns (cop department, theme JS global); renaming them only breaks sync.
+  TEMPLATE_NAMESPACES = %r{ModelRails/\w|(?:rubocop|cop)/modelrails\b|\bmodule ModelRails\b|window\.ModelRails\b}
   COMMENT_LINE = %r{\A\s*(\#|//|\*|/\*|<%\#|<!--)}
   # The template documents its fork seams inside block comments — a /* */ in
   # _brand.css, a multi-line <%# %> in _footer.html.erb. Tracking open/close
@@ -542,6 +544,9 @@ class ForkFlow
     # modelrails_ui is a gem this app names forever — not a leftover to report.
     matching -= matching.select { |i| lines[i].match?(UI_GEM_LINE) }
     return :gem_reference if matching.empty?
+
+    matching.select! { |i| lines[i].gsub(TEMPLATE_NAMESPACES, "").match?(/modelrails/i) }
+    return :template_namespace if matching.empty?
 
     commentary = commentary_lines(lines)
     matching.all? { |i| commentary.include?(i) } ? :comment : :live

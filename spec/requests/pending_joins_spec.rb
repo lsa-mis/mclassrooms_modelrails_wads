@@ -46,12 +46,7 @@ RSpec.describe "PendingJoins", type: :request do
       ).to eq 1
     end
 
-    # The resolver's checks run at page load; the write happens on submit. A
-    # link revoked in between passes the resolver and is never looked at again,
-    # because this action admits through the WORKSPACE rather than the LINK —
-    # so WorkspaceJoinLink#admit's posture re-check, which exists for exactly
-    # this window and re-reads committed state inside the write transaction,
-    # is skipped entirely (#1061).
+    # A link revoked between page load and submit is refused by admit's re-check (#1061).
     it "refuses a link revoked between the resolver and the write" do
       allow(WorkspaceJoinLink).to receive(:find_active).and_wrap_original do |original, *args|
         original.call(*args).tap do |found|

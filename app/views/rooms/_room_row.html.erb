@@ -93,7 +93,7 @@
                       transition-colors hover:text-interactive">
         <%= t("rooms.row.more_features", count: remainder.size) %>
         <%= icon(:chevron_down, size: :sm,
-              class: "text-text-muted transition-transform group-open:rotate-180") %>
+              class: "text-text-muted motion-safe:transition-transform group-open:rotate-180") %>
       </summary>
       <ul class="flex flex-wrap gap-1.5 pb-2 pt-2">
         <% remainder.each do |chip| %>

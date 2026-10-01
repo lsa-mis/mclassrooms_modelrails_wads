@@ -35,10 +35,7 @@ RSpec.describe UI::SelectComponent, type: :component do
     expect(page).to have_css("select.min-h-input")
   end
 
-  # invalid: drives a visible danger BORDER, not just aria-invalid. A ring is a
-  # box-shadow and is not painted in forced-colors mode; the width change is the
-  # half that survives it, since the system repaints every border the same
-  # (modelrails_ui #258).
+  # A border, not a ring: forced-colors paints no box-shadow (modelrails_ui #258).
   it "carries a danger border for the invalid state" do
     render_inline(described_class.new(options: %w[A B]))
 

@@ -127,10 +127,7 @@ RSpec.describe NotificationCleanupJob, type: :job do
         expect(Noticed::Notification.where(id: old_for_other.id)).not_to exist
       end
 
-      # A partial systemic failure is the gap: two of three users failing is not
-      # `failed == attempted`, so nothing raises — and with the per-user reports
-      # going to Rails.error, the run ends looking like a clean sweep. The job
-      # has to say what it actually did (#944).
+      # A partial failure raises nothing, so the job must log it (#944).
       it "says how much of the sweep succeeded when only some users failed" do
         corrupt_retention_for(user)
         corrupt_retention_for(other_user)
@@ -198,11 +195,7 @@ RSpec.describe NotificationCleanupJob, type: :job do
     expect(described_class.queue_name).to eq("low")
   end
 
-  # An event whose last notification retention took away is a ledger row about
-  # nobody — it can never be read, rendered, or counted toward anyone's list.
-  # Pruning is CHILDLESS-ONLY and never age-based: deleting an event cascades
-  # to every recipient's row through the FK, so "old" is the one criterion
-  # that could take live notifications with it (#811).
+  # Childless-only, never age-based: deleting an event cascades to its rows (#811).
   describe "orphan event pruning" do
     let(:recipient) { create(:user) }
 

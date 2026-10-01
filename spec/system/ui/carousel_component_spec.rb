@@ -12,19 +12,12 @@ require "rails_helper"
 RSpec.describe "Carousel component accessibility", type: :system do
   let(:scope) { [ "[data-test='carousel']" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: carousel group + slide labels; AAA in both themes" do
     visit "/rails/view_components/ui/carousel_component/default"
 
     expect(page).to have_css("[role='group'][aria-roledescription='carousel'][aria-label='Featured photos']")
     expect(page).to have_css("[aria-roledescription='slide']", count: 3)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "Next actually translates the track and moves aria-current (outcome, not wiring)" do
@@ -84,6 +77,6 @@ RSpec.describe "Carousel component accessibility", type: :system do
     visit "/rails/view_components/ui/carousel_component/autoplay"
 
     expect(page).to have_css("[role='group'][aria-roledescription='carousel'][aria-label='Auto gallery']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

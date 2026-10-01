@@ -1,5 +1,5 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: -> { Rails.application.credentials.dig(:mailer, :from) || "noreply@#{default_host}" }
+  default from: -> { ENV["MAIL_FROM"].presence || Rails.application.credentials.dig(:mailer, :from) || "noreply@#{default_host}" }
   layout "mailer"
 
   private

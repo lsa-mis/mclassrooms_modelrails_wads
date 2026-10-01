@@ -28,6 +28,7 @@ RSpec.describe "Onboarding · account step", type: :request do
     expect(workspace.owner).to eq(user)
     expect(user.reload.onboarded?).to be(true)
     expect(response).to redirect_to(workspace_path(workspace))
+    expect(flash[:notice]).to eq(I18n.t("onboarding.workspaces.create.success"))
   end
 
   it "re-renders on a blank name" do

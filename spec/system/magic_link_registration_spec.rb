@@ -40,7 +40,7 @@ RSpec.describe "Magic link registration", type: :system do
   describe "registration with consumed token" do
     it "rejects and redirects to sign in" do
       token = MagicLinkToken.create_for_email("consumed-reg@example.com")
-      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consume!
+      MagicLinkToken.consume!(token)
 
       visit magic_link_callback_path(token: token)
 

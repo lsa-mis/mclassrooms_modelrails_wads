@@ -92,9 +92,7 @@
           <% end %>
 
           <div class="biscuit-preference-row__label">
-            <%# min-h-input: the checkbox+label union must clear WCAG 2.5.5's
-                44px floor — the manage panel was never audited until #462
-                lifted the banner exclusion, and the rows measured 21px. %>
+            <%# min-h-input: the 44px WCAG 2.5.5 floor (#462). %>
             <label for="<%= checkbox_id %>" class="biscuit-preference-row__name min-h-input flex items-center">
               <%= t("biscuit.categories.#{key}.name") %>
               <% if opts[:required] %>

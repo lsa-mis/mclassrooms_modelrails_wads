@@ -13,9 +13,8 @@ class Workspace < ApplicationRecord
   # Defense in depth behind WorkspacePolicy — covers console/direct-call paths the policy never sees.
   HomeWorkspaceProtectedError = Class.new(StandardError)
 
-  # Raised only from #admit; HomeWorkspaceProtectedError is a lifecycle guard and
-  # deliberately not a subclass (#689). Rescue this where every admission outcome
-  # is handled the same way; rescue the subclasses where they branch.
+  # Raised only from #admit; HomeWorkspaceProtectedError is a lifecycle guard, deliberately not a subclass (#689).
+  # Rescue this where every admission outcome is handled alike; rescue the subclasses where they branch.
   AdmissionError = Class.new(StandardError)
 
   # Non-disclosing by contract: an outsider must not learn which lifecycle state blocked them.
@@ -45,10 +44,8 @@ class Workspace < ApplicationRecord
   # See /docs/developer/notifications (The actor rule).
   attr_accessor :created_by
 
-  # Virtual, never persisted: backs the operator-create form's target-owner
-  # email (Workspace.create_for_owner_email). A real attribute, not a
-  # controller-local variable, so a format failure attaches to THIS field
-  # instead of :base and UI::FormBuilder's error_for can wire it up.
+  # Never persisted: the operator-create form's owner email. An attribute, not a controller local,
+  # so a format error attaches to this field rather than :base.
   attr_accessor :owner_email
 
   # _commit, not after_create: enqueuing into Solid Queue's SQLite under the primary write lock is a lock-ordering hazard.
@@ -59,10 +56,8 @@ class Workspace < ApplicationRecord
   validates :max_members, numericality: { greater_than: 0 }
   validate :personal_workspaces_are_invite_only
   validate :join_policy_must_be_permitted_by_instance
-  # allow_nil, not allow_blank: every OTHER Workspace creation path never
-  # touches owner_email (stays nil) and must stay unaffected by this rule;
-  # create_for_owner_email coerces its input to a String (a missing key
-  # becomes ""), so the operator path never takes the exemption.
+  # allow_nil, not allow_blank: other creation paths leave owner_email nil, while
+  # create_for_owner_email coerces a missing key to "", so the operator path never takes the exemption.
   validates :owner_email, format: { with: User::EMAIL_FORMAT }, allow_nil: true
 
   def self.broadcast_events
@@ -157,19 +152,10 @@ class Workspace < ApplicationRecord
     workspace
   end
 
-  # The operator-create verb: an existing user owns the workspace outright;
-  # an unknown email makes the operator the interim owner and gets an
-  # Owner-role invitation. The invitation is issued AFTER create_owned's
-  # transaction commits because bulk_invite! enqueues mail, and enqueuing
-  # inside the primary write transaction is the hazard the
-  # after_create_commit note above describes. A failed invitation leaves a
-  # workspace the operator owns and can invite from by hand. See
-  # /docs/developer/operations (The operator becomes the owner).
+  # An unknown email makes the operator the owner, and the Owner invitation goes out after the commit.
+  # See /docs/developer/operations (The operator becomes the owner) and architecture (Concurrency).
   def self.create_for_owner_email(attrs, operator:)
-    # Coerced to a String first: a missing key would otherwise arrive as nil,
-    # pass the format validation's allow_nil, and — because bulk_invite!
-    # skips a blank instead of raising — hand the workspace to the operator
-    # with no invitation and no error.
+    # A String, never nil: nil passes allow_nil and bulk_invite! skips blanks, a silent no-invitation handoff.
     attrs = attrs.to_h.symbolize_keys
     attrs[:owner_email] = attrs[:owner_email].to_s.strip
     owner = User.find_by(email_address: attrs[:owner_email])
@@ -185,12 +171,8 @@ class Workspace < ApplicationRecord
 
   private
 
-  # A workspace's own audit rows belong to it. Without this, Trackable falls
-  # through to Current.workspace — nil at signup, so the workspace.created row
-  # was written unreachable by any feed; and the PREVIOUS workspace when a
-  # signed-in user created a second one from inside the first, so the row
-  # landed in the wrong tenant's feed (#1084). Every other Trackable includer
-  # that owns a workspace already answers this for itself.
+  # A workspace's own audit rows belong to it; Trackable's fallback, Current.workspace, is nil at
+  # signup and the previous tenant when a second workspace is created from inside the first (#1084).
   def activity_workspace
     self
   end

@@ -22,7 +22,7 @@
   --syntax-namespace:  var(--neutral-800);
   --syntax-insert-bg:  oklch(98.2% 0.018 155.826);   /* ~green-50 */
   --syntax-whitespace: var(--neutral-300);
-  --syntax-prompt:     var(--neutral-500);
+  --syntax-prompt:     var(--neutral-700);             /* tighten for AAA */
 }
 
 .dark {

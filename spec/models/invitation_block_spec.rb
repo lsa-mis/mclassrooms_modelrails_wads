@@ -146,11 +146,7 @@ RSpec.describe InvitationBlock, type: :model do
     end
   end
 
-  # #812. Unblocking was a two-statement console recipe, and the second
-  # statement is the one that gets forgotten: destroying the block alone leaves
-  # the stamped invitation invisible to `bulk_invite!`'s duplicate check, which
-  # skips only UNSUPPRESSED pending rows — so every later invite to that
-  # address mints another pending duplicate. One transaction, one method.
+  # Unblocking clears the stamp too, in one transaction, or bulk_invite! duplicates (#812).
   describe ".unblock!" do
     let(:workspace) { create(:workspace) }
 
@@ -165,9 +161,7 @@ RSpec.describe InvitationBlock, type: :model do
       expect(invitation.reload.suppressed_at).to be_nil
     end
 
-    # The asymmetry that makes the second statement easy to forget: a stamp can
-    # outlive its block row (an earlier unblock that cleared only the block), so
-    # the method must not depend on finding one.
+    # A stamp can outlive its block, so the method must not need to find one.
     it "clears a stamp whose block row is already gone" do
       invitation = create(:invitation, email: "orphan@example.com", invitable: workspace, invited_by: inviter)
       described_class.block!(inviter: inviter, email: "orphan@example.com")
@@ -197,9 +191,7 @@ RSpec.describe InvitationBlock, type: :model do
         .not_to change(described_class, :count)
     end
 
-    # Same reason the stamping writes are callback-free (invariant I4):
-    # clearing the flag is not a workspace-feed event, and an activity row an
-    # inviter could read is a block oracle.
+    # Callback-free, like the stamping writes (security.md invariant I4).
     it "writes no activity rows" do
       create(:invitation, email: "quiet@example.com", invitable: workspace, invited_by: inviter)
       described_class.block!(inviter: inviter, email: "quiet@example.com")

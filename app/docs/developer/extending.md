@@ -280,7 +280,7 @@ area does with this.
 
 Brand has three fork-owned files: the words (`config/locales/en/brand.en.yml`), the colors (`app/assets/tailwind/tokens/_brand.css`), and the mark — `app/views/shared/_site_mark.html.erb`, a file whose entire body is one `<svg>`. Replace it wholesale with your artwork. It is `merge=ours`, so upstream never conflicts with it again. Three things on the root `<svg>` are the contract with the template, and a view spec asserts them:
 
-- `fill="currentColor"` — the mark inherits `text-interactive` from the link around it, which is what re-lights it in dark mode.
+- `fill="currentColor"` — the mark takes its color from the link around it, which is what re-lights it in dark mode; on the header that is `--color-chrome-mark` (below).
 - `aria-hidden="true"` — the mark is decorative; the brand name next to it is what assistive tech reads.
 - a `viewBox`, and **no** `width`, `height`, or `class` — the caller sizes it.
 
@@ -297,6 +297,39 @@ The lockup around it, `app/views/shared/_site_logo.html.erb`, is template-owned:
 ```
 
 Use `h-*` on the child, not `size-*`: a wordmark is wider than tall, and a square box letterboxes it. The favicon and PWA icons in `public/` are the same artwork again, in the sizes [Getting started](getting-started#favicon-and-pwa-icons) lists; `public/icon.svg` colors itself with `prefers-color-scheme` rather than the app's `.dark` class because a favicon renders outside the document.
+
+## Branding the Header Bar
+
+The header bar paints from a family of chrome tokens, so a fork recolors it from `_brand.css` without touching `app/views/shared/_header.html.erb`. Each token defaults to the semantic token the bar used before (`app/assets/tailwind/tokens/_semantic.css`), so an unbranded fork looks exactly as it did:
+
+| Token | Paints | Default |
+|---|---|---|
+| `--color-chrome` | the bar | `--color-surface-raised` |
+| `--color-chrome-border`, `--chrome-border-width` | the rule under it | `--color-border`, `1px` |
+| `--color-on-chrome` | icons and controls on the bar | `--color-text-body` |
+| `--color-on-chrome-strong` | the product name | `--color-text-heading` |
+| `--color-on-chrome-muted` | the account chevron | `--color-text-muted` |
+| `--color-on-chrome-hover` | a control under the pointer | `--color-interactive-hover` |
+| `--color-chrome-mark` | the site mark | `--color-on-chrome-strong` |
+| `--color-chrome-focus` | the focus outline, via `focus-ring-chrome` | `--color-interactive-focus` |
+
+Brand the whole family or none of it: a bar color with the default text tokens is a dark-on-dark header. Set them in OKLCH; one `:root` value covers both themes, and a second, inside `.dark`, overrides the dark one:
+
+```css
+:root {
+  --color-chrome:           oklch(27.1% 0.080 251.6);
+  --color-chrome-border:    oklch(86.3% 0.176 89.8);
+  --chrome-border-width:    4px;
+  --color-on-chrome:        oklch(100% 0 0);
+  --color-on-chrome-strong: oklch(100% 0 0);
+  --color-on-chrome-muted:  oklch(86.9% 0.020 252.9);
+  --color-on-chrome-hover:  oklch(86.3% 0.176 89.8);
+  --color-chrome-mark:      oklch(86.3% 0.176 89.8);
+  --color-chrome-focus:     oklch(86.3% 0.176 89.8);
+}
+```
+
+`spec/code_smells/chrome_contrast_spec.rb` measures whatever `_brand.css` sets: every `on-chrome` token at 7:1 on `--color-chrome` and the mark and focus colors at 3:1, in both themes, and it fails when a branded chrome leaves a token unset. A control a fork adds to the bar uses `text-on-chrome` and `focus-ring-chrome`; the account menu and the mobile menu panel open onto `bg-surface-raised` and keep the ordinary tokens, so they stay readable under any bar color.
 
 ## Cookie Consent (GDPR)
 

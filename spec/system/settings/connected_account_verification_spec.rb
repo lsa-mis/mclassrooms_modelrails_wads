@@ -9,11 +9,6 @@ RSpec.describe "Connected account verification", type: :system do
     )
   end
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(axe_options)).to(be(true),
-      "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}")
-  end
-
   before { sign_in_via_form(user) }
 
   it "renders the confirmation accessibly in both themes and verifies nothing on GET" do
@@ -25,7 +20,7 @@ RSpec.describe "Connected account verification", type: :system do
       I18n.t("settings.connected_account_verifications.show.button", email: auth.email, provider: auth.display_provider)
     )
     expect(page).to have_link(I18n.t("settings.connected_account_verifications.show.cancel"))
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(axe_options)
 
     expect(auth.reload).not_to be_verified
   end

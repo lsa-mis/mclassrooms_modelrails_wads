@@ -119,6 +119,16 @@ RSpec.describe "Settings::Reauthentications", type: :request do
       expect(user.sessions.sole.reload.reauthenticated?).to be(false)
       expect(flash[:alert]).to eq(I18n.t("settings.reauthentications.create.wrong_password"))
     end
+
+    it "does not stamp once rate limited, even on the right password, and says so" do
+      stale!(user)
+      allow(Rails.cache).to receive(:increment).and_return(11)
+      post settings_reauthentication_path, params: { password: "SecureP@ssw0rd123!" }
+
+      expect(response).to redirect_to(new_settings_reauthentication_path)
+      expect(flash[:alert]).to eq(I18n.t("settings.reauthentications.rate_limited"))
+      expect(user.sessions.sole.reload.reauthenticated?).to be(false)
+    end
   end
 
   describe "POST /settings/reauthentication (email code factor)" do

@@ -41,7 +41,7 @@ module UI
           xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24",
           fill: "none", stroke: "currentColor", "stroke-width": "2",
           "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true",
-          class: "pointer-events-none size-4 shrink-0 translate-y-0.5 text-text-muted transition-transform duration-200 group-open:rotate-180")
+          class: "pointer-events-none size-4 shrink-0 translate-y-0.5 text-text-muted motion-safe:transition-transform duration-200 group-open:rotate-180")
       ])
     end
   end

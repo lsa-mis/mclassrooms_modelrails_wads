@@ -110,7 +110,8 @@ RSpec.describe "the :activity_log factory" do
     written = ActivityLog.record_security_event!(action: "user.password_changed", user: user)
     built = create(:activity_log, :security, actor: user, action: "user.password_changed")
 
-    shape = %w[actor_id trackable_type trackable_id visibility workspace_id]
+    # "Exactly the shape" is an allow-list, so the snapshot column is in it (#1122).
+    shape = %w[actor_id actor_name trackable_type trackable_id visibility workspace_id]
     expect(built.attributes.slice(*shape)).to eq(written.attributes.slice(*shape))
   end
 

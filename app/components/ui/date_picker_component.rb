@@ -13,10 +13,10 @@ module UI
     # icon-only rather than a full-width labelled button.
     GROUP = "flex items-stretch gap-1"
     INPUT = "h-11 w-40 rounded-md border border-border-strong bg-surface-raised px-3 text-sm " \
-            "text-text-heading shadow-xs focus-ring transition " \
+            "text-text-heading shadow-xs focus-ring motion-safe:transition " \
             "aria-[invalid=true]:border-2 aria-[invalid=true]:border-danger "
     TRIGGER = "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md " \
-               "border border-border-strong bg-surface-raised text-text-heading shadow-xs focus-ring transition " \
+               "border border-border-strong bg-surface-raised text-text-heading shadow-xs focus-ring motion-safe:transition " \
                "aria-expanded:border-border-focus"
     ERROR_CLS = "mt-1.5 block text-sm text-danger"
     ICON_CLS = "size-4 shrink-0 text-text-muted"

@@ -19,13 +19,6 @@ RSpec.describe "ListGroup component accessibility", type: :system do
   # collides across scoped 0b specs → axe scopes to the wrong selector).
   let(:scope) { [ "#lg-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: renders a <ul> of <li> rows and passes AAA in both themes" do
     visit "/rails/view_components/ui/list_group_component/default"
 
@@ -33,7 +26,7 @@ RSpec.describe "ListGroup component accessibility", type: :system do
     expect(page).to have_css("#lg-scope ul > li", minimum: 2)
     # The selected row is a plain <li> (no href) — not a link in this scenario.
     expect(page).to have_no_css("#lg-scope ul > li > a")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "links: rows are li > a (not bare anchors), active is aria-current, links carry focus-ring; AAA in both themes" do
@@ -49,6 +42,6 @@ RSpec.describe "ListGroup component accessibility", type: :system do
     # Every link carries the focus-ring outline.
     expect(page).to have_css("#lg-scope ul > li > a.focus-ring", count: 3)
 
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

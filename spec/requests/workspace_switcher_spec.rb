@@ -1,14 +1,7 @@
 require "rails_helper"
 
-# The switcher is workspace chrome: it heads the workspace sidebar rather than
-# the global header. Two consequences this file pins down — it renders on a
-# workspace page even for a user with a single workspace (it is the only place
-# the workspace is named), and it is absent from account-level pages such as
-# settings.
-#
-# "No workspace context" is NOT the rule, and saying so hid a real gap until
-# #1091: the workspaces index has no `Current.workspace` and still renders the
-# switcher, capped. Absence is about account-level pages, not about context.
+# The switcher heads workspace pages, even with one workspace, and the capped
+# index; account-level pages omit it (#1091).
 RSpec.describe "Workspace switcher placement", type: :request do
   let(:user) { create(:user) }                                  # :personal default → 1 workspace
   before { sign_in(user) }

@@ -15,13 +15,6 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:viewer)   { membership_with("viewer") }
   let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
   let!(:room) do
@@ -30,10 +23,6 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
   end
 
   before { sign_in(viewer) }
-
-  def page
-    Capybara.string(response.body)
-  end
 
   def attach_panorama!
     room.panorama.attach(io: File.open(Rails.root.join("spec/fixtures/files/room.jpg")),

@@ -15,15 +15,13 @@ require "rails_helper"
 # and the Viewer security redirect). It locks in the role matrix — in particular
 # the Member "Profile + Limits & Plan hidden" path the system specs never reach. #151
 RSpec.describe "Settings sidebar visibility (workspace context)", type: :request do
+  include_context "settings sidebar items"
+
   let(:workspace) { create(:workspace, name: "Acme Corp") }
 
   def org_sidebar
     Capybara.string(response.body)
             .find("nav[aria-label='#{I18n.t("settings.sidebar.strip_heading.workspace")}']")
-  end
-
-  def item(key)
-    I18n.t("settings.sidebar.items.#{key}")
   end
 
   def sign_in_and_load(*traits)

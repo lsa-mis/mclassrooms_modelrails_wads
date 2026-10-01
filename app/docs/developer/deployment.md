@@ -81,7 +81,103 @@ managed platform's settings.
 > A root `.env` does **not** reach Kamal. Kamal's dotenv parses its own secrets
 > files, not `.env` — that file is for local Rails only.
 
-### 3. Bootstrap and deploy
+### 3. Configure outbound mail
+
+Sign-in is an email. Magic links, invitations and password resets all leave
+the box through Action Mailer, so a deployment with no mail server boots,
+reports healthy at `/up`, and nobody can sign in. The preflight guard refuses
+that boot, which is why this step sits before the first deploy.
+
+Mail leaves over SMTP, configured entirely from the environment. Every
+provider named below speaks SMTP, so moving between them is a change of
+values, never of code:
+
+| Variable | Meaning | Default |
+| --- | --- | --- |
+| `SMTP_ADDRESS` | The provider's SMTP host | none; the guard refuses `localhost` and placeholders |
+| `SMTP_PORT` | Submission port | `587` |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | The provider's credentials, as secrets | none |
+| `SMTP_DOMAIN` | The HELO domain | `RAILS_HOST` |
+| `MAIL_FROM` | The sender on every message | `noreply@RAILS_HOST` |
+| `MAIL_DELIVERY` | The transport; only `smtp` ships | `smtp` |
+
+`config/deploy.yml` already carries the Postmark host under `env.clear` and the
+two credentials under `env.secret`; `.kamal/secrets` references them from the
+deployer's environment. `MAIL_DELIVERY` is reserved: an API transport, for
+tags, bounce webhooks or inbound mail, would join under that name without
+renaming anything a deployment already sets. A failed delivery raises, so it
+fails its Solid Queue job where you can see it rather than vanishing.
+
+#### Postmark, the worked default
+
+Transactional only, and free to validate on: the developer tier sends a
+small number of messages a month at no cost, and the first paid tier covers
+thousands. Check the current limits on their pricing page.
+
+1. Create a server for this app and keep its **Server API token**.
+2. Add your domain under Sender Signatures and publish the two DNS records it
+   gives you (DKIM and Return-Path). Wait for both to verify.
+3. Export the token twice, as both halves of the credential, and deploy:
+
+   ```bash
+   export SMTP_USERNAME=<server-api-token>
+   export SMTP_PASSWORD=<server-api-token>
+   kamal deploy
+   ```
+
+`SMTP_ADDRESS` is already `smtp.postmarkapp.com` and the port `587`. Messages go
+to the server's default transactional stream.
+
+#### Amazon SES over SMTP, the second recipe
+
+The path when a fork needs an EU region, a BAA, or volume pricing. Same six
+variables; the differences are where the values come from.
+
+1. In the region you want, verify the sending domain (Easy DKIM publishes the
+   DNS records for you).
+2. Create **SMTP credentials** from the SES console. They are an IAM user's
+   derived SMTP password, not the account's access keys.
+3. Request production access; a new account starts in a sandbox that only
+   delivers to verified addresses.
+4. Point the deployment at the regional endpoint:
+
+   ```yaml
+   # config/deploy.yml, under env.clear
+   SMTP_ADDRESS: email-smtp.eu-central-1.amazonaws.com
+   SMTP_PORT: 587
+   ```
+
+#### Domain authentication, whichever provider
+
+Send from a subdomain you reserve for the app's mail (`mail.yourdomain.com`),
+so its reputation is its own. Publish SPF and DKIM as the provider instructs,
+then a DMARC record, starting at `p=none` with a reporting address and
+tightening once the reports show only your mail. Keep marketing mail, if the
+app ever sends any, on a separate stream or provider: one bounce storm from a
+campaign should never cost a sign-in link its reputation.
+
+#### Assumptions, and what reopens them
+
+- **No protected health information travels by email** (decided 2026-10-01).
+  A magic link or a "you have a new message" notice carries none; an
+  appointment detail would. A fork that must send such content needs a
+  provider that signs a Business Associate Agreement; SES under the AWS
+  agreement is the documented path, and this step is where it gets rewritten.
+- **EU residency** is per fork. Postmark processes in the United States under a
+  data-processing agreement, which satisfies GDPR for most apps; a fork that
+  promises EU residency uses the SES recipe in an EU region.
+- **Inbound mail** (replies into the app, an address users can write to) is the
+  trigger for an API transport under `MAIL_DELIVERY`. Postmark and SES both
+  receive mail; neither is wired here.
+- **Self-hosting the mail server** becomes worth a look when sending costs
+  exceed the hours it takes to run one. Deliverability — IP reputation,
+  warm-up, blocklists — is the cost that moves from the provider to you.
+
+To check a deployment: request a magic link for your own address and read the
+mail. If nothing arrives, `kamal app logs` shows the failed job with the
+provider's response.
+
+### 4. Bootstrap and deploy
 
 ```bash
 bin/kamal setup     # First-time only — installs Docker on the host
@@ -107,7 +203,7 @@ An earlier revision spelled this `stop_wait_time` and paired it with a `max-repl
 ```yaml
 builder:
   args:
-    RUBY_VERSION: "4.0.6"   # Keep in sync with .tool-versions
+    RUBY_VERSION: "4.0.7"   # Keep in sync with .tool-versions
 ```
 
 This ensures `kamal build` always produces an image matching the Ruby version Bundler enforces in `Gemfile.lock`. If `.tool-versions`, `Dockerfile` `ARG RUBY_VERSION`, and `deploy.yml` `builder.args.RUBY_VERSION` ever drift apart, the integration spec at `spec/code_smells/template_invariants_spec.rb` will fail.
@@ -195,7 +291,7 @@ Before the first deploy:
 
 ## Production preflight
 
-`config/initializers/required_production_config.rb` refuses to boot a production process when `RAILS_HOST` is unset or still a placeholder (`example.com`, anything ending in `.example`), or when the Active Record encryption keys are missing from the production credentials. The reason it refuses rather than warns: every mailer link — magic links, password resets, invitations — is generated from `RAILS_HOST`, and DNS-rebinding protection (`config.hosts`) is derived from it. With a placeholder value the app boots, `/up` reports healthy, and nobody can sign in. Missing encryption keys fail the same way — healthy `/up`, then the first read of a user raises. A failed boot is the only version of either failure you can see. Keys: `bin/rails db:encryption:init`, pasted into `bin/rails credentials:edit --environment production` ([Forking](/docs/developer/forking#bootstrap-secrets-and-configuration)).
+`config/initializers/required_production_config.rb` refuses to boot a production process when `RAILS_HOST` is unset or still a placeholder (`example.com`, anything ending in `.example`), when `SMTP_ADDRESS` is unset, `localhost` or a placeholder (see [Configure outbound mail](#3-configure-outbound-mail)), or when the Active Record encryption keys are missing from the production credentials. The reason it refuses rather than warns: every mailer link — magic links, password resets, invitations — is generated from `RAILS_HOST`, and DNS-rebinding protection (`config.hosts`) is derived from it. With a placeholder value the app boots, `/up` reports healthy, and nobody can sign in. Missing encryption keys fail the same way — healthy `/up`, then the first read of a user raises. A failed boot is the only version of either failure you can see. Keys: `bin/rails db:encryption:init`, pasted into `bin/rails credentials:edit --environment production` ([Forking](/docs/developer/forking#bootstrap-secrets-and-configuration)).
 
 Rules the guard follows:
 

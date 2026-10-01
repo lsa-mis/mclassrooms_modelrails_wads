@@ -19,10 +19,7 @@ RSpec.describe DigestMailerJob, type: :job do
     user.create_preferences!(timezone: "UTC")
   end
 
-  # The schedule's explicit `queue:` wins over this, so the two disagreeing
-  # costs nothing at runtime and is invisible — which is exactly why it went
-  # unnoticed. queue.yml names its queues so a backed-up one can be traced to
-  # a job class, and that only works while the class tells the truth (#1045).
+  # Must match the schedule's queue, which silently wins (#1045).
   it "declares the queue config/recurring.yml actually routes it to" do
     expect(described_class.queue_name).to eq("mailers")
   end
@@ -148,9 +145,7 @@ RSpec.describe DigestMailerJob, type: :job do
       end
     end
 
-    # The digest is the one path where the skip is a SCOPE rather than a mailer
-    # guard: the candidate query is what decides who gets considered, and
-    # filtering there means a suspended user costs no work at all (#1132).
+    # Suspended users are skipped in the candidate scope, at no cost (#1132).
     context "user is suspended" do
       before do
         np = user.preferences.notification_preferences.deep_dup
@@ -192,18 +187,9 @@ RSpec.describe DigestMailerJob, type: :job do
     end
 
     context "uses a single indexed range scan, not per-user polling" do
-      # An example here asserted `expect(User).to receive(:joins)`, which pinned
-      # the RECEIVER rather than the behaviour: adding the suspension filter
-      # ahead of it (#1132) moved `joins` onto a relation and broke a spec that
-      # no longer described anything true about the query. Its duty — the
-      # candidate set costs one scan, not one per user — belongs to the
-      # SELECT-count example below, which compares two population sizes rather
-      # than hard-coding a budget or a call shape.
+      # One scan for the candidate set, pinned by comparing two population sizes.
 
-      # Reads only. The job writes user_preferences once per user it visits
-      # (reschedule_digest!), so counting every statement would assert a
-      # contract no preload can satisfy — the writes rise with the population
-      # by design, the SELECTs must not (#1048).
+      # SELECTs only: the job writes each visited user's preferences by design (#1048).
       it "does not add a user_preferences SELECT per additional due user" do
         user.preferences.update!(digest_next_due_at: 1.minute.ago)
         one_due = count_selects_touching("user_preferences") { described_class.perform_now }

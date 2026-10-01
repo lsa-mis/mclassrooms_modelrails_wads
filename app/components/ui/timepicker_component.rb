@@ -8,7 +8,7 @@ module UI
     WRAPPER  = "relative inline-block"
     HINT_CLS = "mt-1.5 block text-sm text-text-muted"
     TRIGGER  = "flex h-11 w-36 cursor-pointer items-center gap-2 rounded-md border border-border-strong " \
-               "bg-surface-raised px-3 text-sm text-text-heading shadow-xs focus-ring transition " \
+               "bg-surface-raised px-3 text-sm text-text-heading shadow-xs focus-ring motion-safe:transition " \
                "aria-expanded:border-border-focus"
     ICON_CLS = "size-4 shrink-0 text-text-muted"
     # Placement is CSS anchor positioning: `position: fixed` (containing block = the
@@ -22,7 +22,7 @@ module UI
     # targets, and WCAG 2.5.5's floor applies to pointer targets regardless
     # of AT visibility (caught by the open-state audit, #463).
     SPIN_BTN = "inline-flex size-11 items-center justify-center rounded-md focus-ring " \
-               "text-text-muted hover:bg-surface-sunken hover:text-text-heading transition"
+               "text-text-muted hover:bg-surface-sunken hover:text-text-heading motion-safe:transition"
     # min-h-input + w-12: the spinbutton fields are the primary targets and must
     # clear the 44px floor (WCAG 2.5.5 AAA — open-state audit, #463).
     NUM_CLS  = "w-12 min-h-input rounded-md border border-border-strong bg-surface-raised px-1 text-center text-sm focus-ring"

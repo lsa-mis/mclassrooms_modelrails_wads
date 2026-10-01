@@ -8,11 +8,8 @@ require "yaml"
 # since) — each catches a misconfiguration that would otherwise propagate
 # silently. See /docs/developer/testing.
 RSpec.describe "Template invariants" do
-  # #789 — `git -C <dir>` loses to an inherited GIT_DIR, and git hooks export one
-  # (man 5 githooks); under Lefthook these reads would enumerate the wrong
-  # repository's index and assert the invariants against someone else's files.
-  # The hash itself lives in lib/clean_git_env.rb — this used to be a third copy,
-  # which is how a bare spawn went unnoticed for two days after #1057 (#1056).
+  # Clears the GIT_DIR family: under a hook these reads would enumerate another
+  # repository's index (#789; lib/clean_git_env.rb).
   let(:clean_git_env) { CleanGitEnv::HASH }
 
   let(:root) { Rails.root }
@@ -514,6 +511,31 @@ RSpec.describe "Template invariants" do
         "expected the pre-push rspec gate to run bin/parallel-rspec so local pushes " \
         "get the same gates as CI (drift bit us before — see lefthook.yml's bundler_audit note)"
     end
+
+    it "the comment-block gate runs in Lefthook pre-commit AND in CI's lint job over the PR's diff" do
+      hook = lefthook_config.dig("pre-commit", "commands", "comment_blocks", "run").to_s
+      ci_steps = Array(ci_workflow.dig("jobs", "lint", "steps")).map { |s| s["run"].to_s }
+
+      expect(hook).to include("bin/comment-block-check"),
+        "expected Lefthook pre-commit to run bin/comment-block-check on the staged files"
+      expect(ci_steps).to include(match(%r{bin/comment-block-check --range})),
+        "expected CI's lint job to run bin/comment-block-check --range over the pull request's " \
+        "diff — a skipped hook, or a fork without Lefthook, otherwise lands long comment blocks unchecked"
+    end
+  end
+
+  describe "a gate that ran nothing says so" do
+    it "an rspec run that selects no examples fails" do
+      expect(RSpec.configuration.fail_if_no_examples).to be(true),
+        "expected spec_helper to set config.fail_if_no_examples — a filter that matches " \
+        "nothing (a typo'd -e, a stale tag) otherwise reads as a green run of zero examples"
+    end
+
+    it "bin/comment-block-check refuses to run with no paths to check" do
+      output = IO.popen(clean_git_env, [ root.join("bin/comment-block-check").to_s ], err: [ :child, :out ], &:read)
+
+      expect([ $?.exitstatus, output ]).to match([ 64, a_string_including("nothing was checked") ])
+    end
   end
 
   describe "CI cancels superseded runs (#486)" do
@@ -842,20 +864,13 @@ RSpec.describe "Template invariants" do
         "retention sweeps` convention"
     end
 
-    # An explicit `queue:` WINS over the class's own queue_as (see
-    # effective_recurring_queue below), so the two disagreeing is silent: the
-    # job runs where the schedule says, and the class's declaration is simply
-    # false. DigestMailerJob declared :default while the schedule routed it to
-    # mailers, and nothing noticed — both queues are polled, so there was no
-    # symptom to notice (#1045). What it costs is the reason queue.yml names
-    # its queues at all: "the mailers queue is backed up" stops being a
-    # statement you can trace back to a job class.
+    # An explicit recurring `queue:` wins over queue_as, so a disagreement is silent
+    # and the class's declaration false (#1045).
     it "recurring.yml's queue agrees with the job class's own queue_as" do
       recurring = YAML.safe_load(recurring_yml_raw, aliases: true).fetch("production")
       pinned = recurring.select { |_name, entry| entry["class"].present? && entry["queue"].present? }
 
-      # A misparse here would examine nothing and pass. These are the entries
-      # the invariant claims to have checked.
+      # POSITIVE CONTROL: a misparse would examine nothing and pass.
       expect(pinned.size).to be >= 8,
         "only #{pinned.size} recurring entries name both a class and a queue — the parse has " \
         "stopped seeing the schedule, so a disagreement would go unreported"
@@ -1181,6 +1196,39 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  describe "parallel pull requests do not conflict on the changelog" do
+    let(:repo) { Pathname.new(Dir.mktmpdir) }
+    let(:env) do
+      clean_git_env.merge("GIT_AUTHOR_NAME" => "spec", "GIT_AUTHOR_EMAIL" => "spec@example.com",
+                          "GIT_COMMITTER_NAME" => "spec", "GIT_COMMITTER_EMAIL" => "spec@example.com")
+    end
+
+    after { FileUtils.rm_rf(repo) }
+
+    def git(*args) = system(env, "git", *args, chdir: repo.to_s, out: File::NULL, err: File::NULL)
+
+    def add_entry(line)
+      changelog = repo.join("CHANGELOG.md")
+      changelog.write(changelog.read.sub("### Added\n\n", "### Added\n\n#{line}\n"))
+      git("commit", "-q", "-am", line)
+    end
+
+    it "keeps both sides' entries when two branches append under the same heading" do
+      FileUtils.cp(root.join(".gitattributes"), repo)
+      repo.join("CHANGELOG.md").write("# Changelog\n\n## [Unreleased]\n\n### Added\n\n- An earlier entry.\n")
+      git("init", "-q", "-b", "main")
+      git("add", ".")
+      git("commit", "-q", "-m", "base")
+      git("checkout", "-q", "-b", "second")
+      add_entry("- The second pull request's entry.")
+      git("checkout", "-q", "main")
+      add_entry("- The first pull request's entry.")
+
+      expect(git("rebase", "-q", "main", "second")).to be(true), "the rebase conflicted on CHANGELOG.md"
+      expect(repo.join("CHANGELOG.md").read).to include("- The first pull request's entry.", "- The second pull request's entry.", "- An earlier entry.")
+    end
+  end
+
   describe "Fork seams (downstream disentanglement — see /docs/developer/forking)" do
     it "keeps brand identity strings in the fork-owned brand locale file" do
       brand_path = Rails.root.join("config/locales/en/brand.en.yml")
@@ -1257,17 +1305,12 @@ RSpec.describe "Template invariants" do
       end
     end
 
-    # The list above is hand-kept and only checks guide-says -> attribute-exists for
-    # paths someone remembered to add. This checks the other direction and derives
-    # its set from the guide's own table, so a row added to the table without the
-    # attribute fails here rather than silently promising a fork something upstream
-    # never arranged (#1106 — project_tools.rb was born that way in #381).
+    # The reverse direction, derived from the guide's own table (#1106).
     it "marks every path the fork-owned table names (the guide's promise is a contract)" do
       guide = File.read(Rails.root.join("app/docs/developer/forking.md"))
       gitattributes = File.read(Rails.root.join(".gitattributes"))
 
-      # Bounded to the Fork-owned files section: the conflict table further down
-      # names Gemfile/Gemfile.lock, which are template-owned and merge normally.
+      # Bounded to the Fork-owned files section; Gemfile below merges normally.
       section = guide[/^## Fork-owned files$.*?(?=^## )/m]
       expect(section).to be_present, "the Fork-owned files section moved or was renamed"
 
@@ -1408,6 +1451,25 @@ RSpec.describe "Template invariants" do
       expect(offenders).to be_empty,
         "expected every external `uses:` pinned as owner/repo@<40-hex-sha> # <tag>, got:\n" +
         offenders.map { |site, ref| "  #{site} #{ref}" }.join("\n")
+    end
+  end
+
+  describe "Dependabot leaves the git-tag-pinned design-system gem to hand bumps (#1261)" do
+    # To Dependabot a git gem's current version is the lockfile SHA, so its default
+    # cooldown proposes the newest OLDER tag as a bump — see /docs/developer/forking.
+    let(:bundler_updates) do
+      config = YAML.safe_load(File.read(root.join(".github/dependabot.yml")))
+      config.fetch("updates").find { |update| update["package-ecosystem"] == "bundler" }
+    end
+
+    it "ignores modelrails_ui in the bundler block" do
+      expect(bundler_updates).not_to be_nil, "expected a bundler block in .github/dependabot.yml"
+
+      ignored = Array(bundler_updates["ignore"]).map { |entry| entry["dependency-name"] }
+      expect(ignored).to include("modelrails_ui"),
+        "expected .github/dependabot.yml to ignore modelrails_ui in its bundler block — " \
+        "a git-tag gem is bumped by hand (re-vendor pre-flight, generator, parity), and " \
+        "Dependabot's cooldown has proposed it as a downgrade three times (#665, #888, #1261)"
     end
   end
 end

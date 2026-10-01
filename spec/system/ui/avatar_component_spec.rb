@@ -19,24 +19,17 @@ RSpec.describe "Avatar component accessibility", type: :system do
   # axe would scope to the wrong selector ("No elements found for include").
   let(:scope) { [ "#av-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "image: renders the photo avatar and passes AAA in both themes" do
     visit "/rails/view_components/ui/avatar_component/image"
 
     expect(page).to have_css("#av-scope img[alt]")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "initials: renders the initials avatar and passes AAA in both themes" do
     visit "/rails/view_components/ui/avatar_component/initials"
 
     expect(page).to have_css("#av-scope span", text: "JD")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

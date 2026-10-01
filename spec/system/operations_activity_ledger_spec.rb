@@ -44,13 +44,6 @@ RSpec.describe "Operations activity ledger", type: :system do
 
   # Acting AS someone is a session, not an assignment: Current.user delegates
   # to Current.session (spec/models/activity_log_filters_spec.rb's pattern).
-  def acting_as(user)
-    Current.session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
-    yield
-  ensure
-    Current.session = nil
-  end
-
   # The rename row, addressed the way the page addresses it — workspace column
   # plus the sentence. The project's NAME cannot be the locator: it lives
   # inside the closed <details>, which is exactly what opening the row proves.

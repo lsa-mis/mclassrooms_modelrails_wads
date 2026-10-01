@@ -1,14 +1,6 @@
 class NotificationMailer < ApplicationMailer
-  # A suspended user is bounced before they reach a workspace, so every mail
-  # here invites an action they cannot take. Security mail is skipped too:
-  # they cannot act on that either, and a reset on reinstatement recovers it
-  # through the same address. One rule rather than a per-class exemption —
-  # the disclosure principle is recorded in /docs/developer/operations (#1132).
-  #
-  # `response_body = ""` rather than `throw :abort`: a before_action's throw is
-  # uncaught on Rails 8.1 (AbstractController's terminator checks `performed?`
-  # and does not `catch(:abort)`), the same deviation InvitationMailer
-  # documents. Same intent — the message is never built.
+  # A suspended user gets no mail they cannot act on (#1132). response_body, not
+  # throw :abort: a before_action's throw is uncaught on Rails 8.1.
   before_action :abort_when_recipient_suspended
 
   # Mailer methods invoked by Noticed via `deliver_by :email, mailer: ..., method: ...`.

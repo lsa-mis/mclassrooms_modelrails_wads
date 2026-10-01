@@ -17,23 +17,12 @@ RSpec.describe "GET /find-a-room (redesigned filter card)", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:viewer)   { membership_with("viewer") }
   let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
   let(:floor)    { create(:floor, building: building, label: "1") }
   let!(:room)    { classroom(building, "1401", 45, codes: %w[intrscreen movetablet whtbrd blackout], floor: floor) }
 
   before { sign_in(viewer) }
-
-  def page
-    Capybara.string(response.body)
-  end
 
   it "renders one merged search box instead of separate building/room inputs" do
     get find_a_room_path

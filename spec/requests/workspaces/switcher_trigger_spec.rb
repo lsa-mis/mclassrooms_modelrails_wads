@@ -16,11 +16,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
     end
   end
 
-  # The dropdown affordance is an ICON, not a text character. It used to be
-  # &#9662; (U+25BE, "small" triangle) at the inherited 14px, which drew well
-  # inside its em box and varied with the platform font — visibly smaller than
-  # the user-menu chevron a few pixels away, which has always been
-  # icon(:chevron_down) (#1224).
+  # An icon, not a U+25BE glyph (#1224).
   it "draws its chevron with the icon registry, like every other chevron" do
     get workspace_path(workspace)
     trigger = Nokogiri::HTML(response.body).at_css("#workspace-switcher-button")
@@ -31,14 +27,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
       "a text glyph is still standing in for the chevron"
   end
 
-  # The trigger is a <button>, so anything focusable inside it is a
-  # nested-interactive axe failure. The name used to be an <a> (the old identity
-  # bar's link); when the id moved into this button, the rename broadcast kept
-  # injecting that anchor and every personal-workspace rename audit went red.
-  #
-  # The index is the third pair, and the one the earlier loop missed (#1091): it
-  # renders the mobile copy with no current workspace, so the trigger falls to
-  # the avatar branch and a different component builds its insides.
+  # Nothing focusable inside the trigger <button>; the index's avatar branch too (#1091).
   it "renders no focusable element inside the trigger button" do
     [
       [ workspace_path(workspace), "#workspace-switcher-button" ],

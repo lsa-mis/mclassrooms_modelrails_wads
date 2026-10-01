@@ -21,6 +21,14 @@ RSpec.describe "Magic Links", type: :request do
       end
     end
 
+    it "says it was rate limited where the check-your-email notice would land, and sends nothing" do
+      allow(Rails.cache).to receive(:increment).and_return(6)
+
+      expect { post magic_link_path, params: { email_address: "nobody@example.com" } }.not_to have_enqueued_mail
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("magic_links.create.rate_limited"))
+    end
+
     context "non-existent email" do
       it "shows the same message (no information leakage)" do
         post magic_link_path, params: { email_address: "nobody@example.com" }

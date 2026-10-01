@@ -6,30 +6,6 @@ require "rails_helper"
 # sync service (Tasks 6+) can call the U-M gateway without worrying about
 # tripping the real rate limit or aborting a whole sync run on a transient
 # 429. #sleep_count feeds each sync phase's `rate_limit_sleeps` counter.
-#
-# `sleeper:` (a callable) and `clock:` (anything responding to `.now`) are
-# both injected exactly like UmApi::TokenCache's `clock:` — FakeSleeper
-# below just records the seconds it was asked to sleep and returns
-# immediately, and FakeClock is the same minimal fake used in
-# token_cache_spec.rb (reopened here; identical definition, no conflict).
-# No example in this file ever sleeps or waits on real time.
-class FakeClock
-  attr_accessor :now
-
-  def initialize(now) = @now = now
-end
-
-class FakeSleeper
-  attr_reader :calls
-
-  def initialize
-    @calls = []
-  end
-
-  def call(seconds)
-    @calls << seconds
-  end
-end
 
 RSpec.describe UmApi::RateLimiter do
   describe "#throttle!" do

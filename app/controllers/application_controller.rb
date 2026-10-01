@@ -32,16 +32,8 @@ class ApplicationController < ActionController::Base
     )
   end
 
-  # A join token parked in the session (open-link Flow B) that resolves to a
-  # link the signed-in user could join through but hasn't yet. Surfaced as a
-  # dismissible banner so a pre-existing user re-consents to the join instead of
-  # being force-joined — the drive-by-join guard's other half. nil when there's
-  # nothing actionable to offer.
-  #
-  # Returns the LINK, not just its workspace: everything this resolves is read
-  # at page-load time, and the accepting action has to re-check posture inside
-  # its own write. It cannot call WorkspaceJoinLink#admit without the link
-  # (#1061).
+  # A parked join token the user could use: offered as a banner, never a forced join.
+  # Returns the link so the accepting write can re-check it (#1061).
   def pending_join_link
     return @pending_join_link if defined?(@pending_join_link)
 

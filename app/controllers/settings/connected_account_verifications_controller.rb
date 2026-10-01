@@ -50,13 +50,7 @@ module Settings
 
       was_authenticated = authenticated?
 
-      # Before the first write, not after it. The hold refuses sessions rather
-      # than writes (see /docs/developer/security), but this path applied
-      # verify! and only then raised — spending the token and orphaning the
-      # claim parked on this Authentication, with no second chance. Refusing
-      # here costs nothing and leaves the link usable once the hold lifts
-      # (#1129). ApplicationController turns this into the suspended-account
-      # redirect.
+      # Refuse before verify!, or the token is spent and the claim orphaned (#1129).
       raise User::SuspendedError if auth.user.suspended?
 
       # verify! is a compare-and-swap (#950): a concurrent POST for the same

@@ -49,7 +49,7 @@ Bump Ruby in `.tool-versions`, run `bundle install`, and the lockfile + producti
 
 This template ships a Dev Container configuration so you can develop in an isolated environment that matches production runtime closely. Open the project in VS Code and accept the "Reopen in Container" prompt, or run **Dev Containers: Rebuild Container** from the command palette.
 
-The container is built on `ruby:4.0.6-slim` — the **same base image as the production `Dockerfile`** (Option C: shared base, separate files). That means libvips, glibc, SQLite, and OpenSSL versions all match prod. Bugs that depend on those library versions surface in dev rather than only in production.
+The container is built on `ruby:4.0.7-slim` — the **same base image as the production `Dockerfile`** (Option C: shared base, separate files). That means libvips, glibc, SQLite, and OpenSSL versions all match prod. Bugs that depend on those library versions surface in dev rather than only in production.
 
 Capabilities baked in:
 
@@ -139,7 +139,7 @@ Two things worth knowing when it fires:
   `bundle exec rspec` share `storage/test.sqlite3`. A parallel run and a focused
   run *do* collide.
 - **Stop a run by process group, not by name.** `pkill -f "bundle exec rspec"`
-  matches the shell wrapper and orphans the `bin/rspec` child, which keeps the
+  matches the shell wrapper and orphans the `rspec` child process, which keeps the
   WAL lock — after which every later run fails in its first `create(...)`. Use
   `kill -- -<pgid>`, then confirm with `lsof storage/test.sqlite3*`.
 

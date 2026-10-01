@@ -56,7 +56,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
 
       it "redirects to sign in" do
         token = MagicLinkToken.create_for_email(user.email_address)
-        MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consume!
+        MagicLinkToken.consume!(token)
         get magic_link_callback_path(token: token)
         expect(response).to redirect_to(new_session_path)
         expect(flash[:alert]).to be_present
@@ -90,6 +90,20 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         sign_in(user)
 
         get magic_link_callback_path(token: others_token)
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq(I18n.t("magic_link_callbacks.show.invalid"))
+      end
+
+      # Superseded is not redeemed: an older link the owner never clicked is invalid,
+      # not a replay (#1083).
+      it "rejects a superseded link the signed-in owner never clicked" do
+        superseded = MagicLinkToken.create_for_email(user.email_address)
+        MagicLinkToken.create_for_email(user.email_address)
+        sign_in(user)
+
+        expect { get magic_link_callback_path(token: superseded) }
+          .not_to change { user.sessions.count }
 
         expect(response).to redirect_to(root_path)
         expect(flash[:alert]).to eq(I18n.t("magic_link_callbacks.show.invalid"))
@@ -211,7 +225,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
     context "already-consumed token" do
       it "redirects to sign in" do
         token = MagicLinkToken.create_for_email("consumed-reg@example.com")
-        MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token)).consume!
+        MagicLinkToken.consume!(token)
         post magic_link_callback_path(token: token), params: {
           user: { first_name: "Test", last_name: "User" }
         }
@@ -378,12 +392,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         end
       end
 
-      # Task 5: archived and deleted must behave exactly like the
-      # suspended case above — silent no-op, signup still succeeds. This is a
-      # deliberate mechanism divergence from the invitation path: an
-      # invitation FAILS the whole signup with a notice (the invitee already
-      # has a specific stake in that workspace), whereas an open-link visitor
-      # was never a member, so a silent drop is the only privacy-safe outcome.
+      # A silent no-op, unlike an invitation: an open-link visitor was never a member.
       %i[archive discard].each do |lifecycle_action|
         lifecycle_name = lifecycle_action == :archive ? "archived" : "deleted"
 
@@ -462,13 +471,7 @@ RSpec.describe "Magic Link Callbacks", type: :request do
         expect(user.memberships.kept).to exist
       end
 
-      # Task 5: breaks the invitation retry-loop. Invitation#accept!'s
-      # widened guard rejects the parked invitation because its workspace is
-      # archived, and commit_signup_atomically's rescue must clear
-      # session[:pending_invitation_token] — otherwise a retry hits the
-      # identical rejection forever. The invitation itself stays pending?
-      # (accept! guards before marking it consumed), so a second attempt with
-      # the token now gone signs up cleanly, just without that membership.
+      # The parked token is cleared, or a retry hits the same rejection forever.
       context "when the invitation's workspace is archived after being parked" do
         before do
           inv_workspace.archive!

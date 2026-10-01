@@ -30,7 +30,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
         with:
           bundler-cache: true
 
@@ -51,7 +51,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
         with:
           bundler-cache: true
 
@@ -76,9 +76,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          # The comment-block gate diffs the PR against its base, so it needs history.
+          fetch-depth: 0
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
         with:
           bundler-cache: true
 
@@ -95,6 +97,12 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+      - name: Refuse comment blocks over two lines in the pull request's diff
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bin/comment-block-check --range "origin/${BASE_REF}...HEAD"
+
   lint_docs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -106,7 +114,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
         with:
           bundler-cache: true
 
@@ -194,7 +202,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
         with:
           bundler-cache: true
 
@@ -292,7 +300,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
         with:
           bundler-cache: true
 
@@ -357,10 +365,10 @@ jobs:
           persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Build production image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           push: false

@@ -114,6 +114,8 @@ class OmniauthCallbacksController < ApplicationController
     when :unverified_pending
       redirect_to new_session_path,
         notice: t("omniauth_callbacks.create.unverified_email_pending", email: outcome.email)
+    when :suspended
+      raise User::SuspendedError
     when :failed
       redirect_to fallback_path,
         alert: t("omniauth_callbacks.create.linking_failed")

@@ -18,10 +18,6 @@ class Workspace < ApplicationRecord
       open_join? && admittable?
     end
 
-    # "Is there an open-link join to offer this user?" — the workspace takes
-    # open joins AND they are not already in it. The two halves were written
-    # out at the one call site that asks; naming them keeps the question in
-    # the model that owns admission (#648).
     def joinable_by?(user)
       accepting_open_joins? && !memberships.kept.exists?(user: user)
     end

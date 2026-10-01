@@ -71,6 +71,18 @@ module SourceScanning
     end
     line
   end
+
+  def ruby_sources
+    Dir[Rails.root.join("{app,lib}/**/*.rb")]
+  end
+
+  # Example, hook and method openers bound a spec block; a false boundary can only split a block,
+  # which makes a scan miss a violation, never invent one.
+  def block_start_pattern = /^\s*(it|specify|scenario|before|after|def)\b/
+
+  def blocks_in(source)
+    source.each_line.with_index(1).slice_before { |line, _| line.match?(block_start_pattern) }
+  end
 end
 
 RSpec.configure do |config|

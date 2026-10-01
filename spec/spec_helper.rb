@@ -13,6 +13,8 @@ RSpec.configure do |config|
   # when nothing is tagged, everything runs.
   config.filter_run_when_matching :focus
 
+  config.fail_if_no_examples = true
+
   # Persist example status so `--only-failures` / `--next-failure` work. Under
   # parallel_tests each worker writes its own file (TEST_ENV_NUMBER) so a
   # shared path can't be clobbered; kept under tmp/ (gitignored).

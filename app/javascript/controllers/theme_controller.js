@@ -1,10 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Theme resolution is NOT defined here. `shared/_theme_script` owns it, because
-// that script has to run before first paint and therefore cannot import this
-// module — so a copy here would be a second answer to the same question, free
-// to drift for exactly the window before Stimulus boots (#624). This reads the
-// shared definition instead, and the media query list with it.
+// Resolution lives in shared/_theme_script, which must run before first paint (#624).
 export default class extends Controller {
   static values = { theme: { type: String, default: "system" } }
 

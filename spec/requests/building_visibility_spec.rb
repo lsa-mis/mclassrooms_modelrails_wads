@@ -13,13 +13,6 @@ RSpec.describe "Building visibility (hide/unhide)", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:building) { create(:building, workspace: workspace) }
   let!(:classroom) { create(:room, building: building, workspace: workspace) }
 

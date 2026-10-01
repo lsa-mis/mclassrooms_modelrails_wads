@@ -12,13 +12,6 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
   include ActiveJob::TestHelper
   include ActionMailer::TestHelper
 
-  # Scoped drains only: the un-scoped `perform_enqueued_jobs` would also run
-  # CheckGravatarJob from the user factory, which does network IO.
-  def drain_noticed_jobs
-    perform_enqueued_jobs(only: Noticed::EventJob)
-    perform_enqueued_jobs(only: Noticed::DeliveryMethods::Email)
-  end
-
   let(:owner_role) do
     Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
       r.name = "Owner"

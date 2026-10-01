@@ -446,6 +446,7 @@ git merge upstream/main
 | `Gemfile.lock` | Never hand-merge: `git checkout --theirs Gemfile.lock`, then `bundle install`, commit the regenerated result |
 | Behavior (app code, specs, config) | Take theirs — unless you deliberately diverged, in which case consider sending your version upstream instead |
 | Two migrations, same timestamp | Keep both; rename yours to a later timestamp with `git mv`, then re-run `bin/rails db:migrate` |
+| `db/schema.rb` | Never hand-merge: `git checkout --theirs db/schema.rb`, then `bin/rails db:schema:regenerate`, which rebuilds it from both sides' migrations |
 | Upstream renamed/moved a file you'd edited | Re-apply your edit at the new location, delete the old file. If the same resolution recurs every sync, turn on `git config rerere.enabled true` so git replays it for you |
 
 A conflict looks like this — your side on top, upstream's below:
@@ -533,6 +534,13 @@ Three guardrails before you open the PR:
   invariant fails on ANY unpinned `uses:` (yours included). Add fork CI as
   new workflow files, SHA-pinned with the `# <tag>` trailer the invariant
   reads; never edit the template's workflows in place.
+- **Dependabot never bumps `modelrails_ui`, by config.** For a gem pinned by
+  git tag, Dependabot keeps the lockfile SHA as the current version, so its
+  default cooldown can propose the newest tag *older* than the pin as an
+  update — it did, three times. The bundler block ignores the gem; a bump is
+  a hand PR that diffs each vendored component against the tag it came from
+  before regenerating (see [Components](components)). The suite's invariant
+  fails if the ignore is removed.
 - **Fetching a URL a user typed?** Read the outbound-request (SSRF) posture
   in [Security](security) first — the template deliberately ships no
   fetch-by-URL feature, and the first fork that adds one owns the pinning.

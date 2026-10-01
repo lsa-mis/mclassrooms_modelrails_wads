@@ -19,7 +19,7 @@
 class OauthLink
   CODES = %i[
     signed_in linked verification_sent verification_resent pending_in_progress
-    already_linked collision signups_closed unverified_pending failed
+    already_linked collision signups_closed unverified_pending suspended failed
   ].freeze
 
   Outcome = Data.define(:code, :user, :auth, :email, :provider_name, :problems, :spent_tokens)
@@ -50,11 +50,11 @@ class OauthLink
 
   def claim_existing(auth)
     if @actor.present? && @actor.id != auth.user_id
-      # Cross-user collision: the OAuth provider+uid is already linked to a
-      # different user. Notify the legitimate owner (defense-in-depth) so
-      # they're aware someone tried to attach their identity elsewhere.
+      # The identity is linked to a different user: alert its owner (defense in depth) and refuse.
       alert_collision_owner(auth)
       outcome(:collision)
+    elsif auth.user.suspended?
+      outcome(:suspended, user: auth.user)
     elsif auth.pending?
       send_verification(auth)
       outcome(:verification_resent, email: auth.email)
@@ -105,17 +105,13 @@ class OauthLink
   def claim_verified_signup
     claims = new_pending_claims
     existing = find_verified_user_by_email(identity.email)
+    # Before the transaction: a held account links nothing and spends no parked token (#1129).
+    return outcome(:suspended, user: existing) if existing&.suspended?
+
     user = nil
 
-    # A pre-existing user linking a new verified provider must not be silently
-    # force-joined by a pending join token riding the session (drive-by join) —
-    # hence newly_registered below.
-    #
-    # The new-user branch is resolved inside this transaction, mirroring
-    # claim_unverified_signup: create_user_from_identity commits on its own,
-    # so resolving it ahead of the transaction left a committed orphan user
-    # (and its onboarded workspace) whenever the Authentication insert or
-    # claims.claim! raised afterward (#1044).
+    # newly_registered guards a pre-existing user against a drive-by join from a parked join
+    # token; the new-user branch resolves inside the transaction so a raise leaves no orphan (#1044).
     ApplicationRecord.transaction do
       user = existing || create_user_from_identity
       user.save!

@@ -3,7 +3,6 @@
       title: t("operations.users.index.title"),
       description: t("operations.users.index.description") %>
 
-<%# max-w-md: one query does not need the column. %>
 <%= form_with url: operations_users_path, method: :get, class: "flex gap-3 items-end max-w-md" do |form| %>
   <div class="flex-1">
     <%= form.label :q, t("operations.users.index.search_label"), class: "mb-1 block text-sm font-medium text-text-heading" %>
@@ -17,9 +16,7 @@
   <%= form.submit t("operations.users.index.search"), class: "btn-primary" %>
 <% end %>
 
-<%# What the filter could not do, said out loud. A list that silently drops
-    matches is worse than one that admits it: the operator cannot otherwise
-    tell "no more" from "not shown" (#1166's ruling). %>
+<%# Say when the scan was capped rather than silently stopping (#1166). %>
 <% if @search&.names_skipped? %>
   <p class="mt-4 text-sm text-text-body"><%= t("operations.users.index.names_skipped") %></p>
 <% elsif @search&.capped? %>
@@ -43,8 +40,6 @@
     <% end %>
     <%= render "shared/pagination", pagy: @pagy %>
   <% elsif @query.present? %>
-    <%# No user by that query is not the end of the question: the ledger's
-        search also matches workspaces and projects. %>
     <%= render "shared/empty_state", message: t("operations.users.index.no_match"),
           action_text: t("operations.users.index.search_activity"), action_url: operations_activity_logs_path(q: @query) %>
   <% else %>

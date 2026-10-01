@@ -1,13 +1,14 @@
-<header class="sticky top-0 z-40 bg-surface-raised border-b border-border"
+<header class="sticky top-0 z-40 bg-chrome border-b-[length:var(--chrome-border-width)] border-chrome-border"
         data-controller="mobile-menu"
         data-action="keydown@window->mobile-menu#close click@window->mobile-menu#closeOnOutsideClick">
   <nav aria-label="<%= t("navigation.aria_label") %>"
        class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <%= link_to main_app.root_path,
-            class: "flex items-center gap-2 min-h-input [&>svg]:h-6 hover:opacity-80 transition-opacity
-                    focus-ring rounded" do %>
-        <%= render "shared/site_logo" %>
+            class: "flex items-center gap-2 min-h-input text-on-chrome-strong [&>svg]:h-6 [&>svg]:text-chrome-mark
+                    hover:opacity-80 transition-opacity
+                    focus-ring-chrome rounded" do %>
+        <%= render "shared/site_logo", name_class: "text-xl font-bold" %>
       <% end %>
 
       <%# Right cluster. v2 (2026-05-23): the standalone notifications bell
@@ -38,7 +39,7 @@
         <% if authenticated? %>
           <%= link_to t("navigation.find_a_room"), main_app.find_a_room_path,
                 class: "hidden md:flex min-h-[44px] items-center px-3 rounded-lg
-                        text-text-body hover:bg-surface-sunken focus-ring" %>
+                        text-on-chrome hover:text-on-chrome-hover focus-ring-chrome" %>
         <% end %>
         <%# No workspace switcher here: it is the head of the workspace sidebar
             (_workspace_switcher), and on phones the same switcher
@@ -65,8 +66,8 @@
                 data-mobile-menu-close-label-value="<%= t("navigation.mobile_menu.close") %>"
                 aria-expanded="false"
                 aria-controls="mobile-menu-panel"
-                class="btn-touch-target relative md:hidden text-text-body
-                       focus-ring rounded">
+                class="btn-touch-target relative md:hidden text-on-chrome
+                       focus-ring-chrome rounded">
           <span class="sr-only" data-mobile-menu-target="label"><%= t("navigation.mobile_menu.open") %></span>
           <%= icon(:bars_3, size: :lg) %>
           <% if authenticated? %>
@@ -92,7 +93,9 @@
          data-mobile-menu-target="menu"
          data-action="click->mobile-menu#closeOnLinkClick"
          aria-label="<%= t("navigation.mobile_menu.aria_label") %>"
-         class="hidden md:hidden pb-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
+         class="hidden bg-surface-raised -mx-4 px-4 pb-4 max-h-[calc(100vh-4rem)] overflow-y-auto
+                sm:-mx-6 sm:px-6
+                md:hidden">
       <%# Mobile accordion — global chrome only: the account menu (identity +
           always-present account actions, including "All workspaces") and the
           theme toggle. The workspace switcher is not here: on a phone it

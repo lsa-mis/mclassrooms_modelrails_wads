@@ -10,10 +10,6 @@ RSpec.describe WelcomeNotifier, type: :notifier do
     Noticed::Event.delete_all
   end
 
-  def events
-    Noticed::Event.where(type: described_class.name)
-  end
-
   describe "declarations" do
     it "is :account_access" do
       expect(described_class.category_name).to eq "account_access"
@@ -33,7 +29,7 @@ RSpec.describe WelcomeNotifier, type: :notifier do
     # has `after_create :onboard_workspace`, so a callback-fired welcome would
     # ride every factory user and shift every notification count in the suite.
     it "does not fire for a factory-built user" do
-      expect { create(:user) }.not_to change { events.count }
+      expect { create(:user) }.not_to change { notifier_events.count }
     end
 
     it "leaves a factory-built user with no notifications of any kind" do
@@ -44,7 +40,7 @@ RSpec.describe WelcomeNotifier, type: :notifier do
   describe "rendering" do
     it "greets the recipient and points at their notification preferences" do
       described_class.with(record: user).deliver(nil)
-      notification = events.last.notifications.first
+      notification = notifier_events.last.notifications.first
 
       expect(notification.message).to eq(
         I18n.t("notifications.welcome.message", user_name: "Jane")
