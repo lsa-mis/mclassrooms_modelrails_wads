@@ -24,9 +24,11 @@ en:
       announcement: "Announcements"
       characteristic_display_rule: "Characteristic display rules"
       editor_assignment: "Editor assignments"
-      room: "Rooms (bulk media uploads)"
+      room: "Rooms (bulk media uploads, legacy import)"
       sync_scope_rule: "Sync scope rules"
       unit_display_name: "Unit display names"
+      building: "Buildings (legacy import)"
+      floor: "Floors (legacy import)"
     # Nested, never flat and dotted: I18n splits a requested key on "." and
     # walks the hash segment by segment, so a literal "membership.created" key
     # is unreachable and the renderer's `default:` silently humanizes instead
@@ -93,6 +95,11 @@ en:
         revoked: "revoked editor access"
       room:
         media_bulk_uploaded: "bulk-uploaded room media"
+        legacy_imported: "imported room media from the legacy app"
+      building:
+        legacy_imported: "imported a building photo from the legacy app"
+      floor:
+        legacy_imported: "imported a floor plan from the legacy app"
       sync_scope_rule:
         created: "added a sync scope rule"
         updated: "updated a sync scope rule"

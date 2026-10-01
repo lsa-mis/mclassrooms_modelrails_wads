@@ -317,7 +317,7 @@ module Sync
     # (`lib/tasks/um_import.rake`); the pre-Task-3 code did no normalization
     # at all on the raw floor value.
     def normalize_floor_label(raw)
-      raw.to_s.strip.sub(/\A0+(?=.)/, "")
+      FloorLabel.normalize(raw)
     end
   end
 end
