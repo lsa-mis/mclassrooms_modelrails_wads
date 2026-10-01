@@ -43,11 +43,39 @@ RSpec.describe "Header chrome", type: :system do
     JS
   end
 
+  # Puts the family back on its defaults, so the example holds in a fork whose _brand.css sets it.
+  def unbrand_the_chrome
+    page.execute_script(<<~JS)
+      var root = document.documentElement.style;
+      root.setProperty("--color-chrome", "var(--color-surface-raised)");
+      root.setProperty("--color-chrome-border", "var(--color-border)");
+      root.setProperty("--chrome-border-width", "1px");
+      root.setProperty("--color-on-chrome", "var(--color-text-body)");
+      root.setProperty("--color-on-chrome-strong", "var(--color-text-heading)");
+      root.setProperty("--color-chrome-mark", "var(--color-text-heading)");
+    JS
+  end
+
   def toggle = "header button[data-theme-toggle-target='button']"
   def wordmark = "header a[href='#{root_path}'] span"
 
-  it "keeps today's header when no brand sets the chrome" do
+  it "lets a brand stylesheet that loads before the app's set the chrome" do
     visit root_path
+    page.execute_script(<<~JS)
+      var brand = document.createElement("style");
+      brand.textContent = ":root { --color-chrome: oklch(35% 0.12 150); " +
+        "--color-on-chrome: oklch(100% 0 0); --color-on-chrome-strong: oklch(100% 0 0); " +
+        "--color-on-chrome-muted: oklch(100% 0 0); --color-on-chrome-hover: oklch(100% 0 0); " +
+        "--color-chrome-mark: oklch(100% 0 0); --color-chrome-focus: oklch(100% 0 0); }";
+      document.head.prepend(brand);
+    JS
+
+    expect(computed("header", "backgroundColor")).to eq("oklch(0.35 0.12 150)")
+  end
+
+  it "keeps today's header with the chrome family at its defaults" do
+    visit root_path
+    unbrand_the_chrome
 
     expect(computed("header", "backgroundColor")).to eq(resolved("--color-surface-raised"))
     expect(computed("header", "borderBottomColor")).to eq(resolved("--color-border"))

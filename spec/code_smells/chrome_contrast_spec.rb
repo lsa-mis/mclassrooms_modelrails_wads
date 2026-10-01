@@ -58,4 +58,13 @@ RSpec.describe "Code smell: a branded header clears the contrast floors" do
         "--color-#{chrome} should default to var(--color-#{base}) so an unbranded header is today's"
     end
   end
+
+  # _brand.css loads before _semantic.css, so a default at :root's specificity would beat the brand.
+  it "declares the chrome defaults at zero specificity" do
+    defaults = semantic[/^:where\(:root\)\s*\{[^}]*\}/m].to_s
+
+    expect(defaults).to include("--color-chrome:"), "the chrome defaults belong in a :where(:root) block"
+    expect(semantic.sub(defaults, "")).not_to match(/--color-(on-)?chrome[\w-]*:/),
+      "a chrome default outside :where(:root) outranks _brand.css, which loads first"
+  end
 end
