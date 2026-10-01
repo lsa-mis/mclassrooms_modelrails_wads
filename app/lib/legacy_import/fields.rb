@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # Curated columns the sync never supplies, written only where blank, plus the
-  # legacy app's hide flag. Sync-owned columns are in neither map, so they
-  # cannot be written. Records load one at a time: Bullet raises on any
-  # association walked across a multi-row load, and 600 lookups are nothing.
+  # Curated columns written only where blank, plus the hide flag; sync-owned columns are in neither map.
+  # Records load one at a time: Bullet raises on an association walked across a multi-row load.
   class Fields
     ROOM_COLUMNS = { "nickname" => :nickname, "ada_seat_count" => :ada_seat_count }.freeze
     BUILDING_COLUMNS = { "nickname" => :nickname, "latitude" => :latitude, "longitude" => :longitude }.freeze

@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # The export as downloaded from legacy production: media/manifest.json plus
-  # the files it lists, and curated/data/*.ndjson. Read as-is — nothing is
-  # converted first.
+  # The export as downloaded from legacy production (media/manifest.json, curated/data/*.ndjson), read as-is.
   class Export
     Missing = Class.new(StandardError)
     # A manifest that is not JSON or lacks "files"; raised before any write.

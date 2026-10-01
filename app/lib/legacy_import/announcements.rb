@@ -1,10 +1,7 @@
-# app/lib/legacy_import/announcements.rb
 # frozen_string_literal: true
 
 module LegacyImport
-  # Page announcements. An empty legacy body is skipped, and a page that
-  # already has an announcement keeps it — copy written here wins over copy
-  # written in the old app.
+  # Page announcements: an empty legacy body is skipped, and a page that already has one keeps it.
   class Announcements
     def self.call(export:, workspace:, actor:, dry_run:) = new(export:, workspace:, dry_run:).call
 

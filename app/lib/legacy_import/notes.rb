@@ -1,11 +1,8 @@
-# app/lib/legacy_import/notes.rb
 # frozen_string_literal: true
 
 module LegacyImport
-  # Legacy notes and alerts, credited to the Legacy import account with a line
-  # naming the original author. Two passes so a reply can point at its
-  # already-imported parent. Broadcasts are suppressed: nobody is subscribed
-  # during an import, and 54 refreshes would be noise.
+  # Legacy notes and alerts under the Legacy import account, with an attribution line. Two passes so
+  # a reply finds its imported parent; broadcasts are suppressed, since nobody is subscribed.
   class Notes
     def self.call(export:, workspace:, actor:, dry_run:) = new(export:, workspace:, actor:, dry_run:).call
 

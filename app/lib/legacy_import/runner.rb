@@ -1,15 +1,8 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # Checks preconditions, then runs the phases in their fixed order and halts
-  # on the first that raises. The phase 8 plan required a completed SyncRun;
-  # dev is loaded by um:import and has none, so the precondition is "the
-  # workspace has rooms and buildings", and the report's match counts carry
-  # the rest.
-  #
-  # Opens no outer transaction: each record's Curate transaction must be the
-  # outermost so a failed room really rolls back. Current.workspace is set
-  # because Curation::Apply stamps it on audit rows.
+  # Opens no outer transaction: each record's Curate transaction must be outermost so a failed room
+  # really rolls back. Why the precondition is rooms-and-buildings, not a SyncRun: PR #90.
   class Runner
     PHASES = {
       "fields" => [ Fields ],

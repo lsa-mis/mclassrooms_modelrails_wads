@@ -1,4 +1,3 @@
-# spec/lib/legacy_import/notes_spec.rb
 require "rails_helper"
 
 RSpec.describe LegacyImport::Notes do

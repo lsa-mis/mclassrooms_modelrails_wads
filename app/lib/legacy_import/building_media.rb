@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # building_image -> Building.photo and floor_plan -> Floor.plan. The export
-  # carries only the legacy floor's own id, so a floor matches by exact
-  # building name plus normalized label; floors are never created — the sync
-  # owns them.
+  # Building photos and floor plans. A floor matches by building name plus normalized label (the
+  # export carries only the legacy floor id) and is never created — the sync owns floors.
   class BuildingMedia
     FLOOR_RECORD_LABEL = /\A(?<building>.+) floor (?<floor>\S+)\z/
 

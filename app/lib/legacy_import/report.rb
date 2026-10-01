@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # The printed counter table and the files under the report directory:
-  # unmatched.txt, replaced.txt, errors.txt (one line per item, prefixed with
-  # the phase) and summary.json.
+  # The printed counter table plus unmatched.txt, replaced.txt, errors.txt and summary.json.
   module Report
     FILES = { "unmatched.txt" => :unmatched_lines, "replaced.txt" => :replaced_lines, "errors.txt" => :error_lines }.freeze
 

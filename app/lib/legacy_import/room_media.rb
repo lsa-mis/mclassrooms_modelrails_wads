@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # A room's legacy media — panorama, layout (the seating chart) and up to six
-  # stills — written in ONE Curate call per room, so the room is the unit of
-  # rollback and of the audit trail. Authored image_alt / subject on an
-  # existing gallery row are never touched; only its image is.
+  # A room's legacy media in one Curate call, so the room is the unit of rollback and audit.
+  # An existing gallery row only ever gets a new image; authored alt, description and subject stay.
   class RoomMedia
     SINGLE_SLOTS = { "room_panorama" => :panorama, "room_layout" => :seating_chart }.freeze
     GALLERY_SLOT = /\A(room_image|gallery_image[1-5])\z/

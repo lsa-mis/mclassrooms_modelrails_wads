@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # Legacy wins for a single-slot image: attach when empty, skip when
-  # byte-identical, replace otherwise. Both apps store Active Storage's base64
-  # MD5, so checksums compare directly.
+  # Legacy wins for a single-slot image: attach when empty, skip when byte-identical, replace otherwise.
   module SlotWriter
     def self.outcome(current_checksum, legacy_checksum)
       return :created if current_checksum.nil?

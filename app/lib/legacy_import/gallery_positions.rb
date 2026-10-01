@@ -1,11 +1,8 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # Where each legacy still lands in a room's gallery. room_image is always
-  # shot 1, whatever its filename says. gallery_imageN is shot N + 1, unless
-  # the "Image N" in Grace's filename says otherwise. If two files in a room
-  # claim the same shot, the filenames can't be trusted for that room, so
-  # every file falls back to its slot.
+  # room_image is shot 1; gallery_imageN is shot N + 1 unless Grace's "Image N" says otherwise.
+  # A room whose filenames claim the same shot twice falls back to slot order (see PR #90).
   module GalleryPositions
     SHOT = /Image\s*(\d+)/i
     Placement = Data.define(:position, :entry, :source)

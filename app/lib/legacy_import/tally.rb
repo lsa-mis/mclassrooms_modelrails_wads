@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module LegacyImport
-  # What one importer did: outcome counters plus the lines the report files
-  # carry. Every service returns #to_result, so the runner and the report read
-  # one shape.
+  # One importer's outcome counters and report lines, as the Result the runner and report both read.
   class Tally
     OUTCOMES = %i[created updated replaced skipped unmatched errors].freeze
 

@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-# Writes an export in the shape mi_classrooms produced on 2026-09-30
-# (media/manifest.json + files, curated/data/*.ndjson) into a tmpdir, so each
-# spec builds exactly the rows it needs and checksums are computed from the
-# fixture bytes rather than hand-kept.
+# Writes an export in mi_classrooms' 2026-09-30 shape into a tmpdir, with checksums computed
+# from the fixture bytes, so each spec builds only the rows it needs.
 module LegacyExportBuilder
   class Tree
     DATA_FILES = %w[rooms buildings notes announcements users].freeze
