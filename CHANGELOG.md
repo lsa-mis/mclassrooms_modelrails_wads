@@ -50,6 +50,7 @@ All notable changes to ModelRails are documented here, organized by phase.
 
 ### Fixed
 
+- A fork's chrome tokens in `_brand.css` reach the header: the defaults sit in a zero-specificity `:where(:root)` block, since `_brand.css` loads before `_semantic.css` and a `:root` default outranked it. A system spec now brands the bar from a stylesheet loaded ahead of the app's.
 - Production mail leaves over SMTP configured from the environment instead of Rails' `localhost:25` default; the boot guard refuses a deployment with no mail server, a failed delivery fails its job, and the deployment doc walks Postmark through with SES over SMTP as the second recipe (#1318).
 - Reduce Motion reaches the components: every moving utility in the vendored UI components, three views, two previews and the select's picker arrow now honors `prefers-reduced-motion`, and a code-smell guard ported from modelrails_ui keeps it so (#1313).
 - A focused `rspec` run is no longer held to the 90% coverage floor, which it could only meet within ten minutes of a full run; the floor applies to the whole suite and `bin/parallel-rspec`'s merge, as documented (#1315).

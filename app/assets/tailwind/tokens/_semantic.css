@@ -71,18 +71,6 @@
   --color-border-strong: var(--neutral-300);
   --color-border-focus:  var(--primary-800);
 
-  /* --- Chrome (header bar): today's tokens until _brand.css sets the family ---
-     var() resolves on <html>, where .dark lives, so these follow the theme. */
-  --color-chrome:           var(--color-surface-raised);
-  --color-chrome-border:    var(--color-border);
-  --color-on-chrome:        var(--color-text-body);
-  --color-on-chrome-strong: var(--color-text-heading);
-  --color-on-chrome-muted:  var(--color-text-muted);
-  --color-on-chrome-hover:  var(--color-interactive-hover);
-  --color-chrome-mark:      var(--color-on-chrome-strong);
-  --color-chrome-focus:     var(--color-interactive-focus);
-  --chrome-border-width:    1px;
-
   /* --- Toast (inverted overlay pill) --- */
   --color-surface-toast: oklch(20.5% 0.016 265.755 / 90%);  /* neutral-900 @ 90% */
   --color-text-on-toast: oklch(100% 0 0);                     /* white */
@@ -109,6 +97,20 @@
      prefers-reduced-motion get instant state changes. */
   --transition-default: 150ms;
   --transition-fast: 75ms;
+}
+
+/* Chrome (header bar): today's tokens until _brand.css sets the family. :where() keeps
+   these at zero specificity — _brand.css loads first, so a :root default would beat it. */
+:where(:root) {
+  --color-chrome:           var(--color-surface-raised);
+  --color-chrome-border:    var(--color-border);
+  --color-on-chrome:        var(--color-text-body);
+  --color-on-chrome-strong: var(--color-text-heading);
+  --color-on-chrome-muted:  var(--color-text-muted);
+  --color-on-chrome-hover:  var(--color-interactive-hover);
+  --color-chrome-mark:      var(--color-on-chrome-strong);
+  --color-chrome-focus:     var(--color-interactive-focus);
+  --chrome-border-width:    1px;
 }
 
 .dark {
