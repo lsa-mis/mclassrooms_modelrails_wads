@@ -138,4 +138,13 @@ RSpec.describe "Header chrome", type: :system do
 
     expect_aaa_in_both_themes(include: "header")
   end
+
+  it "keeps the signed-out bar AAA once a brand sets the chrome" do
+    Capybara.reset_session!
+    visit root_path
+    brand_the_chrome
+
+    expect(page).to have_link(I18n.t("navigation.sign_in"), href: new_session_path)
+    expect_aaa_in_both_themes(include: "header")
+  end
 end
