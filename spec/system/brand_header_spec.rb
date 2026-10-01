@@ -58,3 +58,12 @@ RSpec.describe "Branded header", type: :system do
     expect_aaa_in_both_themes(include: "header")
   end
 end
+
+RSpec.describe "Branded header, signed out", type: :system do
+  it "keeps the Sign in link readable on the U-M Blue bar in both themes" do
+    visit root_path
+
+    expect(page).to have_link(I18n.t("navigation.sign_in"), href: new_session_path)
+    expect_aaa_in_both_themes(include: "header")
+  end
+end
