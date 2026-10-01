@@ -54,11 +54,6 @@ RSpec.describe Sync::UpdateContacts do
 
   def phase = run.sync_phases.find_by!(key: "contacts")
 
-  # See update_campuses_spec.rb's identical helper: an untouched counter is
-  # ABSENT from the hash, not present-and-zero, so #fetch(..., 0) has teeth
-  # either way.
-  def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
-
   def stub_contacts(facility_code: "MLB1200", fixture: "contacts_MLB1200.json")
     stub_um_get("/aa/ClassroomList/v2/Classrooms/#{facility_code}/Contacts", fixture: fixture)
   end

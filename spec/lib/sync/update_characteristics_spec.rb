@@ -60,11 +60,6 @@ RSpec.describe Sync::UpdateCharacteristics do
 
   def phase = run.sync_phases.find_by!(key: "characteristics")
 
-  # See update_campuses_spec.rb's identical helper: an untouched counter is
-  # ABSENT from the hash, not present-and-zero, so #fetch(..., 0) has teeth
-  # either way.
-  def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
-
   def stub_characteristics(facility_code: "MLB1200", fixture: "characteristics_MLB1200.json")
     stub_um_get("/aa/ClassroomList/v2/Classrooms/#{facility_code}/Characteristics", fixture: fixture)
   end

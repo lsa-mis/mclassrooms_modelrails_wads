@@ -7,15 +7,6 @@ require "rails_helper"
 # spec/support/um_api_stubs.rb's DEFAULT_TOKEN_URL, since TokenCache#fetch
 # reads ENV.fetch("UM_API_TOKEN_URL") with no fallback — see the `around`
 # block, which follows the same save/restore-ENV pattern as auth_config_spec.
-#
-# A minimal FakeClock (responds to #now, mutable) stands in for the
-# `clock:` constructor arg so expiry can be advanced deterministically —
-# no example in this file sleeps or waits on real time.
-class FakeClock
-  attr_accessor :now
-
-  def initialize(now) = @now = now
-end
 
 RSpec.describe UmApi::TokenCache do
   around do |example|

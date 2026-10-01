@@ -17,18 +17,6 @@ RSpec.describe "GET / landing page", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # `create(:user)` auto-joins `workspace` via User#onboard_workspace under
-  # the :shared posture stubbed above — re-role the auto-created membership
-  # (mirrors spec/requests/rooms_spec.rb).
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
-  def page = Capybara.string(response.body)
-
   it "renders for anonymous visitors with sign-in CTAs" do
     get root_path
 

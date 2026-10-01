@@ -82,11 +82,6 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
 
   def phase_for(run, key) = run.sync_phases.find_by!(key: key)
 
-  # Mirrors every per-phase spec's identical helper: an untouched counter is
-  # ABSENT from the hash, not present-and-zero, so #fetch(..., 0) has teeth
-  # either way.
-  def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
-
   # ---- Stub helpers, one per endpoint family, composed by #stub_full_feed_set ----
 
   def stub_tokens
@@ -112,13 +107,6 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
       query: { "$start_index" => "0", "$count" => "1000" })
     stub_um_get("/bf/Department/v2/DeptData", fixture: "department_190100.json",
       query: { "DeptDescription" => "LSA - Chemistry" })
-  end
-
-  def stub_rooms_feed
-    stub_um_get("/bf/Buildings/v2/RoomInfo/1005046", fixture: "rooms_1005046.json",
-      query: { "$start_index" => "0", "$count" => "1000" })
-    stub_um_get("/bf/Buildings/v2/RoomInfo/1005090", fixture: "rooms_1005090.json",
-      query: { "$start_index" => "0", "$count" => "1000" })
   end
 
   def stub_facility_ids_feed

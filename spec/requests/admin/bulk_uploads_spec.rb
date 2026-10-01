@@ -14,13 +14,6 @@ RSpec.describe "Admin bulk uploads", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   # Any real file works as the upload `io:` — Matcher (Task 10) reads only
   # `blob.filename.to_s`, and Room's content_type validation reads the
   # explicit `content_type:` given here, not bytes sniffed from `io`. Real

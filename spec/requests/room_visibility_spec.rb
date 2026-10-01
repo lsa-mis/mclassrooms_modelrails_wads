@@ -17,25 +17,6 @@ RSpec.describe "Room visibility (hide/unhide)", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # Same reuse-and-re-role pattern as rooms_spec.rb (see that file's comment):
-  # `create(:user)` auto-joins `workspace` via `User#onboard_workspace` under
-  # the :shared posture stubbed above.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
-  # An editor: a plain viewer-role membership PLUS an EditorAssignment on a
-  # specific unit — RoleResolver#editor?/#can_edit_room? derive entirely from
-  # the EditorAssignment table, not the Membership role (app/lib/role_resolver.rb).
-  def editor_for(unit)
-    user = membership_with("viewer")
-    create(:editor_assignment, user: user, unit: unit)
-    user
-  end
-
   let(:building) { create(:building, workspace: workspace) }
   let(:unit) { create(:unit, workspace: workspace) }
   let(:other_unit) { create(:unit, workspace: workspace) }

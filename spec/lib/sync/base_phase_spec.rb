@@ -12,41 +12,6 @@ require "rails_helper"
 # pins one behavior (succeed, raise a typed gateway error, raise an
 # unexpected error, dry-run guarded_write) via a `#perform` this file
 # controls completely.
-#
-# FakeClient/FakeRateLimiter stand in for UmApi::Client/UmApi::RateLimiter
-# — same spirit as client_spec.rb's ThrottleSpy and rate_limiter_spec.rb's
-# FakeSleeper/FakeClock: minimal fakes that let a test subclass's #perform
-# simulate "this phase made N HTTP calls / triggered N throttle sleeps"
-# without any real network access or real sleeping, so BasePhase's
-# before/after delta capture can be asserted precisely.
-class FakeRateLimiter
-  attr_accessor :sleep_count
-
-  # `sleep_count:` seedable so a spec can simulate a shared limiter a PRIOR
-  # phase already slept on — the delta-nonzero regression test starts above
-  # zero on purpose.
-  def initialize(sleep_count: 0)
-    @sleep_count = sleep_count
-  end
-end
-
-class FakeClient
-  attr_reader :call_count, :rate_limiter
-
-  # `call_count:`/`rate_limiter:` seedable for the same reason — a client
-  # carried across phases starts each new phase at a non-zero cumulative
-  # count, and BasePhase must record only THIS phase's delta.
-  def initialize(call_count: 0, rate_limiter: FakeRateLimiter.new)
-    @call_count = call_count
-    @rate_limiter = rate_limiter
-  end
-
-  # Simulates the client having sent `n` HTTP requests, exactly like
-  # UmApi::Client#call_count incrementing once per request actually sent.
-  def simulate_calls(n)
-    @call_count += n
-  end
-end
 
 class SucceedingTestPhase < Sync::BasePhase
   KEY = "campuses"
@@ -89,12 +54,7 @@ end
 class GuardedWriteTestPhase < Sync::BasePhase
   KEY = "facility_ids"
 
-  def initialize(run:, client:)
-    super
-    @write_executed = false
-  end
-
-  def write_executed? = @write_executed
+  def write_executed? = @write_executed == true
 
   private
 

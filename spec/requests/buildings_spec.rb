@@ -15,16 +15,6 @@ RSpec.describe "GET /buildings", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # Same reuse-and-re-role pattern as rooms_spec.rb (see that file's comment):
-  # `create(:user)` auto-joins `workspace` via `User#onboard_workspace` under
-  # the :shared posture stubbed above.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
   let!(:classroom) { create(:room, building: building, workspace: workspace) }
 
@@ -250,13 +240,6 @@ RSpec.describe "GET /buildings/:id", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
   let!(:classroom) { create(:room, building: building, workspace: workspace) }
 
@@ -429,13 +412,6 @@ RSpec.describe "GET /buildings/:id/edit", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   let(:building) { create(:building, workspace: workspace) }
   let!(:classroom) { create(:room, building: building, workspace: workspace) }
 
@@ -473,13 +449,6 @@ RSpec.describe "PATCH /buildings/:id", type: :request do
   before do
     allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
-  end
-
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
   end
 
   let(:building) { create(:building, workspace: workspace, nickname: "Old Name") }
