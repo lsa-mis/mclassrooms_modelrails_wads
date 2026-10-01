@@ -210,6 +210,11 @@ summary::-webkit-details-marker { display: none; }
   min-width: var(--form-input-height);
 }
 
+/* Lexxy 1.0 sizes toolbar buttons at 2lh, which is 32px in the notes form's small type. */
+lexxy-toolbar {
+  --lexxy-toolbar-button-size: max(2lh, var(--form-input-height));
+}
+
 /* Lexxy's stylesheet (linked before this one) themed onto the semantic tokens,
    so it follows .dark. Unlayered on purpose: layered rules lose to Lexxy's. */
 :root {

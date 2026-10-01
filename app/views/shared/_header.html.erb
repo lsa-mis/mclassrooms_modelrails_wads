@@ -39,7 +39,7 @@
         <% if authenticated? %>
           <%= link_to t("navigation.find_a_room"), main_app.find_a_room_path,
                 class: "hidden md:flex min-h-[44px] items-center px-3 rounded-lg
-                        text-text-body hover:bg-surface-sunken focus-ring" %>
+                        text-on-chrome hover:text-on-chrome-hover focus-ring-chrome" %>
         <% end %>
         <%# No workspace switcher here: it is the head of the workspace sidebar
             (_workspace_switcher), and on phones the same switcher
