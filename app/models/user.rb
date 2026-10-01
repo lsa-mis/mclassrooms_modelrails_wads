@@ -14,10 +14,13 @@ class User < ApplicationRecord
   SuspendedError = Class.new(StandardError)
 
   # Non-null created_by columns: a creator is refused, not nullified — see /docs/developer/architecture.
-  has_many :created_projects, class_name: "Project", foreign_key: :created_by_id, dependent: :restrict_with_error
-  has_many :created_resources, class_name: "Resource", foreign_key: :created_by_id, dependent: :restrict_with_error
   has_many :created_workspace_join_links, class_name: "WorkspaceJoinLink", foreign_key: :created_by_id,
                                           dependent: :restrict_with_error
+  # Fork: the directory's curation footprints refuse deletion too, until reassigning them is decided.
+  has_many :editor_assignments, dependent: :restrict_with_error
+  has_many :authored_notes, class_name: "Note", foreign_key: :author_id, dependent: :restrict_with_error
+  has_many :hidden_buildings, class_name: "Building", foreign_key: :hidden_by_id, dependent: :restrict_with_error
+  has_many :hidden_rooms, class_name: "Room", foreign_key: :hidden_by_id, dependent: :restrict_with_error
   has_many :reauthentication_challenges, dependent: :delete_all
   has_many :webauthn_challenges, dependent: :delete_all
   has_many :sessions, dependent: :destroy

@@ -95,10 +95,9 @@ RSpec.describe "Operations activity ledger top actors", type: :request do
   it "stays full when one of the busiest has since been deleted" do
     workspace = create(:workspace)
     stub_const("Operations::ActivityLogsController::TOP_ACTORS", 2)
-    project = create(:project, workspace: workspace)
     departing = create(:user, first_name: "Gone", last_name: "Away")
-    busy(departing, workspace, 9, project: project)
-    2.times { |i| busy(create(:user, first_name: "Still#{i}", last_name: "Here"), workspace, i + 1, project: project) }
+    busy(departing, workspace, 9)
+    2.times { |i| busy(create(:user, first_name: "Still#{i}", last_name: "Here"), workspace, i + 1) }
 
     departing.destroy!
     get operations_activity_logs_path

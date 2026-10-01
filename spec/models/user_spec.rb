@@ -216,21 +216,14 @@ RSpec.describe User, type: :model do
         .and change(WebauthnChallenge, :count).by(-1)
     end
 
-    it "refuses a user who created a project, and names what they still own" do
-      user = create(:user)
-      create(:project, created_by: user)
-
-      expect(user.destroy).to be false
-      expect(user.errors.details[:base]).to include(a_hash_including(error: :"restrict_dependent_destroy.has_many"))
-      expect(user.reload).to be_persisted
-    end
-
-    it "refuses the creator of a join link the same way" do
+    it "refuses the creator of a join link, and names what they still own" do
       user = create(:user)
       create(:workspace_join_link, created_by: user)
 
       expect(user.destroy).to be false
+      expect(user.errors.details[:base]).to include(a_hash_including(error: :"restrict_dependent_destroy.has_many"))
       expect(user.errors.details[:base]).to include(a_hash_including(record: "created workspace join links"))
+      expect(user.reload).to be_persisted
     end
   end
 
