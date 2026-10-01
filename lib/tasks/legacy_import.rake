@@ -1,13 +1,7 @@
 # frozen_string_literal: true
 
-# One-time carry-over of mi_classrooms' hand-curated content. Design:
-# planning/specs/2026-09-30-mclassrooms-legacy-import-design.md.
-#
-#   bin/rails legacy:import EXPORT=~/mclassrooms-export WORKSPACE=mclassrooms
-#   bin/rails legacy:import EXPORT=... WORKSPACE=... DRY_RUN=1
-#   bin/rails legacy:import EXPORT=... WORKSPACE=... ONLY=media,notes
-#
-# Reports land in tmp/legacy_import/<timestamp>/ unless REPORT_DIR is set.
+# One-time carry-over of mi_classrooms' hand-curated content; usage and cutover order in the
+# deployment-miclassrooms doc. Reports land in tmp/legacy_import/<timestamp>/ unless REPORT_DIR is set.
 namespace :legacy do
   desc "Import the mi_classrooms export (EXPORT=, WORKSPACE=, DRY_RUN=1, ONLY=fields,media,announcements,notes, REPORT_DIR=)"
   task import: :environment do
