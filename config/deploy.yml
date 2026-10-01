@@ -84,14 +84,12 @@ env:
     - OKTA_CLIENT_SECRET
     - UM_API_CLIENT_ID
     - UM_API_CLIENT_SECRET
-    # Outbound mail credentials, referenced from .kamal/secrets. For Postmark both
-    # are the Server API token; for SES over SMTP they are the SMTP credentials.
+    # U-M SMTP relay credentials from LSA TS, referenced from .kamal/secrets.
     - SMTP_USERNAME
     - SMTP_PASSWORD
   clear:
-    # Outbound mail: production refuses to boot without a mail server; Postmark is the
-    # shipped default and any SMTP provider is a swap. Recipes: /docs/developer/deployment.
-    SMTP_ADDRESS: smtp.postmarkapp.com
+    # Mail goes through the U-M SMTP relay. SMTP_ADDRESS stays unset until LSA TS supplies the
+    # host, so production refuses to boot without it — see deployment-miclassrooms.
     SMTP_PORT: 587
     # MAIL_FROM: hello@app.yourdomain.com   # default: noreply@RAILS_HOST
 
