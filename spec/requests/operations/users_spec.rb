@@ -7,15 +7,8 @@ RSpec.describe "Operations users", type: :request do
 
   before { sign_in(operator) }
 
-  # #1135. This page was an exact-email lookup rendering a list of at most one
-  # row, which is a search-results shape for what was really a `find`. The
-  # issue proposed redirecting on a hit; the ruling was to make the list real
-  # instead, which dissolves the duplicated hit row rather than repairing it.
-  #
-  # Ordering is `created_at` desc and cannot be a name: first_name/last_name
-  # are non-deterministically encrypted, so an SQL sort reads ciphertext, and a
-  # keyed digest is not order-preserving. #1124's closing comment records why;
-  # do not re-derive it.
+  # A paginated list of every user (#1135), ordered by created_at because names are
+  # encrypted non-deterministically (#1124).
   describe "GET /operations/users" do
     def rows_in(response) = Capybara.string(response.body).all("[data-testid='operations-user-row']")
 
@@ -36,9 +29,7 @@ RSpec.describe "Operations users", type: :request do
       expect(User.order(created_at: :desc).first).to eq(newest)
     end
 
-    # `nav[aria-label='Pages']`, not a bare `nav[aria-label]`: the operations
-    # layout's own navigation is also a labelled nav, so the loose selector
-    # passed without a pager on the page at all.
+    # Pages, not any labelled nav: the operations layout's own nav also matches.
     it "paginates rather than rendering the whole instance" do
       stub_const("Pagy::OPTIONS", Pagy::OPTIONS.merge(limit: 2))
       create_list(:user, 3)
@@ -56,8 +47,7 @@ RSpec.describe "Operations users", type: :request do
       expect(html).to have_no_text("Otto Other")
     end
 
-    # The filter's other half: names are matched by decrypting in Ruby, which
-    # is the only way this app can match inside a non-deterministic column.
+    # Names match by decrypting in Ruby, the only way into a non-deterministic column.
     it "filters by name, not only by address" do
       get operations_users_path(q: "tess")
       html = Capybara.string(response.body)
@@ -65,9 +55,7 @@ RSpec.describe "Operations users", type: :request do
       expect(html).to have_no_text("Otto Other")
     end
 
-    # Never a silent cap (#1166): a list that quietly drops matches is worse
-    # than one that admits it, because the operator cannot tell the difference
-    # between "no more" and "not shown".
+    # Never a silent cap (#1166).
     it "says when names were too numerous to search" do
       stub_const("User::Search::NAME_SEARCH_LIMIT", 0)
       get operations_users_path(q: "tess")
@@ -95,12 +83,7 @@ RSpec.describe "Operations users", type: :request do
       expect(Capybara.string(response.body)).to have_text(I18n.t("operations.users.index.no_match"))
     end
 
-    # Rewritten for the list, not deleted: the contract it carried — a row
-    # names the user, shows the address, and carries the state badges the
-    # user's page opens with — is the same contract, and it is the one that
-    # drifted (the old hit row was missing `locked_out` against this very
-    # example's description). The badges now come from a partial the show page
-    # renders too, so the two cannot disagree again.
+    # The row carries the same state badges as the user's page, from one partial.
     it "renders a row with the address and every state badge the show page opens with" do
       Operatorship.grant!(user: target)
       target.update!(locked_at: Time.current)

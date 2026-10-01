@@ -69,11 +69,7 @@ RSpec.describe UI::SwitchComponent, type: :component do
     expect(page).not_to have_css("input[aria-invalid]")
   end
 
-  # The TRACK carries a peer-aria-invalid danger BORDER so an invalid switch is
-  # visible (the peer input gets aria-invalid; the later-sibling track reacts).
-  # A border rather than a ring because forced-colors does not paint a
-  # box-shadow, and this control had NO invalid state there at all before
-  # (modelrails_ui #258).
+  # The track's peer-aria-invalid border survives forced-colors (modelrails_ui #258).
   it "thickens the track's border for the peer-aria-invalid state" do
     render_inline(described_class.new(name: "notifications"))
 

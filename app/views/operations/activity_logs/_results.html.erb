@@ -83,8 +83,7 @@
             </nav>
           </div>
           <% if @pagy.pages > 1 %>
-            <%# frame: "_top" — the pager is a link like any other here, so it
-                navigates out of the results frame (#1169). %>
+            <%# frame: "_top" so the pager leaves the results frame (#1169). %>
             <div data-focus-key="pager">
               <%= render "shared/pager", pagy: @pagy, frame: "_top" %>
             </div>

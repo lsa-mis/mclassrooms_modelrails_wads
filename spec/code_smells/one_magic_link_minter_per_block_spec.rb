@@ -28,15 +28,6 @@ RSpec.describe "One party mints the magic-link token per example" do
 
   def test_mint_pattern = /MagicLinkToken\.create_for_email/
 
-  # Spec files are conventional enough that example/hook/method openers are a
-  # reliable block boundary; a false boundary can only SPLIT a block, which
-  # makes the scan miss a violation, never invent one.
-  def block_start_pattern = /^\s*(it|specify|scenario|before|after|def)\b/
-
-  def blocks_in(source)
-    source.each_line.with_index(1).slice_before { |line, _| line.match?(block_start_pattern) }
-  end
-
   def violations_in(path)
     blocks_in(File.read(path)).filter_map do |block|
       next unless block.any? { |line, _| line.match?(server_mint_pattern) }

@@ -110,9 +110,7 @@ RSpec.describe "Mutating controller actions authorize or are allow-listed" do
     # verification token names the one Authentication the action acts on.
     "settings/connected_account_verifications#create",
     "settings/email_confirmations#destroy",
-    # Scoped to the signed-in user's OWN address — blocks are email-keyed, so
-    # `where(email: Current.user.email_address)` is the only door and a foreign
-    # id raises RecordNotFound (a 404, deliberately, not a 403).
+    # Scoped to the user's own address, so a foreign id gets the not-found redirect.
     "settings/invitation_blocks#destroy",
     "settings/notifications#update",
     "settings/other_sessions#destroy",

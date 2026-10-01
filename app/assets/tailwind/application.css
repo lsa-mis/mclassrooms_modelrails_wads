@@ -53,6 +53,16 @@
   --color-border-strong: var(--color-border-strong);
   --color-border-focus: var(--color-border-focus);
 
+  /* Chrome (header bar) */
+  --color-chrome: var(--color-chrome);
+  --color-chrome-border: var(--color-chrome-border);
+  --color-on-chrome: var(--color-on-chrome);
+  --color-on-chrome-strong: var(--color-on-chrome-strong);
+  --color-on-chrome-muted: var(--color-on-chrome-muted);
+  --color-on-chrome-hover: var(--color-on-chrome-hover);
+  --color-chrome-mark: var(--color-chrome-mark);
+  --color-chrome-focus: var(--color-chrome-focus);
+
   /* Signals — Danger */
   --color-danger: var(--color-danger);
   --color-danger-strong: var(--color-danger-strong);
@@ -130,6 +140,14 @@ body:has([data-biscuit-target="banner"]:not([hidden])) {
   }
 }
 
+/* focus-ring for controls on the header bar, whose color a brand may set. */
+@utility focus-ring-chrome {
+  &:focus-visible {
+    outline: 2px solid var(--color-chrome-focus);
+    outline-offset: 2px;
+  }
+}
+
 /* Safari/WebKit paints its default disclosure triangle unless the vendor
    pseudo-element is suppressed — Tailwind list-none alone does not cover it
    (pre-release audit, Wathan). Applies to every <details> in the app. */
@@ -190,6 +208,39 @@ summary::-webkit-details-marker { display: none; }
 .lexxy-editor__content {
   min-height: var(--form-input-height);
   min-width: var(--form-input-height);
+}
+
+/* Lexxy 1.0 sizes toolbar buttons at 2lh, which is 32px in the notes form's small type. */
+lexxy-toolbar {
+  --lexxy-toolbar-button-size: max(2lh, var(--form-input-height));
+}
+
+/* Lexxy's stylesheet (linked before this one) themed onto the semantic tokens,
+   so it follows .dark. Unlayered on purpose: layered rules lose to Lexxy's. */
+:root {
+  --lexxy-color-ink: var(--color-text-heading);
+  --lexxy-color-ink-medium: var(--color-text-body);
+  --lexxy-color-ink-light: var(--color-text-muted);
+  --lexxy-color-ink-lighter: var(--color-border-strong);
+  --lexxy-color-ink-lightest: var(--color-surface-sunken);
+  --lexxy-color-ink-inverted: var(--color-surface-raised);
+  --lexxy-color-accent-dark: var(--color-interactive);
+  --lexxy-color-accent-medium: var(--color-interactive-hover);
+  --lexxy-color-accent-light: var(--color-interactive-subtle);
+  --lexxy-color-accent-lightest: var(--color-interactive-subtle);
+  --lexxy-color-selected-dark: var(--color-interactive);
+  --lexxy-focus-ring-color: var(--color-interactive-focus);
+  --lexxy-font-base: var(--font-sans);
+}
+
+/* Focus lands on the contenteditable inside the host; ring the whole field as focus-ring does. */
+lexxy-editor:has(.lexxy-editor__content:focus) {
+  outline: 2px solid var(--color-interactive-focus);
+  outline-offset: 2px;
+}
+
+.lexxy-editor__content:focus {
+  outline: none;
 }
 
 /* Overlays promoted to the top layer (app/javascript/overlays/top_layer.js) take the
@@ -260,21 +311,14 @@ summary::-webkit-details-marker { display: none; }
     @apply hover:bg-interactive-subtle;
   }
 
-  /* Compound rather than bare .btn-text-danger: the tone must out-specify the
-     base's hover tint, not merely follow it in source order. */
-  /* -surface, NOT -hover, though a -hover token exists and is the obvious
-     reach: text-danger on danger-hover (~red-100) measures 6.85:1 light and
-     6.96:1 dark, under the 7:1 floor. Measured with axe on a hovered control,
-     not computed. The pale tint is the price of AAA here. */
+  /* Compound so the tone out-specifies the base hover. -surface, not -hover:
+     text-danger on danger-hover measures 6.85:1, under AAA (#1227). */
   .btn-text.btn-text-danger,
   .btn-text-icon.btn-text-danger {
     @apply hover:bg-danger-surface;
   }
 
-  /* Success mirrors danger for the same reason: an opacity fade on a signal
-     already near the AAA floor lands under it (text-success at 80% measured
-     5.02:1 against the row surface), and a darker text token is not available
-     either — so the cue is a tinted background here too (#1068). */
+  /* Mirrors danger: an opacity fade on success lands under AAA (#1068). */
   .btn-text.btn-text-success,
   .btn-text-icon.btn-text-success {
     @apply hover:bg-success-surface;
@@ -455,10 +499,15 @@ summary::-webkit-details-marker { display: none; }
   .ui-select::picker-icon {
     flex: none;
     color: var(--color-text-body);
-    transition: rotate 0.2s ease;
   }
   .ui-select:open::picker-icon {
     rotate: 180deg;
+  }
+  /* The flip is motion (WCAG 2.3.3), so it animates only when the OS allows. */
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-select::picker-icon {
+      transition: rotate 0.2s ease;
+    }
   }
 
   /* The popup — same overlay/border/shadow language as the combobox panel. */
@@ -610,7 +659,7 @@ dialog[open]::backdrop {
   --color-interactive-hover: var(--neutral-100);
   --color-interactive-focus: var(--neutral-300);
   --color-interactive-subtle: var(--neutral-800);
-  --color-accent: var(--neutral-400);
+  --color-accent: var(--neutral-300);
 }
 
 /* Markdowndocs gem views — required so Tailwind scans the gem's templates.

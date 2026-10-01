@@ -13,6 +13,16 @@ class User < ApplicationRecord
   # name — in backtraces and the rescue_from line — is User::SuspendedError.
   SuspendedError = Class.new(StandardError)
 
+  # Non-null created_by columns: a creator is refused, not nullified — see /docs/developer/architecture.
+  has_many :created_workspace_join_links, class_name: "WorkspaceJoinLink", foreign_key: :created_by_id,
+                                          dependent: :restrict_with_error
+  # Fork: the directory's curation footprints refuse deletion too, until reassigning them is decided.
+  has_many :editor_assignments, dependent: :restrict_with_error
+  has_many :authored_notes, class_name: "Note", foreign_key: :author_id, dependent: :restrict_with_error
+  has_many :hidden_buildings, class_name: "Building", foreign_key: :hidden_by_id, dependent: :restrict_with_error
+  has_many :hidden_rooms, class_name: "Room", foreign_key: :hidden_by_id, dependent: :restrict_with_error
+  has_many :reauthentication_challenges, dependent: :delete_all
+  has_many :webauthn_challenges, dependent: :delete_all
   has_many :sessions, dependent: :destroy
   has_many :authentications, dependent: :destroy
   has_one :preferences, class_name: "UserPreferences", dependent: :destroy
@@ -88,27 +98,15 @@ class User < ApplicationRecord
     operatorships.kept.exists?
   end
 
-  # The operations area's reach, as a RELATION not a predicate: every
-  # Operations:: controller resolves workspaces through this. A future
-  # scoped-operator model can change this body and no call site.
-  #
-  # include_discarded: the ledger needs it, and only the ledger. A discarded
-  # workspace's activity rows stay in the feed — ActivityLog.for_workspace is a
-  # plain where(workspace:) and does not read lifecycle — so a reach that
-  # excludes them lets those rows be read in the unfiltered ledger and never
-  # isolated (#1170). Everywhere else the default stands: an operator acts on
-  # live workspaces.
+  # The operations area's reach, as a relation so scoped operators change one body.
+  # include_discarded serves the ledger only (#1170).
   def operated_workspaces(include_discarded: false)
     return Workspace.none unless operator?
 
     include_discarded ? Workspace.all : Workspace.kept
   end
 
-  # The users half of the same reach. Today it is every user, and saying so as
-  # a RELATION is the point: the operations users index reads from here rather
-  # than `User.all`, so scoped operators (#1123) narrow it in one place instead
-  # of a hunt through controllers (#1135). Suspended users are in — an operator
-  # acts on them precisely because they are suspended.
+  # The users half of the same reach (#1123, #1135).
   def operated_users
     return User.none unless operator?
 

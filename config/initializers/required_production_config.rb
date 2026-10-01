@@ -4,6 +4,8 @@
 # user read raises. Deterministic checks only — a previously-healthy config
 # must never fail a restart. See /docs/developer/deployment (Production
 # preflight).
+require_relative "../../lib/mail_delivery"
+
 module RequiredProductionConfig
   # example.com is IANA-reserved (RFC 2606); `.example` is the TLD bin/fork
   # substitutes into placeholders. Neither can ever be a real deployment host.
@@ -17,7 +19,27 @@ module RequiredProductionConfig
   def self.check!(env = ENV, credentials = Rails.application.credentials,
                   encryption = Rails.application.config.active_record.encryption)
     check_host!(env)
+    check_mail!(env)
     check_encryption_keys!(credentials, encryption)
+  end
+
+  def self.check_mail!(env)
+    reason = MailDelivery.unconfigured_reason(env) or return
+
+    raise <<~MSG
+      Production preflight failed: SMTP_ADDRESS is #{reason}.
+
+      Sign-in is an email. With no mail server the app boots, /up reports healthy,
+      and every magic link, invitation and reset is a job that fails to connect.
+
+      Fix: point SMTP_ADDRESS at your provider and set SMTP_USERNAME and SMTP_PASSWORD
+        - Kamal: SMTP_ADDRESS under env.clear in config/deploy.yml, the credentials
+          under env.secret and referenced from .kamal/secrets, then redeploy
+        - Anything else: set the three environment variables
+
+      Details: /docs/developer/deployment (Configure outbound mail section).
+      Opting out for good: git rm config/initializers/required_production_config.rb
+    MSG
   end
 
   def self.check_host!(env)

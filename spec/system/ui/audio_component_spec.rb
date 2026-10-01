@@ -14,24 +14,17 @@ RSpec.describe "Audio component accessibility", type: :system do
   # and collides across scoped 0b specs).
   let(:scope) { [ "[data-test='audio']" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: native audio controls pass AAA in both themes" do
     visit "/rails/view_components/ui/audio_component/default"
 
     expect(page).to have_css("audio", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "multi_source: multiple sources pass AAA in both themes" do
     visit "/rails/view_components/ui/audio_component/multi_source"
 
     expect(page).to have_css("audio", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

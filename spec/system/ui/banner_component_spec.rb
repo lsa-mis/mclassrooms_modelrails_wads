@@ -13,32 +13,25 @@ RSpec.describe "Banner component accessibility", type: :system do
   # collides across scoped 0b specs → axe scopes to the wrong selector).
   let(:scope) { [ "[role='region']" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: renders a region landmark and passes AAA in both themes" do
     visit "/rails/view_components/ui/banner_component/default"
 
     expect(page).to have_css("[role='region']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "info: the tinted info surface passes AAA in both themes" do
     visit "/rails/view_components/ui/banner_component/info"
 
     expect(page).to have_css("[role='region']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "dismissible: the close button has an accessible name + focus-ring; AAA in both themes" do
     visit "/rails/view_components/ui/banner_component/dismissible"
 
     expect(page).to have_css("[role='region'] button[aria-label].focus-ring")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "showcase renders every variant and passes AAA in both themes" do

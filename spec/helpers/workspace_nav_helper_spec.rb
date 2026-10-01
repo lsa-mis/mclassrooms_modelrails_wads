@@ -42,8 +42,7 @@ RSpec.describe WorkspaceNavHelper, type: :helper do
 
   describe "#workspace_shell_nav_items Settings active state" do
     let(:workspace) { create(:workspace, name: "Acme") }
-    # The item is derived from the settings sub-nav now, so these examples need
-    # a viewer for the policies to answer about (#1153).
+    # Needs a viewer: the item derives from the policy-gated sub-nav (#1153).
     let(:owner) { create(:user) }
 
     before do
@@ -69,10 +68,7 @@ RSpec.describe WorkspaceNavHelper, type: :helper do
   describe "#workspace_shell_nav_items" do
     before { allow(helper).to receive(:current_page?).and_return(false) }
 
-    # The shell item linked to Profile for everyone, and ProfilePolicy gates
-    # that page on manage_settings — so a Member saw a Settings link, clicked
-    # it, and was refused (#1153). The destination is now the first item of
-    # the sub-nav, which is already gated per entry.
+    # Settings leads to the first sub-nav item this user can open (#1153).
     context "the Settings destination follows what the role can actually open" do
       def settings_item_for(permissions)
         role = Role.create!(name: "Probe #{SecureRandom.hex(3)}", slug: "probe-#{SecureRandom.hex(3)}",
@@ -100,12 +96,8 @@ RSpec.describe WorkspaceNavHelper, type: :helper do
           "a Member's only route into settings was a link to a page they are refused"
       end
 
-      # The issue expected Settings to disappear for a Viewer. It does not, and
-      # should not: MembershipPolicy#index? is `membership.present?`, so any
-      # member — Viewer included — may open the members list. The item is
-      # dropped only when the sub-nav is genuinely empty, which no membership
-      # produces today; the guard is there so a fork that tightens that policy
-      # does not reintroduce a link to nothing.
+      # A Viewer keeps Settings: MembershipPolicy#index? admits any member. Dropped only
+      # when the sub-nav is empty, for a fork that tightens that policy.
       it "still offers a permission-less role the members list" do
         workspace, item = settings_item_for({})
 

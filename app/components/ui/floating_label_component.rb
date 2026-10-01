@@ -17,7 +17,7 @@ module UI
                  "md:text-sm "
 
     LABEL_BASE = "pointer-events-none absolute left-3 top-3 origin-[0_0] text-sm text-text-muted " \
-                 "transition-all duration-200 " \
+                 "motion-safe:transition-all duration-200 " \
                  "peer-focus:-translate-y-2 peer-focus:scale-75 peer-focus:text-text-heading " \
                  "peer-[:not(:placeholder-shown)]:-translate-y-2 peer-[:not(:placeholder-shown)]:scale-75"
 

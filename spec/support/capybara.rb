@@ -30,30 +30,8 @@ CUPRITE_DRIVER_OPTIONS = {
   # content, so a genuinely broken page still fails (just via a matcher
   # timeout, not this error). Standard Cuprite remedy for asset-heavy pages.
   pending_connection_errors: false,
-  # Chromium refuses to start as root without --no-sandbox
-  # ("Running as root without --no-sandbox is not supported", crbug.com/638180),
-  # and the devcontainer's remoteUser is root — so every system spec there failed
-  # with `Ferrum::ProcessTimeoutError: Browser did not produce websocket url`,
-  # which names neither root nor the sandbox. Docker's 64MB /dev/shm is the
-  # second half: Chromium exhausts it mid-run and the tab crashes.
-  #
-  # Applied only when actually running as root. --no-sandbox gives up a real
-  # security boundary, and on a developer's own machine there is no reason to.
-  # The test browser resolves no third-party host. `Network.setBlockedURLs` is
-  # NOT enough: it stops subresources but not an IFRAME'S OWN DOCUMENT, so with
-  # it in place `youtube.com/embed/...` still returned 200 — measured. Resolving
-  # the host to nothing stops everything, and off-host traffic on the embed
-  # preview drops from 12 requests to one that fails (#1233).
-  #
-  # These are the hosts the component previews reach. The app itself reaches
-  # none: its CSP is `font_src :self, :data`, so it self-hosts fonts, and OAuth
-  # is mocked. A suite that quietly depends on the public internet fails as a
-  # broken component rather than as a network problem, and it refused a push
-  # twice in one evening (#1207).
-  #
-  # NOTE the merge below rather than a second `browser_options:` key — as root
-  # (the devcontainer) a second key would REPLACE this one and silently restore
-  # the network.
+  # Root needs --no-sandbox and a larger /dev/shm (the devcontainer). Third-party
+  # hosts resolve to nothing (#1207, #1233); merged into one key, or root loses it.
   browser_options: {
     "host-resolver-rules" =>
       "MAP *.youtube.com ~NOTFOUND, MAP *.google.com ~NOTFOUND, MAP fonts.gstatic.com ~NOTFOUND"

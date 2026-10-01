@@ -80,9 +80,7 @@ RSpec.describe "Account Passwords", type: :request do
             .to eq(passwordless_user.id.to_s)
         end
 
-        # #1059: the pending row is the only thing the connected-accounts page
-        # has to name the address it is confirming, so a blank one renders
-        # "Confirming " at the user.
+        # The pending row names the address being confirmed (#1059).
         it "records the address on the created authentication" do
           post settings_password_path, params: {
             user: {
@@ -132,6 +130,7 @@ RSpec.describe "Account Passwords", type: :request do
             }
           }
           expect(response).to redirect_to(edit_settings_password_path)
+          expect(flash[:alert]).to eq(I18n.t("settings.passwords.create.already_has_password"))
         end
       end
     end

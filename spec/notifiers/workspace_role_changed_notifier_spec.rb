@@ -12,17 +12,6 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
   let(:new_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
   let(:membership) { create(:membership, user: user, workspace: workspace, role: initial_role) }
 
-  # Noticed dispatches an EventJob, which then enqueues a per-channel
-  # delivery-method job (Noticed::DeliveryMethods::Email), which finally calls
-  # `mail.deliver_later` and enqueues an ActionMailer::MailDeliveryJob. The
-  # `have_enqueued_mail` matcher only sees the final MailDeliveryJob, so we
-  # must drain BOTH intermediate Noticed jobs in sequence — `perform_enqueued_jobs`
-  # only performs jobs already enqueued at call time, not jobs added during the run.
-  def drain_noticed_jobs
-    perform_enqueued_jobs(only: Noticed::EventJob)
-    perform_enqueued_jobs(only: Noticed::DeliveryMethods::Email)
-  end
-
   describe ".category" do
     it "is :account_access" do
       expect(described_class.category_name).to eq "account_access"
@@ -127,18 +116,10 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
   # RENDERING, not URL generation, so one stale row takes down a whole
   # recipient's digest rather than just its own line.
   describe "#url once the workspace is gone" do
-    # Workspace declares no `dependent:` for activity_logs and the FK blocks
-    # the DELETE (#921), so the audit rows go first. The placeholder contract
-    # is about the record being gone, not about how it got there.
-    def hard_delete(workspace)
-      ActivityLog.where(workspace_id: workspace.id).delete_all
-      workspace.destroy!
-    end
-
     it "renders the placeholder instead of raising" do
       membership.update!(role: new_role)
       notification = Noticed::Event.where(type: described_class.name).last.notifications.first
-      hard_delete(workspace)
+      workspace.destroy!
 
       expect(notification.reload.url).to eq(I18n.t("notifications.placeholder"))
     end

@@ -20,6 +20,8 @@ The two gates exist because a parallel splitter can silently drop work:
 1. **Example-count parity.** A `--dry-run` enumeration fixes the expected example count before the run, and the per-worker counts must sum to exactly that number. The enumeration costs about 50 seconds per run — a deliberate price (#496) for "green means everything ran". It exists because the splitter really has dropped files; don't move it to a schedule or hide it behind a cache.
 2. **Merged coverage floor.** Each worker sees only ~1/N of the suite, so workers skip the minimum-coverage check; `SimpleCov.collate` enforces the floor on the merged result instead.
 
+The floor is a whole-suite number everywhere. A bare `bundle exec rspec` is held to it; a focused run (`bundle exec rspec spec/models/user_spec.rb`) is measured but not held to it, because `spec/rails_helper.rb` asks `CoverageConfig.floor_for` whether the files RSpec was given are the whole suite. `SKIP_COVERAGE=1` turns instrumentation off altogether, which is faster for a tight loop but is not needed to make a focused run pass.
+
 Worker count comes from `PARALLEL_TEST_PROCESSORS` or the machine's core count.
 
 ### CI sharding
@@ -70,7 +72,19 @@ Two complementary gates cover missing translations, and it is worth being precis
 
 ### Bullet safelists live in one file
 
-Bullet raises on N+1 queries in test and alerts in development. Its safelists — intentional preload and delivery-layer trade-offs that hold in both environments, since the app code is identical — are centralized in `lib/bullet_safelists.rb` rather than duplicated per environment file. They drifted once: `development.rb` carried only two entries while `test.rb` had the full set, so false positives fired in dev but never in test, invisible to the suite. One source removes that whole class of drift. Each environment file keeps its own enable/display/raise configuration and calls `BulletSafelists.apply` after `Bullet.enable = true`; every safelist entry carries a comment explaining the trade-off it encodes.
+Bullet raises on N+1 queries in test and alerts in development. Its safelists — intentional preload and delivery-layer trade-offs that hold in both environments, since the app code is identical — are centralized in `lib/bullet_safelists.rb` rather than duplicated per environment file. They drifted once: `development.rb` carried only two entries while `test.rb` had the full set, so false positives fired in dev but never in test, invisible to the suite. One source removes that whole class of drift. Each environment file keeps its own enable/display/raise configuration and calls `BulletSafelists.apply` after `Bullet.enable = true`.
+
+Every entry is an unused-eager-loading safelist: a preload kept on purpose because the rows that need it would otherwise N+1, accepted as a false positive on the rows that don't.
+
+| Entry | Why the preload goes unused, and why it stays |
+| ----- | --------------------------------------------- |
+| `ActiveStorage::Attachment :record` | A framework false positive. ActiveStorage's bulk touch (`touch_attachment_records`) includes `:record` for its SQL but never reads the objects in Ruby. |
+| `SignInFromNewDeviceNotifier :record` | The notifications index includes `event: :record` because nearly every notifier's `#message` reads `event.record`. The new-device notifier reads only `event.params`, so a page holding only those rows leaves the include unused. |
+| `Invitation :role` | The members index preloads invitation roles for its combined table. Invitations sort to the front, so page 2 onward, or a filter matching no invitations, renders none. The #124/#125 boundary specs exercise exactly those slices. |
+| `Membership :user`, `Membership :role`, `User :avatar_attachment` | The workspace sidebar switcher preloads `memberships: [:role, { user: :avatar_attachment }]` so `workspace_icon_for` can fall back to the owner's avatar. The fallback is skipped when a workspace has its own logo or the sidebar posture is `:none`, and `Workspace#owners` short-circuits on loaded memberships on the workspaces index. Every leg is safelisted, deliberately pessimistic. |
+| `Membership :workspace` | `WorkspacesController#index` queries memberships, joins and preloads the workspace to sort by `memberships.last_accessed_at`. Bullet reads the preload as redundant against the join, but the view needs it for each row's name and icon. |
+
+The N+1 safelist is empty on purpose (#1054). A Bullet safelist is global, keyed by class and association across the whole app, so an entry that accepts an N+1 on one page would also hide a real one everywhere else. The notifications index's second-level traversals off the polymorphic `event.record` go through `ApplicationNotifier.preload_records` instead, guarded by `spec/requests/settings/notifications_record_preloads_spec.rb`.
 
 ### Rake task specs load once
 

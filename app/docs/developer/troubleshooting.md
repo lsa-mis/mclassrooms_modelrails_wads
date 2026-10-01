@@ -74,6 +74,22 @@ git checkout db/queue_schema.rb
 bin/rails db:reset:queue
 ```
 
+## `db/schema.rb` carries changes your branch didn't make
+
+`db:migrate` rewrites `db/schema.rb` from your development database. That
+database remembers every migration you have run on any branch, so after
+switching branches the dump can include another branch's tables, columns, or
+indexes. The pre-commit hook refuses to commit a `db/schema.rb` that the
+migrations in `db/migrate` don't produce, and names the repair:
+
+```bash
+bin/rails db:schema:regenerate
+```
+
+It builds a scratch database from `db/migrate` alone and dumps that, so the
+result holds exactly this branch's migrations. Use it for a `db/schema.rb`
+merge or rebase conflict too: take either side, then regenerate.
+
 ## Operations
 
 Recipes for running the app, rather than for developing it. These arrive as support tickets.

@@ -496,30 +496,7 @@ RSpec.describe NotificationPreferences do
     end
   end
 
-  # do_not_disturb? is kept as a back-compat alias for quiet_hours_active?
-  # so existing callers (notably the bell button tooltip) continue working.
-  # Semantic shift documented in the value object.
-  describe "#do_not_disturb? (back-compat alias)" do
-    let(:tz) { ActiveSupport::TimeZone["America/New_York"] }
-
-    it "delegates to quiet_hours_active?" do
-      jsonb = default_jsonb.deep_merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59" })
-      travel_to(tz.parse("2026-05-10 12:00:00")) do
-        expect(prefs_for(jsonb).do_not_disturb?).to be true
-      end
-    end
-
-    it "is false when quiet hours are disabled" do
-      expect(prefs_for(default_jsonb).do_not_disturb?).to be false
-    end
-  end
-
-  # Validation + coerce + deep_merge moved here from
-  # Settings::NotificationPreferencesController#apply_changes! per panel
-  # review should-fix #7 (DHH + Chris Oliver + Dave Thomas). The controller
-  # was carrying schema validation that belongs on the value object —
-  # half-Result pattern (`:rejected` sentinel) made return semantics fuzzy
-  # and coupled the controller to JSONB shape decisions.
+  # Validation, coercion and deep_merge live on the value object, not the controller (panel should-fix #7).
   describe "#merge (validation + coercion of partial changes)" do
     it "returns a new value object with the changes deep-merged in" do
       prefs = prefs_for(default_jsonb)

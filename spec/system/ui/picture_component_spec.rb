@@ -20,19 +20,12 @@ RSpec.describe "Picture component accessibility", type: :system do
   # axe would scope to the wrong selector ("No elements found for include").
   let(:scope) { [ "#pic-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: renders art-directed sources plus a named base img and passes AAA in both themes" do
     visit "/rails/view_components/ui/picture_component/default"
 
     expect(page).to have_css("#pic-scope picture source", minimum: 1, visible: :all)
     expect(page).to have_css("#pic-scope picture img[alt]", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "formats: renders format-fallback sources plus a named base img and passes AAA in both themes" do
@@ -40,6 +33,6 @@ RSpec.describe "Picture component accessibility", type: :system do
 
     expect(page).to have_css("#pic-scope picture source", minimum: 1, visible: :all)
     expect(page).to have_css("#pic-scope picture img[alt]", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

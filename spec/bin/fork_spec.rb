@@ -736,6 +736,31 @@ RSpec.describe ForkFlow do
       expect(triage[:live] + triage[:comment]).not_to include("config/deploy.yml")
     end
 
+    it "says nothing about files that only use the template's code namespaces" do
+      run_fork(name: "my_app", yes: true)
+      repo.join(".rubocop.yml").write("require:\n  - ./lib/rubocop/modelrails\nModelRails/NoDefaultScope:\n  Enabled: true\n")
+      repo.join("theme.js").write("window.ModelRails = window.ModelRails || {};\nmodule ModelRails\n")
+      git("add", ".rubocop.yml", "theme.js")
+
+      flow = described_class.new({}, root: repo.to_s)
+      allow(flow).to receive(:puts)
+
+      triage = flow.step_verify!
+      expect(triage[:template_namespace]).to contain_exactly(".rubocop.yml", "theme.js")
+      expect(triage[:live] + triage[:comment]).not_to include(".rubocop.yml", "theme.js")
+    end
+
+    it "still flags an identity token that shares a line with a namespace" do
+      run_fork(name: "my_app", yes: true)
+      repo.join("theme.js").write(%(window.ModelRails.name = "modelrails_base";\n))
+      git("add", "theme.js")
+
+      flow = described_class.new({}, root: repo.to_s)
+      allow(flow).to receive(:puts)
+
+      expect(flow.step_verify![:live]).to include("theme.js")
+    end
+
     it "classifies a comment-only mention as harmless" do
       run_fork(name: "my_app", yes: true)
       repo.join("config/deploy.yml").write("# forked from modelrails_base\nservice: my_app\n")

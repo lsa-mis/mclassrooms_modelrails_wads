@@ -6,7 +6,7 @@ module UI
     # Usage, options and the accessibility contract: docs/components/carousel.md in the
     # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
-    TRACK_CLS = "flex transition-transform duration-300 motion-reduce:transition-none"
+    TRACK_CLS = "flex motion-safe:transition-transform duration-300"
     # w-full (definite, not min-w-full) so a percentage-width child resolves against
     # it instead of falling back to the image's intrinsic width and overflowing the
     # slide; overflow-hidden flips the flex min-width:auto to 0 so wide content can't
@@ -18,7 +18,7 @@ module UI
     # (a11y gate, mc-transparent-over-media, 2026-07-13).
     BTN_BASE  = "absolute top-1/2 z-10 -translate-y-1/2 inline-flex size-11 items-center justify-center " \
                 "rounded-full bg-surface-raised/95 backdrop-blur border border-border shadow-sm " \
-                "transition hover:bg-surface-raised disabled:opacity-40 focus-ring"
+                "motion-safe:transition hover:bg-surface-raised disabled:opacity-40 focus-ring"
     BTN_PREV  = "left-2"
     BTN_NEXT  = "right-2"
 

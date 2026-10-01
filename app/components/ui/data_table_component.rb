@@ -10,7 +10,7 @@ module UI
     # h-11 keeps the search control at the AAA 44px target floor (WCAG 2.5.5).
     SEARCH_CLS = "flex h-11 flex-1 items-center gap-2 rounded-md border border-border-strong bg-surface-raised " \
                  "px-3 text-sm text-text-muted focus-within:border-border-focus focus-within:ring-[3px] " \
-                 "focus-within:ring-interactive-focus transition"
+                 "focus-within:ring-interactive-focus motion-safe:transition"
     SEARCH_INPUT = "w-full bg-transparent outline-none placeholder:text-text-muted text-text-heading text-sm"
     TABLE_CLS  = "w-full caption-bottom text-sm"
     THEAD_CLS  = "bg-surface-sunken/40"
@@ -28,7 +28,7 @@ module UI
     # h-11 w-11 keeps the pager buttons at the AAA 44px target floor.
     PAGE_BTN   = "inline-flex h-11 w-11 items-center justify-center rounded-md border border-border " \
                  "hover:bg-surface-sunken hover:text-text-heading disabled:pointer-events-none " \
-                 "disabled:opacity-40 focus-ring transition"
+                 "disabled:opacity-40 focus-ring motion-safe:transition"
     SORT_ASC   = "▲"
     SORT_DESC  = "▼"
 

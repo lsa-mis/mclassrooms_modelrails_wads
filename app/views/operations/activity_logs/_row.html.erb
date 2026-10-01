@@ -30,7 +30,7 @@
   <td class="px-4 py-0 align-baseline">
     <details>
       <summary class="cursor-pointer min-h-input flex items-center gap-2 focus-ring rounded">
-        <svg class="size-4 shrink-0 text-text-muted transition-transform [details[open]_&]:rotate-90"
+        <svg class="size-4 shrink-0 text-text-muted motion-safe:transition-transform [details[open]_&]:rotate-90"
              aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 5l7 7-7 7" />
         </svg>
@@ -38,10 +38,7 @@
         <span class="sr-only"><%= t("operations.activity_logs.index.details.suffix") %></span>
       </summary>
       <dl class="mt-2 mb-3 ml-6 grid grid-cols-1 gap-x-3 gap-y-1 text-sm text-text-muted sm:grid-cols-[8rem_1fr]">
-        <%# Rendered verbatim. The only thing keeping a secret off this line is
-            Trackable::SENSITIVE_ATTRIBUTES, applied at write time — there is no
-            filter here, and none is wanted: a column that must not reach an
-            operator must not reach the row either (#1171). %>
+        <%# Verbatim: Trackable::SENSITIVE_ATTRIBUTES filters at write time (#1171). %>
         <% changes = activity_log.metadata.to_h["changes"].to_h %>
         <% if changes.any? %>
           <dt class="font-semibold"><%= t("operations.activity_logs.index.details.change") %></dt>

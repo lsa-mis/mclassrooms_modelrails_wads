@@ -15,8 +15,8 @@
         aria-controls="user-menu"
         aria-label="<%= t("navigation.user_menu_label_simple", name: user.full_name) %>"
         class="btn-touch-target gap-1 rounded-full
-               text-text-body
-               focus-ring
+               text-on-chrome
+               focus-ring-chrome
                cursor-pointer">
   <span id="user_avatar_header" class="relative inline-flex">
     <%= avatar_for(user, size: :md) %>
@@ -26,5 +26,5 @@
   </span>
   <%= icon(:chevron_down, size: :sm,
         data: { test: "user-menu-chevron" },
-        class: "text-text-muted") %>
+        class: "text-on-chrome-muted") %>
 </button>

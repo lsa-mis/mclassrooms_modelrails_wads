@@ -1,11 +1,5 @@
 <%# locals: (workspace:) %>
-<%# CONTENT ONLY — the caller owns the <li> and its chrome.
-    This renders in three containers: the pinned current row's plain <ul>, the
-    other-workspaces <ul>, and the archived UI::ListGroup. No single padding is
-    right in all three, and hard-coding one here is what put three paddings
-    inside identical list chrome, two of them in the same <ul> (#1119).
-    The comment this replaces said the partial rendered only inside the
-    archived ListGroup. That stopped being true at cd6f0263. %>
+<%# Content only: the caller owns the <li> and its padding (#1119). %>
 <p class="font-medium text-text-heading"><%= t("workspaces.locked_row.heading") %></p>
 <p class="mt-1 text-sm text-text-body"><%= t("workspaces.locked_row.body", name: workspace.name) %></p>
 <%= link_to t("workspaces.locked_row.contact"), contact_path,

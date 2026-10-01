@@ -19,25 +19,6 @@ RSpec.describe "Notes", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # Same reuse-and-re-role pattern as rooms_update_spec.rb: `create(:user)`
-  # auto-joins `workspace` via `User#onboard_workspace` under the :shared
-  # posture stubbed above.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
-  # An editor: a plain viewer-role membership PLUS an EditorAssignment on a
-  # specific unit — RoleResolver#editor?/#can_edit_room? derive entirely
-  # from the EditorAssignment table, not the Membership role.
-  def editor_for(unit)
-    user = membership_with("viewer")
-    create(:editor_assignment, user: user, unit: unit)
-    user
-  end
-
   def note_params_for(notable, **overrides)
     { notable_type: notable.class.name, notable_id: notable.id, body: "A note body", alert: "0" }.merge(overrides)
   end

@@ -174,8 +174,9 @@ An operator hold, separate from the failed-attempt lockout above: refused at
 magic link, passkey, OAuth), and again at session resumption. Sessions are
 destroyed at suspend time; memberships, roles and project access are left
 untouched, so reinstating a user restores them exactly. The hold refuses
-sessions, not writes: a sign-in token a suspended account presents is spent
-as usual, and an OAuth callback still links the provider before the refusal.
+sessions and the writes that ride on them: an OAuth callback for a held account
+links nothing and spends no parked invitation (#1129). A magic-link token it
+presents is still spent, because the token is consumed before the account is known.
 `user.suspended`, `user.unsuspended` and `user.unlocked` are STRICT-tier
 audit rows at `admin` visibility naming the operator as actor (none for a
 rake run). The operations area refuses to suspend an operator; `rails
@@ -339,7 +340,7 @@ one of the two fails the suite.
 | Cookie | Category | Reason |
 |---|---|---|
 | `session_id` | necessary | authentication session (the app's own signed cookie, `Authenticatable#start_new_session_for`) |
-| `_modelrails_base_session` (Rails' configured session-store key) | necessary | Rails' encrypted session cookie: CSRF token, flash messages, and short-lived flow state (pending join/invitation tokens, post-auth redirect target) |
+| `_<app_name>_session` (Rails' default session-store key, named for the application) | necessary | Rails' encrypted session cookie: CSRF token, flash messages, and short-lived flow state (pending join/invitation tokens, post-auth redirect target) |
 | `biscuit_consent` | necessary | the consent record itself |
 | `theme` | necessary | display choice made through a control; no identifier; first-party |
 | `sidebar_collapsed` | necessary | layout choice made through a control; no identifier; first-party |

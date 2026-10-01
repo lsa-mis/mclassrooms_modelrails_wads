@@ -25,14 +25,8 @@ class InvitationBlock < ApplicationRecord
     end
   end
 
-  # The one undo (#812). Two statements, because destroying the block alone
-  # leaves the stamped invitation invisible to `bulk_invite!`'s duplicate check
-  # — which skips only UNSUPPRESSED pending rows — so every later invite to the
-  # address mints another pending duplicate. `destroy_by`, not
-  # `find_by(...).destroy`: a stamp can outlive its block row, and clearing the
-  # stamp must not depend on finding one. `update_all` for the same reason the
-  # stamping writes are callback-free (invariant I4) — clearing the flag is not
-  # a workspace-feed event, and a row the inviter could read is a block oracle.
+  # The one undo (#812). Clears the stamp too, or bulk_invite! mints duplicates;
+  # callback-free like the stamping writes (security.md invariant I4).
   def self.unblock!(inviter:, email:)
     transaction do
       destroy_by(inviter: inviter, email: email)

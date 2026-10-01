@@ -60,7 +60,7 @@ RSpec.describe "Account Notifications", type: :request do
       deliver_in_distinct_idempotency_bucket do
         PasswordChangedNotifier.with(record: recipient).deliver(recipient)
       end
-      recipient.notifications.reload.last
+      recipient.notifications.order(:id).last
     end
 
     def deliver_account_access_notification(recipient: user, inviter: nil)
@@ -73,7 +73,7 @@ RSpec.describe "Account Notifications", type: :request do
       deliver_in_distinct_idempotency_bucket do
         WorkspaceInvitationResentNotifier.with(record: invitation).deliver(recipient)
       end
-      recipient.notifications.reload.last
+      recipient.notifications.order(:id).last
     end
 
     # A same-bucket collision dedup-drops the 2nd dispatch and flaked the
@@ -153,9 +153,7 @@ RSpec.describe "Account Notifications", type: :request do
         expect(response).to have_http_status(:ok)
       end
 
-      # The third padding of #1119: this row carried px-4 py-4 with an sm:px-6
-      # step, inside the same list chrome the workspaces rows use. One row
-      # shape, one padding — the component owns it.
+      # The component owns the row padding (#1119).
       it "uses the shared list-row padding, with no breakpoint step of its own" do
         event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {}, record: user)
         Noticed::Notification.create!(event: event, recipient: user,

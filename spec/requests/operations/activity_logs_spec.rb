@@ -18,6 +18,10 @@ RSpec.describe "Operations activity feed", type: :request do
     expect(html).to have_text("Beta")
   end
 
+  it "paginates without a Pagy deprecation warning" do
+    expect { get operations_activity_logs_path }.not_to output(/\[PAGY\]/).to_stderr
+  end
+
   # .btn-cell-link sets no colour of its own — .btn-text-interactive is what
   # makes it read as a link rather than plain text (1.4.1).
   it "renders a row's workspace name link as visibly a link" do

@@ -2,6 +2,27 @@
 title: Application Flows
 description: A builder's guide to the app's core journeys for developers and designers extending the template — clean wireframes paired with full-size prose explaining the why (the framework decision, seam, or guarantee) behind each screen, on a domain-model primer.
 keywords: wireframes flows builder guide developers designers why rationale model workspace membership role onboarding seam readable signup invitation join-link exception contract email-mismatch capacity oauth verification new-device best-effort
+code:
+  signup:
+    - app/controllers/sessions_controller.rb
+    - app/controllers/sessions/lookups_controller.rb
+    - app/models/email_lookup.rb
+    - app/views/sessions/
+    - app/models/magic_link_token.rb
+    - app/mailers/magic_link_mailer.rb
+    - app/views/magic_link_mailer/
+    - app/controllers/magic_link_callbacks_controller.rb
+    - app/views/magic_link_callbacks/
+    - app/controllers/concerns/signupable.rb
+    - app/lib/pending_claims.rb
+    - app/controllers/omniauth_callbacks_controller.rb
+    - app/lib/oauth_link.rb
+    - app/views/shared/_oauth_buttons.html.erb
+    - app/models/authentication.rb
+    - app/controllers/email_verifications_controller.rb
+    - app/controllers/concerns/authenticatable.rb
+    - app/controllers/passkey_prompts_controller.rb
+    - app/models/user/onboarding.rb
 ---
 
 # Application Flows

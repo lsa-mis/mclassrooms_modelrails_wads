@@ -15,30 +15,6 @@ RSpec.describe "Admin announcements", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # `create(:user)` itself triggers User#onboard_workspace (after_create),
-  # which — under the :shared posture stubbed above — auto-joins `workspace`
-  # with TenancyConfig.shared_join_role before this method ever runs. Reuses
-  # and re-roles that auto-created membership instead of inserting a second
-  # one for the same (user, workspace) pair.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
-  # An "editor" per RoleResolver is a viewer-role Membership PLUS an
-  # EditorAssignment for some unit (app/lib/role_resolver.rb#editor?) —
-  # AnnouncementPolicy denies this actor identically to a plain viewer (no
-  # editor carve-out at all — see the policy's own header comment), so both
-  # actors must be proven denied independently rather than assumed
-  # equivalent.
-  def editor_actor
-    user = membership_with("viewer")
-    create(:editor_assignment, user: user, unit: create(:unit, workspace: workspace))
-    user
-  end
-
   let!(:announcement) { create(:announcement, workspace: workspace, slot: "home_page", body: "Welcome") }
 
   describe "GET /admin/announcements" do

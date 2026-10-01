@@ -33,11 +33,7 @@ RSpec.describe UI::RangeComponent, type: :component do
     expect(rendered_content).to include("slider-runnable-track]:bg-surface-sunken")
   end
 
-  # invalid: drives a visible danger BORDER on the slider's TRACK, not just
-  # aria-invalid. The control's own box is transparent (the 44px interaction
-  # area), so the edge goes on the track pseudo-element; and it is a border
-  # rather than a ring because forced-colors does not paint a box-shadow — this
-  # control showed no invalid state there at all before (modelrails_ui #258).
+  # The invalid border sits on the track, since forced-colors paints no ring (gem #258).
   it "carries a danger border on the track for the invalid state" do
     render_inline(described_class.new)
 

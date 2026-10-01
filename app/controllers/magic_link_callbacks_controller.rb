@@ -12,11 +12,8 @@ class MagicLinkCallbacksController < ApplicationController
   def show
     @token_record = MagicLinkToken.find_valid(params[:token])
     unless @token_record
-      # A spent link re-presented by its signed-in owner is not a failure. The
-      # existing "already signed in" answer and its home-path destination are
-      # reused rather than minted, and deliberately NOT routed through the
-      # token's intent: a superseded set_password link clicked from an old
-      # email must not bounce a signed-in user to the password page.
+      # A redeemed link re-presented by its signed-in owner is not a failure: the existing
+      # already-signed-in answer is reused and not routed by the token's intent.
       if replayed_by_owner(params[:token])
         redirect_to authenticated_home_path, notice: t("authentication.already_signed_in")
       else

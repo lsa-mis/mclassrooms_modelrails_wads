@@ -21,19 +21,12 @@ RSpec.describe "DeviceMockup component accessibility", type: :system do
   # axe would scope to the wrong selector ("No elements found for include").
   let(:scope) { [ "#dm-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "phone: renders the frame, slotted image, and aria-hidden notch; passes AAA in both themes" do
     visit "/rails/view_components/ui/device_mockup_component/phone"
 
     expect(page).to have_css("#dm-scope img[alt='Mobile app home screen']")
     expect(page).to have_css("#dm-scope [aria-hidden='true']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "browser: renders the frame, slotted image, and aria-hidden browser bar; passes AAA in both themes" do
@@ -41,6 +34,6 @@ RSpec.describe "DeviceMockup component accessibility", type: :system do
 
     expect(page).to have_css("#dm-scope img[alt='Analytics dashboard with charts']")
     expect(page).to have_css("#dm-scope [aria-hidden='true']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

@@ -10,18 +10,6 @@ RSpec.describe WorkspaceCreatedNotifier, type: :notifier do
     Noticed::Event.delete_all
   end
 
-  def events
-    Noticed::Event.where(type: described_class.name)
-  end
-
-  # Workspace declares no `dependent:` for activity_logs and the FK blocks the
-  # DELETE, so the audit rows go first. The placeholder contract is about the
-  # record being gone, not about how it got there.
-  def hard_delete(workspace)
-    ActivityLog.where(workspace_id: workspace.id).delete_all
-    workspace.destroy!
-  end
-
   describe "declarations" do
     it "is :workspace_activity" do
       expect(described_class.category_name).to eq "workspace_activity"
@@ -36,29 +24,29 @@ RSpec.describe WorkspaceCreatedNotifier, type: :notifier do
     it "fires once for the creator when a workspace is created through the creation verb" do
       workspace = Workspace.create_owned({ name: "Acme" }, owner: creator)
 
-      expect(events.count).to eq 1
-      event = events.last
+      expect(notifier_events.count).to eq 1
+      event = notifier_events.last
       expect(event.record).to eq(workspace)
       expect(event.notifications.map(&:recipient)).to eq([ creator ])
     end
 
     it "does not fire for a bare Workspace.create! (seeds, fixtures, factories)" do
-      expect { create(:workspace) }.not_to change { events.count }
+      expect { create(:workspace) }.not_to change { notifier_events.count }
     end
 
     it "does not fire for the personal workspace auto-provisioned at signup" do
-      expect { create(:user) }.not_to change { events.count }
+      expect { create(:user) }.not_to change { notifier_events.count }
     end
 
     it "does not fire when the workspace fails to save" do
-      expect { Workspace.create_owned({ name: nil }, owner: creator) }.not_to change { events.count }
+      expect { Workspace.create_owned({ name: nil }, owner: creator) }.not_to change { notifier_events.count }
     end
   end
 
   describe "rendering" do
     it "names the workspace and carries the members-page url" do
       workspace = Workspace.create_owned({ name: "Acme" }, owner: creator)
-      notification = events.last.notifications.first
+      notification = notifier_events.last.notifications.first
 
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_created.message", workspace_name: "Acme")
@@ -72,7 +60,7 @@ RSpec.describe WorkspaceCreatedNotifier, type: :notifier do
     # therefore a promise the row itself cannot keep.
     it "promises no destination the in-app row cannot reach" do
       workspace = Workspace.create_owned({ name: "Acme" }, owner: creator)
-      notification = events.last.notifications.first
+      notification = notifier_events.last.notifications.first
 
       expect(notification.message).not_to match(/\bpage\b/i)
     end
@@ -83,16 +71,16 @@ RSpec.describe WorkspaceCreatedNotifier, type: :notifier do
     # takes down the whole digest render for this user, not just this row.
     it "returns the placeholder copy when the workspace has been deleted" do
       workspace = Workspace.create_owned({ name: "Acme" }, owner: creator)
-      notification = events.last.notifications.first
-      hard_delete(workspace)
+      notification = notifier_events.last.notifications.first
+      workspace.destroy!
 
       expect(notification.reload.url).to eq(I18n.t("notifications.placeholder"))
     end
 
     it "returns the placeholder copy for the message too when the workspace has been deleted" do
       workspace = Workspace.create_owned({ name: "Acme" }, owner: creator)
-      notification = events.last.notifications.first
-      hard_delete(workspace)
+      notification = notifier_events.last.notifications.first
+      workspace.destroy!
 
       expect(notification.reload.message).to eq(I18n.t("notifications.placeholder"))
     end

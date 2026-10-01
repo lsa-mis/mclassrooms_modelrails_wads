@@ -22,12 +22,7 @@ require "rails_helper"
 # when it exists. It must prune by NOT EXISTS against noticed_notifications,
 # never by the counter cache, which PR 5 left stale on purpose.
 RSpec.describe "Code smell: no relation-level deletes of Noticed::Event" do
-  # The pre-registered #811 carve-out, now real. It is here as a DECLARATION,
-  # not because the pattern flags it: the prune is split across orphan_events
-  # and prune_orphan_events, so the single-line shape above does not see it —
-  # the blind spot this file's header names. Registering it anyway keeps the
-  # decision reviewed rather than accidental, and the contract example below
-  # makes the entry carry weight instead of being a rubber stamp.
+  # #811's prune, declared here although the single-line pattern cannot see it.
   allowed_files = { "app/jobs/notification_cleanup_job.rb" => "#811's childless-only orphan prune" }.freeze
 
   it "app/ and lib/ never delete or destroy Noticed::Event rows" do
@@ -49,12 +44,8 @@ RSpec.describe "Code smell: no relation-level deletes of Noticed::Event" do
       "or register a pruning job here by file name with its reason."
   end
 
-  # An allow-list entry is permission to delete events, which is the most
-  # destructive thing in this subsystem. It has to keep earning that: the file
-  # must still exist, must still decide childlessness by asking
-  # noticed_notifications, and must never reach for notifications_count —
-  # PR 5 left that counter stale on purpose, so pruning on it would delete
-  # events that still have rows.
+  # The entry must keep earning its permission: childlessness is asked of
+  # noticed_notifications, never of the deliberately stale notifications_count.
   it "holds every registered file to the rule that earned it the exemption" do
     problems = allowed_files.filter_map do |relative, reason|
       path = Rails.root.join(relative)

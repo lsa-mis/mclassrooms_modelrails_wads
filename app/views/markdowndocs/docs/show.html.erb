@@ -43,7 +43,7 @@
 
       <div id="mobile-sidebar"
            data-docs-sidebar-target="sidebar"
-           class="overflow-hidden transition-all duration-300 ease-in-out mt-2"
+           class="overflow-hidden motion-safe:transition-all duration-300 ease-in-out mt-2"
            style="max-height: 0px;">
         <%= render "markdowndocs/docs/navigation",
           rendered_content: @rendered_content,

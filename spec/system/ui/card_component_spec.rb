@@ -20,20 +20,13 @@ RSpec.describe "Card component accessibility", type: :system do
   # axe would scope to the wrong selector ("No elements found for include").
   let(:scope) { [ "#card-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: renders the titled card body and passes AAA in both themes" do
     visit "/rails/view_components/ui/card_component/default"
 
     expect(page).to have_css("#card-scope h2", text: "Account settings")
     expect(page).to have_css("#card-scope p", text: "Manage your account preferences.")
     expect(page).to have_css("#card-scope", text: "Update your name, email, and notification choices.")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "with_footer: renders header, body, and footer actions and passes AAA in both themes" do
@@ -44,6 +37,6 @@ RSpec.describe "Card component accessibility", type: :system do
     expect(page).to have_css("#card-scope", text: "You can export your data before deleting.")
     expect(page).to have_button("Cancel")
     expect(page).to have_button("Delete")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

@@ -17,7 +17,7 @@ RSpec.describe RoleResolver do
 
   before { Current.workspace = workspace }
 
-  def membership_with(slug)
+  def grant_membership(slug)
     create(:membership, user: user, workspace: workspace, role: Role.system_default!(slug))
   end
 
@@ -27,18 +27,18 @@ RSpec.describe RoleResolver do
   end
 
   it "is viewer-only for a kept membership with no assignments" do
-    membership_with(:viewer)
+    grant_membership(:viewer)
     grant = described_class.for(user)
     expect([ grant.viewer?, grant.editor?, grant.admin? ]).to eq([ true, false, false ])
   end
 
   it "is admin for the admin and owner role slugs" do
-    membership_with(:admin)
+    grant_membership(:admin)
     expect(described_class.for(user).admin?).to be true
   end
 
   it "is editor with unit ids when EditorAssignments exist" do
-    membership_with(:viewer)
+    grant_membership(:viewer)
     create(:editor_assignment, user: user, unit: unit)
     grant = described_class.for(user)
     expect(grant.editor?).to be true
@@ -46,14 +46,14 @@ RSpec.describe RoleResolver do
   end
 
   it "nullifies editor grants when the membership is discarded" do
-    membership_with(:viewer).deactivate!
+    grant_membership(:viewer).deactivate!
     create(:editor_assignment, user: user, unit: unit)
     expect(described_class.for(user).editor?).to be false
   end
 
   describe "#can_edit_room?" do
     before do
-      membership_with(:viewer)
+      grant_membership(:viewer)
       create(:editor_assignment, user: user, unit: unit)
     end
 
@@ -72,7 +72,7 @@ RSpec.describe RoleResolver do
   end
 
   it "reads the database on every call (no caching across grants)" do
-    membership_with(:viewer)
+    grant_membership(:viewer)
     expect(described_class.for(user).editor?).to be false
     create(:editor_assignment, user: user, unit: unit)
     expect(described_class.for(user).editor?).to be true
@@ -86,7 +86,7 @@ RSpec.describe RoleResolver do
   it "falls back to TenancyConfig.shared_workspace when Current.workspace is nil" do
     Current.workspace = nil
     allow(TenancyConfig).to receive(:shared_workspace).and_return(workspace)
-    membership_with(:admin)
+    grant_membership(:admin)
 
     expect(described_class.for(user).admin?).to be true
   end

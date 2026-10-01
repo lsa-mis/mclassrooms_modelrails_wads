@@ -18,6 +18,8 @@
       <meta name="form-draft-scope" content="<%= FormDraftKey.scope_for(Current.user) %>">
     <% end %>
     <%= stylesheet_link_tag "biscuit/biscuit", "data-turbo-track": "reload" %>
+    <%# Before :app, whose --lexxy-* token mapping must win. %>
+    <%= stylesheet_link_tag "lexxy", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%# Adopted lsa_tdx_feedback modal (rendered site-wide in the layout tail).
         The gem's self-contained stylesheet, then our override which retunes its

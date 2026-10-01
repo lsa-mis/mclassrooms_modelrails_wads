@@ -7,22 +7,8 @@ require "rails_helper"
 # explicit carve-out — which should be added to ALLOWED below, not disabled
 # inline.
 RSpec.describe "Code smell: activity log immutability" do
-  # Locals, not constants: a constant here lands on Object, where another
-  # spec file's same-named constant clobbers it whenever CI shards both into
-  # one worker (the ALLOWED collision that broke CI on 2026-08-14).
-  # `(?:\.|&:)` — the batched idiom `in_batches(of: 100, &:delete_all)`
-  # passes delete_all as a SYMBOL, which the original dotted-call pattern
-  # missed entirely (found when the #438 retention job failed to trip this
-  # guard as designed).
-  # `dependent:` is the third spelling, and it slipped through until #921:
-  # `has_many :activity_logs, dependent: :delete_all` deletes rows relation-
-  # level exactly like the dotted call, but the separator is `: ` rather than
-  # `.` or `&:`. A guard that exists to make relation-level deletion a REVIEWED
-  # decision has to see the association form too.
-  # `:nullify` rides in the same alternation because it is the natural wrong
-  # fix for #1122 — actor_id carries a FK with no cleanup path, and nullifying
-  # on user deletion REWRITES audit rows to hide who acted. A row keeps its
-  # actor, or carries a snapshot; it does not quietly lose one.
+  # Locals, not constants (#607). Covers dotted, `&:` symbol and `dependent:`
+  # spellings, including :nullify, the natural wrong fix for #1122.
   bypass_writes = /\b(?:ActivityLog|activity_logs)\b[^\n]*(?:(?:\.|&:)(?:update_all|delete_all|destroy_all|update_columns|upsert(?:_all)?)|dependent:\s*:(?:delete_all|destroy_all|nullify))\b/
 
   # path => reason. Empty until the #438 retention job exists.
@@ -43,10 +29,7 @@ RSpec.describe "Code smell: activity log immutability" do
       "workspace_id: nil, so no SECURITY_ACTIONS row is in the association's scope"
   }.freeze
 
-  # POSITIVE CONTROL — the example below asserts an EMPTY list, which is also
-  # what a broken pattern produces. Every spelling the guard claims to cover is
-  # planted here, so a regex that stops matching fails loudly instead of
-  # reporting a clean app.
+  # POSITIVE CONTROL: every spelling the guard claims is planted here.
   it "sees every spelling it claims to cover" do
     planted = [
       "ActivityLog.update_all(action: \"x\")",

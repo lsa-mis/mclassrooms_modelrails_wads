@@ -79,9 +79,7 @@ RSpec.describe "shared/_footer", type: :view do
     end
 
     it "meets AAA target-size by applying --form-input-height to interactive elements" do
-      # min-h-input is the ONE spelling of that token (#1105) — the raw
-      # min-h-[var(--form-input-height)] this used to assert is what the sweep
-      # removed, and spec/code_smells/design_system_token_spec.rb keeps it gone.
+      # min-h-input is the one spelling (#1105).
       expect(rendered).to have_css("#{selector} a.min-h-input", count: 2)
       expect(rendered).to have_css("#{selector} button.min-h-input", count: 1)
     end

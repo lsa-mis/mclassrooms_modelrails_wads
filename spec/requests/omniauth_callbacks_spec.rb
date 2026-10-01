@@ -162,6 +162,32 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     end
   end
 
+  # The hold refuses the writes that ride on the sign-in, not only the session (#1129).
+  describe "a suspended user presenting a new provider with a parked invitation" do
+    let!(:user) { create(:user, :suspended, email_address: "held-oauth@example.com") }
+    let!(:invitation) { create(:invitation, email: "held-oauth@example.com") }
+
+    before do
+      allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
+      OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+        provider: "google",
+        uid: "held-oauth-new",
+        info: { email: "held-oauth@example.com", first_name: "Held", last_name: "User", email_verified: true },
+        credentials: { token: "token", refresh_token: nil, expires_at: nil }
+      )
+      post accept_invitation_path(token: invitation.token)
+    end
+
+    it "attaches no provider, accepts no invitation, and shows the suspended alert" do
+      expect { get "/auth/google_oauth2/callback" }
+        .not_to change { [ Authentication.count, Membership.count ] }
+
+      expect(response).to redirect_to(new_session_path)
+      expect(flash[:alert]).to eq(I18n.t("sessions.create.suspended"))
+      expect(invitation.reload).to be_pending
+    end
+  end
+
   describe "OAuth does not link to unverified email accounts" do
     let!(:unverified_user) { create(:user, :unverified_email, email_address: "unverified@example.com") }
 
@@ -287,7 +313,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     it "refuses to sign in (does NOT create a session)" do
       get "/auth/google_oauth2/callback"
       expect(response).to redirect_to(new_session_path)
-      expect(flash[:notice]).to include("fresh confirmation link")
+      expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.pending_resent", email: "bob.work@gmail.com"))
     end
 
     context "when the user is signed in as the rightful owner" do
@@ -338,7 +364,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "references the original email in the flash notice" do
       get "/auth/google_oauth2/callback"
-      expect(flash[:notice]).to include("dean.original@gmail.com")
+      expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.pending_resent", email: "dean.original@gmail.com"))
     end
   end
 
@@ -371,7 +397,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "redirects Eve with a collision alert (not pending_resent)" do
       get "/auth/google_oauth2/callback"
-      expect(flash[:alert]).to include("different user")
+      expect(flash[:alert]).to eq(I18n.t("omniauth_callbacks.create.collision_other_user", provider: "Google"))
     end
   end
 
@@ -399,7 +425,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "redirects Eve with collision_other_user alert" do
       get "/auth/google_oauth2/callback"
-      expect(flash[:alert]).to include("different user")
+      expect(flash[:alert]).to eq(I18n.t("omniauth_callbacks.create.collision_other_user", provider: "Google"))
     end
   end
 
@@ -468,7 +494,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     it "redirects to connected accounts (auto-verified path: emails match)" do
       get "/auth/google_oauth2/callback"
       expect(response).to redirect_to(settings_connected_accounts_path)
-      expect(flash[:notice]).to include("linked")
+      expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.linked", provider: "Google"))
     end
   end
 
@@ -498,7 +524,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       it "redirects to connected accounts with linked notice" do
         get "/auth/google_oauth2/callback"
         expect(response).to redirect_to(settings_connected_accounts_path)
-        expect(flash[:notice]).to include("linked")
+        expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.linked", provider: "Google"))
       end
     end
 
@@ -531,7 +557,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       it "redirects to connected accounts with pending banner flash" do
         get "/auth/google_oauth2/callback"
         expect(response).to redirect_to(settings_connected_accounts_path)
-        expect(flash[:notice]).to include("alice.work@gmail.com")
+        expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.pending", email: "alice.work@gmail.com", provider: "Google"))
       end
     end
 
@@ -554,7 +580,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
       it "redirects with already_linked alert" do
         get "/auth/google_oauth2/callback"
-        expect(flash[:alert]).to include("already linked")
+        expect(flash[:alert]).to eq(I18n.t("omniauth_callbacks.create.already_linked", provider: "Google"))
       end
     end
 
@@ -654,8 +680,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
 
     it "alerts about the pending link with the affected email (not 'already linked')" do
       get "/auth/google_oauth2/callback"
-      expect(flash[:alert]).to include("pending")
-      expect(flash[:alert]).to include("carol.work@gmail.com")
+      expect(flash[:alert]).to eq(I18n.t("omniauth_callbacks.create.pending_in_progress", provider: "Google", email: "carol.work@gmail.com"))
     end
 
     it "does not create a new authentication" do
@@ -691,8 +716,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
     it "redirects to connected accounts with linked notice (Google, not Google Oauth2)" do
       get "/auth/google_oauth2/callback"
       expect(response).to redirect_to(settings_connected_accounts_path)
-      expect(flash[:notice]).to include("Google")
-      expect(flash[:notice]).not_to include("Google Oauth2")
+      expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.linked", provider: "Google"))
     end
   end
 
@@ -733,7 +757,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       it "redirects to connected accounts with the pending notice (not the linked notice)" do
         get "/auth/google_oauth2/callback"
         expect(response).to redirect_to(settings_connected_accounts_path)
-        expect(flash[:notice]).to include("confirmation link")
+        expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.pending", email: "linker@example.com", provider: "Google"))
       end
     end
 
@@ -765,7 +789,7 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       it "does NOT sign the user in (redirects to sign-in, not root)" do
         get "/auth/google_oauth2/callback"
         expect(response).to redirect_to(new_session_path)
-        expect(flash[:notice]).to include("hasn't been verified")
+        expect(flash[:notice]).to eq(I18n.t("omniauth_callbacks.create.unverified_email_pending", email: "newbie@example.com"))
       end
     end
 

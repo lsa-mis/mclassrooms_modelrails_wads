@@ -17,6 +17,16 @@ RSpec.describe MagicLinkToken, type: :model do
       expect(MagicLinkToken.find_valid(second)).to be_present
     end
 
+    it "marks the superseded token as superseded, not redeemed" do
+      first = MagicLinkToken.create_for_email("test@example.com")
+      MagicLinkToken.create_for_email("test@example.com")
+      superseded = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(first))
+
+      expect(superseded.superseded_at).to be_present
+      expect(superseded.consumed_at).to be_present
+      expect(superseded).not_to be_redeemed
+    end
+
     it "leaves at most one unconsumed token per email regardless of call count" do
       3.times { MagicLinkToken.create_for_email("test@example.com") }
 
@@ -76,7 +86,7 @@ RSpec.describe MagicLinkToken, type: :model do
 
     it "returns nil for consumed tokens" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
-      MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value)).consume!
+      MagicLinkToken.consume!(token_value)
       expect(MagicLinkToken.find_valid(token_value)).to be_nil
     end
   end
@@ -108,44 +118,26 @@ RSpec.describe MagicLinkToken, type: :model do
     end
   end
 
-  describe "#consume! (instance)" do
-    it "returns true on first call and false on subsequent calls" do
-      token_value = MagicLinkToken.create_for_email("test@example.com")
-      record = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
+  describe "#redeemed?" do
+    it "is false for a fresh token, false once superseded, and true once consumed" do
+      first = MagicLinkToken.create_for_email("test@example.com")
+      expect(MagicLinkToken.find_valid(first)).not_to be_redeemed
 
-      expect(record.consume!).to be true
-      expect(record.consume!).to be false
-    end
+      second = MagicLinkToken.create_for_email("test@example.com")
+      expect(MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(first))).not_to be_redeemed
 
-    # Reproduces the panel-flagged race: two callers both observed
-    # consumed_at: nil before either committed. Without atomic CAS, both
-    # update!s succeed (no WHERE clause) and the token is double-spent.
-    it "atomically detects double-consume across stale references" do
-      token_value = MagicLinkToken.create_for_email("test@example.com")
-      ref_a = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
-      ref_b = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
-
-      expect(ref_a.consume!).to be true
-      expect(ref_b.consume!).to be false
-    end
-
-    it "reloads the record so consumed_at reflects the database after success" do
-      token_value = MagicLinkToken.create_for_email("test@example.com")
-      record = MagicLinkToken.find_by(token_digest: MagicLinkToken.digest(token_value))
-
-      record.consume!
-
-      expect(record.consumed_at).to be_present
+      expect(MagicLinkToken.consume!(second)).to be_redeemed
     end
   end
 
   describe ".consume!(token)" do
-    it "returns the record on first call" do
+    it "returns the record on first call, redeemed and not superseded" do
       token_value = MagicLinkToken.create_for_email("test@example.com")
       result = MagicLinkToken.consume!(token_value)
 
       expect(result).to be_a(MagicLinkToken)
       expect(result.consumed_at).to be_present
+      expect(result.superseded_at).to be_nil
     end
 
     it "returns nil on the second call (no double-spend)" do

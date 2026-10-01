@@ -320,6 +320,62 @@ RSpec.describe ActivityLog, type: :model do
   # whether any caller read it, masking a real unused eager load. This calls
   # Bullet::Detector::UnusedEagerLoading directly to check that marking, so a
   # Bullet upgrade that changes it breaks here, not mysteriously elsewhere.
+  describe "#display_subject" do
+    let(:ada) { create(:user, first_name: "Ada", last_name: "Owner") }
+    let(:row) { create(:activity_log, actor: ada) }
+
+    def pre_snapshot(row, actor_id: row.actor_id)
+      ActivityLog.where(id: row.id).update_all(actor_name: nil, actor_id: actor_id)
+      row.reload
+    end
+
+    it "names the actor from the snapshot, even after the actor is renamed" do
+      row
+      ada.update!(first_name: "Renamed")
+
+      expect(row.reload.display_subject).to eq("Ada Owner")
+    end
+
+    it "resolves a pre-snapshot row from the live actor" do
+      row
+      ada.update!(first_name: "Renamed")
+
+      expect(pre_snapshot(row).display_subject).to eq("Renamed Owner")
+    end
+
+    it "names a former member when a pre-snapshot row's actor is gone" do
+      gone = pre_snapshot(row, actor_id: User.maximum(:id) + 1)
+
+      expect(gone.display_subject).to eq(I18n.t("activity.departed_actor"))
+    end
+  end
+
+  describe ".for_feed actor preloading" do
+    let(:ada) { create(:user, first_name: "Ada", last_name: "Owner") }
+    let!(:snapshot_row) { create(:activity_log, actor: ada) }
+    let!(:legacy_rows) do
+      create_list(:activity_log, 2, actor: ada).each { |row| ActivityLog.where(id: row.id).update_all(actor_name: nil) }
+    end
+
+    def subjects_of(scope)
+      scope.for_feed.map(&:display_subject)
+    end
+
+    it "names the pre-snapshot rows' actors in one query, not one per row" do
+      scope = ActivityLog.where(id: [ snapshot_row.id, *legacy_rows.map(&:id) ])
+      subjects = nil
+
+      expect(count_selects_touching("users") { subjects = subjects_of(scope) }).to eq(1)
+      expect(subjects).to all(eq("Ada Owner"))
+    end
+
+    it "touches users not at all when every row carries its snapshot" do
+      scope = ActivityLog.where(id: snapshot_row.id)
+
+      expect(count_selects_touching("users") { subjects_of(scope) }).to eq(0)
+    end
+  end
+
   describe ".for_feed Bullet visibility" do
     it "leaves an unread User trackable hop visible to Bullet's unused-eager-load detector" do
       2.times { Operatorship.grant!(user: create(:user)) }

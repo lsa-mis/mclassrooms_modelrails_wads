@@ -202,12 +202,12 @@ double announcement and no silence. NVDA/Firefox has never been run.*
 from first render.
 
 A toast streamed in after load is spoken **once**, politely, and focus does not
-move. A flash rendered *with* the page is a different case: it arrived inside
-the region rather than being inserted into it, so it is **not** spoken
-spontaneously, and is reached through the rotor's landmark list instead. That
-second expectation was settled from the accessibility tree rather than from a
-real reader (#901) — record what actually happens, and if it diverges, the
-recording is the finding.
+move. A flash rendered *with* the page is a different case: it is already
+inside the region at load rather than inserted into it. What a reader does
+with that has **not been observed** — the expectation that used to sit here
+was read off the accessibility tree, not from a real reader (#901), and the
+2026-09-23 retrospective judged it wrong. #1267 owns the cold run: record what
+actually happens, and the recording replaces this paragraph.
 
 **C. A modal opening and closing.** A native `<dialog>` with `aria-modal="true"`
 and `aria-labelledby` pointing at its title, opened via `showModal`.

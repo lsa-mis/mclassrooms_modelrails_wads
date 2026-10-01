@@ -22,22 +22,6 @@ RSpec.describe "Admin unit display names", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # `create(:user)` itself triggers User#onboard_workspace (after_create),
-  # which — under the :shared posture stubbed above — auto-joins `workspace`
-  # with TenancyConfig.shared_join_role before this method ever runs.
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
-  def editor_actor
-    user = membership_with("viewer")
-    create(:editor_assignment, user: user, unit: create(:unit, workspace: workspace))
-    user
-  end
-
   let!(:display_name) do
     create(:unit_display_name, workspace: workspace,
                                department_group: "LSAPHYS", display_name: "Department of Physics")

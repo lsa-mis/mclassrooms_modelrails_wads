@@ -56,6 +56,34 @@ RSpec.describe IconRegistry do
     end
   end
 
+  describe "find and exists? consult the same styles" do
+    def with_solid_only_icon
+      test_file = Rails.root.join("app/assets/icons/solid/test_solid_only.svg")
+      File.write(test_file, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 10z"/></svg>')
+      described_class.reload!
+      yield
+    ensure
+      File.delete(test_file) if test_file&.exist?
+      described_class.reload!
+    end
+
+    def found?(name, style)
+      described_class.find(name, style: style).present?
+    rescue IconRegistry::NotFound
+      false
+    end
+
+    it "answer alike for every icon and style, including one that exists only in solid" do
+      with_solid_only_icon do
+        lookups = described_class.available_icons.product([ nil, *IconRegistry::STYLES ])
+
+        lookups.each do |name, style|
+          expect(described_class.exists?(name, style: style)).to eq(found?(name, style)), "#{name} #{style.inspect}"
+        end
+      end
+    end
+  end
+
   describe ".available_icons" do
     it "returns a sorted array of symbol names" do
       icons = described_class.available_icons

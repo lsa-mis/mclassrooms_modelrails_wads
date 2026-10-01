@@ -35,10 +35,7 @@ RSpec.describe Noticed::EventJob, type: :job do
     end
   end
 
-  # A claimed job that raises was the uncovered case: no retry_on, so it landed
-  # in solid_queue_failed_executions and waited for a hand that this app ships
-  # no dashboard for. The reconciler cannot be that safety net — the row is
-  # stamped, so it is invisible to the sweep by design (#1065).
+  # A claimed job that raises is stamped, so only retry_on can recover it (#1065).
   it "retries a raising delivery instead of parking the event after one attempt" do
     event = welcome_event
     attempts = 0
@@ -56,12 +53,7 @@ RSpec.describe Noticed::EventJob, type: :job do
       "failed executions, where nothing in this app will find it"
   end
 
-  # The stamp lands before the delivery legs run, so a leg that blows up still
-  # leaves the event marked dispatched and invisible to the reconciler.
-  #
-  # The raise no longer escapes: retry_on catches it and reschedules (#1065),
-  # so the assertion is the stamp rather than the exception. The property
-  # being pinned is unchanged — only what a raising job does afterwards is.
+  # The stamp lands before the legs run; retry_on now catches the raise (#1065).
   it "stamps dispatched_at before delivering, so a raising leg still marks the event dispatched" do
     event = welcome_event
     allow(event).to receive(:bulk_delivery_methods).and_raise(RuntimeError, "delivery exploded")

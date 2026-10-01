@@ -24,14 +24,10 @@ RSpec.describe PanoramaIngest do
     FileUtils.cp(file_fixture("room.jpg"), File.join(@dir, "#{stem}.jpg"))
   end
 
-  def call(**opts)
-    described_class.call(directory: @dir, workspace: workspace, **opts)
-  end
-
   it "attaches matching files by rmrecnbr without pre-processing a variant" do
     add_pano(covered.rmrecnbr)
 
-    result = call
+    result = run_ingest
 
     expect(covered.reload.panorama).to be_attached
     expect(covered.panorama.filename.to_s).to eq("#{covered.rmrecnbr}.jpg")
@@ -53,7 +49,7 @@ RSpec.describe PanoramaIngest do
     # flat_render_failed_at tombstone, visible via panoramas:flat_status.
     File.write(File.join(@dir, "#{covered.rmrecnbr}.jpg"), "not a jpeg")
 
-    result = call
+    result = run_ingest
 
     expect(result.errors).to be_empty
     expect(result.attached).to contain_exactly("#{covered.rmrecnbr}.jpg")
@@ -63,7 +59,7 @@ RSpec.describe PanoramaIngest do
     add_pano(covered.rmrecnbr)
     add_pano("9999999") # no such room
 
-    result = call
+    result = run_ingest
 
     expect(result.unmatched_files).to contain_exactly("9999999.jpg")
     expect(result.rooms_without_panorama).to contain_exactly(bare)
@@ -71,14 +67,14 @@ RSpec.describe PanoramaIngest do
 
   it "skips already-attached rooms unless replace:, then replaces" do
     add_pano(covered.rmrecnbr)
-    call
+    run_ingest
     original_blob = covered.reload.panorama.blob
 
-    result = call
+    result = run_ingest
     expect(result.skipped_existing).to contain_exactly("#{covered.rmrecnbr}.jpg")
     expect(covered.reload.panorama.blob).to eq(original_blob)
 
-    result = call(replace: true)
+    result = run_ingest(replace: true)
     expect(result.replaced).to contain_exactly("#{covered.rmrecnbr}.jpg")
     expect(covered.reload.panorama.blob).not_to eq(original_blob)
   end
@@ -87,7 +83,7 @@ RSpec.describe PanoramaIngest do
     add_pano(covered.rmrecnbr)
     add_pano("9999999")
 
-    result = call(dry_run: true)
+    result = run_ingest(dry_run: true)
 
     expect(covered.reload.panorama).not_to be_attached
     expect(result.attached).to contain_exactly("#{covered.rmrecnbr}.jpg")
@@ -108,7 +104,7 @@ RSpec.describe PanoramaIngest do
     File.delete(covered_path)
     Dir.mkdir(covered_path)
 
-    result = call
+    result = run_ingest
 
     expect(result.errors.size).to eq(1)
     expect(result.errors.first).to include(covered.rmrecnbr)
@@ -121,7 +117,7 @@ RSpec.describe PanoramaIngest do
     foreign = classroom(other_building, "3000", 300)
     add_pano(foreign.rmrecnbr)
 
-    result = call
+    result = run_ingest
 
     expect(foreign.reload.panorama).not_to be_attached
     expect(result.unmatched_files).to contain_exactly("#{foreign.rmrecnbr}.jpg")

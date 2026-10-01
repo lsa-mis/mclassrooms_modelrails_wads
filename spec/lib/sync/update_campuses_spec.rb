@@ -44,14 +44,6 @@ RSpec.describe Sync::UpdateCampuses do
 
   def phase = run.sync_phases.find_by!(key: "campuses")
 
-  # BasePhase's counters hash is a Hash.new(0) that only gains a key once
-  # #count actually increments it (see app/lib/sync/base_phase.rb) — an
-  # untouched counter is simply ABSENT, not present-and-zero. #fetch(...,
-  # 0) asserts "this counter is effectively zero" the same way whether the
-  # phase never touched it at all or (hypothetically) touched it and net
-  # zero, so these assertions have teeth either way.
-  def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
-
   describe "a first run against an empty workspace" do
     it "creates every campus from the feed and reports accurate counters" do
       stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json",

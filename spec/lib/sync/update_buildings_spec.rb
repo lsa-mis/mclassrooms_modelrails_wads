@@ -66,11 +66,6 @@ RSpec.describe Sync::UpdateBuildings do
 
   def phase = run.sync_phases.find_by!(key: "buildings")
 
-  # See update_campuses_spec.rb's identical helper: an untouched counter is
-  # ABSENT from the hash, not present-and-zero, so #fetch(..., 0) has teeth
-  # either way.
-  def counter(phase, key) = phase.counters.fetch(key.to_s, 0)
-
   def stub_buildings_feed
     page1_stub = stub_um_get("/bf/Buildings/v2/BuildingInfo", fixture: "building_info_page1.json",
       query: { "$start_index" => "0", "$count" => "1000" })

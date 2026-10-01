@@ -1,24 +1,8 @@
 require "rails_helper"
 
-# Migrations replay from zero on every fresh clone — a fork's very first
-# command. A migration that touches a live app class breaks the moment a fork
-# renames the model or reshapes the constant it references (two shipped
-# instances froze under #449: Project/ProjectTools::Registry and User).
-# Data work inside a migration uses an inline `class X < ActiveRecord::Base`
-# with a literal table name and literal values: the migration's world as of
-# its timestamp, deliberately not tracking the app.
-#
-# The runtime complement is spec/migrations/fresh_database_migration_spec.rb,
-# which actually replays the history; this static guard fails at the moment
-# the reference is WRITTEN instead of on the next fresh clone.
-#
-# It walks the RECEIVER CHAIN rather than matching a constant glued to a data
-# call: `UserPreferences.unscoped.update_all` evaded this fence for four
-# months, and was cited in a spec review as the house pattern — the opposite
-# of what it is (#942).
+# Migrations must not touch live app classes; data work uses an inline model (#449).
+# Walks the receiver chain, which `X.unscoped.update_all` once evaded (#942).
 RSpec.describe "Code smell: migrations reference no live app classes" do
-  # A `let`, not a constant: a bare constant in a describe block lands on
-  # Object and collides across parallel workers.
   let(:data_calls) do
     %w[
       update_all delete_all destroy_all create create! find_each find_by where
@@ -26,9 +10,7 @@ RSpec.describe "Code smell: migrations reference no live app classes" do
     ]
   end
 
-  # The first data call reached from a leading constant, or nil. Balanced
-  # (), [] and {} are skipped whole, so an argument list cannot hide the next
-  # hop — `where.not(primary_color: [ nil, "" ]).find_each` is one chain.
+  # The first data call reached from a leading constant; balanced brackets skipped.
   def chained_data_call(line)
     return nil unless (match = line.match(/^\s*([A-Z]\w*(?:::\w+)*)/))
 
@@ -56,7 +38,6 @@ RSpec.describe "Code smell: migrations reference no live app classes" do
     nil
   end
 
-  # Takes SOURCE so the controls below can feed it planted text.
   def offenders_in(source, path: "db/migrate/probe.rb")
     inline_models = source.scan(/class\s+(\w+)\s*<\s*ActiveRecord::Base/).flatten
 
@@ -75,9 +56,7 @@ RSpec.describe "Code smell: migrations reference no live app classes" do
     Dir[Rails.root.join("db/migrate/*.rb")]
   end
 
-  # POSITIVE CONTROL 1 — a walker that sees nothing must not pass. These are
-  # the lines the fence is claiming to have inspected; if the chain walk
-  # breaks, every one of them goes quiet at once and the guard still passes.
+  # POSITIVE CONTROL 1: a walker that sees nothing must not pass.
   it "sees the data calls the migrations already make" do
     seen = migration_files.sum do |file|
       File.read(file).lines.count { |line| chained_data_call(line) }
@@ -99,8 +78,7 @@ RSpec.describe "Code smell: migrations reference no live app classes" do
     expect(offenders_in(planted).size).to eq(3), "a bare shape slipped past the walker"
   end
 
-  # NEGATIVE CONTROL — an inline model is the prescribed fix, so it must clear
-  # the fence through the very same chain that condemns the app constant.
+  # NEGATIVE CONTROL: the prescribed inline model clears the same chain.
   it "clears an inline model reached through the same chain" do
     planted = <<~RUBY
       class MigrationFoo < ActiveRecord::Base

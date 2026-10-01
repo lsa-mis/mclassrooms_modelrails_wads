@@ -14,4 +14,11 @@ RSpec.describe "SimpleCov configuration" do
   it "tags results with a per-worker command name so parallel resultsets merge" do
     expect(SimpleCov.command_name).to eq("rspec#{ENV['TEST_ENV_NUMBER']}")
   end
+
+  it "holds this run to the floor only when it is the whole suite" do
+    pattern = File.join(RSpec.configuration.default_path, RSpec.configuration.pattern)
+    floor = CoverageConfig.floor_for(RSpec.configuration.files_to_run, Dir[pattern])
+
+    expect(SimpleCov.minimum_coverage).to eq({ line: floor })
+  end
 end

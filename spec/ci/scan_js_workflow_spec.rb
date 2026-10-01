@@ -1,21 +1,8 @@
 require "spec_helper"
 require "yaml"
 
-# scan_js is a REQUIRED branch-ruleset status check, so it must never exit 0
-# on anything but a genuinely clean audit — but `bin/importmap audit` POSTs
-# to the npm registry, and importmap-rails 2.2.3's npm.rb collapses a
-# timeout/429/503 and a real advisory into the same exit code. A registry
-# hiccup held main red for ~3h on 2026-09-03 (#984) because the job's only
-# output was indistinguishable from a real vulnerability. This spec pins the
-# structural shape of the fix: a bounded retry loop that still fails closed,
-# with a distinct message when the registry — not an advisory — is the
-# cause. Structural only (parses the workflows; no network, no Rails boot).
-#
-# It ENUMERATES rather than names (#1041): the scheduled lane added for
-# advisories published between pushes runs the same command, and a second
-# copy of a retry contract is exactly the thing that drifts. Every workflow
-# carrying `bin/importmap audit` is held to all of it, so a third lane is
-# covered the day it lands rather than the day it fails.
+# scan_js must fail closed yet tell a registry outage from an advisory (#984).
+# Enumerates every workflow running `bin/importmap audit` (#1041).
 RSpec.describe "every workflow running the JS advisory audit" do
   workflow_dir = File.expand_path("../../.github/workflows", __dir__)
 
@@ -28,10 +15,7 @@ RSpec.describe "every workflow running the JS advisory audit" do
     end
   end
 
-  # POSITIVE CONTROL — the per-site examples below are generated from this
-  # list, so an enumeration that finds nothing produces a file with no
-  # assertions at all and passes. Naming the required gate here means the
-  # parser breaking cannot read as compliance.
+  # POSITIVE CONTROL: naming the required gate means a broken parser cannot pass.
   it "finds the required per-PR gate among the audit sites" do
     expect(audit_sites.map { |site| site[:label] }).to include("ci.yml / scan_js"),
       "the workflow scan no longer sees ci.yml's scan_js job — with the enumeration " \

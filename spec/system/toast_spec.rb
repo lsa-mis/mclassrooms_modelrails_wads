@@ -10,12 +10,6 @@ RSpec.describe "Toast notification system", type: :system do
     click_button I18n.t("sessions.passwords.new.submit")
   end
 
-  def dismiss_cookie_banner
-    page.execute_script(<<~JS)
-      document.querySelectorAll('[data-controller="biscuit"]').forEach(el => el.remove());
-    JS
-  end
-
   # #683: a live region must exist and be registered BEFORE content arrives —
   # a region inserted WITH its content (the appended toast carrying its own
   # aria-live) is silently dropped by AT. The STABLE containers own the

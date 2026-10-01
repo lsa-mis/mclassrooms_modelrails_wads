@@ -16,13 +16,6 @@ RSpec.describe "Post-sign-in destination (fork seam override)", type: :request d
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  def membership_with(slug)
-    user = create(:user)
-    membership = Membership.find_by!(user: user, workspace: workspace)
-    membership.update!(role: Role.system_default!(slug))
-    user
-  end
-
   # A real authentication request (not the sign_in helper's session shortcut)
   # so the redirect exercises after_authentication_url end-to-end.
   def password_sign_in(user)

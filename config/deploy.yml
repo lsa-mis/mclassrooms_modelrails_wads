@@ -84,7 +84,17 @@ env:
     - OKTA_CLIENT_SECRET
     - UM_API_CLIENT_ID
     - UM_API_CLIENT_SECRET
+    # Outbound mail credentials, referenced from .kamal/secrets. For Postmark both
+    # are the Server API token; for SES over SMTP they are the SMTP credentials.
+    - SMTP_USERNAME
+    - SMTP_PASSWORD
   clear:
+    # Outbound mail: production refuses to boot without a mail server; Postmark is the
+    # shipped default and any SMTP provider is a swap. Recipes: /docs/developer/deployment.
+    SMTP_ADDRESS: smtp.postmarkapp.com
+    SMTP_PORT: 587
+    # MAIL_FROM: hello@app.yourdomain.com   # default: noreply@RAILS_HOST
+
     # === Solid Queue topology ===
     # Run the Solid Queue Supervisor inside the web server's Puma process.
     # This is the right default for the SQLite/one-box deploy this template
@@ -179,7 +189,7 @@ builder:
   # Pass the Ruby version through so the production image always matches the
   # version Bundler enforces via Gemfile.lock. Keep in sync with .tool-versions.
   args:
-    RUBY_VERSION: "4.0.6"
+    RUBY_VERSION: "4.0.7"
 
   # secrets:
   #   - GITHUB_TOKEN

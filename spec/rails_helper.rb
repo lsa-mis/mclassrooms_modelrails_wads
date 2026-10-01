@@ -17,7 +17,9 @@ unless ENV["SKIP_COVERAGE"]
       minimum_coverage 0
     else
       command_name "rspec"
-      minimum_coverage CoverageConfig::MINIMUM
+      # A focused run is measured, not held to the floor (#1315).
+      minimum_coverage CoverageConfig.floor_for(RSpec.configuration.files_to_run,
+        Dir[File.join(RSpec.configuration.default_path, RSpec.configuration.pattern)])
     end
   end
 end

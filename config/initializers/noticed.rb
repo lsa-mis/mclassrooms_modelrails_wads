@@ -1,42 +1,7 @@
 # frozen_string_literal: true
 
-# The dispatch watermark for #927.
-#
-# `Noticed::Deliverable#deliver` commits the event and its notification rows in
-# a transaction and then enqueues `Noticed::EventJob` outside it. Solid Queue
-# writes to a separate SQLite database in production, so that enqueue can never
-# be atomic with the primary write — and moving it inside the write transaction
-# is ruled out by the lock-ordering decision recorded in `Workspace` and
-# `app/docs/developer/architecture.md`. An enqueue that fails (Solid Queue's
-# database busy past its timeout, a full disk) or a process death in the gap
-# therefore leaves committed rows — and a consumed idempotency key — with no
-# email and no broadcast behind them.
-#
-# So the job stamps its own arrival. Stamped at the START of `perform`, not the
-# end: an event whose job was CLAIMED is already stamped, so
-# `NotificationDispatchReconcileJob` covers only the never-enqueued gap and can
-# never re-run an event whose delivery legs already fanned out.
-#
-# A claimed job that then raises is covered by the retry policy registered
-# below (#1065). The gem ships none — only `discard_on
-# ActiveJob::DeserializationError` — so such a job used to land in
-# `solid_queue_failed_executions` and wait for a hand, and this app ships no
-# dashboard to notice. Three attempts with a growing delay, because the faults
-# worth retrying here are transient (a busy Solid Queue database, a mail host
-# refusing a connection).
-#
-# Retrying re-runs `perform`, which is NOT idempotent: the fan-out is 1-3
-# delivery legs and a recipient may see a duplicate email. That trade is
-# deliberate and the smaller harm — a duplicate is visible and annoying, a
-# silently dropped security notification is neither. What retry_on still
-# cannot see is process death: Solid Queue FAILS a pruned worker's claimed
-# executions rather than releasing them, so those never re-enter the queue.
-#
-# `before_perform` rather than an override: the gem hardcodes `EventJob` at
-# `Deliverable#deliver`, so no subclass can be substituted. `update_column`
-# skips callbacks and validations deliberately — this is bookkeeping on a gem
-# model, not a domain write, and it must not fire `after_create_commit`
-# broadcasts or touch `updated_at`.
+# Stamps dispatched_at as EventJob starts, so a lost enqueue can be re-sent (#927);
+# raising jobs retry and may repeat an email (#1065). See /docs/developer/notifications.
 Rails.application.config.to_prepare do
   # `to_prepare` runs on every reload in development, but `Noticed::EventJob`
   # lives in the gem's engine and is not reloaded with the app — registering

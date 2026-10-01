@@ -1,10 +1,6 @@
 require "rails_helper"
 
-# Ten call sites across nine files report handled errors. Rails only writes a log
-# line for a handled report when a subscriber raises, so with no subscriber
-# registered those reports reached nothing at all — not a tracker, not even the
-# log. Every one of those sites is a deliberate best-effort rescue, and that
-# trade is only sound if the report is observable somewhere (#1209).
+# Handled Rails.error reports reach nothing without a subscriber (#1209).
 RSpec.describe "Handled error reports" do
   let(:logged) { StringIO.new }
 
@@ -38,9 +34,7 @@ RSpec.describe "Handled error reports" do
       "an unhandled report reads the same as a handled one, so severity is unreadable"
   end
 
-  # The point of every rescue behind these reports is that the user's request
-  # survives. A subscriber that raises would invert that — turning a swallowed
-  # error into a visible one, from inside the rescue meant to prevent it.
+  # A raising subscriber would surface the very errors its callers rescue.
   it "never lets a reporting failure escape to the caller" do
     allow(Rails.logger).to receive(:error).and_raise(IOError, "log device went away")
 

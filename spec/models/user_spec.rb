@@ -205,6 +205,26 @@ RSpec.describe User, type: :model do
 
       expect(queries).to eq(1)
     end
+
+    it "removes the user's pending challenges with the user" do
+      user = create(:user)
+      ReauthenticationChallenge.issue_for(user)
+      WebauthnChallenge.store(challenge: "spec-challenge", purpose: "authentication", user: user)
+
+      expect { user.destroy! }
+        .to change(ReauthenticationChallenge, :count).by(-1)
+        .and change(WebauthnChallenge, :count).by(-1)
+    end
+
+    it "refuses the creator of a join link, and names what they still own" do
+      user = create(:user)
+      create(:workspace_join_link, created_by: user)
+
+      expect(user.destroy).to be false
+      expect(user.errors.details[:base]).to include(a_hash_including(error: :"restrict_dependent_destroy.has_many"))
+      expect(user.errors.details[:base]).to include(a_hash_including(record: "created workspace join links"))
+      expect(user.reload).to be_persisted
+    end
   end
 
   describe "operator reach" do
@@ -239,10 +259,7 @@ RSpec.describe User, type: :model do
     end
   end
 
-  # The sibling of #operated_workspaces, and the reason the users index does
-  # not start from `User.all`: today every operator reaches every user, and
-  # scoped operators (#1123) must be a one-line change here rather than a hunt
-  # through controllers (#1135).
+  # The users half of the operations reach, one line for scoped operators (#1123).
   describe "#operated_users" do
     let(:user) { create(:user) }
 

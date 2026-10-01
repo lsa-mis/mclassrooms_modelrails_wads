@@ -29,5 +29,6 @@ RSpec.describe "Onboarding dispatcher", type: :request do
     patch onboarding_path
     expect(user.reload.onboarded?).to be(true)
     expect(response).to redirect_to(workspace_path(workspace))
+    expect(flash[:notice]).to eq(I18n.t("onboardings.update.complete"))
   end
 end

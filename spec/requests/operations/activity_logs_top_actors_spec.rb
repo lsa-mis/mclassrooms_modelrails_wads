@@ -18,16 +18,8 @@ RSpec.describe "Operations activity ledger top actors", type: :request do
   def strip(body) = Capybara.string(body).find("[data-role=top-actors]", visible: :all)
   def entries(body) = strip(body).all("[data-role=top-actor]", visible: :all)
 
-  def acting_as(user)
-    Current.session = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
-    yield
-  ensure
-    Current.session = nil
-  end
-
-  # Renames mint attributed rows (fork: of the workspace itself, there being no
-  # Project domain). Each rename is exactly one activity row actored by
-  # `user`, so the count the strip shows is `times`.
+  # Workspace renames (fork: no Project domain) mint attributed rows; each rename is exactly
+  # one activity row actored by `user`, so the count the strip shows is `times`.
   def busy(user, workspace, times)
     acting_as(user) { times.times { |i| workspace.update!(name: "P#{user.id}-#{i}") } }
     workspace
@@ -97,6 +89,22 @@ RSpec.describe "Operations activity ledger top actors", type: :request do
     get operations_activity_logs_path
 
     expect(entries(response.body).size).to eq(2)
+  end
+
+  # A deleted actor claimed a slot and then vanished, shortening the strip (#1250).
+  it "stays full when one of the busiest has since been deleted" do
+    workspace = create(:workspace)
+    stub_const("Operations::ActivityLogsController::TOP_ACTORS", 2)
+    departing = create(:user, first_name: "Gone", last_name: "Away")
+    busy(departing, workspace, 9)
+    2.times { |i| busy(create(:user, first_name: "Still#{i}", last_name: "Here"), workspace, i + 1) }
+
+    departing.destroy!
+    get operations_activity_logs_path
+
+    expect(entries(response.body).size).to eq(2)
+    expect(strip(response.body).text).to include("Still0 Here", "Still1 Here")
+    expect(strip(response.body).text).not_to include("Gone Away")
   end
 
   # A way INTO the ledger, not a decoration on top of it — and through the same

@@ -90,24 +90,12 @@ RSpec.describe "Static pages", type: :system do
       expect(page).to have_css("[data-controller='toast-pill']")
       expect(page).to have_css("[data-toast-pill-target='progress']")
     end
+  end
 
-    # The whole chain in one example: toggle writes the cookie, the server
-    # renders it back onto <html>, and the inline script paints it.
-    #
-    # The last link is the one that used to go unproven. `html.dark` at the end
-    # of a load says nothing about WHEN the class landed — theme_controller
-    # applies it too, just late enough to flash the wrong theme first, which is
-    # the entire reason _theme_script.html.erb exists (#624). So a recorder
-    # injected ahead of every page script notes the readyState at the moment
-    # `dark` first appears: "loading" means the inline script did it, anything
-    # later means the deferred module did and the flash is back.
-    it "preserves theme preference across fresh page loads, and paints it before the modules run" do
-      visit root_path
-      # Cycle to dark: system → light → dark
-      find("[data-controller='theme-toggle']").click
-      find("[data-controller='theme-toggle']").click
-      expect(page).to have_css("html.dark")
-
+  # Records readyState when `dark` first appears: "loading" means the inline script
+  # painted it before first paint, anything later means a flash (#624).
+  describe "theme before first paint" do
+    def recording_when_dark_first_appears
       cdp = page.driver.browser.page
       recorder = cdp.command("Page.addScriptToEvaluateOnNewDocument", source: <<~JS)
         new MutationObserver(function () {
@@ -117,15 +105,60 @@ RSpec.describe "Static pages", type: :system do
           }
         }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: [ "class" ] });
       JS
-
-      # Full page load (not Turbo) — cookie should restore dark mode
-      visit root_path
-      expect(page).to have_css("html[data-theme-theme-value='dark']")
-      expect(page).to have_css("html.dark")
-      expect(page.evaluate_script("window.__darkAppliedAt")).to eq("loading")
+      yield
     ensure
-      cdp&.command("Page.removeScriptToEvaluateOnNewDocument",
-        identifier: recorder["identifier"])
+      cdp&.command("Page.removeScriptToEvaluateOnNewDocument", identifier: recorder["identifier"]) if recorder
+    end
+
+    def dark_first_appeared_at
+      page.evaluate_script("window.__darkAppliedAt")
+    end
+
+    def with_os_preferring(scheme)
+      cdp = page.driver.browser.page
+      cdp.command("Emulation.setEmulatedMedia", features: [ { name: "prefers-color-scheme", value: scheme } ])
+      yield
+    ensure
+      cdp.command("Emulation.setEmulatedMedia", features: [])
+    end
+
+    def choose_theme(*cycle_stops)
+      visit root_path
+      cycle_stops.each { find("[data-controller='theme-toggle']").click }
+    end
+
+    it "paints a dark preference before the modules run, across a fresh page load" do
+      choose_theme(:light, :dark)
+      expect(page).to have_css("html.dark")
+
+      recording_when_dark_first_appears do
+        visit root_path
+        expect(page).to have_css("html[data-theme-theme-value='dark']")
+        expect(page).to have_css("html.dark")
+        expect(dark_first_appeared_at).to eq("loading")
+      end
+    end
+
+    it "leaves a light preference free of any dark flash" do
+      choose_theme(:light)
+      expect(page).to have_css("html[data-theme-theme-value='light']")
+
+      recording_when_dark_first_appears do
+        visit root_path
+        expect(page).to have_css("html[data-theme-theme-value='light']")
+        expect(page).to have_no_css("html.dark")
+        expect(dark_first_appeared_at).to be_nil
+      end
+    end
+
+    it "paints dark before the modules run when the preference is system and the OS prefers dark" do
+      with_os_preferring("dark") do
+        recording_when_dark_first_appears do
+          visit root_path
+          expect(page).to have_css("html.dark")
+          expect(dark_first_appeared_at).to eq("loading")
+        end
+      end
     end
   end
 

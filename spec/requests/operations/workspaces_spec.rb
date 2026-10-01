@@ -210,22 +210,10 @@ RSpec.describe "Operations workspaces", type: :request do
 
       get operations_workspace_path(workspace)
 
-      # Read the member list itself, in DOM order. The previous form searched
-      # the WHOLE document with `body.index(last_name)` and took each name's
-      # first byte offset, which three different things could answer (#1231):
-      # the operator's own Faker name in the user-menu `aria-label` near the top
-      # of the page, the activity feed further down listing the same people in
-      # RECENCY order, and the "Owner" role badge, which is not a person at all.
-      # It failed whenever Faker handed the operator a name containing Adams,
-      # Baker, Owner or Young — deterministic per seed, and it named the sort
-      # rather than the chrome.
-      #
-      # `span:not([data-variant])` excludes the role badge beside each name.
+      # The member list itself, in DOM order; the badge span is excluded (#1231).
       names = Capybara.string(response.body).all("#ops-members li span:not([data-variant])").map(&:text)
 
-      # Insertion order is Owner (the `before` block), Young, Adams, Baker;
-      # alphabetical by last name is a different order, so this can only pass
-      # by sorting the decrypted names.
+      # Inserted out of order, so only a sort by decrypted last name passes.
       expect(names).to eq([ "Amy Adams", "Ben Baker", "Olive Owner", "Zoe Young" ])
     end
 

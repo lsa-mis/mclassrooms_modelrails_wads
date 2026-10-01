@@ -17,7 +17,7 @@ RSpec.describe "Notifications index page", type: :system do
     travel_to(Time.current + @notification_offset.minutes) do
       PasswordChangedNotifier.with(record: recipient).deliver(recipient)
     end
-    recipient.notifications.reload.last
+    recipient.notifications.order(:id).last
   end
 
   before { sign_in_via_form(user) }
@@ -47,7 +47,7 @@ RSpec.describe "Notifications index page", type: :system do
       travel_to(Time.current + @notification_offset.minutes) do
         WorkspaceInvitationResentNotifier.with(record: invitation).deliver(user)
       end
-      [ invitation, user.notifications.reload.last ]
+      [ invitation, user.notifications.order(:id).last ]
     end
 
     it "links the message to the notifier's url and follows it" do

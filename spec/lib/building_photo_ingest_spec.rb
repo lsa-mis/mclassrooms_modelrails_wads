@@ -32,14 +32,10 @@ RSpec.describe BuildingPhotoIngest do
     FileUtils.cp(file_fixture("room.jpg"), File.join(@dir, filename))
   end
 
-  def call(**opts)
-    described_class.call(directory: @dir, workspace: workspace, **opts)
-  end
-
   it "attaches on a case-insensitive exact name match and eagerly processes variants" do
     add_photo("Mason_Hall.jpg")
 
-    result = call
+    result = run_ingest
 
     expect(mason.reload.photo).to be_attached
     # :hero + :thumb pre-processed — VariantRecords prove vips already ran
@@ -50,7 +46,7 @@ RSpec.describe BuildingPhotoIngest do
   it "falls back to a UNIQUE search-index hit for partial names" do
     add_photo("Chemistry.jpg")
 
-    result = call
+    result = run_ingest
 
     expect(chem.reload.photo).to be_attached
     expect(result.attached).to contain_exactly("Chemistry.jpg")
@@ -59,7 +55,7 @@ RSpec.describe BuildingPhotoIngest do
   it "refuses ambiguous matches into their own list instead of guessing" do
     add_photo("Hall.jpg") # search matches MASON HALL and WEST HALL (and more)
 
-    result = call
+    result = run_ingest
 
     expect(result.ambiguous_files).to contain_exactly("Hall.jpg")
     expect(Building.where(workspace: workspace).none? { |b| b.photo.attached? }).to be(true)
@@ -69,7 +65,7 @@ RSpec.describe BuildingPhotoIngest do
     add_photo("Mason_Hall..jpg") # trailing dot before extension, like Kraus_Natural_Science_Bldg..jpg
     add_photo("Ruthven_Exhibit_Museum.jpg")
 
-    result = call
+    result = run_ingest
 
     expect(mason.reload.photo).to be_attached
     expect(result.unmatched_files).to contain_exactly("Ruthven_Exhibit_Museum.jpg")
@@ -78,20 +74,20 @@ RSpec.describe BuildingPhotoIngest do
 
   it "skips already-attached buildings unless replace:" do
     add_photo("Mason_Hall.jpg")
-    call
+    run_ingest
     original_blob = mason.reload.photo.blob
 
-    expect(call.skipped_existing).to contain_exactly("Mason_Hall.jpg")
+    expect(run_ingest.skipped_existing).to contain_exactly("Mason_Hall.jpg")
     expect(mason.reload.photo.blob).to eq(original_blob)
 
-    expect(call(replace: true).replaced).to contain_exactly("Mason_Hall.jpg")
+    expect(run_ingest(replace: true).replaced).to contain_exactly("Mason_Hall.jpg")
     expect(mason.reload.photo.blob).not_to eq(original_blob)
   end
 
   it "attaches nothing on dry_run but reports every list as-if" do
     add_photo("Mason_Hall.jpg")
 
-    result = call(dry_run: true)
+    result = run_ingest(dry_run: true)
 
     expect(mason.reload.photo).not_to be_attached
     expect(result.attached).to contain_exactly("Mason_Hall.jpg")
@@ -103,7 +99,7 @@ RSpec.describe BuildingPhotoIngest do
     add_photo("West_Hall.jpg")
     File.write(File.join(@dir, "Mason_Hall.jpg"), "not a jpeg")
 
-    result = call
+    result = run_ingest
 
     expect(result.errors.size).to eq(1)
     expect(result.errors.first).to include("Mason_Hall.jpg")
@@ -115,7 +111,7 @@ RSpec.describe BuildingPhotoIngest do
     foreign = create(:building, name: "TAPPAN HALL", workspace: other_ws)
     add_photo("Tappan_Hall.jpg")
 
-    result = call
+    result = run_ingest
 
     expect(foreign.reload.photo).not_to be_attached
     expect(result.unmatched_files).to contain_exactly("Tappan_Hall.jpg")

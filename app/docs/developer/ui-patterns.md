@@ -1,7 +1,39 @@
 ---
 title: UI Patterns & Design Tokens
-description: Form builder, icons, modals, toasts, design token architecture, and accessibility patterns
-keywords: tailwind design tokens oklch dark mode form builder icons modal toast accessibility wcag aria focus signals notification bell severity non-text contrast danger-strong
+description: Form builder, icons, modals, toasts, design token architecture, accessibility patterns, and recipes for the pages the template repeats
+keywords: tailwind design tokens oklch dark mode form builder icons modal toast accessibility wcag aria focus signals notification bell severity non-text contrast danger-strong recipes settings page list empty state search pagination sortable table preferences card public page
+code:
+  settings_page:
+    - app/views/layouts/settings.html.erb
+    - app/views/shared/_settings_page_header.html.erb
+    - app/views/settings/sessions/index.html.erb
+    - spec/code_smells/settings_layout_opt_in_spec.rb
+    - spec/code_smells/settings_page_padding_spec.rb
+  empty_list:
+    - app/components/ui/list_group_component.rb
+    - app/components/ui/list_group_item_component.rb
+    - app/views/shared/_empty_state.html.erb
+    - app/views/operations/users/index.html.erb
+  searchable_list:
+    - app/components/ui/search_input_component.rb
+    - app/views/shared/_pagination.html.erb
+    - app/views/shared/_pager.html.erb
+    - app/views/operations/users/index.html.erb
+  sortable_table:
+    - app/views/shared/_sortable_header.html.erb
+    - app/views/shared/_pagination.html.erb
+    - app/components/ui/scroll_area_component.rb
+    - app/views/workspaces/members/index.html.erb
+    - spec/code_smells/bordered_containers_are_not_the_page_surface_spec.rb
+  preferences_card:
+    - app/views/shared/_preferences_card.html.erb
+    - app/views/shared/_preferences_row.html.erb
+    - app/views/shared/_toggle.html.erb
+    - app/views/settings/notification_preferences/_delivery_card.html.erb
+  public_page:
+    - app/views/shared/_hero.html.erb
+    - app/views/shared/_section.html.erb
+    - app/views/pages/about.html.erb
 ---
 
 # UI Patterns & Design Tokens
@@ -127,8 +159,14 @@ seam over `UI::FormBuilder` (the vendored, regenerable parent). It provides:
 - **Hint text** below the control, linked via `aria-describedby` (error-first when
   both a hint and an error are present)
 - **ARIA attributes** — `aria-required`, `aria-invalid`, `aria-describedby` are set
-  automatically; native HTML `required` is never emitted, so a failed submit always
-  reaches the server and gets a real error response
+  automatically; native HTML `required` is never emitted, and every `form_with`
+  renders `novalidate` (`FormDefaultsHelper`), so a failed submit — blank *or*
+  malformed — always reaches the server and gets a real error response. The input
+  types stay (`type="email"` still picks the email keyboard and drives autofill);
+  only the browser's own validation bubble is suppressed. A form that genuinely
+  wants native validation opts out with `html: { novalidate: false }`. Build forms
+  with `form_with` — `form_for`/`form_tag`, or a component calling `form_with`
+  rather than `helpers.form_with`, skip the default, and a code-smell spec says so
 - **Consistent styling** — all fields use token-backed border, focus ring, and error
   states
 
@@ -270,6 +308,159 @@ The application layout (`layouts/application.html.erb`) provides:
 4. Main content area (`<main id="main-content">`)
 5. Footer with clustered nav, centered copyright, and cookie settings button
 6. Cookie consent banner (Biscuit) — shown once on first visit
+
+## Recipes
+
+The sections above describe parts. A recipe is how the parts go together into
+a page this template builds more than once. Each one names its parts by path,
+a view to copy from, and the guard that holds the rule where there is one.
+
+Recipes made only of `UI::*` components belong in the `modelrails_ui` docs.
+These are the ones built from this app's own partials, and the page's `code:`
+front matter indexes them by name. `spec/docs/ui_recipes_spec.rb` reads that
+index: a partial listed under a recipe fails the suite when no view in the
+recipe renders it, so a recipe cannot go on describing a page that has changed.
+When a view moves on, update the recipe or point it at another view.
+
+### A page in the settings shell
+
+A settings page gets its sidebar, its section strip on small screens and its
+`<main>` from `app/views/layouts/settings.html.erb`, which a controller opts
+into with `layout "settings"`. That `<main>` carries no vertical padding of
+its own, so the page supplies it through its top-level wrapper:
+
+| Wrapper | Width |
+| --- | --- |
+| `.page-container` | `max-w-2xl` |
+| `.page-container-wide` | `max-w-4xl` |
+
+Both classes set the vertical padding as well as the width, which is why a
+wrapper that uses one adds no `py-*` of its own. The title line is
+`app/views/shared/_settings_page_header.html.erb`:
+
+```erb
+<div class="page-container">
+  <%= render "shared/settings_page_header",
+        title: t("settings.sessions.index.title"),
+        description: t("settings.sessions.index.description") %>
+</div>
+```
+
+`title_html:` stands in for `title:` when the heading needs markup, and the
+caller escapes any user input in it first. `badges:` takes rendered badge
+markup and sets it beside the title.
+
+Copy from `app/views/settings/sessions/index.html.erb`. Two guards hold the
+shape: `spec/code_smells/settings_layout_opt_in_spec.rb` fails when a settings
+controller with page templates declares neither the layout nor a reviewed
+ruling, and `spec/code_smells/settings_page_padding_spec.rb` fails when a
+wrapper supplies no vertical padding, supplies it twice, or sets a `max-w-*`
+by hand.
+
+### A list that may be empty
+
+Rows without columns go in `ui :list_group`
+(`app/components/ui/list_group_component.rb` and
+`app/components/ui/list_group_item_component.rb`), and the branch with no rows
+renders `app/views/shared/_empty_state.html.erb` in the list's place:
+
+```erb
+<% if @users.any? %>
+  <%= ui :list_group do %>
+    <% @users.each do |user| %>
+      <%= ui :list_group_item do %>
+        <%= link_to user.full_name, operations_user_path(user) %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% elsif @query.present? %>
+  <%= render "shared/empty_state", message: t("operations.users.index.no_match") %>
+<% else %>
+  <%= render "shared/empty_state", message: t("operations.users.index.empty") %>
+<% end %>
+```
+
+There are two empty branches because "nothing matched" and "nothing here yet"
+are different things to tell someone. The partial takes `message:`, and
+`action_text:` with `action_url:` as a pair; the action renders only when both
+are given.
+
+A row that holds its own links or buttons stays a plain `ui :list_group_item`.
+Pass `href:` only when the row itself is the destination.
+
+Copy from `app/views/operations/users/index.html.erb`.
+
+### A searchable, paged list
+
+The search box is a GET form, so a query is a URL that can be reloaded. Outside
+the form builder the control is `ui :search_input`
+(`app/components/ui/search_input_component.rb`). Its `label:` repeats the
+visible `<label>` text: the component emits its own `aria-label`, and a
+mismatch fails WCAG 2.5.3 Label in Name.
+
+Paging is `app/views/shared/_pagination.html.erb`. It takes `pagy:`, prints the
+range being shown, and renders `app/views/shared/_pager.html.erb`, which holds
+the `pagy.series_nav` call and accepts `frame:` to target a Turbo Frame. Both
+render nothing when there is one page.
+
+Copy from `app/views/operations/users/index.html.erb`. Inside the form builder
+the control is `form.search_field` instead;
+`app/views/workspaces/members/index.html.erb` does that inside a Turbo Frame
+and announces the new count through an `aria-live` region.
+
+### A sortable table
+
+Rows with columns are a `<table>` inside a card: `bg-surface-raised rounded-lg
+border border-border shadow-sm overflow-hidden`. The surface is part of the
+recipe. `bg-surface` is the page, and a bordered box painted with it fails
+`spec/code_smells/bordered_containers_are_not_the_page_surface_spec.rb`.
+
+Each sortable column is `app/views/shared/_sortable_header.html.erb`, which
+renders the whole `<th>` so that `aria-sort` sits on the header its link
+sorts. It takes `title:`, `column:`, `current_sort:`, `current_direction:` and
+`url:`, a callable that builds the link for a sort and a direction. `frame:`
+names the Turbo Frame to swap.
+
+`ui :scroll_area` (`app/components/ui/scroll_area_component.rb`) wraps the
+table alone, so the pagination beneath it stays put while the table scrolls
+sideways.
+
+Copy from `app/views/workspaces/members/index.html.erb`.
+
+### A preferences card
+
+`app/views/shared/_preferences_card.html.erb` is rendered as a layout, with
+`title:` and an optional `description:`, and its block is the rows:
+
+```erb
+<%= render layout: "shared/preferences_card",
+      locals: { title: t("notifications.preferences.delivery_methods.heading") } do %>
+  <%= render "shared/preferences_row",
+        icon_name: "computer_desktop",
+        icon_color: :info,
+        title: t("notifications.preferences.delivery_methods.items.in_app.title"),
+        description: t("notifications.preferences.delivery_methods.items.in_app.description"),
+        control: in_app_control %>
+<% end %>
+```
+
+Each row is `app/views/shared/_preferences_row.html.erb`. `icon_color:` is one
+of `:info`, `:success`, `:warning` or `:danger`, and any other value falls back
+to a neutral tile. `control:` is captured markup, here
+`app/views/shared/_toggle.html.erb` in a form that submits itself on change.
+Pass the toggle `visible_label: false`: the row already shows the title, and a
+second visible label repeats it.
+
+Copy from `app/views/settings/notification_preferences/_delivery_card.html.erb`.
+
+### A public page
+
+A public page is a stack of full-width bands. `app/views/shared/_hero.html.erb`
+opens it, and each band after that is `app/views/shared/_section.html.erb`,
+which takes `title:`, `subtitle:` and `bg:` and yields the content.
+
+Copy from `app/views/pages/about.html.erb`, which alternates `bg: "bg-surface"`
+and `bg: "bg-surface-raised"` so that neighboring bands read apart.
 
 ## Footer Structure
 

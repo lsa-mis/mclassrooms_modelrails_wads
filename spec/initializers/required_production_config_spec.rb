@@ -32,13 +32,42 @@ RSpec.describe RequiredProductionConfig do
     end
 
     it "accepts a real hostname" do
-      expect { described_class.check!({ "RAILS_HOST" => "app.humbledaisy.com" }) }
+      expect { described_class.check!({ "RAILS_HOST" => "app.humbledaisy.com", "SMTP_ADDRESS" => "smtp.postmarkapp.com" }) }
         .not_to raise_error
     end
 
     it "accepts a hostname that merely contains the word example" do
-      expect { described_class.check!({ "RAILS_HOST" => "goodexample.io" }) }
+      expect { described_class.check!({ "RAILS_HOST" => "goodexample.io", "SMTP_ADDRESS" => "smtp.postmarkapp.com" }) }
         .not_to raise_error
+    end
+
+    # Sign-in is an email; a box that mails localhost:25 boots healthy and nobody can sign in (#1318).
+    describe "outbound mail" do
+      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com" } }
+
+      it "raises when SMTP_ADDRESS is unset" do
+        expect { described_class.check!(host) }
+          .to raise_error(RuntimeError, /SMTP_ADDRESS is unset/)
+      end
+
+      it "raises on localhost, where Rails mails by default" do
+        expect { described_class.check!(host.merge("SMTP_ADDRESS" => "localhost")) }
+          .to raise_error(RuntimeError, /"localhost"/)
+      end
+
+      it "raises on the rails new placeholder" do
+        expect { described_class.check!(host.merge("SMTP_ADDRESS" => "smtp.example.com")) }
+          .to raise_error(RuntimeError, /"smtp\.example\.com"/)
+      end
+
+      it "names the fix and the doc in the message" do
+        described_class.check!(host)
+        raise "expected check! to raise"
+      rescue RuntimeError => e
+        expect(e.message).to include("SMTP_ADDRESS")
+        expect(e.message).to include("env.secret")
+        expect(e.message).to include("/docs/developer/deployment")
+      end
     end
 
     it "names the fix and the opt-out in the message" do
@@ -53,7 +82,7 @@ RSpec.describe RequiredProductionConfig do
     # Personal data is encrypted at rest (#902); without keys the app boots,
     # /up reports healthy, and the first user read raises.
     describe "Active Record encryption keys" do
-      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com" } }
+      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com", "SMTP_ADDRESS" => "smtp.postmarkapp.com" } }
       let(:keys) { { primary_key: "p", deterministic_key: "d", key_derivation_salt: "s" } }
 
       it "raises when neither credentials nor config carry the keys" do
@@ -114,5 +143,15 @@ RSpec.describe "config/environments/production.rb host authorization" do
   it "excludes /up from host authorization so the Kamal healthcheck cannot be blocked" do
     line = source.lines.find { |l| l.strip.start_with?("config.host_authorization") }
     expect(line).to include('request.path == "/up"')
+  end
+
+  it "takes its transport and SMTP settings from MailDelivery, so a provider is a change of secrets" do
+    expect(source).to include("config.action_mailer.delivery_method = MailDelivery.delivery_method(ENV)")
+    expect(source).to include("config.action_mailer.smtp_settings = MailDelivery.smtp_settings(ENV)")
+  end
+
+  it "lets a failed delivery fail its job instead of vanishing" do
+    expect(source).to include("config.action_mailer.raise_delivery_errors = true")
+    expect(source).to include("config.action_mailer.perform_deliveries = true")
   end
 end

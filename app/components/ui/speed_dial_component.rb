@@ -7,7 +7,7 @@ module UI
     # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
 
     FAB_CLS = "relative z-50 inline-flex size-14 items-center justify-center rounded-full " \
-              "bg-interactive text-text-on-interactive shadow-lg transition-transform " \
+              "bg-interactive text-text-on-interactive shadow-lg motion-safe:transition-transform " \
               "hover:bg-interactive-hover focus-ring active:scale-95"
 
     PANEL_CLS = "absolute bottom-16 right-0 flex flex-col-reverse items-end gap-2"
@@ -98,7 +98,7 @@ module UI
         fill: "none",
         stroke: "currentColor",
         "stroke-width": "2",
-        class: "size-6 transition-transform duration-200",
+        class: "size-6 motion-safe:transition-transform duration-200",
         "aria-hidden": "true",
         data: { speed_dial_target: "icon" })
     end

@@ -9,9 +9,7 @@ class Membership < ApplicationRecord
   include Ownership
   include Announcements
 
-  # Removal has one door. A bare discard! skips the last-owner guard and can leave
-  # a workspace nobody can administer (#1120); undiscard! skips reactivate!'s
-  # provenance guard and row lock. See /docs/developer/membership-lifecycle.
+  # Removal has one door: bare discard!/undiscard! skip their guards (#1120).
   private :discard!, :undiscard!
 
   belongs_to :user

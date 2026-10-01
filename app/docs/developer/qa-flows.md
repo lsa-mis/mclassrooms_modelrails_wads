@@ -2,6 +2,15 @@
 title: "QA: User Flow Walkthroughs"
 description: Manual verification guide for the core user-facing flows — signup, magic-link, OAuth, workspace join, identity surfaces, onboarding wizard, and passkeys. Each section lists the config required, a numbered walkthrough, and edge cases.
 keywords: qa testing signup invitation magic-link oauth workspace join identity verification manual walkthrough onboarding
+code:
+  signup:
+    - app/controllers/sessions/lookups_controller.rb
+    - app/views/sessions/
+    - app/controllers/magic_link_callbacks_controller.rb
+    - app/views/magic_link_callbacks/
+    - app/controllers/omniauth_callbacks_controller.rb
+    - app/lib/oauth_link.rb
+    - app/controllers/email_verifications_controller.rb
 ---
 
 # QA: User Flow Walkthroughs
@@ -149,11 +158,10 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 
 1. Navigate to `/session/new` and click **Sign in with Google** (or GitHub).
    The browser is sent to `/auth/:provider`, then redirects to the provider, then returns to `/auth/:provider/callback`.
-2. The callback reaches `OmniauthCallbacksController#create`.
-   `Authentication.find_by(provider:, uid:)` finds nothing. `Current.user` is nil.
-   `handle_new_user_oauth` is called.
-3. `oauth_email_verified?` returns `true` (Google explicitly sets `email_verified`, GitHub is implicitly trusted).
-   `handle_verified_email_oauth` finds or creates a user by email.
+2. The callback reaches `OmniauthCallbacksController#create`, which hands the identity to `OauthLink#claim`.
+   `Authentication.find_by(provider:, uid:)` finds nothing and no one is signed in, so `claim_signup` runs.
+3. `OauthIdentity#email_verified?` returns `true` (Google explicitly sets `email_verified`, GitHub is implicitly trusted).
+   `claim_verified_signup` finds or creates a user by email.
    **Expect:** You are signed in immediately and redirected to `after_authentication_url`. No verification email is sent.
 
 ### New user, provider email **un**verified
@@ -161,23 +169,22 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 This path applies when Google explicitly returns `info.email_verified: false`.
 
 1. Same flow as above through the callback.
-   `oauth_email_verified?` returns `false`.
-   `handle_unverified_email_oauth` is called.
+   `OauthIdentity#email_verified?` returns `false`, so `claim_unverified_signup` runs.
 2. The user record is created and an email `Authentication` is saved as **pending** (no `verified_at`). The pending invitation/join-link tokens from the session (if present) are persisted onto this authentication for deferred claiming.
    **Expect:** You are **not** signed in. You are redirected to `new_session_path` with a notice: check your email. A verification link email is dispatched — check `/letter_opener`.
-3. Click the verification link in `/letter_opener`.
-   `Settings::ConnectedAccountsController#verify` verifies the authentication, signs you in (because `was_authenticated` is false), claims any pending invitation or join-link, and redirects to `root_path`.
+3. Click the verification link in `/letter_opener`. It opens a confirmation page, which verifies nothing on its own; press its button.
+   `Settings::ConnectedAccountVerificationsController#create` verifies the authentication, signs you in (because `was_authenticated` is false), claims any pending invitation or join-link, and redirects to `root_path`.
 
 ### Signed-in user linking a provider
 
 1. Sign in with email/password, then navigate to `settings/connected_accounts` (the sidebar item labelled **Security**).
 2. Click **Connect Google** (or GitHub). The browser returns to the callback.
-   `Current.user` is present; `handle_signed_in_link` is called.
+   `Current.user` is present, so `OauthLink#claim_link` runs.
 3. If the OAuth email **matches** the account's primary email and `email_verified` is true: the authentication is created and immediately verified.
    **Expect:** Redirect to `settings/connected_accounts` with a "linked" notice. The provider now appears in the list as verified.
 4. If the OAuth email does **not** match (or `email_verified` is false): the authentication is saved as pending. A verification link email is dispatched to the OAuth address — check `/letter_opener`.
    **Expect:** Redirect to `settings/connected_accounts` with a "pending" notice. The provider appears in the list with a "Verify" / "Resend" / "Remove" action.
-5. Click the verification link in `/letter_opener`.
+5. Click the verification link in `/letter_opener` and press the button on the confirmation page.
    **Expect:** The authentication is verified, the pending entry is updated to verified, and you are redirected to `settings/connected_accounts` with a success notice (you were already authenticated, so `was_authenticated` is true — no re-sign-in).
 
 ### Removing a provider (`settings/connected_accounts`)

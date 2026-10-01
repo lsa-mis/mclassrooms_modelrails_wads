@@ -12,7 +12,7 @@ module UI
     # 44px AAA target; the offset outline (focus-ring) survives overflow:hidden
     # ancestors and forced-colors mode, where a box-shadow ring is clipped.
     NAV_BTN    = "inline-flex size-11 items-center justify-center rounded-md focus-ring " \
-                 "text-text-muted hover:bg-surface-sunken hover:text-text-heading transition"
+                 "text-text-muted hover:bg-surface-sunken hover:text-text-heading motion-safe:transition"
     GRID_CLS   = "grid grid-cols-7 gap-px"
     ROW_CLS    = "contents"
     DOW_CLS    = "py-1.5 text-center text-xs text-text-muted font-medium"

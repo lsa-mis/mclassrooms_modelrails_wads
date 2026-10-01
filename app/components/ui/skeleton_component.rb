@@ -5,7 +5,7 @@ module UI
   # Usage, options and the accessibility contract: docs/components/skeleton.md in the
   # modelrails_ui gem (`bundle show modelrails_ui`); live examples in Lookbook.
   class SkeletonComponent < ApplicationComponent
-    BASE = "bg-surface-sunken animate-pulse motion-reduce:animate-none rounded-md"
+    BASE = "bg-surface-sunken motion-safe:animate-pulse rounded-md"
 
     def initialize(**html_attrs)
       @extra_class = html_attrs.delete(:class)

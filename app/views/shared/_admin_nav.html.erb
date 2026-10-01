@@ -74,8 +74,8 @@
     <button data-menu-target="trigger" data-action="click->menu#toggle keydown->menu#triggerKeydown"
             id="admin-nav-button" type="button"
             aria-expanded="false" aria-controls="admin-nav-panel"
-            class="min-h-[44px] flex items-center gap-2 px-3 rounded-lg text-text-body
-                   hover:bg-surface-sunken focus-ring">
+            class="min-h-[44px] flex items-center gap-2 px-3 text-on-chrome focus-ring-chrome
+                   hover:text-on-chrome-hover hover:shadow-[inset_0_-3px_0_var(--color-chrome-indicator)]">
       <%= t("navigation.admin.label") %>
       <span aria-hidden="true">&#9662;</span> <%# erblint:disable HardCodedString - presentational glyph, not language (#498) %>
     </button>

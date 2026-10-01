@@ -40,6 +40,8 @@ RSpec.describe "Account Profiles", type: :request do
 
           expect(user.reload.pending_email).to eq("new@example.com")
           expect(user.email_address).not_to eq("new@example.com")
+          expect(response).to redirect_to(edit_settings_profile_path)
+          expect(flash[:notice]).to eq(I18n.t("settings.profiles.update.verification_sent", email: "new@example.com"))
         end
 
         it "sends notification to old email" do

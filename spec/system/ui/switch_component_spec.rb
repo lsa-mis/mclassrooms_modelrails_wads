@@ -113,23 +113,8 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
     end
   end
 
-  # Proves the AAA focus outline applies on the TRACK via the peer-focus-visible
-  # cascade (converged-conventions B5). The input is `sr-only` but focusable; the
-  # visible focus indicator lives on the TRACK. B5 uses an OUTLINE (not a box-shadow
-  # ring) so the indicator survives overflow:hidden clipping and forced-colors mode.
-  #
-  # Approach: programmatic `.focus()` does not reliably trigger `:focus-visible` in
-  # Chromium, nor does a JS-dispatched (untrusted) synthetic Tab keydown — Chromium's
-  # focus-modality heuristic only latches "keyboard" on a TRUSTED keyboard event. So we
-  # blur whatever's focused and Tab-navigate onto the switch input via REAL CDP-dispatched
-  # key presses — the browser's own native tab-navigation is what makes :focus-visible
-  # latch true (verified empirically against this driver's Chrome; JS-level tricks don't).
-  #
-  # The TRACK carries `transition-all`, which ANIMATES the (animatable) outline-width
-  # 0 -> 2px over the transition duration. We poll a few frames until it settles so we
-  # read the resolved focus indicator, not a mid-transition frame. (The old box-shadow
-  # ring proof never needed this because it read the non-animated --tw-ring-shadow
-  # custom property; an outline's longhands are real animatable computed values.)
+  # Chromium latches :focus-visible only on a TRUSTED key event, so the track is reached by real CDP Tab
+  # presses; its motion-safe:transition-all animates the outline, so the read polls until it settles (B5).
   describe "focus-visible outline (peer-focus-visible cascade)" do
     it "renders the AAA focus outline on the track when the switch input is keyboard-focused" do
       visit "#{preview}/off"

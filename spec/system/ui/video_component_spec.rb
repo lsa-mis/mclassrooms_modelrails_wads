@@ -12,18 +12,11 @@ require "rails_helper"
 RSpec.describe "Video component accessibility", type: :system do
   let(:scope) { [ "[data-test='video']" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: native video controls pass AAA in both themes" do
     visit "/rails/view_components/ui/video_component/default"
 
     expect(page).to have_css("video", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "captions: a captions track is present and AAA passes in both themes" do
@@ -31,6 +24,6 @@ RSpec.describe "Video component accessibility", type: :system do
 
     expect(page).to have_css("video", visible: :all)
     expect(page).to have_css("video track[kind='captions']", visible: :all)
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end

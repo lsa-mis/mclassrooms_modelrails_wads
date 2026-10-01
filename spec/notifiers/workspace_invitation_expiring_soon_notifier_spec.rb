@@ -21,14 +21,6 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
            expires_at: 48.hours.from_now)
   end
 
-  # Drain the EventJob -> per-channel delivery method -> ActionMailer chain
-  # in two passes; perform_enqueued_jobs only performs jobs already enqueued
-  # at call time, not jobs added during the run.
-  def drain_noticed_jobs
-    perform_enqueued_jobs(only: Noticed::EventJob)
-    perform_enqueued_jobs(only: Noticed::DeliveryMethods::Email)
-  end
-
   describe ".category" do
     it "is :account_access" do
       expect(described_class.category_name).to eq "account_access"

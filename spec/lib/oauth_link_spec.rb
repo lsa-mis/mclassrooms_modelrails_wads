@@ -178,9 +178,7 @@ RSpec.describe OauthLink do
         expect(outcome.spent_tokens).to contain_exactly(:invitation, :join)
 
         registrant = User.find_by(email_address: "person@example.com")
-        # The one signup path whose welcome no request spec pins (#924): here the
-        # welcome is dispatched before verification, which makes it the site a
-        # refactor is most likely to drop, silently.
+        # The one signup welcome no request spec pins (#924).
         expect(Noticed::Notification.where(recipient: registrant,
                                            type: "WelcomeNotifier::Notification").count).to eq 1
 
@@ -277,6 +275,37 @@ RSpec.describe OauthLink do
       expect(outcome.code).to eq(:signed_in)
       expect(outcome.user.workspaces).not_to include(workspace)
       expect(outcome.spent_tokens).not_to include(:join)
+    end
+  end
+
+  describe "a suspended account (#1129)" do
+    it "refuses an existing identity before refreshing its credentials" do
+      owner = create(:user, :no_authentications, :suspended, email_address: "held@example.com")
+      auth = owner.authentications.create!(
+        provider: "google", uid: "uid-held", email: "held@example.com", verified_at: Time.current, oauth_token: "stale"
+      )
+
+      outcome = described_class.new(google_hash(uid: "uid-held", email: "held@example.com", token: "fresh")).claim
+
+      expect(outcome.code).to eq(:suspended)
+      expect(outcome.user).to eq(owner)
+      expect(auth.reload.oauth_token).to eq("stale")
+    end
+
+    it "refuses a new provider for a suspended address before linking it or spending a parked invitation" do
+      held = create(:user, :suspended, email_address: "person@example.com")
+      invitation = create(:invitation, email: "person@example.com")
+
+      outcome = described_class.new(
+        google_hash(email_verified: true), signups_open: true, invitation_token: invitation.token
+      ).claim
+
+      expect(outcome.code).to eq(:suspended)
+      expect(outcome.user).to eq(held)
+      expect(outcome.spent_tokens).to be_empty
+      expect(Authentication.find_by(provider: "google", uid: "uid-123")).to be_nil
+      expect(invitation.reload).to be_pending
+      expect(held.memberships.count).to eq(1)
     end
   end
 

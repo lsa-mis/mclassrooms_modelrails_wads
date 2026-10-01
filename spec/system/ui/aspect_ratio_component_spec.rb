@@ -20,19 +20,12 @@ RSpec.describe "AspectRatio component accessibility", type: :system do
   # collides across scoped 0b specs → axe scopes to the wrong selector).
   let(:scope) { [ "#ar-scope" ] }
 
-  def expect_aaa_in_both_themes
-    expect(axe_clean_in_both_themes?(include: scope)).to(
-      be(true),
-      axe_violations_in_both_themes(include: scope).join("\n")
-    )
-  end
-
   it "default: renders a 16:9 ratio wrapper framing the slotted image; AAA in both themes" do
     visit "/rails/view_components/ui/aspect_ratio_component/default"
 
     expect(page).to have_css("#ar-scope div[style*='aspect-ratio']")
     expect(page).to have_css("#ar-scope img[alt='A river winding between forested cliffs']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 
   it "square: renders a 1:1 ratio wrapper framing the slotted image; AAA in both themes" do
@@ -40,6 +33,6 @@ RSpec.describe "AspectRatio component accessibility", type: :system do
 
     expect(page).to have_css("#ar-scope div[style*='aspect-ratio']")
     expect(page).to have_css("#ar-scope img[alt='A black puppy sitting on a wooden floor']")
-    expect_aaa_in_both_themes
+    expect_aaa_in_both_themes(include: scope)
   end
 end
