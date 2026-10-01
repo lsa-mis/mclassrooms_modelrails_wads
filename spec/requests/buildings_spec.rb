@@ -667,6 +667,7 @@ RSpec.describe "PATCH /buildings/:id", type: :request do
       }.not_to raise_error
 
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(flash[:alert]).to eq(I18n.t("buildings.edit.stale_floor"))
       expect(building.reload.nickname).to eq("Old Name")
       expect(foreign_floor.reload.plan).not_to be_attached
     end

@@ -8,7 +8,6 @@ RSpec.describe "Documentation cited paths" do
   let(:allowed_absent) do
     {
       "config/initializers/session_store.rb" => "optional; a fork adds it only to share a cookie domain",
-      "config/markdowndocs_categories.local.yml" => "fork-owned; the template ships none",
       "app/docs/my-feature.md" => "a placeholder name in the forking guide's example",
       "app/models/concerns/noticed/deliverable.rb" => "inside the noticed 3.0.0 gem, named beside it",
       "app/models/ssrf_protection.rb" => "Fizzy's file, cited as the port source for #658",
@@ -16,7 +15,9 @@ RSpec.describe "Documentation cited paths" do
       "config/credentials.yml.enc" => "gitignored; a fork generates it with credentials:edit",
       "config/master.key" => "gitignored; every checkout keeps its own",
       "config/credentials/production.key" => "gitignored; a deployment keeps its own",
-      "app/assets/builds/tailwind.css" => "a build artifact; tailwindcss:build writes it"
+      "app/assets/builds/tailwind.css" => "a build artifact; tailwindcss:build writes it",
+      "config/initializers/project_tools.rb" => "fork: no Project domain; forking.md names it for its merge=ours line",
+      "spec/code_smells/project_tools_have_locale_keys_spec.rb" => "fork: deleted with project tools; i18n.md cites the shape"
     }
   end
 
