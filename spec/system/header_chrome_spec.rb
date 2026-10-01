@@ -70,7 +70,10 @@ RSpec.describe "Header chrome", type: :system do
       document.head.prepend(brand);
     JS
 
-    expect(computed("header", "backgroundColor")).to eq("oklch(0.35 0.12 150)")
+    # Either this rule or a fork's own _brand.css may win; the defaults must not.
+    expect(resolved("--color-chrome")).not_to eq(resolved("--color-surface-raised")),
+      "a :root brand rule loaded ahead of the app's stylesheet lost to the chrome defaults"
+    expect(computed("header", "backgroundColor")).to eq(resolved("--color-chrome"))
   end
 
   it "keeps today's header with the chrome family at its defaults" do

@@ -8,7 +8,7 @@
             class: "flex items-center gap-2 min-h-input text-on-chrome-strong [&>svg]:h-6 [&>svg]:text-chrome-mark
                     hover:opacity-80 transition-opacity
                     focus-ring-chrome rounded" do %>
-        <%= render "shared/site_logo", name_class: "text-xl font-bold" %>
+        <%= render "shared/site_logo", name_class: "text-xl font-bold inline-block first-letter:text-chrome-mark" %>
       <% end %>
 
       <%# Right cluster. v2 (2026-05-23): the standalone notifications bell
@@ -38,8 +38,11 @@
             above and every route helper in shared/_user_menu. %>
         <% if authenticated? %>
           <%= link_to t("navigation.find_a_room"), main_app.find_a_room_path,
-                class: "hidden md:flex min-h-[44px] items-center px-3 rounded-lg
-                        text-on-chrome hover:text-on-chrome-hover focus-ring-chrome" %>
+                aria: { current: ("page" if current_page?(main_app.find_a_room_path)) },
+                class: "hidden md:flex min-h-[44px] items-center px-3
+                        text-on-chrome focus-ring-chrome
+                        aria-[current=page]:font-semibold aria-[current=page]:shadow-[inset_0_-3px_0_var(--color-chrome-indicator)]
+                        hover:text-on-chrome-hover hover:shadow-[inset_0_-3px_0_var(--color-chrome-indicator)]" %>
         <% end %>
         <%# No workspace switcher here: it is the head of the workspace sidebar
             (_workspace_switcher), and on phones the same switcher
