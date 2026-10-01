@@ -60,3 +60,18 @@
   --primary-900: var(--color-blue-900);
   --primary-950: var(--color-blue-950);
 }
+
+/* The header bar in U-M Blue with a maize rule; chrome_contrast_spec measures the family.
+   One value serves both themes: the maize rule is the bar's edge on a dark page. */
+:root {
+  --color-chrome:           oklch(27.1% 0.080 251.6);  /* U-M Blue #00274C */
+  --color-chrome-border:    oklch(86.3% 0.176 89.8);   /* U-M Maize #FFCB05 */
+  --chrome-border-width:    4px;
+  --color-on-chrome:        oklch(100% 0 0);
+  --color-on-chrome-strong: oklch(100% 0 0);
+  --color-on-chrome-muted:  oklch(86.9% 0.020 252.9);
+  --color-on-chrome-hover:  oklch(80.7% 0.101 250.4);
+  --color-chrome-mark:      oklch(86.3% 0.176 89.8);
+  --color-chrome-focus:     oklch(86.3% 0.176 89.8);
+  --color-chrome-indicator: oklch(80.7% 0.101 250.4);  /* nav current-page + hover underline */
+}
