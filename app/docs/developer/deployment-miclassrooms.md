@@ -35,6 +35,7 @@ through `.kamal/secrets` and the deployer's shell.
 | `REPLACE_WITH_OKTA_ISSUER_URL` / `REPLACE_WITH_OKTA_CLIENT_ID` | U-M Okta org + OIDC app | LSA TS |
 | `REPLACE_WITH_OWNER_EMAIL` | initial Owner the seed mails a password-set link to | you |
 | `UM_API_BASE_URL` / `UM_API_TOKEN_URL` | confirm the production gateway URLs | U-M gateway team |
+| `SMTP_ADDRESS` (add it under `env.clear`) | the U-M SMTP relay host; left unset on purpose, so production refuses to boot until it is set | LSA TS |
 
 ## Environment variable inventory
 
@@ -55,6 +56,8 @@ secrets are sourced in `.kamal/secrets` from the deployer's shell or a password 
 | `TENANCY_OWNER_EMAIL` | clear (seed-time) | initial Owner account (`db:seed`) |
 | `UM_API_BASE_URL` / `UM_API_TOKEN_URL` | clear | U-M Facilities gateway endpoints (Phase 2 sync) |
 | `UM_API_CLIENT_ID` / `UM_API_CLIENT_SECRET` | secret | gateway client credentials |
+| `SMTP_ADDRESS` / `SMTP_PORT` | clear | outbound mail through the U-M SMTP relay (port `587`); the boot guard refuses an unset address |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | secret | U-M SMTP relay credentials |
 | `API_UPDATE_DELETE_DRY_RUN` | clear, optional | sync dry-run posture (unset = live writes) |
 | `TEST_LOGIN_TOKEN` | **staging only** | Siteimprove crawler login; route never drawn in production |
 | Google / GitHub OAuth | Rails credentials | SSO (via `RAILS_MASTER_KEY`) |
@@ -70,6 +73,7 @@ depend on a Phase 8 task not yet built.
 
 - [ ] **DNS + TLS** — hostname → server IP; `proxy.host` / `RAILS_HOST` / `APP_HOST` all match; Let's Encrypt cert issued via kamal-proxy.
 - [ ] **Deploy** — all env vars + secrets set; `bin/kamal deploy` green; `bin/kamal console` opens.
+- [ ] **Mail** — `SMTP_ADDRESS` names the U-M relay and its credentials are in the deployer's environment; a mail sent from `bin/kamal console` (for example `Rails.application.config.action_mailer.smtp_settings` checked, then a real `deliver_now`) arrives.
 - [ ] **Seeds** — reference data verified against the old app's lists (`db:seed`: `CharacteristicDisplayRule`, `UnitDisplayName`, `SyncScopeRule`); Owner account created + password-set link received.
 - [ ] **First sync** — run `SyncNightlyJob` from the console; confirm succeeded, inventory counts sane, `Setting.capacity_filter_max` populated. *(Verify via console/logs until the admin sync-run UI ships — later.)*
 - [ ] **Legacy URLs in production** — spot-check a known `/classrooms/<facility_code>`, an unknown code, `/classrooms` (LSA pre-filter — confirm `COLLEGE_OF_LSA` resolved), `/legacy_crdb`, one `/toggle_visibile/<rmrecnbr>`.
