@@ -37,7 +37,7 @@ class NotesController < ApplicationController
   def update
     authorize @note
     result = Curation::Apply.call(record: @note, actor: Current.user, action: "note.updated", attributes: note_params)
-    respond_with_result(result)
+    respond_with_result(result, form_target: dom_id(@note, :edit))
   end
 
   def destroy
@@ -94,7 +94,7 @@ class NotesController < ApplicationController
     parent ? dom_id(parent, :new_reply) : dom_id(notable, :new_note)
   end
 
-  def respond_with_result(result, reset_target: nil)
+  def respond_with_result(result, reset_target: nil, form_target: reset_target)
     if result.success?
       respond_to do |format|
         format.turbo_stream { render turbo_stream: success_streams(reset_target) }
@@ -103,11 +103,19 @@ class NotesController < ApplicationController
     else
       respond_to do |format|
         format.turbo_stream do
-          render turbo_stream: error_toast(result.errors.to_sentence), status: :unprocessable_content
+          render turbo_stream: failure_stream(result, form_target), status: :unprocessable_content
         end
         format.html { redirect_to request.referer || root_path, alert: result.errors.to_sentence }
       end
     end
+  end
+
+  # The form returns with its error summary and field error, which announce; a toast would say it twice.
+  def failure_stream(result, form_target)
+    return error_toast(result.errors.to_sentence) unless form_target
+
+    turbo_stream.update(form_target, partial: "notes/form",
+                                     locals: { notable: @note.notable, parent: @note.parent, note: @note })
   end
 
   # Form-and-toast only — see the class comment: inserting/replacing/
