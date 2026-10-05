@@ -134,6 +134,15 @@ RSpec.describe Panorama::Rectilinear do
     end
   end
 
+  describe ".equirectangular?" do
+    it "answers from dimensions alone, with the same tolerance .project enforces" do
+      expect(described_class.equirectangular?(4000, 2000)).to be(true)
+      expect(described_class.equirectangular?(4000, 1990)).to be(true)
+      expect(described_class.equirectangular?(4420, 2360)).to be(false)
+      expect(described_class.equirectangular?(300, 200)).to be(false)
+    end
+  end
+
   # Not a tautology: this value is a CONTRACT with Pannellum's documented
   # default, and this is the cheapest place to record that it is not arbitrary.
   it "renders at Pannellum's default field of view" do

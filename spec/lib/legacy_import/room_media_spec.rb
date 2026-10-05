@@ -13,8 +13,8 @@ RSpec.describe LegacyImport::RoomMedia do
 
   around { |example| Current.set(workspace:) { example.run } }
 
-  def room_file(attachment_name, fixture, filename: nil, record_id: 2_196_067)
-    export_tree.media(model: "Room", record_id:, attachment_name:, fixture:, filename: filename || File.basename(fixture))
+  def room_file(attachment_name, fixture, filename: nil, record_id: 2_196_067, metadata: {})
+    export_tree.media(model: "Room", record_id:, attachment_name:, fixture:, filename: filename || File.basename(fixture), metadata:)
   end
 
   def md5(io_or_bytes) = Digest::MD5.base64digest(io_or_bytes)
@@ -78,6 +78,28 @@ RSpec.describe LegacyImport::RoomMedia do
 
     expect(md5(room.reload.panorama.download)).to eq(md5(file_fixture("room.jpg").binread))
     expect(result.payload[:counters]).to include(replaced: 1)
+  end
+
+  it "leaves out a panorama that is not a 2:1 360-degree image and says which" do
+    room_file("room_panorama", "room.jpg", filename: "r-bus0210_qtvr-s.jpg", metadata: { width: 4420, height: 2360 })
+    room_file("room_layout", "seating_chart.pdf")
+
+    result = run_importer
+
+    expect(room.reload.panorama).not_to be_attached
+    expect(room.seating_chart).to be_attached
+    expect(result.payload[:counters]).to include(created: 1)
+    expect(result.payload[:info_lines]).to include(
+      a_string_starting_with("panorama not imported, 4420x2360 is not a 2:1 360-degree image:").and(including("r-bus0210_qtvr-s.jpg"))
+    )
+  end
+
+  it "imports a panorama whose manifest metadata is 2:1" do
+    room_file("room_panorama", "equirect.png", metadata: { width: 6000, height: 3000 })
+
+    run_importer
+
+    expect(room.reload.panorama).to be_attached
   end
 
   # stray.txt keeps its .txt name so it identifies as text/plain; renamed to
