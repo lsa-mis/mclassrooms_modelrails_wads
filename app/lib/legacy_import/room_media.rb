@@ -48,12 +48,24 @@ module LegacyImport
       entries.filter_map do |entry|
         slot = SINGLE_SLOTS[entry.fetch("attachment_name")]
         next if slot.nil?
+        if slot == :panorama && not_360?(entry)
+          @tally.info_lines << "panorama not imported, #{dimensions(entry)} is not a 2:1 360-degree image: #{Export.describe(entry)}"
+          next
+        end
 
         { outcome: SlotWriter.outcome(SlotWriter.checksum(room.public_send(slot)), entry.fetch("checksum")),
           report: SlotWriter.replaced_line(room, "#{slot}_alt", entry),
           apply: -> { room.public_send("#{slot}=", SlotWriter.attachable(@export, entry)) } }
       end
     end
+
+    # Decided from the manifest's dimensions; an entry without them imports, and the flat render job reports it.
+    def not_360?(entry)
+      width, height = entry["metadata"].to_h.values_at("width", "height")
+      width.present? && height.present? && !Panorama::Rectilinear.equirectangular?(width, height)
+    end
+
+    def dimensions(entry) = entry["metadata"].to_h.values_at("width", "height").join("x")
 
     def gallery_writes(room, entries)
       assets = MediaAsset.where(owner: room).order(:position, :id).to_a

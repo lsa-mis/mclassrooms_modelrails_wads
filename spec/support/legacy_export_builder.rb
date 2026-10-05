@@ -13,7 +13,7 @@ module LegacyExportBuilder
     end
 
     def media(model:, record_id:, attachment_name:, fixture:, record_label: "record #{record_id}",
-              filename: File.basename(fixture))
+              filename: File.basename(fixture), metadata: {})
       source = Rails.root.join("spec/fixtures/files", fixture)
       path = File.join(model.underscore, record_id.to_s, attachment_name, filename)
       destination = @root.join("media", path)
@@ -24,7 +24,8 @@ module LegacyExportBuilder
         "attachment_name" => attachment_name, "filename" => filename,
         "content_type" => Marcel::MimeType.for(source, name: filename),
         "byte_size" => File.size(source),
-        "checksum" => Digest::MD5.base64digest(File.binread(source)), "path" => path
+        "checksum" => Digest::MD5.base64digest(File.binread(source)), "path" => path,
+        "metadata" => metadata.stringify_keys
       }
       self
     end

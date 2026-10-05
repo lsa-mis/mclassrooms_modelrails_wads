@@ -111,10 +111,12 @@ module Panorama
     # accepts a 3:2 phone photo into the panorama slot. Projected, that renders
     # something PLAUSIBLE AND WRONG — the worst failure mode, because nobody
     # notices. Fail loudly, and say what to do about it.
-    def assert_equirectangular!(source, source_path)
-      ratio = source.width.to_f / source.height
-      return if (ratio - 2.0).abs <= ASPECT_TOLERANCE
+    def equirectangular?(width, height) = ((width.to_f / height) - 2.0).abs <= ASPECT_TOLERANCE
 
+    def assert_equirectangular!(source, source_path)
+      return if equirectangular?(source.width, source.height)
+
+      ratio = source.width.to_f / source.height
       raise NotEquirectangular,
             "#{source_path} is #{source.width}x#{source.height} (ratio #{ratio.round(3)}); " \
             "a rectilinear render needs a full-sphere 2:1 equirectangular source " \
