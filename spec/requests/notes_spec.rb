@@ -12,6 +12,7 @@ require "rails_helper"
 # workspace-scoped fixtures + sign_in) and its membership_with/editor_for
 # helpers.
 RSpec.describe "Notes", type: :request do
+  include ActionView::RecordIdentifier
   let(:workspace) { create(:workspace, slug: "notes-spec-workspace", personal: false) }
 
   before do
@@ -81,6 +82,18 @@ RSpec.describe "Notes", type: :request do
         }.not_to change(ActivityLog, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
+      end
+
+      it "re-renders the create form in place with the body error and the alert choice kept" do
+        expect {
+          post notes_path, params: { note: note_params_for(room_in_unit, body: "", alert: "1") }, as: :turbo_stream
+        }.not_to change(Note, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include(%(target="#{dom_id(room_in_unit, :new_note)}"))
+        expect(response.body).to include(%(id="#{dom_id(room_in_unit, :new_note)}_note_body-error"))
+        checkbox = Nokogiri::HTML(response.body).at_css(%(input[type="checkbox"][name="note[alert]"]))
+        expect(checkbox["checked"]).to eq("checked")
       end
     end
 
@@ -217,6 +230,17 @@ RSpec.describe "Notes", type: :request do
         # No double-insert: the update broadcast (not this response) replaces
         # the note in place — the HTTP response body carries no note markup.
         expect(response.body).not_to include("Updated by admin")
+      end
+
+      it "re-renders the edit form in place with the body error when the update is invalid" do
+        expect {
+          patch note_path(note), params: { note: { body: "" } }, as: :turbo_stream
+        }.not_to change(ActivityLog, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include(%(target="#{dom_id(note, :edit)}"))
+        expect(response.body).to include(%(id="#{dom_id(note)}_note_body-error"))
+        expect(note.reload.body.to_plain_text).not_to be_empty
       end
     end
 

@@ -68,10 +68,12 @@
     <%= form.hidden_field :parent_id, value: parent.id %>
   <% end %>
 
-  <div class="space-y-2">
-    <%= form.label :body, t("notes.form.body_label"), class: "block text-sm font-medium text-text-body" %>
-    <%= form.rich_text_area :body %>
-  </div>
+  <%# Lexxy forwards the host's aria-* to its contenteditable (#754). No id: namespace: would prefix it twice. %>
+  <%= render UI::FormFieldComponent.new(label: t("notes.form.body_label"),
+                                        error: record.errors.full_messages_for(:body).first,
+                                        id: form.field_id(:body)) do |field| %>
+    <%= form.rich_text_area :body, **field.html_input_attrs.except(:id) %>
+  <% end %>
 
   <%= form.check_box :alert, label: t("notes.form.alert_label") %>
 
