@@ -106,6 +106,16 @@ namespace :admin do
   resources :characteristic_display_rules, except: [ :show ]
   resources :unit_display_names, except: [ :show ]
   resources :sync_scope_rules, except: [ :show ]
+  resources :sync_runs, only: %i[index show]
+end
+
+# Operator controls for the sync; merges with upstream's operations namespace in config/routes.rb.
+namespace :operations do
+  resources :sync_runs, only: %i[index show create] do
+    scope module: :sync_runs do
+      resource :resumption, only: :create
+    end
+  end
 end
 
 # Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for

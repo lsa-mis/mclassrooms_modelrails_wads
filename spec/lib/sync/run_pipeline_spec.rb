@@ -180,6 +180,18 @@ RSpec.describe Sync::RunPipeline do
       expect(sleeps).to eq([ 61, 61, 61 ])
     end
 
+    it "runs every phase of a queued run and stamps when it started" do
+      queued = create(:sync_run, workspace: workspace, status: :running, started_at: nil)
+      call_log = []
+      described_class::CORE_PHASES.each { |phase| stub_phase(phase, status: :succeeded, call_log: call_log) }
+
+      run = described_class.call(resume_run: queued, sleeper: sleeper, client: client, operator_log: operator_log)
+
+      expect(call_log).to eq(%w[campuses buildings rooms facility_ids characteristics contacts])
+      expect(run).to be_succeeded
+      expect(run.started_at).to be_present
+    end
+
     it "stops again and skips the rest if the resumed run fails again at the same phase" do
       failed_run = create(:sync_run, workspace: workspace, status: :failed)
       create(:sync_phase, sync_run: failed_run, workspace: workspace, key: "campuses", status: :succeeded)

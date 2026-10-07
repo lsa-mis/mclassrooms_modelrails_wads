@@ -15,10 +15,13 @@ RSpec.describe SyncRunPolicy do
   # editor-other-unit, viewer.
   sync_run_matrix = [
     [ :index?,   :sync_run, true, true,  true,  false ],
-    [ :show?,    :sync_run, true, true,  true,  false ],
-    [ :resume?,  :sync_run, true, false, false, false ],
-    [ :refresh?, :sync_run, true, false, false, false ]
+    [ :show?,    :sync_run, true, true,  true,  false ]
   ]
+
+  # Retrying or starting a sync is an operator action now (Operations::SyncRunPolicy), not a workspace admin's.
+  it "answers no workspace-tier action verbs" do
+    expect(described_class.new(admin_user, sync_run)).not_to respond_to(:resume?, :refresh?)
+  end
 
   sync_run_users = %i[admin_user editor_user other_editor_user viewer_user]
 

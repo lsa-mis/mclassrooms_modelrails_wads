@@ -27,7 +27,8 @@ RSpec.describe "Operations area", type: :request do
     # The exact count: an empty selection (a routes.rb typo breaking the
     # scope) and a route quietly removed are both noticed. Update it when the
     # surface changes on purpose.
-    expect(operations_routes.size).to eq(16)
+    expect(operations_routes.size).to eq(20)
+    sync_run = create(:sync_run, workspace:)
 
     operations_routes.each do |route|
       verb = route.verb.to_s.strip.downcase.to_sym
@@ -41,10 +42,13 @@ RSpec.describe "Operations area", type: :request do
           workspace.slug
         when :user_id
           member.id
+        when :sync_run_id
+          sync_run.id
         when :id
           case controller
           when "operations/operatorships" then other_operatorship.id
           when "operations/users" then member.id
+          when "operations/sync_runs" then sync_run.id
           else
             raise "no resolver for :id on #{controller}##{action} — teach this example its value"
           end

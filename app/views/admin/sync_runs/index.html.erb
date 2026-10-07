@@ -1,0 +1,18 @@
+<% content_for(:title) { t(".title") } %>
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-text-heading"><%= t(".title") %></h1>
+      <p class="mt-2 text-text-body"><%= t(".description") %></p>
+    </div>
+    <% if Current.user.operator? %>
+      <%= ui :button, t(".manage"), href: operations_sync_runs_path, variant: :outline, tone: :neutral, class: "whitespace-nowrap" %>
+    <% end %>
+  </div>
+
+  <div class="mt-8">
+    <%= render "sync_runs/summary", latest: @sync_runs.first, inventory: @inventory %>
+  </div>
+  <%= render "sync_runs/history", sync_runs: @sync_runs, scope: :admin %>
+</div>

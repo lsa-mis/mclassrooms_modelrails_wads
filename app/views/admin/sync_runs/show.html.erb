@@ -1,0 +1,13 @@
+<% content_for(:title) { t(".title", started: sync_started_at(@sync_run)) } %>
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <%= link_to t(".back"), admin_sync_runs_path, class: "btn-text btn-text-interactive" %>
+  <div class="mt-4 flex flex-wrap items-center gap-3">
+    <h1 class="text-2xl font-bold text-text-heading"><%= t(".title", started: sync_started_at(@sync_run)) %></h1>
+    <%= sync_run_status_badge(@sync_run) %>
+  </div>
+
+  <div class="mt-6">
+    <%= render "sync_runs/detail", sync_run: @sync_run %>
+  </div>
+</div>

@@ -56,6 +56,118 @@ RSpec.describe SyncRun, type: :model do
     end
   end
 
+  describe "operator actions" do
+    include ActiveJob::TestHelper
+
+    let(:workspace) { create(:workspace) }
+    let(:operator) { create(:user) }
+
+    describe ".request!" do
+      it "queues a new run, audits it, and enqueues the pipeline for that run" do
+        outcome = nil
+        expect { outcome = described_class.request!(workspace:, by: operator) }
+          .to change { described_class.where(workspace:).count }.by(1)
+
+        run = described_class.where(workspace:).sole
+        expect(outcome).to eq(:requested)
+        expect(run).to be_queued
+        expect(SyncRunJob).to have_been_enqueued.with(run)
+        log = ActivityLog.find_by!(action: "sync_run.requested", trackable: run)
+        expect([ log.actor, log.workspace, log.visibility ]).to eq([ operator, workspace, "admin" ])
+      end
+
+      it "refuses while a run is in progress, so a double click cannot start two" do
+        described_class.request!(workspace:, by: operator)
+
+        expect(described_class.request!(workspace:, by: operator)).to eq(:already_running)
+        expect(described_class.where(workspace:).count).to eq(1)
+      end
+
+      it "is not blocked by a run that stalled hours ago" do
+        create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago)
+
+        expect(described_class.request!(workspace:, by: operator)).to eq(:requested)
+      end
+
+      it "is not blocked by another workspace's run" do
+        create(:sync_run, status: :running, started_at: 1.minute.ago)
+
+        expect(described_class.request!(workspace:, by: operator)).to eq(:requested)
+      end
+    end
+
+    describe "#resume!" do
+      let(:run) { create(:sync_run, workspace:, status: :failed, started_at: 1.hour.ago, finished_at: 50.minutes.ago) }
+
+      it "marks a failed run running at once, audits it, and enqueues the pipeline for it" do
+        expect(run.resume!(by: operator)).to eq(:resumed)
+
+        expect(run.reload).to be_running
+        expect(run.finished_at).to be_nil
+        expect(SyncRunJob).to have_been_enqueued.with(run)
+        expect(ActivityLog.find_by!(action: "sync_run.resumed", trackable: run).actor).to eq(operator)
+      end
+
+      it "retries a stalled run" do
+        stalled = create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago)
+
+        expect(stalled.resume!(by: operator)).to eq(:resumed)
+      end
+
+      it "refuses a succeeded run or one still in progress" do
+        succeeded = create(:sync_run, workspace:, status: :succeeded, started_at: 2.hours.ago)
+        running = create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
+
+        expect(succeeded.resume!(by: operator)).to eq(:not_resumable)
+        expect(running.resume!(by: operator)).to eq(:not_resumable)
+        expect(SyncRunJob).not_to have_been_enqueued
+      end
+
+      it "refuses while another run is in progress" do
+        create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
+
+        expect(run.resume!(by: operator)).to eq(:already_running)
+      end
+    end
+  end
+
+  describe "display state" do
+    it "reads a run with no start time as queued and one running past the stall window as stalled" do
+      expect(build(:sync_run, status: :running, started_at: nil, created_at: 1.minute.ago).display_status).to eq(:queued)
+      expect(build(:sync_run, status: :running, started_at: 7.hours.ago).display_status).to eq(:stalled)
+      expect(build(:sync_run, status: :running, started_at: 1.minute.ago).display_status).to eq(:running)
+      expect(build(:sync_run, status: :failed).display_status).to eq(:failed)
+    end
+
+    it "lists its phases in pipeline order" do
+      run = create(:sync_run)
+      %w[rooms campuses buildings].each { |key| create(:sync_phase, sync_run: run, key:) }
+
+      expect(run.phases_in_order.map(&:key)).to eq(%w[campuses buildings rooms])
+    end
+  end
+
+  describe ".history_for and .inventory_for" do
+    let(:workspace) { create(:workspace) }
+
+    it "returns the workspace's newest fourteen runs, newest first" do
+      runs = 16.times.map { |i| create(:sync_run, workspace:, started_at: i.hours.ago) }
+      create(:sync_run, started_at: 1.minute.ago)
+
+      expect(described_class.history_for(workspace)).to eq(runs.first(14))
+    end
+
+    it "counts the workspace's listed buildings and rooms, and its classrooms" do
+      building = create(:building, workspace:)
+      create(:room, building:, workspace:, room_type: "Classroom", facility_code: "MLB1", instructional_seat_count: 30)
+      create(:room, building:, workspace:, room_type: "Classroom", facility_code: "MLB2", instructional_seat_count: 30, hidden_at: Time.current)
+      create(:room, building:, workspace:, room_type: "Office")
+      create(:room)
+
+      expect(described_class.inventory_for(workspace)).to include(buildings: 1, rooms: 2, classrooms: 2, listed_classrooms: 1)
+    end
+  end
+
   describe ".latest" do
     it "returns the most recently started run" do
       workspace = create(:workspace)

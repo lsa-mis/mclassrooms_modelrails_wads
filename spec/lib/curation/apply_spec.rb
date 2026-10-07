@@ -111,4 +111,14 @@ RSpec.describe Curation::Apply do
     tracked = curation_models.select { |klass| klass.include?(Trackable) }
     expect(tracked).to be_empty
   end
+
+  it "takes the audit row's workspace explicitly where no Current.workspace exists" do
+    Current.workspace = nil
+    other = create(:workspace)
+
+    result = described_class.call(record: room, actor: actor, action: "room.updated",
+                                  attributes: { nickname: "Aud 3" }, workspace: other)
+
+    expect(result.payload[:activity_log].workspace).to eq(other)
+  end
 end

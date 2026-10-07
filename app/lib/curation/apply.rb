@@ -17,12 +17,13 @@ module Curation
   class Apply
     IGNORED_DIFF_KEYS = %w[updated_at created_at].freeze
 
-    def self.call(record:, actor:, action:, attributes: {}, &block)
-      new(record:, actor:, action:, attributes:, block:).call
+    # workspace: is passed explicitly where no request sets Current.workspace (the operations area).
+    def self.call(record:, actor:, action:, attributes: {}, workspace: Current.workspace, &block)
+      new(record:, actor:, action:, attributes:, workspace:, block:).call
     end
 
-    def initialize(record:, actor:, action:, attributes:, block:)
-      @record, @actor, @action, @attributes, @block = record, actor, action, attributes, block
+    def initialize(record:, actor:, action:, attributes:, workspace:, block:)
+      @record, @actor, @action, @attributes, @workspace, @block = record, actor, action, attributes, workspace, block
     end
 
     def call
@@ -34,7 +35,7 @@ module Curation
         @block ? @block.call(@record) : @record.save!
         activity_log = ActivityLog.create!(
           actor: @actor, action: @action, trackable: @record,
-          workspace: Current.workspace, visibility: "admin",
+          workspace: @workspace, visibility: "admin",
           before_after: before_after_payload(diff)
         )
       end
