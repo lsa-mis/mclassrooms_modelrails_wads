@@ -28,6 +28,9 @@ class SyncNightlyJob < ApplicationJob
 
   def perform
     Current.workspace = Workspace.kept.find_by!(slug: TenancyConfig.shared_workspace_slug)
-    Sync::RunPipeline.call
+    run = SyncRun.reserve(workspace: Current.workspace, &:save!)
+    return Rails.logger.info("[sync] nightly run skipped: a sync is already in progress") unless run
+
+    Sync::RunPipeline.call(resume_run: run)
   end
 end

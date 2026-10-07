@@ -27,22 +27,46 @@ class SyncRun < ApplicationRecord
       classrooms: rooms.classroom.count, listed_classrooms: rooms.classroom.listed.count }
   end
 
-  # Operator verbs: each writes one admin-visible audit row, then enqueues the pipeline after commit.
-  def self.request!(workspace:, by:)
-    return :already_running if in_progress_for?(workspace)
-
+  # The one place a new run starts: a partial unique index allows one running run per workspace, and a
+  # stalled run is failed first so it never blocks. The caller saves the yielded run; nil means one is running.
+  def self.reserve(workspace:)
     run = new(workspace:, dry_run: dry_run_by_default?, status: :running)
-    run.enqueue_audited!("sync_run.requested", by:)
+    transaction do
+      fail_stalled(workspace)
+      yield run
+    end
+    run
+  rescue ActiveRecord::RecordNotUnique
+    nil
+  end
+
+  def self.fail_stalled(workspace)
+    where(workspace:).running.where("COALESCE(started_at, created_at) <= ?", STALL_AFTER.ago)
+      .update_all(status: "failed", finished_at: Time.current, updated_at: Time.current)
+  end
+
+  # Operator verbs: the audit row commits with the reservation; the pipeline is enqueued after commit.
+  def self.request!(workspace:, by:)
+    run = reserve(workspace:) { |reserved| reserved.audit!("sync_run.requested", by:) }
+    return :already_running unless run
+
+    SyncRunJob.perform_later(run)
     :requested
   end
 
   def resume!(by:)
-    return :not_resumable unless resumable?
-    return :already_running if SyncRun.in_progress_for?(workspace)
+    outcome = SyncRun.transaction do
+      SyncRun.fail_stalled(workspace)
+      next :not_resumable unless claim_retry
 
-    assign_attributes(status: :running, finished_at: nil)
-    enqueue_audited!("sync_run.resumed", by:)
-    :resumed
+      reload.audit!("sync_run.resumed", by:)
+      :resumed
+    end
+    SyncRunJob.perform_later(self) if outcome == :resumed
+    outcome
+  rescue ActiveRecord::RecordNotUnique
+    reload
+    :already_running
   end
 
   def queued? = running? && started_at.nil? && !stalled?
@@ -64,11 +88,19 @@ class SyncRun < ApplicationRecord
 
   def phases_in_order = sync_phases.sort_by { |phase| SyncPhase::KEYS.index(phase.key) || SyncPhase::KEYS.size }
 
-  # Public so SyncRun.request! can call it on the run it builds.
-  def enqueue_audited!(action, by:)
+  # Public so SyncRun.request! can audit the run it reserves.
+  def audit!(action, by:)
     result = Curation::Apply.call(record: self, actor: by, action:, workspace:)
     raise ActiveRecord::RecordNotSaved.new(result.errors.to_sentence, self) unless result.success?
 
-    SyncRunJob.perform_later(self)
+    self
+  end
+
+  private
+
+  # A conditional UPDATE, so of two simultaneous retries only one wins; the new attempt gets a fresh start time.
+  def claim_retry
+    now = Time.current
+    SyncRun.where(id:, status: "failed").update_all(status: "running", finished_at: nil, started_at: now, updated_at: now) == 1
   end
 end

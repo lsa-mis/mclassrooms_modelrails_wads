@@ -1,7 +1,8 @@
 module SyncRunsHelper
   RUN_TONES = { succeeded: :success, failed: :danger, running: :info, queued: :info, stalled: :warning }.freeze
   PHASE_TONES = { succeeded: :success, failed: :danger, running: :info, pending: :neutral, skipped: :neutral }.freeze
-  COUNTERS = %w[created updated deactivated api_calls rate_limit_sleeps].freeze
+  # Every counter a phase writes (count(:key) in app/lib/sync), in display order; the helper spec keeps it whole.
+  COUNTERS = %w[created updated added removed cleared deactivated deleted skipped api_calls rate_limit_sleeps].freeze
 
   def sync_run_status_badge(run)
     status = run.display_status

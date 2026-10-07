@@ -127,6 +127,51 @@ RSpec.describe SyncRun, type: :model do
         create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
 
         expect(run.resume!(by: operator)).to eq(:already_running)
+        expect(run.reload).to be_failed
+      end
+
+      it "gives a retried run a fresh start time, so an old failure is not stalled the moment it resumes" do
+        old = create(:sync_run, workspace:, status: :failed, started_at: 10.hours.ago, finished_at: 9.hours.ago)
+
+        old.resume!(by: operator)
+
+        expect(old.reload.started_at).to be_within(5.seconds).of(Time.current)
+        expect(old.display_status).to eq(:queued).or eq(:running)
+        expect(described_class.in_progress_for?(workspace)).to be(true)
+      end
+
+      it "lets only one of two simultaneous retries claim the run" do
+        first = described_class.find(run.id)
+        second = described_class.find(run.id)
+
+        expect(first.resume!(by: operator)).to eq(:resumed)
+        expect(second.resume!(by: operator)).to eq(:not_resumable)
+        expect(SyncRunJob).to have_been_enqueued.exactly(:once)
+      end
+    end
+
+    describe "one running sync per workspace" do
+      it "is enforced by the database, not only by the in-progress check" do
+        create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
+
+        expect { create(:sync_run, workspace:, status: :running) }.to raise_error(ActiveRecord::RecordNotUnique)
+        expect { create(:sync_run, status: :running) }.not_to raise_error
+      end
+
+      it "turns Run now away when the reservation loses a race the in-progress check missed" do
+        allow(described_class).to receive(:in_progress_for?).and_return(false)
+        create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
+
+        expect(described_class.request!(workspace:, by: operator)).to eq(:already_running)
+        expect(ActivityLog.where(action: "sync_run.requested")).to be_empty
+        expect(SyncRunJob).not_to have_been_enqueued
+      end
+
+      it "fails a stalled run before reserving, so it never blocks the next one" do
+        stalled = create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago)
+
+        expect(described_class.request!(workspace:, by: operator)).to eq(:requested)
+        expect(stalled.reload).to be_failed
       end
     end
   end
@@ -151,7 +196,7 @@ RSpec.describe SyncRun, type: :model do
     let(:workspace) { create(:workspace) }
 
     it "returns the workspace's newest fourteen runs, newest first" do
-      runs = 16.times.map { |i| create(:sync_run, workspace:, started_at: i.hours.ago) }
+      runs = 16.times.map { |i| create(:sync_run, workspace:, status: :succeeded, started_at: i.hours.ago) }
       create(:sync_run, started_at: 1.minute.ago)
 
       expect(described_class.history_for(workspace)).to eq(runs.first(14))
@@ -171,7 +216,7 @@ RSpec.describe SyncRun, type: :model do
   describe ".latest" do
     it "returns the most recently started run" do
       workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, started_at: 2.days.ago)
+      create(:sync_run, workspace: workspace, status: :succeeded, started_at: 2.days.ago)
       newer = create(:sync_run, workspace: workspace, started_at: 1.hour.ago)
 
       expect(SyncRun.latest).to eq(newer)
@@ -179,8 +224,8 @@ RSpec.describe SyncRun, type: :model do
 
     it "falls back to created_at when started_at is nil" do
       workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, started_at: nil)
-      second_run = create(:sync_run, workspace: workspace, started_at: nil)
+      create(:sync_run, workspace: workspace, status: :failed, started_at: nil)
+      second_run = create(:sync_run, workspace: workspace, status: :failed, started_at: nil)
 
       expect(SyncRun.latest).to eq(second_run)
     end

@@ -38,6 +38,25 @@ RSpec.describe SyncNightlyJob, type: :job do
     expect(Sync::RunPipeline).to have_received(:call)
   end
 
+  it "reserves its run and hands that run to the pipeline" do
+    allow(Sync::RunPipeline).to receive(:call) { |resume_run:| resume_run }
+
+    described_class.new.perform
+
+    run = SyncRun.where(workspace: shared_workspace).sole
+    expect(Sync::RunPipeline).to have_received(:call).with(resume_run: run)
+  end
+
+  it "skips the night when an operator's sync is already running" do
+    create(:sync_run, workspace: shared_workspace, status: :running, started_at: 5.minutes.ago)
+    allow(Sync::RunPipeline).to receive(:call)
+
+    described_class.new.perform
+
+    expect(Sync::RunPipeline).not_to have_received(:call)
+    expect(SyncRun.where(workspace: shared_workspace).count).to eq(1)
+  end
+
   it "does not raise even when the pipeline returns a failed run" do
     failed_run = create(:sync_run, workspace: shared_workspace, status: :failed, finished_at: Time.current)
     allow(Sync::RunPipeline).to receive(:call).and_return(failed_run)

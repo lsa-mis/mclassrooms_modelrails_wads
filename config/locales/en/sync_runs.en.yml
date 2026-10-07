@@ -23,7 +23,12 @@ en:
     counters:
       created: "Created"
       updated: "Updated"
+      added: "Added"
+      removed: "Removed"
+      cleared: "Cleared"
       deactivated: "Deactivated"
+      deleted: "Deleted"
+      skipped: "Skipped"
       api_calls: "API calls"
       rate_limit_sleeps: "Rate-limit pauses"
     columns:
