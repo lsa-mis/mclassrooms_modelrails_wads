@@ -18,10 +18,10 @@ module Operations
     def create
       authorize [ :operations, SyncRun ]
 
-      if SyncRun.request!(workspace: directory_workspace, by: Current.user) == :requested
-        redirect_to operations_sync_run_path(directory_sync_runs.latest), notice: t(".success")
-      else
-        redirect_to operations_sync_runs_path, alert: t("operations.sync_runs.already_running")
+      case SyncRun.request!(workspace: directory_workspace, by: Current.user)
+      when :requested then redirect_to operations_sync_run_path(directory_sync_runs.latest), notice: t(".success")
+      when :already_running then redirect_to operations_sync_runs_path, alert: t("operations.sync_runs.already_running")
+      else redirect_to operations_sync_runs_path, alert: t("operations.sync_runs.not_queued")
       end
     end
   end

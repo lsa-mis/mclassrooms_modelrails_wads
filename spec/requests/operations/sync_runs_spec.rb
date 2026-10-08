@@ -60,8 +60,17 @@ RSpec.describe "Operations sync runs", type: :request do
       run = SyncRun.last
       expect(response).to redirect_to(operations_sync_run_path(run))
       expect(flash[:notice]).to eq(I18n.t("operations.sync_runs.create.success"))
-      expect(SyncRunJob).to have_been_enqueued.with(run)
+      expect(SyncRunJob).to have_been_enqueued.with(run, 0)
       expect(ActivityLog.find_by!(action: "sync_run.requested").actor).to eq(operator)
+    end
+
+    it "says so when the job cannot be queued" do
+      allow(SyncRunJob).to receive(:perform_later).and_return(false)
+
+      post operations_sync_runs_path
+
+      expect(response).to redirect_to(operations_sync_runs_path)
+      expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.not_queued"))
     end
 
     it "refuses while a run is in progress" do
@@ -97,7 +106,17 @@ RSpec.describe "Operations sync runs", type: :request do
       expect(response).to redirect_to(operations_sync_run_path(run))
       expect(flash[:notice]).to eq(I18n.t("operations.sync_runs.resumptions.create.success"))
       expect(run.reload).to be_running
-      expect(SyncRunJob).to have_been_enqueued.with(run)
+      expect(SyncRunJob).to have_been_enqueued.with(run, 1)
+    end
+
+    it "says so when the retry cannot be queued" do
+      run = create(:sync_run, workspace:, status: :failed, started_at: 1.hour.ago, finished_at: 50.minutes.ago)
+      allow(SyncRunJob).to receive(:perform_later).and_return(false)
+
+      post operations_sync_run_resumption_path(run)
+
+      expect(response).to redirect_to(operations_sync_run_path(run))
+      expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.not_queued"))
     end
 
     it "refuses a run that succeeded" do

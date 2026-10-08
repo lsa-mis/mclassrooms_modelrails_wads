@@ -10,6 +10,7 @@ module Operations
         case sync_run.resume!(by: Current.user)
         when :resumed then redirect_to operations_sync_run_path(sync_run), notice: t(".success")
         when :already_running then redirect_to operations_sync_run_path(sync_run), alert: t("operations.sync_runs.already_running")
+        when :not_queued then redirect_to operations_sync_run_path(sync_run), alert: t("operations.sync_runs.not_queued")
         else redirect_to operations_sync_run_path(sync_run), alert: t(".not_resumable")
         end
       end

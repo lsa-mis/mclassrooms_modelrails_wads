@@ -71,6 +71,7 @@ en:
   operations:
     sync_runs:
       already_running: "A sync is already in progress. Try again when it finishes."
+      not_queued: "The sync could not be queued, so nothing started. Try again in a moment."
       actions:
         run_now: "Run now"
         retry: "Retry"

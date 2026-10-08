@@ -31,6 +31,6 @@ class SyncNightlyJob < ApplicationJob
     run = SyncRun.reserve(workspace: Current.workspace, &:save!)
     return Rails.logger.info("[sync] nightly run skipped: a sync is already in progress") unless run
 
-    Sync::RunPipeline.call(resume_run: run)
+    SyncRunJob.perform_now(run, run.attempt)
   end
 end

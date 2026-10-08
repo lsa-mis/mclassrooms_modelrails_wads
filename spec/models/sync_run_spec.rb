@@ -71,7 +71,7 @@ RSpec.describe SyncRun, type: :model do
         run = described_class.where(workspace:).sole
         expect(outcome).to eq(:requested)
         expect(run).to be_queued
-        expect(SyncRunJob).to have_been_enqueued.with(run)
+        expect(SyncRunJob).to have_been_enqueued.with(run, 0)
         log = ActivityLog.find_by!(action: "sync_run.requested", trackable: run)
         expect([ log.actor, log.workspace, log.visibility ]).to eq([ operator, workspace, "admin" ])
       end
@@ -104,7 +104,7 @@ RSpec.describe SyncRun, type: :model do
 
         expect(run.reload).to be_running
         expect(run.finished_at).to be_nil
-        expect(SyncRunJob).to have_been_enqueued.with(run)
+        expect(SyncRunJob).to have_been_enqueued.with(run, 1)
         expect(ActivityLog.find_by!(action: "sync_run.resumed", trackable: run).actor).to eq(operator)
       end
 
@@ -130,14 +130,34 @@ RSpec.describe SyncRun, type: :model do
         expect(run.reload).to be_failed
       end
 
-      it "gives a retried run a fresh start time, so an old failure is not stalled the moment it resumes" do
+      it "queues a retried run as a new attempt with its own stall window, so an old failure is not stalled at once" do
         old = create(:sync_run, workspace:, status: :failed, started_at: 10.hours.ago, finished_at: 9.hours.ago)
 
         old.resume!(by: operator)
 
-        expect(old.reload.started_at).to be_within(5.seconds).of(Time.current)
-        expect(old.display_status).to eq(:queued).or eq(:running)
+        expect(old.reload).to have_attributes(started_at: nil, attempt: 1, display_status: :queued)
         expect(described_class.in_progress_for?(workspace)).to be(true)
+        expect(SyncRunJob).to have_been_enqueued.with(old, 1)
+      end
+
+      it "retires the pending job of a stalled queued run, so only the retry's job runs it" do
+        stalled = create(:sync_run, workspace:, status: :running, started_at: nil,
+                                    created_at: 7.hours.ago, updated_at: 7.hours.ago)
+        allow(Sync::RunPipeline).to receive(:call) { |resume_run:| resume_run }
+
+        expect(stalled.resume!(by: operator)).to eq(:resumed)
+        SyncRunJob.perform_now(stalled, 0)
+        SyncRunJob.perform_now(stalled, 1)
+
+        expect(Sync::RunPipeline).to have_received(:call).once
+      end
+
+      it "releases the run and says so when the job cannot be queued" do
+        allow(SyncRunJob).to receive(:perform_later).and_return(false)
+
+        expect(run.resume!(by: operator)).to eq(:not_queued)
+        expect(run.reload).to be_failed
+        expect(described_class.in_progress_for?(workspace)).to be(false)
       end
 
       it "lets only one of two simultaneous retries claim the run" do
@@ -167,6 +187,14 @@ RSpec.describe SyncRun, type: :model do
         expect(SyncRunJob).not_to have_been_enqueued
       end
 
+      it "releases a new run and says so when its job cannot be queued" do
+        allow(SyncRunJob).to receive(:perform_later).and_return(false)
+
+        expect(described_class.request!(workspace:, by: operator)).to eq(:not_queued)
+        expect(described_class.where(workspace:).sole).to be_failed
+        expect(described_class.request!(workspace:, by: operator)).to eq(:not_queued)
+      end
+
       it "fails a stalled run before reserving, so it never blocks the next one" do
         stalled = create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago)
 
@@ -178,7 +206,7 @@ RSpec.describe SyncRun, type: :model do
 
   describe "display state" do
     it "reads a run with no start time as queued and one running past the stall window as stalled" do
-      expect(build(:sync_run, status: :running, started_at: nil, created_at: 1.minute.ago).display_status).to eq(:queued)
+      expect(build(:sync_run, status: :running, started_at: nil, updated_at: 1.minute.ago).display_status).to eq(:queued)
       expect(build(:sync_run, status: :running, started_at: 7.hours.ago).display_status).to eq(:stalled)
       expect(build(:sync_run, status: :running, started_at: 1.minute.ago).display_status).to eq(:running)
       expect(build(:sync_run, status: :failed).display_status).to eq(:failed)

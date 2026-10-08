@@ -9,9 +9,9 @@ class SyncRun < ApplicationRecord
 
   has_many :sync_phases, dependent: :destroy
 
-  # A run created but not yet started has no started_at, so ordering falls back to created_at.
+  # A run that has not started yet has no started_at; its queue time is updated_at (bumped by a retry).
   scope :newest_first, -> { order(Arel.sql("COALESCE(started_at, created_at) DESC")) }
-  scope :in_progress, -> { running.where("COALESCE(started_at, created_at) > ?", STALL_AFTER.ago) }
+  scope :in_progress, -> { running.where("COALESCE(started_at, updated_at) > ?", STALL_AFTER.ago) }
 
   def self.latest = newest_first.first
 
@@ -41,17 +41,16 @@ class SyncRun < ApplicationRecord
   end
 
   def self.fail_stalled(workspace)
-    where(workspace:).running.where("COALESCE(started_at, created_at) <= ?", STALL_AFTER.ago)
+    where(workspace:).running.where("COALESCE(started_at, updated_at) <= ?", STALL_AFTER.ago)
       .update_all(status: "failed", finished_at: Time.current, updated_at: Time.current)
   end
 
-  # Operator verbs: the audit row commits with the reservation; the pipeline is enqueued after commit.
+  # Operator verbs: the audit row commits with the reservation; the job is queued after commit.
   def self.request!(workspace:, by:)
     run = reserve(workspace:) { |reserved| reserved.audit!("sync_run.requested", by:) }
     return :already_running unless run
 
-    SyncRunJob.perform_later(run)
-    :requested
+    run.dispatch ? :requested : :not_queued
   end
 
   def resume!(by:)
@@ -62,15 +61,33 @@ class SyncRun < ApplicationRecord
       reload.audit!("sync_run.resumed", by:)
       :resumed
     end
-    SyncRunJob.perform_later(self) if outcome == :resumed
-    outcome
+    return outcome unless outcome == :resumed
+
+    dispatch ? :resumed : :not_queued
   rescue ActiveRecord::RecordNotUnique
     reload
     :already_running
   end
 
+  # SyncRunJob's gate: only a job for the current attempt, and only the first of them, gets to run the row.
+  def claim_execution(for_attempt)
+    now = Time.current
+    SyncRun.where(id:, attempt: for_attempt, status: "running", started_at: nil)
+      .update_all(started_at: now, updated_at: now) == 1
+  end
+
+  # The queue is a separate database, so a failed enqueue cannot roll the reservation back; release it instead.
+  def dispatch
+    return true if SyncRunJob.perform_later(self, attempt)
+
+    release("enqueue returned false")
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { sync_run_id: id })
+    release(e.class.name)
+  end
+
   def queued? = running? && started_at.nil? && !stalled?
-  def stalled? = running? && (started_at || created_at || Time.current) <= STALL_AFTER.ago
+  def stalled? = running? && (started_at || updated_at || Time.current) <= STALL_AFTER.ago
   def resumable? = failed? || stalled?
 
   def display_status
@@ -98,9 +115,17 @@ class SyncRun < ApplicationRecord
 
   private
 
-  # A conditional UPDATE, so of two simultaneous retries only one wins; the new attempt gets a fresh start time.
+  # A conditional UPDATE, so of two simultaneous retries only one wins. The retry is a new, queued attempt,
+  # which retires any job still holding the old one.
   def claim_retry
-    now = Time.current
-    SyncRun.where(id:, status: "failed").update_all(status: "running", finished_at: nil, started_at: now, updated_at: now) == 1
+    SyncRun.where(id:, status: "failed").update_all(
+      [ "status = 'running', finished_at = NULL, started_at = NULL, attempt = attempt + 1, updated_at = ?", Time.current ]
+    ) == 1
+  end
+
+  def release(reason)
+    Rails.logger.error("[sync] could not queue sync run #{id} (#{reason}); released it")
+    update_columns(status: "failed", finished_at: Time.current, updated_at: Time.current)
+    false
   end
 end
