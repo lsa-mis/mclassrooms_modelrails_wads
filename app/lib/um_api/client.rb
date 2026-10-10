@@ -44,11 +44,14 @@ module UmApi
     PAGE_SIZE = 1000
 
     attr_reader :call_count, :rate_limiter
+    # Called around every request, so a sync shows it is alive (SyncRun#beat!) and a superseded one stops.
+    attr_writer :heartbeat
 
     def initialize(token_cache: TokenCache.new, rate_limiter: RateLimiter.new)
       @token_cache = token_cache
       @rate_limiter = rate_limiter
       @call_count = 0
+      @heartbeat = -> { }
     end
 
     # Fetches `path` (+ `params` as a query string) and returns the parsed
@@ -101,6 +104,7 @@ module UmApi
     end
 
     def request(uri, scope:)
+      @heartbeat.call
       @rate_limiter.throttle!
 
       http = Net::HTTP.new(uri.host, uri.port)
@@ -113,6 +117,7 @@ module UmApi
 
       response = http.request(get)
       @call_count += 1
+      @heartbeat.call
 
       raise_for_status(response, uri: uri)
       response

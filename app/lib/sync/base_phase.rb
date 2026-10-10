@@ -70,6 +70,8 @@ module Sync
 
         phase.update!(status: :succeeded, finished_at: Time.current, counters: counters, warnings: warnings)
         Result.success(counters: counters.dup, warnings: warnings.dup)
+      rescue SyncRun::Superseded
+        raise
       rescue StandardError => e
         # UmApi::Error (Task 5's typed gateway errors) is itself a
         # StandardError subclass, so one rescue clause handles both "the

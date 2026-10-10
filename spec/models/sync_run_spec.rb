@@ -204,6 +204,50 @@ RSpec.describe SyncRun, type: :model do
     end
   end
 
+  describe "heartbeat" do
+    let(:workspace) { create(:workspace) }
+    let(:operator) { create(:user) }
+
+    it "keeps a long sync that is still beating in progress, so nothing can start over it" do
+      live = create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago, heartbeat_at: 1.minute.ago)
+
+      expect(live).not_to be_stalled
+      expect(described_class.in_progress_for?(workspace)).to be(true)
+      expect(described_class.request!(workspace:, by: operator)).to eq(:already_running)
+      expect(live.reload).to be_running
+    end
+
+    it "treats a sync whose heartbeat went quiet as stalled" do
+      quiet = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, heartbeat_at: 20.minutes.ago)
+
+      expect(quiet).to be_stalled
+      expect(described_class.in_progress_for?(workspace)).to be(false)
+    end
+
+    it "renews the heartbeat for the attempt the worker holds" do
+      run = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, heartbeat_at: 10.minutes.ago)
+
+      run.beat!
+
+      expect(run.reload.heartbeat_at).to be_within(5.seconds).of(Time.current)
+    end
+
+    it "stops a worker whose attempt a retry has taken over" do
+      run = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, attempt: 0)
+      described_class.where(id: run.id).update_all(attempt: 1)
+
+      expect { run.beat! }.to raise_error(SyncRun::Superseded)
+    end
+
+    it "finishes only the attempt it holds, so a superseded worker cannot overwrite a retry" do
+      run = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, attempt: 0)
+      described_class.where(id: run.id).update_all(attempt: 1, started_at: nil)
+
+      expect(run.finish!(:succeeded)).to be(false)
+      expect(run.reload).to have_attributes(status: "running", finished_at: nil, attempt: 1)
+    end
+  end
+
   describe "display state" do
     it "reads a run with no start time as queued and one running past the stall window as stalled" do
       expect(build(:sync_run, status: :running, started_at: nil, updated_at: 1.minute.ago).display_status).to eq(:queued)

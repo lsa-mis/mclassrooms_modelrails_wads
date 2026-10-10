@@ -106,10 +106,13 @@ module Sync
       # — flip it back to a live "in progress" row for the duration of this
       # attempt; the final update below (success or failure) sets both again.
       run.update!(status: :running, finished_at: nil, started_at: run.started_at || Time.current) if @resume_run
+      client.heartbeat = -> { run.beat! }
 
-      execute_core_phases(run)
+      outcome = execute_core_phases(run)
       execute_optional_phases(run)
-      run.update!(finished_at: Time.current)
+      run.finish!(outcome)
+    rescue SyncRun::Superseded => e
+      operator_log.error("Sync::RunPipeline: stopped, #{e.message}")
     rescue StandardError => e
       # NOT a phase failure (those are contained in #run_phase) — the
       # pipeline's own bookkeeping broke. Best-effort mark the run failed so
@@ -117,7 +120,7 @@ module Sync
       # construction of #call.
       operator_log.error("Sync::RunPipeline: unexpected pipeline error: #{e.class}: #{e.message}")
       begin
-        run.update!(status: :failed, finished_at: Time.current)
+        run.finish!(:failed)
       rescue StandardError => stamp_error
         operator_log.error(
           "Sync::RunPipeline: failed to stamp run failed after pipeline error: " \
@@ -127,7 +130,8 @@ module Sync
     end
 
     def create_run!
-      SyncRun.create!(workspace: Current.workspace, dry_run: dry_run, status: :running, started_at: Time.current)
+      now = Time.current
+      SyncRun.create!(workspace: Current.workspace, dry_run: dry_run, status: :running, started_at: now, heartbeat_at: now)
     end
 
     def execute_core_phases(run)
@@ -142,15 +146,21 @@ module Sync
         end
 
         result = run_phase(run, phase_class)
+        run.beat!
 
         if result.success?
-          sleeper.call(PHASE_PAUSE_SECONDS) unless index == phases_to_run.length - 1
+          pause(run) unless index == phases_to_run.length - 1
         else
           failed = true
         end
       end
 
-      run.update!(status: failed ? :failed : :succeeded)
+      failed ? :failed : :succeeded
+    end
+
+    def pause(run)
+      sleeper.call(PHASE_PAUSE_SECONDS)
+      run.beat!
     end
 
     # Runs AFTER core regardless of whether core succeeded or stopped early
@@ -161,10 +171,13 @@ module Sync
     end
 
     def run_phase(run, phase_class)
+      run.beat!
       operator_log.phase_started(phase_class::KEY)
       result = phase_class.call(run: run, client: client)
       operator_log.phase_finished(phase_class::KEY, result)
       result
+    rescue SyncRun::Superseded
+      raise
     rescue StandardError => e
       # Defense-in-depth, not the expected path: a conforming BasePhase
       # subclass never raises out of .call (Task 6). Guards against a

@@ -2,8 +2,12 @@ class SyncRun < ApplicationRecord
   include Tenanted
 
   HISTORY_SIZE = 14
-  # A run still "running" past this was cut off (a deploy, a crash), so it neither blocks nor stays unretryable.
-  STALL_AFTER = 6.hours
+  # A live sync beats at least every few minutes (each API call, each phase); quiet this long, its worker is gone.
+  STALL_AFTER = 15.minutes
+  LAST_SIGN_OF_LIFE = "COALESCE(heartbeat_at, started_at, updated_at)".freeze
+
+  # Raised in a worker whose attempt a retry has taken over, so it stops instead of writing over the retry.
+  Superseded = Class.new(StandardError)
 
   enum :status, { running: "running", succeeded: "succeeded", failed: "failed" }
 
@@ -14,7 +18,7 @@ class SyncRun < ApplicationRecord
     order(Arel.sql("CASE WHEN started_at IS NULL AND status = 'running' THEN updated_at " \
                    "ELSE COALESCE(started_at, created_at) END DESC"))
   }
-  scope :in_progress, -> { running.where("COALESCE(started_at, updated_at) > ?", STALL_AFTER.ago) }
+  scope :in_progress, -> { running.where("#{LAST_SIGN_OF_LIFE} > ?", STALL_AFTER.ago) }
 
   def self.latest = newest_first.first
 
@@ -44,7 +48,7 @@ class SyncRun < ApplicationRecord
   end
 
   def self.fail_stalled(workspace)
-    where(workspace:).running.where("COALESCE(started_at, updated_at) <= ?", STALL_AFTER.ago)
+    where(workspace:).running.where("#{LAST_SIGN_OF_LIFE} <= ?", STALL_AFTER.ago)
       .update_all(status: "failed", finished_at: Time.current, updated_at: Time.current)
   end
 
@@ -76,7 +80,23 @@ class SyncRun < ApplicationRecord
   def claim_execution(for_attempt)
     now = Time.current
     SyncRun.where(id:, attempt: for_attempt, status: "running", started_at: nil)
-      .update_all(started_at: now, updated_at: now) == 1
+      .update_all(started_at: now, heartbeat_at: now, updated_at: now) == 1
+  end
+
+  # The worker's lease: renewed only while this attempt still owns the run, so a superseded worker stops here.
+  def beat!
+    return if fenced.update_all(heartbeat_at: Time.current, updated_at: Time.current) == 1
+
+    raise Superseded, "sync run #{id} attempt #{attempt} was taken over by a retry"
+  end
+
+  # The worker's last write, fenced the same way; false means a retry owns the run and nothing was written.
+  def finish!(outcome)
+    now = Time.current
+    return false unless fenced.update_all(status: outcome.to_s, finished_at: now, updated_at: now) == 1
+
+    reload
+    true
   end
 
   # The queue is a separate database, so a failed enqueue cannot roll the reservation back; release it instead.
@@ -90,7 +110,7 @@ class SyncRun < ApplicationRecord
   end
 
   def queued? = running? && started_at.nil? && !stalled?
-  def stalled? = running? && (started_at || updated_at || Time.current) <= STALL_AFTER.ago
+  def stalled? = running? && (heartbeat_at || started_at || updated_at || Time.current) <= STALL_AFTER.ago
   def resumable? = failed? || stalled?
 
   def display_status
@@ -117,6 +137,8 @@ class SyncRun < ApplicationRecord
   end
 
   private
+
+  def fenced = SyncRun.where(id:, attempt:, status: "running")
 
   # A conditional UPDATE, so of two simultaneous retries only one wins. The retry is a new, queued attempt,
   # which retires any job still holding the old one.
