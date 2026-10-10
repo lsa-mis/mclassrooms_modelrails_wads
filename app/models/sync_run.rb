@@ -10,7 +10,10 @@ class SyncRun < ApplicationRecord
   has_many :sync_phases, dependent: :destroy
 
   # A run that has not started yet has no started_at; its queue time is updated_at (bumped by a retry).
-  scope :newest_first, -> { order(Arel.sql("COALESCE(started_at, created_at) DESC")) }
+  scope :newest_first, -> {
+    order(Arel.sql("CASE WHEN started_at IS NULL AND status = 'running' THEN updated_at " \
+                   "ELSE COALESCE(started_at, created_at) END DESC"))
+  }
   scope :in_progress, -> { running.where("COALESCE(started_at, updated_at) > ?", STALL_AFTER.ago) }
 
   def self.latest = newest_first.first

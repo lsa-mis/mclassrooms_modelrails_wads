@@ -230,6 +230,18 @@ RSpec.describe SyncRun, type: :model do
       expect(described_class.history_for(workspace)).to eq(runs.first(14))
     end
 
+    it "puts a retried run that is queued again at the top, by when it was queued" do
+      old = create(:sync_run, workspace:, status: :failed, started_at: 3.days.ago, finished_at: 3.days.ago,
+                              created_at: 3.days.ago)
+      newer = create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago)
+
+      old.resume!(by: create(:user))
+
+      expect(described_class.history_for(workspace).first).to eq(old)
+      expect(described_class.where(workspace:).latest).to eq(old)
+      expect(described_class.history_for(workspace).second).to eq(newer)
+    end
+
     it "counts the workspace's listed buildings and rooms, and its classrooms" do
       building = create(:building, workspace:)
       create(:room, building:, workspace:, room_type: "Classroom", facility_code: "MLB1", instructional_seat_count: 30)
