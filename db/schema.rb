@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_10_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_25_134500) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -479,10 +479,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_150000) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "attempt", default: 0, null: false
-    t.datetime "heartbeat_at"
     t.index ["workspace_id"], name: "index_sync_runs_on_workspace_id"
-    t.index ["workspace_id"], name: "index_sync_runs_on_workspace_id_while_running", unique: true, where: "status = 'running'"
   end
 
   create_table "sync_scope_rules", force: :cascade do |t|

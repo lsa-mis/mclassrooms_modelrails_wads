@@ -56,211 +56,25 @@ RSpec.describe SyncRun, type: :model do
     end
   end
 
-  describe "operator actions" do
-    include ActiveJob::TestHelper
+  describe ".latest" do
+    it "returns the most recently started run" do
+      workspace = create(:workspace)
+      create(:sync_run, workspace: workspace, started_at: 2.days.ago)
+      newer = create(:sync_run, workspace: workspace, started_at: 1.hour.ago)
 
-    let(:workspace) { create(:workspace) }
-    let(:operator) { create(:user) }
-
-    describe ".request!" do
-      it "queues a new run, audits it, and enqueues the pipeline for that run" do
-        outcome = nil
-        expect { outcome = described_class.request!(workspace:, by: operator) }
-          .to change { described_class.where(workspace:).count }.by(1)
-
-        run = described_class.where(workspace:).sole
-        expect(outcome).to eq(:requested)
-        expect(run).to be_queued
-        expect(SyncRunJob).to have_been_enqueued.with(run, 0)
-        log = ActivityLog.find_by!(action: "sync_run.requested", trackable: run)
-        expect([ log.actor, log.workspace, log.visibility ]).to eq([ operator, workspace, "admin" ])
-      end
-
-      it "refuses while a run is in progress, so a double click cannot start two" do
-        described_class.request!(workspace:, by: operator)
-
-        expect(described_class.request!(workspace:, by: operator)).to eq(:already_running)
-        expect(described_class.where(workspace:).count).to eq(1)
-      end
-
-      it "is not blocked by a run that stalled hours ago" do
-        create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago)
-
-        expect(described_class.request!(workspace:, by: operator)).to eq(:requested)
-      end
-
-      it "is not blocked by another workspace's run" do
-        create(:sync_run, status: :running, started_at: 1.minute.ago)
-
-        expect(described_class.request!(workspace:, by: operator)).to eq(:requested)
-      end
+      expect(SyncRun.latest).to eq(newer)
     end
 
-    describe "#resume!" do
-      let(:run) { create(:sync_run, workspace:, status: :failed, started_at: 1.hour.ago, finished_at: 50.minutes.ago) }
+    it "falls back to created_at when started_at is nil" do
+      workspace = create(:workspace)
+      create(:sync_run, workspace: workspace, started_at: nil)
+      second_run = create(:sync_run, workspace: workspace, started_at: nil)
 
-      it "marks a failed run running at once, audits it, and enqueues the pipeline for it" do
-        expect(run.resume!(by: operator)).to eq(:resumed)
-
-        expect(run.reload).to be_running
-        expect(run.finished_at).to be_nil
-        expect(SyncRunJob).to have_been_enqueued.with(run, 1)
-        expect(ActivityLog.find_by!(action: "sync_run.resumed", trackable: run).actor).to eq(operator)
-      end
-
-      it "retries a stalled run" do
-        stalled = create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago)
-
-        expect(stalled.resume!(by: operator)).to eq(:resumed)
-      end
-
-      it "refuses a succeeded run or one still in progress" do
-        succeeded = create(:sync_run, workspace:, status: :succeeded, started_at: 2.hours.ago)
-        running = create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
-
-        expect(succeeded.resume!(by: operator)).to eq(:not_resumable)
-        expect(running.resume!(by: operator)).to eq(:not_resumable)
-        expect(SyncRunJob).not_to have_been_enqueued
-      end
-
-      it "refuses while another run is in progress" do
-        create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
-
-        expect(run.resume!(by: operator)).to eq(:already_running)
-        expect(run.reload).to be_failed
-      end
-
-      it "queues a retried run as a new attempt with its own stall window, so an old failure is not stalled at once" do
-        old = create(:sync_run, workspace:, status: :failed, started_at: 10.hours.ago, finished_at: 9.hours.ago)
-
-        old.resume!(by: operator)
-
-        expect(old.reload).to have_attributes(started_at: nil, attempt: 1, display_status: :queued)
-        expect(described_class.in_progress_for?(workspace)).to be(true)
-        expect(SyncRunJob).to have_been_enqueued.with(old, 1)
-      end
-
-      it "retires the pending job of a stalled queued run, so only the retry's job runs it" do
-        stalled = create(:sync_run, workspace:, status: :running, started_at: nil,
-                                    created_at: 7.hours.ago, updated_at: 7.hours.ago)
-        allow(Sync::RunPipeline).to receive(:call) { |resume_run:| resume_run }
-
-        expect(stalled.resume!(by: operator)).to eq(:resumed)
-        SyncRunJob.perform_now(stalled, 0)
-        SyncRunJob.perform_now(stalled, 1)
-
-        expect(Sync::RunPipeline).to have_received(:call).once
-      end
-
-      it "releases the run and says so when the job cannot be queued" do
-        allow(SyncRunJob).to receive(:perform_later).and_return(false)
-
-        expect(run.resume!(by: operator)).to eq(:not_queued)
-        expect(run.reload).to be_failed
-        expect(described_class.in_progress_for?(workspace)).to be(false)
-      end
-
-      it "lets only one of two simultaneous retries claim the run" do
-        first = described_class.find(run.id)
-        second = described_class.find(run.id)
-
-        expect(first.resume!(by: operator)).to eq(:resumed)
-        expect(second.resume!(by: operator)).to eq(:not_resumable)
-        expect(SyncRunJob).to have_been_enqueued.exactly(:once)
-      end
+      expect(SyncRun.latest).to eq(second_run)
     end
 
-    describe "one running sync per workspace" do
-      it "is enforced by the database, not only by the in-progress check" do
-        create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
-
-        expect { create(:sync_run, workspace:, status: :running) }.to raise_error(ActiveRecord::RecordNotUnique)
-        expect { create(:sync_run, status: :running) }.not_to raise_error
-      end
-
-      it "turns Run now away when the reservation loses a race the in-progress check missed" do
-        allow(described_class).to receive(:in_progress_for?).and_return(false)
-        create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
-
-        expect(described_class.request!(workspace:, by: operator)).to eq(:already_running)
-        expect(ActivityLog.where(action: "sync_run.requested")).to be_empty
-        expect(SyncRunJob).not_to have_been_enqueued
-      end
-
-      it "releases a new run and says so when its job cannot be queued" do
-        allow(SyncRunJob).to receive(:perform_later).and_return(false)
-
-        expect(described_class.request!(workspace:, by: operator)).to eq(:not_queued)
-        expect(described_class.where(workspace:).sole).to be_failed
-        expect(described_class.request!(workspace:, by: operator)).to eq(:not_queued)
-      end
-
-      it "fails a stalled run before reserving, so it never blocks the next one" do
-        stalled = create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago)
-
-        expect(described_class.request!(workspace:, by: operator)).to eq(:requested)
-        expect(stalled.reload).to be_failed
-      end
-    end
-  end
-
-  describe "heartbeat" do
-    let(:workspace) { create(:workspace) }
-    let(:operator) { create(:user) }
-
-    it "keeps a long sync that is still beating in progress, so nothing can start over it" do
-      live = create(:sync_run, workspace:, status: :running, started_at: 7.hours.ago, heartbeat_at: 1.minute.ago)
-
-      expect(live).not_to be_stalled
-      expect(described_class.in_progress_for?(workspace)).to be(true)
-      expect(described_class.request!(workspace:, by: operator)).to eq(:already_running)
-      expect(live.reload).to be_running
-    end
-
-    it "treats a sync whose heartbeat went quiet as stalled" do
-      quiet = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, heartbeat_at: 20.minutes.ago)
-
-      expect(quiet).to be_stalled
-      expect(described_class.in_progress_for?(workspace)).to be(false)
-    end
-
-    it "renews the heartbeat for the attempt the worker holds" do
-      run = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, heartbeat_at: 10.minutes.ago)
-
-      run.beat!
-
-      expect(run.reload.heartbeat_at).to be_within(5.seconds).of(Time.current)
-    end
-
-    it "stops a worker whose attempt a retry has taken over" do
-      run = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, attempt: 0)
-      described_class.where(id: run.id).update_all(attempt: 1)
-
-      expect { run.beat! }.to raise_error(SyncRun::Superseded)
-    end
-
-    it "finishes only the attempt it holds, so a superseded worker cannot overwrite a retry" do
-      run = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago, attempt: 0)
-      described_class.where(id: run.id).update_all(attempt: 1, started_at: nil)
-
-      expect(run.finish!(:succeeded)).to be(false)
-      expect(run.reload).to have_attributes(status: "running", finished_at: nil, attempt: 1)
-    end
-  end
-
-  describe "display state" do
-    it "reads a run with no start time as queued and one running past the stall window as stalled" do
-      expect(build(:sync_run, status: :running, started_at: nil, updated_at: 1.minute.ago).display_status).to eq(:queued)
-      expect(build(:sync_run, status: :running, started_at: 7.hours.ago).display_status).to eq(:stalled)
-      expect(build(:sync_run, status: :running, started_at: 1.minute.ago).display_status).to eq(:running)
-      expect(build(:sync_run, status: :failed).display_status).to eq(:failed)
-    end
-
-    it "lists its phases in pipeline order" do
-      run = create(:sync_run)
-      %w[rooms campuses buildings].each { |key| create(:sync_phase, sync_run: run, key:) }
-
-      expect(run.phases_in_order.map(&:key)).to eq(%w[campuses buildings rooms])
+    it "returns nil when there are no runs" do
+      expect(SyncRun.latest).to be_nil
     end
   end
 
@@ -269,21 +83,9 @@ RSpec.describe SyncRun, type: :model do
 
     it "returns the workspace's newest fourteen runs, newest first" do
       runs = 16.times.map { |i| create(:sync_run, workspace:, status: :succeeded, started_at: i.hours.ago) }
-      create(:sync_run, started_at: 1.minute.ago)
+      create(:sync_run, status: :succeeded, started_at: 1.minute.ago)
 
       expect(described_class.history_for(workspace)).to eq(runs.first(14))
-    end
-
-    it "puts a retried run that is queued again at the top, by when it was queued" do
-      old = create(:sync_run, workspace:, status: :failed, started_at: 3.days.ago, finished_at: 3.days.ago,
-                              created_at: 3.days.ago)
-      newer = create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago)
-
-      old.resume!(by: create(:user))
-
-      expect(described_class.history_for(workspace).first).to eq(old)
-      expect(described_class.where(workspace:).latest).to eq(old)
-      expect(described_class.history_for(workspace).second).to eq(newer)
     end
 
     it "counts the workspace's listed buildings and rooms, and its classrooms" do
@@ -297,25 +99,27 @@ RSpec.describe SyncRun, type: :model do
     end
   end
 
-  describe ".latest" do
-    it "returns the most recently started run" do
-      workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, status: :succeeded, started_at: 2.days.ago)
-      newer = create(:sync_run, workspace: workspace, started_at: 1.hour.ago)
+  describe "#phases_in_order" do
+    it "lists the run's phases in pipeline order" do
+      run = create(:sync_run)
+      %w[rooms campuses buildings].each { |key| create(:sync_phase, sync_run: run, key:) }
 
-      expect(SyncRun.latest).to eq(newer)
+      expect(run.phases_in_order.map(&:key)).to eq(%w[campuses buildings rooms])
     end
+  end
 
-    it "falls back to created_at when started_at is nil" do
+  describe ".fail_abandoned" do
+    it "fails the workspace's runs left running, and leaves finished runs and other workspaces alone" do
       workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, status: :failed, started_at: nil)
-      second_run = create(:sync_run, workspace: workspace, status: :failed, started_at: nil)
+      abandoned = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago)
+      finished = create(:sync_run, workspace:, status: :succeeded, started_at: 2.hours.ago, finished_at: 1.hour.ago)
+      elsewhere = create(:sync_run, status: :running, started_at: 1.hour.ago)
 
-      expect(SyncRun.latest).to eq(second_run)
-    end
+      described_class.fail_abandoned(workspace)
 
-    it "returns nil when there are no runs" do
-      expect(SyncRun.latest).to be_nil
+      expect(abandoned.reload).to have_attributes(status: "failed", finished_at: be_present)
+      expect(finished.reload).to be_succeeded
+      expect(elsewhere.reload).to be_running
     end
   end
 end

@@ -39,21 +39,20 @@ RSpec.describe "Sync runs", type: :system do
   end
 
   it "lets an operator retry a failed run and start a new one, at AAA in both themes" do
+    create(:sync_run, workspace:, status: :running, started_at: 5.minutes.ago)
     sign_in_via_form(create(:user).tap { |user| Operatorship.grant!(user:) })
 
     visit operations_sync_runs_path
+    expect(page).to have_text(I18n.t("operations.sync_runs.index.running_notice"))
     expect(axe_clean_in_both_themes?).to be(true), axe_violations_in_both_themes.join("\n")
 
     click_link I18n.l(failed.started_at, format: :short)
     expect(axe_clean_in_both_themes?).to be(true), axe_violations_in_both_themes.join("\n")
     click_button I18n.t("operations.sync_runs.actions.retry")
     expect(page).to have_text(I18n.t("operations.sync_runs.resumptions.create.success"))
-    expect(page).to have_no_button(I18n.t("operations.sync_runs.actions.retry"))
 
-    failed.reload.update!(status: :failed, finished_at: Time.current)
     visit operations_sync_runs_path
     accept_confirm { click_button I18n.t("operations.sync_runs.actions.run_now") }
     expect(page).to have_text(I18n.t("operations.sync_runs.create.success"))
-    expect(page).to have_text(I18n.t("sync_runs.status.queued"))
   end
 end

@@ -7,11 +7,12 @@ module Operations
         sync_run = directory_sync_runs.find(params[:sync_run_id])
         authorize [ :operations, sync_run ], :resume?
 
-        case sync_run.resume!(by: Current.user)
-        when :resumed then redirect_to operations_sync_run_path(sync_run), notice: t(".success")
-        when :already_running then redirect_to operations_sync_run_path(sync_run), alert: t("operations.sync_runs.already_running")
-        when :not_queued then redirect_to operations_sync_run_path(sync_run), alert: t("operations.sync_runs.not_queued")
-        else redirect_to operations_sync_run_path(sync_run), alert: t(".not_resumable")
+        if !sync_run.failed?
+          redirect_to operations_sync_run_path(sync_run), alert: t(".not_resumable")
+        elsif SyncRunJob.perform_later(directory_workspace, resume: sync_run, requested_by: Current.user)
+          redirect_to operations_sync_run_path(sync_run), notice: t(".success")
+        else
+          redirect_to operations_sync_run_path(sync_run), alert: t("operations.sync_runs.not_queued")
         end
       end
     end

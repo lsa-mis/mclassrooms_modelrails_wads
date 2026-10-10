@@ -59,18 +59,6 @@ RSpec.describe UmApi::Client do
       expect(stub).to have_been_requested
     end
 
-    it "beats the heartbeat before and after each request, so a running sync shows it is alive" do
-      stub_um_token(scope: "buildings")
-      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
-      beats = []
-      client = described_class.new(rate_limiter: ThrottleSpy.new)
-      client.heartbeat = -> { beats << Time.current }
-
-      client.get_json("/bf/Buildings/v2/Campuses", scope: "buildings")
-
-      expect(beats.size).to eq(2)
-    end
-
     # Real param name (sync-fix Task 1): the old `fiscalYear` example pinned
     # a param no phase sends anymore (UmApi.fiscal_year was deleted once
     # Sync::UpdateBuildings stopped using it) — `$start_index` is the real

@@ -19,7 +19,7 @@ RSpec.describe Sync::RunPipeline do
   let(:workspace) { create(:workspace) }
   let(:sleeps) { [] }
   let(:sleeper) { ->(seconds) { sleeps << seconds } }
-  let(:client) { instance_double(UmApi::Client, "heartbeat=": nil) }
+  let(:client) { instance_double(UmApi::Client) }
   let(:operator_log) { Sync::OperatorLog.new(logger: Logger.new(StringIO.new)) }
 
   before { Current.workspace = workspace }
@@ -83,7 +83,7 @@ RSpec.describe Sync::RunPipeline do
 
     it "defaults to a real UmApi::Client when none is injected" do
       stub_all_core_succeeding
-      fake_client = instance_double(UmApi::Client, "heartbeat=": nil)
+      fake_client = instance_double(UmApi::Client)
       allow(UmApi::Client).to receive(:new).and_return(fake_client)
 
       described_class.call(sleeper: sleeper, operator_log: operator_log)
@@ -180,33 +180,13 @@ RSpec.describe Sync::RunPipeline do
       expect(sleeps).to eq([ 61, 61, 61 ])
     end
 
-    it "stops at its next heartbeat when a retry takes the run over, and leaves the retry's state alone" do
-      run = create(:sync_run, workspace: workspace, status: :running, started_at: 1.hour.ago, attempt: 0)
-      call_log = []
-      stub_phase(described_class::CORE_PHASES[0], status: :succeeded, call_log: call_log)
-      allow(described_class::CORE_PHASES[1]).to receive(:call) do |run:, client:| # rubocop:disable Lint/UnusedBlockArgument
-        call_log << "buildings"
-        SyncRun.where(id: run.id).update_all(attempt: 1, started_at: nil)
-        Result.success(counters: {}, warnings: [])
-      end
-      described_class::CORE_PHASES.drop(2).each { |phase| stub_phase(phase, status: :succeeded, call_log: call_log) }
+    it "gives a retry its own start time, so its duration and place in the history are the retry's" do
+      failed_run = create(:sync_run, workspace: workspace, status: :failed, started_at: 2.days.ago, finished_at: 2.days.ago)
+      described_class::CORE_PHASES.each { |phase| stub_phase(phase, status: :succeeded) }
 
-      described_class.call(resume_run: run, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
 
-      expect(call_log).to eq(%w[campuses buildings])
-      expect(run.reload).to have_attributes(status: "running", attempt: 1, started_at: nil, finished_at: nil)
-    end
-
-    it "runs every phase of a queued run and stamps when it started" do
-      queued = create(:sync_run, workspace: workspace, status: :running, started_at: nil)
-      call_log = []
-      described_class::CORE_PHASES.each { |phase| stub_phase(phase, status: :succeeded, call_log: call_log) }
-
-      run = described_class.call(resume_run: queued, sleeper: sleeper, client: client, operator_log: operator_log)
-
-      expect(call_log).to eq(%w[campuses buildings rooms facility_ids characteristics contacts])
-      expect(run).to be_succeeded
-      expect(run.started_at).to be_present
+      expect(run.started_at).to be_within(5.seconds).of(Time.current)
     end
 
     it "stops again and skips the rest if the resumed run fails again at the same phase" do

@@ -4,8 +4,6 @@ en:
       succeeded: "Succeeded"
       failed: "Failed"
       running: "Running"
-      queued: "Queued"
-      stalled: "Stalled"
     phase_status:
       pending: "Pending"
       running: "Running"
@@ -38,7 +36,6 @@ en:
       actions: "Actions"
     dry_run: "Dry run"
     not_finished: "Not finished"
-    not_started: "Not started yet"
     latest:
       title: "Latest sync"
     inventory:
@@ -70,7 +67,6 @@ en:
         back: "All sync runs"
   operations:
     sync_runs:
-      already_running: "A sync is already in progress. Try again when it finishes."
       not_queued: "The sync could not be queued, so nothing started. Try again in a moment."
       actions:
         run_now: "Run now"
@@ -79,17 +75,17 @@ en:
       index:
         title: "Sync runs"
         description: "Start a sync now, or retry one that failed. A retry picks up at the step that failed."
-        in_progress: "A sync is in progress. Run now and Retry come back when it finishes."
+        running_notice: "A sync is running. Run now and Retry are skipped until it finishes; a sync left running by a stopped worker is marked failed when the next one starts."
         run_now_confirm: "Start a sync now? It calls the U-M Facilities APIs and takes several minutes."
       show:
         title: "Sync started %{started}"
         back: "All sync runs"
       create:
-        success: "Sync queued. It starts in a moment."
+        success: "Sync requested. It appears below when it starts, usually within a few seconds. If a sync is already running, this request is skipped."
       resumptions:
         create:
-          success: "Retry queued. It picks up at the step that failed."
-          not_resumable: "Only a failed or stalled sync can be retried."
+          success: "Retry requested. It picks up at the step that failed. If a sync is already running, this request is skipped."
+          not_resumable: "Only a failed sync can be retried."
   navigation:
     admin:
       sync_runs: "Sync runs"
