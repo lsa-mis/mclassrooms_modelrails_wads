@@ -89,7 +89,7 @@ en:
   operations:
     sync_runs:
       not_queued: "The sync could not be queued, so nothing started. Try again in a moment."
-      already_running: "A sync is already queued or running, so nothing new started. Reload this page to follow it."
+      already_running: "A sync is already queued or running, so nothing new started."
       actions:
         run_now: "Run now"
         retry: "Retry"
@@ -103,10 +103,10 @@ en:
         title: "Sync started %{started}"
         back: "All sync runs"
       create:
-        success: "Sync requested. Reload to follow it."
+        success: "Sync requested."
       resumptions:
         create:
-          success: "Retry requested. Reload to follow it."
+          success: "Retry requested."
           not_resumable: "Only the most recent sync can be retried, and only when it failed."
   navigation:
     admin:
