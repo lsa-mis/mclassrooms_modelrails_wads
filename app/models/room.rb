@@ -183,7 +183,7 @@ class Room < ApplicationRecord
   SEARCH_INDEX_TABLE = "room_search_index"
   SEARCH_INDEX_COLUMNS = %w[facility_code nickname room_number rmrecnbr building_name].freeze
 
-  after_save :refresh_search_index        # same-transaction: FTS lives in the same SQLite file
+  after_save :refresh_search_index, if: :search_index_stale?   # same-transaction: FTS lives in the same SQLite file
   after_destroy :remove_from_search_index
 
   # D8 classroom rule as a display scope; D6 visibility split (duplicated on
@@ -323,6 +323,8 @@ class Room < ApplicationRecord
   def normalize_facility_code
     self.facility_code_normalized = self.class.normalize_facility_code(facility_code)
   end
+
+  def search_index_stale? = previously_new_record? || SEARCH_INDEX_COLUMNS.any? { saved_change_to_attribute?(it) }
 
   def refresh_search_index
     remove_from_search_index
