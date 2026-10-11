@@ -54,6 +54,14 @@ RSpec.describe "Sync runs", type: :system do
     visit operations_sync_runs_path
     accept_confirm { click_button I18n.t("operations.sync_runs.actions.run_now") }
     expect(page).to have_text(I18n.t("operations.sync_runs.create.success"))
+    expect(toast_pills_fit?).to be(true), "a success pill is one line and clips its text; shorten the message"
+  end
+
+  # Success toasts are single-line pills that hide overflow, so a long message is cut off silently.
+  def toast_pills_fit?
+    page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll('[data-controller="toast-pill"]')).every(pill => pill.scrollWidth <= pill.clientWidth)
+    JS
   end
 
   it "tells an operator a sync is running before they reach Run now, at AAA in both themes" do

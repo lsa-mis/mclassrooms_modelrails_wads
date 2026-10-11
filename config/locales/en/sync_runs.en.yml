@@ -98,10 +98,10 @@ en:
         title: "Sync started %{started}"
         back: "All sync runs"
       create:
-        success: "Sync requested. It appears in the history when it starts, usually within a few seconds; reload this page to see it."
+        success: "Sync requested. Reload to follow it."
       resumptions:
         create:
-          success: "Retry requested. It picks up at the step that failed."
+          success: "Retry requested. Reload to follow it."
           not_resumable: "Only the most recent sync can be retried, and only when it failed."
   navigation:
     admin:
