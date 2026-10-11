@@ -1,5 +1,6 @@
 class SyncPhase < ApplicationRecord
   include Tenanted
+  include Broadcastable
 
   # Reference list of phase keys the pipeline (phase 2) writes: "campuses",
   # "buildings", "rooms", "facility_ids", "characteristics", "contacts",
@@ -20,4 +21,8 @@ class SyncPhase < ApplicationRecord
 
     finished_at - started_at
   end
+
+  private
+
+  def broadcast_target = [ workspace, :sync_runs ]
 end

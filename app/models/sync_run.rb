@@ -1,5 +1,6 @@
 class SyncRun < ApplicationRecord
   include Tenanted
+  include Broadcastable
 
   HISTORY_SIZE = 14
 
@@ -12,6 +13,11 @@ class SyncRun < ApplicationRecord
   def self.history_for(workspace) = where(workspace:).newest_first.limit(HISTORY_SIZE)
 
   def self.dry_run_by_default? = ENV["API_UPDATE_DELETE_DRY_RUN"].present?
+
+  # How long the last finished sync took, as the "usually takes about" estimate for a running one.
+  def self.typical_duration_for(workspace)
+    where(workspace:).succeeded.where(dry_run: false).newest_first.first&.duration_seconds
+  end
 
   def self.inventory_for(workspace)
     rooms = Room.where(workspace:)
@@ -40,4 +46,16 @@ class SyncRun < ApplicationRecord
   end
 
   def phases_in_order = sync_phases.sort_by { |phase| SyncPhase::KEYS.index(phase.key) || SyncPhase::KEYS.size }
+
+  def steps_total = Sync::RunPipeline::CORE_PHASES.size
+
+  def steps_done = sync_phases.count { |phase| core_key?(phase.key) && (phase.succeeded? || phase.failed? || phase.skipped?) }
+
+  def current_phase = sync_phases.find(&:running?)
+
+  private
+
+  def core_key?(key) = Sync::RunPipeline::CORE_PHASES.any? { it::KEY == key }
+
+  def broadcast_target = [ workspace, :sync_runs ]
 end

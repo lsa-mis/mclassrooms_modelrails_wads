@@ -37,6 +37,11 @@ en:
     dry_run: "Dry run"
     not_finished: "Not finished"
     running_for: "Running for %{duration}"
+    progress:
+      label: "Sync progress"
+      starting: "Starting"
+      step: "Step %{step} of %{total}: %{phase}"
+      typical: "usually takes about %{duration}"
     duration:
       days:
         one: "1 day"

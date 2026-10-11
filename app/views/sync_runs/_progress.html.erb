@@ -1,0 +1,8 @@
+<%# locals: (run:, typical: nil) %>
+<div class="space-y-2" data-sync-progress>
+  <p class="text-sm font-medium text-text-heading"><%= sync_progress_label(run) %></p>
+  <%= ui :progress, value: run.steps_done, max: run.steps_total, label: t("sync_runs.progress.label") %>
+  <p class="text-sm text-text-body">
+    <%= sync_duration(run) %><% if typical %> · <%= t("sync_runs.progress.typical", duration: localized_duration(typical)) %><% end %>
+  </p>
+</div>

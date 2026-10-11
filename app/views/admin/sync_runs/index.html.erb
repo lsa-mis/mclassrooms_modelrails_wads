@@ -1,4 +1,5 @@
 <% content_for(:title) { t(".title") } %>
+<%= render "sync_runs/live", workspace: Current.workspace %>
 
 <div class="max-w-5xl mx-auto px-4 py-8">
   <div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
@@ -12,7 +13,7 @@
   </div>
 
   <div class="mt-8">
-    <%= render "sync_runs/summary", latest: @sync_runs.first, inventory: @inventory %>
+    <%= render "sync_runs/summary", latest: @latest, inventory: @inventory, typical: @typical %>
   </div>
   <%= render "sync_runs/history", sync_runs: @sync_runs, scope: :admin %>
 </div>
