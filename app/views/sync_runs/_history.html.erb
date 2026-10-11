@@ -1,5 +1,6 @@
 <%# locals: (sync_runs:, scope:, retry_allowed: false) %>
-<section class="mt-8" data-sync-run-history>
+<section class="mt-8" aria-labelledby="sync-run-history-heading" data-sync-run-history>
+  <h2 id="sync-run-history-heading" class="mb-4 text-lg font-semibold text-text-heading"><%= t("sync_runs.history.heading") %></h2>
   <% if sync_runs.any? %>
     <%= render UI::TableComponent.new(caption: t("sync_runs.history.caption"), scroll: :horizontal) do |table| %>
       <% table.with_header do %>
@@ -14,7 +15,7 @@
         <% sync_runs.each do |run| %>
           <tr class="border-t border-border h-12 align-middle">
             <th scope="row" class="px-4 py-0 align-middle text-left font-medium whitespace-nowrap">
-              <%= link_to sync_started_at(run), [ scope, run ], class: "btn-cell-link btn-text-interactive" %>
+              <%= link_to [ scope, run ], class: "btn-cell-link btn-text-interactive" do %><span class="sr-only"><%= t("sync_runs.history.link_prefix") %> </span><%= sync_started_at(run) %><% end %>
             </th>
             <td class="px-4 py-0 align-middle whitespace-nowrap">
               <span class="inline-flex items-center gap-2">

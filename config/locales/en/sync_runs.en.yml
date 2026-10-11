@@ -59,7 +59,9 @@ en:
       classrooms: "Classrooms"
       listed_classrooms: "Listed classrooms"
     history:
-      caption: "The 14 most recent sync runs, newest first"
+      heading: "Recent syncs"
+      caption: "The most recent sync runs, newest first"
+      link_prefix: "Sync started"
       empty: "No sync has run yet."
     detail:
       phases_heading: "Steps"

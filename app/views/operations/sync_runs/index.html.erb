@@ -1,16 +1,17 @@
 <% content_for(:title) { t(".title") } %>
 <div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
-  <%= render "shared/settings_page_header", title: t(".title"), description: t(".description") %>
+  <div>
+    <%= render "shared/settings_page_header", title: t(".title"), description: t(".description") %>
+    <% if @sync_runs.any?(&:running?) %>
+      <%= ui :alert, tone: :info, role: :note, class: "mb-6" do |a| %>
+        <% a.with_alert_description { t(".running_notice") } %>
+      <% end %>
+    <% end %>
+  </div>
   <%= button_to t("operations.sync_runs.actions.run_now"), operations_sync_runs_path,
         class: "btn-primary whitespace-nowrap",
         data: { turbo_confirm: t(".run_now_confirm") } %>
 </div>
-
-<% if @sync_runs.any?(&:running?) %>
-  <%= ui :alert, tone: :info, class: "mb-6" do |a| %>
-    <% a.with_alert_description { t(".running_notice") } %>
-  <% end %>
-<% end %>
 
 <%= render "sync_runs/summary", latest: @sync_runs.first, inventory: @inventory %>
 <%= render "sync_runs/history", sync_runs: @sync_runs, scope: :operations, retry_allowed: true %>
