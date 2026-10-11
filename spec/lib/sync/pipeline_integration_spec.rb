@@ -1,54 +1,7 @@
 require "rails_helper"
 
-# Task 13 of planning/plans/phase-2-ingestion.md — the phase-2 gate, RESTORED
-# in sync-fix Task 5 once every phase (Tasks 1-4) migrated off the wrong
-# guessed endpoints/params/field-names onto the real, live-verified gateway
-# shapes (see .superpowers/sdd/sync-fix-plan.md and sync-fix-decisions.md).
-# Every other spec/lib/sync/*_spec.rb file exercises exactly ONE phase in
-# isolation (a real client + WebMock, but only that phase's own endpoints
-# stubbed). This file is the first (and only) place `Sync::RunPipeline`
-# drives all SIX real Sync::BasePhase subclasses back-to-back against the
-# COMPLETE, real-shaped WebMock fixture set — no phase doubles anywhere. If a
-# phase's endpoint path/query doesn't match what another phase (or this
-# spec) expects, or two phases disagree about a room's shape, this is where
-# that surfaces: as a WebMock::NetConnectNotAllowedError (a missing stub) or
-# a wrong assertion, not a silent gap.
-#
-# `sleeper:` is a no-op lambda (spec D7: `PHASE_PAUSE_SECONDS` is 61 real
-# seconds between each of the 6 core phases; a bare `Sync::RunPipeline.call`
-# would sleep ~5*61s per run in this file alone). `client:` is left at its
-# default (a real `UmApi::Client.new`, per Task 12) — every HTTP call it
-# makes is intercepted by WebMock, never the network.
-#
-# Fixture-driven scope (spec/fixtures/um_api/): building_info_page1.json
-# (campus "100": MLB "1005046", Angell Hall "1005090", padded with campus
-# "999" filler rows to force fetch_all's short-page pagination — sync-fix
-# Task 2) and building_info_page2.json (campus "250": DEDC "1005200") give
-# one in-scope and one out-of-scope campus; only a `campus_allow: "100"`
-# SyncScopeRule (set once, top-level `before`) is needed for DEDC to be
-# filtered by Sync::UpdateBuildings — which matters for wiring, not just
-# filtering: Sync::UpdateRooms walks `Building.for_current_workspace`, so
-# DEDC never being persisted is also why this spec never needs a
-# rooms-feed/facility stub for it.
-#
-# Department join-by-name handoff (sync-fix Task 3): rooms_1005046.json's
-# Class Laboratory room names department "LSA - Chemistry", deliberately
-# ABSENT from departments.json's bulk preload — every run below genuinely
-# exercises Sync::UpdateRooms's `?DeptDescription=` fallback fetch
-# (department_190100.json), not a no-op. The Office row's blank
-# DepartmentName proves the admin-room (no unit) path in the same run.
-#
-# Facility crosswalk handoff (sync-fix Task 4): classroom_list_mlb_ah.json
-# (a NEW fixture for this spec — the per-phase update_facility_ids_spec.rb
-# fixtures map both its facilities to the SAME single seeded building,
-# which this whole-pipeline spec can't reuse since it has two real,
-# differently-numbered buildings) maps MLB1200 -> building "1005046" and
-# AH0100 -> building "1005090", matching exactly the two Classroom rows
-# Sync::UpdateRooms creates (German "2005046", Math "2005090") — this is the
-# rmrecnbr handoff Sync::UpdateFacilityIds's per-facility Characteristics
-# fetch must resolve correctly. Sync::UpdateCharacteristics/UpdateContacts
-# then independently re-fetch those same two facility codes (sync-fix-
-# decisions.md Risk 2, accepted per-facility double-fetch).
+# All six real phases back to back against the full WebMock fixture set (spec/fixtures/um_api/). One campus_allow rule
+# keeps campus 100 in scope; the fixtures also exercise the department fallback fetch and the facility crosswalk.
 RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
   around do |example|
     original = %w[UM_API_BASE_URL UM_API_TOKEN_URL UM_API_CLIENT_ID UM_API_CLIENT_SECRET].index_with { |key| ENV[key] }
@@ -64,12 +17,6 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
   end
 
   let(:workspace) { create(:workspace) }
-  # A no-op sleeper for Sync::RunPipeline's OWN 61s inter-phase pause (5 gaps
-  # across the 6 core phases). Note this is a DIFFERENT sleeper from
-  # UmApi::RateLimiter's (which defaults to Kernel.sleep) — this spec never
-  # trips the rate limiter's own 400-calls/minute or 429-backoff sleeps (far
-  # too few requests), so the default real client is safe to use unmodified.
-  let(:no_op_sleeper) { ->(_seconds) { } }
 
   before do
     Current.workspace = workspace
@@ -78,7 +25,7 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
     create(:sync_scope_rule, workspace: workspace, rule_type: "campus_allow", value: "100")
   end
 
-  def run_pipeline(**kwargs) = Sync::RunPipeline.call(sleeper: no_op_sleeper, **kwargs)
+  def run_pipeline(**) = Sync::RunPipeline.call(**)
 
   def phase_for(run, key) = run.sync_phases.find_by!(key: key)
 
@@ -317,7 +264,7 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
       stub_um_get("/aa/ClassroomList/v2/Classrooms/OLD8888/Characteristics", fixture: "characteristics_empty.json")
       stub_um_get("/aa/ClassroomList/v2/Classrooms/OLD8888/Contacts", fixture: "contacts_MLB1200.json")
 
-      run = Sync::RunPipeline.call(dry_run: true, sleeper: no_op_sleeper)
+      run = Sync::RunPipeline.call(dry_run: true)
 
       expect(run).to be_succeeded
       expect(run).to be_dry_run

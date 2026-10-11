@@ -1,24 +1,9 @@
 require "rails_helper"
 
-# Task 12 of planning/plans/phase-2-ingestion.md: Sync::RunPipeline
-# orchestrates the six phase-2 sync phases into one resumable run (spec D7).
-# Every phase class here is STUBBED (`allow(phase_class).to receive(:call)`)
-# rather than run for real — this suite tests the ORCHESTRATION (order,
-# stop-on-failure, resume, the 61s inter-phase pause, one shared client,
-# never-raises), not any individual phase's business logic, which already
-# has its own spec (spec/lib/sync/update_*_spec.rb). Each stub also stamps
-# the corresponding SyncPhase row itself, exactly like the real
-# Sync::BasePhase#call would — the pipeline itself never touches a
-# succeeded/failed phase's row, only a skipped one's (see run_pipeline.rb).
-#
-# No real sleeps, ever: `sleeper:` is injected as a fake that records its
-# calls instead of invoking Kernel.sleep. No real log writes, ever:
-# `operator_log:` is injected with a StringIO-backed Logger so nothing here
-# appends to the real log/sync.log (mirrors operator_log_spec's discipline).
+# The pipeline's orchestration (order, stop-on-failure, resume, one shared client, never raising) with every phase
+# stubbed; each stub stamps its SyncPhase row as BasePhase#call would. The operator log writes to a StringIO.
 RSpec.describe Sync::RunPipeline do
   let(:workspace) { create(:workspace) }
-  let(:sleeps) { [] }
-  let(:sleeper) { ->(seconds) { sleeps << seconds } }
   let(:client) { instance_double(UmApi::Client) }
   let(:operator_log) { Sync::OperatorLog.new(logger: Logger.new(StringIO.new)) }
 
@@ -50,14 +35,13 @@ RSpec.describe Sync::RunPipeline do
   end
 
   describe "the happy path — every core phase succeeds" do
-    it "runs all six core phases in the fixed order, pausing 61s between each, and marks the run succeeded" do
+    it "runs all six core phases in the fixed order, without pausing between them, and marks the run succeeded" do
       call_log = []
       stub_all_core_succeeding(call_log: call_log)
 
-      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(client: client, operator_log: operator_log)
 
       expect(call_log).to eq(%w[campuses buildings rooms facility_ids characteristics contacts])
-      expect(sleeps).to eq([ 61, 61, 61, 61, 61 ]) # 5 gaps between 6 phases, never after the last
       expect(run).to be_succeeded
       expect(run.finished_at).to be_present
       expect(run.sync_phases.count).to eq(6)
@@ -75,7 +59,7 @@ RSpec.describe Sync::RunPipeline do
         end
       end
 
-      described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
+      described_class.call(client: client, operator_log: operator_log)
 
       expect(seen_clients.uniq.size).to eq(1)
       expect(seen_clients.first).to equal(client)
@@ -86,7 +70,7 @@ RSpec.describe Sync::RunPipeline do
       fake_client = instance_double(UmApi::Client)
       allow(UmApi::Client).to receive(:new).and_return(fake_client)
 
-      described_class.call(sleeper: sleeper, operator_log: operator_log)
+      described_class.call(operator_log: operator_log)
 
       expect(UmApi::Client).to have_received(:new).once
     end
@@ -94,7 +78,7 @@ RSpec.describe Sync::RunPipeline do
     it "creates the run under Current.workspace with the requested dry_run flag" do
       stub_all_core_succeeding
 
-      run = described_class.call(dry_run: true, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(dry_run: true, client: client, operator_log: operator_log)
 
       expect(run.workspace).to eq(workspace)
       expect(run).to be_dry_run
@@ -112,7 +96,7 @@ RSpec.describe Sync::RunPipeline do
         allow(phase_class).to receive(:call)
       end
 
-      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(client: client, operator_log: operator_log)
 
       expect(call_log).to eq(%w[campuses buildings rooms])
       described_class::CORE_PHASES[3..].each { |phase_class| expect(phase_class).not_to have_received(:call) }
@@ -129,10 +113,6 @@ RSpec.describe Sync::RunPipeline do
         "characteristics" => "skipped",
         "contacts" => "skipped"
       )
-
-      # Sleeps only happen between phases that actually ran: 1->2, 2->3.
-      # Never after the phase that failed and stopped the run.
-      expect(sleeps).to eq([ 61, 61 ])
     end
   end
 
@@ -158,7 +138,7 @@ RSpec.describe Sync::RunPipeline do
       stub_phase(described_class::CORE_PHASES[4], status: :succeeded, call_log: call_log) # characteristics
       stub_phase(described_class::CORE_PHASES[5], status: :succeeded, call_log: call_log) # contacts
 
-      run = described_class.call(run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(run: failed_run, client: client, operator_log: operator_log)
 
       expect(run).to eq(failed_run)
       expect(described_class::CORE_PHASES[0]).not_to have_received(:call)
@@ -176,15 +156,13 @@ RSpec.describe Sync::RunPipeline do
         "characteristics" => "succeeded",
         "contacts" => "succeeded"
       )
-      # 3 gaps between the 4 phases actually re-run.
-      expect(sleeps).to eq([ 61, 61, 61 ])
     end
 
     it "gives a retry its own start time, so its duration and place in the history are the retry's" do
       failed_run = create(:sync_run, workspace: workspace, status: :failed, started_at: 2.days.ago, finished_at: 2.days.ago)
       described_class::CORE_PHASES.each { |phase| stub_phase(phase, status: :succeeded) }
 
-      run = described_class.call(run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(run: failed_run, client: client, operator_log: operator_log)
 
       expect(run.started_at).to be_within(5.seconds).of(Time.current)
     end
@@ -205,7 +183,7 @@ RSpec.describe Sync::RunPipeline do
       allow(described_class::CORE_PHASES[4]).to receive(:call)
       allow(described_class::CORE_PHASES[5]).to receive(:call)
 
-      run = described_class.call(run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(run: failed_run, client: client, operator_log: operator_log)
 
       expect(run).to be_failed
       expect(described_class::CORE_PHASES[3]).not_to have_received(:call)
@@ -237,7 +215,7 @@ RSpec.describe Sync::RunPipeline do
         Result.failure("meetings endpoint down")
       end
 
-      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(client: client, operator_log: operator_log)
 
       expect(run).to be_succeeded # core succeeded; the optional failure must not flip this
       expect(run.sync_phases.find_by!(key: "availability")).to be_failed
@@ -254,7 +232,7 @@ RSpec.describe Sync::RunPipeline do
         Result.success(counters: {}, warnings: [])
       end
 
-      run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(client: client, operator_log: operator_log)
 
       expect(run).to be_failed # core's failure still stands
       expect(call_log).to eq(%w[campuses availability])
@@ -274,7 +252,7 @@ RSpec.describe Sync::RunPipeline do
       described_class::CORE_PHASES[2..].each { |phase_class| allow(phase_class).to receive(:call) }
 
       run = nil
-      expect { run = described_class.call(sleeper: sleeper, client: client, operator_log: operator_log) }.not_to raise_error
+      expect { run = described_class.call(client: client, operator_log: operator_log) }.not_to raise_error
 
       expect(run).to be_a(SyncRun)
       expect(run).to be_failed
@@ -287,7 +265,7 @@ RSpec.describe Sync::RunPipeline do
     it "raises loudly when the run row itself cannot be created — there is nothing to record the failure on" do
       Current.workspace = nil # SyncRun requires a workspace; create! raises rather than returning nil
 
-      expect { described_class.call(sleeper: sleeper, client: client, operator_log: operator_log) }
+      expect { described_class.call(client: client, operator_log: operator_log) }
         .to raise_error(ActiveRecord::RecordInvalid)
     end
   end

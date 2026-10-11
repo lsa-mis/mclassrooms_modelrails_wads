@@ -1,5 +1,5 @@
 # Runs the sync phases, in order, for one SyncRun and never raises once that run exists. Phases, resuming,
-# the 61s pause, and the one-sync-at-a-time rule: app/docs/developer/sync.md.
+# the gateway budget, and the one-sync-at-a-time rule: app/docs/developer/sync.md.
 module Sync
   class RunPipeline
     CORE_PHASES = [
@@ -13,19 +13,17 @@ module Sync
 
     OPTIONAL_PHASES = [].freeze
 
-    PHASE_PAUSE_SECONDS = 61
 
     def self.call(dry_run: SyncRun.dry_run_by_default?, run: nil,
-                  sleeper: ->(seconds) { Kernel.sleep(seconds) }, client: nil,
+                  client: nil,
                   operator_log: Sync::OperatorLog.new)
-      new(dry_run: dry_run, run: run, sleeper: sleeper, client: client,
+      new(dry_run: dry_run, run: run, client: client,
           operator_log: operator_log).call
     end
 
-    def initialize(dry_run:, run:, sleeper:, client:, operator_log:)
+    def initialize(dry_run:, run:, client:, operator_log:)
       @dry_run = dry_run
       @given_run = run
-      @sleeper = sleeper
       @client = client || UmApi::Client.new
       @operator_log = operator_log
     end
@@ -39,7 +37,7 @@ module Sync
 
     private
 
-    attr_reader :dry_run, :sleeper, :client, :operator_log
+    attr_reader :dry_run, :client, :operator_log
 
     # The never-raises boundary: `run` is guaranteed to exist here, so any
     # failure below is recorded on it and swallowed rather than propagated.
@@ -75,19 +73,13 @@ module Sync
       phases_to_run = CORE_PHASES.reject { |phase_class| already_succeeded.include?(phase_class::KEY) }
 
       failed = false
-      phases_to_run.each_with_index do |phase_class, index|
+      phases_to_run.each do |phase_class|
         if failed
           mark_skipped!(run, phase_class)
           next
         end
 
-        result = run_phase(run, phase_class)
-
-        if result.success?
-          sleeper.call(PHASE_PAUSE_SECONDS) unless index == phases_to_run.length - 1
-        else
-          failed = true
-        end
+        failed = true unless run_phase(run, phase_class).success?
       end
 
       run.update!(status: failed ? :failed : :succeeded)
