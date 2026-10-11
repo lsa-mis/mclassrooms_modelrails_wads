@@ -31,6 +31,7 @@ RSpec.describe "Admin sync runs", type: :request do
       expect(page).to have_css("[data-sync-inventory]", text: I18n.t("sync_runs.inventory.classrooms"))
       expect(page).to have_no_button(I18n.t("operations.sync_runs.actions.run_now"))
       expect(page).to have_no_button(I18n.t("operations.sync_runs.actions.retry"))
+      expect(page).to have_no_link(href: operations_sync_runs_path)
     end
 
     it "points an operator who is also an admin to the controls" do

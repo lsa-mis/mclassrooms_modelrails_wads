@@ -75,7 +75,7 @@ depend on a Phase 8 task not yet built.
 - [ ] **Deploy** — all env vars + secrets set; `bin/kamal deploy` green; `bin/kamal console` opens.
 - [ ] **Mail** — `SMTP_ADDRESS` names the U-M relay and its credentials are in the deployer's environment; a mail sent from `bin/kamal console` (for example `Rails.application.config.action_mailer.smtp_settings` checked, then a real `deliver_now`) arrives.
 - [ ] **Seeds** — reference data verified against the old app's lists (`db:seed`: `CharacteristicDisplayRule`, `UnitDisplayName`, `SyncScopeRule`); Owner account created + password-set link received.
-- [ ] **First sync** — run `SyncNightlyJob` from the console; confirm succeeded, inventory counts sane, `Setting.capacity_filter_max` populated. *(Verify via console/logs until the admin sync-run UI ships — later.)*
+- [ ] **First sync** — as an operator, open `/operations/sync_runs` and choose **Run now**; reload until it finishes. Confirm it succeeded, every step's counts look sane, the inventory counts match expectations, and `Setting.capacity_filter_max` is populated. Note how long it took: the one-sync lock (`SyncRunJob::DURATION`, 12 hours) must stay well above it. See [Facilities sync](/docs/developer/sync).
 - [ ] **Legacy URLs in production** — spot-check a known `/classrooms/<facility_code>`, an unknown code, `/classrooms` (LSA pre-filter — confirm `COLLEGE_OF_LSA` resolved), `/legacy_crdb`, one `/toggle_visibile/<rmrecnbr>`.
 - [ ] **SSO** — a real U-M user signs in via **Okta** and via **Google**; confirm the domain allowlist and the Okta org gate.
 - [ ] **Siteimprove** — `TEST_LOGIN_TOKEN` set on staging; crawler completes an authenticated pass; confirm production 404s `/test_login`.
