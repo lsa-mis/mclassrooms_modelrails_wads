@@ -135,4 +135,15 @@ RSpec.describe SyncPhase, type: :model do
       expect(index.unique).to be true
     end
   end
+
+  it "has copy for every kind of change a sync step counts" do
+    kinds = Dir[Rails.root.join("app/lib/sync/update_*.rb")].flat_map do |path|
+      source = File.read(path)
+      counted = source.scan(/count\(:(\w+)/).flatten.uniq & described_class::CHANGE_COUNTERS
+      counted.map { "#{source[/KEY = "(\w+)"/, 1]}_#{it}" }
+    end
+
+    expect(kinds.size).to eq(13)
+    expect(kinds.reject { I18n.exists?("sync_runs.changes.kinds.#{it}") }).to be_empty
+  end
 end

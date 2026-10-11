@@ -229,6 +229,7 @@ ignore_unused:
   # delete these and every feed entry silently degrades to a humanized column
   # value with nothing raising and the suite still green (#522).
   - activity.actions.*
+  - sync_runs.changes.kinds.*
   # AccountActivityHelper#account_activity_label builds the key the same
   # dynamic way from ActivityLog::SECURITY_ACTIONS entries, and appends
   # `_with_os` when the row carries one:

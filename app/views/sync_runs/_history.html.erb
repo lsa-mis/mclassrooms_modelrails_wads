@@ -7,6 +7,7 @@
         <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("sync_runs.columns.started") %></th>
         <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("sync_runs.columns.status") %></th>
         <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("sync_runs.columns.duration") %></th>
+        <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("sync_runs.columns.changes") %></th>
         <% if retry_allowed %>
           <th scope="col" class="<%= UI::TableComponent::TH %>"><span class="sr-only"><%= t("sync_runs.columns.actions") %></span></th>
         <% end %>
@@ -26,6 +27,7 @@
               </span>
             </td>
             <td class="px-4 py-0 align-middle text-text-body whitespace-nowrap tabular-nums"><%= sync_duration(run) %></td>
+            <td class="px-4 py-0 align-middle text-text-body whitespace-nowrap tabular-nums"><%= sync_change_summary(run) %></td>
             <% if retry_allowed %>
               <td class="px-4 py-0 align-middle whitespace-nowrap text-right">
                 <% if run.failed? && run == sync_runs.first %>

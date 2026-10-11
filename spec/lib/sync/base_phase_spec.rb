@@ -51,6 +51,20 @@ class RaisingStandardErrorTestPhase < Sync::BasePhase
   end
 end
 
+class ProgressTestPhase < Sync::BasePhase
+  KEY = "contacts"
+
+  class << self
+    attr_accessor :script
+  end
+
+  public :progress_total!, :progress!, :count
+
+  private
+
+  def perform = self.class.script.call(self)
+end
+
 class GuardedWriteTestPhase < Sync::BasePhase
   KEY = "facility_ids"
 
@@ -259,6 +273,42 @@ RSpec.describe Sync::BasePhase do
       phase_instance.call
 
       expect(phase_instance.write_executed?).to be true
+    end
+  end
+
+  describe "progress within a step" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    let(:run) { create(:sync_run) }
+
+    def contacts_row = run.sync_phases.find_by!(key: "contacts")
+
+    it "saves the total at once and the count done at most every PROGRESS_INTERVAL, with the changes so far" do
+      freeze_time
+      seen = []
+      script = lambda do |step|
+        step.progress_total!(3)
+        seen << [ contacts_row.items_done, contacts_row.items_total ]
+        step.count(:updated)
+        step.progress!
+        seen << [ contacts_row.items_done, contacts_row.counters ]
+        travel Sync::BasePhase::PROGRESS_INTERVAL
+        step.progress!
+        seen << [ contacts_row.items_done, contacts_row.counters ]
+        step.progress!
+      end
+
+      ProgressTestPhase.script = script
+      ProgressTestPhase.call(run:, client: FakeClient.new)
+
+      expect(seen).to eq([ [ 0, 3 ], [ 0, {} ], [ 2, { "updated" => 1 } ] ])
+      expect(contacts_row).to have_attributes(status: "succeeded", items_done: 3, items_total: 3)
+    end
+
+    it "leaves a step that never reports progress without a total" do
+      SucceedingTestPhase.call(run:, client: FakeClient.new)
+
+      expect(run.sync_phases.find_by!(key: "campuses")).to have_attributes(items_done: nil, items_total: nil)
     end
   end
 end

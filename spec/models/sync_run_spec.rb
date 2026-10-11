@@ -146,6 +146,23 @@ RSpec.describe SyncRun, type: :model do
       expect([ run.steps_done, run.steps_total, run.current_phase ]).to eq([ 2, 6, rooms ])
     end
 
+    it "counts the running step's share of its items toward the bar" do
+      %w[campuses buildings rooms].each { create(:sync_phase, sync_run: run, key: it, status: :succeeded) }
+      facility_ids = create(:sync_phase, sync_run: run, key: "facility_ids", status: :running)
+
+      expect(run.progress_percent).to eq(50)
+      facility_ids.update!(items_done: 612, items_total: 1067)
+      expect(run.reload.progress_percent).to eq(59)
+    end
+
+    it "lists the changes each step made, in step order, leaving out calls and skips" do
+      create(:sync_phase, sync_run: run, key: "contacts", counters: { "updated" => 1, "api_calls" => 461 })
+      create(:sync_phase, sync_run: run, key: "rooms", counters: { "created" => 1, "updated" => 3, "deactivated" => 0, "skipped" => 2 })
+
+      expect(run.changes_made).to eq([ [ "rooms_created", 1 ], [ "rooms_updated", 3 ], [ "contacts_updated", 1 ] ])
+      expect(run.change_count).to eq(5)
+    end
+
     it "takes the typical duration from the newest finished real sync" do
       create(:sync_run, workspace:, status: :succeeded, started_at: 2.days.ago, finished_at: 2.days.ago + 30.minutes)
       create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago + 14.minutes)

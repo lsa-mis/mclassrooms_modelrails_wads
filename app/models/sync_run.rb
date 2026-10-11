@@ -53,6 +53,17 @@ class SyncRun < ApplicationRecord
 
   def current_phase = sync_phases.find(&:running?)
 
+  def progress_percent
+    phase = current_phase
+    within = phase&.items_total.to_i.positive? ? phase.items_done.to_f / phase.items_total : 0
+    ((steps_done + within) * 100 / steps_total).floor
+  end
+
+  # [kind, count] per kind of change ("rooms_updated"), in step order; a dry run's are what it would have changed.
+  def changes_made = phases_in_order.flat_map { |phase| phase.changes_made.map { |counter, count| [ "#{phase.key}_#{counter}", count ] } }
+
+  def change_count = changes_made.sum(&:last)
+
   private
 
   def core_key?(key) = Sync::RunPipeline::CORE_PHASES.any? { it::KEY == key }

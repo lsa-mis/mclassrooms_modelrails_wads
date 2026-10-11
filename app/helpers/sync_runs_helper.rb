@@ -42,6 +42,37 @@ module SyncRunsHelper
     t("sync_runs.progress.step", step: run.steps_done + 1, total: run.steps_total, phase: t("sync_runs.phases.#{phase.key}"))
   end
 
+  def sync_progress_detail(run)
+    phase = run.current_phase
+    return unless phase&.items_total
+
+    t("sync_runs.progress.items.#{phase.key}", done: number_with_delimiter(phase.items_done.to_i), total: number_with_delimiter(phase.items_total))
+  end
+
+  def sync_changes_heading(run)
+    if run.running? then t("sync_runs.changes.heading.running")
+    elsif run.dry_run? then t("sync_runs.changes.heading.dry_run")
+    else t("sync_runs.changes.heading.finished")
+    end
+  end
+
+  def sync_change_lines(run)
+    run.changes_made.map { |kind, count| t("sync_runs.changes.kinds.#{kind}", count:, number: number_with_delimiter(count)) }
+  end
+
+  def sync_no_changes_message(run)
+    if run.running? then t("sync_runs.changes.none.running")
+    elsif run.dry_run? then t("sync_runs.changes.none.dry_run")
+    elsif run.succeeded? then t("sync_runs.changes.none.matched")
+    else t("sync_runs.changes.none.failed")
+    end
+  end
+
+  def sync_change_summary(run)
+    count = run.change_count
+    count.zero? ? t("sync_runs.changes.total.none") : t("sync_runs.changes.total.some", count:, number: number_with_delimiter(count))
+  end
+
   def sync_started_at(run)
     l(run.started_at || run.created_at, format: :short)
   end

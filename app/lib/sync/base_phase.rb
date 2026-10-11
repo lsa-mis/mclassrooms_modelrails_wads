@@ -34,6 +34,8 @@
 # accurate "would have" counts even though no UPDATE/DELETE ever fires.
 module Sync
   class BasePhase
+    PROGRESS_INTERVAL = 3.seconds
+
     def self.call(run:, client:)
       new(run: run, client: client).call
     end
@@ -59,7 +61,7 @@ module Sync
       sleeps_before = nil
 
       begin
-        phase = find_or_create_phase!
+        @phase = phase = find_or_create_phase!
         phase.update!(status: :running, started_at: Time.current, finished_at: nil, error_messages: [])
 
         calls_before = client.call_count
@@ -68,7 +70,7 @@ module Sync
         perform
         record_call_deltas!(calls_before, sleeps_before)
 
-        phase.update!(status: :succeeded, finished_at: Time.current, counters: counters, warnings: warnings)
+        phase.update!(status: :succeeded, finished_at: Time.current, counters: counters, warnings: warnings, items_done: @items_done)
         Result.success(counters: counters.dup, warnings: warnings.dup)
       rescue StandardError => e
         # UmApi::Error (Task 5's typed gateway errors) is itself a
@@ -114,6 +116,21 @@ module Sync
 
     def add_warning(message)
       warnings << message
+    end
+
+    # A long step reports how far it has got; saving the row broadcasts a refresh, so at most every PROGRESS_INTERVAL.
+    def progress_total!(total)
+      @items_done = 0
+      @progress_saved_at = Time.current
+      @phase.update!(items_done: 0, items_total: total)
+    end
+
+    def progress!
+      @items_done += 1
+      return if Time.current - @progress_saved_at < PROGRESS_INTERVAL
+
+      @progress_saved_at = Time.current
+      @phase.update!(items_done: @items_done, counters: counters)
     end
 
     def perform

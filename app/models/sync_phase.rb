@@ -9,6 +9,7 @@ class SyncPhase < ApplicationRecord
   # ArgumentError if a future phase key is added — KEYS backs an inclusion
   # validation instead, which just marks the record invalid.
   KEYS = %w[campuses buildings rooms facility_ids characteristics contacts availability].freeze
+  CHANGE_COUNTERS = %w[created updated added removed cleared deactivated deleted].freeze
 
   belongs_to :sync_run
 
@@ -21,6 +22,8 @@ class SyncPhase < ApplicationRecord
 
     finished_at - started_at
   end
+
+  def changes_made = counters.slice(*CHANGE_COUNTERS).select { |_counter, count| count.positive? }
 
   private
 

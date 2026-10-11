@@ -20,6 +20,8 @@
           <dd class="text-text-body"><%= sync_started_at(latest) %></dd>
           <dt class="text-text-muted"><%= t("sync_runs.columns.duration") %></dt>
           <dd class="text-text-body"><%= sync_duration(latest) %></dd>
+          <dt class="text-text-muted"><%= t("sync_runs.columns.changes") %></dt>
+          <dd class="text-text-body tabular-nums"><%= sync_change_summary(latest) %></dd>
         </dl>
       <% else %>
         <p class="text-sm text-text-body"><%= t("sync_runs.history.empty") %></p>
