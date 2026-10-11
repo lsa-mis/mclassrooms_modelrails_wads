@@ -16,7 +16,7 @@
           <dt class="text-text-muted"><%= t("sync_runs.columns.started") %></dt>
           <dd class="text-text-body"><%= sync_started_at(latest) %></dd>
           <dt class="text-text-muted"><%= t("sync_runs.columns.duration") %></dt>
-          <dd class="text-text-body"><%= sync_duration(latest.duration_seconds) %></dd>
+          <dd class="text-text-body"><%= sync_duration(latest) %></dd>
         </dl>
       <% else %>
         <p class="text-sm text-text-body"><%= t("sync_runs.history.empty") %></p>

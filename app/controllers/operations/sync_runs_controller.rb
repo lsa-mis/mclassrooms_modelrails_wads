@@ -15,11 +15,17 @@ module Operations
 
     def create
       authorize [ :operations, SyncRun ]
+      outcome = SyncRunJob.request(directory_workspace, requested_by: Current.user)
+      redirect_to operations_sync_runs_path, **flash_for(outcome)
+    end
 
-      if SyncRunJob.perform_later(directory_workspace, requested_by: Current.user)
-        redirect_to operations_sync_runs_path, notice: t(".success")
-      else
-        redirect_to operations_sync_runs_path, alert: t("operations.sync_runs.not_queued")
+    private
+
+    def flash_for(outcome)
+      case outcome
+      when :queued then { notice: t("operations.sync_runs.create.success") }
+      when :already_running then { alert: t("operations.sync_runs.already_running") }
+      else { alert: t("operations.sync_runs.not_queued") }
       end
     end
   end

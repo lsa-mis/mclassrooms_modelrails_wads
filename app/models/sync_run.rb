@@ -22,8 +22,16 @@ class SyncRun < ApplicationRecord
   # Called only by SyncRunJob, which runs one sync per workspace at a time: any run still marked running
   # was left by a worker that died, so it is failed and can be retried.
   def self.fail_abandoned(workspace)
-    where(workspace:).running.update_all(status: "failed", finished_at: Time.current, updated_at: Time.current)
+    now = Time.current
+    abandoned = where(workspace:).running
+    SyncPhase.where(sync_run: abandoned).running.update_all(status: "failed", finished_at: now, updated_at: now)
+    abandoned.update_all(status: "failed", finished_at: now, updated_at: now)
   end
+
+  def self.most_recent_for(workspace) = where(workspace:).newest_first.first
+
+  # Only the most recent run: an older run's leftover steps would re-run against today's data.
+  def retryable? = failed? && self == SyncRun.most_recent_for(workspace)
 
   def duration_seconds
     return nil if started_at.blank? || finished_at.blank?

@@ -99,5 +99,38 @@ RSpec.describe SyncRun, type: :model do
       expect(finished.reload).to be_succeeded
       expect(elsewhere.reload).to be_running
     end
+
+    it "also fails the abandoned run's step that was mid-flight, so it does not keep showing Running" do
+      workspace = create(:workspace)
+      abandoned = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago)
+      done = create(:sync_phase, sync_run: abandoned, key: "campuses", status: :succeeded)
+      mid_flight = create(:sync_phase, sync_run: abandoned, key: "buildings", status: :running)
+      other_live = create(:sync_phase, sync_run: create(:sync_run, status: :running), key: "rooms", status: :running)
+
+      described_class.fail_abandoned(workspace)
+
+      expect(mid_flight.reload).to have_attributes(status: "failed", finished_at: be_present)
+      expect(done.reload).to be_succeeded
+      expect(other_live.reload).to be_running
+    end
+  end
+
+  describe "#retryable?" do
+    let(:workspace) { create(:workspace) }
+
+    it "is true only for the workspace's most recent run, and only when it failed" do
+      older = create(:sync_run, workspace:, status: :failed, started_at: 2.days.ago, finished_at: 2.days.ago)
+      newest = create(:sync_run, workspace:, status: :failed, started_at: 1.day.ago, finished_at: 1.day.ago)
+      create(:sync_run, status: :failed, started_at: 1.hour.ago)
+
+      expect(newest).to be_retryable
+      expect(older).not_to be_retryable
+    end
+
+    it "is false for the most recent run when it did not fail" do
+      run = create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago)
+
+      expect(run).not_to be_retryable
+    end
   end
 end

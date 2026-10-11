@@ -24,10 +24,10 @@
                 <% end %>
               </span>
             </td>
-            <td class="px-4 py-0 align-middle text-text-body whitespace-nowrap tabular-nums"><%= sync_duration(run.duration_seconds) %></td>
+            <td class="px-4 py-0 align-middle text-text-body whitespace-nowrap tabular-nums"><%= sync_duration(run) %></td>
             <% if retry_allowed %>
               <td class="px-4 py-0 align-middle whitespace-nowrap text-right">
-                <% if run.failed? %>
+                <% if run.failed? && run == sync_runs.first %>
                   <%= button_to t("operations.sync_runs.actions.retry"), operations_sync_run_resumption_path(run),
                         class: "btn-text btn-text-interactive",
                         "aria-label": t("operations.sync_runs.actions.retry_run", started: sync_started_at(run)) %>

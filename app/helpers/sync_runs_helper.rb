@@ -14,10 +14,25 @@ module SyncRunsHelper
     ui :badge, t("sync_runs.phase_status.#{status}"), variant: :soft, tone: PHASE_TONES.fetch(status)
   end
 
-  def sync_duration(seconds)
-    return t("sync_runs.not_finished") if seconds.nil?
+  # For a run or a step: how long it took, how long it has been running, or neither.
+  def sync_duration(record)
+    if record.duration_seconds
+      localized_duration(record.duration_seconds)
+    elsif record.running? && record.started_at
+      t("sync_runs.running_for", duration: localized_duration(Time.current - record.started_at))
+    else
+      t("sync_runs.not_finished")
+    end
+  end
 
-    ActiveSupport::Duration.build(seconds.round).inspect
+  def localized_duration(seconds)
+    parts = ActiveSupport::Duration.build(seconds.round).parts
+    words = []
+    words << t("sync_runs.duration.days", count: parts[:days]) if parts[:days]
+    words << t("sync_runs.duration.hours", count: parts[:hours]) if parts[:hours]
+    words << t("sync_runs.duration.minutes", count: parts[:minutes]) if parts[:minutes]
+    words << t("sync_runs.duration.seconds", count: parts.fetch(:seconds, 0)) if parts[:seconds] || words.empty?
+    words.to_sentence
   end
 
   def sync_started_at(run)

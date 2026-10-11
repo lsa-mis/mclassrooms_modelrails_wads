@@ -26,6 +26,16 @@ RSpec.describe "Operations sync runs", type: :request do
       expect(page).to have_css("form[action='#{operations_sync_run_resumption_path(failed)}']")
     end
 
+    it "offers Retry only on the most recent run" do
+      older = failed_run
+      newest = create(:sync_run, workspace:, status: :failed, started_at: 10.minutes.ago, finished_at: 5.minutes.ago)
+
+      get operations_sync_runs_path
+
+      expect(page).to have_css("form[action='#{operations_sync_run_resumption_path(newest)}']")
+      expect(page).to have_no_css("form[action='#{operations_sync_run_resumption_path(older)}']")
+    end
+
     it "says a sync is running, and still offers Run now in case that run was left by a stopped worker" do
       create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
 
@@ -55,53 +65,75 @@ RSpec.describe "Operations sync runs", type: :request do
     end
   end
 
-  describe "POST /operations/sync_runs" do
-    it "enqueues the directory's sync for this operator" do
-      post operations_sync_runs_path
+describe "POST /operations/sync_runs" do
+  it "requests the directory sync for this operator" do
+    allow(SyncRunJob).to receive(:request).and_return(:queued)
 
-      expect(response).to redirect_to(operations_sync_runs_path)
-      expect(flash[:notice]).to eq(I18n.t("operations.sync_runs.create.success"))
-      expect(SyncRunJob).to have_been_enqueued.with(workspace, requested_by: operator)
-    end
+    post operations_sync_runs_path
 
-    it "says so when the job cannot be queued" do
-      allow(SyncRunJob).to receive(:perform_later).and_return(false)
-
-      post operations_sync_runs_path
-
-      expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.not_queued"))
-    end
+    expect(response).to redirect_to(operations_sync_runs_path)
+    expect(flash[:notice]).to eq(I18n.t("operations.sync_runs.create.success"))
+    expect(SyncRunJob).to have_received(:request).with(workspace, requested_by: operator)
   end
 
-  describe "POST /operations/sync_runs/:id/resumption" do
-    it "enqueues a retry of a failed run" do
-      run = failed_run
+  it "says nothing new started when a sync is already queued or running" do
+    allow(SyncRunJob).to receive(:request).and_return(:already_running)
 
-      post operations_sync_run_resumption_path(run)
+    post operations_sync_runs_path
 
-      expect(response).to redirect_to(operations_sync_run_path(run))
-      expect(flash[:notice]).to eq(I18n.t("operations.sync_runs.resumptions.create.success"))
-      expect(SyncRunJob).to have_been_enqueued.with(workspace, resume: run, requested_by: operator)
-    end
-
-    it "refuses a run that did not fail" do
-      run = create(:sync_run, workspace:, status: :succeeded, started_at: 1.hour.ago, finished_at: 50.minutes.ago)
-
-      post operations_sync_run_resumption_path(run)
-
-      expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.resumptions.create.not_resumable"))
-      expect(SyncRunJob).not_to have_been_enqueued
-    end
-
-    it "says so when the retry cannot be queued" do
-      run = failed_run
-      allow(SyncRunJob).to receive(:perform_later).and_return(false)
-
-      post operations_sync_run_resumption_path(run)
-
-      expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.not_queued"))
-    end
+    expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.already_running"))
   end
+
+  it "says so when the job cannot be queued" do
+    allow(SyncRunJob).to receive(:request).and_return(:not_queued)
+
+    post operations_sync_runs_path
+
+    expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.not_queued"))
+  end
+end
+
+describe "POST /operations/sync_runs/:id/resumption" do
+  it "requests a retry of the most recent failed run" do
+    run = failed_run
+    allow(SyncRunJob).to receive(:request).and_return(:queued)
+
+    post operations_sync_run_resumption_path(run)
+
+    expect(response).to redirect_to(operations_sync_run_path(run))
+    expect(flash[:notice]).to eq(I18n.t("operations.sync_runs.resumptions.create.success"))
+    expect(SyncRunJob).to have_received(:request).with(workspace, resume: run, requested_by: operator)
+  end
+
+  it "refuses a run that is not the most recent, or did not fail" do
+    older = failed_run
+    create(:sync_run, workspace:, status: :succeeded, started_at: 10.minutes.ago, finished_at: 5.minutes.ago)
+    allow(SyncRunJob).to receive(:request)
+
+    post operations_sync_run_resumption_path(older)
+
+    expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.resumptions.create.not_resumable"))
+    expect(SyncRunJob).not_to have_received(:request)
+  end
+
+  it "says nothing new started when a sync is already queued or running" do
+    run = failed_run
+    allow(SyncRunJob).to receive(:request).and_return(:already_running)
+
+    post operations_sync_run_resumption_path(run)
+
+    expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.already_running"))
+  end
+
+  it "says so when the retry cannot be queued" do
+    run = failed_run
+    allow(SyncRunJob).to receive(:request).and_return(:not_queued)
+
+    post operations_sync_run_resumption_path(run)
+
+    expect(flash[:alert]).to eq(I18n.t("operations.sync_runs.not_queued"))
+  end
+end
 
   # Upstream's ledger has never seen these fork rows, so read it with them in place.
   it "lists both operator actions in the activity ledger under their own kind" do
