@@ -1,0 +1,108 @@
+en:
+  sync_runs:
+    status:
+      succeeded: "Succeeded"
+      failed: "Failed"
+      running: "Running"
+    phase_status:
+      pending: "Pending"
+      running: "Running"
+      succeeded: "Succeeded"
+      failed: "Failed"
+      skipped: "Skipped"
+    phases:
+      campuses: "Campuses"
+      buildings: "Buildings"
+      rooms: "Rooms"
+      facility_ids: "Facility IDs"
+      characteristics: "Characteristics"
+      contacts: "Contacts"
+      availability: "Availability"
+    counters:
+      created: "Created"
+      updated: "Updated"
+      added: "Added"
+      removed: "Removed"
+      cleared: "Cleared"
+      deactivated: "Deactivated"
+      deleted: "Deleted"
+      skipped: "Skipped"
+      api_calls: "API calls"
+      rate_limit_sleeps: "Rate-limit pauses"
+    columns:
+      started: "Started"
+      status: "Status"
+      duration: "Duration"
+      actions: "Actions"
+    dry_run: "Dry run"
+    not_finished: "Not finished"
+    running_for: "Running for %{duration}"
+    duration:
+      days:
+        one: "1 day"
+        other: "%{count} days"
+      hours:
+        one: "1 hour"
+        other: "%{count} hours"
+      minutes:
+        one: "1 minute"
+        other: "%{count} minutes"
+      seconds:
+        one: "1 second"
+        other: "%{count} seconds"
+    latest:
+      title: "Latest sync"
+    inventory:
+      title: "In the directory now"
+      buildings: "Listed buildings"
+      rooms: "Listed rooms"
+      classrooms: "Classrooms"
+      listed_classrooms: "Listed classrooms"
+    history:
+      heading: "Recent syncs"
+      caption: "The most recent sync runs, newest first"
+      link_prefix: "Sync started"
+      empty: "No sync has run yet."
+    detail:
+      phases_heading: "Steps"
+      no_phases: "No step has started yet."
+      error_messages:
+        one: "1 error"
+        other: "%{count} errors"
+      warnings:
+        one: "1 warning"
+        other: "%{count} warnings"
+  admin:
+    sync_runs:
+      index:
+        title: "Sync runs"
+        description: "The nightly import of buildings and rooms from U-M Facilities, and what it changed."
+        manage: "Run or retry in Operations"
+      show:
+        title: "Sync started %{started}"
+        back: "All sync runs"
+  operations:
+    sync_runs:
+      not_queued: "The sync could not be queued, so nothing started. Try again in a moment."
+      already_running: "A sync is already queued or running, so nothing new started. Reload this page to follow it."
+      actions:
+        run_now: "Run now"
+        retry: "Retry"
+        retry_run: "Retry the sync started %{started}"
+      index:
+        title: "Sync runs"
+        description: "Start a sync now, or retry one that failed. A retry picks up at the step that failed."
+        running_notice: "A sync is running. Run now and Retry start nothing until it finishes. A sync left running by a stopped worker is marked failed when the next one starts."
+        run_now_confirm: "Start a sync now? It calls the U-M Facilities APIs and takes several minutes."
+      show:
+        title: "Sync started %{started}"
+        back: "All sync runs"
+      create:
+        success: "Sync requested. It appears in the history when it starts, usually within a few seconds; reload this page to see it."
+      resumptions:
+        create:
+          success: "Retry requested. It picks up at the step that failed."
+          not_resumable: "Only the most recent sync can be retried, and only when it failed."
+  navigation:
+    admin:
+      sync_runs: "Sync runs"

@@ -29,6 +29,7 @@ en:
       unit_display_name: "Unit display names"
       building: "Buildings (legacy import)"
       floor: "Floors (legacy import)"
+      sync_run: "Sync runs (run now, retries)"
     # Nested, never flat and dotted: I18n splits a requested key on "." and
     # walks the hash segment by segment, so a literal "membership.created" key
     # is unreachable and the renderer's `default:` silently humanizes instead
@@ -100,6 +101,9 @@ en:
         legacy_imported: "imported a building photo from the legacy app"
       floor:
         legacy_imported: "imported a floor plan from the legacy app"
+      sync_run:
+        requested: "started a sync"
+        resumed: "retried a failed sync"
       sync_scope_rule:
         created: "added a sync scope rule"
         updated: "updated a sync scope rule"

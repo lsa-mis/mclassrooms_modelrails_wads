@@ -1,11 +1,6 @@
 require "rails_helper"
 
-# MiClassrooms Phase 5 Task 4 (Brief §14.1, interpretation 7): SyncRunPolicy
-# follows AnalyticsPolicy's same read-only pattern — editors can see sync-run
-# history/status (pipeline health visibility), only admins can resume a
-# failed run or trigger a manual refresh. Neither predicate reads `record`,
-# so a real SyncRun instance is used here purely for realism (SyncRun,
-# unlike Analytics, is an actual persisted model).
+# Admins and editors read sync history; retrying or starting a sync is an operator action (Operations::SyncRunPolicy).
 RSpec.describe SyncRunPolicy do
   include_context "role matrix"
 
@@ -15,10 +10,13 @@ RSpec.describe SyncRunPolicy do
   # editor-other-unit, viewer.
   sync_run_matrix = [
     [ :index?,   :sync_run, true, true,  true,  false ],
-    [ :show?,    :sync_run, true, true,  true,  false ],
-    [ :resume?,  :sync_run, true, false, false, false ],
-    [ :refresh?, :sync_run, true, false, false, false ]
+    [ :show?,    :sync_run, true, true,  true,  false ]
   ]
+
+  # Retrying or starting a sync is an operator action now (Operations::SyncRunPolicy), not a workspace admin's.
+  it "answers no workspace-tier action verbs" do
+    expect(described_class.new(admin_user, sync_run)).not_to respond_to(:resume?, :refresh?)
+  end
 
   sync_run_users = %i[admin_user editor_user other_editor_user viewer_user]
 

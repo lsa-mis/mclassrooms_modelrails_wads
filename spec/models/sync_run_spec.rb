@@ -56,25 +56,81 @@ RSpec.describe SyncRun, type: :model do
     end
   end
 
-  describe ".latest" do
-    it "returns the most recently started run" do
-      workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, started_at: 2.days.ago)
-      newer = create(:sync_run, workspace: workspace, started_at: 1.hour.ago)
+  describe ".history_for and .inventory_for" do
+    let(:workspace) { create(:workspace) }
 
-      expect(SyncRun.latest).to eq(newer)
+    it "returns the workspace's newest fourteen runs, newest first" do
+      runs = 16.times.map { |i| create(:sync_run, workspace:, status: :succeeded, started_at: i.hours.ago) }
+      create(:sync_run, status: :succeeded, started_at: 1.minute.ago)
+
+      expect(described_class.history_for(workspace)).to eq(runs.first(14))
     end
 
-    it "falls back to created_at when started_at is nil" do
-      workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, started_at: nil)
-      second_run = create(:sync_run, workspace: workspace, started_at: nil)
+    it "counts the workspace's listed buildings and rooms, and its classrooms" do
+      building = create(:building, workspace:)
+      create(:room, building:, workspace:, room_type: "Classroom", facility_code: "MLB1", instructional_seat_count: 30)
+      create(:room, building:, workspace:, room_type: "Classroom", facility_code: "MLB2", instructional_seat_count: 30, hidden_at: Time.current)
+      create(:room, building:, workspace:, room_type: "Office")
+      create(:room)
 
-      expect(SyncRun.latest).to eq(second_run)
+      expect(described_class.inventory_for(workspace)).to include(buildings: 1, rooms: 2, classrooms: 2, listed_classrooms: 1)
+    end
+  end
+
+  describe "#phases_in_order" do
+    it "lists the run's phases in pipeline order" do
+      run = create(:sync_run)
+      %w[rooms campuses buildings].each { |key| create(:sync_phase, sync_run: run, key:) }
+
+      expect(run.phases_in_order.map(&:key)).to eq(%w[campuses buildings rooms])
+    end
+  end
+
+  describe ".fail_abandoned" do
+    it "fails the workspace's runs left running, and leaves finished runs and other workspaces alone" do
+      workspace = create(:workspace)
+      abandoned = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago)
+      finished = create(:sync_run, workspace:, status: :succeeded, started_at: 2.hours.ago, finished_at: 1.hour.ago)
+      elsewhere = create(:sync_run, status: :running, started_at: 1.hour.ago)
+
+      described_class.fail_abandoned(workspace)
+
+      expect(abandoned.reload).to have_attributes(status: "failed", finished_at: be_present)
+      expect(finished.reload).to be_succeeded
+      expect(elsewhere.reload).to be_running
     end
 
-    it "returns nil when there are no runs" do
-      expect(SyncRun.latest).to be_nil
+    it "also fails the abandoned run's step that was mid-flight, so it does not keep showing Running" do
+      workspace = create(:workspace)
+      abandoned = create(:sync_run, workspace:, status: :running, started_at: 1.hour.ago)
+      done = create(:sync_phase, sync_run: abandoned, key: "campuses", status: :succeeded)
+      mid_flight = create(:sync_phase, sync_run: abandoned, key: "buildings", status: :running)
+      other_live = create(:sync_phase, sync_run: create(:sync_run, status: :running), key: "rooms", status: :running)
+
+      described_class.fail_abandoned(workspace)
+
+      expect(mid_flight.reload).to have_attributes(status: "failed", finished_at: be_present)
+      expect(done.reload).to be_succeeded
+      expect(other_live.reload).to be_running
+    end
+  end
+
+  describe "#retryable?" do
+    let(:workspace) { create(:workspace) }
+
+    it "is true only for the workspace's most recent run, and only when it failed" do
+      older = create(:sync_run, workspace:, status: :failed, started_at: 2.days.ago, finished_at: 2.days.ago)
+      newest = create(:sync_run, workspace:, status: :failed, started_at: 1.day.ago, finished_at: 1.day.ago)
+      create(:sync_run, status: :failed, started_at: 1.hour.ago)
+
+      expect(newest).to be_retryable
+      expect(older).not_to be_retryable
+    end
+
+    it "is false for the most recent run when it did not fail" do
+      run = create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago)
+
+      expect(run).not_to be_retryable
     end
   end
 end

@@ -1,0 +1,14 @@
+<% content_for(:title) { t(".title", started: sync_started_at(@sync_run)) } %>
+<%= link_to t(".back"), operations_sync_runs_path, class: "btn-text btn-text-interactive" %>
+<% badges = capture do %>
+  <%= sync_run_status_badge(@sync_run) %>
+<% end %>
+<div class="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
+  <%= render "shared/settings_page_header", title: t(".title", started: sync_started_at(@sync_run)), badges: badges %>
+  <% if @sync_run.retryable? %>
+    <%= button_to t("operations.sync_runs.actions.retry"), operations_sync_run_resumption_path(@sync_run),
+          class: "btn-primary whitespace-nowrap" %>
+  <% end %>
+</div>
+
+<%= render "sync_runs/detail", sync_run: @sync_run %>
