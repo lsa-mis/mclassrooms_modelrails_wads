@@ -136,7 +136,7 @@ RSpec.describe Sync::RunPipeline do
     end
   end
 
-  describe "resume_run: (spec D7 — resumable)" do
+  describe "resuming a given run (spec D7)" do
     it "skips already-succeeded phases and re-runs from the first non-succeeded phase onward" do
       # Simulate a prior attempt that failed at phase 3 (rooms): 1-2
       # succeeded, 3 failed, 4-6 skipped — exactly the row shapes the
@@ -158,7 +158,7 @@ RSpec.describe Sync::RunPipeline do
       stub_phase(described_class::CORE_PHASES[4], status: :succeeded, call_log: call_log) # characteristics
       stub_phase(described_class::CORE_PHASES[5], status: :succeeded, call_log: call_log) # contacts
 
-      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run).to eq(failed_run)
       expect(described_class::CORE_PHASES[0]).not_to have_received(:call)
@@ -184,7 +184,7 @@ RSpec.describe Sync::RunPipeline do
       failed_run = create(:sync_run, workspace: workspace, status: :failed, started_at: 2.days.ago, finished_at: 2.days.ago)
       described_class::CORE_PHASES.each { |phase| stub_phase(phase, status: :succeeded) }
 
-      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run.started_at).to be_within(5.seconds).of(Time.current)
     end
@@ -205,7 +205,7 @@ RSpec.describe Sync::RunPipeline do
       allow(described_class::CORE_PHASES[4]).to receive(:call)
       allow(described_class::CORE_PHASES[5]).to receive(:call)
 
-      run = described_class.call(resume_run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
+      run = described_class.call(run: failed_run, sleeper: sleeper, client: client, operator_log: operator_log)
 
       expect(run).to be_failed
       expect(described_class::CORE_PHASES[3]).not_to have_received(:call)

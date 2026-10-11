@@ -1,11 +1,6 @@
 require "rails_helper"
 
-# MiClassrooms Phase 5 Task 4 (Brief §14.1, interpretation 7): SyncRunPolicy
-# follows AnalyticsPolicy's same read-only pattern — editors can see sync-run
-# history/status (pipeline health visibility), only admins can resume a
-# failed run or trigger a manual refresh. Neither predicate reads `record`,
-# so a real SyncRun instance is used here purely for realism (SyncRun,
-# unlike Analytics, is an actual persisted model).
+# Admins and editors read sync history; retrying or starting a sync is an operator action (Operations::SyncRunPolicy).
 RSpec.describe SyncRunPolicy do
   include_context "role matrix"
 

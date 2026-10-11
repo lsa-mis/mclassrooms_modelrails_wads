@@ -56,28 +56,6 @@ RSpec.describe SyncRun, type: :model do
     end
   end
 
-  describe ".latest" do
-    it "returns the most recently started run" do
-      workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, started_at: 2.days.ago)
-      newer = create(:sync_run, workspace: workspace, started_at: 1.hour.ago)
-
-      expect(SyncRun.latest).to eq(newer)
-    end
-
-    it "falls back to created_at when started_at is nil" do
-      workspace = create(:workspace)
-      create(:sync_run, workspace: workspace, started_at: nil)
-      second_run = create(:sync_run, workspace: workspace, started_at: nil)
-
-      expect(SyncRun.latest).to eq(second_run)
-    end
-
-    it "returns nil when there are no runs" do
-      expect(SyncRun.latest).to be_nil
-    end
-  end
-
   describe ".history_for and .inventory_for" do
     let(:workspace) { create(:workspace) }
 

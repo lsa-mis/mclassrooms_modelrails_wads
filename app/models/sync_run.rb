@@ -7,10 +7,7 @@ class SyncRun < ApplicationRecord
 
   has_many :sync_phases, dependent: :destroy
 
-  # A run created but not yet started has no started_at, so ordering falls back to created_at.
   scope :newest_first, -> { order(Arel.sql("COALESCE(started_at, created_at) DESC")) }
-
-  def self.latest = newest_first.first
 
   def self.history_for(workspace) = where(workspace:).newest_first.limit(HISTORY_SIZE)
 

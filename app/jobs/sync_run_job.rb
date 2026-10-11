@@ -1,5 +1,4 @@
-# Every sync goes through here (nightly, Run now, Retry). Solid Queue runs at most one per workspace and
-# discards a request made while one is running; DURATION must exceed any real sync, or the limit lapses.
+# DURATION must exceed any real sync, queue wait included, or the one-at-a-time limit lapses mid-sync.
 class SyncRunJob < ApplicationJob
   DURATION = 3.hours
 
@@ -15,7 +14,7 @@ class SyncRunJob < ApplicationJob
     return if resume && !run.failed?
 
     audit(run, resume ? "sync_run.resumed" : "sync_run.requested", requested_by) if requested_by
-    Sync::RunPipeline.call(resume_run: run)
+    Sync::RunPipeline.call(run:)
   end
 
   private

@@ -1,60 +1,5 @@
-# Orchestrator tying together the six phase-2 sync phases (Task 12 of
-# planning/plans/phase-2-ingestion.md; roadmap Lib section; Brief §6.1; spec
-# D7). Every phase (Sync::UpdateCampuses .. Sync::UpdateContacts, Tasks 7-11)
-# is a Sync::BasePhase subclass whose `.call(run:, client:)` NEVER raises —
-# this class is the one thing standing between that per-phase guarantee and
-# a fully automated nightly run, so its OWN bookkeeping (creating/finding the
-# run row, deciding what to skip, timing) must uphold the same invariant.
-#
-# CORE_PHASES / OPTIONAL_PHASES (spec D11): CORE_PHASES runs in the fixed
-# Brief §6.1 order with stop-on-first-failure — a broken phase 3 means
-# phases 4-6 never see live data this run, so they're stamped `skipped`
-# rather than left `pending` (indistinguishable from "never scheduled").
-# OPTIONAL_PHASES starts empty; phase 6 (availability) appends
-# Sync::UpdateAvailability here. Optional phases are failure-isolated: each
-# runs independently of the others AND of core's outcome (they always run,
-# even after a core failure — an availability refresh is still worth
-# attempting even if, say, the characteristics phase choked), and a failed
-# optional phase only fails its own SyncPhase row, never `run.status`.
-#
-# Resumability (spec D7): passing `resume_run:` reuses that SyncRun instead
-# of creating a new one, skipping every phase already `succeeded` on it and
-# re-running everything else (`failed`, `skipped`, or `pending`) — a run
-# that stopped at phase 3 resumes by re-running 3-6; phases 1-2 are
-# untouched. This requires no special-casing beyond "skip succeeded keys":
-# Sync::BasePhase#find_or_create_phase! already reuses the existing
-# SyncPhase row for a re-run key and flips its status forward from
-# whatever it was.
-#
-# One client per run: `client:` (real usage) or the pipeline's own
-# `UmApi::Client.new` (default) is built exactly once and threaded through
-# every phase call — core AND optional — so BasePhase's before/after
-# api_calls/rate_limit_sleeps delta capture (Task 6) reflects one shared
-# client's running totals, not N independent ones.
-#
-# The 61s inter-phase pause (Brief §6.1: 400 calls/min self-imposed budget)
-# is injectable via `sleeper:` (default `Kernel.sleep`) so specs never
-# really sleep. It only fires BETWEEN two phases this invocation actually
-# executes (never after the last phase run, never after a phase that just
-# failed and stopped the run) — a resumed run's N pauses cover only the N-1
-# gaps between the phases it re-runs, not the ones it skipped via
-# already-succeeded.
-#
-# Never raises — ONCE THE RUN EXISTS: the guarantee is scoped to phase
-# execution. A real phase's `.call` already can't raise (Task 6); the only
-# things that could blow up here after the SyncRun row exists are this
-# class's own bookkeeping (phase-row writes) or — in principle, e.g. a
-# future non-BasePhase phase class — a phase itself raising instead of
-# returning a Result. `#run_phase` guards the latter; `#execute`'s rescue
-# guards the former, marking the run failed. Both paths still return the
-# SyncRun.
-#   Deliberate exception (the clarification, Task 12 review): if the SyncRun
-# row ITSELF cannot be created (`create_run!` — catastrophic infra/misconfig,
-# e.g. no Current.workspace), there is nothing to record a failure on, so it
-# raises LOUDLY rather than returning nil and silently breaking the
-# `.call -> SyncRun` contract. `create_run!` therefore sits OUTSIDE `#execute`'s
-# swallow-and-record boundary. For a resumed run the row already exists, so
-# this edge can't occur.
+# Runs the sync phases, in order, for one SyncRun and never raises once that run exists. Phases, resuming,
+# the 61s pause, and the one-sync-at-a-time rule: app/docs/developer/sync.md.
 module Sync
   class RunPipeline
     CORE_PHASES = [
@@ -70,27 +15,24 @@ module Sync
 
     PHASE_PAUSE_SECONDS = 61
 
-    def self.call(dry_run: ENV["API_UPDATE_DELETE_DRY_RUN"].present?, resume_run: nil,
+    def self.call(dry_run: SyncRun.dry_run_by_default?, run: nil,
                   sleeper: ->(seconds) { Kernel.sleep(seconds) }, client: nil,
                   operator_log: Sync::OperatorLog.new)
-      new(dry_run: dry_run, resume_run: resume_run, sleeper: sleeper, client: client,
+      new(dry_run: dry_run, run: run, sleeper: sleeper, client: client,
           operator_log: operator_log).call
     end
 
-    def initialize(dry_run:, resume_run:, sleeper:, client:, operator_log:)
+    def initialize(dry_run:, run:, sleeper:, client:, operator_log:)
       @dry_run = dry_run
-      @resume_run = resume_run
+      @given_run = run
       @sleeper = sleeper
       @client = client || UmApi::Client.new
       @operator_log = operator_log
     end
 
     def call
-      # Run creation is OUTSIDE the never-raises boundary (see the class
-      # header): if the row can't be created there's nothing to record a
-      # failure on, so let it raise loudly rather than return nil. For a
-      # resumed run the row already exists.
-      run = @resume_run || create_run!
+      # Creating the run sits outside the never-raises boundary: with no row there is nowhere to record a failure.
+      run = @given_run || create_run!
       execute(run)
       run
     end
@@ -102,10 +44,8 @@ module Sync
     # The never-raises boundary: `run` is guaranteed to exist here, so any
     # failure below is recorded on it and swallowed rather than propagated.
     def execute(run)
-      # A resumed run's prior attempt left status: failed, finished_at: set
-      # — flip it back to a live "in progress" row for the duration of this
-      # attempt; the final update below (success or failure) sets both again.
-      run.update!(status: :running, finished_at: nil, started_at: Time.current) if @resume_run
+      # A given run may be a failed one being resumed; this attempt gets its own start time.
+      run.update!(status: :running, finished_at: nil, started_at: Time.current) if @given_run
 
       execute_core_phases(run)
       execute_optional_phases(run)

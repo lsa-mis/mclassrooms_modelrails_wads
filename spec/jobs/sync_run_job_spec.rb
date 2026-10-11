@@ -6,7 +6,7 @@ RSpec.describe SyncRunJob, type: :job do
   let(:workspace) { create(:workspace) }
   let(:operator) { create(:user) }
 
-  before { allow(Sync::RunPipeline).to receive(:call) { |resume_run:| resume_run } }
+  before { allow(Sync::RunPipeline).to receive(:call) { |run:| run } }
 
   it "allows one sync per workspace at a time, and drops a request made while one runs" do
     expect(described_class.concurrency_limit).to eq(1)
@@ -21,7 +21,7 @@ RSpec.describe SyncRunJob, type: :job do
 
     run = SyncRun.where(workspace:).sole
     expect(run).to have_attributes(status: "running", started_at: be_present)
-    expect(Sync::RunPipeline).to have_received(:call).with(resume_run: run)
+    expect(Sync::RunPipeline).to have_received(:call).with(run: run)
     expect(ActivityLog.find_by!(action: "sync_run.requested", trackable: run)).to have_attributes(actor: operator, workspace:)
   end
 
@@ -36,7 +36,7 @@ RSpec.describe SyncRunJob, type: :job do
 
     described_class.perform_now(workspace, resume: failed, requested_by: operator)
 
-    expect(Sync::RunPipeline).to have_received(:call).with(resume_run: failed)
+    expect(Sync::RunPipeline).to have_received(:call).with(run: failed)
     expect(ActivityLog.find_by!(action: "sync_run.resumed", trackable: failed).actor).to eq(operator)
   end
 
@@ -53,12 +53,12 @@ RSpec.describe SyncRunJob, type: :job do
 
     described_class.perform_now(workspace, resume: abandoned, requested_by: operator)
 
-    expect(Sync::RunPipeline).to have_received(:call).with(resume_run: abandoned)
+    expect(Sync::RunPipeline).to have_received(:call).with(run: abandoned)
   end
 
   it "sets the workspace the pipeline and audit read" do
     seen = nil
-    allow(Sync::RunPipeline).to receive(:call) { |resume_run:| seen = Current.workspace; resume_run }
+    allow(Sync::RunPipeline).to receive(:call) { |run:| seen = Current.workspace; run }
 
     described_class.perform_now(workspace)
 

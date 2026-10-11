@@ -1,4 +1,3 @@
-# Read-only sync history for the directory's admins and editors; operators act on it in /operations.
 module Admin
   class SyncRunsController < ApplicationController
     include DirectoryScoped
