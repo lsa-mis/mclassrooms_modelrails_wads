@@ -1,0 +1,28 @@
+{
+  "ListOfRooms": {
+    "RoomData": [
+      {
+        "RoomRecordNumber": "2005047",
+        "BuildingRecordNumber": "1005046",
+        "RoomNumber": "B120",
+        "RoomTypeDescription": "Class Laboratory",
+        "DepartmentName": "LSA - Chemistry",
+        "RoomSquareFeet": 1200,
+        "RoomStationCount": 24,
+        "FloorNumber": "B",
+        "RoomName": "Chemistry Lab"
+      },
+      {
+        "RoomRecordNumber": "2005049",
+        "BuildingRecordNumber": "1005046",
+        "RoomNumber": "B130",
+        "RoomTypeDescription": "Class Laboratory",
+        "DepartmentName": "LSA - Chemistry",
+        "RoomSquareFeet": 1100,
+        "RoomStationCount": 20,
+        "FloorNumber": "B",
+        "RoomName": "Chemistry Lab 2"
+      }
+    ]
+  }
+}

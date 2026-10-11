@@ -311,6 +311,41 @@ RSpec.describe Sync::UpdateRooms do
     end
   end
 
+  describe "query and API cost (a real sync walks about 49,000 rooms)" do
+    def selects_on(*tables, &)
+      count = 0
+      counter = ->(*, payload) { count += 1 if payload[:sql].start_with?("SELECT") && tables.any? { payload[:sql].include?(%("#{it}")) } }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &)
+      count
+    end
+
+    it "looks up each building's rooms and floors once, not once per room, and units once per run" do
+      stub_departments_feed
+      stub_department_fallback
+      stub_rooms_feed
+      described_class.call(run: run, client: client)
+
+      lookups = selects_on("rooms", "floors", "units") { described_class.call(run: run, client: client) }
+
+      # Two buildings: one rooms and one floors load each, plus the stale-room sweep; units are loaded once.
+      expect(lookups).to be <= 6
+    end
+
+    it "asks the gateway about a department missing from the preload once per run, however many rooms name it" do
+      stub_departments_feed
+      fallback_stub = stub_department_fallback
+      stub_um_get("/bf/Buildings/v2/RoomInfo/1005046", fixture: "rooms_1005046_two_chemistry.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
+      stub_um_get("/bf/Buildings/v2/RoomInfo/1005090", fixture: "rooms_empty.json",
+        query: { "$start_index" => "0", "$count" => "1000" })
+
+      described_class.call(run: run, client: client)
+
+      expect(Room.for_current_workspace.where(department_id: "190100").count).to eq(2)
+      expect(fallback_stub).to have_been_requested.once
+    end
+  end
+
   describe "idempotency" do
     it "reports 0 created/updated/deactivated on a second run against the same feed" do
       stub_departments_feed
