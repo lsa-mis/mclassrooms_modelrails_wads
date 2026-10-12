@@ -119,10 +119,10 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
       expect(facility_ids.counters).to include("updated" => 2, "api_calls" => 3)
       expect(counter(facility_ids, :skipped)).to eq(0)
 
-      # 2 facility-coded rooms (German via MLB1200, Math via AH0100), 3
-      # characteristics each -> added 6, one api_call per room.
+      # 2 facility-coded rooms, 3 characteristics each -> added 6, with no calls: the
+      # facility-IDs step already fetched both facilities' characteristics this run.
       characteristics = phase_for(run, "characteristics")
-      expect(characteristics.counters).to include("added" => 6, "api_calls" => 2)
+      expect(characteristics.counters).to include("added" => 6, "api_calls" => 0)
       expect(counter(characteristics, :removed)).to eq(0)
 
       contacts = phase_for(run, "contacts")

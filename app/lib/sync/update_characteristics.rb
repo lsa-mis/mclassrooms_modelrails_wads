@@ -138,7 +138,7 @@ module Sync
     # treats as "this room legitimately has zero characteristics right now".
     def characteristics_for(room)
       body = client.rate_limiter.backoff_429 do
-        client.get_json(characteristics_path(room.facility_code), scope: "classrooms")
+        client.get_json(characteristics_path(room.facility_code), scope: "classrooms", remember: true)
       end
       characteristics_from(body).group_by { |row| row["RmRecNbr"].to_s }[room.rmrecnbr.to_s] || []
     end

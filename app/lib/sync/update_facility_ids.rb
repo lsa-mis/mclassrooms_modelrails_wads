@@ -177,7 +177,7 @@ module Sync
     # accepted data gap (see header comment), not a phase failure.
     def fetch_facility_characteristics(facility_id)
       body = client.rate_limiter.backoff_429 do
-        client.get_json("#{FACILITY_LIST_PATH}/#{ERB::Util.url_encode(facility_id)}/Characteristics", scope: "classrooms")
+        client.get_json("#{FACILITY_LIST_PATH}/#{ERB::Util.url_encode(facility_id)}/Characteristics", scope: "classrooms", remember: true)
       end
       body.dig("Classrooms", "Classroom") || []
     rescue UmApi::NotFound, UmApi::ServerError => e

@@ -85,6 +85,34 @@ RSpec.describe UmApi::Client do
       expect(client.call_count).to eq(2)
     end
 
+    it "opens one connection and reuses it for every call" do
+      stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
+      allow(Net::HTTP).to receive(:start).and_call_original
+      token_cache = instance_double(UmApi::TokenCache, token_for: "token")
+      client = described_class.new(token_cache:, rate_limiter: ThrottleSpy.new)
+
+      3.times { client.get_json("/bf/Buildings/v2/Campuses", scope: "buildings") }
+
+      expect(Net::HTTP).to have_received(:start).once
+      expect(client.call_count).to eq(3)
+    end
+
+    it "answers a remembered request from the earlier response, and remembers only successes" do
+      stub_um_token(scope: "buildings")
+      campuses = stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")
+      failing = stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/bf/Buildings/v2/BuildingInfo")
+        .to_return({ status: 500 }, { status: 200, body: "{}" })
+      client = described_class.new(rate_limiter: ThrottleSpy.new)
+
+      2.times { client.get_json("/bf/Buildings/v2/Campuses", scope: "buildings", remember: true) }
+      client.get_json("/bf/Buildings/v2/Campuses", scope: "buildings")
+      expect { client.get_json("/bf/Buildings/v2/BuildingInfo", scope: "buildings", remember: true) }.to raise_error(UmApi::ServerError)
+      client.get_json("/bf/Buildings/v2/BuildingInfo", scope: "buildings", remember: true)
+
+      expect(campuses).to have_been_requested.twice
+      expect(failing).to have_been_requested.twice
+    end
+
     it "calls rate_limiter.throttle! once before the request" do
       stub_um_token(scope: "buildings")
       stub_um_get("/bf/Buildings/v2/Campuses", fixture: "fetch_all_campuses.json")

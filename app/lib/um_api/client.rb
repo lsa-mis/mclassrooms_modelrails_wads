@@ -51,12 +51,12 @@ module UmApi
       @call_count = 0
     end
 
-    # Fetches `path` (+ `params` as a query string) and returns the parsed
-    # JSON body as a Hash. Raises a UmApi::Error subclass on any non-2xx
-    # response.
-    def get_json(path, params: {}, scope:)
-      response = request(build_uri(path, params), scope: scope)
-      JSON.parse(response.body)
+    # Parsed JSON for `path`; raises a UmApi::Error subclass on a non-2xx response. `remember:` keeps a
+    # successful body for this client's life (one sync run), so a later step asking again makes no call.
+    def get_json(path, params: {}, scope:, remember: false)
+      uri = build_uri(path, params)
+      body = remember ? (remembered[uri.to_s] ||= request(uri, scope:).body) : request(uri, scope:).body
+      JSON.parse(body)
     end
 
     # Fetches every row of a paginated U-M listing endpoint, the way the
@@ -103,20 +103,25 @@ module UmApi
     def request(uri, scope:)
       @rate_limiter.throttle!
 
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == "https"
-
       get = Net::HTTP::Get.new(uri)
       get["Authorization"] = "Bearer #{@token_cache.token_for(scope)}"
       get["x-ibm-client-id"] = ENV["UM_API_CLIENT_ID"]
       get["Accept"] = "application/json"
 
-      response = http.request(get)
+      response = connection(uri).request(get)
       @call_count += 1
 
       raise_for_status(response, uri: uri)
       response
     end
+
+    # One connection for the whole run instead of a TLS handshake per call; Net::HTTP reopens it when idle or dropped.
+    def connection(uri)
+      @connection = nil unless @connection&.started? && @connection.address == uri.host && @connection.port == uri.port
+      @connection ||= Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https")
+    end
+
+    def remembered = @remembered ||= {}
 
     def raise_for_status(response, uri:)
       code = response.code.to_i
