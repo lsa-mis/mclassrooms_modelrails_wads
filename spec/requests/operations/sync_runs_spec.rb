@@ -193,7 +193,6 @@ describe "POST /operations/sync_runs/:id/resumption" do
   end
 end
 
-  # Upstream's ledger has never seen these fork rows, so read it with them in place.
   it "lists both operator actions in the activity ledger under their own kind" do
     allow(Sync::RunPipeline).to receive(:call) { |run:| run }
     SyncRunJob.perform_now(workspace, resume: failed_run, requested_by: operator)

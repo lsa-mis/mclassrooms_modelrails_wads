@@ -1,4 +1,3 @@
-# The shared directory as an operator reaches it: through their operated workspaces, never Current.workspace.
 module OperatedDirectory
   extend ActiveSupport::Concern
 

@@ -1,7 +1,5 @@
 require "rails_helper"
 
-# The pipeline's orchestration (order, stop-on-failure, resume, one shared client, never raising) with every phase
-# stubbed; each stub stamps its SyncPhase row as BasePhase#call would. The operator log writes to a StringIO.
 RSpec.describe Sync::RunPipeline do
   let(:workspace) { create(:workspace) }
   let(:client) { instance_double(UmApi::Client) }

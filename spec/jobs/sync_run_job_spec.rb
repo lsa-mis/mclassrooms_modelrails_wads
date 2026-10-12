@@ -1,7 +1,5 @@
 require "rails_helper"
 
-# The pipeline is stubbed. The test adapter ignores limits_concurrency and never sets provider_job_id, so
-# the lock is checked through its key and the dropped-request path through a job with no provider id.
 RSpec.describe SyncRunJob, type: :job do
   include ActiveJob::TestHelper
 

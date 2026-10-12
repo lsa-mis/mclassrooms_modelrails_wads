@@ -1,6 +1,5 @@
 require "rails_helper"
 
-# Operators retry or start the sync; a workspace admin or editor reads history under /admin instead.
 RSpec.describe Operations::SyncRunPolicy do
   let(:operator) { create(:user).tap { |u| Operatorship.grant!(user: u) } }
   let(:member) { create(:user) }

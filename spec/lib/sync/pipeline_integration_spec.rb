@@ -1,7 +1,5 @@
 require "rails_helper"
 
-# All six real phases back to back against the full WebMock fixture set (spec/fixtures/um_api/). One campus_allow rule
-# keeps campus 100 in scope; the fixtures also exercise the department fallback fetch and the facility crosswalk.
 RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
   around do |example|
     original = %w[UM_API_BASE_URL UM_API_TOKEN_URL UM_API_CLIENT_ID UM_API_CLIENT_SECRET].index_with { |key| ENV[key] }
@@ -119,8 +117,6 @@ RSpec.describe "Sync::RunPipeline full pipeline integration (Task 13)" do
       expect(facility_ids.counters).to include("updated" => 2, "api_calls" => 3)
       expect(counter(facility_ids, :skipped)).to eq(0)
 
-      # 2 facility-coded rooms, 3 characteristics each -> added 6, with no calls: the
-      # facility-IDs step already fetched both facilities' characteristics this run.
       characteristics = phase_for(run, "characteristics")
       expect(characteristics.counters).to include("added" => 6, "api_calls" => 0)
       expect(counter(characteristics, :removed)).to eq(0)

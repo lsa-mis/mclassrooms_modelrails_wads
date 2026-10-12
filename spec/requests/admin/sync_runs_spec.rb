@@ -1,6 +1,5 @@
 require "rails_helper"
 
-# Read-only sync history for the workspace's admins and editors; retry and run-now live in /operations.
 RSpec.describe "Admin sync runs", type: :request do
   let(:workspace) { create(:workspace, slug: "sync-runs-workspace", personal: false) }
   let(:unit) { create(:unit, workspace:) }

@@ -327,7 +327,6 @@ RSpec.describe Sync::UpdateRooms do
 
       lookups = selects_on("rooms", "floors", "units") { described_class.call(run: run, client: client) }
 
-      # Two buildings: one rooms and one floors load each, plus the stale-room sweep; units are loaded once.
       expect(lookups).to be <= 6
     end
 

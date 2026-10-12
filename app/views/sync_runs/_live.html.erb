@@ -1,4 +1,3 @@
 <%# locals: (workspace:) %>
-<%# SyncRun and SyncPhase broadcast a refresh on this stream (Broadcastable); the page morphs in place. %>
 <% turbo_refreshes_with method: :morph, scroll: :preserve %>
 <%= turbo_stream_from workspace, :sync_runs %>

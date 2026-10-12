@@ -1,44 +1,5 @@
 # frozen_string_literal: true
 
-# U-M Facilities gateway HTTP client (Task 5 of
-# planning/plans/phase-2-ingestion.md; roadmap Lib section). Every sync
-# service (Tasks 6+) goes through this one class instead of touching
-# Net::HTTP directly, so pagination, auth headers, and status->error
-# mapping all live in exactly one place. Per the brief, a single
-# persistent-connection helper is unnecessary at this volume — plain
-# per-request Net::HTTP is fine and simpler.
-#
-# #get_json fetches one URL and parses its JSON body. #fetch_all walks a
-# paginated listing endpoint: it requests PAGE_SIZE items per page (real
-# `$start_index`/`$count` query params, confirmed live — sync-fix Task 1)
-# and returns every row from every page, stopping once a page comes back
-# shorter than PAGE_SIZE.
-#
-# Auth/headers: every request carries `Authorization: Bearer <token>`
-# (from `token_cache.token_for(scope)`), `x-ibm-client-id` (the IBM API
-# Connect gateway convention U-M's Facilities API sits behind), and
-# `Accept: application/json`.
-#
-# Rate limiting: every single HTTP request — each #get_json call, and
-# each page fetched inside #fetch_all — runs `rate_limiter.throttle!`
-# first (before the request is sent), so the self-imposed budget
-# (UmApi::RateLimiter) sees every call the gateway actually receives, not
-# just the "logical" request the caller made.
-#
-# Errors: a non-2xx response raises a UmApi::Error subclass (see
-# app/lib/um_api.rb) instead of returning silently. A 429 is surfaced as
-# UmApi::RateLimited to the caller rather than retried here —
-# RateLimiter#backoff_429 is the caller's tool for that (roadmap:
-# "callers decide whether to backoff_429"), so this class stays a dumb,
-# predictable HTTP layer.
-#
-# #call_count is a running total of HTTP requests actually sent (feeds
-# each sync phase's `api_calls` counter, roadmap).
-#
-# #rate_limiter is exposed (Task 6) so Sync::BasePhase can read
-# `rate_limiter.sleep_count` before/after a phase runs and diff the two —
-# the same before/after pattern #call_count itself supports — without this
-# class needing to know anything about phases or counters itself.
 module UmApi
   class Client
     PAGE_SIZE = 1000
@@ -51,8 +12,6 @@ module UmApi
       @call_count = 0
     end
 
-    # Parsed JSON for `path`; raises a UmApi::Error subclass on a non-2xx response. `remember:` keeps a
-    # successful body for this client's life (one sync run), so a later step asking again makes no call.
     def get_json(path, params: {}, scope:, remember: false)
       uri = build_uri(path, params)
       body = remember ? (remembered[uri.to_s] ||= request(uri, scope:).body) : request(uri, scope:).body
@@ -115,7 +74,6 @@ module UmApi
       response
     end
 
-    # One connection for the whole run instead of a TLS handshake per call; Net::HTTP reopens it when idle or dropped.
     def connection(uri)
       @connection = nil unless @connection&.started? && @connection.address == uri.host && @connection.port == uri.port
       @connection ||= Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https")

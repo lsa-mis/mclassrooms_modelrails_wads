@@ -157,7 +157,6 @@ module Sync
         parsed = rows.map { parse_room(it) }
         seen.concat(parsed.pluck(:rmrecnbr))
 
-        # One query each per building, not per room: a sync walks tens of thousands of rooms.
         rooms = Room.for_current_workspace.where(rmrecnbr: parsed.pluck(:rmrecnbr)).index_by(&:rmrecnbr)
         floors = Floor.for_current_workspace.where(building:).index_by(&:label)
         parsed.each { |attrs| upsert_room(attrs, building, department_lookup, rooms:, floors:) }
@@ -235,7 +234,6 @@ module Sync
     def department_attrs(department_name, department_lookup)
       return blank_department_attrs if department_name.blank?
 
-      # Remembered for the run, misses included, so each missing department costs one gateway call.
       enrichment = department_lookup.fetch(department_name) do
         department_lookup[department_name] = fetch_department_fallback(department_name)
       end
@@ -267,7 +265,6 @@ module Sync
       unit.id
     end
 
-    # Every unit loaded once per run; there are a handful, and every room names one.
     def units = @units ||= Unit.for_current_workspace.index_by(&:department_group)
 
     # See header comment: empty-feed guard, then a single all-or-nothing

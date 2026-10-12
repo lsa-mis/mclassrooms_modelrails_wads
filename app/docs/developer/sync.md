@@ -29,7 +29,7 @@ limits_concurrency to: 1, key: ->(workspace, **) { workspace }, duration: DURATI
 ```
 
 - At most one sync runs per workspace. All three triggers share the same key, so they all count.
-- A request made while a sync is queued or running is **dropped**. Solid Queue doesn't store it, and the operator is told nothing new started.
+- A request made while a sync is queued or running is **dropped**. Solid Queue doesn't store it, so the job comes back without a `provider_job_id`; that is how `SyncRunJob.request` knows, and the operator is told nothing new started.
 - The lock is taken when the job is **queued** and lasts `DURATION` from then. It is released when the job finishes, or when Solid Queue cleans up a worker process that died.
 - **`DURATION` (12 hours) must be longer than any real sync, including time spent waiting in the queue.** If a sync outlived it, a second one could start beside it. It is set far above the expected sync time on purpose: a crashed worker releases its lock when Solid Queue cleans the process up, so a long duration only matters if that clean-up never happens.
 
@@ -45,8 +45,16 @@ Two consequences follow:
 - **Core phases run in a fixed order and stop at the first failure:** campuses, buildings, rooms, facility IDs, characteristics, contacts. The steps after a failure are marked `skipped`, not left `pending`, so "never ran" and "didn't get to it" read differently.
 - **Optional phases** (`OPTIONAL_PHASES`) run after the core ones whatever happened, and their failure never changes the run's status.
 - **The gateway's 400-calls-a-minute budget is held by `UmApi::RateLimiter`,** call by call, with a back-off when the gateway answers 429. Phases run back to back; the 61-second pause the legacy app slept between phases was dropped once the limiter enforced the same budget.
-- **One API client per run** is shared by every phase, so each phase's `api_calls` and `rate_limit_sleeps` counters come from one running total.
+- **One API client per run** is shared by every phase, so each phase's `api_calls` and `rate_limit_sleeps` counters come from one running total. It keeps one connection open for the run, and `get_json(remember: true)` keeps a successful response for the rest of the run: the characteristics phase reuses the `/Characteristics` responses the facility-IDs phase already fetched. The client raises `UmApi::RateLimited` on a 429; retrying is the caller's job, through `rate_limiter.backoff_429`.
 - **It never raises once the run exists.** A phase returns a `Result` and records its own failure. The pipeline's own bookkeeping errors mark the run failed. Only failing to *create* the run raises, because there's nowhere to record that.
+
+## What the phases may change
+
+- **Only the rooms phase creates rooms.** The facility-IDs phase matches existing rooms by `rmrecnbr` and writes `facility_code` and `campus`; a room number it can't match is skipped with a warning.
+- **The facility-to-room crosswalk comes from `/Characteristics`.** The classroom list carries no room number, so the facility-IDs phase reads each facility's `/Characteristics` rows for their `RmRecNbr`. A facility with no characteristics can't be matched; that's an accepted gap, not guessed at.
+- **A classroom that leaves the classroom list loses its facility code; it isn't deactivated.** Offices and labs are never on that list, so deactivating on absence would retire them nightly. Clearing the code drops the room from Find-a-Room, and the next sync that finds it restores it. `in_feed` belongs to the rooms phase alone.
+- **Every stale sweep is skipped, with a warning, when its feed comes back empty,** so a gateway glitch can't retire everything at once.
+- **The capacity filter's maximum is recomputed last** in the facility-IDs phase, so it runs only when the phase got that far, with seat counts the rooms phase already wrote.
 
 ## Resuming
 
