@@ -1,0 +1,45 @@
+<%# locals: (sync_runs:, scope:, retry_allowed: false) %>
+<section class="mt-8" aria-labelledby="sync-run-history-heading" data-sync-run-history>
+  <h2 id="sync-run-history-heading" class="mb-4 text-lg font-semibold text-text-heading"><%= t("sync_runs.history.heading") %></h2>
+  <% if sync_runs.any? %>
+    <%= render UI::TableComponent.new(caption: t("sync_runs.history.caption"), scroll: :horizontal) do |table| %>
+      <% table.with_header do %>
+        <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("sync_runs.columns.started") %></th>
+        <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("sync_runs.columns.status") %></th>
+        <th scope="col" class="<%= UI::TableComponent::TH %>"><%= t("sync_runs.columns.duration") %></th>
+        <% if retry_allowed %>
+          <th scope="col" class="<%= UI::TableComponent::TH %>"><span class="sr-only"><%= t("sync_runs.columns.actions") %></span></th>
+        <% end %>
+      <% end %>
+      <% table.with_body do %>
+        <% sync_runs.each do |run| %>
+          <tr class="border-t border-border h-12 align-middle">
+            <th scope="row" class="px-4 py-0 align-middle text-left font-medium whitespace-nowrap">
+              <%= link_to [ scope, run ], class: "btn-cell-link btn-text-interactive" do %><span class="sr-only"><%= t("sync_runs.history.link_prefix") %> </span><%= sync_started_at(run) %><% end %>
+            </th>
+            <td class="px-4 py-0 align-middle whitespace-nowrap">
+              <span class="inline-flex items-center gap-2">
+                <%= sync_run_status_badge(run) %>
+                <% if run.dry_run? %>
+                  <%= ui :badge, t("sync_runs.dry_run"), variant: :outline, tone: :neutral %>
+                <% end %>
+              </span>
+            </td>
+            <td class="px-4 py-0 align-middle text-text-body whitespace-nowrap tabular-nums"><%= sync_duration(run) %></td>
+            <% if retry_allowed %>
+              <td class="px-4 py-0 align-middle whitespace-nowrap text-right">
+                <% if run.failed? && run == sync_runs.first %>
+                  <%= button_to t("operations.sync_runs.actions.retry"), operations_sync_run_resumption_path(run),
+                        class: "btn-text btn-text-interactive",
+                        "aria-label": t("operations.sync_runs.actions.retry_run", started: sync_started_at(run)) %>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= render "shared/empty_state", message: t("sync_runs.history.empty") %>
+  <% end %>
+</section>

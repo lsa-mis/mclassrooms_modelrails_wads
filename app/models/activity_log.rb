@@ -68,7 +68,7 @@ class ActivityLog < ApplicationRecord
   # included (building and floor come only from the legacy import). Re-EXPLAIN past ~5M rows (#1165).
   KINDS = %w[workspace membership invitation project resource user operatorship
              announcement characteristic_display_rule editor_assignment room
-             sync_scope_rule unit_display_name building floor].freeze
+             sync_scope_rule unit_display_name building floor sync_run].freeze
 
   scope :of_kind, ->(kind) { where(arel_table[:action].matches("#{kind}.%")) }
   # Actor, User trackable, or a Membership of theirs; widening on purpose, since a rule-out
