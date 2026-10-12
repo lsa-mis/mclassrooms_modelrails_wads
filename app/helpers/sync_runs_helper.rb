@@ -35,6 +35,13 @@ module SyncRunsHelper
     words.to_sentence
   end
 
+  def sync_progress_label(run)
+    phase = run.current_phase
+    return t("sync_runs.progress.starting") unless phase
+
+    t("sync_runs.progress.step", step: run.steps_done + 1, total: run.steps_total, phase: t("sync_runs.phases.#{phase.key}"))
+  end
+
   def sync_started_at(run)
     l(run.started_at || run.created_at, format: :short)
   end

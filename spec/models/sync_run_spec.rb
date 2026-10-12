@@ -133,4 +133,34 @@ RSpec.describe SyncRun, type: :model do
       expect(run).not_to be_retryable
     end
   end
+
+  describe "progress" do
+    let(:workspace) { create(:workspace) }
+    let(:run) { create(:sync_run, workspace:, status: :running, started_at: 5.minutes.ago) }
+
+    it "counts finished core steps and names the one running" do
+      create(:sync_phase, sync_run: run, key: "campuses", status: :succeeded)
+      create(:sync_phase, sync_run: run, key: "buildings", status: :succeeded)
+      rooms = create(:sync_phase, sync_run: run, key: "rooms", status: :running)
+
+      expect([ run.steps_done, run.steps_total, run.current_phase ]).to eq([ 2, 6, rooms ])
+    end
+
+    it "takes the typical duration from the newest finished real sync" do
+      create(:sync_run, workspace:, status: :succeeded, started_at: 2.days.ago, finished_at: 2.days.ago + 30.minutes)
+      create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago + 14.minutes)
+      create(:sync_run, workspace:, status: :succeeded, dry_run: true, started_at: 1.hour.ago, finished_at: 1.hour.ago + 1.minute)
+      create(:sync_run, workspace:, status: :failed, started_at: 2.hours.ago, finished_at: 2.hours.ago + 2.minutes)
+
+      expect(described_class.typical_duration_for(workspace)).to be_within(1).of(14.minutes)
+    end
+
+    it "broadcasts a refresh to the workspace sync stream when a run or step changes" do
+      stream = [ workspace, :sync_runs ].map { |s| s.try(:to_gid_param) || s.to_param }.join(":")
+      run
+
+      expect { run.update!(status: :succeeded, finished_at: Time.current) }.to have_broadcasted_to(stream)
+      expect { create(:sync_phase, sync_run: run, key: "rooms", status: :running) }.to have_broadcasted_to(stream)
+    end
+  end
 end

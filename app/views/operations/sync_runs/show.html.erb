@@ -1,4 +1,5 @@
 <% content_for(:title) { t(".title", started: sync_started_at(@sync_run)) } %>
+<%= render "sync_runs/live", workspace: @directory_workspace %>
 <%= link_to t(".back"), operations_sync_runs_path, class: "btn-text btn-text-interactive" %>
 <% badges = capture do %>
   <%= sync_run_status_badge(@sync_run) %>
@@ -11,4 +12,4 @@
   <% end %>
 </div>
 
-<%= render "sync_runs/detail", sync_run: @sync_run %>
+<%= render "sync_runs/detail", sync_run: @sync_run, typical: @typical %>

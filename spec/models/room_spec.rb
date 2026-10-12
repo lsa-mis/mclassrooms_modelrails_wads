@@ -199,6 +199,18 @@ RSpec.describe Room, type: :model do
       expect(Room.search_name("new")).to contain_exactly(room)
     end
 
+    # The nightly sync saves every room; re-indexing the unchanged ones was most of its write cost.
+    it "leaves the index alone when a save changes nothing it indexes" do
+      room = create(:room, nickname: "Aud 3")
+      Room.connection.execute("DELETE FROM #{Room::SEARCH_INDEX_TABLE} WHERE rowid = #{room.id}")
+
+      room.update!(instructional_seat_count: room.instructional_seat_count + 1)
+      expect(Room.search_name("aud")).to be_empty
+
+      room.update!(building_name: "Mason Hall")
+      expect(Room.search_name("maso")).to contain_exactly(room)
+    end
+
     it "drops a room from the index when it is destroyed" do
       room = create(:room, facility_code: "MLB1200")
       expect { room.destroy! }.to change(Room, :count).by(-1)

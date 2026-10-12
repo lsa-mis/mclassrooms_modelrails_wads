@@ -44,7 +44,7 @@ Two consequences follow:
 
 - **Core phases run in a fixed order and stop at the first failure:** campuses, buildings, rooms, facility IDs, characteristics, contacts. The steps after a failure are marked `skipped`, not left `pending`, so "never ran" and "didn't get to it" read differently.
 - **Optional phases** (`OPTIONAL_PHASES`) run after the core ones whatever happened, and their failure never changes the run's status.
-- **There's a 61-second pause between phases** that actually run, to keep within the gateway's 400-calls-a-minute budget. Specs inject `sleeper:` so they never really sleep.
+- **The gateway's 400-calls-a-minute budget is held by `UmApi::RateLimiter`,** call by call, with a back-off when the gateway answers 429. Phases run back to back; the 61-second pause the legacy app slept between phases was dropped once the limiter enforced the same budget.
 - **One API client per run** is shared by every phase, so each phase's `api_calls` and `rate_limit_sleeps` counters come from one running total.
 - **It never raises once the run exists.** A phase returns a `Result` and records its own failure. The pipeline's own bookkeeping errors mark the run failed. Only failing to *create* the run raises, because there's nowhere to record that.
 

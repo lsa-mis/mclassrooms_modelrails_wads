@@ -44,6 +44,22 @@ RSpec.describe "Operations sync runs", type: :request do
       expect(page).to have_text(I18n.t("operations.sync_runs.index.running_notice"))
       expect(page).to have_button(I18n.t("operations.sync_runs.actions.run_now"))
     end
+
+    it "shows a running sync's step, a progress bar and the usual duration, and subscribes to live updates" do
+      create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago + 14.minutes)
+      run = create(:sync_run, workspace:, status: :running, started_at: 3.minutes.ago)
+      create(:sync_phase, sync_run: run, key: "campuses", status: :succeeded)
+      create(:sync_phase, sync_run: run, key: "buildings", status: :running)
+
+      get operations_sync_runs_path
+
+      progress = page.find("[data-sync-progress]")
+      expect(progress).to have_text("Step 2 of 6: #{I18n.t("sync_runs.phases.buildings")}")
+      expect(progress).to have_css('[role="progressbar"][aria-valuenow="1"][aria-valuemax="6"]')
+      expect(progress).to have_text(I18n.t("sync_runs.progress.typical", duration: "14 minutes"))
+      expect(page).to have_css("turbo-cable-stream-source", visible: :all)
+      expect(page).to have_css('meta[name="turbo-refresh-method"][content="morph"]', visible: :all)
+    end
   end
 
   describe "GET /operations/sync_runs/:id" do
