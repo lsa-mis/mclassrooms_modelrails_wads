@@ -152,11 +152,13 @@ module Sync
 
       Building.for_current_workspace.find_each do |building|
         rows = client.fetch_all(rooms_path(building), array_path: %w[ListOfRooms RoomData], scope: "buildings")
-        rows.each do |row|
-          attrs = parse_room(row)
-          seen << attrs[:rmrecnbr]
-          upsert_room(attrs, building, department_lookup)
-        end
+        parsed = rows.map { parse_room(it) }
+        seen.concat(parsed.pluck(:rmrecnbr))
+
+        # One query each per building, not per room: a sync walks tens of thousands of rooms.
+        rooms = Room.for_current_workspace.where(rmrecnbr: parsed.pluck(:rmrecnbr)).index_by(&:rmrecnbr)
+        floors = Floor.for_current_workspace.where(building:).index_by(&:label)
+        parsed.each { |attrs| upsert_room(attrs, building, department_lookup, rooms:, floors:) }
       end
 
       deactivate_stale_rooms(seen)
@@ -195,9 +197,9 @@ module Sync
       row && parse_department(row)
     end
 
-    def upsert_room(attrs, building, department_lookup)
+    def upsert_room(attrs, building, department_lookup, rooms:, floors:)
       dept_attrs = department_attrs(attrs[:department_name], department_lookup)
-      floor = Floor.for_current_workspace.find_or_create_by!(building: building, label: attrs[:floor_label])
+      floor = floors[attrs[:floor_label]] ||= Floor.for_current_workspace.create!(building:, label: attrs[:floor_label])
 
       assignable = {
         building: building,
@@ -211,9 +213,14 @@ module Sync
         in_feed: true
       }.merge(dept_attrs)
 
-      room = Room.for_current_workspace.find_or_initialize_by(rmrecnbr: attrs[:rmrecnbr])
-      is_new = room.new_record?
-      is_new ? count(:created) : (count(:updated) if room.changed_after_assign(assignable))
+      room = rooms[attrs[:rmrecnbr]] || Room.for_current_workspace.new(rmrecnbr: attrs[:rmrecnbr])
+      if room.new_record?
+        count(:created)
+      elsif room.changed_after_assign(assignable)
+        count(:updated)
+      else
+        return
+      end
       room.update!(assignable)
     end
 
@@ -225,7 +232,10 @@ module Sync
     def department_attrs(department_name, department_lookup)
       return blank_department_attrs if department_name.blank?
 
-      enrichment = department_lookup[department_name] || fetch_department_fallback(department_name)
+      # Remembered for the run, misses included, so each missing department costs one gateway call.
+      enrichment = department_lookup.fetch(department_name) do
+        department_lookup[department_name] = fetch_department_fallback(department_name)
+      end
       return blank_department_attrs unless enrichment
 
       {
@@ -249,12 +259,13 @@ module Sync
     def resolve_unit_id(group_code, group_description)
       return nil if group_code.blank?
 
-      unit = Unit.for_current_workspace.find_or_create_by!(department_group: group_code) do |new_unit|
-        new_unit.description = group_description
-      end
+      unit = units[group_code] ||= Unit.for_current_workspace.create!(department_group: group_code, description: group_description)
       unit.update!(description: group_description) if unit.description != group_description
       unit.id
     end
+
+    # Every unit loaded once per run; there are a handful, and every room names one.
+    def units = @units ||= Unit.for_current_workspace.index_by(&:department_group)
 
     # See header comment: empty-feed guard, then a single all-or-nothing
     # transaction (real runs) or a pure count+warn preview (dry run).
