@@ -4,7 +4,7 @@ module Operations
 
     def index
       authorize [ :operations, SyncRun ]
-      @sync_runs = SyncRun.history_for(directory_workspace)
+      @sync_runs = SyncRun.history_for(directory_workspace).includes(:sync_phases)
       @latest = SyncRun.most_recent_for(directory_workspace)
       @inventory = SyncRun.inventory_for(directory_workspace)
       @typical = SyncRun.typical_duration_for(directory_workspace)

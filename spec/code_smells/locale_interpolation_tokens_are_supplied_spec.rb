@@ -16,10 +16,10 @@ RSpec.describe "Code smell: every locale interpolation token is supplied" do
     user_name workspace_name zone
   ] + %w[
     ada alt building caption description floor label min n original owner
-    position room students total value started duration step phase
+    position room students total value started duration step phase done number
   ]
   # Non-vocabulary tokens a caller supplies, the second list from the fork's buildings, rooms, media
-  # and sync-run views (`started`, `duration`: SyncRunsHelper); `count` and `name` come from JavaScript.
+  # and sync-run views (`started`, `duration`, `done`, `number`: SyncRunsHelper); `count` and `name` come from JavaScript.
   js_filled_keys = %w[form_draft.restored_other identity_picker.js.color_announce]
 
   def tokens_in(path)

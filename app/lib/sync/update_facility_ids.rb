@@ -131,10 +131,11 @@ module Sync
       skipped_rmrecnbrs = Set.new
       facility_ids_by_building = preload_facility_ids_by_building
 
-      Building.for_current_workspace.find_each do |building|
-        (facility_ids_by_building[building.bldrecnbr] || []).each do |facility_id|
-          apply_facility(facility_id, seen, skipped_rmrecnbrs)
-        end
+      facility_ids = Building.for_current_workspace.order(:id).pluck(:bldrecnbr).flat_map { facility_ids_by_building[it] || [] }
+      progress_total!(facility_ids.size)
+      facility_ids.each do |facility_id|
+        apply_facility(facility_id, seen, skipped_rmrecnbrs)
+        progress!
       end
 
       clear_stale_facility_codes(seen)

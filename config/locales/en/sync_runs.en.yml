@@ -33,6 +33,7 @@ en:
       started: "Started"
       status: "Status"
       duration: "Duration"
+      changes: "Changes"
       actions: "Actions"
     dry_run: "Dry run"
     not_finished: "Not finished"
@@ -42,6 +43,11 @@ en:
       starting: "Starting"
       step: "Step %{step} of %{total}: %{phase}"
       typical: "usually takes about %{duration}"
+      items:
+        rooms: "%{done} of %{total} buildings"
+        facility_ids: "%{done} of %{total} facilities"
+        characteristics: "%{done} of %{total} rooms"
+        contacts: "%{done} of %{total} rooms"
     duration:
       days:
         one: "1 day"
@@ -55,6 +61,62 @@ en:
       seconds:
         one: "1 second"
         other: "%{count} seconds"
+    changes:
+      heading:
+        finished: "What changed"
+        running: "Changed so far"
+        dry_run: "What it would have changed"
+      dry_run_note: "A dry run saves nothing. A real sync would make these changes."
+      none:
+        matched: "Nothing changed. Everything already matched U-M Facilities."
+        failed: "Nothing changed before the sync stopped."
+        running: "Nothing yet."
+        dry_run: "Nothing would have changed."
+      total:
+        none: "None"
+        some:
+          one: "1 change"
+          other: "%{number} changes"
+      kinds:
+        campuses_created:
+          one: "1 campus added"
+          other: "%{number} campuses added"
+        campuses_updated:
+          one: "1 campus updated"
+          other: "%{number} campuses updated"
+        campuses_deleted:
+          one: "1 campus removed"
+          other: "%{number} campuses removed"
+        buildings_created:
+          one: "1 building added"
+          other: "%{number} buildings added"
+        buildings_updated:
+          one: "1 building updated"
+          other: "%{number} buildings updated"
+        rooms_created:
+          one: "1 room added"
+          other: "%{number} rooms added"
+        rooms_updated:
+          one: "1 room updated"
+          other: "%{number} rooms updated"
+        rooms_deactivated:
+          one: "1 room deactivated"
+          other: "%{number} rooms deactivated"
+        facility_ids_updated:
+          one: "1 room's facility ID set"
+          other: "%{number} rooms' facility IDs set"
+        facility_ids_cleared:
+          one: "1 room's facility ID cleared"
+          other: "%{number} rooms' facility IDs cleared"
+        characteristics_added:
+          one: "1 room characteristic added"
+          other: "%{number} room characteristics added"
+        characteristics_removed:
+          one: "1 room characteristic removed"
+          other: "%{number} room characteristics removed"
+        contacts_updated:
+          one: "1 room contact updated"
+          other: "%{number} room contacts updated"
     latest:
       title: "Latest sync"
     inventory:

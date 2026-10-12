@@ -150,7 +150,9 @@ module Sync
       department_lookup = preload_departments
       seen = []
 
-      Building.for_current_workspace.find_each do |building|
+      buildings = Building.for_current_workspace
+      progress_total!(buildings.count)
+      buildings.find_each do |building|
         rows = client.fetch_all(rooms_path(building), array_path: %w[ListOfRooms RoomData], scope: "buildings")
         parsed = rows.map { parse_room(it) }
         seen.concat(parsed.pluck(:rmrecnbr))
@@ -159,6 +161,7 @@ module Sync
         rooms = Room.for_current_workspace.where(rmrecnbr: parsed.pluck(:rmrecnbr)).index_by(&:rmrecnbr)
         floors = Floor.for_current_workspace.where(building:).index_by(&:label)
         parsed.each { |attrs| upsert_room(attrs, building, department_lookup, rooms:, floors:) }
+        progress!
       end
 
       deactivate_stale_rooms(seen)

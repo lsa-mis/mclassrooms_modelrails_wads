@@ -55,10 +55,24 @@ RSpec.describe "Operations sync runs", type: :request do
 
       progress = page.find("[data-sync-progress]")
       expect(progress).to have_text("Step 2 of 6: #{I18n.t("sync_runs.phases.buildings")}")
-      expect(progress).to have_css('[role="progressbar"][aria-valuenow="1"][aria-valuemax="6"]')
+      expect(progress).to have_css('[role="progressbar"][aria-valuenow="16"][aria-valuemax="100"]')
       expect(progress).to have_text(I18n.t("sync_runs.progress.typical", duration: "14 minutes"))
       expect(page).to have_css("turbo-cable-stream-source", visible: :all)
       expect(page).to have_css('meta[name="turbo-refresh-method"][content="morph"]', visible: :all)
+    end
+
+    it "shows how far the running step has got, and each run's change count" do
+      create(:sync_run, workspace:, status: :succeeded, started_at: 1.day.ago, finished_at: 1.day.ago + 14.minutes)
+      run = create(:sync_run, workspace:, status: :running, started_at: 6.minutes.ago)
+      create(:sync_phase, sync_run: run, key: "rooms", status: :succeeded, counters: { "updated" => 1_204, "api_calls" => 161 })
+      create(:sync_phase, sync_run: run, key: "facility_ids", status: :running, items_done: 612, items_total: 1_067)
+
+      get operations_sync_runs_path
+
+      expect(page.find("[data-sync-progress]")).to have_text("612 of 1,067 facilities")
+      history = page.find("[data-sync-run-history]")
+      expect(history).to have_css("tr", text: "1,204 changes")
+      expect(history).to have_css("tr", text: I18n.t("sync_runs.changes.total.none"))
     end
   end
 
@@ -71,6 +85,34 @@ RSpec.describe "Operations sync runs", type: :request do
 
       expect(page).to have_css("[data-sync-phase]", text: "gateway timed out")
       expect(page).to have_button(I18n.t("operations.sync_runs.actions.retry"))
+    end
+
+    it "lists what a finished sync changed" do
+      run = create(:sync_run, workspace:, status: :succeeded, started_at: 1.hour.ago, finished_at: 50.minutes.ago)
+      create(:sync_phase, sync_run: run, key: "rooms", status: :succeeded, counters: { "created" => 1, "updated" => 3, "api_calls" => 161 })
+      create(:sync_phase, sync_run: run, key: "contacts", status: :succeeded, counters: { "updated" => 1 })
+
+      get operations_sync_run_path(run)
+
+      changes = page.find("[data-sync-changes]")
+      expect(changes).to have_css("h2", text: I18n.t("sync_runs.changes.heading.finished"))
+      expect(changes.all("li").map(&:text)).to eq([ "1 room added", "3 rooms updated", "1 room contact updated" ])
+    end
+
+    it "says when a finished sync changed nothing, and that a dry run's changes are hypothetical" do
+      real = create(:sync_run, workspace:, status: :succeeded, started_at: 2.hours.ago, finished_at: 110.minutes.ago)
+      create(:sync_phase, sync_run: real, key: "rooms", status: :succeeded, counters: { "api_calls" => 161 })
+      dry = create(:sync_run, workspace:, status: :succeeded, dry_run: true, started_at: 1.hour.ago, finished_at: 50.minutes.ago)
+      create(:sync_phase, sync_run: dry, key: "rooms", status: :succeeded, counters: { "deactivated" => 2 })
+
+      get operations_sync_run_path(real)
+      expect(page.find("[data-sync-changes]")).to have_text(I18n.t("sync_runs.changes.none.matched"))
+
+      get operations_sync_run_path(dry)
+      changes = page.find("[data-sync-changes]")
+      expect(changes).to have_css("h2", text: I18n.t("sync_runs.changes.heading.dry_run"))
+      expect(changes).to have_text(I18n.t("sync_runs.changes.dry_run_note"))
+      expect(changes).to have_css("li", text: "2 rooms deactivated")
     end
 
     it "does not show a run from a workspace other than the directory" do

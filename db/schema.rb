@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_134500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_11_231059) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -466,6 +466,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_134500) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "items_done"
+    t.integer "items_total"
     t.index ["sync_run_id", "key"], name: "index_sync_phases_on_sync_run_id_and_key", unique: true
     t.index ["sync_run_id"], name: "index_sync_phases_on_sync_run_id"
     t.index ["workspace_id"], name: "index_sync_phases_on_workspace_id"

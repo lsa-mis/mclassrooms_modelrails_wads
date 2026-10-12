@@ -90,8 +90,11 @@ module Sync
     private
 
     def perform
-      Room.for_current_workspace.where.not(facility_code: nil).find_each do |room|
+      rooms = Room.for_current_workspace.where.not(facility_code: nil)
+      progress_total!(rooms.count)
+      rooms.find_each do |room|
         sync_characteristics(room)
+        progress!
       end
     end
 
