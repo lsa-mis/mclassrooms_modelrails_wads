@@ -42,7 +42,9 @@
 .lsa-tdx-feedback-form-group select:focus,
 .lsa-tdx-feedback-form-group textarea:focus {
   border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-border-focus) 25%, transparent);
+  box-shadow: none;
+  outline: 2px solid var(--color-interactive-focus);
+  outline-offset: 2px;
 }
 
 /*
