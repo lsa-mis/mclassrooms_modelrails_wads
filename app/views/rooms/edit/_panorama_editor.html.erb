@@ -1,0 +1,40 @@
+<%# locals: (room:, form_room:, open:) %>
+<% attached = room.panorama.attached? %>
+<%= ui :dialog, id: "panorama-editor", title: t("rooms.edit.panorama_label"), size: :lg, open: open do |dialog| %>
+  <% dialog.with_trigger do %>
+    <button type="button" class="btn-secondary">
+      <%= icon(:pencil, size: :sm) %>
+      <%= attached ? t("rooms.edit.edit_panorama") : t("rooms.edit.add_panorama") %>
+    </button>
+  <% end %>
+
+  <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
+        id: "panorama-editor-form", class: "space-y-5" do |form| %>
+    <%= form.error_summary %>
+    <% if attached %>
+      <div class="flex flex-wrap items-center gap-4">
+        <%= render "rooms/edit/media_thumb", attachment: room.panorama, size: 150 %>
+        <p class="text-sm text-text-body">
+          <%= t("rooms.edit.updated_ago", time: time_ago_in_words(room.panorama.blob.created_at)) %>
+        </p>
+      </div>
+      <div>
+        <%= form.check_box :remove_panorama,
+              label: t("rooms.edit.remove_panorama_label", room: room.display_name) %>
+        <p class="mt-1 text-sm text-text-body"><%= t("rooms.edit.delete_confirm") %></p>
+      </div>
+    <% end %>
+    <%= form.file_field :panorama,
+          label: attached ? t("rooms.edit.upload_new") : t("rooms.edit.panorama_label"),
+          help: t("rooms.edit.panorama_hint"),
+          accept: "image/png,image/jpeg,image/webp,image/heic,image/heif" %>
+    <%= form.text_field :panorama_alt, label: t("rooms.media.alt_label") %>
+    <%= form.text_area :panorama_description, rows: 2, label: t("rooms.media.description_label") %>
+    <%= form.check_box :panorama_derived_ok, label: t("rooms.media.derived_ok_label") %>
+  <% end %>
+
+  <% dialog.with_footer do %>
+    <button type="button" class="btn-secondary" data-action="click->modal#close"><%= t("rooms.edit.cancel") %></button>
+    <%= button_tag t("rooms.edit.save_media"), type: "submit", form: "panorama-editor-form", class: "btn-primary" %>
+  <% end %>
+<% end %>

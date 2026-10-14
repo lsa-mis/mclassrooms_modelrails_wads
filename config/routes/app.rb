@@ -32,10 +32,6 @@ resources :saved_rooms, only: [ :create, :destroy ]
 
 resources :rooms, only: [ :show, :edit, :update ] do
   get :floor_plan, on: :member
-  member do
-    post :hide
-    post :unhide
-  end
 end
 
 # Admin Buildings section (MiClassrooms Phase 4 Task 8, contract). Only
@@ -44,9 +40,6 @@ end
 # precedent above (nothing links to the unimplemented actions yet). JSON is
 # supported on #index/#show only (the contract doesn't require it on
 # #edit/#update).
-#
-# hide/unhide (Phase 5 Task 5, Brief §14.1): admin-only visibility flow,
-# mirroring the `resources :rooms` member routes above.
 resources :buildings, only: [ :index, :show, :edit, :update ] do
   member do
     post :hide

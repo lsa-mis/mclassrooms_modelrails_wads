@@ -30,7 +30,7 @@
       <div class="prose-sm"><%= note.body %></div>
 
       <% if policy(note).update? || policy(note).destroy? %>
-        <div class="action-group mt-2">
+        <div class="action-group mt-2 group-data-[room-mode=view]/room:hidden">
           <% if policy(note).update? %>
             <details>
               <summary class="btn-text btn-text-interactive cursor-pointer">
@@ -60,7 +60,7 @@
     </ul>
 
     <% if policy(Note.new(notable: note.notable)).create? %>
-      <details class="ml-6 mt-2">
+      <details class="ml-6 mt-2 group-data-[room-mode=view]/room:hidden">
         <summary class="btn-text btn-text-interactive cursor-pointer"><%= t("notes.actions.reply") %></summary>
         <div id="<%= dom_id(note, :new_reply) %>" class="mt-2">
           <%= render "notes/form", notable: note.notable, parent: note %>

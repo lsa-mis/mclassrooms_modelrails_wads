@@ -1,0 +1,17 @@
+<%# locals: (attachment:, size:) %>
+<% size_class = { 96 => "size-24", 150 => "size-[150px]" }.fetch(size) %>
+<% if attachment.attached? && attachment.variable? %>
+  <%= ui :image,
+        src: rails_representation_path(attachment.variant(resize_to_fill: [ size, size ], format: :webp)),
+        alt: "",
+        width: size, height: size,
+        class: "#{size_class} rounded-md object-cover" %>
+<% else %>
+  <span class="<%= size_class %> grid place-items-center rounded-md border border-border-strong bg-surface-raised text-text-body">
+    <% if attachment.attached? %>
+      <span class="text-sm font-semibold"><%= attachment.filename.extension.upcase %></span>
+    <% else %>
+      <%= icon(:camera, size: :lg) %>
+    <% end %>
+  </span>
+<% end %>

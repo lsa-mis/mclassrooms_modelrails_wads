@@ -24,27 +24,6 @@ class RoomsController < ApplicationController
   # client submitted.
   CURATED_PARAMS = [ :nickname, :ada_seat_count ].freeze
 
-  # Kept as its own constant (not folded into `room_params` directly) so the
-  # curated/media split reads as a deliberate security boundary, not an
-  # incidental grouping. `gallery_attributes` uses the DOUBLE-array
-  # `[[ ... ]]` shape `params.expect` requires for a Hash-of-hashes nested
-  # collection (what `fields_for`'s index-keyed submission actually is) — the
-  # single-array `permit`-style shape silently returns an EMPTY
-  # gallery_attributes under `expect` (verified empirically against
-  # this app's Rails version; `permit` tolerates either shape, `expect` does
-  # not). Getting this wrong would silently break every admin gallery
-  # add/reorder/destroy while looking correct in a review of the params list.
-  # Task 4 (image metadata, Brief §5.2/§14.1 follow-on): alt/description/
-  # derived_ok are metadata ABOUT an attachment slot, not curated room data —
-  # kept in MEDIA_PARAMS (not CURATED_PARAMS) so authoring them stays behind
-  # the same `policy(@room).manage_media?` (admin-only) gate as the
-  # attachments themselves. This matches the existing render boundary:
-  # rooms/edit.html.erb never renders _media_sections (where these fields
-  # live) for a unit editor at all — RoomPolicy#manage_media? is admin-only
-  # even though #update?/#edit? admit an editor (see rooms_update_spec.rb's
-  # "renders the curated fields and the media-admin-only hint, but not the
-  # media inputs" spec) — so permitting these scalars only when manage_media?
-  # keeps the strong-params boundary and the rendered UI in agreement.
   MEDIA_PARAMS = [
     :panorama, :seating_chart,
     :remove_panorama, :remove_seating_chart,
@@ -66,16 +45,7 @@ class RoomsController < ApplicationController
   # #edit/#update at all — RoomPolicy#edit?/#update? deny them via `authorize`
   # below, the same redirect-with-alert as every other Pundit denial in this
   # app.
-  #
-  # Phase 5 Task 5: #hide/#unhide join set_room too (they need @room loaded
-  # to authorize/mutate), but deliberately do NOT join
-  # redirect_inactive_for_non_admins below — a hide POST acts on a room that
-  # is, by definition, still visible when the request is issued (RoomPolicy
-  # #hide? requires visible_record? for a non-admin editor), and an admin
-  # unhiding a room is unhiding a currently-HIDDEN one on purpose. Neither
-  # case should be intercepted by the hidden-room redirect the way a GET
-  # /rooms/:id is.
-  before_action :set_room, only: [ :show, :floor_plan, :edit, :update, :hide, :unhide ]
+  before_action :set_room, only: [ :show, :floor_plan, :edit, :update ]
   before_action :redirect_inactive_for_non_admins, only: [ :show, :floor_plan ]
 
   def index
@@ -165,6 +135,7 @@ class RoomsController < ApplicationController
   def edit
     authorize @room
     build_blank_gallery
+    @presenter = RoomPresenter.new(@room, url: room_url(@room))
   end
 
   # Phase 5 Task 6 (Brief §14.1) retrofit: routes curated-field changes and
@@ -209,6 +180,8 @@ class RoomsController < ApplicationController
   def update
     authorize @room
     attrs = room_params.to_h
+    visibility = requested_visibility(attrs.delete("listed"))
+    authorize @room, (visibility == :hide ? :hide? : :unhide?) if visibility
 
     # Guard BEFORE either Curation::Apply call ever sees `attrs`: Rails' own
     # `assign_nested_attributes_for_collection_association` resolves each
@@ -230,9 +203,8 @@ class RoomsController < ApplicationController
     # reaches `assign_attributes` at all. Mirrors BuildingsController#update's
     # identical `stale_floor_ids?` guard for floors_attributes.
     if stale_gallery_ids?(attrs)
-      build_blank_gallery
       flash.now[:alert] = t("rooms.edit.stale_gallery")
-      render :edit, status: :unprocessable_entity
+      render_edit_failure(:gallery)
       return
     end
 
@@ -269,41 +241,57 @@ class RoomsController < ApplicationController
       # (result.payload[:record] is the same in-memory @room Curation::Apply
       # attempted to save!, so re-rendering :edit shows exactly what failed).
       @room = failed_result.payload[:record] || @room
-      build_blank_gallery
-      render :edit, status: :unprocessable_entity
+      render_edit_failure(media_slot(media_attrs))
+    else
+      apply_visibility(visibility)
+      redirect_after_update(visibility)
+    end
+  end
+
+  private
+
+  def render_edit_failure(open_media)
+    build_blank_gallery
+    @display_room = Room.for_current_workspace.find(@room.id)
+    @presenter = RoomPresenter.new(@display_room, url: room_url(@display_room))
+    @open_media = open_media
+    render :edit, status: :unprocessable_entity
+  end
+
+  def media_slot(media_attrs)
+    keys = media_attrs.keys.map(&:to_s)
+    if keys.any? { |key| key.include?("panorama") } then :panorama
+    elsif keys.any? { |key| key.include?("seating_chart") } then :seating_chart
+    elsif keys.include?("gallery_attributes") then :gallery
+    end
+  end
+
+  def requested_visibility(listed)
+    return if listed.nil?
+
+    wants_listed = ActiveModel::Type::Boolean.new.cast(listed)
+    return if wants_listed == !@room.hidden?
+
+    wants_listed ? :unhide : :hide
+  end
+
+  def apply_visibility(visibility)
+    case visibility
+    when :hide then @room.hide!(actor: Current.user)
+    when :unhide then @room.unhide!(actor: Current.user)
+    end
+  end
+
+  def redirect_after_update(visibility)
+    case visibility
+    when :hide
+      redirect_to policy(@room).show? ? room_path(@room) : find_a_room_path, notice: t("rooms.hide.success")
+    when :unhide
+      redirect_to room_path(@room), notice: t("rooms.unhide.success")
     else
       redirect_to room_path(@room), notice: t("rooms.edit.success")
     end
   end
-
-  # Phase 5 Task 5 (Brief §14.1): one-way editor hide. `authorize @room,
-  # :hide?` covers both grantees RoomPolicy#hide? allows — an admin, or the
-  # room's assigned-unit editor while it's still visible — Room#hide! is the
-  # same audited call either way. The redirect branches on the ACTOR, not a
-  # role check duplicated here: `policy(@room).show?` re-evaluates
-  # RoomPolicy for the now-hidden record, which is false for an editor (an
-  # editor loses sight of a room the instant they hide it — the "one-way"
-  # half of the brief) and true for an admin (RoomPolicy#show? admits
-  # `grant.admin?` unconditionally). Reusing `policy(@room).show?` here
-  # rather than re-deriving "is this actor an admin" keeps the branch
-  # anchored to the same predicate the next GET /rooms/:id would itself
-  # re-check via redirect_inactive_for_non_admins.
-  def hide
-    authorize @room, :hide?
-    @room.hide!(actor: Current.user)
-    redirect_to policy(@room).show? ? room_path(@room) : find_a_room_path,
-                notice: t("rooms.hide.success")
-  end
-
-  # Admin-only (RoomPolicy#unhide?) — always lands back on the room, since
-  # only an admin ever reaches this action and an admin can always see it.
-  def unhide
-    authorize @room, :unhide?
-    @room.unhide!(actor: Current.user)
-    redirect_to room_path(@room), notice: t("rooms.unhide.success")
-  end
-
-  private
 
   # Blank "add a photo" rows for the gallery card, up to the D9 five-image
   # cap (app/models/media_asset.rb) — `.build` appends to the
@@ -378,17 +366,6 @@ class RoomsController < ApplicationController
     submitted_gallery_rows(attrs).any? { |row| gallery_row_changed?(row) }
   end
 
-  # Task 4 (image metadata): unlike panorama/seating_chart themselves,
-  # the *_alt/*_description/*_derived_ok fields are ordinary columns that
-  # rooms/edit/_media_sections renders and resubmits UNCONDITIONALLY on
-  # every request (not just when the slot has an attachment) — so a
-  # presence check alone would false-positive on every curated-only
-  # resubmission of a room that already has an authored alt/description
-  # (the text field redisplays the current value, which is "present" but
-  # unchanged). Each key is compared against @room's own CURRENT value
-  # instead, mirroring gallery_row_changed?'s position-diff reasoning.
-  # `.to_s` on both sides normalizes nil vs. "" (a never-authored column vs.
-  # an unfilled text field) so neither reads as a change against the other.
   METADATA_TEXT_KEYS = %w[
     panorama_alt panorama_description
     seating_chart_alt seating_chart_description
@@ -547,7 +524,7 @@ class RoomsController < ApplicationController
   # shape-checked nested syntax is what MEDIA_PARAMS' double-array
   # gallery_attributes entry above is written for.
   def room_params
-    permitted = CURATED_PARAMS.dup
+    permitted = [ *CURATED_PARAMS, :listed ]
     permitted.concat(MEDIA_PARAMS) if policy(@room).manage_media?
     params.expect(room: permitted)
   end

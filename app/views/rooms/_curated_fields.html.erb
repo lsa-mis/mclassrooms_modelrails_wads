@@ -1,0 +1,17 @@
+<%# locals: (room:) %>
+<section data-testid="curated-fields" aria-labelledby="curated-fields-heading" class="mt-4 rounded-lg border border-border bg-surface-raised p-4">
+  <h2 id="curated-fields-heading" class="text-sm font-semibold text-text-heading"><%= t("rooms.edit.curated_heading") %></h2>
+  <%= fields model: room do |form| %>
+    <div class="mt-3 grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <%= form.text_field :nickname, form: "room-edit-form",
+            label: t("rooms.edit.nickname_label"),
+            help: t("rooms.edit.nickname_hint") %>
+
+      <%= form.number_field :ada_seat_count, form: "room-edit-form", min: 0,
+            label: t("rooms.edit.ada_seat_count_label"),
+            help: t("rooms.edit.ada_seat_count_hint") %>
+    </div>
+  <% end %>
+  <p class="mt-4 text-sm text-text-body"><%= t("rooms.edit.synced_seats", count: room.instructional_seat_count.to_i) %></p>
+  <p class="mt-1 text-sm text-text-body"><%= t("rooms.edit.synced_sections") %></p>
+</section>

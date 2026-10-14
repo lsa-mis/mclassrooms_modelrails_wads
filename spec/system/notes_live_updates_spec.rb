@@ -84,7 +84,7 @@ RSpec.describe "Notes live updates", type: :system do
 
   it "room page with the note create form open is axe-clean at AAA (both themes)" do
     sign_in_via_form(editor)
-    visit room_path(room)
+    visit edit_room_path(room)
 
     expect(page).to have_css("##{ActionView::RecordIdentifier.dom_id(room, :new_note)}")
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
@@ -100,7 +100,7 @@ RSpec.describe "Notes live updates", type: :system do
 
     using_session(:editor_session) do
       sign_in_via_form(editor)
-      visit room_path(room)
+      visit edit_room_path(room)
 
       new_note_container = "##{ActionView::RecordIdentifier.dom_id(room, :new_note)}"
       fill_in_lexxy(new_note_container, "Projector bulb needs replacement")

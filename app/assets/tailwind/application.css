@@ -140,6 +140,12 @@ body:has([data-biscuit-target="banner"]:not([hidden])) {
   }
 }
 
+@utility hidden-hatch {
+  background-image: repeating-linear-gradient(135deg,
+    oklch(0% 0 0 / 0.45) 0 14px,
+    oklch(0% 0 0 / 0.2) 14px 28px);
+}
+
 /* focus-ring for controls on the header bar, whose color a brand may set. */
 @utility focus-ring-chrome {
   &:focus-visible {

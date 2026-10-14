@@ -1,4 +1,4 @@
-<%# locals: (notable:) %>
+<%# locals: (notable:, editing: true) %>
 <%# MiClassrooms Phase 4 Task 4 (Brief §5.3) / Phase 5 Task 7 (Brief §14.1,
     D15): live, interactive notes for the room detail page — the notable's
     own notes (alerts first, then plain), then (when the notable responds
@@ -23,12 +23,12 @@
   preload = [ :author, :rich_text_body ]
   own_roots = notable.notes.alerts.roots.includes(*preload).to_a +
               notable.notes.plain_notes.roots.includes(*preload).to_a
-  own_can_create = policy(Note.new(notable: notable)).create?
+  own_can_create = editing && policy(Note.new(notable: notable)).create?
 
   building = notable.respond_to?(:building) ? notable.building : nil
   building_roots = building ? (building.notes.alerts.roots.includes(*preload).to_a +
                                 building.notes.plain_notes.roots.includes(*preload).to_a) : []
-  building_can_create = building ? policy(Note.new(notable: building)).create? : false
+  building_can_create = editing && building.present? && policy(Note.new(notable: building)).create?
 %>
 <% if own_roots.any? || own_can_create || building_roots.any? || building_can_create %>
   <section class="mt-8">

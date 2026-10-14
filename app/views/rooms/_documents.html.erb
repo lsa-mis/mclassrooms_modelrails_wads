@@ -1,0 +1,43 @@
+<%# locals: (room:, form_room:, manage_media:, open_media:) %>
+<% if manage_media || room.seating_chart.attached? || room.floor.present? %>
+  <div data-testid="documents-card" class="rounded-lg border border-border p-4">
+    <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.show.documents_heading") %></h2>
+    <div class="mt-3 space-y-3">
+      <% if manage_media %>
+        <%= render "rooms/edit/seating_chart_editor", room: room, form_room: form_room,
+              open: open_media == :seating_chart %>
+      <% elsif room.seating_chart.attached? %>
+        <% if room.seating_chart.content_type == "application/pdf" %>
+          <%= link_to t("rooms.show.seating_chart_link", room: room.display_name),
+                rails_blob_path(room.seating_chart, disposition: :inline),
+                class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+        <% else %>
+          <%= ui :dialog, id: "seating-chart-dialog", title: room.display_name do |dialog| %>
+            <% dialog.with_trigger do %>
+              <button type="button" data-testid="seating-chart-thumb"
+                      class="block overflow-hidden rounded-md cursor-zoom-in focus-ring">
+                <%= ui :image,
+                      src: rails_representation_path(room.seating_chart.variant(resize_to_fill: [ 150, 150 ], format: :webp)),
+                      alt: room.alt_for(:seating_chart),
+                      width: 150, height: 150,
+                      class: "size-[150px] object-cover" %>
+              </button>
+            <% end %>
+            <%= ui :figure do %>
+              <%= ui :image,
+                    src: rails_representation_path(room.seating_chart.variant(:lightbox)),
+                    alt: room.alt_for(:seating_chart),
+                    loading: :eager,
+                    class: "max-h-[70vh] w-auto rounded-md mx-auto" %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+      <% if room.floor.present? %>
+        <div>
+          <%= link_to t("rooms.show.floor_plan_link"), floor_plan_room_path(room), class: "btn-secondary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

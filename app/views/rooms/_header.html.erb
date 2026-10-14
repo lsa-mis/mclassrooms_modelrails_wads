@@ -14,8 +14,3 @@
       { label: room.display_name }
     ] %>
 
-<% if RoleResolver.for(Current.user).admin? && room.hidden? %>
-  <div class="mt-4">
-    <%= ui :banner, t("rooms.show.inactive_banner"), variant: :warning %>
-  </div>
-<% end %>

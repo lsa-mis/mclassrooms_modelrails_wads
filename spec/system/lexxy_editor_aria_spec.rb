@@ -20,7 +20,7 @@ RSpec.describe "Lexxy editor aria contract", type: :system do
     form_id = ActionView::RecordIdentifier.dom_id(room, :new_note)
     field_id = "#{form_id}_note_body"
 
-    visit room_path(room)
+    visit edit_room_path(room)
     within("##{form_id}") { click_button I18n.t("notes.form.create_submit") }
 
     expect(page).to have_css("##{field_id}-error", text: "Body can't be blank")

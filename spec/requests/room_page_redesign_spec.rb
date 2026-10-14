@@ -24,11 +24,6 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
 
   before { sign_in(viewer) }
 
-  def attach_panorama!
-    room.panorama.attach(io: File.open(Rails.root.join("spec/fixtures/files/room.jpg")),
-                         filename: "pano.jpg", content_type: "image/jpeg")
-  end
-
   it "renders the branded empty band (no error wording, no tabs) when the room has no media" do
     get room_path(room)
 
@@ -38,17 +33,16 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
     expect(page).to have_no_css("[role='tablist']")
   end
 
-  it "gates the empty band's Add photos affordance to those who can edit" do
-    get room_path(room)
-    expect(page).to have_no_link(I18n.t("rooms.show.add_photos"))
-
+  it "keeps the empty band free of editing affordances on the view page, even for an admin" do
     sign_in(membership_with("admin"))
     get room_path(room)
-    expect(page).to have_link(I18n.t("rooms.show.add_photos"))
+
+    expect(page).to have_no_link(I18n.t("rooms.show.add_photos"))
+    expect(page).to have_no_button(I18n.t("rooms.show.add_photos"))
   end
 
   it "renders the media stage with the identity overlay (h1) when a panorama exists" do
-    attach_panorama!
+    attach_panorama!(room)
     get room_path(room)
 
     stage = page.find("[data-testid='media-stage']")
@@ -73,7 +67,7 @@ RSpec.describe "GET /rooms/:id (redesigned room page)", type: :request do
   end
 
   it "renders the photos chip only when both panorama and photos exist, panes hidden not removed" do
-    attach_panorama!
+    attach_panorama!(room)
     create(:media_asset, owner: room, workspace: workspace)
     get room_path(room)
 

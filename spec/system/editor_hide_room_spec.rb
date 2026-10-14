@@ -1,17 +1,5 @@
 require "rails_helper"
 
-# MiClassrooms Phase 5 Task 10 (Brief §14.1): end-to-end coverage of the
-# one-way editor hide flow — RoomPolicy#hide? admits the room's
-# assigned-unit editor while the room is still visible (Task 3/5), the
-# button's `turbo_confirm` copy branches editor-vs-admin
-# (rooms/_visibility_actions.html.erb), and RoomsController#hide redirects
-# an editor to Find a Room (they lose sight of the room they just hid) while
-# a later direct GET /rooms/:id bounces them right back out via
-# redirect_inactive_for_non_admins. Mirrors spec/system/rooms/show_spec.rb's
-# tenancy setup (shared-posture stub + workspace-scoped fixtures) and
-# spec/requests/room_visibility_spec.rb's editor_for(unit) helper (a plain
-# viewer-role membership PLUS an EditorAssignment — RoleResolver#can_edit_room?
-# derives entirely from EditorAssignment, not the Membership role).
 RSpec.describe "Editor hides a room", type: :system do
   # Matches spec/system/admin/*_axe_spec.rb's AAA-only convention (both
   # themes) rather than find_a_room_spec.rb's fuller A+AA+AAA sweep — this
@@ -45,22 +33,18 @@ RSpec.describe "Editor hides a room", type: :system do
   before { sign_in_via_form(editor) }
 
   it "confirms with the editor-specific warning, hides the room, and blinds the editor to it afterward" do
-    visit room_path(room)
+    visit edit_room_path(room)
 
     expect(page).to have_selector("h1", text: room.display_name)
-    expect(page).to have_button(I18n.t("rooms.hide.button"))
+    expect(page).to have_checked_field(I18n.t("rooms.edit.listed_label"), visible: :all)
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
-      "AAA violations on the room page (pre-hide):\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+      "AAA violations on the room page in edit mode (pre-hide):\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
 
-    # The confirmation text must be the editor-specific one-way warning, not
-    # the admin's plain confirmation (rooms/_visibility_actions.html.erb
-    # branches on current_grant.admin?) — accept_confirm(text) raises if the
-    # live dialog's message doesn't match, so this doubles as the assertion
-    # the brief asks for ("assert the confirmation dialog text equals ...
-    # BEFORE accepting").
+    uncheck I18n.t("rooms.edit.listed_label"), allow_label_click: true
+
     accept_confirm(I18n.t("rooms.hide.editor_confirmation")) do
-      click_button I18n.t("rooms.hide.button")
+      click_button I18n.t("rooms.edit.submit")
     end
 
     # RoomsController#hide redirects to policy(@room).show? ? room_path :

@@ -1,27 +1,5 @@
 require "rails_helper"
 
-# MiClassrooms Task 4 (image metadata, Brief §5.2/design spec
-# 2026-07-23-mclassrooms-image-metadata-alt-fallback): the admin authoring UI
-# on top of Describable (columns + resolvers, Tasks 1-3) — alt/description
-# text fields plus a "the auto-generated alt is fine here" checkbox per
-# media slot, so `alt_status_for(slot)` can report :authored/:derived_ok
-# instead of :needs_review. Mirrors spec/system/rooms/edit_spec.rb's tenancy
-# setup (shared-posture stub + workspace-scoped fixtures + sign_in_via_form)
-# and its admin re-role pattern (Membership.find_by!(...).update!(role:
-# Role.system_default!("admin"))).
-#
-# DEVIATION from this task's brief: the brief's snippet sketches
-# `sign_in_editor_for(room)` as "the existing editor-auth helper used by
-# other rooms/edit specs" — no such helper, and no such spec, exists.
-# RoomPolicy#manage_media? is admin-only (even though #update?/#edit? admit
-# a unit editor per Phase 5 Task 3), and rooms/edit.html.erb only renders
-# rooms/edit/_media_sections — where every alt/description/derived_ok field
-# lives — when `policy(@room).manage_media?` is true; an editor instead sees
-# the media_admin_only_hint banner with none of these fields at all (proven
-# by spec/requests/rooms_update_spec.rb's "renders the curated fields and
-# the media-admin-only hint, but not the media inputs" spec). So this spec
-# signs in as an admin, exactly like spec/system/rooms/edit_spec.rb, rather
-# than the brief's placeholder editor helper.
 RSpec.describe "Authoring room media metadata", type: :system do
   let!(:workspace) { create(:workspace, slug: "directory", personal: false) }
 
@@ -47,10 +25,13 @@ RSpec.describe "Authoring room media metadata", type: :system do
                   panorama_alt: nil, panorama_derived_ok: false)
 
     visit edit_room_path(room)
+    click_button I18n.t("rooms.edit.edit_panorama")
 
-    fill_in "room[panorama_alt]", with: "Lecture hall, seats facing the podium"
-    fill_in "room[panorama_description]", with: "Two aisles; step-free front row."
-    click_button I18n.t("rooms.edit.submit")
+    within("dialog#panorama-editor") do
+      fill_in "room[panorama_alt]", with: "Lecture hall, seats facing the podium"
+      fill_in "room[panorama_description]", with: "Two aisles; step-free front row."
+      click_button I18n.t("rooms.edit.save_media")
+    end
 
     expect(page).to have_current_path(room_path(room))
     expect(page).to have_content(I18n.t("rooms.edit.success"))
@@ -67,9 +48,12 @@ RSpec.describe "Authoring room media metadata", type: :system do
                                filename: "seating.pdf", content_type: "application/pdf")
 
     visit edit_room_path(room)
+    click_button I18n.t("rooms.edit.edit_seating_chart")
 
-    check "room[seating_chart_derived_ok]"
-    click_button I18n.t("rooms.edit.submit")
+    within("dialog#seating-chart-editor") do
+      check "room[seating_chart_derived_ok]"
+      click_button I18n.t("rooms.edit.save_media")
+    end
 
     expect(page).to have_current_path(room_path(room))
     expect(room.reload.alt_status_for(:seating_chart)).to eq(:derived_ok)

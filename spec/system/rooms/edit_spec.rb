@@ -52,26 +52,14 @@ RSpec.describe "Room edit", type: :system do
 
   before { sign_in_via_form(admin) }
 
-  it "edits the nickname, uploads a new panorama, and reorders the gallery, accessibly in both themes" do
+  it "edits the nickname in place on the room page, accessibly in both themes" do
     visit edit_room_path(room)
 
-    expect(page).to have_selector("h1", text: I18n.t("rooms.edit.title", room: room.display_name))
+    expect(page).to have_selector("h1", text: room.display_name)
+    expect(page).to have_css("[data-room-mode='edit']")
 
     fill_in I18n.t("rooms.edit.nickname_label"), with: "New Name"
-    # `browser_upload_fixture` (spec/support/browser_upload_helpers.rb): under
-    # Cuprite, uploading a file handed to `attach_file` straight from the
-    # fixtures dir hangs the submit with a browser-side `NotReadableError`. A
-    # private per-example copy reads reliably. See the helper for the full note.
-    attach_file I18n.t("rooms.edit.panorama_label"), browser_upload_fixture("room.jpg")
 
-    # Swap the two gallery images' positions (first ↔ second).
-    fill_in I18n.t("rooms.edit.position_label", position: 1), with: "2"
-    fill_in I18n.t("rooms.edit.position_label", position: 2), with: "1"
-
-    # Audit the edit page itself in its "filled out, ready to submit" state —
-    # every card (curated fields, both media slots with their
-    # current-attachment previews + remove checkboxes, and the gallery with
-    # both existing rows plus a blank add row) is on the page at this point.
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
 
@@ -80,8 +68,39 @@ RSpec.describe "Room edit", type: :system do
     expect(page).to have_current_path(room_path(room))
     expect(page).to have_content(I18n.t("rooms.edit.success"))
     expect(page).to have_selector("h1", text: "New Name")
-
     expect(room.reload.nickname).to eq("New Name")
+  end
+
+  it "replaces the panorama from its dialog, accessibly in both themes" do
+    visit edit_room_path(room)
+
+    click_button I18n.t("rooms.edit.edit_panorama")
+
+    within("dialog#panorama-editor") do
+      attach_file I18n.t("rooms.edit.upload_new"), browser_upload_fixture("room.jpg")
+    end
+
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations with the panorama dialog open:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+
+    within("dialog#panorama-editor") { click_button I18n.t("rooms.edit.save_media") }
+
+    expect(page).to have_current_path(room_path(room))
+    expect(page).to have_content(I18n.t("rooms.edit.success"))
+  end
+
+  it "reorders the gallery from the photos sheet" do
+    visit edit_room_path(room)
+
+    click_button I18n.t("rooms.edit.manage_photos", count: 2)
+
+    within("dialog#gallery-editor") do
+      fill_in I18n.t("rooms.edit.position_label", position: 1), with: "2"
+      fill_in I18n.t("rooms.edit.position_label", position: 2), with: "1"
+      click_button I18n.t("rooms.edit.save_media")
+    end
+
+    expect(page).to have_current_path(room_path(room))
     expect(first_image.reload.position).to eq(2)
     expect(second_image.reload.position).to eq(1)
   end
