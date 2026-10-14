@@ -35,10 +35,11 @@
         <% main_context_attrs =
              if Current.workspace.personal?
                { data: { workspace_kind: "personal" } }
-             else
-               ws_hue = Current.workspace.identity.hue
+             elsif (ws_hue = Current.workspace.identity.custom_hue)
                { data: { workspace_branded: "" },
                  style: "--ws-primary-light: oklch(0.40 0.15 #{ws_hue}); --ws-primary-dark: oklch(0.78 0.10 #{ws_hue});" }
+             else
+               {}
              end %>
         <%= tag.main id: "main-content", tabindex: "-1", class: "flex-1 min-w-0", **main_context_attrs do %>
           <%# The section nav and page content share one left-aligned max-w-4xl

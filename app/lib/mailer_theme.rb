@@ -9,7 +9,7 @@ module MailerTheme
   TEXT           = "#1f2937"  # primary body text + headings
   SUBTLE         = "#374151"  # lightly de-emphasized body (e.g. "what is this?")
   MUTED          = "#4b5563"  # footnotes / meta
-  INTERACTIVE    = "#1e40af"  # buttons + links
+  INTERACTIVE    = "#043b6c"  # buttons + links
   ON_INTERACTIVE = "#ffffff"  # text on an interactive fill
   BORDER         = "#e5e7eb"  # dividers / borders
 end

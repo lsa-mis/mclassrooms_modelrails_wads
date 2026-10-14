@@ -28,11 +28,11 @@ RSpec.describe "Workspace branding cascade", type: :request do
       expect(response.body).to include("--ws-primary-dark: oklch(0.78 0.10 270)")
     end
 
-    it "falls back to hue 210 for both variables when primary_color is nil" do
+    it "leaves the brand's own tokens in place when primary_color is nil" do
       workspace.update!(primary_color: nil)
       get workspace_path(workspace)
-      expect(response.body).to include("--ws-primary-light: oklch(0.40 0.15 210)")
-      expect(response.body).to include("--ws-primary-dark: oklch(0.78 0.10 210)")
+      expect(response.body).not_to include("data-workspace-branded")
+      expect(response.body).not_to include("--ws-primary")
     end
   end
 

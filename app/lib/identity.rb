@@ -4,7 +4,7 @@
 # NOT OauthIdentity (same directory) — that is the *authentication* identity
 # (provider/uid). Design: docs repo, specs/2026-08-12-identity-poro-design.md.
 class Identity
-  DEFAULT_HUE = 210
+  DEFAULT_HUE = 252
 
   Result = Struct.new(:success, :error, :error_message, keyword_init: true) do
     def success? = success

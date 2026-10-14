@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_11_231059) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_232719) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -543,7 +543,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_231059) do
     t.datetime "pending_email_sent_at"
     t.string "avatar_source", default: "initials", null: false
     t.boolean "has_gravatar", default: false, null: false
-    t.integer "primary_color", default: 210
+    t.integer "primary_color", default: 252
     t.json "last_known_browsers", default: [], null: false
     t.integer "personal_workspace_id"
     t.datetime "onboarded_at"
@@ -608,7 +608,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_231059) do
     t.datetime "updated_at", null: false
     t.boolean "personal", default: false, null: false
     t.string "logo_source", default: "initials", null: false
-    t.integer "primary_color", default: 210
+    t.integer "primary_color", default: 252
     t.string "join_policy", default: "invite", null: false
     t.datetime "archived_at"
     t.datetime "suspended_at"

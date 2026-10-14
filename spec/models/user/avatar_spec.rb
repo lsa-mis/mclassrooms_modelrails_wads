@@ -168,9 +168,9 @@ RSpec.describe User, type: :model do
   end
 
   describe "primary_color" do
-    it "defaults to 210" do
+    it "defaults to the brand hue" do
       user = create(:user)
-      expect(user.primary_color).to eq(210)
+      expect(user.primary_color).to eq(Identity::DEFAULT_HUE)
     end
 
     it "validates inclusion in 0..360" do

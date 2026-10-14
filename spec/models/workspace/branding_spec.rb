@@ -83,9 +83,9 @@ RSpec.describe Workspace, type: :model do
   end
 
   describe "primary_color (integer hue)" do
-    it "defaults to 210 (blue)" do
+    it "defaults to the brand hue" do
       workspace = create(:workspace)
-      expect(workspace.primary_color).to eq(210)
+      expect(workspace.primary_color).to eq(Identity::DEFAULT_HUE)
     end
 
     it "validates inclusion in 0..360" do
