@@ -8,17 +8,18 @@ module Sync
 
     def perform
       seen = []
+      unread_facility_ids = []
       skipped_rmrecnbrs = Set.new
       facility_ids_by_building = preload_facility_ids_by_building
 
       facility_ids = Building.for_current_workspace.order(:id).pluck(:bldrecnbr).flat_map { facility_ids_by_building[it] || [] }
       progress_total!(facility_ids.size)
       facility_ids.each do |facility_id|
-        apply_facility(facility_id, seen, skipped_rmrecnbrs)
+        apply_facility(facility_id, seen, unread_facility_ids, skipped_rmrecnbrs)
         progress!
       end
 
-      clear_stale_facility_codes(seen)
+      clear_stale_facility_codes(seen, unread_facility_ids)
       Setting.recompute_capacity_filter_max!
     end
 
@@ -30,8 +31,9 @@ module Sync
           .transform_values { |group| group.map { |row| row["FacilityID"] }.uniq }
     end
 
-    def apply_facility(facility_id, seen, skipped_rmrecnbrs)
+    def apply_facility(facility_id, seen, unread_facility_ids, skipped_rmrecnbrs)
       characteristic_rows = fetch_facility_characteristics(facility_id)
+      unread_facility_ids << facility_id if characteristic_rows.empty?
 
       characteristic_rows.group_by { |row| row["RmRecNbr"] }.each_key do |rmrecnbr|
         seen << rmrecnbr
@@ -66,13 +68,14 @@ module Sync
       room.update!(assignable)
     end
 
-    def clear_stale_facility_codes(seen)
+    def clear_stale_facility_codes(seen, unread_facility_ids)
       if seen.empty?
         add_warning("Classroom facility crosswalk discovered zero rows this run; skipping facility_code clear sweep")
         return
       end
 
       stale = Room.for_current_workspace.where.not(facility_code: nil).where.not(rmrecnbr: seen)
+                  .where.not(facility_code: unread_facility_ids)
 
       if dry_run?
         stale.find_each do |room|
