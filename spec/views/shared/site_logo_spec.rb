@@ -34,7 +34,7 @@ RSpec.describe "shared/_site_logo.html.erb", type: :view do
 
   context "when the fork's mark stands in for the name's first letter" do
     around do |example|
-      I18n.backend.store_translations(:en, application: { wordmark_tail: "lassrooms" })
+      I18n.backend.store_translations(:en, application: { wordmark_tail: "Classrooms" })
       example.run
     ensure
       I18n.backend.reload!
@@ -46,7 +46,7 @@ RSpec.describe "shared/_site_logo.html.erb", type: :view do
       expect(nodes.first.text).to eq(I18n.t("application.name"))
       expect(nodes.last["aria-hidden"]).to eq("true")
       expect(nodes.last.at_css("svg")).to be_present
-      expect(nodes.last.text.strip).to eq("lassrooms")
+      expect(nodes.last.text.strip).to eq("Classrooms")
     end
 
     it "keeps the mark a direct child in the compact variant, with the name sr-only" do

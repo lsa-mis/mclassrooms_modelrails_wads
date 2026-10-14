@@ -50,6 +50,26 @@ RSpec.describe "Branded header", type: :system do
     expect(computed("header a[href='#{root_path}'] svg", "color")).to eq("oklch(0.863 0.176 89.8)")
   end
 
+  context "when the brand sets no wordmark tail" do
+    around do |example|
+      I18n.backend.store_translations(:en, application: { wordmark_tail: nil })
+      example.run
+    ensure
+      I18n.backend.reload!
+    end
+
+    def rendered_height(selector)
+      page.evaluate_script("document.querySelector(#{selector.to_json}).getBoundingClientRect().height")
+    end
+
+    it "keeps the fallback mark at the link's size in the header and the desktop footer" do
+      visit root_path
+
+      expect(rendered_height("header a[href='#{root_path}'] > svg")).to eq(24)
+      expect(rendered_height("footer a.sm\\:flex > svg")).to eq(24)
+    end
+  end
+
   it "stays AAA in both themes" do
     visit find_a_room_path
 
