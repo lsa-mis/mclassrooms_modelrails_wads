@@ -1,6 +1,14 @@
 <%# locals: (name_class: "text-xl font-bold text-text-heading") %>
-<%# The lockup: mark + wordmark as siblings, no wrapper — the caller's link is
-    the flex box and sizes the mark with [&>svg]:h-*. The mark itself is the
-    fork-owned shared/_site_mark (see /docs/developer/forking). %>
-<%= render "shared/site_mark" %>
-<span class="<%= name_class %>"><%= t("application.name") %></span>
+<%# The lockup — the caller's link is the flex box; the mark is the fork-owned
+    shared/_site_mark. %>
+<% tail = t("application.wordmark_tail") if I18n.exists?("application.wordmark_tail") %>
+<% if tail.blank? %>
+  <%= render "shared/site_mark" %>
+  <span class="<%= name_class %>"><%= t("application.name") %></span>
+<% elsif name_class == "sr-only" %>
+  <span class="sr-only"><%= t("application.name") %></span>
+  <%= render "shared/site_mark" %>
+<% else %>
+  <span class="sr-only"><%= t("application.name") %></span>
+  <span aria-hidden="true" class="<%= name_class %> inline-flex items-baseline gap-[0.06em] [&>svg]:h-[0.72em] [&>svg]:w-auto"><%= render "shared/site_mark" %><span><%= tail %></span></span>
+<% end %>

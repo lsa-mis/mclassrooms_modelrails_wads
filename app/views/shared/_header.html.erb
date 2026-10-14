@@ -5,10 +5,10 @@
        class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <%= link_to main_app.root_path,
-            class: "flex items-center gap-2 min-h-input text-on-chrome-strong [&>svg]:h-6 [&>svg]:text-chrome-mark
+            class: "flex items-center gap-2 min-h-input text-on-chrome-strong [&_svg]:text-chrome-mark
                     hover:opacity-80 transition-opacity
                     focus-ring-chrome rounded" do %>
-        <%= render "shared/site_logo", name_class: "text-xl font-bold inline-block first-letter:text-chrome-mark" %>
+        <%= render "shared/site_logo", name_class: "text-3xl font-bold" %>
       <% end %>
 
       <%# Right cluster. v2 (2026-05-23): the standalone notifications bell
