@@ -94,7 +94,6 @@
   color: #4b5563; /* muted, still ≥7:1 on white */
 }
 
-/* Dark theme: mirrors the app's `.dark` toggle; every pairing ≥7:1. */
 .dark .lsa-tdx-feedback-modal-content {
   background: #1e232b;
   color: #f1f5f9;
