@@ -118,7 +118,6 @@ module Sync
       warnings << message
     end
 
-    # A long step reports how far it has got; saving the row broadcasts a refresh, so at most every PROGRESS_INTERVAL.
     def progress_total!(total)
       @items_done = 0
       @progress_saved_at = Time.current

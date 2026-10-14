@@ -1,11 +1,9 @@
-# DURATION must exceed any real sync, queue wait included, or the one-at-a-time limit lapses mid-sync.
 class SyncRunJob < ApplicationJob
   DURATION = 12.hours
 
   queue_as :default
   limits_concurrency to: 1, key: ->(workspace, **) { workspace }, duration: DURATION, on_conflict: :discard
 
-  # Solid Queue stores nothing for a request it drops, so that job comes back with no provider id.
   def self.request(workspace, **)
     job = perform_later(workspace, **)
     return :not_queued unless job

@@ -109,7 +109,6 @@ namespace :admin do
   resources :sync_runs, only: %i[index show]
 end
 
-# Operator controls for the sync; merges with upstream's operations namespace in config/routes.rb.
 namespace :operations do
   resources :sync_runs, only: %i[index show create] do
     scope module: :sync_runs do

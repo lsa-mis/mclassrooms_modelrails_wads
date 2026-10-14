@@ -1,6 +1,5 @@
 require "rails_helper"
 
-# The recurring 2:30am trigger only resolves the directory workspace and enqueues SyncRunJob.
 RSpec.describe SyncNightlyJob, type: :job do
   include ActiveJob::TestHelper
 

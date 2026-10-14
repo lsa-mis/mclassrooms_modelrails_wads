@@ -1,5 +1,3 @@
-# Runs the sync phases, in order, for one SyncRun and never raises once that run exists. Phases, resuming,
-# the gateway budget, and the one-sync-at-a-time rule: app/docs/developer/sync.md.
 module Sync
   class RunPipeline
     CORE_PHASES = [
@@ -29,7 +27,6 @@ module Sync
     end
 
     def call
-      # Creating the run sits outside the never-raises boundary: with no row there is nowhere to record a failure.
       run = @given_run || create_run!
       execute(run)
       run
@@ -42,7 +39,6 @@ module Sync
     # The never-raises boundary: `run` is guaranteed to exist here, so any
     # failure below is recorded on it and swallowed rather than propagated.
     def execute(run)
-      # A given run may be a failed one being resumed; this attempt gets its own start time.
       run.update!(status: :running, finished_at: nil, started_at: Time.current) if @given_run
 
       execute_core_phases(run)

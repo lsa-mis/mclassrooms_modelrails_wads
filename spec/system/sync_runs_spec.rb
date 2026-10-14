@@ -38,7 +38,6 @@ RSpec.describe "Sync runs", type: :system do
     expect(axe_clean_in_both_themes?).to be(true), axe_violations_in_both_themes.join("\n")
   end
 
-  # SyncRunJob.request is stubbed: the test adapter never sets provider_job_id, so every real request would read as dropped.
   it "lets an operator retry the most recent failed run and start a new one, at AAA in both themes" do
     allow(SyncRunJob).to receive(:request).and_return(:queued)
     sign_in_via_form(create(:user).tap { |user| Operatorship.grant!(user:) })
@@ -57,7 +56,6 @@ RSpec.describe "Sync runs", type: :system do
     expect(toast_pills_fit?).to be(true), "a success pill is one line and clips its text; shorten the message"
   end
 
-  # Success toasts are single-line pills that hide overflow, so a long message is cut off silently.
   def toast_pills_fit?
     page.evaluate_script(<<~JS)
       Array.from(document.querySelectorAll('[data-controller="toast-pill"]')).every(pill => pill.scrollWidth <= pill.clientWidth)

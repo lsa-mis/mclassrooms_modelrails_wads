@@ -14,7 +14,6 @@ class SyncRun < ApplicationRecord
 
   def self.dry_run_by_default? = ENV["API_UPDATE_DELETE_DRY_RUN"].present?
 
-  # How long the last finished sync took, as the "usually takes about" estimate for a running one.
   def self.typical_duration_for(workspace)
     where(workspace:).succeeded.where(dry_run: false).newest_first.first&.duration_seconds
   end
@@ -25,8 +24,6 @@ class SyncRun < ApplicationRecord
       classrooms: rooms.classroom.count, listed_classrooms: rooms.classroom.listed.count }
   end
 
-  # Called only by SyncRunJob, which runs one sync per workspace at a time: any run still marked running
-  # was left by a worker that died, so it is failed and can be retried.
   def self.fail_abandoned(workspace)
     now = Time.current
     abandoned = where(workspace:).running
@@ -36,7 +33,6 @@ class SyncRun < ApplicationRecord
 
   def self.most_recent_for(workspace) = where(workspace:).newest_first.first
 
-  # Only the most recent run: an older run's leftover steps would re-run against today's data.
   def retryable? = failed? && self == SyncRun.most_recent_for(workspace)
 
   def duration_seconds
@@ -59,7 +55,6 @@ class SyncRun < ApplicationRecord
     ((steps_done + within) * 100 / steps_total).floor
   end
 
-  # [kind, count] per kind of change ("rooms_updated"), in step order; a dry run's are what it would have changed.
   def changes_made = phases_in_order.flat_map { |phase| phase.changes_made.map { |counter, count| [ "#{phase.key}_#{counter}", count ] } }
 
   def change_count = changes_made.sum(&:last)

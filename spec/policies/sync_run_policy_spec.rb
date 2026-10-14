@@ -1,6 +1,5 @@
 require "rails_helper"
 
-# Admins and editors read sync history; retrying or starting a sync is an operator action (Operations::SyncRunPolicy).
 RSpec.describe SyncRunPolicy do
   include_context "role matrix"
 
@@ -13,7 +12,6 @@ RSpec.describe SyncRunPolicy do
     [ :show?,    :sync_run, true, true,  true,  false ]
   ]
 
-  # Retrying or starting a sync is an operator action now (Operations::SyncRunPolicy), not a workspace admin's.
   it "answers no workspace-tier action verbs" do
     expect(described_class.new(admin_user, sync_run)).not_to respond_to(:resume?, :refresh?)
   end
