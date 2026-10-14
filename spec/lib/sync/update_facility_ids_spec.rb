@@ -221,6 +221,38 @@ RSpec.describe Sync::UpdateFacilityIds do
       expect(counter(phase, :cleared)).to eq(0)
     end
 
+    describe "a facility still on the list that couldn't be read" do
+      let!(:german) { create(:room, workspace: workspace, building: building, rmrecnbr: "2005046", facility_code: "MLB1200") }
+      let!(:ah) { create(:room, workspace: workspace, building: building, rmrecnbr: "2005090", facility_code: "AH0100") }
+
+      before do
+        stub_facility_list(fixture: "classroom_list_two_facilities.json")
+        stub_facility_characteristics(facility_id: "MLB1200", fixture: "characteristics_MLB1200.json")
+      end
+
+      it "keeps its rooms' facility codes when its Characteristics fetch fails" do
+        stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/aa/ClassroomList/v2/Classrooms/AH0100/Characteristics")
+          .to_return(status: 500, body: "")
+
+        result = described_class.call(run: run, client: client)
+
+        expect(result).to be_success
+        expect(ah.reload.facility_code).to eq("AH0100")
+        expect(counter(phase, :cleared)).to eq(0)
+        expect(phase.warnings).to include(a_string_matching(/AH0100/))
+      end
+
+      it "keeps its rooms' facility codes when its Characteristics response is empty" do
+        stub_facility_characteristics(facility_id: "AH0100", fixture: "characteristics_empty.json")
+
+        result = described_class.call(run: run, client: client)
+
+        expect(result).to be_success
+        expect(ah.reload.facility_code).to eq("AH0100")
+        expect(counter(phase, :cleared)).to eq(0)
+      end
+    end
+
     describe "dry run (Brief §6.1 API_UPDATE_DELETE_DRY_RUN)" do
       it "reports the would-clear list without writing, and does not touch in_feed" do
         dry_run = create(:sync_run, workspace: workspace, dry_run: true)
