@@ -20,8 +20,31 @@
 .lsa-tdx-feedback-trigger-btn,
 .lsa-tdx-feedback-btn-primary,
 .lsa-tdx-feedback-submit-btn {
-  background-color: #1e3a8a; /* dark blue; white text >7:1 */
-  color: #ffffff;
+  background-color: var(--color-interactive);
+  color: var(--color-text-on-interactive);
+}
+
+.lsa-tdx-feedback-trigger-btn {
+  box-shadow: 0 4px 12px color-mix(in oklch, var(--primary-900) 30%, transparent);
+}
+
+.lsa-tdx-feedback-trigger-btn:hover,
+.lsa-tdx-feedback-btn-primary:hover:not(:disabled),
+.lsa-tdx-feedback-submit-btn:hover:not(:disabled) {
+  background-color: var(--color-interactive-hover);
+}
+
+.lsa-tdx-feedback-trigger-btn:hover {
+  box-shadow: 0 6px 20px color-mix(in oklch, var(--primary-900) 40%, transparent);
+}
+
+.lsa-tdx-feedback-form-group input:focus,
+.lsa-tdx-feedback-form-group select:focus,
+.lsa-tdx-feedback-form-group textarea:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: none;
+  outline: 2px solid var(--color-interactive-focus);
+  outline-offset: 2px;
 }
 
 /*
@@ -73,14 +96,6 @@
   color: #4b5563; /* muted, still ≥7:1 on white */
 }
 
-/*
- * Dark theme. The app toggles `.dark` on <html> (theme_controller.js); mirror
- * it so the modal matches dark mode instead of flashing a white panel. Dark
- * surface + light text/fields, every pairing ≥7:1. The primary/submit + trigger
- * buttons already carry their own dark-blue bg + white text (above), so they
- * hold in both themes and aren't restyled here. Upstream target: ship the modal
- * as theme-aware CSS custom properties rather than this fork-side `.dark` block.
- */
 .dark .lsa-tdx-feedback-modal-content {
   background: #1e232b;
   color: #f1f5f9;
