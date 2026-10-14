@@ -50,9 +50,10 @@ Two consequences follow:
 
 ## What the phases may change
 
-- **Only the rooms phase creates rooms.** The facility-IDs phase matches existing rooms by `rmrecnbr` and writes `facility_code` and `campus`; a room number it can't match is skipped with a warning.
-- **The facility-to-room crosswalk comes from `/Characteristics`.** The classroom list carries no room number, so the facility-IDs phase reads each facility's `/Characteristics` rows for their `RmRecNbr`. A facility with no characteristics can't be matched; that's an accepted gap, not guessed at.
-- **A classroom that leaves the classroom list loses its facility code; it isn't deactivated.** Offices and labs are never on that list, so deactivating on absence would retire them nightly. Clearing the code drops the room from Find-a-Room, and the next sync that finds it restores it. `in_feed` belongs to the rooms phase alone.
+- **Only the rooms phase creates rooms.** The facility-IDs phase matches existing rooms by `rmrecnbr` and writes `facility_code` and `campus`; a room number it can't match is skipped with a warning, once per run however many facilities list it.
+- **The classroom list is fetched once and grouped by `BuildingID` in Ruby.** Whether the gateway honours a `BuildingID` filter on that endpoint is unverified, and a filter it silently ignored would hand every building the whole list.
+- **The facility-to-room crosswalk comes from `/Characteristics`.** The classroom list carries no room number, so the facility-IDs phase reads each facility's `/Characteristics` rows for their `RmRecNbr`; one facility can cover several rooms. A 429 there retries only that facility. A facility with no characteristics, or whose fetch fails outright, is warned and skipped; that's an accepted gap, not guessed at.
+- **A classroom that leaves the classroom list loses its facility code; it isn't deactivated.** Offices and labs are never on that list, so deactivating on absence would retire them nightly. Only rooms holding a facility code are swept, so a room that never had one is never touched. Clearing the code drops the room from Find-a-Room, and the next sync that finds it restores it. `in_feed` belongs to the rooms phase alone.
 - **Every stale sweep is skipped, with a warning, when its feed comes back empty,** so a gateway glitch can't retire everything at once.
 - **The capacity filter's maximum is recomputed last** in the facility-IDs phase, so it runs only when the phase got that far, with seat counts the rooms phase already wrote.
 
