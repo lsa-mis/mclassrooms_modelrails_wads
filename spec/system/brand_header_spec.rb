@@ -47,8 +47,7 @@ RSpec.describe "Branded header", type: :system do
   it "sets the wordmark's M in maize" do
     visit root_path
 
-    expect(computed("header a[href='#{root_path}'] span", "color", pseudo: "::first-letter"))
-      .to eq("oklch(0.863 0.176 89.8)")
+    expect(computed("header a[href='#{root_path}'] svg", "color")).to eq("oklch(0.863 0.176 89.8)")
   end
 
   it "stays AAA in both themes" do
