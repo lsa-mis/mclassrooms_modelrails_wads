@@ -242,6 +242,19 @@ RSpec.describe Sync::UpdateFacilityIds do
         expect(phase.warnings).to include(a_string_matching(/AH0100/))
       end
 
+      it "keeps its rooms' facility codes when its Characteristics rows carry no usable room number" do
+        stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/aa/ClassroomList/v2/Classrooms/AH0100/Characteristics")
+          .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS,
+                     body: { Classrooms: { Classroom: [ { RmRecNbr: nil, Chrstc: 301 }, { RmRecNbr: "", Chrstc: 302 } ] } }.to_json)
+
+        result = described_class.call(run: run, client: client)
+
+        expect(result).to be_success
+        expect(ah.reload.facility_code).to eq("AH0100")
+        expect(counter(phase, :cleared)).to eq(0)
+        expect(counter(phase, :skipped)).to eq(0)
+      end
+
       it "keeps its rooms' facility codes when its Characteristics response is empty" do
         stub_facility_characteristics(facility_id: "AH0100", fixture: "characteristics_empty.json")
 
@@ -275,6 +288,22 @@ RSpec.describe Sync::UpdateFacilityIds do
   end
 
   describe "empty-feed guard" do
+    it "skips the clear sweep when every facility's rows lack a usable room number" do
+      kept = create(:room, workspace: workspace, building: building, rmrecnbr: "7777777",
+        facility_code: "KEEP7777", in_feed: true)
+      stub_facility_list
+      stub_request(:get, "#{UmApiStubs::DEFAULT_BASE_URL}/aa/ClassroomList/v2/Classrooms/MLB1200/Characteristics")
+        .to_return(status: 200, headers: UmApiStubs::JSON_RESPONSE_HEADERS,
+                   body: { Classrooms: { Classroom: [ { Chrstc: 301 } ] } }.to_json)
+
+      result = described_class.call(run: run, client: client)
+
+      expect(result).to be_success
+      expect(kept.reload.facility_code).to eq("KEEP7777")
+      expect(counter(phase, :cleared)).to eq(0)
+      expect(phase.warnings).to include(a_string_matching(/zero rows/i))
+    end
+
     it "does not clear any facility_code and warns when the facility list feed returns zero rows" do
       untouched = create(:room, workspace: workspace, building: building, rmrecnbr: "7777777",
         facility_code: "KEEP7777", in_feed: true)
