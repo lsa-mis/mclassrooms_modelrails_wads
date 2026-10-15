@@ -21,6 +21,19 @@ RSpec.describe RoomPresenter do
     end
   end
 
+  describe "#media_summary" do
+    it "lists the room's panorama and photo count" do
+      room.panorama.attach(io: File.open(Rails.root.join("spec/fixtures/files/room.jpg")), filename: "pano.jpg", content_type: "image/jpeg")
+
+      expect(described_class.new(room).media_summary(photo_count: 2))
+        .to eq([ I18n.t("rooms.edit.media_strip_panorama"), I18n.t("rooms.edit.media_strip_photos", count: 2) ].join(" · "))
+    end
+
+    it "says when the room has neither" do
+      expect(described_class.new(room).media_summary(photo_count: 0)).to eq(I18n.t("rooms.edit.media_strip_none"))
+    end
+  end
+
   describe "#chips" do
     it "sorts chips by short_code regardless of creation order" do
       create(:room_characteristic, room: room, code: "c1", short_code: "zzz")

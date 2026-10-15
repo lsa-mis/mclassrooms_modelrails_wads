@@ -1,0 +1,51 @@
+<% content_for(:title) { t("rooms.floor_plan.title", building: @room.building.display_name, floor: @floor.label) } %>
+
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <%= ui :breadcrumb, items: [
+        { label: @room.display_name, href: room_path(@room) },
+        { label: t("rooms.floor_plan.title", building: @room.building.display_name, floor: @floor.label) }
+      ] %>
+
+  <h1 class="mt-4 text-2xl font-bold text-text-heading">
+    <%= t("rooms.floor_plan.title", building: @room.building.display_name, floor: @floor.label) %>
+  </h1>
+
+  <div class="mt-6">
+    <% if @floor.plan.attached? %>
+      <% if @floor.plan.content_type == "application/pdf" %>
+        <%= link_to t("rooms.floor_plan.plan_pdf_link", building: @room.building.display_name, floor: @floor.label),
+              rails_blob_path(@floor.plan, disposition: :inline),
+              class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+      <% else %>
+        <%= ui :figure do %>
+          <%= ui :image,
+                src: rails_representation_path(@floor.plan.variant(:display)),
+                alt: @floor.alt_for(:plan),
+                loading: :eager,
+                class: "w-full rounded-md border border-border" %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <%= ui :alert, tone: :neutral, description: t("rooms.floor_plan.no_plan") %>
+    <% end %>
+  </div>
+
+  <%= ui :list_group, class: "mt-8" do %>
+    <% @rooms_on_floor.each do |floor_room| %>
+      <% current = floor_room == @room %>
+      <%= ui :list_group_item, href: room_path(floor_room),
+            **(current ? { "aria-current": "true" } : {}) do %>
+        <span class="inline-flex items-center gap-2">
+          <%= floor_room.display_name %>
+          <% if current %>
+            <%= ui :badge, t("rooms.floor_plan.current_room"), variant: :soft, tone: :info %>
+          <% end %>
+        </span>
+        <span class="text-text-muted">
+          <%= t("rooms.show.capacity", students: floor_room.instructional_seat_count,
+                ada: floor_room.ada_seat_count.to_i) %>
+        </span>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

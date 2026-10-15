@@ -62,6 +62,11 @@ RSpec.describe "Authoring room media metadata", type: :system do
     expect(page).to have_current_path(edit_room_path(room, open: "gallery"))
     expect(MediaAsset.exists?(doomed.id)).to be(false)
     expect(room.gallery.count).to eq(1)
+
+    within("dialog#gallery-editor") { click_button I18n.t("rooms.edit.cancel") }
+    expect(page).to have_no_css("dialog#gallery-editor[open]")
+    expect(page.evaluate_script("document.activeElement.textContent.trim()"))
+      .to eq(I18n.t("rooms.edit.manage_photos", count: 1))
   end
 
   # Matches spec/system/rooms/edit_spec.rb's fuller A+AA+AAA sweep (not the

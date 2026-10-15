@@ -30,6 +30,7 @@
   --color-surface-raised: var(--color-surface-raised);
   --color-surface-overlay: var(--color-surface-overlay);
   --color-surface-sunken: var(--color-surface-sunken);
+  --color-scrim: var(--color-scrim);
 
   /* Text */
   --color-text-heading: var(--color-text-heading);

@@ -73,7 +73,7 @@ RSpec.describe "Buildings", type: :system do
     expect(page).to have_current_path(building_path(building))
     expect(page).to have_selector("h1", text: "Mason Hall")
     expect(page).to have_content("2") # floor label
-    expect(page).to have_link(href: floor_plan_room_path(classroom))
+    expect(page).to have_link(href: room_floor_plan_path(classroom))
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"

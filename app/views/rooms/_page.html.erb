@@ -13,15 +13,11 @@
   <%= render "rooms/actions", room: room, presenter: presenter, saved_id: saved_id, editing: editing %>
 
   <% if editing %>
-    <div data-testid="media-dock"
-         class="mt-6 overflow-hidden rounded-md border border-border
-                [&>[data-testid=media-stage]]:mt-0 [&>[data-testid=empty-media-band]]:mt-0
-                [&>[data-testid=empty-media-band]]:rounded-none
-                [&_#room_panorama_stage]:rounded-t-none [&_[data-testid=photo-frame]>*]:rounded-t-none">
-      <%= render "rooms/edit/media_strip", room: room, form_room: form_room, manage_media: manage_media,
+    <div data-testid="media-dock" class="mt-6 overflow-hidden rounded-lg border border-border">
+      <%= render "rooms/edit/media_strip", room: room, presenter: presenter, form_room: form_room, manage_media: manage_media,
             open_media: open_media, photo_count: gallery.size %>
       <%= render "rooms/media", room: room, presenter: presenter, gallery: gallery,
-            has_pano: has_pano, has_photos: has_photos, permanent: false %>
+            has_pano: has_pano, has_photos: has_photos, permanent: false, docked: true %>
     </div>
 
     <%= render "rooms/curated_fields", room: form_room %>

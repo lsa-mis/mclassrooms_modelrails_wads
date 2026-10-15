@@ -350,7 +350,7 @@ RSpec.describe "GET /buildings/:id", type: :request do
 
       get building_path(building)
 
-      expect(response.body).to include(floor_plan_room_path(classroom))
+      expect(response.body).to include(room_floor_plan_path(classroom))
     end
 
     it "renders read-only notes for the building" do

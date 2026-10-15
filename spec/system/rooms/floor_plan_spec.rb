@@ -44,7 +44,7 @@ RSpec.describe "Room floor plan", type: :system do
     floor.plan.attach(io: file_fixture("room.jpg").open,
                        filename: "mason-2.jpg", content_type: "image/jpeg")
 
-    visit floor_plan_room_path(room)
+    visit room_floor_plan_path(room)
 
     expect(page).to have_selector(
       "h1", text: I18n.t("rooms.floor_plan.title", building: building.display_name, floor: floor.label)
@@ -61,7 +61,7 @@ RSpec.describe "Room floor plan", type: :system do
   end
 
   it "renders the no-plan empty state accessibly in both themes" do
-    visit floor_plan_room_path(room)
+    visit room_floor_plan_path(room)
 
     expect(page).to have_no_css("figure img")
     expect(page).to have_content(I18n.t("rooms.floor_plan.no_plan"))

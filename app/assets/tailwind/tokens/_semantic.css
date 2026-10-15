@@ -12,6 +12,7 @@
   --color-surface-raised:  oklch(100% 0 0);  /* white */
   --color-surface-overlay: oklch(100% 0 0);  /* white — distinct role for modals/dropdowns */
   --color-surface-sunken:  var(--neutral-100);
+  --color-scrim:           oklch(0% 0 0 / 30%);
 
   /* --- Text --- */
   --color-text-heading:        var(--neutral-900);
@@ -119,6 +120,7 @@
   --color-surface-raised:  var(--neutral-800);
   --color-surface-overlay: var(--neutral-800);
   --color-surface-sunken:  var(--neutral-950);
+  --color-scrim:           oklch(0% 0 0 / 55%);
 
   /* --- Text --- */
   --color-text-heading:        var(--neutral-100);

@@ -50,6 +50,12 @@ class RoomPresenter
     I18n.t("rooms.show.capacity", students: room.instructional_seat_count, ada: room.ada_seat_count.to_i)
   end
 
+  def media_summary(photo_count:)
+    contents = [ (I18n.t("rooms.edit.media_strip_panorama") if room.panorama.attached?),
+                 (I18n.t("rooms.edit.media_strip_photos", count: photo_count) if photo_count.positive?) ].compact
+    contents.any? ? contents.join(" · ") : I18n.t("rooms.edit.media_strip_none")
+  end
+
   def chips
     @chips ||= room.room_characteristics.sort_by(&:short_code).map { |c| build_chip(c) }
   end

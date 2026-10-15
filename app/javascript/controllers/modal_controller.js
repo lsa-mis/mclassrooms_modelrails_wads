@@ -26,6 +26,7 @@ export default class extends Controller {
 
     if (this.openValue) {
       this.open()
+      this.previouslyFocused = null
     }
   }
 
@@ -67,18 +68,6 @@ export default class extends Controller {
     })
   }
 
-  // Focus the opener again — unless it left the DOM while the dialog was open
-  // (a detached node's focus() is a silent no-op and focus falls to <body>, a
-  // 2.4.3 loss). Fall back to the page's stable focus anchor: the skip-link
-  // <main tabindex="-1"> every host layout carries.
-  restoreFocus() {
-    const target = this.previouslyFocused?.isConnected
-      ? this.previouslyFocused
-      : document.querySelector('main[tabindex="-1"]')
-    target?.focus()
-    this.previouslyFocused = null
-  }
-
   handleEscOnPage() {
     // When ESC is pressed on a page with a modal controller but the dialog
     // is NOT open, navigate back. When the dialog IS open, the native
@@ -90,26 +79,22 @@ export default class extends Controller {
 
   // Private
 
-  // Normally we restore focus to whatever opened the dialog. But a host that
-  // hides its trigger elements as part of in-dialog navigation (the room
-  // media stage hides the outgoing photo slide when the popout's own
-  // prev/next moves the shared index) can leave `previouslyFocused` pointing
-  // at an element that's now `hidden` — WCAG 2.4.3 / 2.1.1: `.focus()` on a
-  // hidden element silently no-ops and focus falls through to <body>. Fall
-  // back to whichever trigger in this controller's scope is currently
-  // visible instead of losing focus outright. Scoped to `this.element` (the
-  // shared `gallery modal` ancestor) so a page with more than one gallery
-  // never reaches across into an unrelated one.
   restoreFocus() {
-    const target = this.isFocusable(this.previouslyFocused)
-      ? this.previouslyFocused
-      : [ ...this.element.querySelectorAll("[data-gallery-index-param]") ].find((el) => !el.hidden)
+    const target = [ this.previouslyFocused, this.visibleTrigger() ].find((el) => this.isFocusable(el)) ??
+      document.querySelector('main[tabindex="-1"]')
     target?.focus()
     this.previouslyFocused = null
   }
 
+  visibleTrigger() {
+    const focusable = "button, a[href], [tabindex]"
+    return [ ...this.element.querySelectorAll('[data-action~="click->modal#open"], [data-action~="modal#open"]') ]
+      .map((trigger) => (trigger.matches(focusable) ? trigger : trigger.querySelector(focusable)))
+      .find((el) => this.isFocusable(el))
+  }
+
   isFocusable(el) {
-    return !!el && el.isConnected && !el.hidden
+    return !!el && el !== document.body && el.isConnected && !el.hidden && el.checkVisibility()
   }
 
   handleCancel(event) {

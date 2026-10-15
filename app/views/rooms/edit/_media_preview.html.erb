@@ -1,11 +1,7 @@
-<%# locals: (src:, alt:, input_id:, replace_label:) %>
+<%# locals: (src:, input_id:, replace_label:) %>
 <label for="<%= input_id %>" data-testid="media-preview"
-       class="group/preview relative block cursor-pointer overflow-hidden rounded-md border border-border bg-surface-raised">
-  <%= image_tag src, alt: alt, class: "block max-h-96 w-full object-contain" %>
-  <span class="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover/preview:bg-black/30">
-    <span class="grid size-11 place-items-center rounded-full bg-surface-overlay text-interactive opacity-0 shadow-md transition-opacity group-hover/preview:opacity-100">
-      <%= icon(:pencil, size: :md) %>
-    </span>
-  </span>
+       class="group relative block cursor-pointer overflow-hidden rounded-md border border-border bg-surface-raised">
+  <%= image_tag src, alt: "", class: "block max-h-96 w-full object-contain", data: { media_preview_target: "image" } %>
+  <%= render "shared/image_edit_cue" %>
   <span class="sr-only"><%= replace_label %></span>
 </label>

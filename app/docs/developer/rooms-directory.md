@@ -173,12 +173,33 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   beside the alt text and description. Each holds its own form posting to
   `#update`, with its submit button in the dialog footer pointed at the
   form by `form=`. **Upload new** is `ui :file_input` with `show_selection`
-  behind a label (`_media_actions`). Each **Remove** is a submit button
-  pointed by `form=` at its own small form, rendered after the main one
-  so no form nests: `remove_panorama`/`remove_seating_chart`, or a gallery
-  row's `_destroy`, sent with `return_to` so the save lands back in edit
-  mode (`open=gallery` reopens the Photos dialog). Replacing an existing
-  photo's file counts as a change, and its `image_blob` is preloaded.
+  behind a label (`_media_actions`), whose `aria-label` starts with the
+  visible "Upload new"; the preview image inside its label is `alt=""`, since
+  its text is in the field beside it. Choosing a file swaps the preview to an
+  object URL (`media_preview_controller.js`) before anything is saved.
+  Replacing an existing photo's file counts as a change, and its
+  `image_blob` is preloaded.
+- **Removal is RESTful.** Each **Remove** is a submit button pointed by
+  `form=` at its own small `DELETE` form, rendered after the main one so no
+  form nests: `Rooms::PanoramasController`, `Rooms::SeatingChartsController`
+  and `Rooms::PhotosController#destroy`, nested under rooms and sharing
+  `Rooms::MediaController`. Each authorizes `manage_media?`, writes through
+  `Curation::Apply` (`room.media_updated`), and redirects to
+  `edit?open=<editor>`. `#edit` reopens that dialog, and its `description:`
+  carries the flash ("Photo 2 removed."): a toast outside an open modal is
+  ignored by the accessibility tree (`activeModalDialog`), so the message
+  must live in the dialog. `#update` no longer takes removal flags. The
+  floor plan is `resource :floor_plan` (`Rooms::FloorPlansController`);
+  nested controllers find their room through the `RoomScoped` concern.
+- **Floor plan page** (`Rooms::FloorPlansController#show`). It lists the
+  floor's classrooms in `Room.natural_room_order`, the same order Find a
+  Room uses. The current room is marked with a visible badge and
+  `aria-current="true"` (not `"page"`, since its link goes to the room, not
+  this page). A PDF plan renders as a link, not an `<img>`.
+- **Focus.** `modal_controller.js` returns focus to the opener, or to the
+  dialog's own visible trigger (the gallery slide, or the editor button)
+  when the opener is gone or the dialog was opened by the server, then to
+  `<main tabindex="-1">`.
 - **Stage permanence.** The panorama stage keeps a fixed id and
   `data-turbo-permanent` on the view page only (`permanent: false` in edit
   mode). Turbo therefore never carries the edit page's stage over to the

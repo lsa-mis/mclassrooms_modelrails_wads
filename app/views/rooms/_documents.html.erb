@@ -35,7 +35,7 @@
       <% end %>
       <% if room.floor.present? %>
         <div>
-          <%= link_to t("rooms.show.floor_plan_link"), floor_plan_room_path(room), class: "btn-secondary" %>
+          <%= link_to t("rooms.show.floor_plan_link"), room_floor_plan_path(room), class: "btn-secondary" %>
         </div>
       <% end %>
     </div>

@@ -1,16 +1,15 @@
 <%# locals: (room:, form_room:, open:) %>
 <% attached = room.seating_chart.attached? %>
-<%= ui :dialog, id: "seating-chart-editor", title: t("rooms.edit.seating_chart_label"), size: :full, open: open do |dialog| %>
+<%= ui :dialog, id: "seating-chart-editor", title: t("rooms.edit.seating_chart_label"), size: :full, open: open,
+      description: (flash[:notice] if open) do |dialog| %>
   <% dialog.with_trigger do %>
     <button type="button" data-testid="seating-chart-edit"
-            class="group/edit flex items-center gap-3 rounded-md text-left text-interactive focus-ring">
+            class="group flex items-center gap-3 rounded-md text-left text-interactive focus-ring">
       <span class="relative block">
         <%= render "rooms/edit/media_thumb", attachment: room.seating_chart, size: 96 %>
-        <span aria-hidden="true" class="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full border-2 border-surface-raised bg-interactive text-text-on-interactive">
-          <%= icon(:pencil, size: :sm) %>
-        </span>
+        <%= render "shared/image_edit_cue", size: :sm %>
       </span>
-      <span class="font-semibold group-hover/edit:underline underline-offset-4">
+      <span class="font-semibold group-hover:underline underline-offset-4">
         <%= attached ? t("rooms.edit.edit_seating_chart") : t("rooms.edit.add_seating_chart") %>
       </span>
     </button>
@@ -20,11 +19,10 @@
         id: "seating-chart-editor-form" do |form| %>
     <%= form.error_summary %>
     <div class="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <div class="min-w-0">
+      <div class="min-w-0" data-controller="media-preview" data-action="change->media-preview#show">
         <% if attached && room.seating_chart.variable? %>
           <%= render "rooms/edit/media_preview",
                 src: rails_representation_path(room.seating_chart.variant(resize_to_limit: [ 800, 800 ], format: :webp)),
-                alt: room.alt_for(:seating_chart),
                 input_id: form.field_id(:seating_chart), replace_label: t("rooms.edit.replace_seating_chart") %>
         <% elsif attached %>
           <div class="flex flex-wrap items-center gap-4">
@@ -44,6 +42,7 @@
         <% end %>
         <%= render "rooms/edit/media_actions", input_id: form.field_id(:seating_chart), input_name: form.field_name(:seating_chart),
               accept: "image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf",
+              upload_label: t("rooms.edit.upload_new_seating_chart"),
               remove_form: ("seating-chart-remove-form" if attached), remove_label: t("rooms.edit.remove_seating_chart"),
               remove_confirm: t("rooms.edit.remove_seating_chart_confirm", room: room.display_name) %>
       </div>
@@ -55,9 +54,7 @@
   <% end %>
 
   <% if attached %>
-    <%= form_with model: form_room, url: room_path(form_room, return_to: "edit"), method: :patch,
-          id: "seating-chart-remove-form", class: "hidden" do |form| %>
-      <%= form.hidden_field :remove_seating_chart, value: "1", id: nil %>
+    <%= form_with url: room_seating_chart_path(form_room), method: :delete, id: "seating-chart-remove-form", class: "hidden" do %>
     <% end %>
   <% end %>
 

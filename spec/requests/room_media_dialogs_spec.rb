@@ -37,7 +37,26 @@ RSpec.describe "Room media editing dialogs", type: :request do
 
       remove_form = page.find("form#panorama-remove-form", visible: :all)
       expect(page.all("form#panorama-editor-form form", visible: :all)).to be_empty
-      expect(remove_form).to have_css("input[name='room[remove_panorama]'][value='1']", visible: :all)
+      expect(remove_form["action"]).to eq(room_panorama_path(room))
+      expect(remove_form).to have_css("input[name='_method'][value='delete']", visible: :all)
+    end
+
+    it "names the upload control by its visible label and keeps the preview image decorative" do
+      editor = dialog("panorama-editor")
+      expect(editor.find("input#room_panorama", visible: :all)["aria-label"]).to eq(I18n.t("rooms.edit.upload_new_panorama"))
+      expect(editor.find("[data-testid='media-preview'] img", visible: :all)["alt"]).to eq("")
+    end
+
+    it "docks the stage under the media strip by its own classes, not the page's test hooks" do
+      stage = page.find("#room_panorama_stage", visible: :all)
+      expect(stage["class"].split).to include("rounded-b-md")
+      expect(stage["class"].split).not_to include("rounded-md")
+      expect(page.find("[data-testid='media-stage']", visible: :all)["class"].split).not_to include("mt-6")
+      expect(page.find("[data-testid='media-dock']", visible: :all)["class"]).not_to include("data-testid")
+
+      get room_path(room)
+      expect(page.find("#room_panorama_stage", visible: :all)["class"].split).to include("rounded-md")
+      expect(page.find("[data-testid='media-stage']", visible: :all)["class"].split).to include("mt-6")
     end
 
     it "keeps the stage out of Turbo's permanent elements in edit mode only" do
@@ -72,21 +91,19 @@ RSpec.describe "Room media editing dialogs", type: :request do
       expect(remove["data-turbo-confirm"]).to be_present
 
       remove_form = page.find("form#photo-remove-#{second_photo.id}", visible: :all)
-      expect(remove_form["action"]).to eq(room_path(room, return_to: "gallery"))
-      expect(remove_form).to have_css("input[value='#{second_photo.id}'][name$='[id]']", visible: :all)
-      expect(remove_form).to have_css("input[value='1'][name$='[_destroy]']", visible: :all)
+      expect(remove_form["action"]).to eq(room_photo_path(room, second_photo))
+      expect(remove_form).to have_css("input[name='_method'][value='delete']", visible: :all)
       expect(photos).to have_css("input[type='file'][name$='[image]']", visible: :all, minimum: 2)
     end
 
-    it "removes one photo and returns to edit mode with the photos dialog open" do
-      expect {
-        patch room_path(room, return_to: "gallery"),
-              params: { room: { gallery_attributes: { "0" => { id: second_photo.id, _destroy: "1" } } } }
-      }.to change { room.gallery.count }.from(2).to(1)
+    it "removes one photo and reopens the photos dialog, which says what was removed" do
+      expect { delete room_photo_path(room, second_photo) }.to change { room.gallery.count }.from(2).to(1)
 
       expect(response).to redirect_to(edit_room_path(room, open: "gallery"))
       follow_redirect!
-      expect(page).to have_css("[data-modal-open-value='true'] dialog#gallery-editor", visible: :all)
+      photos = page.find("[data-modal-open-value='true'] dialog#gallery-editor", visible: :all)
+      description = page.find("##{photos['aria-describedby']}", visible: :all)
+      expect(description.text(:all)).to eq(I18n.t("rooms.edit.photo_removed", position: 2))
     end
 
     it "replaces an existing photo's file" do

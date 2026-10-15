@@ -87,7 +87,7 @@
       <%= ui :list_group, class: "mt-3" do %>
         <% @floors.each do |floor| %>
           <% representative_room = @floor_representative_rooms[floor.id]&.first %>
-          <%= ui :list_group_item, href: (representative_room && floor_plan_room_path(representative_room)) do %>
+          <%= ui :list_group_item, href: (representative_room && room_floor_plan_path(representative_room)) do %>
             <%= floor_row_body(floor, classroom_count: @floor_classroom_counts.fetch(floor.id, 0)) %>
           <% end %>
         <% end %>

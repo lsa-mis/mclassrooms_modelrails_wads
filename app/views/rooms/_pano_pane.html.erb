@@ -1,4 +1,4 @@
-<%# locals: (room:, permanent: true) %>
+<%# locals: (room:, permanent: true, docked: false) %>
 <%# The click-to-load Pannellum stage. The pre-load image is the flat
     rectilinear render (Room#flat_panorama) — the old squashed-equirect
     :poster variant only engages as a fallback (see the comment block below).
@@ -86,7 +86,7 @@
 <% pano_instructions_id = "panorama_instructions_#{room.id}" %>
 <%= ui :aspect_ratio, ratio: Panorama::Rectilinear::ASPECT,
       id: "room_panorama_stage",
-      class: "relative rounded-md bg-surface-sunken overflow-hidden",
+      class: "relative #{docked ? "rounded-b-md" : "rounded-md"} bg-surface-sunken overflow-hidden",
       data: {
         turbo_permanent: ("" if permanent),
         controller: "panorama",

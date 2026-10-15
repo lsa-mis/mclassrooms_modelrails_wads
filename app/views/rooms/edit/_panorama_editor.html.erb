@@ -1,6 +1,7 @@
 <%# locals: (room:, form_room:, open:) %>
 <% attached = room.panorama.attached? %>
-<%= ui :dialog, id: "panorama-editor", title: t("rooms.edit.panorama_label"), size: :full, open: open do |dialog| %>
+<%= ui :dialog, id: "panorama-editor", title: t("rooms.edit.panorama_label"), size: :full, open: open,
+      description: (flash[:notice] if open) do |dialog| %>
   <% dialog.with_trigger do %>
     <button type="button" class="btn-secondary">
       <%= icon(:pencil, size: :sm) %>
@@ -12,10 +13,10 @@
         id: "panorama-editor-form" do |form| %>
     <%= form.error_summary %>
     <div class="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <div class="min-w-0">
+      <div class="min-w-0" data-controller="media-preview" data-action="change->media-preview#show">
         <% if attached %>
           <% preview_src = room.flat_panorama.attached? ? rails_storage_proxy_path(room.flat_panorama) : rails_representation_path(room.panorama.variant(:poster)) %>
-          <%= render "rooms/edit/media_preview", src: preview_src, alt: room.alt_for(:panorama),
+          <%= render "rooms/edit/media_preview", src: preview_src,
                 input_id: form.field_id(:panorama), replace_label: t("rooms.edit.replace_panorama") %>
           <p class="mt-2 text-sm text-text-body">
             <%= t("rooms.edit.updated_ago", time: time_ago_in_words(room.panorama.blob.created_at)) %>
@@ -25,6 +26,7 @@
         <% end %>
         <%= render "rooms/edit/media_actions", input_id: form.field_id(:panorama), input_name: form.field_name(:panorama),
               accept: "image/png,image/jpeg,image/webp,image/heic,image/heif",
+              upload_label: t("rooms.edit.upload_new_panorama"),
               remove_form: ("panorama-remove-form" if attached), remove_label: t("rooms.edit.remove_panorama"),
               remove_confirm: t("rooms.edit.remove_panorama_confirm", room: room.display_name) %>
       </div>
@@ -36,9 +38,7 @@
   <% end %>
 
   <% if attached %>
-    <%= form_with model: form_room, url: room_path(form_room, return_to: "edit"), method: :patch,
-          id: "panorama-remove-form", class: "hidden" do |form| %>
-      <%= form.hidden_field :remove_panorama, value: "1", id: nil %>
+    <%= form_with url: room_panorama_path(form_room), method: :delete, id: "panorama-remove-form", class: "hidden" do %>
     <% end %>
   <% end %>
 

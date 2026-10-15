@@ -21,17 +21,17 @@ get "filters-glossary", to: "characteristics#glossary", as: :filters_glossary
 # /rooms/:id (no #index).
 get "rooms", to: redirect("/find-a-room")
 
-# Room detail (MiClassrooms Phase 4 Task 3, contract). Only #show ships this
-# task — #edit/#update land in Task 7, #floor_plan in Task 6 — but all three
-# routes are drawn now per the contract; nothing links to the unimplemented
-# actions yet, and no routing-conformance spec in this checkout asserts every
-# drawn route resolves to an existing action (verified: no such spec exists).
 # Saved rooms (shortlist): plain REST create/destroy; the toggle button on
 # cards and room pages posts here and gets a Turbo Stream back.
 resources :saved_rooms, only: [ :create, :destroy ]
 
 resources :rooms, only: [ :show, :edit, :update ] do
-  get :floor_plan, on: :member
+  scope module: :rooms do
+    resource :floor_plan, only: :show
+    resource :panorama, only: :destroy
+    resource :seating_chart, only: :destroy
+    resources :photos, only: :destroy
+  end
 end
 
 # Admin Buildings section (MiClassrooms Phase 4 Task 8, contract). Only

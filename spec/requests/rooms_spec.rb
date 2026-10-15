@@ -870,7 +870,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
     before { sign_in(viewer) }
 
     it "returns 200 for a room with a floor" do
-      get floor_plan_room_path(room)
+      get room_floor_plan_path(room)
 
       expect(response).to have_http_status(:ok)
     end
@@ -878,7 +878,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
     it "redirects to the room with the no_floor notice when the room has no floor" do
       floorless_room = create(:room, building: building, workspace: workspace, floor: nil, facility_code: "MLB1099")
 
-      get floor_plan_room_path(floorless_room)
+      get room_floor_plan_path(floorless_room)
 
       expect(response).to redirect_to(room_path(floorless_room))
       expect(flash[:notice]).to eq(I18n.t("rooms.floor_plan.no_floor"))
@@ -887,7 +887,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
     it "redirects a hidden room to Find a Room instead of rendering" do
       hidden_room = create(:room, :hidden, building: building, workspace: workspace, floor: floor, facility_code: "MLB1098")
 
-      get floor_plan_room_path(hidden_room)
+      get room_floor_plan_path(hidden_room)
 
       expect(response).to redirect_to(find_a_room_path)
       expect(flash[:notice]).to eq(I18n.t("rooms.inactive_notice"))
@@ -906,7 +906,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
         content_type: "application/pdf"
       )
 
-      get floor_plan_room_path(room)
+      get room_floor_plan_path(room)
 
       expect(response.body).to include(
         I18n.t("rooms.floor_plan.plan_pdf_link", building: building.display_name, floor: floor.label)
@@ -927,7 +927,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
         content_type: "image/png"
       )
 
-      get floor_plan_room_path(room)
+      get room_floor_plan_path(room)
 
       expect(response.body).not_to include(rails_blob_path(floor.plan))
       expect(response.body).to include(rails_representation_path(floor.plan.variant(:display)))
@@ -945,7 +945,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
       high = create(:room, building: building, workspace: workspace, floor: floor,
                       room_number: "100", facility_code: "MLB2003")
 
-      get floor_plan_room_path(room)
+      get room_floor_plan_path(room)
 
       body = response.body
       lettered_index = body.index(lettered.display_name)
@@ -966,7 +966,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
     it "returns 200 for a hidden room's floor plan instead of redirecting" do
       hidden_room = create(:room, :hidden, building: building, workspace: workspace, floor: floor, facility_code: "MLB1097")
 
-      get floor_plan_room_path(hidden_room)
+      get room_floor_plan_path(hidden_room)
 
       expect(response).to have_http_status(:ok)
     end
@@ -1162,18 +1162,6 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(response).to redirect_to(room_path(room))
       expect(first.reload.position).to eq(2)
       expect(second.reload.position).to eq(1)
-    end
-
-    it "removes a gallery image via _destroy" do
-      image = create(:media_asset, owner: room, workspace: workspace)
-
-      expect {
-        patch room_path(room), params: {
-          room: { gallery_attributes: { "0" => { id: image.id, _destroy: "1" } } }
-        }
-      }.to change(MediaAsset, :count).by(-1)
-
-      expect(response).to redirect_to(room_path(room))
     end
 
     # Whole-branch review regression (Important): the exact parallel of
