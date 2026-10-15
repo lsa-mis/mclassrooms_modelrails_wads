@@ -41,22 +41,27 @@ RSpec.describe "Authoring room media metadata", type: :system do
     expect(room.description_for(:panorama)).to eq("Two aisles; step-free front row.")
   end
 
-  it "retires an item via the derived-ok checkbox without authored alt" do
-    room = create(:room, building: building, workspace: workspace,
-                  seating_chart_alt: nil, seating_chart_derived_ok: false)
-    room.seating_chart.attach(io: file_fixture("seating_chart.pdf").open,
-                               filename: "seating.pdf", content_type: "application/pdf")
+  it "removes a photo from the photos dialog after confirming, and stays in the dialog, accessibly in both themes" do
+    axe_options = { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } }
+    room = create(:room, building: building, workspace: workspace)
+    create(:media_asset, owner: room, workspace: workspace, position: 1)
+    doomed = create(:media_asset, owner: room, workspace: workspace, position: 2)
 
     visit edit_room_path(room)
-    click_button I18n.t("rooms.edit.edit_seating_chart")
+    click_button I18n.t("rooms.edit.manage_photos", count: 2)
 
-    within("dialog#seating-chart-editor") do
-      check "room[seating_chart_derived_ok]"
-      click_button I18n.t("rooms.edit.save_media")
+    expect(page).to have_css("dialog#gallery-editor[open]")
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations with the photos dialog open:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+
+    accept_confirm(I18n.t("rooms.edit.remove_photo_confirm", position: 2, room: room.display_name)) do
+      within("dialog#gallery-editor") { click_button "#{I18n.t("rooms.edit.remove_photo")} 2" }
     end
 
-    expect(page).to have_current_path(room_path(room))
-    expect(room.reload.alt_status_for(:seating_chart)).to eq(:derived_ok)
+    expect(page).to have_css("dialog#gallery-editor[open]")
+    expect(page).to have_current_path(edit_room_path(room, open: "gallery"))
+    expect(MediaAsset.exists?(doomed.id)).to be(false)
+    expect(room.gallery.count).to eq(1)
   end
 
   # Matches spec/system/rooms/edit_spec.rb's fuller A+AA+AAA sweep (not the

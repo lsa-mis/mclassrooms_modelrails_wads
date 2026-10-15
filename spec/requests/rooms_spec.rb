@@ -1016,13 +1016,13 @@ RSpec.describe "GET /rooms/:id/edit", type: :request do
     # job processes by name. (The anonymous call happened to compile to the
     # same variation digest, so this pins the contract going forward rather
     # than distinguishing the two.)
-    it "renders each persisted gallery thumb via the declared :card variant" do
+    it "renders each persisted gallery photo via the declared :gallery variant" do
       asset = create(:media_asset, owner: room, workspace: workspace)
       sign_in(admin)
 
       get edit_room_path(room)
 
-      expect(response.body).to include(rails_representation_path(asset.image.variant(:card)))
+      expect(response.body).to include(rails_representation_path(asset.image.variant(:gallery)))
     end
 
     # Task 10 widened the validators to accept HEIC/HEIF on every image slot;

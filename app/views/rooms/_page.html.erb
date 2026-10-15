@@ -21,7 +21,7 @@
       <%= render "rooms/edit/media_strip", room: room, form_room: form_room, manage_media: manage_media,
             open_media: open_media, photo_count: gallery.size %>
       <%= render "rooms/media", room: room, presenter: presenter, gallery: gallery,
-            has_pano: has_pano, has_photos: has_photos %>
+            has_pano: has_pano, has_photos: has_photos, permanent: false %>
     </div>
 
     <%= render "rooms/curated_fields", room: form_room %>

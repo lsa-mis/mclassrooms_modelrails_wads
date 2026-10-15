@@ -164,15 +164,26 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
 - **Media editors.** In edit mode `_page` wraps the stage (or empty band)
   in a `media-dock` with `rooms/edit/_media_strip` fused to its top edge:
   a summary and, for admins, `rooms/edit/_panorama_editor` (`ui :dialog`)
-  and `_gallery_editor` (`ui :sheet`); editors get the admin-managed note
+  and `_gallery_editor` (`ui :dialog`); editors get the admin-managed note
   there instead. The strip sits outside the stage `<section>`, so its
   dialogs never nest inside the stage's own `modal` controller. The
   seating chart's `_seating_chart_editor` (`ui :dialog`) lives on its
-  thumbnail in the documents card. Each holds its own form posting to `#update`, with its
-  submit button in the dialog footer pointed at the form by `form=`. The
-  panorama form opts out of Turbo (`data: { turbo: false }`): the stage
-  keeps a fixed id and `data-turbo-permanent`, so a Turbo visit back to
-  the room page would keep the old panorama on screen after a replacement.
+  thumbnail in the documents card. All three are full-size dialogs that
+  put a large preview (`_media_preview`, a `<label>` for the file input)
+  beside the alt text and description. Each holds its own form posting to
+  `#update`, with its submit button in the dialog footer pointed at the
+  form by `form=`. **Upload new** is `ui :file_input` with `show_selection`
+  behind a label (`_media_actions`). Each **Remove** is a submit button
+  pointed by `form=` at its own small form, rendered after the main one
+  so no form nests: `remove_panorama`/`remove_seating_chart`, or a gallery
+  row's `_destroy`, sent with `return_to` so the save lands back in edit
+  mode (`open=gallery` reopens the Photos dialog). Replacing an existing
+  photo's file counts as a change, and its `image_blob` is preloaded.
+- **Stage permanence.** The panorama stage keeps a fixed id and
+  `data-turbo-permanent` on the view page only (`permanent: false` in edit
+  mode). Turbo therefore never carries the edit page's stage over to the
+  view page, so a replaced panorama shows on save while the view page
+  still keeps its booted viewer across refreshes.
 - **Visibility rides on `#update`.** `room[listed]` is permitted alongside
   the curated params. A value that differs from the room's state is
   authorized with `hide?` or `unhide?` before anything is written, so an
@@ -206,8 +217,10 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
 
 `CURATED_PARAMS` (nickname, ADA seat count) is always permitted, and
 `MEDIA_PARAMS` only when `RoomPolicy#manage_media?` (admins). The media
-metadata (`*_alt`, `*_description`, `*_derived_ok`) stays in `MEDIA_PARAMS`,
-behind the same gate as the attachments. `gallery_attributes` uses the
+metadata (`*_alt`, `*_description`) stays in `MEDIA_PARAMS`,
+behind the same gate as the attachments. The `*_derived_ok` columns are no
+longer editable or permitted; an image without authored alt text stays on
+the `media:alt_coverage` needs-review count. `gallery_attributes` uses the
 double-array `[[ ... ]]` shape `params.expect` needs for a hash of nested
 rows: the single-array shape silently permits nothing, which would break
 every gallery add, reorder and delete. The media editors resubmit the
