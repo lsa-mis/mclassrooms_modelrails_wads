@@ -1,4 +1,4 @@
-<%# locals: (room:, presenter:, gallery:, has_pano:, has_photos:, permanent: true) %>
+<%# locals: (room:, presenter:, gallery:, has_pano:, has_photos:, permanent: true, docked: false) %>
 <%# Two-mode stage (2026-08-07 spec): pano default when present, photos one
     chip-click away — progressive disclosure, not tabs. The pano pane keeps
     data-turbo-permanent and is only ever `hidden`, never removed (WebGL
@@ -7,7 +7,7 @@
     `modal` with no `[data-modal-target="dialog"]` in scope (pano-only rooms
     never render _photo_frame, the dialog's only source) makes Stimulus log
     a missing-target error on connect and on every Turbo navigation. %>
-<section data-testid="media-stage" class="mt-6 relative"
+<section data-testid="media-stage" class="<%= docked ? "relative" : "mt-6 relative" %>"
      aria-label="<%= t("rooms.show.media_label") %>"
      data-controller="media-stage<%= " gallery modal" if has_photos %>"
      data-action="gallery:navigated->media-stage#syncFromPopout"
@@ -22,13 +22,13 @@
      <% if has_photos %>data-media-stage-badge-format-value="<%= t("rooms.show.photo_badge", caption: "%{caption}", position: "%{position}") %>"<% end %>>
   <% if has_pano %>
     <div data-media-stage-target="pano">
-      <%= render "rooms/pano_pane", room: room, permanent: permanent %>
+      <%= render "rooms/pano_pane", room: room, permanent: permanent, docked: docked %>
     </div>
   <% end %>
 
   <% if has_photos %>
     <%= render "rooms/photo_frame", room: room, gallery: gallery,
-          start_hidden: has_pano %>
+          start_hidden: has_pano, docked: docked %>
   <% end %>
 
   <%= render "rooms/hidden_overlay", room: room %>

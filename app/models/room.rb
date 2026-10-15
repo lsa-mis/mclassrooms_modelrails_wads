@@ -150,17 +150,6 @@ class Room < ApplicationRecord
 
   before_save :normalize_facility_code
 
-  # Phase 4 Task 7 (Brief §5.3): attribute-shaped removers so a media "delete"
-  # checkbox flows through strong params + Curation::Apply.call(attributes:)
-  # exactly like nickname/ada_seat_count — no separate purge call in the
-  # controller. purge_later (not purge) is a deliberate MVP choice: it's
-  # enqueued as a side effect of #assign_attributes, which runs BEFORE
-  # Curation::Apply's transaction opens, so on the rare rollback (the audit
-  # write itself failing) the purge job still executes even though the rest of
-  # the mutation rolled back. Acceptable for MVP; flagged in the task report.
-  # The reader always returns false (never true) so the checkbox round-trips
-  # unchecked on re-render (a validation failure re-renders :edit) rather than
-  # echoing back "checked" from a transient submitted value.
   %i[panorama seating_chart].each do |slot|
     define_method("remove_#{slot}=") do |value|
       next unless ActiveModel::Type::Boolean.new.cast(value)
@@ -177,7 +166,6 @@ class Room < ApplicationRecord
       # a stale association silently no-ops.
       reload_flat_panorama_attachment&.purge_later if slot == :panorama
     end
-    define_method("remove_#{slot}") { false }
   end
 
   SEARCH_INDEX_TABLE = "room_search_index"

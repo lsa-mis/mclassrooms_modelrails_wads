@@ -1,0 +1,9 @@
+<%# locals: (shape: :rect, size: :md) %>
+<span aria-hidden="true"
+      class="pointer-events-none absolute inset-0 flex items-center justify-center bg-transparent transition-colors
+             group-hover:bg-scrim group-focus-visible:bg-scrim <%= "rounded-full" if shape == :circle %>">
+  <span class="grid <%= size == :sm ? "size-8" : "size-11" %> place-items-center rounded-full bg-surface-overlay text-interactive
+               opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+    <%= icon(:pencil, size: size == :sm ? :sm : :md) %>
+  </span>
+</span>

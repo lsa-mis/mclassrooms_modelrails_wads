@@ -1,6 +1,4 @@
-<%# locals: (room:, form_room:, manage_media:, open_media:, photo_count:) %>
-<% contents = [ (t("rooms.edit.media_strip_panorama") if room.panorama.attached?),
-                (t("rooms.edit.media_strip_photos", count: photo_count) if photo_count.positive?) ].compact %>
+<%# locals: (room:, presenter:, form_room:, manage_media:, open_media:, photo_count:) %>
 <div data-testid="media-toolbar"
      class="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-raised px-4 py-3">
   <div class="flex min-w-0 items-center gap-3">
@@ -9,7 +7,7 @@
       <p class="font-semibold text-text-heading"><%= t("rooms.edit.media_strip_label") %></p>
       <% if manage_media %>
         <p class="text-sm text-text-body">
-          <%= contents.any? ? contents.join(" · ") : t("rooms.edit.media_strip_none") %>.
+          <%= presenter.media_summary(photo_count: photo_count) %>.
           <%= t("rooms.edit.media_strip_seating_hint") %>
         </p>
       <% else %>
@@ -21,7 +19,8 @@
   <% if manage_media %>
     <div class="flex flex-wrap gap-2">
       <%= render "rooms/edit/panorama_editor", room: room, form_room: form_room, open: open_media == :panorama %>
-      <%= render "rooms/edit/gallery_editor", room: room, form_room: form_room, open: open_media == :gallery %>
+      <%= render "rooms/edit/gallery_editor", room: room, form_room: form_room, photo_count: photo_count,
+            open: open_media == :gallery %>
     </div>
   <% end %>
 </div>

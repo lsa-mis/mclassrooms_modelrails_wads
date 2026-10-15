@@ -69,8 +69,10 @@ preview beside the alt text and description, so you can describe the image
 while looking at it. Click the preview, or **Upload new**, to choose a
 replacement; **Save & apply** saves it with any text changes. **Remove
 panorama**, **Remove seating chart** and **Remove photo** ask you to confirm
-and apply straight away. **Manage photos** lists every photo the same way,
-each with its position, and removing one keeps the dialog open.
+and apply straight away, then bring you back to that dialog with a note of
+what was removed. Choosing a new file shows it in the preview before you
+save. **Manage photos** lists every photo the same way, each with its
+position.
 Editors see the same strip with a note that media is managed by
 administrators, and flag problems with a note instead.
 

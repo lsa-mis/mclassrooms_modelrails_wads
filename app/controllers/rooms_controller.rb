@@ -26,10 +26,9 @@ class RoomsController < ApplicationController
 
   MEDIA_PARAMS = [
     :panorama, :seating_chart,
-    :remove_panorama, :remove_seating_chart,
     :panorama_alt, :panorama_description,
     :seating_chart_alt, :seating_chart_description,
-    { gallery_attributes: [ [ :id, :image, :position, :_destroy,
+    { gallery_attributes: [ [ :id, :image, :position,
                                      :image_alt, :image_description ] ] }
   ].freeze
 
@@ -45,8 +44,8 @@ class RoomsController < ApplicationController
   # #edit/#update at all — RoomPolicy#edit?/#update? deny them via `authorize`
   # below, the same redirect-with-alert as every other Pundit denial in this
   # app.
-  before_action :set_room, only: [ :show, :floor_plan, :edit, :update ]
-  before_action :redirect_inactive_for_non_admins, only: [ :show, :floor_plan ]
+  before_action :set_room, only: [ :show, :edit, :update ]
+  before_action :redirect_inactive_for_non_admins, only: [ :show ]
 
   def index
     authorize Room
@@ -100,29 +99,6 @@ class RoomsController < ApplicationController
     end
   end
 
-  # MiClassrooms Phase 4 Task 6 (Brief §5.3): the floor-plan view — authorizes
-  # identically to #show (a floor plan is just another facet of room detail,
-  # not a separately-gated resource) and reuses `set_room`/
-  # `redirect_inactive_for_non_admins` (both already extended to `:floor_plan`
-  # above) so a hidden room's non-admin redirect fires before this method ever
-  # runs. `@room.floor` can be nil (Floor is `optional: true` on Room) — that's
-  # not an error state, just a room the nightly sync never assigned a floor
-  # to, so it redirects back to the room with a notice rather than 404ing or
-  # rendering a floor-less page.
-  def floor_plan
-    authorize @room, :show?
-    @floor = @room.floor
-    return redirect_to(room_path(@room), notice: t("rooms.floor_plan.no_floor")) if @floor.nil?
-
-    # for_current_workspace kept explicit here (CLAUDE.md deviation #1) even
-    # though floor_id already transitively scopes to the workspace (a Floor
-    # belongs to a Building in exactly one workspace) — consistent with how
-    # every other Room query in this controller resolves through an explicit
-    # tenant scope rather than relying on a transitive guarantee.
-    @rooms_on_floor = Room.for_current_workspace.classroom.listed
-                          .where(floor_id: @floor.id).natural_room_order
-  end
-
   # MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): the phase's first admin
   # mutation — curated fields (nickname, ADA seat count) plus media
   # attach/remove/reorder, all in one form. Phase 5 Task 3 widened
@@ -136,7 +112,7 @@ class RoomsController < ApplicationController
     authorize @room
     build_blank_gallery
     @presenter = RoomPresenter.new(@room, url: room_url(@room))
-    @open_media = :gallery if params[:open] == "gallery"
+    @open_media = params[:open].presence_in(%w[panorama seating_chart gallery])&.to_sym
   end
 
   # Phase 5 Task 6 (Brief §14.1) retrofit: routes curated-field changes and
@@ -221,7 +197,7 @@ class RoomsController < ApplicationController
     # spec below caught exactly that). Also loads @room.gallery into
     # memory, which media_change? below relies on to detect a genuine
     # position change per row.
-    preload_gallery_image_attachments(skip_ids: destroyed_gallery_ids(attrs), replaced_ids: replaced_gallery_ids(attrs))
+    preload_gallery_image_attachments(replaced_ids: replaced_gallery_ids(attrs))
 
     curated_keys  = CURATED_PARAMS.map(&:to_s)
     curated_attrs = attrs.slice(*curated_keys)
@@ -290,7 +266,7 @@ class RoomsController < ApplicationController
     when :unhide
       redirect_to room_path(@room), notice: t("rooms.unhide.success")
     else
-      redirect_to after_save_path, notice: t("rooms.edit.success")
+      redirect_to room_path(@room), notice: t("rooms.edit.success")
     end
   end
 
@@ -304,14 +280,6 @@ class RoomsController < ApplicationController
   # blanks past the cap). Preloading runs AFTER build (harmless either order —
   # it only touches already-persisted rows) so both #edit's first render and
   # a failed #update's re-render get it.
-  def after_save_path
-    case params[:return_to]
-    when "gallery" then edit_room_path(@room, open: "gallery")
-    when "edit" then edit_room_path(@room)
-    else room_path(@room)
-    end
-  end
-
   def build_blank_gallery
     remaining = 5 - @room.gallery.size
     if remaining.positive?
@@ -368,8 +336,6 @@ class RoomsController < ApplicationController
     attrs = media_attrs.with_indifferent_access
 
     return true if %w[panorama seating_chart].any? { |key| attrs[key].present? }
-    return true if %w[remove_panorama remove_seating_chart]
-                     .any? { |key| ActiveModel::Type::Boolean.new.cast(attrs[key]) }
     return true if media_metadata_changed?(attrs)
 
     submitted_gallery_rows(attrs).any? { |row| gallery_row_changed?(row) }
@@ -383,19 +349,7 @@ class RoomsController < ApplicationController
     METADATA_TEXT_KEYS.any? { |key| attrs.key?(key) && attrs[key].to_s != @room.public_send(key).to_s }
   end
 
-  # A gallery row counts as changed when it's marked `_destroy`, is a brand
-  # new row with a real image chosen (the D9 blank "add another photo" rows
-  # this controller always renders up to the five-image cap submit an EMPTY
-  # image otherwise — reject_if's own `image.blank?` check on the model side
-  # mirrors this), or is an existing row whose submitted position actually
-  # differs from its current one (the position field is always resubmitted
-  # by the form for every persisted row, even an untouched one, so presence
-  # alone would false-positive on every request that merely renders the
-  # gallery card). Relies on @room.gallery already being loaded
-  # in-memory (preload_gallery_image_attachments, called before this in
-  # #update) so this never issues its own query.
   def gallery_row_changed?(row)
-    return true if ActiveModel::Type::Boolean.new.cast(row[:_destroy])
     return row[:image].present? if row[:id].blank?
 
     existing = @room.gallery.detect { |image| image.id.to_s == row[:id].to_s }
@@ -422,15 +376,8 @@ class RoomsController < ApplicationController
   # `includes(image_attachment: :blob)` choice over the auto-generated
   # `with_attached_image` scope (that scope also preloads `variant_records`,
   # which Bullet flags as unused here).
-  #
-  # `skip_ids:` excludes rows the caller already knows are being `_destroy`d
-  # this request — Rails skips validations on a record marked for
-  # destruction, so preloading ITS attachment ahead of `#update`'s save would
-  # itself be an unused eager load (Bullet caught exactly this on the
-  # destroy-only spec). Not used before a render (#edit, or #update's failure
-  # re-render still wants every row's thumbnail, destroy-marked or not).
-  def preload_gallery_image_attachments(skip_ids: [], replaced_ids: [])
-    persisted = @room.gallery.select { |image| image.persisted? && skip_ids.exclude?(image.id.to_s) }
+  def preload_gallery_image_attachments(replaced_ids: [])
+    persisted = @room.gallery.select(&:persisted?)
     return if persisted.empty?
 
     ActiveRecord::Associations::Preloader.new(
@@ -443,15 +390,6 @@ class RoomsController < ApplicationController
 
   def replaced_gallery_ids(attrs)
     submitted_gallery_rows(attrs).select { |row| row[:id].present? && row[:image].present? }.map { |row| row[:id].to_s }
-  end
-
-  # Ids of gallery images the submitted params mark for destruction this
-  # request — see preload_gallery_image_attachments' `skip_ids:` above.
-  def destroyed_gallery_ids(attrs)
-    submitted_gallery_rows(attrs)
-      .select { |row| ActiveModel::Type::Boolean.new.cast(row[:_destroy]) }
-      .map { |row| row[:id].to_s }
-      .compact
   end
 
   # True when `gallery_attributes` names an `:id` that is NOT one of
@@ -468,14 +406,6 @@ class RoomsController < ApplicationController
     submitted_ids.any? { |id| known_ids.exclude?(id) }
   end
 
-  # Shared row-extraction for destroyed_gallery_ids and
-  # stale_gallery_ids? — `room_params.to_h`'s nested gallery_attributes
-  # hash and its per-row hashes are both plain Hash by the time they reach
-  # here, and Rails' own `fields_for` always submits this as a hash keyed by
-  # index (never a bare array), but the defensive `Array(...)`/`.is_a?(Hash)`
-  # branch (mirrors BuildingsController#submitted_floor_rows) tolerates
-  # either shape. Each returned row is already `.with_indifferent_access`'d
-  # so callers can read `row[:id]`/`row[:_destroy]` directly.
   def submitted_gallery_rows(attrs)
     rows = attrs.with_indifferent_access[:gallery_attributes]
     return [] if rows.blank?

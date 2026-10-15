@@ -1,4 +1,4 @@
-<%# locals: (room:, gallery:, start_hidden:) %>
+<%# locals: (room:, gallery:, start_hidden:, docked: false) %>
 <%# In-frame photo browsing (spec §2). Same aspect as the pano stage so the
     two modes are the same height. Every slide is a full-frame button that
     opens the shared lightbox at its own index (uncropped there); the frame
@@ -7,7 +7,7 @@
 <div data-media-stage-target="photosLayer" data-testid="photo-frame"
      <%= "hidden" if start_hidden %>>
   <%= ui :aspect_ratio, ratio: Panorama::Rectilinear::ASPECT,
-        class: "relative rounded-md bg-surface-sunken overflow-hidden",
+        class: "relative #{docked ? "rounded-b-md" : "rounded-md"} bg-surface-sunken overflow-hidden",
         data: { action: "keydown.left->media-stage#prev keydown.right->media-stage#next" } do %>
     <% gallery.each_with_index do |asset, i| %>
       <button type="button" <%= "hidden" if i.positive? %>

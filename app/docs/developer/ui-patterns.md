@@ -63,6 +63,7 @@ Role-based aliases that define **what colors are for**, not what they are. Dark 
 | Category | Tokens | Example |
 |----------|--------|---------|
 | Surfaces | `surface`, `surface-raised`, `surface-overlay`, `surface-sunken` | `bg-surface-raised` |
+| Scrim | `scrim` (a dimming layer over an image or media, deeper in dark mode) | `group-hover:bg-scrim` |
 | Text | `text-heading`, `text-body`, `text-muted`, `text-on-interactive` | `text-text-muted` |
 | Interactive | `interactive`, `interactive-hover`, `interactive-focus` | `bg-interactive` |
 | Borders | `border`, `border-strong`, `border-focus` | `border-border` |
@@ -254,6 +255,14 @@ Uses the native `<dialog>` element with a Stimulus controller for open/close man
 - Escape key closes the modal
 - Focus trapped inside the modal while open
 - `aria-modal="true"`, `aria-labelledby`, `aria-describedby`
+
+### Editable images
+
+Any image you click to replace (avatar, workspace logo, room media) shows
+the same cue: `render "shared/image_edit_cue"` (`shape: :circle` for
+round avatars, `size: :sm` for small ones) inside a `relative` box, in a
+host with the `group` class. It dims the image with `bg-scrim` and shows a
+pencil disc on hover and on keyboard focus.
 
 ## Toast Notifications
 

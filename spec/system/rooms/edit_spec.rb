@@ -79,6 +79,7 @@ RSpec.describe "Room edit", type: :system do
 
     within("dialog#panorama-editor") do
       attach_file I18n.t("rooms.edit.upload_new"), browser_upload_fixture("room.jpg")
+      expect(find("[data-testid='media-preview'] img")[:src]).to start_with("blob:")
     end
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
