@@ -72,6 +72,10 @@ class Room < ApplicationRecord
   def gallery_ordered
     gallery.sort_by { |a| [ self.class.subject_rank(a.subject), a.position, a.id || Float::INFINITY ] }
   end
+
+  def gallery_by_position
+    gallery.sort_by { |a| [ a.position.to_i, a.id || Float::INFINITY ] }
+  end
   has_many :notes, as: :notable, dependent: :destroy
   has_many :saved_rooms, dependent: :destroy
   # :poster is now a FALLBACK ONLY — the squashed-equirect strip the pano pane

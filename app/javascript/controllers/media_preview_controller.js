@@ -3,15 +3,25 @@ import { Controller } from "@hotwired/stimulus"
 const PREVIEWABLE = [ "image/png", "image/jpeg", "image/webp", "image/gif" ]
 
 export default class extends Controller {
-  static targets = [ "image" ]
+  static targets = [ "frame", "image" ]
+
+  connect() {
+    if (this.hasImageTarget) this.savedSrc = this.imageTarget.getAttribute("src")
+  }
 
   show({ target }) {
-    const [ file ] = target.files || []
-    if (!file || !this.hasImageTarget || !PREVIEWABLE.includes(file.type)) return
+    if (target.type !== "file" || !this.hasImageTarget) return
 
+    const [ file ] = target.files || []
     this.release()
-    this.objectUrl = URL.createObjectURL(file)
-    this.imageTarget.src = this.objectUrl
+
+    if (file && PREVIEWABLE.includes(file.type)) {
+      this.objectUrl = URL.createObjectURL(file)
+      this.imageTarget.src = this.objectUrl
+    } else {
+      this.imageTarget.src = this.savedSrc
+    }
+    if (this.hasFrameTarget) this.frameTarget.hidden = !!file && !this.objectUrl
   }
 
   disconnect() {

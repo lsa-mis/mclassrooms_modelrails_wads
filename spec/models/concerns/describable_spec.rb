@@ -32,9 +32,10 @@ RSpec.describe Describable do
       expect(record.alt_status_for(:image)).to eq(:authored)
     end
 
-    it "is :derived_ok when flagged and alt blank" do
+    it "ignores the retired derived-ok flag, so blank alt still needs review" do
       record.image_derived_ok = true
-      expect(record.alt_status_for(:image)).to eq(:derived_ok)
+      expect(record.alt_status_for(:image)).to eq(:needs_review)
+      expect(record.needs_alt_review?(:image)).to be(true)
     end
 
     it "is :needs_review by default" do

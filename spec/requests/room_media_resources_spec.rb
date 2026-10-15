@@ -39,6 +39,19 @@ RSpec.describe "Room media as nested resources", type: :request do
       expect(flash[:notice]).to eq(I18n.t("rooms.edit.panorama_removed"))
     end
 
+    it "says why a removal failed inside the reopened editor, where the toast can't be heard" do
+      allow(Curation::Apply).to receive(:call).and_return(Result.failure("The panorama is locked"))
+      sign_in(admin)
+
+      delete room_panorama_path(room)
+
+      expect(flash[:alert]).to eq("The panorama is locked")
+      follow_redirect!
+      editor = page.find("[data-modal-open-value='true'] dialog#panorama-editor", visible: :all)
+      expect(editor["aria-describedby"]).to be_present
+      expect(page.find("##{editor['aria-describedby']}", visible: :all).text(:all)).to eq("The panorama is locked")
+    end
+
     it "is refused for the room's unit editor and leaves the panorama" do
       sign_in(editor_for(unit))
 
@@ -74,6 +87,21 @@ RSpec.describe "Room media as nested resources", type: :request do
       expect(MediaAsset.exists?(photo.id)).to be(false)
       expect(response).to redirect_to(edit_room_path(room, open: "gallery"))
       expect(flash[:notice]).to eq(I18n.t("rooms.edit.photo_removed", position: 1))
+    end
+
+    it "names the removed photo by its row in the editor, not its stored position" do
+      tied = create(:media_asset, owner: room, workspace: workspace, position: 1)
+      later = create(:media_asset, owner: room, workspace: workspace, position: 7)
+      sign_in(admin)
+
+      get edit_room_path(room)
+      expect(page.find("button[form='photo-remove-#{tied.id}']", visible: :all).text(:all).squish).to end_with(" 2")
+
+      delete room_photo_path(room, later)
+      expect(flash[:notice]).to eq(I18n.t("rooms.edit.photo_removed", position: 3))
+
+      delete room_photo_path(room, tied)
+      expect(flash[:notice]).to eq(I18n.t("rooms.edit.photo_removed", position: 2))
     end
 
     it "never reaches another room's photo" do

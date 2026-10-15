@@ -1,7 +1,7 @@
 <%# locals: (room:, form_room:, open:) %>
 <% attached = room.seating_chart.attached? %>
 <%= ui :dialog, id: "seating-chart-editor", title: t("rooms.edit.seating_chart_label"), size: :full, open: open,
-      description: (flash[:notice] if open) do |dialog| %>
+      description: media_editor_message(open) do |dialog| %>
   <% dialog.with_trigger do %>
     <button type="button" data-testid="seating-chart-edit"
             class="group flex items-center gap-3 rounded-md text-left text-interactive focus-ring">

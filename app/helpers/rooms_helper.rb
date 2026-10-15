@@ -281,4 +281,8 @@ module RoomsHelper
       I18n.t("rooms.characteristic_label_overrides", default: {}).stringify_keys.transform_values(&:to_s)
     )
   end
+
+  def media_editor_message(open)
+    flash[:alert] || flash[:notice] if open
+  end
 end

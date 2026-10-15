@@ -10,7 +10,6 @@ module Describable
 
   class_methods do
     # describable :panorama, derived_alt: ->(rec) { I18n.t("media.derived_alt.panorama", room: rec.display_name) }
-    # Expects columns #{slot}_alt, #{slot}_description, #{slot}_derived_ok.
     def describable(slot, derived_alt:)
       describable_slots[slot.to_sym] = derived_alt
       Describable.registry[name] = self
@@ -33,7 +32,6 @@ module Describable
   def alt_status_for(slot)
     slot = slot.to_sym
     return :authored if read_attribute("#{slot}_alt").present?
-    return :derived_ok if read_attribute("#{slot}_derived_ok")
 
     :needs_review
   end

@@ -1,7 +1,7 @@
 <%# locals: (room:, form_room:, open:) %>
 <% attached = room.panorama.attached? %>
 <%= ui :dialog, id: "panorama-editor", title: t("rooms.edit.panorama_label"), size: :full, open: open,
-      description: (flash[:notice] if open) do |dialog| %>
+      description: media_editor_message(open) do |dialog| %>
   <% dialog.with_trigger do %>
     <button type="button" class="btn-secondary">
       <%= icon(:pencil, size: :sm) %>

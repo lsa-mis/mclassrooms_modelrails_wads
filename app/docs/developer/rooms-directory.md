@@ -173,10 +173,15 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   beside the alt text and description. Each holds its own form posting to
   `#update`, with its submit button in the dialog footer pointed at the
   form by `form=`. **Upload new** is `ui :file_input` with `show_selection`
-  behind a label (`_media_actions`), whose `aria-label` starts with the
-  visible "Upload new"; the preview image inside its label is `alt=""`, since
-  its text is in the field beside it. Choosing a file swaps the preview to an
-  object URL (`media_preview_controller.js`) before anything is saved.
+  behind a label (`_media_actions`) that shows "Upload new panorama" or
+  "Upload new photo". The input's `aria-label` repeats those words and adds
+  only the photo number (WCAG 2.5.3, Label in Name); it outranks the
+  preview's own label, which would otherwise join the name. The preview
+  image inside its label is `alt=""`, since its text is in the field beside
+  it. Choosing a PNG, JPEG, WebP or GIF swaps the preview to an object URL
+  (`media_preview_controller.js`) before anything is saved; a file it can't
+  draw (PDF, HEIC) hides the preview rather than show the old image, and
+  clearing the choice brings the saved image back.
   Replacing an existing photo's file counts as a change, and its
   `image_blob` is preloaded.
 - **Removal is RESTful.** Each **Remove** is a submit button pointed by
@@ -186,9 +191,12 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   `Rooms::MediaController`. Each authorizes `manage_media?`, writes through
   `Curation::Apply` (`room.media_updated`), and redirects to
   `edit?open=<editor>`. `#edit` reopens that dialog, and its `description:`
-  carries the flash ("Photo 2 removed."): a toast outside an open modal is
-  ignored by the accessibility tree (`activeModalDialog`), so the message
-  must live in the dialog. `#update` no longer takes removal flags. The
+  carries the flash, the alert when removal failed and the notice
+  ("Photo 2 removed.") when it worked (`RoomsHelper#media_editor_message`):
+  a toast outside an open modal is ignored by the accessibility tree
+  (`activeModalDialog`), so the message must live in the dialog. A photo is
+  numbered by its row in the editor, `Room#gallery_by_position` (position,
+  then id), never by its stored `position`, which can have gaps and ties. `#update` no longer takes removal flags. The
   floor plan is `resource :floor_plan` (`Rooms::FloorPlansController`);
   nested controllers find their room through the `RoomScoped` concern.
 - **Floor plan page** (`Rooms::FloorPlansController#show`). It lists the
@@ -239,9 +247,10 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
 `CURATED_PARAMS` (nickname, ADA seat count) is always permitted, and
 `MEDIA_PARAMS` only when `RoomPolicy#manage_media?` (admins). The media
 metadata (`*_alt`, `*_description`) stays in `MEDIA_PARAMS`,
-behind the same gate as the attachments. The `*_derived_ok` columns are no
-longer editable or permitted; an image without authored alt text stays on
-the `media:alt_coverage` needs-review count. `gallery_attributes` uses the
+behind the same gate as the attachments. The `*_derived_ok` columns are retired:
+not editable, not permitted, and ignored by `Describable#alt_status_for`, so
+an image without authored alt text counts as needs-review on
+`media:alt_coverage`, whatever an old flag says. `gallery_attributes` uses the
 double-array `[[ ... ]]` shape `params.expect` needs for a hash of nested
 rows: the single-array shape silently permits nothing, which would break
 every gallery add, reorder and delete. The media editors resubmit the

@@ -1,13 +1,13 @@
-<%# locals: (input_id:, input_name:, accept:, upload_label:, remove_form: nil, remove_label: nil, remove_context: nil, remove_confirm: nil) %>
+<%# locals: (input_id:, input_name:, accept:, upload_label:, upload_context: nil, remove_form: nil, remove_label: nil, remove_context: nil, remove_confirm: nil) %>
 <div class="group/upload mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
   <%= ui :file_input, id: input_id, name: input_name, accept: accept, show_selection: true, class: "sr-only",
-        "aria-label": upload_label %>
+        "aria-label": [ upload_label, upload_context ].compact.join(" ") %>
   <label for="<%= input_id %>"
          class="btn-text-icon btn-text-interactive inline-flex min-h-input cursor-pointer items-center px-2 text-sm rounded
                 group-has-[input:focus-visible]/upload:[outline:2px_solid_var(--color-interactive-focus)]
                 group-has-[input:focus-visible]/upload:[outline-offset:2px]">
     <%= icon(:arrow_up_tray, size: :sm) %>
-    <%= t("rooms.edit.upload_new") %>
+    <%= upload_label %>
   </label>
   <% if remove_form %>
     <button type="submit" form="<%= remove_form %>"
