@@ -110,9 +110,7 @@ class RoomsController < ApplicationController
   # the audit trail.
   def edit
     authorize @room
-    build_blank_gallery
-    @presenter = RoomPresenter.new(@room, url: room_url(@room))
-    @open_media = params[:open].presence_in(%w[panorama seating_chart gallery])&.to_sym
+    prepare_edit_page(open_media: params[:open].presence_in(%w[panorama seating_chart gallery])&.to_sym)
   end
 
   # Phase 5 Task 6 (Brief §14.1) retrofit: routes curated-field changes and
@@ -219,6 +217,8 @@ class RoomsController < ApplicationController
       # attempted to save!, so re-rendering :edit shows exactly what failed).
       @room = failed_result.payload[:record] || @room
       render_edit_failure(media_slot(media_attrs))
+    elsif (@saved_media = media_slot(media_attrs)) && visibility.nil? && curated_attrs.empty?
+      respond_with_saved_media
     else
       apply_visibility(visibility)
       redirect_after_update(visibility)
@@ -228,11 +228,25 @@ class RoomsController < ApplicationController
   private
 
   def render_edit_failure(open_media)
-    build_blank_gallery
-    @display_room = Room.for_current_workspace.find(@room.id)
-    @presenter = RoomPresenter.new(@display_room, url: room_url(@display_room))
-    @open_media = open_media
+    prepare_edit_page(open_media: open_media, display_room: Room.for_current_workspace.find(@room.id))
     render :edit, status: :unprocessable_entity
+  end
+
+  def respond_with_saved_media
+    respond_to do |format|
+      format.turbo_stream do
+        @room = Room.for_current_workspace.find(@room.id)
+        prepare_edit_page
+      end
+      format.html { redirect_to edit_room_path(@room), notice: t("rooms.edit.#{@saved_media}_saved") }
+    end
+  end
+
+  def prepare_edit_page(open_media: nil, display_room: @room)
+    build_blank_gallery
+    @display_room = display_room
+    @presenter = RoomPresenter.new(display_room, url: room_url(display_room))
+    @open_media = open_media
   end
 
   def media_slot(media_attrs)

@@ -34,6 +34,16 @@ RSpec.describe RoomPresenter do
     end
   end
 
+  describe "#stage_photos" do
+    it "is the first five photos in gallery order, loaded once" do
+      photos = [ 3, 1, 6, 2, 5, 4 ].map { create(:media_asset, owner: room, workspace: room.workspace, position: it) }
+      presenter = described_class.new(room)
+
+      expect(presenter.stage_photos).to eq(photos.sort_by(&:position).first(5))
+      expect(presenter.stage_photos).to be(presenter.stage_photos)
+    end
+  end
+
   describe "#chips" do
     it "sorts chips by short_code regardless of creation order" do
       create(:room_characteristic, room: room, code: "c1", short_code: "zzz")

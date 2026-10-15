@@ -19,10 +19,12 @@ export default class extends Controller {
     this.prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     this.handleCancel = this.handleCancel.bind(this)
     this.handleClick = this.handleClick.bind(this)
+    this.closeInsteadOfMorph = this.closeInsteadOfMorph.bind(this)
     this.closeTimer = null
 
     this.dialogTarget.addEventListener("cancel", this.handleCancel)
     this.dialogTarget.addEventListener("click", this.handleClick)
+    this.element.addEventListener("turbo:before-morph-attribute", this.closeInsteadOfMorph)
 
     if (this.openValue) {
       this.open()
@@ -33,6 +35,7 @@ export default class extends Controller {
   disconnect() {
     this.dialogTarget.removeEventListener("cancel", this.handleCancel)
     this.dialogTarget.removeEventListener("click", this.handleClick)
+    this.element.removeEventListener("turbo:before-morph-attribute", this.closeInsteadOfMorph)
 
     if (this.closeTimer) {
       clearTimeout(this.closeTimer)
@@ -103,6 +106,18 @@ export default class extends Controller {
       this.close()
     } catch {
       this.dialogTarget.close()
+    }
+  }
+
+  closeInsteadOfMorph(event) {
+    if (!this.dialogTarget.open) return
+
+    const { attributeName } = event.detail
+    if (event.target === this.dialogTarget && attributeName === "open") {
+      event.preventDefault()
+      this.close()
+    } else if (event.target === this.panelTarget && attributeName === "style") {
+      event.preventDefault()
     }
   }
 

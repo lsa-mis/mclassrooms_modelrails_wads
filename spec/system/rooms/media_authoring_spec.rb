@@ -33,8 +33,8 @@ RSpec.describe "Authoring room media metadata", type: :system do
       click_button I18n.t("rooms.edit.save_media")
     end
 
-    expect(page).to have_current_path(room_path(room))
-    expect(page).to have_content(I18n.t("rooms.edit.success"))
+    expect(page).to have_content(I18n.t("rooms.edit.panorama_saved"))
+    expect(page).to have_current_path(edit_room_path(room))
 
     room.reload
     expect(room.alt_status_for(:panorama)).to eq(:authored)
