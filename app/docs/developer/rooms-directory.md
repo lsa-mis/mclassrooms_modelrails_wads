@@ -239,9 +239,10 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
 `CURATED_PARAMS` (nickname, ADA seat count) is always permitted, and
 `MEDIA_PARAMS` only when `RoomPolicy#manage_media?` (admins). The media
 metadata (`*_alt`, `*_description`) stays in `MEDIA_PARAMS`,
-behind the same gate as the attachments. The `*_derived_ok` columns are no
-longer editable or permitted; an image without authored alt text stays on
-the `media:alt_coverage` needs-review count. `gallery_attributes` uses the
+behind the same gate as the attachments. The `*_derived_ok` columns are retired:
+not editable, not permitted, and ignored by `Describable#alt_status_for`, so
+an image without authored alt text counts as needs-review on
+`media:alt_coverage`, whatever an old flag says. `gallery_attributes` uses the
 double-array `[[ ... ]]` shape `params.expect` needs for a hash of nested
 rows: the single-array shape silently permits nothing, which would break
 every gallery add, reorder and delete. The media editors resubmit the

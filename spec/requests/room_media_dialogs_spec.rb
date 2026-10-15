@@ -106,6 +106,17 @@ RSpec.describe "Room media editing dialogs", type: :request do
       expect(description.text(:all)).to eq(I18n.t("rooms.edit.photo_removed", position: 2))
     end
 
+    it "re-renders a rejected photo replacement with its error instead of failing" do
+      patch room_path(room), params: { room: { gallery_attributes: {
+        "0" => { id: first_photo.id, image: fixture_file_upload("seating_chart.pdf", "application/pdf") }
+      } } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      photos = page.find("[data-modal-open-value='true'] dialog#gallery-editor", visible: :all)
+      expect(photos.all("[data-testid='media-preview'] img", visible: :all).size).to eq(2)
+      expect(first_photo.reload.image.blob.content_type).not_to eq("application/pdf")
+    end
+
     it "replaces an existing photo's file" do
       original_blob = first_photo.image.blob
 

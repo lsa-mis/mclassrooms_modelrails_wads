@@ -1,5 +1,6 @@
 <%# locals: (room:, form_room:, photo_count:, open:) %>
 <% persisted_photos = form_room.gallery.select(&:persisted?) %>
+<% saved_photos = room.gallery.includes(image_attachment: :blob).index_by(&:id) %>
 <%= ui :dialog, id: "gallery-editor", title: t("rooms.edit.gallery_heading"), size: :full, open: open,
       description: (flash[:notice] if open) do |dialog| %>
   <% dialog.with_trigger do %>
@@ -17,14 +18,15 @@
       <% gallery_image = gf.object %>
       <% position = gf.index + 1 %>
       <% if gallery_image.persisted? %>
+        <% saved_image = saved_photos.fetch(gallery_image.id, gallery_image).image %>
         <div class="grid gap-6 py-6 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <%= gf.hidden_field :id %>
           <div class="min-w-0" data-controller="media-preview" data-action="change->media-preview#show">
             <%= render "rooms/edit/media_preview",
-                  src: rails_representation_path(gallery_image.image.variant(:gallery)),
+                  src: rails_representation_path(saved_image.variant(:gallery)),
                   input_id: gf.field_id(:image), replace_label: t("rooms.edit.replace_photo", position: position) %>
             <p class="mt-2 text-sm text-text-body">
-              <%= t("rooms.edit.updated_ago", time: time_ago_in_words(gallery_image.image.blob.created_at)) %>
+              <%= t("rooms.edit.updated_ago", time: time_ago_in_words(saved_image.blob.created_at)) %>
             </p>
             <div class="flex flex-wrap items-end justify-between gap-3">
               <%= render "rooms/edit/media_actions", input_id: gf.field_id(:image), input_name: gf.field_name(:image),
