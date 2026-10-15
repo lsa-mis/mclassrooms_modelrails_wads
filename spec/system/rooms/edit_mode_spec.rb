@@ -48,6 +48,18 @@ RSpec.describe "Room page view and edit modes", type: :system do
     expect(page).to have_current_path(room_path(room))
   end
 
+  it "docks the media strip to the empty band for an admin, accessibly in both themes" do
+    sign_in_via_form(admin)
+    visit edit_room_path(room)
+
+    within("[data-testid='media-dock']") do
+      expect(page).to have_text(I18n.t("rooms.edit.media_strip_none"))
+      expect(page).to have_button(I18n.t("rooms.edit.add_panorama"))
+    end
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations with the media strip on the empty band:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+  end
+
   it "shows an admin the hidden overlay and lists the room again from the switch, accessibly in both themes" do
     room.update!(hidden_at: Time.current, hidden_by: admin)
     sign_in_via_form(admin)
