@@ -1,52 +1,69 @@
 <%# locals: (room:, form_room:, open:) %>
 <% photo_count = room.gallery.count %>
-<%= ui :sheet, id: "gallery-editor", title: t("rooms.edit.gallery_heading"), side: :right, open: open do |sheet| %>
-  <% sheet.with_trigger do %>
+<% persisted_photos = form_room.gallery.select(&:persisted?) %>
+<%= ui :dialog, id: "gallery-editor", title: t("rooms.edit.gallery_heading"), size: :full, open: open do |dialog| %>
+  <% dialog.with_trigger do %>
     <button type="button" class="btn-secondary">
       <%= photo_count.positive? ? t("rooms.edit.manage_photos", count: photo_count) : t("rooms.show.add_photos") %>
     </button>
   <% end %>
 
   <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
-        id: "gallery-editor-form", class: "space-y-6" do |form| %>
+        id: "gallery-editor-form" do |form| %>
     <%= form.error_summary %>
     <%= form.fields_for :gallery, form_room.gallery.sort_by(&:position) do |gf| %>
       <% gallery_image = gf.object %>
+      <% position = gf.index + 1 %>
       <% if gallery_image.persisted? %>
-        <div class="flex flex-col gap-4 border-b border-border pb-6 last:border-b-0 last:pb-0">
-          <%= ui :figure do %>
-            <%= ui :image,
-                  src: rails_representation_path(gallery_image.image.variant(:card)),
+        <div class="grid gap-6 border-b border-border py-6 first:pt-0 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div class="min-w-0">
+            <%= render "rooms/edit/media_preview",
+                  src: rails_representation_path(gallery_image.image.variant(:gallery)),
                   alt: gallery_image.alt_for(:image),
-                  width: 96, height: 96,
-                  class: "size-24 shrink-0 rounded-md object-cover" %>
-          <% end %>
-          <div class="space-y-3">
-            <%= gf.number_field :position,
-                  label: t("rooms.edit.position_label", position: gf.index + 1), min: 1, required: true %>
-            <%= gf.text_field :image_alt, label: t("rooms.media.alt_label") %>
-            <%= gf.text_area :image_description, rows: 2, label: t("rooms.media.description_label") %>
-            <%= gf.check_box :image_derived_ok, label: t("rooms.media.derived_ok_label") %>
-            <%= gf.check_box :_destroy,
-                  label: t("rooms.edit.gallery_destroy_label", position: gf.index + 1, room: room.display_name) %>
+                  input_id: gf.field_id(:image), replace_label: t("rooms.edit.replace_photo", position: position) %>
+            <p class="mt-2 text-sm text-text-body">
+              <%= t("rooms.edit.updated_ago", time: time_ago_in_words(gallery_image.image.blob.created_at)) %>
+            </p>
+            <div class="flex flex-wrap items-end justify-between gap-3">
+              <%= render "rooms/edit/media_actions", input_id: gf.field_id(:image), input_name: gf.field_name(:image),
+                    accept: "image/png,image/jpeg,image/webp,image/heic,image/heif",
+                    remove_form: "photo-remove-#{gallery_image.id}", remove_label: t("rooms.edit.remove_photo"),
+                    remove_context: position.to_s,
+                    remove_confirm: t("rooms.edit.remove_photo_confirm", position: position, room: room.display_name) %>
+              <div class="w-28">
+                <%= gf.number_field :position, label: t("rooms.edit.position_label", position: position), min: 1, required: true %>
+              </div>
+            </div>
+          </div>
+          <div class="min-w-0 space-y-4">
+            <%= gf.text_area :image_alt, rows: 3, label: t("rooms.media.alt_label") %>
+            <%= gf.text_area :image_description, rows: 4, label: t("rooms.media.description_label") %>
           </div>
         </div>
       <% else %>
-        <div class="border-b border-border pb-6 last:border-b-0 last:pb-0">
+        <div class="border-b border-border py-6 last:border-b-0 last:pb-0">
           <%= gf.hidden_field :position %>
           <%= gf.file_field :image,
-                label: t("rooms.edit.gallery_add_label", position: gf.index + 1),
+                label: t("rooms.edit.gallery_add_label", position: position),
                 help: t("rooms.edit.gallery_add_hint"),
                 accept: "image/png,image/jpeg,image/webp,image/heic,image/heif" %>
         </div>
       <% end %>
     <% end %>
     <% if form_room.gallery.none?(&:new_record?) && form_room.gallery.size >= 5 %>
-      <p class="text-sm text-text-body"><%= t("rooms.edit.gallery_full_notice") %></p>
+      <p class="pt-6 text-sm text-text-body"><%= t("rooms.edit.gallery_full_notice") %></p>
     <% end %>
   <% end %>
 
-  <% sheet.with_footer do %>
+  <% persisted_photos.each do |photo| %>
+    <%= form_with url: room_path(form_room, return_to: "gallery"), method: :patch,
+          id: "photo-remove-#{photo.id}", class: "hidden" do %>
+      <%= hidden_field_tag "room[gallery_attributes][0][id]", photo.id, id: nil %>
+      <%= hidden_field_tag "room[gallery_attributes][0][_destroy]", "1", id: nil %>
+    <% end %>
+  <% end %>
+
+  <% dialog.with_footer do %>
     <button type="button" class="btn-secondary" data-action="click->modal#close"><%= t("rooms.edit.cancel") %></button>
     <%= button_tag t("rooms.edit.save_media"), type: "submit", form: "gallery-editor-form", class: "btn-primary" %>
   <% end %>

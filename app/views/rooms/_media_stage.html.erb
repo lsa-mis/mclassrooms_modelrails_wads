@@ -1,4 +1,4 @@
-<%# locals: (room:, presenter:, gallery:, has_pano:, has_photos:) %>
+<%# locals: (room:, presenter:, gallery:, has_pano:, has_photos:, permanent: true) %>
 <%# Two-mode stage (2026-08-07 spec): pano default when present, photos one
     chip-click away — progressive disclosure, not tabs. The pano pane keeps
     data-turbo-permanent and is only ever `hidden`, never removed (WebGL
@@ -22,7 +22,7 @@
      <% if has_photos %>data-media-stage-badge-format-value="<%= t("rooms.show.photo_badge", caption: "%{caption}", position: "%{position}") %>"<% end %>>
   <% if has_pano %>
     <div data-media-stage-target="pano">
-      <%= render "rooms/pano_pane", room: room %>
+      <%= render "rooms/pano_pane", room: room, permanent: permanent %>
     </div>
   <% end %>
 

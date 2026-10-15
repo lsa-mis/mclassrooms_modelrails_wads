@@ -62,10 +62,15 @@ In edit mode, a **Photos & 360° panorama** strip sits on top of the photos.
 It says what the room has (say, a panorama and four photos) and holds
 **Edit panorama** (or **Add panorama**) and **Manage photos** (or **Add
 photos**). The seating chart is edited from its thumbnail in the **Plans &
-documents** card. The panorama and
-the seating chart each open a dialog with a preview, **Upload a new file**, a
-remove option, and the alt text and description; **Save & apply** saves just
-that item. **Manage photos** opens a side panel for the ordered gallery.
+documents** card.
+
+Each opens a wide dialog shaped like the profile-photo editor: a large
+preview beside the alt text and description, so you can describe the image
+while looking at it. Click the preview, or **Upload new**, to choose a
+replacement; **Save & apply** saves it with any text changes. **Remove
+panorama**, **Remove seating chart** and **Remove photo** ask you to confirm
+and apply straight away. **Manage photos** lists every photo the same way,
+each with its position, and removing one keeps the dialog open.
 Editors see the same strip with a note that media is managed by
 administrators, and flag problems with a note instead.
 

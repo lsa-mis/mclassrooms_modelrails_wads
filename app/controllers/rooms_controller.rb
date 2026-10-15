@@ -27,10 +27,10 @@ class RoomsController < ApplicationController
   MEDIA_PARAMS = [
     :panorama, :seating_chart,
     :remove_panorama, :remove_seating_chart,
-    :panorama_alt, :panorama_description, :panorama_derived_ok,
-    :seating_chart_alt, :seating_chart_description, :seating_chart_derived_ok,
+    :panorama_alt, :panorama_description,
+    :seating_chart_alt, :seating_chart_description,
     { gallery_attributes: [ [ :id, :image, :position, :_destroy,
-                                     :image_alt, :image_description, :image_derived_ok ] ] }
+                                     :image_alt, :image_description ] ] }
   ].freeze
 
   # Task 7 (Brief §5.3) now defines #edit/#update below, so both actions join
@@ -136,6 +136,7 @@ class RoomsController < ApplicationController
     authorize @room
     build_blank_gallery
     @presenter = RoomPresenter.new(@room, url: room_url(@room))
+    @open_media = :gallery if params[:open] == "gallery"
   end
 
   # Phase 5 Task 6 (Brief §14.1) retrofit: routes curated-field changes and
@@ -220,7 +221,7 @@ class RoomsController < ApplicationController
     # spec below caught exactly that). Also loads @room.gallery into
     # memory, which media_change? below relies on to detect a genuine
     # position change per row.
-    preload_gallery_image_attachments(skip_ids: destroyed_gallery_ids(attrs))
+    preload_gallery_image_attachments(skip_ids: destroyed_gallery_ids(attrs), replaced_ids: replaced_gallery_ids(attrs))
 
     curated_keys  = CURATED_PARAMS.map(&:to_s)
     curated_attrs = attrs.slice(*curated_keys)
@@ -289,7 +290,7 @@ class RoomsController < ApplicationController
     when :unhide
       redirect_to room_path(@room), notice: t("rooms.unhide.success")
     else
-      redirect_to room_path(@room), notice: t("rooms.edit.success")
+      redirect_to after_save_path, notice: t("rooms.edit.success")
     end
   end
 
@@ -303,6 +304,14 @@ class RoomsController < ApplicationController
   # blanks past the cap). Preloading runs AFTER build (harmless either order —
   # it only touches already-persisted rows) so both #edit's first render and
   # a failed #update's re-render get it.
+  def after_save_path
+    case params[:return_to]
+    when "gallery" then edit_room_path(@room, open: "gallery")
+    when "edit" then edit_room_path(@room)
+    else room_path(@room)
+    end
+  end
+
   def build_blank_gallery
     remaining = 5 - @room.gallery.size
     if remaining.positive?
@@ -370,13 +379,8 @@ class RoomsController < ApplicationController
     panorama_alt panorama_description
     seating_chart_alt seating_chart_description
   ].freeze
-  METADATA_BOOL_KEYS = %w[panorama_derived_ok seating_chart_derived_ok].freeze
-
   def media_metadata_changed?(attrs)
-    METADATA_TEXT_KEYS.any? { |key| attrs.key?(key) && attrs[key].to_s != @room.public_send(key).to_s } ||
-      METADATA_BOOL_KEYS.any? { |key|
-        attrs.key?(key) && ActiveModel::Type::Boolean.new.cast(attrs[key]) != @room.public_send(key)
-      }
+    METADATA_TEXT_KEYS.any? { |key| attrs.key?(key) && attrs[key].to_s != @room.public_send(key).to_s }
   end
 
   # A gallery row counts as changed when it's marked `_destroy`, is a brand
@@ -397,15 +401,10 @@ class RoomsController < ApplicationController
     existing = @room.gallery.detect { |image| image.id.to_s == row[:id].to_s }
     return false if existing.blank?
 
+    return true if row[:image].present?
     return true if row[:position].present? && existing.position.to_s != row[:position].to_s
-    # Task 4 (image metadata): same reasoning as media_metadata_changed?
-    # above — image_alt/image_description/image_derived_ok are resubmitted
-    # unconditionally by every persisted row, so each is compared against
-    # the row's OWN current value rather than checked for mere presence.
     return true if row.key?(:image_alt) && row[:image_alt].to_s != existing.image_alt.to_s
     return true if row.key?(:image_description) && row[:image_description].to_s != existing.image_description.to_s
-    return true if row.key?(:image_derived_ok) &&
-      ActiveModel::Type::Boolean.new.cast(row[:image_derived_ok]) != existing.image_derived_ok
 
     false
   end
@@ -430,13 +429,20 @@ class RoomsController < ApplicationController
   # itself be an unused eager load (Bullet caught exactly this on the
   # destroy-only spec). Not used before a render (#edit, or #update's failure
   # re-render still wants every row's thumbnail, destroy-marked or not).
-  def preload_gallery_image_attachments(skip_ids: [])
+  def preload_gallery_image_attachments(skip_ids: [], replaced_ids: [])
     persisted = @room.gallery.select { |image| image.persisted? && skip_ids.exclude?(image.id.to_s) }
     return if persisted.empty?
 
     ActiveRecord::Associations::Preloader.new(
       records: persisted, associations: { image_attachment: :blob }
     ).call
+
+    replaced = persisted.select { |image| replaced_ids.include?(image.id.to_s) }
+    ActiveRecord::Associations::Preloader.new(records: replaced, associations: :image_blob).call if replaced.any?
+  end
+
+  def replaced_gallery_ids(attrs)
+    submitted_gallery_rows(attrs).select { |row| row[:id].present? && row[:image].present? }.map { |row| row[:id].to_s }
   end
 
   # Ids of gallery images the submitted params mark for destruction this

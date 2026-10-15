@@ -1,6 +1,6 @@
 <%# locals: (room:, form_room:, open:) %>
 <% attached = room.seating_chart.attached? %>
-<%= ui :dialog, id: "seating-chart-editor", title: t("rooms.edit.seating_chart_label"), size: :lg, open: open do |dialog| %>
+<%= ui :dialog, id: "seating-chart-editor", title: t("rooms.edit.seating_chart_label"), size: :full, open: open do |dialog| %>
   <% dialog.with_trigger do %>
     <button type="button" data-testid="seating-chart-edit"
             class="group/edit flex items-center gap-3 rounded-md text-left text-interactive focus-ring">
@@ -17,28 +17,48 @@
   <% end %>
 
   <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
-        id: "seating-chart-editor-form", class: "space-y-5" do |form| %>
+        id: "seating-chart-editor-form" do |form| %>
     <%= form.error_summary %>
-    <% if attached %>
-      <div class="flex flex-wrap items-center gap-4">
-        <%= render "rooms/edit/media_thumb", attachment: room.seating_chart, size: 150 %>
-        <p class="text-sm text-text-body">
-          <%= t("rooms.edit.updated_ago", time: time_ago_in_words(room.seating_chart.blob.created_at)) %>
-        </p>
+    <div class="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div class="min-w-0">
+        <% if attached && room.seating_chart.variable? %>
+          <%= render "rooms/edit/media_preview",
+                src: rails_representation_path(room.seating_chart.variant(resize_to_limit: [ 800, 800 ], format: :webp)),
+                alt: room.alt_for(:seating_chart),
+                input_id: form.field_id(:seating_chart), replace_label: t("rooms.edit.replace_seating_chart") %>
+        <% elsif attached %>
+          <div class="flex flex-wrap items-center gap-4">
+            <%= render "rooms/edit/media_thumb", attachment: room.seating_chart, size: 150 %>
+            <%= link_to t("rooms.show.seating_chart_link", room: room.display_name),
+                  rails_blob_path(room.seating_chart, disposition: :inline),
+                  target: "_blank", rel: "noopener",
+                  class: "text-interactive underline-offset-4 hover:underline focus-ring rounded-sm" %>
+          </div>
+        <% else %>
+          <p class="text-sm text-text-body"><%= t("rooms.edit.seating_chart_hint") %></p>
+        <% end %>
+        <% if attached %>
+          <p class="mt-2 text-sm text-text-body">
+            <%= t("rooms.edit.updated_ago", time: time_ago_in_words(room.seating_chart.blob.created_at)) %>
+          </p>
+        <% end %>
+        <%= render "rooms/edit/media_actions", input_id: form.field_id(:seating_chart), input_name: form.field_name(:seating_chart),
+              accept: "image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf",
+              remove_form: ("seating-chart-remove-form" if attached), remove_label: t("rooms.edit.remove_seating_chart"),
+              remove_confirm: t("rooms.edit.remove_seating_chart_confirm", room: room.display_name) %>
       </div>
-      <div>
-        <%= form.check_box :remove_seating_chart,
-              label: t("rooms.edit.remove_seating_chart_label", room: room.display_name) %>
-        <p class="mt-1 text-sm text-text-body"><%= t("rooms.edit.delete_confirm") %></p>
+      <div class="min-w-0 space-y-4">
+        <%= form.text_area :seating_chart_alt, rows: 3, label: t("rooms.media.alt_label") %>
+        <%= form.text_area :seating_chart_description, rows: 6, label: t("rooms.media.description_label") %>
       </div>
+    </div>
+  <% end %>
+
+  <% if attached %>
+    <%= form_with model: form_room, url: room_path(form_room, return_to: "edit"), method: :patch,
+          id: "seating-chart-remove-form", class: "hidden" do |form| %>
+      <%= form.hidden_field :remove_seating_chart, value: "1", id: nil %>
     <% end %>
-    <%= form.file_field :seating_chart,
-          label: attached ? t("rooms.edit.upload_new") : t("rooms.edit.seating_chart_label"),
-          help: t("rooms.edit.seating_chart_hint"),
-          accept: "image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" %>
-    <%= form.text_field :seating_chart_alt, label: t("rooms.media.alt_label") %>
-    <%= form.text_area :seating_chart_description, rows: 2, label: t("rooms.media.description_label") %>
-    <%= form.check_box :seating_chart_derived_ok, label: t("rooms.media.derived_ok_label") %>
   <% end %>
 
   <% dialog.with_footer do %>

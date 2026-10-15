@@ -1,0 +1,19 @@
+<%# locals: (input_id:, input_name:, accept:, remove_form: nil, remove_label: nil, remove_context: nil, remove_confirm: nil) %>
+<div class="group/upload mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+  <%= ui :file_input, id: input_id, name: input_name, accept: accept, show_selection: true, class: "sr-only" %>
+  <label for="<%= input_id %>"
+         class="btn-text-icon btn-text-interactive inline-flex min-h-input cursor-pointer items-center px-2 text-sm rounded
+                group-has-[input:focus-visible]/upload:[outline:2px_solid_var(--color-interactive-focus)]
+                group-has-[input:focus-visible]/upload:[outline-offset:2px]">
+    <%= icon(:arrow_up_tray, size: :sm) %>
+    <%= t("rooms.edit.upload_new") %>
+  </label>
+  <% if remove_form %>
+    <button type="submit" form="<%= remove_form %>"
+            class="btn-text-icon btn-text-danger inline-flex min-h-input cursor-pointer items-center border-0 bg-transparent px-2 text-sm focus-ring rounded"
+            data-turbo-confirm="<%= remove_confirm %>">
+      <%= icon(:trash, size: :sm) %>
+      <%= remove_label %><% if remove_context %><span class="sr-only"> <%= remove_context %></span><% end %>
+    </button>
+  <% end %>
+</div>

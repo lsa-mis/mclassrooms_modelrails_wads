@@ -1,7 +1,7 @@
-<%# locals: (room:, presenter:, gallery:, has_pano:, has_photos:) %>
+<%# locals: (room:, presenter:, gallery:, has_pano:, has_photos:, permanent: true) %>
 <% if has_pano || has_photos %>
   <%= render "rooms/media_stage", room: room, presenter: presenter, gallery: gallery,
-        has_pano: has_pano, has_photos: has_photos %>
+        has_pano: has_pano, has_photos: has_photos, permanent: permanent %>
 <% else %>
   <%= render "rooms/media_empty_band", room: room, presenter: presenter %>
 <% end %>
