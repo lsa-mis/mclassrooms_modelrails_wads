@@ -12,27 +12,22 @@
 
   <%= render "rooms/actions", room: room, presenter: presenter, saved_id: saved_id, editing: editing %>
 
-  <% if has_pano || has_photos %>
-    <%= render "rooms/media_stage", room: room, presenter: presenter, gallery: gallery,
-          has_pano: has_pano, has_photos: has_photos %>
-  <% else %>
-    <%= render "rooms/media_empty_band", room: room, presenter: presenter %>
-  <% end %>
-
-  <% if manage_media %>
-    <div data-testid="media-toolbar" class="mt-3 flex flex-wrap gap-2">
-      <%= render "rooms/edit/panorama_editor", room: room, form_room: form_room, open: open_media == :panorama %>
-      <%= render "rooms/edit/gallery_editor", room: room, form_room: form_room, open: open_media == :gallery %>
-    </div>
-  <% end %>
-
   <% if editing %>
+    <div data-testid="media-dock"
+         class="mt-6 overflow-hidden rounded-md border border-border
+                [&>[data-testid=media-stage]]:mt-0 [&>[data-testid=empty-media-band]]:mt-0
+                [&>[data-testid=empty-media-band]]:rounded-none
+                [&_#room_panorama_stage]:rounded-t-none [&_[data-testid=photo-frame]>*]:rounded-t-none">
+      <%= render "rooms/edit/media_strip", room: room, form_room: form_room, manage_media: manage_media,
+            open_media: open_media, photo_count: gallery.size %>
+      <%= render "rooms/media", room: room, presenter: presenter, gallery: gallery,
+            has_pano: has_pano, has_photos: has_photos %>
+    </div>
+
     <%= render "rooms/curated_fields", room: form_room %>
-    <% unless manage_media %>
-      <div class="mt-4">
-        <%= ui :banner, t("rooms.edit.media_admin_only_hint"), variant: :info %>
-      </div>
-    <% end %>
+  <% else %>
+    <%= render "rooms/media", room: room, presenter: presenter, gallery: gallery,
+          has_pano: has_pano, has_photos: has_photos %>
   <% end %>
 
   <div class="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">

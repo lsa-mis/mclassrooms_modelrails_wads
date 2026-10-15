@@ -58,14 +58,16 @@ of exactly what changed.
 
 ### Adding media
 
-In edit mode, admins get **Edit panorama** (or **Add panorama**) and
-**Manage photos** (or **Add photos**) under the photos, and an editable
-seating-chart thumbnail in the **Plans & documents** card. The panorama and
+In edit mode, a **Photos & 360° panorama** strip sits on top of the photos.
+It says what the room has (say, a panorama and four photos) and holds
+**Edit panorama** (or **Add panorama**) and **Manage photos** (or **Add
+photos**). The seating chart is edited from its thumbnail in the **Plans &
+documents** card. The panorama and
 the seating chart each open a dialog with a preview, **Upload a new file**, a
 remove option, and the alt text and description; **Save & apply** saves just
 that item. **Manage photos** opens a side panel for the ordered gallery.
-Editors see a note that media is managed by administrators, and flag problems
-with a note instead.
+Editors see the same strip with a note that media is managed by
+administrators, and flag problems with a note instead.
 
 Attachments are capped at 10 MB; images are PNG / JPEG / WebP / HEIC, and
 PDFs are allowed only for seating charts and floor plans. For batches, use

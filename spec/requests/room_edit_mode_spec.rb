@@ -107,6 +107,52 @@ RSpec.describe "Room page view and edit modes", type: :request do
       expect(page).to have_css("input[role='switch'][aria-describedby~='room_listed_feed_hint']")
     end
 
+    it "docks a labelled media strip to the top of the stage for an admin" do
+      attach_panorama!(room)
+      create(:media_asset, owner: room, workspace: workspace, position: 1)
+      sign_in(admin)
+      get edit_room_path(room)
+
+      dock = page.find("[data-testid='media-dock']")
+      expect(dock.all(:xpath, "./*").map { it["data-testid"] }).to eq([ "media-toolbar", "media-stage" ])
+      strip = dock.find("[data-testid='media-toolbar']")
+      expect(strip).to have_text(I18n.t("rooms.edit.media_strip_label"))
+      expect(strip).to have_text(I18n.t("rooms.edit.media_strip_panorama"))
+      expect(strip).to have_text(I18n.t("rooms.edit.media_strip_photos", count: 1))
+      expect(strip).to have_text(I18n.t("rooms.edit.media_strip_seating_hint"))
+      expect(strip).to have_button(I18n.t("rooms.edit.edit_panorama"))
+      expect(strip).to have_button(I18n.t("rooms.edit.manage_photos", count: 1))
+    end
+
+    it "docks the strip to the empty band, with add buttons, when the room has no media" do
+      sign_in(admin)
+      get edit_room_path(room)
+
+      dock = page.find("[data-testid='media-dock']")
+      expect(dock.all(:xpath, "./*").map { it["data-testid"] }).to eq([ "media-toolbar", "empty-media-band" ])
+      expect(dock).to have_text(I18n.t("rooms.edit.media_strip_none"))
+    end
+
+    it "gives an editor the same strip, holding the admin-managed note instead of buttons" do
+      attach_panorama!(room)
+      sign_in(editor)
+      get edit_room_path(room)
+
+      strip = page.find("[data-testid='media-dock'] [data-testid='media-toolbar']")
+      expect(strip).to have_text(I18n.t("rooms.edit.media_strip_label"))
+      expect(strip).to have_text(I18n.t("rooms.edit.media_admin_only_hint"))
+      expect(strip).to have_no_button
+    end
+
+    it "leaves the view page without a media strip" do
+      attach_panorama!(room)
+      sign_in(admin)
+      get room_path(room)
+
+      expect(page).to have_no_css("[data-testid='media-dock']")
+      expect(page).to have_no_css("[data-testid='media-toolbar']")
+    end
+
     it "gives an admin the add-media affordances on a room with no media" do
       sign_in(admin)
       get edit_room_path(room)

@@ -162,6 +162,13 @@ en:
       upload_new: "Upload a new file"
       save_media: "Save & apply"
       updated_ago: "Updated %{time} ago"
+      media_strip_label: "Photos & 360° panorama"
+      media_strip_panorama: "360° panorama"
+      media_strip_photos:
+        one: "1 photo"
+        other: "%{count} photos"
+      media_strip_none: "No panorama or photos yet"
+      media_strip_seating_hint: "The seating chart is in Plans & documents."
     # Task 4 (image metadata, Brief §5.2): generic labels shared by every
     # alt/description/derived_ok field across rooms/edit and buildings/edit
     # (panorama, seating chart, gallery photos, building photo) —

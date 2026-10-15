@@ -161,9 +161,14 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   built with `fields model:` and carry `form: "room-edit-form"`, so they can
   sit anywhere in the layout without wrapping the page in a `<form>`. Media
   and note forms stay separate elements; nesting forms is invalid HTML.
-- **Media editors.** Admins get `rooms/edit/_panorama_editor` and
-  `_seating_chart_editor` (`ui :dialog`) and `_gallery_editor`
-  (`ui :sheet`). Each holds its own form posting to `#update`, with its
+- **Media editors.** In edit mode `_page` wraps the stage (or empty band)
+  in a `media-dock` with `rooms/edit/_media_strip` fused to its top edge:
+  a summary and, for admins, `rooms/edit/_panorama_editor` (`ui :dialog`)
+  and `_gallery_editor` (`ui :sheet`); editors get the admin-managed note
+  there instead. The strip sits outside the stage `<section>`, so its
+  dialogs never nest inside the stage's own `modal` controller. The
+  seating chart's `_seating_chart_editor` (`ui :dialog`) lives on its
+  thumbnail in the documents card. Each holds its own form posting to `#update`, with its
   submit button in the dialog footer pointed at the form by `form=`. The
   panorama form opts out of Turbo (`data: { turbo: false }`): the stage
   keeps a fixed id and `data-turbo-permanent`, so a Turbo visit back to
