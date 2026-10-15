@@ -203,7 +203,7 @@ class RoomsController < ApplicationController
     # reaches `assign_attributes` at all. Mirrors BuildingsController#update's
     # identical `stale_floor_ids?` guard for floors_attributes.
     if stale_gallery_ids?(attrs)
-      flash.now[:alert] = t("rooms.edit.stale_gallery")
+      @room.errors.add(:base, t("rooms.edit.stale_gallery"))
       render_edit_failure(:gallery)
       return
     end

@@ -164,7 +164,10 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
 - **Media editors.** Admins get `rooms/edit/_panorama_editor` and
   `_seating_chart_editor` (`ui :dialog`) and `_gallery_editor`
   (`ui :sheet`). Each holds its own form posting to `#update`, with its
-  submit button in the dialog footer pointed at the form by `form=`.
+  submit button in the dialog footer pointed at the form by `form=`. The
+  panorama form opts out of Turbo (`data: { turbo: false }`): the stage
+  keeps a fixed id and `data-turbo-permanent`, so a Turbo visit back to
+  the room page would keep the old panorama on screen after a replacement.
 - **Visibility rides on `#update`.** `room[listed]` is permitted alongside
   the curated params. A value that differs from the room's state is
   authorized with `hide?` or `unhide?` before anything is written, so an
@@ -174,7 +177,10 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   to Find a Room, as they can no longer see it. The standalone
   `hide`/`unhide` member routes are gone; buildings keep theirs.
   `room_visibility_controller.js` puts the existing hide confirmation on
-  **Save changes** only when the switch went from on to off.
+  **Save changes** only when the switch went from on to off. The switch is
+  the curator's flag only: `Room.listed` also needs `in_feed`, so for a room
+  the sync has dropped, the switch carries a description saying Find a Room
+  won't list it until it returns.
 - **Failure re-render.** A failed save renders `edit` with a 422. The page
   draws from a freshly loaded copy of the room (`@display_room`), because
   the failed record can hold an unsaved attachment that can't be previewed.

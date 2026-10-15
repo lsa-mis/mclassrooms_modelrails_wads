@@ -149,6 +149,7 @@ en:
       cancel: "Cancel"
       listed_label: "Listed in Find a Room"
       listed_editor_hint: "Only an administrator can list a hidden room again."
+      listed_out_of_feed: "This room isn’t in the U-M Facilities feed right now, so Find a Room won’t list it until it returns, whatever this switch says."
       synced_seats: "%{count} seats, synced from U-M Facilities"
       synced_sections: "Room features, seat count and contacts sync nightly from U-M Facilities and aren’t edited here."
       edit_panorama: "Edit panorama"

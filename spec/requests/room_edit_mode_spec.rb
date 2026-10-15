@@ -98,6 +98,15 @@ RSpec.describe "Room page view and edit modes", type: :request do
       expect(page).to have_css("dialog form[action='#{room_path(room)}'] input[type='file'][name='room[seating_chart]']", visible: :all)
     end
 
+    it "tells an admin that a room outside the Facilities feed isn't listed, whatever the switch says" do
+      room.update!(in_feed: false)
+      sign_in(admin)
+      get edit_room_path(room)
+
+      expect(page).to have_css("#room_listed_feed_hint", text: I18n.t("rooms.edit.listed_out_of_feed"))
+      expect(page).to have_css("input[role='switch'][aria-describedby~='room_listed_feed_hint']")
+    end
+
     it "gives an admin the add-media affordances on a room with no media" do
       sign_in(admin)
       get edit_room_path(room)
@@ -120,6 +129,15 @@ RSpec.describe "Room page view and edit modes", type: :request do
       expect(page).to have_css("[data-room-mode='edit']")
       expect(page).to have_css("[data-modal-open-value='true'] dialog#seating-chart-editor", visible: :all)
       expect(page).to have_no_css("[data-modal-open-value='true'] dialog#panorama-editor", visible: :all)
+    end
+
+    it "reports a stale gallery row inside the reopened photos sheet" do
+      sign_in(admin)
+      patch room_path(room), params: { room: { gallery_attributes: { "0" => { id: "999999", position: "1" } } } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      sheet = page.find("[data-modal-open-value='true'] dialog#gallery-editor", visible: :all)
+      expect(sheet.text(:all)).to include(I18n.t("rooms.edit.stale_gallery"))
     end
 
     it "reopens the panorama dialog when a panorama upload fails" do

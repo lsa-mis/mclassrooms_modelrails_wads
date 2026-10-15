@@ -73,6 +73,7 @@ RSpec.describe "Room edit", type: :system do
 
   it "replaces the panorama from its dialog, accessibly in both themes" do
     visit edit_room_path(room)
+    original_preview = find("#room_panorama_stage img", visible: :all)[:src]
 
     click_button I18n.t("rooms.edit.edit_panorama")
 
@@ -87,6 +88,7 @@ RSpec.describe "Room edit", type: :system do
 
     expect(page).to have_current_path(room_path(room))
     expect(page).to have_content(I18n.t("rooms.edit.success"))
+    expect(find("#room_panorama_stage img", visible: :all)[:src]).not_to eq(original_preview)
   end
 
   it "reorders the gallery from the photos sheet" do

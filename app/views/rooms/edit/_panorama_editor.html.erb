@@ -9,7 +9,7 @@
   <% end %>
 
   <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
-        id: "panorama-editor-form", class: "space-y-5" do |form| %>
+        id: "panorama-editor-form", class: "space-y-5", data: { turbo: false } do |form| %>
     <%= form.error_summary %>
     <% if attached %>
       <div class="flex flex-wrap items-center gap-4">

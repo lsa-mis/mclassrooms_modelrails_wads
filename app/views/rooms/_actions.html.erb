@@ -7,14 +7,18 @@
 
     <div class="flex flex-wrap items-center gap-3">
       <% if policy(room).hide? || policy(room).unhide? %>
-        <div class="flex flex-col">
+        <% listed_hints = [ ("room_listed_hint" unless current_grant.admin?), ("room_listed_feed_hint" unless room.in_feed?) ].compact %>
+        <div class="flex max-w-sm flex-col">
           <%= hidden_field_tag "room[listed]", "0", form: "room-edit-form", id: nil %>
           <%= ui :switch, label: t("rooms.edit.listed_label"), checked: !room.hidden?,
                 name: "room[listed]", value: "1", id: "room_listed", form: "room-edit-form",
-                describedby: ("room_listed_hint" unless current_grant.admin?),
+                describedby: listed_hints.join(" ").presence,
                 data: { room_visibility_target: "switch", action: "room-visibility#sync" } %>
           <% unless current_grant.admin? %>
             <p id="room_listed_hint" class="text-sm text-text-body"><%= t("rooms.edit.listed_editor_hint") %></p>
+          <% end %>
+          <% unless room.in_feed? %>
+            <p id="room_listed_feed_hint" class="text-sm text-text-body"><%= t("rooms.edit.listed_out_of_feed") %></p>
           <% end %>
         </div>
       <% end %>
