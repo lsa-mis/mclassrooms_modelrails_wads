@@ -155,12 +155,11 @@ en:
       manage_photos:
         one: "Manage photos (1)"
         other: "Manage photos (%{count})"
-      upload_new: "Upload a new file"
       save_media: "Save & apply"
       updated_ago: "Updated %{time} ago"
       upload_new_panorama: "Upload new panorama"
       upload_new_seating_chart: "Upload new seating chart"
-      upload_new_photo: "Upload new photo %{position}"
+      upload_new_photo: "Upload new photo"
       replace_panorama: "Replace the panorama"
       replace_seating_chart: "Replace the seating chart"
       replace_photo: "Replace photo %{position}"

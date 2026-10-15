@@ -2,7 +2,7 @@
 <% persisted_photos = form_room.gallery.select(&:persisted?) %>
 <% saved_photos = room.gallery.includes(image_attachment: :blob).index_by(&:id) %>
 <%= ui :dialog, id: "gallery-editor", title: t("rooms.edit.gallery_heading"), size: :full, open: open,
-      description: (flash[:notice] if open) do |dialog| %>
+      description: media_editor_message(open) do |dialog| %>
   <% dialog.with_trigger do %>
     <button type="button" class="btn-secondary">
       <%= icon(:pencil, size: :sm) %>
@@ -14,7 +14,7 @@
         id: "gallery-editor-form" do |form| %>
     <%= form.error_summary %>
     <div class="divide-y divide-border">
-    <%= form.fields_for :gallery, form_room.gallery.sort_by(&:position), include_id: false do |gf| %>
+    <%= form.fields_for :gallery, form_room.gallery_by_position, include_id: false do |gf| %>
       <% gallery_image = gf.object %>
       <% position = gf.index + 1 %>
       <% if gallery_image.persisted? %>
@@ -31,7 +31,7 @@
             <div class="flex flex-wrap items-end justify-between gap-3">
               <%= render "rooms/edit/media_actions", input_id: gf.field_id(:image), input_name: gf.field_name(:image),
                     accept: "image/png,image/jpeg,image/webp,image/heic,image/heif",
-                    upload_label: t("rooms.edit.upload_new_photo", position: position),
+                    upload_label: t("rooms.edit.upload_new_photo"), upload_context: position.to_s,
                     remove_form: "photo-remove-#{gallery_image.id}", remove_label: t("rooms.edit.remove_photo"),
                     remove_context: position.to_s,
                     remove_confirm: t("rooms.edit.remove_photo_confirm", position: position, room: room.display_name) %>

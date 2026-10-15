@@ -30,7 +30,7 @@ RSpec.describe "Room media editing dialogs", type: :request do
 
     it "offers Upload new and a Remove that submits its own form" do
       editor = dialog("panorama-editor")
-      expect(editor).to have_css("label[for='room_panorama']", text: I18n.t("rooms.edit.upload_new"), visible: :all)
+      expect(editor).to have_css("label[for='room_panorama']", text: I18n.t("rooms.edit.upload_new_panorama"), visible: :all)
       remove = editor.find("button[form='panorama-remove-form']", visible: :all)
       expect(remove.text(:all)).to include(I18n.t("rooms.edit.remove_panorama"))
       expect(remove["data-turbo-confirm"]).to be_present
@@ -41,10 +41,8 @@ RSpec.describe "Room media editing dialogs", type: :request do
       expect(remove_form).to have_css("input[name='_method'][value='delete']", visible: :all)
     end
 
-    it "names the upload control by its visible label and keeps the preview image decorative" do
-      editor = dialog("panorama-editor")
-      expect(editor.find("input#room_panorama", visible: :all)["aria-label"]).to eq(I18n.t("rooms.edit.upload_new_panorama"))
-      expect(editor.find("[data-testid='media-preview'] img", visible: :all)["alt"]).to eq("")
+    it "keeps the preview image decorative" do
+      expect(dialog("panorama-editor").find("[data-testid='media-preview'] img", visible: :all)["alt"]).to eq("")
     end
 
     it "docks the stage under the media strip by its own classes, not the page's test hooks" do
@@ -125,6 +123,25 @@ RSpec.describe "Room media editing dialogs", type: :request do
       } } }
 
       expect(first_photo.reload.image.blob).not_to eq(original_blob)
+    end
+  end
+
+  it "starts every upload control's accessible name with the words its label shows" do
+    attach_panorama!(room)
+    room.seating_chart.attach(io: file_fixture("seating_chart.pdf").open, filename: "chart.pdf",
+                              content_type: "application/pdf")
+    create(:media_asset, owner: room, workspace: workspace, position: 1)
+
+    get edit_room_path(room)
+
+    uploads = page.all("dialog input[type='file'][aria-label]", visible: :all)
+    expect(uploads.map { it["aria-label"] }).to contain_exactly(
+      I18n.t("rooms.edit.upload_new_panorama"), I18n.t("rooms.edit.upload_new_seating_chart"),
+      "#{I18n.t("rooms.edit.upload_new_photo")} 1"
+    )
+    uploads.each do |input|
+      shown = page.all("label[for='#{input[:id]}']", visible: :all).reject { it["data-testid"] == "media-preview" }.sole
+      expect(input["aria-label"]).to start_with(shown.text(:all).squish)
     end
   end
 

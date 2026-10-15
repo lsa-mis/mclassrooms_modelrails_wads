@@ -69,6 +69,32 @@ RSpec.describe "Authoring room media metadata", type: :system do
       .to eq(I18n.t("rooms.edit.manage_photos", count: 1))
   end
 
+  it "previews only a chosen file it can show, and brings back the saved image when the choice is cleared" do
+    room = create(:room, building: building, workspace: workspace)
+    room.seating_chart.attach(io: file_fixture("room.jpg").open, filename: "chart.jpg", content_type: "image/jpeg")
+    label = I18n.t("rooms.edit.upload_new_seating_chart")
+
+    visit edit_room_path(room)
+    find("[data-testid='seating-chart-edit']").click
+
+    within("dialog#seating-chart-editor") do
+      saved = find("[data-testid='media-preview'] img")[:src]
+
+      attach_file label, browser_upload_fixture("room.jpg")
+      expect(find("[data-testid='media-preview'] img")[:src]).to start_with("blob:")
+
+      attach_file label, browser_upload_fixture("seating_chart.pdf")
+      expect(page).to have_no_css("[data-testid='media-preview']")
+
+      page.execute_script(<<~JS)
+        const input = document.getElementById("room_seating_chart")
+        input.value = ""
+        input.dispatchEvent(new Event("change", { bubbles: true }))
+      JS
+      expect(find("[data-testid='media-preview'] img")[:src]).to eq(saved)
+    end
+  end
+
   # Matches spec/system/rooms/edit_spec.rb's fuller A+AA+AAA sweep (not the
   # AAA-only convention some other specs use) since this is the same edit
   # page that spec already audits — full-branch coverage for the new fields
