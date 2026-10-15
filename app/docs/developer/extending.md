@@ -296,7 +296,9 @@ The lockup around it, `app/views/shared/_site_logo.html.erb`, is template-owned:
 <% end %>
 ```
 
-Use `h-*` on the child, not `size-*`: a wordmark is wider than tall, and a square box letterboxes it. The favicon and PWA icons in `public/` are the same artwork again, in the sizes [Getting started](getting-started#favicon-and-pwa-icons) lists; `public/icon.svg` colors itself with `prefers-color-scheme` rather than the app's `.dark` class because a favicon renders outside the document.
+A fork whose mark replaces the name's first letter (the block M in "MClassrooms") sets `application.wordmark_tail` in `brand.en.yml` to the rest of the name (`Classrooms`). The lockup then renders the full `application.name` once as screen-reader text and draws the mark plus tail as an `aria-hidden` unit, sizing the mark to the text's cap height; the compact `name_class: "sr-only"` variant stays mark-only. Callers that style the mark in that unit use a descendant selector (`[&_svg]:`), not `[&>svg]:`.
+
+Use `h-*` on the child, not `size-*`: a wordmark is wider than tall, and a square box letterboxes it. The favicon and PWA icons in `public/` are the same artwork again, in the sizes [Getting started](getting-started#favicon-and-pwa-icons) lists; `public/icon.svg` paints its own tile and fill rather than `currentColor`, because a favicon renders outside the document, where neither the link's color nor the app's `.dark` class reaches it.
 
 ## Branding the Header Bar
 
