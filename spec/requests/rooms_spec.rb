@@ -1207,7 +1207,7 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       }.not_to raise_error
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(flash[:alert]).to eq(I18n.t("rooms.edit.stale_gallery"))
+      expect(page.find("dialog#gallery-editor", visible: :all).text(:all)).to include(I18n.t("rooms.edit.stale_gallery"))
       expect(room.reload.nickname).to eq("Old Name")
       expect(room.gallery.reload).to be_empty
       expect(foreign_image.reload.position).to eq(3)

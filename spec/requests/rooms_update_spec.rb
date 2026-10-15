@@ -70,12 +70,6 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
       expect(room_other_unit.reload.nickname).to be_nil
     end
 
-    # View-level companion to the strong-params proof above: the media
-    # sections partial (panorama/seating_chart/gallery inputs) must not
-    # even RENDER for an editor — RoomPolicy#manage_media? gates it in
-    # rooms/edit.html.erb — replaced by the admin-only-media hint (§14.1:
-    # editors flag media issues via notes, not by managing media directly).
-    # The curated fields (nickname/ADA seat count) still render.
     it "renders the curated fields and the media-admin-only hint, but not the media inputs" do
       get edit_room_path(room_in_unit)
 
@@ -83,7 +77,6 @@ RSpec.describe "PATCH /rooms/:id — editor-scoped room edit", type: :request do
       expect(response.body).to include(I18n.t("rooms.edit.nickname_label"))
       expect(response.body).to include(I18n.t("rooms.edit.ada_seat_count_label"))
       expect(response.body).to include(I18n.t("rooms.edit.media_admin_only_hint"))
-      expect(response.body).to include(I18n.t("rooms.edit.media_admin_only_hint_link"))
       expect(response.body).not_to include(I18n.t("rooms.edit.seating_chart_hint"))
       expect(response.body).not_to include(I18n.t("rooms.edit.gallery_heading"))
     end

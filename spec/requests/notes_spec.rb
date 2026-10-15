@@ -153,12 +153,12 @@ RSpec.describe "Notes", type: :request do
   # spacing after the first successful submit. Both are fixed: the id lives
   # on the div only now, and the reset stream `update`s the div's inner
   # content instead of replacing the div itself.
-  describe "GET /rooms/:id (inline authoring form ids)" do
+  describe "GET /rooms/:id/edit (inline authoring form ids)" do
     let(:editor) { editor_for(unit) }
     before { sign_in(editor) }
 
     it "renders the create-note form's DOM id exactly once" do
-      get room_path(room_in_unit)
+      get edit_room_path(room_in_unit)
 
       expect(response).to have_http_status(:ok)
 
@@ -198,7 +198,7 @@ RSpec.describe "Notes", type: :request do
     it "gives the create, edit, and reply forms distinct Lexxy body-field ids (I-1)" do
       create(:note, notable: room_in_unit, workspace: workspace)
 
-      get room_path(room_in_unit)
+      get edit_room_path(room_in_unit)
 
       expect(response).to have_http_status(:ok)
 

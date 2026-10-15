@@ -18,7 +18,9 @@
   <span aria-hidden="true"
         class="absolute left-1/2 -translate-x-1/2 top-2 text-6xl font-extrabold leading-none text-text-on-interactive/25 select-none">M</span>
 
-  <div class="flex w-full items-end justify-between gap-4 px-4 pb-1">
+  <%= render "rooms/hidden_overlay", room: room %>
+
+  <div class="relative flex w-full items-end justify-between gap-4 px-4 pb-1">
     <div class="min-w-0">
       <h1 class="text-xl font-bold text-text-on-interactive"><%= room.display_name %></h1>
       <p class="text-sm text-text-on-interactive/90"><%= room_meta_line(room) %></p>
@@ -31,12 +33,6 @@
           <%= t("rooms.show.seats_unit") %><% if room.ada_seat_count.to_i.positive? %> · <%= t("rooms.row.ada", count: room.ada_seat_count) %><% end %>
         </span>
       </span>
-      <% if policy(room).edit? %>
-        <%# focus outline recolored: the default focus token IS the band's own
-            interactive hue — invisible here (audit, Léonie / 2.4.7). %>
-        <%= link_to t("rooms.show.add_photos"), edit_room_path(room),
-              class: "btn-secondary mt-2 bg-surface focus-visible:outline-text-on-interactive" %>
-      <% end %>
     </div>
   </div>
 </div>

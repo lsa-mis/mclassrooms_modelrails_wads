@@ -25,11 +25,28 @@ up per session.
 
 ## Curating a room
 
-Open a room's page and use **Edit room**. What you can change depends on your role:
+A room's page looks the same to you as it does to everyone else: no note
+composer, no hide button, no curation controls. The one difference is an
+**Edit room** button.
+
+**Edit room** keeps you on the same page and layout and adds the editing
+controls in place:
+
+- **Room details** sit under the photos: the nickname and the ADA seat count.
+  The total seat count, room features and contacts sync nightly from U-M
+  Facilities, so they're shown but not editable.
+- **Listed in Find a Room** is a switch in the bar at the top, next to
+  **Cancel** and **Save changes**. The bar stays in view while you scroll.
+- **Notes** gain the composer and their Edit, Delete and Reply controls.
+
+**Save changes** applies the nickname, the ADA count and the listing switch
+together. Notes post on their own, and media saves from its own dialog.
+
+What you can change depends on your role:
 
 | Capability | Editor (own units) | Admin |
 |------------|:------------------:|:-----:|
-| Curated fields (nickname, descriptions) | yes | yes |
+| Nickname and ADA seat count | yes | yes |
 | Notes & alerts | yes | yes |
 | Hide a room (one-way) | yes | yes |
 | Unhide a room | — | yes |
@@ -41,21 +58,31 @@ of exactly what changed.
 
 ### Adding media
 
-Rooms without photos show an **Add photos** prompt. Admins attach a 360°
-panorama, a seating chart (image or PDF), and an ordered gallery of photos,
-each tagged with what it shows (front, back, podium, rack, inner door, or
-other). Attachments are capped at 10 MB; images are PNG / JPEG / WebP / HEIC,
-and PDFs are allowed only for seating charts and floor plans. For batches, use
+In edit mode, admins get **Edit panorama** (or **Add panorama**) and
+**Manage photos** (or **Add photos**) under the photos, and an editable
+seating-chart thumbnail in the **Plans & documents** card. The panorama and
+the seating chart each open a dialog with a preview, **Upload a new file**, a
+remove option, and the alt text and description; **Save & apply** saves just
+that item. **Manage photos** opens a side panel for the ordered gallery.
+Editors see a note that media is managed by administrators, and flag problems
+with a note instead.
+
+Attachments are capped at 10 MB; images are PNG / JPEG / WebP / HEIC, and
+PDFs are allowed only for seating charts and floor plans. For batches, use
 **Bulk uploads** below.
 
 ## Visibility (hide / unhide)
 
-Rooms and buildings can be hidden from the public directory:
+Rooms and buildings can be hidden from the public directory. For a room, use
+the **Listed in Find a Room** switch in edit mode and **Save changes**:
 
 - **Hiding is one-way for editors.** An editor can hide a room in their unit (say,
   one that's out of service), but only an **admin** can bring it back — a hidden
-  room can't be quietly un-hidden.
-- **Admins hide and unhide** both rooms and buildings.
+  room can't be quietly un-hidden. Saving asks the editor to confirm, and the
+  room then leaves their view entirely.
+- **Admins hide and unhide** both rooms and buildings. A hidden room shows
+  admins a hatched **Hidden · not listed in Find a Room** overlay across its
+  photos.
 - **Seeing hidden inventory.** Admins get **Listed / Hidden rooms / Hidden
   buildings** views (beside the sort control on Find a Room, and a "show hidden"
   toggle on the buildings index), with a banner whenever you're viewing hidden

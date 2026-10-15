@@ -146,6 +146,70 @@ Rule of thumb from the taxonomy work: **a filter is a question users ask; a
 fact is something they read.** A characteristic matching ~95% of rooms (or
 almost none) filters nothing — demote it.
 
+## View and edit modes (room page)
+
+`rooms/show` and `rooms/edit` both render `rooms/_page`, with `editing:`
+false or true. View mode is the same page for every viewer, staff included,
+plus an **Edit room** link for those who pass `RoomPolicy#edit?`. Edit mode
+is `GET /rooms/:id/edit`: the same layout with the editing controls added.
+Each partial swaps whole elements on `editing`; none opens a tag in one branch
+and closes it in another, so the templates stay well-formed for an
+HTML-aware ERB engine (Herb, in Rails 8.2).
+
+- **One form, inputs in place.** `_page` renders an empty
+  `form#room-edit-form`. The nickname, ADA seat count and listing switch are
+  built with `fields model:` and carry `form: "room-edit-form"`, so they can
+  sit anywhere in the layout without wrapping the page in a `<form>`. Media
+  and note forms stay separate elements; nesting forms is invalid HTML.
+- **Media editors.** Admins get `rooms/edit/_panorama_editor` and
+  `_seating_chart_editor` (`ui :dialog`) and `_gallery_editor`
+  (`ui :sheet`). Each holds its own form posting to `#update`, with its
+  submit button in the dialog footer pointed at the form by `form=`. The
+  panorama form opts out of Turbo (`data: { turbo: false }`): the stage
+  keeps a fixed id and `data-turbo-permanent`, so a Turbo visit back to
+  the room page would keep the old panorama on screen after a replacement.
+- **Visibility rides on `#update`.** `room[listed]` is permitted alongside
+  the curated params. A value that differs from the room's state is
+  authorized with `hide?` or `unhide?` before anything is written, so an
+  editor's one-way hide holds against a crafted request. The change applies
+  through `Room#hide!`/`#unhide!` (their own audit rows) only after the
+  curated and media halves succeed. An editor who hides a room is redirected
+  to Find a Room, as they can no longer see it. The standalone
+  `hide`/`unhide` member routes are gone; buildings keep theirs.
+  `room_visibility_controller.js` puts the existing hide confirmation on
+  **Save changes** only when the switch went from on to off. The switch is
+  the curator's flag only: `Room.listed` also needs `in_feed`, so for a room
+  the sync has dropped, the switch carries a description saying Find a Room
+  won't list it until it returns.
+- **Failure re-render.** A failed save renders `edit` with a 422. The page
+  draws from a freshly loaded copy of the room (`@display_room`), because
+  the failed record can hold an unsaved attachment that can't be previewed.
+  Its forms bind to the failed record, so values and errors survive.
+  `@open_media` reopens the dialog that was submitted (`media_slot` reads
+  which media keys came in).
+- **Notes.** The composer renders only in edit mode (`notes/_list`'s
+  `editing:` local; the building page keeps the default). A note's Edit,
+  Delete and Reply controls still render by policy, because Turbo broadcasts
+  render `notes/_note` once for every subscriber. The room page hides them in
+  view mode with `group-data-[room-mode=view]/room:hidden`, keyed to
+  `data-room-mode` on the page root.
+- **Hidden rooms.** `rooms/_hidden_overlay` lays the `hidden-hatch` utility
+  and a warning pill over the media stage or empty band. Only admins can
+  reach a hidden room, so only they see it.
+
+### The strong-params boundary
+
+`CURATED_PARAMS` (nickname, ADA seat count) is always permitted, and
+`MEDIA_PARAMS` only when `RoomPolicy#manage_media?` (admins). The media
+metadata (`*_alt`, `*_description`, `*_derived_ok`) stays in `MEDIA_PARAMS`,
+behind the same gate as the attachments. `gallery_attributes` uses the
+double-array `[[ ... ]]` shape `params.expect` needs for a hash of nested
+rows: the single-array shape silently permits nothing, which would break
+every gallery add, reorder and delete. The media editors resubmit the
+metadata fields on every save, so `media_metadata_changed?` compares each one
+with the room's current value (`to_s` on both sides, so nil and "" match)
+rather than testing for presence.
+
 ## Directory chrome
 
 `PublicDirectoryChrome` (rooms, buildings, glossary controllers) suppresses

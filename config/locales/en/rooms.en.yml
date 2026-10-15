@@ -61,7 +61,7 @@ en:
     show:
       capacity: "%{students} students · %{ada} ADA-accessible seats"
       address: "Address"
-      inactive_banner: "This room is hidden from Find a Room results."
+      hidden_overlay: "Hidden · not listed in Find a Room"
       features:
         seats_layout: "Layout"
         write_on: "Writing surfaces"
@@ -129,7 +129,6 @@ en:
       nickname_hint: "An optional friendly name shown alongside the facility code, e.g. \"The Lounge.\""
       ada_seat_count_label: "ADA-accessible seats"
       ada_seat_count_hint: "Number of seats in this room meeting ADA accessibility requirements."
-      media_heading: "Media"
       panorama_label: "360° panorama"
       panorama_hint: "PNG, JPEG, WEBP, or iPhone HEIC. Up to 10 MB."
       remove_panorama_label: "Delete 360° panorama for %{room}"
@@ -137,7 +136,6 @@ en:
       seating_chart_hint: "PNG, JPEG, WEBP, iPhone HEIC, or PDF. Up to 10 MB."
       remove_seating_chart_label: "Delete seating chart for %{room}"
       delete_confirm: "This cannot be undone."
-      attachment_present_notice: "A file is currently attached."
       gallery_heading: "Gallery"
       position_label: "Position of photo %{position}"
       gallery_destroy_label: "Delete photo %{position} of %{room}"
@@ -147,8 +145,23 @@ en:
       submit: "Save changes"
       success: "Room updated."
       stale_gallery: "One or more gallery rows are out of date; please reload and try again."
-      media_admin_only_hint: "Photos, panorama, seating chart, and gallery images are managed by administrators. If you notice a media issue,"
-      media_admin_only_hint_link: "add a note on the room page"
+      media_admin_only_hint: "Photos, the panorama and the seating chart are managed by administrators. Spot a problem? Add a note below."
+      cancel: "Cancel"
+      listed_label: "Listed in Find a Room"
+      listed_editor_hint: "Only an administrator can list a hidden room again."
+      listed_out_of_feed: "This room isn’t in the U-M Facilities feed right now, so Find a Room won’t list it until it returns, whatever this switch says."
+      synced_seats: "%{count} seats, synced from U-M Facilities"
+      synced_sections: "Room features, seat count and contacts sync nightly from U-M Facilities and aren’t edited here."
+      edit_panorama: "Edit panorama"
+      add_panorama: "Add panorama"
+      edit_seating_chart: "Edit seating chart"
+      add_seating_chart: "Add seating chart"
+      manage_photos:
+        one: "Manage photos (1)"
+        other: "Manage photos (%{count})"
+      upload_new: "Upload a new file"
+      save_media: "Save & apply"
+      updated_ago: "Updated %{time} ago"
     # Task 4 (image metadata, Brief §5.2): generic labels shared by every
     # alt/description/derived_ok field across rooms/edit and buildings/edit
     # (panorama, seating chart, gallery photos, building photo) —
@@ -159,12 +172,10 @@ en:
       description_label: "Description (optional)"
       derived_ok_label: "The auto-generated alt text is fine here"
     hide:
-      button: "Hide room"
       success: "Room hidden."
       admin_confirmation: "Hide this room from Find a Room results?"
       editor_confirmation: "An administrator will be required to re-activate this room."
     unhide:
-      button: "Unhide room"
       success: "Room unhidden."
     floor_plan:
       title: "%{building}, floor %{floor}"

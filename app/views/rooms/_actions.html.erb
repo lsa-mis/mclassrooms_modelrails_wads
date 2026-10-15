@@ -1,0 +1,53 @@
+<%# locals: (room:, presenter:, saved_id:, editing:) %>
+<% if editing %>
+  <div class="sticky top-0 z-10 -mx-4 flex flex-wrap items-start justify-between gap-3 border-b border-border-strong bg-surface px-4 py-3"
+       data-controller="room-visibility"
+       data-room-visibility-confirm-value="<%= current_grant.admin? ? t("rooms.hide.admin_confirmation") : t("rooms.hide.editor_confirmation") %>">
+    <%= render "rooms/header", room: room %>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <% if policy(room).hide? || policy(room).unhide? %>
+        <% listed_hints = [ ("room_listed_hint" unless current_grant.admin?), ("room_listed_feed_hint" unless room.in_feed?) ].compact %>
+        <div class="flex max-w-sm flex-col">
+          <%= hidden_field_tag "room[listed]", "0", form: "room-edit-form", id: nil %>
+          <%= ui :switch, label: t("rooms.edit.listed_label"), checked: !room.hidden?,
+                name: "room[listed]", value: "1", id: "room_listed", form: "room-edit-form",
+                describedby: listed_hints.join(" ").presence,
+                data: { room_visibility_target: "switch", action: "room-visibility#sync" } %>
+          <% unless current_grant.admin? %>
+            <p id="room_listed_hint" class="text-sm text-text-body"><%= t("rooms.edit.listed_editor_hint") %></p>
+          <% end %>
+          <% unless room.in_feed? %>
+            <p id="room_listed_feed_hint" class="text-sm text-text-body"><%= t("rooms.edit.listed_out_of_feed") %></p>
+          <% end %>
+        </div>
+      <% end %>
+      <%= link_to t("rooms.edit.cancel"), room_path(room), class: "btn-secondary" %>
+      <%= button_tag t("rooms.edit.submit"), type: "submit", form: "room-edit-form", class: "btn-primary",
+            data: { room_visibility_target: "submit" } %>
+    </div>
+  </div>
+<% else %>
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <%= render "rooms/header", room: room %>
+
+    <div data-controller="share"
+         data-share-text-value="<%= presenter.share_text %>"
+         data-share-url-value="<%= room_url(room) %>"
+         data-share-title-value="<%= room.display_name %>"
+         data-share-copied-message-value="<%= t("rooms.show.share.copied") %>"
+         data-share-native-label-value="<%= t("rooms.show.share.native_button") %>"
+         class="flex flex-col items-end gap-1">
+      <div class="flex items-center gap-2">
+        <%= render "rooms/save_toggle", room: room, saved_id: saved_id %>
+        <button type="button" data-share-target="button" data-action="share#copy" class="btn-secondary">
+          <%= t("rooms.show.share.button") %>
+        </button>
+        <% if policy(room).edit? %>
+          <%= link_to t("rooms.show.edit_link"), edit_room_path(room), class: "btn-primary" %>
+        <% end %>
+      </div>
+      <span data-share-target="status" aria-live="polite" class="text-sm text-text-body"></span>
+    </div>
+  </div>
+<% end %>

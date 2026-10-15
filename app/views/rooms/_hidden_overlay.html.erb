@@ -1,0 +1,9 @@
+<%# locals: (room:) %>
+<% if room.hidden? %>
+  <div data-testid="hidden-overlay"
+       class="hidden-hatch pointer-events-none absolute inset-0 flex items-start justify-center rounded-md p-4">
+    <span class="rounded-full border border-warning-border bg-warning-surface px-4 py-1.5 text-sm font-semibold text-warning">
+      <%= t("rooms.show.hidden_overlay") %>
+    </span>
+  </div>
+<% end %>

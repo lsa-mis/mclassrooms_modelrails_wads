@@ -22,11 +22,6 @@
 
   <h1 class="mt-4 text-2xl font-bold text-text-heading"><%= @building.display_name %></h1>
 
-  <%# Phase 5 Task 5 (Brief §14.1): admin-only hide/unhide (BuildingPolicy
-      #hide?/#unhide? are both grant.admin?, so this never renders for a
-      viewer). Branches on `@building.hidden?` first, same reasoning as
-      rooms/_visibility_actions.html.erb: only one action is ever relevant
-      to the building's current state. %>
   <% if @building.hidden? %>
     <% if policy(@building).unhide? %>
       <div class="mt-4">

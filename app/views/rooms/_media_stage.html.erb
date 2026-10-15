@@ -31,6 +31,8 @@
           start_hidden: has_pano %>
   <% end %>
 
+  <%= render "rooms/hidden_overlay", room: room %>
+
   <% if has_pano && has_photos %>
     <%= render "rooms/media_chip", gallery: gallery, room: room %>
   <% end %>

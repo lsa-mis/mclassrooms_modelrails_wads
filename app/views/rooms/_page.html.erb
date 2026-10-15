@@ -1,0 +1,56 @@
+<%# locals: (room:, presenter:, editing:, form_room: room, saved_id: nil, open_media: nil) %>
+<% gallery = room.gallery.includes(image_attachment: :blob).first(5) %>
+<% has_pano = room.panorama.attached? %>
+<% has_photos = gallery.any? %>
+<% manage_media = editing && policy(room).manage_media? %>
+
+<div class="group/room max-w-5xl mx-auto px-4 py-8" data-room-mode="<%= editing ? "edit" : "view" %>">
+  <% if editing %>
+    <%= form_with model: form_room, url: room_path(room), method: :patch, id: "room-edit-form" do %>
+    <% end %>
+  <% end %>
+
+  <%= render "rooms/actions", room: room, presenter: presenter, saved_id: saved_id, editing: editing %>
+
+  <% if has_pano || has_photos %>
+    <%= render "rooms/media_stage", room: room, presenter: presenter, gallery: gallery,
+          has_pano: has_pano, has_photos: has_photos %>
+  <% else %>
+    <%= render "rooms/media_empty_band", room: room, presenter: presenter %>
+  <% end %>
+
+  <% if manage_media %>
+    <div data-testid="media-toolbar" class="mt-3 flex flex-wrap gap-2">
+      <%= render "rooms/edit/panorama_editor", room: room, form_room: form_room, open: open_media == :panorama %>
+      <%= render "rooms/edit/gallery_editor", room: room, form_room: form_room, open: open_media == :gallery %>
+    </div>
+  <% end %>
+
+  <% if editing %>
+    <%= render "rooms/curated_fields", room: form_room %>
+    <% unless manage_media %>
+      <div class="mt-4">
+        <%= ui :banner, t("rooms.edit.media_admin_only_hint"), variant: :info %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div class="min-w-0 space-y-8">
+      <%= render "rooms/characteristics", presenter: presenter %>
+      <%= render "notes/list", notable: room, editing: editing %>
+    </div>
+
+    <div class="space-y-4">
+      <%= render "rooms/contacts", room: room %>
+      <%= render "rooms/documents", room: room, form_room: form_room, manage_media: manage_media, open_media: open_media %>
+
+      <% if room.building.full_address.present? %>
+        <div data-testid="location-card" class="rounded-lg border border-border p-4">
+          <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.show.address") %></h2>
+          <p class="mt-2 text-sm text-text-body"><%= room.building.full_address %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

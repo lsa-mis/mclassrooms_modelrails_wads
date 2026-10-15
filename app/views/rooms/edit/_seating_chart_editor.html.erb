@@ -1,0 +1,48 @@
+<%# locals: (room:, form_room:, open:) %>
+<% attached = room.seating_chart.attached? %>
+<%= ui :dialog, id: "seating-chart-editor", title: t("rooms.edit.seating_chart_label"), size: :lg, open: open do |dialog| %>
+  <% dialog.with_trigger do %>
+    <button type="button" data-testid="seating-chart-edit"
+            class="group/edit flex items-center gap-3 rounded-md text-left text-interactive focus-ring">
+      <span class="relative block">
+        <%= render "rooms/edit/media_thumb", attachment: room.seating_chart, size: 96 %>
+        <span aria-hidden="true" class="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full border-2 border-surface-raised bg-interactive text-text-on-interactive">
+          <%= icon(:pencil, size: :sm) %>
+        </span>
+      </span>
+      <span class="font-semibold group-hover/edit:underline underline-offset-4">
+        <%= attached ? t("rooms.edit.edit_seating_chart") : t("rooms.edit.add_seating_chart") %>
+      </span>
+    </button>
+  <% end %>
+
+  <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
+        id: "seating-chart-editor-form", class: "space-y-5" do |form| %>
+    <%= form.error_summary %>
+    <% if attached %>
+      <div class="flex flex-wrap items-center gap-4">
+        <%= render "rooms/edit/media_thumb", attachment: room.seating_chart, size: 150 %>
+        <p class="text-sm text-text-body">
+          <%= t("rooms.edit.updated_ago", time: time_ago_in_words(room.seating_chart.blob.created_at)) %>
+        </p>
+      </div>
+      <div>
+        <%= form.check_box :remove_seating_chart,
+              label: t("rooms.edit.remove_seating_chart_label", room: room.display_name) %>
+        <p class="mt-1 text-sm text-text-body"><%= t("rooms.edit.delete_confirm") %></p>
+      </div>
+    <% end %>
+    <%= form.file_field :seating_chart,
+          label: attached ? t("rooms.edit.upload_new") : t("rooms.edit.seating_chart_label"),
+          help: t("rooms.edit.seating_chart_hint"),
+          accept: "image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" %>
+    <%= form.text_field :seating_chart_alt, label: t("rooms.media.alt_label") %>
+    <%= form.text_area :seating_chart_description, rows: 2, label: t("rooms.media.description_label") %>
+    <%= form.check_box :seating_chart_derived_ok, label: t("rooms.media.derived_ok_label") %>
+  <% end %>
+
+  <% dialog.with_footer do %>
+    <button type="button" class="btn-secondary" data-action="click->modal#close"><%= t("rooms.edit.cancel") %></button>
+    <%= button_tag t("rooms.edit.save_media"), type: "submit", form: "seating-chart-editor-form", class: "btn-primary" %>
+  <% end %>
+<% end %>
