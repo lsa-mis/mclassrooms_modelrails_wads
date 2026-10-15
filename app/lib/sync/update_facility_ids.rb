@@ -32,10 +32,10 @@ module Sync
     end
 
     def apply_facility(facility_id, seen, unread_facility_ids, skipped_rmrecnbrs)
-      characteristic_rows = fetch_facility_characteristics(facility_id)
-      unread_facility_ids << facility_id if characteristic_rows.empty?
+      rmrecnbrs = fetch_facility_characteristics(facility_id).filter_map { |row| row["RmRecNbr"].presence }.uniq
+      unread_facility_ids << facility_id if rmrecnbrs.empty?
 
-      characteristic_rows.group_by { |row| row["RmRecNbr"] }.each_key do |rmrecnbr|
+      rmrecnbrs.each do |rmrecnbr|
         seen << rmrecnbr
         upsert_facility_id(rmrecnbr, facility_id, skipped_rmrecnbrs)
       end
