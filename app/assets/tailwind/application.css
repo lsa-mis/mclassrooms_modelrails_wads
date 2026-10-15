@@ -551,7 +551,7 @@ lexxy-editor:has(.lexxy-editor__content:focus) {
    never a hardcoded text color. */
 
 .bg-hue-initials {
-  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 252));
 }
 
 /* Hue slider track (identity picker). The gradient must live on the track
@@ -593,7 +593,7 @@ lexxy-editor:has(.lexxy-editor__content:focus) {
   width: 28px;
   height: 28px;
   margin-top: -10px;
-  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 252));
   border: 3px solid var(--color-surface-raised);
   box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
 }
@@ -601,7 +601,7 @@ lexxy-editor:has(.lexxy-editor__content:focus) {
 .hue-range::-moz-range-thumb {
   width: 28px;
   height: 28px;
-  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 210));
+  background-color: oklch(var(--hue-initials-l) var(--hue-initials-c) var(--hue, 252));
   border: 3px solid var(--color-surface-raised);
   box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
 }

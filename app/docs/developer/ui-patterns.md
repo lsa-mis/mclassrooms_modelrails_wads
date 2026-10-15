@@ -133,10 +133,18 @@ OKLCH color-mix resolution varied across Chromium/Ubuntu builds. Direct
 literals are deterministic. See `project_flaky_tests_followup.md §2`
 for the investigation.
 
-The `primary_color` column on `workspaces` is an integer OKLCH hue (0–360)
-with default `210` (the app's sky base). When the column matches the
-default, the cascade computes values identical to the untouched tokens —
-no visual change. Explicit hue changes light up immediately.
+The `primary_color` column on `workspaces` (and `users`) is an integer OKLCH
+hue (0–360) that defaults to `Identity::DEFAULT_HUE`, the brand's own hue:
+252, U-M Blue, in this fork. A workspace at the default hue, or with no hue,
+gets no override at all: the layout emits `data-workspace-branded` only for
+`Identity#custom_hue`, so the page keeps the brand tokens from `_brand.css`
+exactly. Explicit hue changes light up immediately.
+
+A rebrand moves three things together: the `--primary-*` ramp in
+`_brand.css`, `Identity::DEFAULT_HUE` (with a migration moving the column
+defaults and the rows still at the old default), and `MailerTheme::INTERACTIVE`,
+the sRGB twin of `--primary-800` for email. `spec/code_smells/brand_alignment_spec.rb`
+fails when either of the last two drifts from `_brand.css`.
 
 **Contrast caveat.** The `oklch(0.40 0.15 <hue>)` formula yields AAA-level
 (7:1) contrast on white for most hues, but perceived lightness in OKLCH

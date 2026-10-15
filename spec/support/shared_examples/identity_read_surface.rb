@@ -41,8 +41,8 @@ RSpec.shared_examples "an identity read surface" do
   end
 
   describe "#hue" do
-    it "defaults to 210 when primary_color is nil" do
-      expect(identity.hue).to eq(210)
+    it "defaults to the brand hue when primary_color is nil" do
+      expect(identity.hue).to eq(Identity::DEFAULT_HUE)
     end
   end
 

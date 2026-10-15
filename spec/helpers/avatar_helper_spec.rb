@@ -143,9 +143,9 @@ RSpec.describe AvatarHelper, type: :helper do
         end
       end
 
-      context "with default primary_color (210)" do
+      context "with the default primary_color" do
         before do
-          user.update_columns(avatar_source: "initials", primary_color: 210)
+          user.update_columns(avatar_source: "initials", primary_color: Identity::DEFAULT_HUE)
         end
 
         it "uses bg-interactive class" do
