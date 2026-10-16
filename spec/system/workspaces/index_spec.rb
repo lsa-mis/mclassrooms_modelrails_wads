@@ -40,8 +40,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
     it "renders an 'Other workspaces' heading and the older workspace below" do
       visit workspaces_path
-      # Heading uses `uppercase` CSS class — match case-insensitively against the I18n value.
-      expect(page).to have_text(/#{Regexp.escape(I18n.t('workspaces.index.other_workspaces_heading'))}/i)
+      expect(page).to have_css("h2", text: I18n.t("workspaces.index.other_workspaces_heading"), exact_text: true)
       others_section = page.find("[data-test='other-workspaces-list']")
       within(others_section) do
         expect(page).to have_text("Older")
@@ -158,7 +157,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
   describe "single-membership user" do
     it "does NOT render the 'Other workspaces' heading when only one membership exists" do
-      single_user = create(:user)
+      single_user = create(:user, :with_zero_workspaces)
       only_workspace = create(:workspace, name: "Only One")
       create(:membership, :owner, user: single_user, workspace: only_workspace, last_accessed_at: 1.minute.ago)
 
@@ -170,7 +169,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
       visit workspaces_path
 
       expect(page).to have_text("Only One")
-      expect(page).to have_no_text(I18n.t("workspaces.index.other_workspaces_heading"))
+      expect(page).to have_no_css("h2", text: I18n.t("workspaces.index.other_workspaces_heading"))
     end
   end
 

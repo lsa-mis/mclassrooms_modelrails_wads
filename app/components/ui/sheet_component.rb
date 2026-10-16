@@ -10,8 +10,8 @@ module UI
     SIDES = {
       right:  "inset-y-0 right-0 ml-auto h-full w-3/4 max-w-sm rounded-l-lg border-l",
       left:   "inset-y-0 left-0 mr-auto h-full w-3/4 max-w-sm rounded-r-lg border-r",
-      top:    "inset-x-0 top-0 mb-auto w-full max-h-[60vh] rounded-b-lg border-b",
-      bottom: "inset-x-0 bottom-0 mt-auto w-full max-h-[60vh] rounded-t-lg border-t"
+      top:    "inset-x-0 top-0 mb-auto w-full max-h-[60dvh] rounded-b-lg border-b",
+      bottom: "inset-x-0 bottom-0 mt-auto w-full max-h-[60dvh] rounded-t-lg border-t"
     }.freeze
 
     LEAVE_TRANSFORMS = {

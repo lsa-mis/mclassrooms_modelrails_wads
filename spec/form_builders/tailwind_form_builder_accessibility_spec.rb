@@ -27,6 +27,12 @@ RSpec.describe TailwindFormBuilder, "WCAG AAA accessibility", type: :component d
       expect(result).not_to have_css("input[required]")
     end
 
+    it "sets aria-required on password fields when required, never native required" do
+      result = parse(builder.password_field(:password, required: true))
+      expect(result).to have_css("input[type='password'][aria-required='true']")
+      expect(result).not_to have_css("input[required]")
+    end
+
     it "never emits native required on text areas" do
       result = parse(builder.text_area(:first_name, required: true))
       expect(result).to have_css("textarea[aria-required='true']")

@@ -51,7 +51,7 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
       expect {
         described_class.with(record: invitation).deliver(inviter)
         # Drain the EventJob so any per-recipient deliveries also get enqueued.
-        perform_enqueued_jobs(only: Noticed::EventJob)
+        drain_noticed_jobs
       }.not_to have_enqueued_mail
     end
   end

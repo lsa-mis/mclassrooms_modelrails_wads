@@ -15,6 +15,29 @@ keywords: setup install mise ruby bundle rspec tests oauth credentials developme
 
 Rails 8.1 or newer, and the pieces Rails ships: Propshaft for assets, import maps for JavaScript (with `tailwindcss-rails` for CSS), Hotwire (Turbo and Stimulus) for interaction, the built-in authentication generator's shape for sessions, and Solid Queue, Solid Cache, and Solid Cable on SQLite. That is a floor, not a preference list: there is no Devise, no JavaScript bundler, no React, no Sprockets, and no Redis-backed queue, and a fork that adds one of them is off the path every other page here describes. The `ModelRails/StackFloor` cop (`lib/rubocop`) fails a Gemfile line that brings in what the floor replaces, or pins `rails` below it, on commit.
 
+### Rails comes from a pinned commit
+
+The template runs on Rails main (8.2.0.alpha) for two features that have not shipped in a release yet: HTML templates compiled through Herb, and alternative text on Action Text attachments, which turns on Lexxy's ALT button. The Gemfile pins `rails` with `ref:` to one full commit, never a branch, so every checkout and every fork resolves exactly the code that was tested.
+
+**Images saved before Lexxy 1.0.** Lexxy 0.9 wrote each uploaded image's file name into its alternative text, so on Rails main those images open the ALT dialog pre-filled with something like `IMG_2034.JPG`, which reads as a description someone wrote. A deployment that saved images under Lexxy 0.9 runs this once:
+
+```bash
+DRY_RUN=1 bin/rails action_text:clear_filename_alts   # counts the rich texts it would change
+bin/rails action_text:clear_filename_alts
+```
+
+It removes `alt` only where it equals that same attachment's file name, leaves every other attribute and the surrounding text alone, and writes the body without touching the owning record or its timestamps. A second run finds nothing. Afterwards those images open the dialog empty and render like new uploads: an image nobody has described gets `alt=""`, so screen readers skip it and read the caption, which names the file once.
+
+With `load_defaults 8.2`, HTML templates compile through [Herb](https://herb-tools.dev), which parses the HTML around the ERB. A template with broken structure, such as an unclosed tag or ERB output where an attribute name belongs, fails when it compiles, naming the file and line, instead of rendering malformed markup. `bin/rails herb:check` compiles every HTML template on the view paths without rendering anything. It reports one file today, a partial inside the biscuit-rails gem that the app overrides and never renders (#1341). `spec/code_smells/templates_compile_through_herb_spec.rb` runs the same check on every pull request, over the Lookbook previews, the Turbo Stream templates and the static pages in `public/` as well, with that partial as its one reviewed exception, which the spec drops once the gem's copy compiles. Other formats, such as text mailers and Turbo Stream templates, still compile through Erubi.
+
+One test gem needs accommodating on Rails main: `rspec-rails` is pinned to a commit of its own main branch, where its Rails-main fixes are merged but not yet released (#1338). Bullet needed a load shim until 8.3.0 learned Active Record 8.2 (#1337); it now loads like any other gem, and `spec/config/bullet_spec.rb` proves it still catches an N+1.
+
+Dependabot does not bump git-pinned gems: its bundler block ignores exactly the gems `Gemfile.lock` takes from git, and a template invariant keeps the two lists equal in both directions. The pin moves by hand:
+
+- **When.** On every Rails security release, and otherwise at most once a month.
+- **How.** Take the commit from `gh api repos/rails/rails/commits/main --jq .sha`, put it in the `ref:`, run `bundle update rails`, then the full suite, `bin/rails herb:check`, `bin/bundler-audit`, and both the production image and devcontainer builds. A security advisory written as "fixed in 8.2.0" may flag `8.2.0.alpha` even on a commit that has the fix; record that in the audit's ignore file with the commit that carries the fix, and remove the entry at the next move.
+- **The way back.** When 8.2.0 ships, `gem "rails", "~> 8.2.0"` replaces the git line. The security-floor invariant and the StackFloor cop already accept that requirement, and the Dependabot invariant fails until the Rails gems leave the ignore list.
+
 ## Setup
 
 ```bash
@@ -201,14 +224,18 @@ The project uses a two-gate CI pipeline:
 
 ### Gate 1: Local (Lefthook pre-push)
 
-Runs automatically when you `git push`. No setup needed beyond `bundle exec lefthook install` (runs once after clone).
+Runs automatically when you `git push`. No setup needed beyond `bundle exec lefthook install` (runs once after clone). The checks run one at a time, in this order, and the first failure stops the push:
 
 | Check | Tool |
 |-------|------|
+| Stylesheet | `tailwindcss:build`, first, so system specs never read a half-written stylesheet |
 | Security scan | Brakeman |
-| Full test suite | RSpec (full suite) |
-| Accessibility audit | axe-core WCAG 2.2 AAA on every system spec |
+| Gem CVEs | bundler-audit, against the same vendored advisory database CI uses |
 | Code style | RuboCop |
+| ERB templates | erb_lint |
+| Markdown | `mdl` |
+| Full test suite | `bin/parallel-rspec`, including the axe-core WCAG 2.2 AAA audit on every system spec |
+| Production image | `docker build`, last, and only when the branch changes a build input (`Dockerfile`, `.dockerignore`, `Gemfile`, `Gemfile.lock`, `.tool-versions`, `bin/docker-entrypoint`); refuses the push if Docker isn't running |
 
 Pre-commit hooks also auto-fix Ruby style issues on staged files.
 
@@ -225,7 +252,7 @@ Runs the same checks plus additional linting:
 | `lint` | RuboCop with GitHub annotations |
 | `lint_docs` | `mdl` (markdown) + `erb_lint` (ERB) |
 | `test` | Full RSpec with Cuprite, axe accessibility, screenshot artifacts on failure |
-| `docker_build` | Verifies the production `Dockerfile` builds successfully on every PR (catches build-time regressions that structural specs cannot). Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/developer/deployment). |
+| `docker_build` | Verifies the production `Dockerfile` builds (catches build-time regressions that structural specs cannot). Its own workflow: a pull request runs it only when a build input changes (`Dockerfile`, `.dockerignore`, `Gemfile`, `Gemfile.lock`, `.tool-versions`, `bin/docker-entrypoint`); every push to `main` runs it unfiltered. The pre-push hook runs the same build locally through `bin/docker-build-check` on the same inputs. Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/developer/deployment). |
 
 ### Gate 3: Scheduled lanes (not on push/PR)
 

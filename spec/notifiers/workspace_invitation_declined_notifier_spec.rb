@@ -50,7 +50,7 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
     it "does not enqueue any NotificationMailer email job (in-app + digest only)" do
       expect {
         described_class.with(record: invitation).deliver(inviter)
-        perform_enqueued_jobs(only: Noticed::EventJob)
+        drain_noticed_jobs
       }.not_to have_enqueued_mail
     end
   end

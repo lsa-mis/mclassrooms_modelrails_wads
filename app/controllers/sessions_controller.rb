@@ -8,20 +8,14 @@ class SessionsController < ApplicationController
   end
 
   def create
-    user = User.find_by(email_address: params[:email_address])
+    @password_sign_in = PasswordSignIn.new(email_address: params[:email_address], password: params[:password])
 
-    if user&.locked?
-      redirect_to new_session_path, alert: t(".locked")
-      return
-    end
-
-    if user&.authenticate(params[:password])
+    if (user = @password_sign_in.user)
       start_new_session_for(user)
       user.register_successful_login!
       redirect_to after_authentication_url, notice: t(".success")
     else
-      user&.register_failed_login!
-      redirect_to new_session_path, alert: t(".failure")
+      render "sessions/passwords/new", status: :unprocessable_content
     end
   end
 

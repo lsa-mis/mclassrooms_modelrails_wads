@@ -4,7 +4,7 @@
       data-theme-theme-value="<%= current_user_theme %>">
 <%= render "shared/layout_head" %>
 
-  <body class="min-h-screen flex flex-col bg-surface-raised text-text-heading">
+  <body class="min-h-dvh flex flex-col bg-surface-raised text-text-heading">
     <%= render "shared/skip_link" %>
     <%= render "shared/header" %>
     <%= render "shared/toasts" %>
@@ -20,7 +20,7 @@
         [ t("operations.nav.users"), operations_users_path ],
         [ t("operations.nav.activity"), operations_activity_logs_path ],
         [ t("operations.nav.operators"), operations_operatorships_path ]
-      ]
+      ] + operations_fork_nav_items
     %>
     <%# The bordered row is a plain <div>, not the <nav>: the where-you-are strip
         is its own landmark and a landmark nested inside the navigation would be

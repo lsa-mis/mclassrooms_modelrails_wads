@@ -73,8 +73,10 @@ RSpec.describe "Content Security Policy" do
     # visitors. A unit test on the generator is still the most direct guard
     # (a request spec would only catch it now that CSP is actually enforced
     # in test — see "report-only mode" above; belt and suspenders).
+    let(:session_class) { ActionDispatch::Request.new({}).session.class }
+
     it "never returns a blank nonce, even when the session has no id yet" do
-      request_without_session = instance_double(ActionDispatch::Request, session: instance_double(ActionDispatch::Request::Session, id: nil))
+      request_without_session = instance_double(ActionDispatch::Request, session: instance_double(session_class, id: nil))
 
       nonce = nonce_generator.call(request_without_session)
 
@@ -82,7 +84,7 @@ RSpec.describe "Content Security Policy" do
     end
 
     it "returns the session id (stable per session) when a session exists" do
-      request_with_session = instance_double(ActionDispatch::Request, session: instance_double(ActionDispatch::Request::Session, id: "abc123"))
+      request_with_session = instance_double(ActionDispatch::Request, session: instance_double(session_class, id: "abc123"))
 
       nonce = nonce_generator.call(request_with_session)
 

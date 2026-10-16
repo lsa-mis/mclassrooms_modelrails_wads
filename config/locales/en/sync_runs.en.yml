@@ -149,6 +149,8 @@ en:
         title: "Sync started %{started}"
         back: "All sync runs"
   operations:
+    nav:
+      sync_runs: "Sync runs"
     sync_runs:
       not_queued: "The sync could not be queued, so nothing started. Try again in a moment."
       already_running: "A sync is already queued or running, so nothing new started."

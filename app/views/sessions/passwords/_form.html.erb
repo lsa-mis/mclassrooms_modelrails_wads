@@ -1,0 +1,37 @@
+<%# locals: (sign_in:) -%>
+<%= form_with model: sign_in, url: main_app.session_path, scope: "", class: "mt-6 space-y-6", data: { turbo_frame: "_top" } do |form| %>
+  <%= form.error_summary %>
+
+  <%= form.email_field :email_address,
+        label: t("sessions.new.email_label"),
+        readonly: true,
+        autocomplete: "username",
+        tabindex: -1,
+        class: "bg-surface text-text-muted cursor-default" %>
+
+  <%# value: nil — the builder fills fields from the model, and this one must never echo back. %>
+  <%= form.password_field :password,
+        label: t("sessions.passwords.new.password_label"),
+        value: nil,
+        required: true,
+        autofocus: sign_in.errors.none?,
+        autocomplete: "current-password",
+        maxlength: 72 %>
+
+  <%= form.submit t("sessions.passwords.new.submit"), class: "btn-primary w-full" %>
+<% end %>
+
+<div class="mt-4 flex flex-col gap-2 text-sm text-center">
+  <%= button_to t("sessions.passwords.new.use_magic_link"),
+        main_app.magic_link_path,
+        params: { email_address: sign_in.email_address },
+        method: :post,
+        form: { data: { turbo_frame: "_top" } },
+        class: "inline-flex min-h-input items-center text-interactive underline hover:no-underline
+                focus-ring rounded cursor-pointer" %>
+  <%= button_to t("sessions.new.forgot_password"), password_reset_path,
+        params: { email_address: sign_in.email_address }, method: :post,
+        form: { data: { turbo_frame: "_top" } },
+        class: "min-h-input text-center text-sm text-interactive underline w-full
+                focus-ring rounded cursor-pointer" %>
+</div>

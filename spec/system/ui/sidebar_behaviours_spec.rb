@@ -45,7 +45,9 @@ RSpec.describe "Sidebar behaviours", type: :system do
     end
 
     it "reveals the bubble on focus" do
-      expect(bubble_opacity).to eq(0.0)
+      # The pointer outlives the example before it; resting over a rail item, it would hover the bubble in.
+      move_pointer_off_rail
+      expect(settled_bubble_opacity(0.0)).to eq(0.0)
 
       first("aside nav a").execute_script("this.focus()")
 
@@ -100,11 +102,16 @@ RSpec.describe "Sidebar behaviours", type: :system do
 
   # Polls until the fade finishes. Returns the last value either way, so a bubble that
   # never appears fails on its actual opacity rather than on a timeout.
-  def settled_bubble_opacity
+  def settled_bubble_opacity(target = 1.0)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + Capybara.default_max_wait_time
     value = bubble_opacity
-    value = bubble_opacity while value < 1.0 && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
+    value = bubble_opacity while value != target && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
     value
+  end
+
+  def move_pointer_off_rail
+    width, height = page.evaluate_script("[window.innerWidth, window.innerHeight]")
+    page.driver.browser.mouse.move(x: width - 5, y: height - 5)
   end
 
   def bubble_opacity

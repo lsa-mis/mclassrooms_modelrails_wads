@@ -39,31 +39,44 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
     end
   end
 
-  # Resolves lazy `t(".key")` against its controller and action, which is how
-  # nearly every flash in this app is written.
-  def controller_flash_keys
-    Dir.glob(Rails.root.join("app/controllers/**/*.rb")).flat_map do |path|
-      controller = path.to_s.split("app/controllers/").last.sub("_controller.rb", "")
-      action = nil
+  # Three spellings, including a `notice = t(...)` local handed to redirect_to and a `notice +=` suffix.
+  def flash_expression(line)
+    if line =~ /(?:notice|alert):\s*(.+)/
+      Regexp.last_match(1)
+    elsif line =~ /(?:flash(?:\.now)?\[:(?:notice|alert)\]|\b(?:notice|alert))\s*\+?=(?!=)\s*(.+)/
+      Regexp.last_match(1)
+    end
+  end
 
-      File.readlines(path).filter_map do |line|
-        action = Regexp.last_match(1) if line =~ /\A\s*def\s+([a-z_]+)/
+  # Every `t()` key in the expression; a lazy `t(".key")` resolves against its controller and action.
+  def flash_keys(expression, controller, action)
+    expression.scan(/\bt\(\s*"(\.?)([a-z_.]+)"/).map do |lazy, key|
+      lazy.empty? ? key : "#{controller.tr('/', '.')}.#{action}.#{key}"
+    end
+  end
 
-        # Three spellings, including a `notice = t(...)` local handed to redirect_to.
-        expression =
-          if line =~ /(?:notice|alert):\s*(.+)/
-            Regexp.last_match(1)
-          elsif line =~ /(?:flash(?:\.now)?\[:(?:notice|alert)\]|\b(?:notice|alert))\s*=(?!=)\s*(.+)/
-            Regexp.last_match(1)
-          end
-        next unless expression
-        if expression =~ /t\(\s*"\.([a-z_.]+)"/
-          "#{controller.tr('/', '.')}.#{action}.#{Regexp.last_match(1)}"
-        elsif expression =~ /t\(\s*"([a-z_.]+)"/
-          Regexp.last_match(1)
-        end
-      end
-    end.uniq
+  def flashes_in(source, path)
+    controller = path.split("app/controllers/").last.sub("_controller.rb", "")
+    action = nil
+
+    source.lines.each_with_index.filter_map do |line, index|
+      action = Regexp.last_match(1) if line =~ /\A\s*def\s+([a-z_]+)/
+      next if line.strip.start_with?("#")
+
+      expression = flash_expression(line) or next
+      { at: "#{path}:#{index + 1}", expression: expression.strip.delete_suffix("}").strip,
+        keys: flash_keys(expression, controller, action) }
+    end
+  end
+
+  def controller_sources
+    Dir.glob(Rails.root.join("app/controllers/**/*.rb")).to_h do |path|
+      [ path.delete_prefix("#{Rails.root}/"), File.read(path) ]
+    end
+  end
+
+  def controller_flashes
+    controller_sources.flat_map { |path, source| flashes_in(source, path) }
   end
 
   # By key or by English text over 8 characters, so "Saved." can't match by chance. Boundary-aware:
@@ -84,8 +97,73 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
       .map { |f| File.read(f) }.join("\n")
   end
 
+  # Held in a variable, so no key can be read from the line; a new one fails below until someone checks its spec by hand.
+  let(:variable_flashes) do
+    {
+      "app/controllers/settings/avatars_controller.rb" => [ "message", "result.error_message" ],
+      "app/controllers/settings/connected_account_verifications_controller.rb" =>
+        [ 'problems.map { |problem| t(CLAIM_PROBLEM_MESSAGES.fetch(problem)) }.join(" ")' ],
+      "app/controllers/workspaces/invitations/resends_controller.rb" => [ "t(notice_key)" ],
+      "app/controllers/workspaces/invitations_controller.rb" => [ "notice" ],
+      "app/controllers/workspaces/logos_controller.rb" => [ "result.error_message" ],
+      "app/controllers/workspaces/members_controller.rb" => [ "message" ],
+      "app/controllers/workspaces_controller.rb" => [ "message" ],
+      "app/controllers/admin/announcements_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/bulk_uploads_controller.rb" => [ "notice" ],
+      "app/controllers/admin/characteristic_display_rules_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/editor_assignments_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/sync_scope_rules_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/unit_display_names_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/notes_controller.rb" => [ 't("notes.toasts.#{action_name}")', "result.errors.to_sentence" ],
+      "app/controllers/rooms/media_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/rooms_controller.rb" => [ 't("rooms.edit.#{@saved_media}_saved")' ]
+    }
+  end
+
+  # Lines that name a flash without setting one.
+  let(:not_flash_setters) do
+    [ 'toast_stream("notice", message)', 'toast_stream("alert", message)',
+      "params.expect(note: [ :body, :alert ])", ".group(:notable_id, :alert).count" ]
+  end
+
+  it "reads a flash from every controller line that names one" do
+    unread = controller_sources.flat_map do |path, source|
+      source.lines.each_with_index.filter_map do |line, index|
+        next if line.strip.start_with?("#") || line !~ /\b(?:notice|alert)\b/
+        next if flash_expression(line) || not_flash_setters.include?(line.strip)
+
+        "#{path}:#{index + 1}: #{line.strip}"
+      end
+    end
+
+    expect(unread).to be_empty, "the guard cannot read these lines; teach flash_expression the spelling:\n  #{unread.join("\n  ")}"
+  end
+
+  it "reads a key from every flash, or the flash is a reviewed variable" do
+    unread = controller_flashes.select do |flash|
+      path = flash[:at].split(":").first
+      flash[:keys].empty? && !variable_flashes.fetch(path, []).include?(flash[:expression])
+    end
+
+    expect(unread.map { |flash| "#{flash[:at]}: #{flash[:expression]}" }).to be_empty
+  end
+
+  it "catches an unasserted key in each spelling it reads" do
+    planted = <<~RUBY
+      def create
+        redirect_to root_path, notice: t(".planted_lazy")
+        flash[:alert] = t("planted.absolute")
+        notice += " " + t("planted.suffix")
+      end
+    RUBY
+    keys = flashes_in(planted, "app/controllers/planted_controller.rb").flat_map { |flash| flash[:keys] }
+
+    expect(keys).to eq(%w[planted.create.planted_lazy planted.absolute planted.suffix])
+    expect(keys.reject { |key| asserted?(key, values, specs) }).to eq(keys)
+  end
+
   it "asserts every flash a controller sets" do
-    unasserted = controller_flash_keys.reject { |key| asserted?(key, values, specs) }
+    unasserted = controller_flashes.flat_map { |flash| flash[:keys] }.uniq.reject { |key| asserted?(key, values, specs) }
 
     expect(unasserted).to be_empty,
       "these controller flashes are asserted by no spec:\n  #{unasserted.join("\n  ")}\n\n" \

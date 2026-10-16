@@ -1,9 +1,4 @@
-<% content_for(:title) { t("sessions.new.title") } %>
-<div class="max-w-md mx-auto px-4 py-16">
-  <h1 class="text-3xl font-bold text-text-heading">
-    <%= t("sessions.new.title") %>
-  </h1>
-
+<%= render layout: "sessions/page" do %>
   <%= render "shared/oauth_buttons" %>
 
   <%# Fork deviation (MiClassrooms Phase 0 Task 7): SSO-only posture — under
@@ -67,4 +62,4 @@
        class="mt-3 text-sm text-text-body text-center"></p>
   </div>
   <% end %>
-</div>
+<% end %>

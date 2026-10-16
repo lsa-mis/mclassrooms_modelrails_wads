@@ -152,9 +152,39 @@ adding the notifier.
 unauthenticated endpoints and are rate-limited at 10 requests per 3 minutes
 per IP.
 
+### Password sign-in
+
+**Off unless the instance opts in.** `config.x.authentication.passwords`
+reads `AUTH_PASSWORDS` and defaults to `disabled`. Disabled means the routes
+are not drawn: no password sign-in (`POST /session`), no password reset, no
+`/settings/password`, no password factor at reauthentication, and no password
+form at the lookup step. A leftover `set_password` link signs in and lands on
+the home page. The template avoids storing passwords, so supporting them is a
+fork's explicit choice: set `AUTH_PASSWORDS=enabled`.
+
+When enabled, an observer must not learn whether an address has an account, holds a
+password, or is locked. `PasswordSignIn` (`app/models/password_sign_in.rb`)
+is the one place that decides a password attempt, and every failure it
+returns is the same:
+
+- **One response.** An unknown address, a wrong password, a blank password
+  and a locked account all re-render the password step with status 422 and
+  one generic message in the error summary, the address kept read-only.
+  The password field is never refilled.
+- **One duration.** A miss hashes the submitted password anyway, as Rails'
+  `authenticate_by` does; so does an account without a password.
+- **A blank password is not an attempt** and does not count toward the lock.
+- **The lookup step answers every address alike:** the same "check your
+  email" page, with the password form offered inline for everyone, so no
+  URL carries the address. With signups closed an unknown address gets that
+  page too, and no email.
+
 ### Account Locking
 
 After 5 failed login attempts, accounts are locked for 1 hour. Auto-unlock occurs after the lockout period.
+The page never says so: the holder gets `PasswordLockedNotifier` by email when
+the lock starts. `register_failed_login!` decides under `with_lock`, so
+concurrent failures count from the database rather than a stale load.
 
 **Scope — password sign-in only, by design.** The failed-attempt counter and
 the `locked?` gate live in the password path (`sessions#create`). Passkey and
@@ -280,13 +310,24 @@ None of these five tokens is plaintext at rest. Magic-link and workspace-join-li
 
 ### Security Headers
 
-Configured in `config/initializers/security_headers.rb`:
+Rails 8.2's defaults (`load_defaults 8.2`) send these:
 
 - `X-Frame-Options: SAMEORIGIN` — prevents clickjacking
 - `X-Content-Type-Options: nosniff` — prevents MIME sniffing
+- `X-Permitted-Cross-Domain-Policies: none`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy` — disables camera, microphone, geolocation by default
-- Content Security Policy via `content_security_policy.rb` (enforced in development, production, and test — see #499/#120 in `CHANGELOG.md` for why test enforcement matters); its decided trade-offs are documented in the next section
+
+`config/initializers/security_headers.rb` adds the one header Rails does not send: `Permissions-Policy`, which disables camera, microphone and geolocation by default. `X-XSS-Protection` is no longer sent, because every browser dropped the filter it controlled.
+
+Content Security Policy lives in `content_security_policy.rb` (enforced in development, production, and test — see #499/#120 in `CHANGELOG.md` for why test enforcement matters); its decided trade-offs are documented in the next section.
+
+### Cross-Site Request Forgery
+
+Rails 8.2 verifies every write by the browser's `Sec-Fetch-Site` header rather than by an authenticity token (`load_defaults 8.2`, strategy `:header_only`). It first compares the request's `Origin` with the app's own URL. Then a request the header marks `same-origin` or `same-site` is allowed, and anything else is rejected with `ActionController::InvalidCrossOriginRequest`, a 422. A request with no header at all is allowed only over plain HTTP with SSL not forced, which in this app means development, and refused everywhere `force_ssl` is on. An authenticity token no longer rescues a request without the header.
+
+Every browser that `allow_browser versions: :modern` admits sends the header, so a form or a `fetch` call needs no token. `csrf_meta_tags` stays in the layout, and the Stimulus controllers that still attach a token are harmless. No provider is listed in `protect_from_forgery trusted_origins:`, because the Google and GitHub callbacks are GET requests and the OmniAuth request phase is a same-origin POST. A fork whose provider posts its callback cross-site lists that provider's origin there.
+
+`spec/requests/csrf_protection_spec.rb` is the one file that runs with forgery protection on. Codespaces turns off the Origin comparison only; see [Codespaces](codespaces).
 
 ### Content Security Policy
 

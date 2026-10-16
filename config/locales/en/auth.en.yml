@@ -11,7 +11,6 @@ en:
     create:
       success: "Signed in successfully."
       failure: "Invalid email or password."
-      locked: "Your account has been locked due to too many failed attempts. Please try again later."
       suspended: "Your account has been suspended. Contact whoever runs this app to have it reinstated."
       rate_limited: "Too many attempts. Please try again later."
       oauth_failure: "Authentication failed. Please try again."
@@ -32,12 +31,6 @@ en:
       invitation_consumed: "That invitation is no longer valid. Please ask your %{workspace} administrator for a new one."
       invitation_email_mismatch: "You're signed in, but that invitation was sent to a different email address. Ask your %{workspace} administrator to invite this one."
     closed:
-      title: "Sign-ups are by invitation only"
-      body_html: |
-        If your team uses %{app_name}, ask your %{workspace} administrator
-        to send you an invitation. Already have an invitation email?
-        Click the link in that message to get started.
-      sign_in_link: "Sign in to an existing account"
       oauth_blocked: "Sign-ups are by invitation only. Please ask your %{workspace} administrator for an invitation."
   activerecord:
     errors:

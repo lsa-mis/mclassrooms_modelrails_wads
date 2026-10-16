@@ -112,7 +112,7 @@
         always-present means the inner <p>'s text appearing is spoken. -%>
     <div role="status" aria-live="polite">
       <p id="quiet-hours-empty-days-warning"
-         class="<%= class_names("text-xs", "text-warning", "hidden" => !quiet_hours_deceptive) %>"
+         class="<%= class_names("text-sm", "text-warning", "hidden" => !quiet_hours_deceptive) %>"
          data-quiet-hours-warning-target="warning">
         <%= t("notifications.preferences.quiet_hours.empty_days_warning") %>
       </p>
@@ -121,7 +121,7 @@
     <%# Security reassurance is FIXED TEXT per spec decision #6 — not a
         toggle, because security always bypasses quiet_hours and a toggle
         without runtime effect would be deceptive UI. -%>
-    <p class="text-xs text-text-muted">
+    <p class="text-sm text-text-muted">
       <%= t("notifications.preferences.quiet_hours.security_reassurance") %>
     </p>
   </div>

@@ -36,6 +36,14 @@ RSpec.describe "Operations sync runs", type: :request do
       expect(page).to have_no_css("form[action='#{operations_sync_run_resumption_path(older)}']")
     end
 
+    it "is listed last in the operations nav, marked as the current page" do
+      get operations_sync_runs_path
+
+      links = page.all("nav[aria-label='#{I18n.t('operations.area.nav_label')}'] a")
+      expect(links.last.text).to eq(I18n.t("operations.nav.sync_runs"))
+      expect(links.last[:"aria-current"]).to eq("page")
+    end
+
     it "says a sync is running, and still offers Run now in case that run was left by a stopped worker" do
       create(:sync_run, workspace:, status: :running, started_at: 1.minute.ago)
 

@@ -56,27 +56,32 @@ RSpec.describe "Passwordless-first auth", type: :system do
       click_button I18n.t("sessions.new.continue")
 
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
-      expect(page).to have_link(I18n.t("sessions.check_email.use_password"))
 
-      click_link I18n.t("sessions.check_email.use_password")
+      find("summary", text: I18n.t("sessions.check_email.use_password")).click
 
       fill_in I18n.t("sessions.passwords.new.password_label"), with: "SecureP@ssw0rd123!"
       click_button I18n.t("sessions.passwords.new.submit")
 
       expect(page).to have_current_path(root_path)
     end
+
+    it "keeps the address after a wrong password and puts focus on the error summary" do
+      visit new_session_path
+      fill_in I18n.t("sessions.new.email_label"), with: user.email_address
+      click_button I18n.t("sessions.new.continue")
+      find("summary", text: I18n.t("sessions.check_email.use_password")).click
+
+      fill_in I18n.t("sessions.passwords.new.password_label"), with: "wrongpassword"
+      click_button I18n.t("sessions.passwords.new.submit")
+
+      summary = find("[data-slot='error-summary']", text: I18n.t("sessions.create.failure"))
+      expect(page).to have_field(I18n.t("sessions.new.email_label"), with: user.email_address)
+      expect(summary).to match_selector(":focus")
+    end
   end
 
-  # ---------------------------------------------------------------------------
-  # Flow 3: forgot-password sends a set_password magic link that lands on the
-  # change-password form.
-  #
-  # The "Forgot your password?" button in sessions/passwords/new.html.erb is a
-  # button_to (POST to password_reset_path). Because button_to triggers a
-  # Turbo fetch submission, use execute_script to issue a native browser POST
-  # so the redirect is followed in the same Playwright session — the same
-  # workaround used in invite_only_signup_spec and passwordless_join_link_spec.
-  # ---------------------------------------------------------------------------
+  # "Forgot your password?" is a button_to that Turbo submits by fetch; a native submit follows the
+  # redirect in this session (the same workaround as invite_only_signup_spec, passwordless_join_link_spec).
   describe "forgot-password flow lands on the change-password form" do
     let(:user) { create(:user) }
 
@@ -87,7 +92,7 @@ RSpec.describe "Passwordless-first auth", type: :system do
 
       expect(page).to have_text(I18n.t("sessions.check_email.title"))
 
-      click_link I18n.t("sessions.check_email.use_password")
+      find("summary", text: I18n.t("sessions.check_email.use_password")).click
 
       expect(page).to have_field(I18n.t("sessions.passwords.new.password_label"), wait: 5)
 

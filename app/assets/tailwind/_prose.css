@@ -2,11 +2,13 @@
    Tailwind v4 resets element styles, so headings/lists/code/etc. are defined here. */
 
 .prose {
-  @apply text-text-body leading-relaxed;
+  @apply text-text-body leading-relaxed max-w-prose;
 }
 
+/* 1.5lh: paragraph spacing of 1.5 times the line height, WCAG 1.4.8 (AAA) for long-form text. */
 .prose p {
-  @apply text-base mb-4;
+  @apply text-base;
+  margin-block-end: 1.5lh;
 }
 
 .prose h1 {

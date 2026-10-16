@@ -1,7 +1,6 @@
 module Sessions
-  # The email-first step of signing in: look the address up, send the right
-  # magic link (sign-in or registration), and render the next step inline in
-  # the sign_in_form frame. The password step is Sessions::PasswordsController.
+  # The email-first step of signing in: send the right magic link and render one answer for every address.
+  # See /docs/developer/security (Password sign-in).
   class LookupsController < ApplicationController
     allow_unauthenticated_access
     rate_limit to: 10, within: 3.minutes, only: :create,
@@ -15,23 +14,15 @@ module Sessions
         return
       end
 
-      email = @email_lookup.email_address
-      user = User.find_by(email_address: email)
+      @email_address = @email_lookup.email_address
+      user = User.find_by(email_address: @email_address)
 
       if user
         deliver_magic_link(user.email_address)
-        @email_address = email
-        @has_password = user.has_password?
-        render :check_email
-      else
-        unless signups_open?
-          render :closed, status: :unprocessable_entity
-          return
-        end
-        deliver_magic_link(email, registration: true)
-        @email_address = email
-        render :check_email
+      elsif signups_open?
+        deliver_magic_link(@email_address, registration: true)
       end
+      render :check_email
     end
 
     private

@@ -71,7 +71,7 @@ module UI
         }
         concat content_tag(:div, class: "pb-6 pt-0.5 min-w-0") {
           concat content_tag(:p, step[:label], class: cn("text-sm font-medium", label_color(status)))
-          concat content_tag(:p, step[:description], class: "mt-0.5 text-xs text-text-muted") if step[:description]
+          concat content_tag(:p, step[:description], class: "mt-0.5 text-sm text-text-muted") if step[:description]
         }
       end
     end

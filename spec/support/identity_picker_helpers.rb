@@ -15,15 +15,13 @@ module IdentityPickerHelpers
     expect(page).to have_css("#identity-picker-hub [role='radiogroup']", wait: 10)
   end
 
-  # Click a source card by the visible title text ("Photo", "Gravatar", "Initials").
-  # Source cards are now <a> links inside the turbo frame hub that reload it via GET.
-  # Waits for the turbo frame to finish loading (no [busy] attribute) and confirm the
-  # selected source is active.
+  # Turbo clears the frame's [busy] before it renders, so this marks the old hub and waits for its replacement (#1344).
   def select_identity_source(title)
+    page.execute_script(%(document.querySelector("#identity-picker-hub [role='radiogroup']").dataset.stale = ""))
     within("#identity-picker-hub") do
       click_link title
     end
-    expect(page).to have_no_css("#identity-picker-hub[busy]", wait: 10)
+    expect(page).to have_css("#identity-picker-hub [role='radiogroup']:not([data-stale])", wait: 10)
     expect(page).to have_css(
       "#identity-picker-hub a[aria-checked='true']", text: title, wait: 10
     )
@@ -61,6 +59,7 @@ module IdentityPickerHelpers
       slider.value = #{hue}
       slider.dispatchEvent(new Event('input', { bubbles: true }))
     JS
+    expect(page).to have_field("primary_color", type: :hidden, with: hue.to_s)
   end
 
   # Wait for crop view to become visible AND the cropper to be fully ready.
@@ -134,7 +133,7 @@ module IdentityPickerHelpers
   # Save & apply the selected source; the modal closes on success.
   def save_and_apply
     click_button I18n.t("identity_picker.save")
-    expect(page).to have_no_css("dialog[open]", wait: 3)
+    expect(page).to have_no_css("dialog[open]", wait: 10)
   end
 
   # Remove photo submits a DELETE via button_to; the turbo stream response

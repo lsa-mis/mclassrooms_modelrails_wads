@@ -14,13 +14,13 @@ RSpec.describe "Session Lookups", type: :request do
       expect(response.body).to include(I18n.t("sessions.check_email.use_password")) # secondary link present
     end
 
-    it "blocks registration of a new email when signups are closed" do
+    it "sends nothing to a new email when signups are closed, and says what it says to a known one" do
       allow_any_instance_of(Sessions::LookupsController).to receive(:signups_open?).and_return(false)
       expect {
         post session_lookup_path, params: { email_address: "newcomer@example.com" }
       }.not_to change(MagicLinkToken, :count)
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include(I18n.t("registrations.closed.title"))
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(I18n.t("sessions.check_email.title"))
     end
   end
 
@@ -35,9 +35,11 @@ RSpec.describe "Session Lookups", type: :request do
         expect(response.body).to include(I18n.t("sessions.check_email.use_password"))
       end
 
-      it "links the password step as the password resource's new" do
+      it "offers the password form inline, so the address never travels in a URL" do
         post session_lookup_path, params: { email_address: user.email_address }
-        expect(response.body).to include(new_session_password_path(email_address: user.email_address))
+        page = Capybara.string(response.body)
+        expect(page).to have_css("details form[action='#{session_path}']", visible: :all)
+        expect(response.body).not_to include("email_address=")
       end
     end
 
@@ -45,6 +47,11 @@ RSpec.describe "Session Lookups", type: :request do
       let(:user) { create(:user) }
 
       before { user.update_column(:password_digest, nil) }
+
+      it "offers the password form all the same, so the page says nothing about who holds one" do
+        post session_lookup_path, params: { email_address: user.email_address }
+        expect(response.body).to include(I18n.t("sessions.check_email.use_password"))
+      end
 
       it "shows check email confirmation inline" do
         post session_lookup_path, params: { email_address: user.email_address }
@@ -63,26 +70,15 @@ RSpec.describe "Session Lookups", type: :request do
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(I18n.t("sessions.check_email.title"))
         expect(response.body).to include("ghost@example.com")
+        expect(response.body).to include(I18n.t("sessions.check_email.use_password"))
       end
 
-      it "shows closed view when signups are closed" do
+      it "shows the same check email page inside the frame when signups are closed" do
         allow_any_instance_of(Sessions::LookupsController).to receive(:signups_open?).and_return(false)
         post session_lookup_path, params: { email_address: "ghost@example.com" }
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include(I18n.t("registrations.closed.title"))
-      end
-
-      it "wraps the closed view in the sign_in_form turbo-frame (not 'Content missing')" do
-        # The lookup form lives in <turbo-frame id="sign_in_form">, and
-        # turbo-rails' frame layout does NOT auto-wrap the response. So the
-        # closed view must carry a matching frame itself, or Turbo discards the
-        # body and renders its built-in "Content missing" in the browser — a
-        # gap the body-text assertion above cannot see (the text IS present,
-        # just not inside a matching frame).
-        allow_any_instance_of(Sessions::LookupsController).to receive(:signups_open?).and_return(false)
-        post session_lookup_path, params: { email_address: "ghost@example.com" }
+        expect(response).to have_http_status(:ok)
         frame = Capybara.string(response.body).find("turbo-frame#sign_in_form", visible: :all)
-        expect(frame).to have_text(I18n.t("registrations.closed.title"))
+        expect(frame).to have_text(I18n.t("sessions.check_email.title"))
       end
     end
 
@@ -97,6 +93,19 @@ RSpec.describe "Session Lookups", type: :request do
         post session_lookup_path, params: { email_address: "notanemail" }
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(I18n.t("sessions.lookups.create.invalid_email"))
+      end
+
+      it "re-renders a form that posts the address under the name the controller reads" do
+        post session_lookup_path, params: { email_address: "notanemail" }
+        field = Capybara.string(response.body).find("turbo-frame#sign_in_form input[type='email']")
+        expect(field[:name]).to eq("email_address")
+      end
+
+      it "accepts the corrected address from that re-rendered form" do
+        post session_lookup_path, params: { email_address: "notanemail" }
+        name = Capybara.string(response.body).find("input[type='email']")[:name]
+        post session_lookup_path, params: { name => "someone@example.com" }
+        expect(response.body).to include(I18n.t("sessions.check_email.title"))
       end
 
       it "rejects blank email" do

@@ -3,6 +3,7 @@ require "rails_helper"
 RSpec.describe "Notifier severity assignments" do
   expected = {
     PasswordChangedNotifier              => :danger,
+    PasswordLockedNotifier               => :danger,
     PasskeyAddedNotifier                 => :danger,
     SignInFromNewDeviceNotifier          => :danger,
     WorkspaceCapacityApproachingNotifier => :warning,

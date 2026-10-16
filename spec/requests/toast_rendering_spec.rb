@@ -18,10 +18,7 @@ RSpec.describe "Toast rendering", type: :request do
 
   describe "error flash" do
     it "renders a card in the toast-cards container" do
-      post session_path, params: {
-        email_address: "nobody@example.com",
-        password: "wrong"
-      }
+      get omniauth_failure_path
       follow_redirect!
       expect(response.body).to include('id="toast-cards"')
       expect(response.body).to include('data-controller="toast-card"')

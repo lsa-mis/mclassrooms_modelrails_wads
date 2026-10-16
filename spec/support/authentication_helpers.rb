@@ -70,7 +70,7 @@ module AuthenticationHelpers
   end
 
   def sign_in(user)
-    if user.has_password?
+    if user.has_password? && User.passwords_enabled?
       post session_path, params: {
         email_address: user.email_address,
         password: "SecureP@ssw0rd123!"

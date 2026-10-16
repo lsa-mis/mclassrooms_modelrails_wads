@@ -126,6 +126,27 @@ RSpec.describe "Account profile — identity picker", type: :system do
       expect(state["loupeRules"]).to be >= 1  # engine-appropriate thumb rule, token-based fill
     end
 
+    it "saves the hue the author picked even when the hub renders late (#1344)" do
+      open_identity_picker
+      # The hub renders on the hue drag, or after a second: a drag that beats the render lands in the old form.
+      page.execute_script(<<~JS)
+        document.addEventListener("turbo:before-frame-render", (event) => {
+          if (event.target.id !== "identity-picker-hub") return;
+          event.preventDefault();
+          const resume = () => { if (!event.detail.resumed) { event.detail.resumed = true; event.detail.resume() } };
+          document.addEventListener("input", resume, { once: true });
+          setTimeout(resume, 1000);
+        }, { once: true });
+      JS
+      select_identity_source("Initials")
+      expect_color_picker_visible
+
+      set_identity_color_hue(120)
+      save_and_apply
+
+      expect(user.reload.primary_color).to eq(120)
+    end
+
     it "switches to Initials with a custom color" do
       open_identity_picker
       select_identity_source("Initials")

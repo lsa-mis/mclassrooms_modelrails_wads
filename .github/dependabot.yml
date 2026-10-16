@@ -5,10 +5,32 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  # One grouped PR per week: every ungrouped bump runs CI, Image Scan and
+  # Devcontainer on each fork — ~87 billed minutes a gem on a private one.
+  groups:
+    bundler:
+      patterns:
+        - "*"
   ignore:
     # Bumped by hand with the re-vendor pre-flight; Dependabot's default cooldown
     # proposed this git-tag gem as a downgrade three times (#665, #888, #1261).
     - dependency-name: modelrails_ui
+    # Rails main and rspec-rails main, pinned by commit and moved by hand; the
+    # suite's invariant keeps this list equal to the lockfile's git gems.
+    - dependency-name: rails
+    - dependency-name: railties
+    - dependency-name: actioncable
+    - dependency-name: actionmailbox
+    - dependency-name: actionmailer
+    - dependency-name: actionpack
+    - dependency-name: actiontext
+    - dependency-name: actionview
+    - dependency-name: activejob
+    - dependency-name: activemodel
+    - dependency-name: activerecord
+    - dependency-name: activestorage
+    - dependency-name: activesupport
+    - dependency-name: rspec-rails
 - package-ecosystem: github-actions
   directory: "/"
   schedule:

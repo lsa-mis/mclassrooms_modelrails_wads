@@ -84,20 +84,42 @@ RSpec.describe "Sessions", type: :request do
     end
 
     context "with invalid credentials" do
-      # Distinguishes a wrong password from a lockout, same destination (#526).
-      it "rejects the sign in" do
+      it "re-renders the password step with 422, keeping the address and naming the failure in the error summary" do
         post session_path, params: {
           email_address: user.email_address,
           password: "wrongpassword"
         }
-        expect(response).to redirect_to(new_session_path)
-        expect(flash[:alert]).to eq(I18n.t("sessions.create.failure"))
+
+        expect(response).to have_http_status(:unprocessable_content)
+        page = Capybara.string(response.body)
+        expect(page).to have_css("h1", text: I18n.t("sessions.new.title"))
+        expect(page).to have_css("[data-slot='error-summary']", text: I18n.t("sessions.create.failure"))
+        expect(page).to have_field(I18n.t("sessions.new.email_label"), with: user.email_address, readonly: true)
+        expect(page.find_field(I18n.t("sessions.passwords.new.password_label"), type: "password").value).to be_blank
+        expect(flash[:alert]).to be_nil
       end
     end
   end
 
-  # Both land on new_session_path like a wrong password (#526).
-  describe "POST /session — refusals that share a destination" do
+  # Every failure must look the same to someone probing for accounts.
+  describe "POST /session — failures are indistinguishable" do
+    def failure_signature(email:, password:)
+      post session_path, params: { email_address: email, password: password }
+      summary = Capybara.string(response.body).find("[data-slot='error-summary']").text.squish
+      [ response.status, summary, flash[:alert] ]
+    end
+
+    it "answers an unknown address, a locked account and a blank password exactly as it answers a wrong password" do
+      locked = create(:user).tap { |u| 5.times { u.register_failed_login! } }
+      wrong = failure_signature(email: user.email_address, password: "wrongpassword")
+
+      expect(failure_signature(email: "ghost@example.com", password: "anything")).to eq(wrong)
+      expect(failure_signature(email: locked.email_address, password: "SecureP@ssw0rd123!")).to eq(wrong)
+      expect(failure_signature(email: user.email_address, password: "")).to eq(wrong)
+    end
+  end
+
+  describe "POST /session — refusals that redirect" do
     it "says it was rate limited once the limit is exceeded" do
       # An over-limit increment fires the limiter without a persistent cache.
       allow(Rails.cache).to receive(:increment).and_return(11)
@@ -136,13 +158,14 @@ RSpec.describe "Sessions", type: :request do
       5.times { locked_user.register_failed_login! }
     end
 
-    it "rejects sign in for locked user" do
+    it "refuses with the generic failure, never naming the lock on the page" do
       post session_path, params: {
         email_address: locked_user.email_address,
         password: "SecureP@ssw0rd123!"
       }
-      expect(response).to redirect_to(new_session_path)
-      expect(flash[:alert]).to include(I18n.t("sessions.create.locked"))
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).not_to match(/locked/i)
+      expect(response.body).to include(I18n.t("sessions.create.failure"))
     end
   end
 
@@ -194,10 +217,10 @@ RSpec.describe "Sessions", type: :request do
   end
 
   describe "POST /session with non-existent email" do
-    it "redirects with failure flash" do
+    it "re-renders the password step with the generic failure" do
       post session_path, params: { email_address: "ghost@example.com", password: "anything" }
-      expect(response).to redirect_to(new_session_path)
-      expect(flash[:alert]).to be_present
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include(I18n.t("sessions.create.failure"))
     end
   end
 

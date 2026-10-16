@@ -6,8 +6,13 @@ RSpec.describe "Security headers" do
     expect(response.headers["Referrer-Policy"]).to eq("strict-origin-when-cross-origin")
   end
 
-  it "includes Permissions-Policy" do
+  it "does not send X-XSS-Protection, which every browser has dropped" do
     get root_path
-    expect(response.headers["Permissions-Policy"]).to be_present
+    expect(response.headers).not_to have_key("X-XSS-Protection")
+  end
+
+  it "denies the camera, microphone and location through Permissions-Policy" do
+    get root_path
+    expect(response.headers["Permissions-Policy"]).to eq("camera=(), microphone=(), geolocation=()")
   end
 end

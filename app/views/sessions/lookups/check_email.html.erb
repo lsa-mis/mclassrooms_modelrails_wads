@@ -31,17 +31,20 @@
 
     <div class="mt-6">
       <%= link_to t("sessions.check_email.try_again"), main_app.new_session_path,
-            class: "text-sm text-interactive underline hover:no-underline
+            class: "inline-flex min-h-input items-center text-sm text-interactive underline hover:no-underline
                     focus-ring rounded",
             data: { turbo_frame: "_top" } %>
     </div>
 
-    <% if @has_password %>
-      <p class="mt-4 text-sm text-text-muted">
-        <%= link_to t("sessions.check_email.use_password"),
-              main_app.new_session_password_path(email_address: @email_address),
-              class: "text-interactive underline hover:no-underline focus-ring rounded" %>
-      </p>
-    <% end %>
   </div>
+
+  <%# Offered for every address and inline, so neither the page nor a URL says who holds a password. %>
+  <% if User.passwords_enabled? %>
+  <details class="mt-4 text-sm text-center">
+    <summary class="mx-auto flex w-fit min-h-input items-center cursor-pointer text-interactive underline hover:no-underline focus-ring rounded">
+      <%= t("sessions.check_email.use_password") %>
+    </summary>
+    <%= render "sessions/passwords/form", sign_in: PasswordSignIn.new(email_address: @email_address) %>
+  </details>
+  <% end %>
 <% end %>

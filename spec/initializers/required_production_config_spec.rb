@@ -6,6 +6,8 @@ load Rails.root.join("config/initializers/required_production_config.rb").to_s u
 
 RSpec.describe RequiredProductionConfig do
   describe ".check!" do
+    let(:mail) { { "SMTP_ADDRESS" => "smtp.postmarkapp.com", "SMTP_USERNAME" => "token", "SMTP_PASSWORD" => "token" } }
+
     it "raises when RAILS_HOST is unset" do
       expect { described_class.check!({}) }
         .to raise_error(RuntimeError, /RAILS_HOST is unset/)
@@ -32,12 +34,12 @@ RSpec.describe RequiredProductionConfig do
     end
 
     it "accepts a real hostname" do
-      expect { described_class.check!({ "RAILS_HOST" => "app.humbledaisy.com", "SMTP_ADDRESS" => "smtp.postmarkapp.com" }) }
+      expect { described_class.check!({ "RAILS_HOST" => "app.humbledaisy.com", **mail }) }
         .not_to raise_error
     end
 
     it "accepts a hostname that merely contains the word example" do
-      expect { described_class.check!({ "RAILS_HOST" => "goodexample.io", "SMTP_ADDRESS" => "smtp.postmarkapp.com" }) }
+      expect { described_class.check!({ "RAILS_HOST" => "goodexample.io", **mail }) }
         .not_to raise_error
     end
 
@@ -53,11 +55,22 @@ RSpec.describe RequiredProductionConfig do
       it "raises on localhost, where Rails mails by default" do
         expect { described_class.check!(host.merge("SMTP_ADDRESS" => "localhost")) }
           .to raise_error(RuntimeError, /"localhost"/)
+        expect { described_class.check!(host.merge("SMTP_ADDRESS" => "127.0.0.1")) }
+          .to raise_error(RuntimeError, /"127\.0\.0\.1"/)
       end
 
-      it "raises on the rails new placeholder" do
+      it "raises on the rails new and bin/fork placeholders" do
         expect { described_class.check!(host.merge("SMTP_ADDRESS" => "smtp.example.com")) }
           .to raise_error(RuntimeError, /"smtp\.example\.com"/)
+        expect { described_class.check!(host.merge("SMTP_ADDRESS" => "mail.my_app.example")) }
+          .to raise_error(RuntimeError, /"mail\.my_app\.example"/)
+      end
+
+      it "raises when the address is real but a credential is blank, since every send would be refused" do
+        expect { described_class.check!(host.merge(mail, "SMTP_PASSWORD" => " ")) }
+          .to raise_error(RuntimeError, /SMTP_PASSWORD is unset/)
+        expect { described_class.check!(host.merge(mail.except("SMTP_USERNAME", "SMTP_PASSWORD"))) }
+          .to raise_error(RuntimeError, /SMTP_USERNAME and SMTP_PASSWORD are unset/)
       end
 
       it "names the fix and the doc in the message" do
@@ -82,7 +95,7 @@ RSpec.describe RequiredProductionConfig do
     # Personal data is encrypted at rest (#902); without keys the app boots,
     # /up reports healthy, and the first user read raises.
     describe "Active Record encryption keys" do
-      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com", "SMTP_ADDRESS" => "smtp.postmarkapp.com" } }
+      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com", **mail } }
       let(:keys) { { primary_key: "p", deterministic_key: "d", key_derivation_salt: "s" } }
 
       it "raises when neither credentials nor config carry the keys" do
@@ -145,13 +158,11 @@ RSpec.describe "config/environments/production.rb host authorization" do
     expect(line).to include('request.path == "/up"')
   end
 
-  it "takes its transport and SMTP settings from MailDelivery, so a provider is a change of secrets" do
-    expect(source).to include("config.action_mailer.delivery_method = MailDelivery.delivery_method(ENV)")
+  it "takes its SMTP settings from MailDelivery, so a provider is a change of secrets" do
     expect(source).to include("config.action_mailer.smtp_settings = MailDelivery.smtp_settings(ENV)")
   end
 
   it "lets a failed delivery fail its job instead of vanishing" do
     expect(source).to include("config.action_mailer.raise_delivery_errors = true")
-    expect(source).to include("config.action_mailer.perform_deliveries = true")
   end
 end

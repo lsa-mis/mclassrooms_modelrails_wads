@@ -28,7 +28,7 @@
         <%= message %>
       <% end %>
     </p>
-    <p class="mt-1 text-xs text-text-muted">
+    <p class="mt-1 text-sm text-text-muted">
       <%# Wrapped "ago" form (#763): <time datetime> is not announced, so the
           bare time_ago_in_words read as "…3 hours." %>
       <time datetime="<%= notification.created_at.iso8601 %>">

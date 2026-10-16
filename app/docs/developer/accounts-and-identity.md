@@ -52,7 +52,7 @@ These are the correct terms. Use them in UI copy, docs, and code comments. "Acco
 
 ## Password lifecycle
 
-A password is optional (`has_secure_password validations: false`); the passwordless flows are primary. When one exists, three rules govern its removal and its checks, all on `User`.
+A password is optional (`has_secure_password validations: false`); the passwordless flows are primary, and every password surface is absent unless `AUTH_PASSWORDS=enabled` ([Security § Password sign-in](/docs/developer/security)). When one exists, three rules govern its removal and its checks, all on `User`.
 
 **`remove_password!` tears down password authentication as one unit** — the email authentications, the digest, and whatever the caller needs committed alongside (session revocation, via the block) — and returns whether *this* caller performed the removal. Two details are load-bearing:
 

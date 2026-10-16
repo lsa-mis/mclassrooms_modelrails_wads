@@ -16,6 +16,7 @@ RSpec.describe "Settings::Notifications record-preload guard", type: :request do
     %w[
       PasskeyAddedNotifier
       PasswordChangedNotifier
+      PasswordLockedNotifier
       SignInFromNewDeviceNotifier
       WorkspaceCapacityApproachingNotifier
       WorkspaceCreatedNotifier
@@ -66,6 +67,7 @@ RSpec.describe "Settings::Notifications record-preload guard", type: :request do
     in_distinct_idempotency_bucket do
       PasskeyAddedNotifier.with(record: user).deliver(user)
       PasswordChangedNotifier.with(record: user).deliver(user)
+      PasswordLockedNotifier.with(record: user).deliver(user)
       SignInFromNewDeviceNotifier
         .with(record: user, user_agent: "Guard UA #{round}", os: "macOS").deliver(user)
 
