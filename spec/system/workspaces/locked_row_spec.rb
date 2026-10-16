@@ -16,7 +16,7 @@ RSpec.describe "Locked workspace row", type: :system do
     within("[data-test='locked-workspace-row']") do
       expect(page).to have_text(I18n.t("workspaces.locked_row.heading"))
       expect(page).to have_text(I18n.t("workspaces.locked_row.body", name: "Frozen Co"))
-      expect(page).to have_link(I18n.t("workspaces.locked_row.contact"), href: contact_path)
+      expect(page).to have_link(I18n.t("workspaces.locked_row.contact"), href: page_path(:contact))
     end
     # The internal word must never render
     expect(page).to have_no_text(/suspended/i)

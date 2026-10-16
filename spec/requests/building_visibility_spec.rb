@@ -16,14 +16,14 @@ RSpec.describe "Building visibility (hide/unhide)", type: :request do
   let(:building) { create(:building, workspace: workspace) }
   let!(:classroom) { create(:room, building: building, workspace: workspace) }
 
-  describe "POST /buildings/:id/hide as an admin" do
+  describe "POST /buildings/:building_id/hiding as an admin" do
     let(:admin) { membership_with("admin") }
 
     before { sign_in(admin) }
 
     it "hides the building, stays on the building page, and audits the change" do
       expect {
-        post hide_building_path(building)
+        post building_hiding_path(building)
       }.to change(ActivityLog, :count).by(1)
 
       expect(response).to redirect_to(building_path(building))
@@ -41,7 +41,7 @@ RSpec.describe "Building visibility (hide/unhide)", type: :request do
     end
   end
 
-  describe "POST /buildings/:id/unhide as an admin" do
+  describe "DELETE /buildings/:building_id/hiding as an admin" do
     let(:admin) { membership_with("admin") }
 
     before do
@@ -51,7 +51,7 @@ RSpec.describe "Building visibility (hide/unhide)", type: :request do
 
     it "unhides the building, redirects to the building, and audits the change" do
       expect {
-        post unhide_building_path(building)
+        delete building_hiding_path(building)
       }.to change(ActivityLog, :count).by(1)
 
       expect(response).to redirect_to(building_path(building))
@@ -72,7 +72,7 @@ RSpec.describe "Building visibility (hide/unhide)", type: :request do
     it_behaves_like "an admin-only action" do
       let(:actor) { membership_with("viewer") }
       let(:http_method) { :post }
-      let(:request_path) { hide_building_path(building) }
+      let(:request_path) { building_hiding_path(building) }
     end
 
     it "denies unhide too, and writes no ActivityLog" do
@@ -81,7 +81,7 @@ RSpec.describe "Building visibility (hide/unhide)", type: :request do
       sign_in(viewer)
 
       expect {
-        post unhide_building_path(building)
+        delete building_hiding_path(building)
       }.not_to change(ActivityLog, :count)
 
       expect(response).to redirect_to(find_a_room_path)

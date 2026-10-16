@@ -11,7 +11,7 @@ require "rails_helper"
 # and the token both resolve).
 RSpec.describe "Feedback trigger stacking", type: :system do
   it "stacks the trigger below the toast layer" do
-    visit about_path
+    visit page_path(:about)
     expect(page).to have_css("#lsa-tdx-feedback-trigger")
 
     z = page.evaluate_script(<<~JS)

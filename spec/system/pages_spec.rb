@@ -31,8 +31,8 @@ RSpec.describe "Public marketing pages", type: :system do
     end
 
     it "lets the anonymous visitor reach the About page" do
-      click_link I18n.t("pages.home.hero.cta_secondary"), href: about_path
-      expect(page).to have_current_path(about_path)
+      click_link I18n.t("pages.home.hero.cta_secondary"), href: page_path(:about)
+      expect(page).to have_current_path(page_path(:about))
       expect(page).to have_text(I18n.t("pages.about.hero.title"))
     end
 
@@ -43,7 +43,7 @@ RSpec.describe "Public marketing pages", type: :system do
   end
 
   describe "about page" do
-    before { visit about_path }
+    before { visit page_path(:about) }
 
     it "carries no leftover template branding" do
       expect(page).not_to have_text("ModelRails")

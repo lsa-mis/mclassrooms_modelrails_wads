@@ -38,7 +38,7 @@
 
           <nav aria-label="<%= t("footer.aria.product") %>"
                class="flex items-center gap-5">
-            <%= link_to t("footer.about"), main_app.about_path,
+            <%= link_to t("footer.about"), main_app.page_path(:about),
                   class: "inline-flex items-center min-h-input px-2 text-sm text-text-muted
                           hover:text-interactive-hover
                           focus-ring rounded" %>
@@ -53,11 +53,11 @@
 
         <nav aria-label="<%= t("footer.aria.legal") %>"
              class="flex items-center gap-5">
-          <%= link_to t("footer.privacy"), main_app.privacy_path,
+          <%= link_to t("footer.privacy"), main_app.page_path(:privacy),
                 class: "inline-flex items-center min-h-input px-2 text-sm text-text-muted
                         hover:text-interactive-hover
                         focus-ring rounded" %>
-          <%= link_to t("footer.contact"), main_app.contact_path,
+          <%= link_to t("footer.contact"), main_app.page_path(:contact),
                 class: "inline-flex items-center min-h-input px-2 text-sm text-text-muted
                         hover:text-interactive-hover
                         focus-ring rounded" %>

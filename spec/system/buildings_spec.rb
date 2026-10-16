@@ -120,4 +120,18 @@ RSpec.describe "Buildings", type: :system do
     expect(building.reload.nickname).to eq("The Mason")
     expect(floor.reload.plan).to be_attached
   end
+
+  it "hides a building and unhides it from its page" do
+    visit building_path(building)
+
+    accept_confirm(I18n.t("buildings.hide.confirmation")) do
+      click_button I18n.t("buildings.hide.button")
+    end
+    expect(page).to have_content(I18n.t("buildings.hide.success"))
+    expect(building.reload).to be_hidden
+
+    click_button I18n.t("buildings.unhide.button")
+    expect(page).to have_content(I18n.t("buildings.unhide.success"))
+    expect(building.reload).not_to be_hidden
+  end
 end

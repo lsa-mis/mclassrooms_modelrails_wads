@@ -13,11 +13,11 @@ RSpec.describe "Feedback modal — page context", type: :system do
   end
 
   it "captures the current page, and refreshes it across Turbo navigation" do
-    visit about_path
+    visit page_path(:about)
     expect(captured_url).to end_with("/about")
 
     click_link I18n.t("footer.contact")
-    expect(page).to have_current_path(contact_path)
+    expect(page).to have_current_path(page_path(:contact))
 
     expect(captured_url).to end_with("/contact")
   end

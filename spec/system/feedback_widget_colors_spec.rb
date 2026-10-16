@@ -18,7 +18,7 @@ RSpec.describe "Feedback widget colors", type: :system do
 
   %w[light dark].each do |theme|
     it "hovers the trigger and the submit button to the interactive hover color in the #{theme} theme" do
-      visit contact_path
+      visit page_path(:contact)
       click_button I18n.t("biscuit.banner.accept_all")
       expect(page).to have_css("[data-biscuit-target='banner'][hidden]", visible: :hidden)
       set_theme(theme)

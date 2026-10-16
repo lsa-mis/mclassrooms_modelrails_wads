@@ -25,13 +25,13 @@
   <% if @building.hidden? %>
     <% if policy(@building).unhide? %>
       <div class="mt-4">
-        <%= button_to t("buildings.unhide.button"), unhide_building_path(@building), method: :post,
+        <%= button_to t("buildings.unhide.button"), building_hiding_path(@building), method: :delete,
               class: "btn-secondary" %>
       </div>
     <% end %>
   <% elsif policy(@building).hide? %>
     <div class="mt-4">
-      <%= button_to t("buildings.hide.button"), hide_building_path(@building), method: :post,
+      <%= button_to t("buildings.hide.button"), building_hiding_path(@building), method: :post,
             class: "btn-danger",
             data: { turbo_confirm: t("buildings.hide.confirmation") } %>
     </div>

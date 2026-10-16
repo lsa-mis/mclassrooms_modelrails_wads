@@ -2,18 +2,11 @@
 # freezes this file after creation — add and rewrite routes freely in a fork
 # without merge conflicts on config/routes.rb. See /docs/developer/forking.
 
-root "pages#home"
-get "about", to: "pages#about"
-get "privacy", to: "pages#privacy"
-get "contact", to: "pages#contact"
+root to: "pages#show", defaults: { id: "home" }
+resources :pages, only: :show, path: "", constraints: { id: /about|privacy|contact/ }
 
-# Find a Room (MiClassrooms Phase 3 Task 4, Brief §5.2). filters-glossary is
-# drawn here alongside find-a-room even though CharacteristicsController#glossary
-# ships in a later phase-3 task — Rails routes are inert data until dispatched,
-# so pre-drawing the named route now lets Task 5's glossary link use
-# `filters_glossary_path` without a second routes.rb touch.
-get "find-a-room",      to: "rooms#index",              as: :find_a_room
-get "filters-glossary", to: "characteristics#glossary", as: :filters_glossary
+get "find-a-room",      to: "rooms#index",           as: :find_a_room
+get "filters-glossary", to: "characteristics#index", as: :filters_glossary
 
 # Convenience alias (product navigation): users naturally type /rooms
 # expecting the room directory; the real index lives at /find-a-room. This
@@ -41,9 +34,8 @@ end
 # supported on #index/#show only (the contract doesn't require it on
 # #edit/#update).
 resources :buildings, only: [ :index, :show, :edit, :update ] do
-  member do
-    post :hide
-    post :unhide
+  scope module: :buildings do
+    resource :hiding, only: [ :create, :destroy ]
   end
 end
 

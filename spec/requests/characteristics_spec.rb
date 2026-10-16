@@ -1,12 +1,5 @@
 require "rails_helper"
 
-# MiClassrooms Phase 3 Task 7 (Brief §5.1): the filters glossary — an
-# alphabetized, categorized reference of every characteristic short-code +
-# its long description, linked from Find a Room (Task 5's "What do these
-# filters mean?" link). CharacteristicPolicy#glossary? is headless
-# (`user.present?` only, no record), so DirectoryScoped's authentication
-# gate is what actually produces the unauthenticated redirect below — same
-# stubbing pattern as spec/requests/rooms_spec.rb.
 RSpec.describe "GET /filters-glossary", type: :request do
   let(:workspace) { create(:workspace, slug: "characteristics-spec-workspace", personal: false) }
 
@@ -15,12 +8,6 @@ RSpec.describe "GET /filters-glossary", type: :request do
     allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
   end
 
-  # Mirrors rooms_spec.rb's membership_with: `create(:user)` auto-joins
-  # `workspace` via User#onboard_workspace under the :shared posture stubbed
-  # above, so this re-roles the auto-created membership rather than
-  # inserting a second one (would violate the user_id/workspace_id unique
-  # index). A plain viewer is sufficient — glossary? only checks
-  # user.present?.
   def viewer
     user = create(:user)
     membership = Membership.find_by!(user: user, workspace: workspace)
