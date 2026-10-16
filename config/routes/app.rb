@@ -2,10 +2,8 @@
 # freezes this file after creation — add and rewrite routes freely in a fork
 # without merge conflicts on config/routes.rb. See /docs/developer/forking.
 
-root "pages#home"
-get "about", to: "pages#about"
-get "privacy", to: "pages#privacy"
-get "contact", to: "pages#contact"
+root to: "pages#show", defaults: { id: "home" }
+resources :pages, only: :show, path: "", constraints: { id: /about|privacy|contact/ }
 
 # Find a Room (MiClassrooms Phase 3 Task 4, Brief §5.2). filters-glossary is
 # drawn here alongside find-a-room even though CharacteristicsController#glossary

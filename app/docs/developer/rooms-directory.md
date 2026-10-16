@@ -281,6 +281,10 @@ metadata fields on every save, so `media_metadata_changed?` compares each one
 with the room's current value (`to_s` on both sides, so nil and "" match)
 rather than testing for presence.
 
+## Public pages
+
+`PagesController#show` serves the home, About, Privacy and Contact pages, as `page_path(:about)` and so on. The four pages render for everyone, signed in or not: the header logo links to the home page, and a link named for the site must mean the same thing for every role. Where a signed-in user starts is decided once, at sign-in (`ApplicationController#authenticated_home_path`). The home and About pages each show their announcement slot (`home_page`, `about_page`) through `announcements/_banner`; signed-in visitors see Find-a-Room calls to action where anonymous ones see sign-in.
+
 ## Directory chrome
 
 `PublicDirectoryChrome` (rooms, buildings, glossary controllers) suppresses

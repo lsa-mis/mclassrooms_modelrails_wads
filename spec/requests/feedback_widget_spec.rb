@@ -8,12 +8,12 @@ require "rails_helper"
 # opt-out via config.
 RSpec.describe "Feedback widget (site-wide)", type: :request do
   it "renders the modal on a public page" do
-    get about_path
+    get page_path(:about)
     expect(response.body).to include('id="lsa-tdx-feedback-modal"')
   end
 
   it "renders the floating trigger by default" do
-    get about_path
+    get page_path(:about)
     expect(response.body).to include('id="lsa-tdx-feedback-trigger"')
   end
 
@@ -21,7 +21,7 @@ RSpec.describe "Feedback widget (site-wide)", type: :request do
   # submission (hidden url field -> Feedback::Submit -> "Page URL:" in the TDX
   # ticket description, or "Page:" in the admin fallback email).
   it "captures the page the modal was rendered from in the hidden url field" do
-    get about_path
+    get page_path(:about)
     expect(response.body).to match(%r{name="url" value="[^"]*/about"})
   end
 
@@ -29,7 +29,7 @@ RSpec.describe "Feedback widget (site-wide)", type: :request do
     original = Rails.configuration.x.feedback_floating_trigger
     Rails.configuration.x.feedback_floating_trigger = false
 
-    get about_path
+    get page_path(:about)
     expect(response.body).not_to include('id="lsa-tdx-feedback-trigger"')
     expect(response.body).to include('id="lsa-tdx-feedback-modal"')
   ensure

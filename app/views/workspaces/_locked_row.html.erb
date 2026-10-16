@@ -2,5 +2,5 @@
 <%# Content only: the caller owns the <li> and its padding (#1119). %>
 <p class="font-medium text-text-heading"><%= t("workspaces.locked_row.heading") %></p>
 <p class="mt-1 text-sm text-text-body"><%= t("workspaces.locked_row.body", name: workspace.name) %></p>
-<%= link_to t("workspaces.locked_row.contact"), contact_path,
+<%= link_to t("workspaces.locked_row.contact"), page_path(:contact),
       class: "mt-3 inline-flex btn-touch-target btn-text btn-text-interactive text-sm" %>

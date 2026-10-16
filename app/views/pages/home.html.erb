@@ -12,10 +12,8 @@
       cta_primary: authenticated? ? t("pages.home.hero.cta_primary_signed_in") : t("pages.home.hero.cta_primary"),
       cta_primary_path: authenticated? ? find_a_room_path : new_session_path,
       cta_secondary: t("pages.home.hero.cta_secondary"),
-      cta_secondary_path: about_path %>
+      cta_secondary_path: page_path(:about) %>
 
-<%# Phase 5 Task 8 (Brief §14.1): the home_page announcement slot, shared
-    with pages#about and rooms#index via announcements/_banner. %>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
   <%= render "announcements/banner", announcement: @announcement %>
 </div>

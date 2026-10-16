@@ -13,7 +13,7 @@ require "rails_helper"
 # (see spec/support/playwright_accessibility.rb) — do not claim AAA from a local run.
 RSpec.describe "Feedback modal — axe audit", type: :system do
   it "the opened feedback modal is axe-clean, chrome included (both themes)" do
-    visit contact_path
+    visit page_path(:contact)
 
     # Exercises the real open path: the /contact CTA -> feedback Stimulus
     # controller -> window.LsaTdxFeedback.showModal().

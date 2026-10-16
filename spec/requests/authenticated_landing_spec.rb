@@ -44,11 +44,11 @@ RSpec.describe "Authenticated landing seam", type: :request do
     # while the call stays dynamic.
     it "sends a real sign-in wherever a fork points authenticated_home_path" do
       allow_any_instance_of(SessionsController)
-        .to receive(:authenticated_home_path).and_return(about_path)
+        .to receive(:authenticated_home_path).and_return(page_path(:about))
 
       post session_path, params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" }
 
-      expect(response).to redirect_to(about_path)
+      expect(response).to redirect_to(page_path(:about))
     end
   end
 end
