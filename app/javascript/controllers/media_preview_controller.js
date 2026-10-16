@@ -5,10 +5,6 @@ const PREVIEWABLE = [ "image/png", "image/jpeg", "image/webp", "image/gif" ]
 export default class extends Controller {
   static targets = [ "frame", "image" ]
 
-  connect() {
-    if (this.hasImageTarget) this.savedSrc = this.imageTarget.getAttribute("src")
-  }
-
   show({ target }) {
     if (target.type !== "file" || !this.hasImageTarget) return
 
@@ -19,7 +15,7 @@ export default class extends Controller {
       this.objectUrl = URL.createObjectURL(file)
       this.imageTarget.src = this.objectUrl
     } else {
-      this.imageTarget.src = this.savedSrc
+      this.imageTarget.src = this.imageTarget.dataset.savedSrc
     }
     if (this.hasFrameTarget) this.frameTarget.hidden = !!file && !this.objectUrl
   }

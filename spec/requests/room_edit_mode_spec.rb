@@ -114,7 +114,8 @@ RSpec.describe "Room page view and edit modes", type: :request do
       get edit_room_path(room)
 
       dock = page.find("[data-testid='media-dock']")
-      expect(dock.all(:xpath, "./*").map { it["data-testid"] }).to eq([ "media-toolbar", "media-stage" ])
+      expect(dock.all(:xpath, "./*").map { it["data-testid"] || it[:id] }).to eq([ "media-toolbar", "room_media_view" ])
+      expect(dock.find("#room_media_view").all(:xpath, "./*").map { it["data-testid"] }).to eq([ "media-stage" ])
       strip = dock.find("[data-testid='media-toolbar']")
       expect(strip).to have_text(I18n.t("rooms.edit.media_strip_label"))
       expect(strip).to have_text(I18n.t("rooms.edit.media_strip_panorama"))
@@ -129,7 +130,8 @@ RSpec.describe "Room page view and edit modes", type: :request do
       get edit_room_path(room)
 
       dock = page.find("[data-testid='media-dock']")
-      expect(dock.all(:xpath, "./*").map { it["data-testid"] }).to eq([ "media-toolbar", "empty-media-band" ])
+      expect(dock.all(:xpath, "./*").map { it["data-testid"] || it[:id] }).to eq([ "media-toolbar", "room_media_view" ])
+      expect(dock.find("#room_media_view").all(:xpath, "./*").map { it["data-testid"] }).to eq([ "empty-media-band" ])
       expect(dock).to have_text(I18n.t("rooms.edit.media_strip_none"))
     end
 

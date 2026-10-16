@@ -172,6 +172,9 @@ en:
       panorama_removed: "Panorama removed."
       seating_chart_removed: "Seating chart removed."
       photo_removed: "Photo %{position} removed."
+      panorama_saved: "Panorama saved."
+      seating_chart_saved: "Seating chart saved."
+      gallery_saved: "Photos saved."
       media_strip_label: "Photos & 360° panorama"
       media_strip_panorama: "360° panorama"
       media_strip_photos:

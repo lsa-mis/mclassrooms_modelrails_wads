@@ -1,0 +1,16 @@
+<% room = @display_room %>
+<% gallery = @presenter.stage_photos %>
+<%= turbo_stream.replace "room_media_strip", method: :morph, partial: "rooms/edit/media_strip",
+      locals: { room: room, presenter: @presenter, form_room: @room, manage_media: true, open_media: nil,
+                photo_count: gallery.size } %>
+
+<%= turbo_stream.update "room_media_view", partial: "rooms/media",
+      locals: { room: room, presenter: @presenter, gallery: gallery, has_pano: room.panorama.attached?,
+                has_photos: gallery.any?, permanent: false, docked: true } %>
+
+<%= turbo_stream.replace "room_documents", method: :morph, partial: "rooms/documents",
+      locals: { room: room, form_room: @room, manage_media: true, open_media: nil } %>
+
+<%= turbo_stream.append "toast-pills" do %>
+  <%= render "shared/toast_pill", type: :success, message: t("rooms.edit.#{@saved_media}_saved") %>
+<% end %>

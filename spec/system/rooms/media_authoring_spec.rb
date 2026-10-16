@@ -33,8 +33,8 @@ RSpec.describe "Authoring room media metadata", type: :system do
       click_button I18n.t("rooms.edit.save_media")
     end
 
-    expect(page).to have_current_path(room_path(room))
-    expect(page).to have_content(I18n.t("rooms.edit.success"))
+    expect(page).to have_content(I18n.t("rooms.edit.panorama_saved"))
+    expect(page).to have_current_path(edit_room_path(room))
 
     room.reload
     expect(room.alt_status_for(:panorama)).to eq(:authored)
@@ -86,6 +86,63 @@ RSpec.describe "Authoring room media metadata", type: :system do
       attach_file label, browser_upload_fixture("seating_chart.pdf")
       expect(page).to have_no_css("[data-testid='media-preview']")
 
+      page.execute_script(<<~JS)
+        const input = document.getElementById("room_seating_chart")
+        input.value = ""
+        input.dispatchEvent(new Event("change", { bubbles: true }))
+      JS
+      expect(find("[data-testid='media-preview'] img")[:src]).to eq(saved)
+    end
+  end
+
+  it "forgets a saved upload, so a later text-only save doesn't upload it again" do
+    room = create(:room, :with_panorama, building: building, workspace: workspace)
+
+    visit edit_room_path(room)
+    click_button I18n.t("rooms.edit.edit_panorama")
+    within("dialog#panorama-editor") do
+      attach_file I18n.t("rooms.edit.upload_new_panorama"), browser_upload_fixture("room.jpg")
+      click_button I18n.t("rooms.edit.save_media")
+    end
+    expect(page).to have_content(I18n.t("rooms.edit.panorama_saved"))
+    expect(page).to have_no_css("dialog#panorama-editor[open]")
+    uploaded = room.reload.panorama.blob
+
+    click_button I18n.t("rooms.edit.edit_panorama")
+    within("dialog#panorama-editor") do
+      expect(page.evaluate_script("document.getElementById('room_panorama').files.length")).to eq(0)
+      fill_in "room[panorama_alt]", with: "Seats facing the podium"
+      click_button I18n.t("rooms.edit.save_media")
+    end
+
+    expect(page).to have_no_css("dialog#panorama-editor[open]")
+    expect(room.reload.panorama_alt).to eq("Seats facing the podium")
+    expect(room.panorama.blob).to eq(uploaded)
+
+    click_button I18n.t("rooms.edit.edit_panorama")
+    expect(find_field("room[panorama_alt]").value).to eq("Seats facing the podium")
+  end
+
+  it "brings back the newly saved image, not the one from page load, when a later choice is cleared" do
+    room = create(:room, building: building, workspace: workspace)
+    label = I18n.t("rooms.edit.upload_new_seating_chart")
+
+    visit edit_room_path(room)
+    find("[data-testid='seating-chart-edit']").click
+    within("dialog#seating-chart-editor") do
+      attach_file label, browser_upload_fixture("room.jpg")
+      click_button I18n.t("rooms.edit.save_media")
+    end
+    expect(page).to have_content(I18n.t("rooms.edit.seating_chart_saved"))
+    expect(page).to have_no_css("dialog#seating-chart-editor[open]")
+
+    find("[data-testid='seating-chart-edit']").click
+    within("dialog#seating-chart-editor") do
+      saved = find("[data-testid='media-preview'] img")[:src]
+      expect(saved).not_to start_with("blob:")
+
+      attach_file label, browser_upload_fixture("room.jpg")
+      expect(find("[data-testid='media-preview'] img")[:src]).to start_with("blob:")
       page.execute_script(<<~JS)
         const input = document.getElementById("room_seating_chart")
         input.value = ""

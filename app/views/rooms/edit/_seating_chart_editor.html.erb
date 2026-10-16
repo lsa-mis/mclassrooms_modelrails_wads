@@ -16,7 +16,8 @@
   <% end %>
 
   <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
-        id: "seating-chart-editor-form" do |form| %>
+        id: "seating-chart-editor-form",
+        data: { controller: "form-reset", action: "turbo:submit-end->form-reset#reset" } do |form| %>
     <%= form.error_summary %>
     <div class="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <div class="min-w-0" data-controller="media-preview" data-action="change->media-preview#show">

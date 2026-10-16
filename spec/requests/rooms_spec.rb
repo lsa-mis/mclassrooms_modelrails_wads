@@ -1159,7 +1159,8 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
         } }
       }
 
-      expect(response).to redirect_to(room_path(room))
+      expect(response).to redirect_to(edit_room_path(room))
+      expect(flash[:notice]).to eq(I18n.t("rooms.edit.gallery_saved"))
       expect(first.reload.position).to eq(2)
       expect(second.reload.position).to eq(1)
     end
