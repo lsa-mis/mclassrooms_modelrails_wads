@@ -11,7 +11,8 @@
   <% end %>
 
   <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
-        id: "gallery-editor-form" do |form| %>
+        id: "gallery-editor-form",
+        data: { controller: "form-reset", action: "turbo:submit-end->form-reset#reset" } do |form| %>
     <%= form.error_summary %>
     <div class="divide-y divide-border">
     <%= form.fields_for :gallery, form_room.gallery_by_position, include_id: false do |gf| %>

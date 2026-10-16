@@ -1,7 +1,8 @@
 <%# locals: (src:, input_id:, replace_label:) %>
 <label for="<%= input_id %>" data-testid="media-preview" data-media-preview-target="frame"
        class="group relative block cursor-pointer overflow-hidden rounded-md border border-border bg-surface-raised">
-  <%= image_tag src, alt: "", class: "block max-h-96 w-full object-contain", data: { media_preview_target: "image" } %>
+  <%= image_tag src, alt: "", class: "block max-h-96 w-full object-contain",
+        data: { media_preview_target: "image", saved_src: src } %>
   <%= render "shared/image_edit_cue" %>
   <span class="sr-only"><%= replace_label %></span>
 </label>

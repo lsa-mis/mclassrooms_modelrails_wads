@@ -193,7 +193,11 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   or "Photos saved." as a toast. The page stays in edit mode at the same
   scroll position. When a morph would remove `open` from an open dialog,
   `modal_controller.js` cancels it and runs its own `close()`, so focus
-  returns to the button that opened it. Without Turbo the save redirects
+  returns to the button that opened it. A morph keeps a file input's chosen
+  file, so each editor form resets itself after a successful submit
+  (`form_reset_controller.js`, on `turbo:submit-end`), and the preview
+  restores from its image's `data-saved-src`, which the morph keeps current.
+  Without Turbo the save redirects
   to `edit`. "Save room" and the visibility switch still return to the
   view page. `#edit`, the failure re-render and this response share
   `prepare_edit_page`, and `RoomPresenter#stage_photos` is the one
