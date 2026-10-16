@@ -41,9 +41,8 @@ end
 # supported on #index/#show only (the contract doesn't require it on
 # #edit/#update).
 resources :buildings, only: [ :index, :show, :edit, :update ] do
-  member do
-    post :hide
-    post :unhide
+  scope module: :buildings do
+    resource :hiding, only: [ :create, :destroy ]
   end
 end
 
