@@ -72,6 +72,14 @@ RSpec.describe MediaAsset do
     end
   end
 
+  it "takes its owner's workspace when built through the owner without one" do
+    asset = room.gallery.build(position: 1)
+    asset.image.attach(io: file_fixture("room.jpg").open, filename: "room.jpg", content_type: "image/jpeg")
+
+    expect(asset).to be_valid
+    expect(asset.workspace).to eq(workspace)
+  end
+
   it "rejects an asset whose workspace differs from its owner's" do
     other = create(:workspace)
     asset = build(:media_asset, owner: room, workspace: other)
