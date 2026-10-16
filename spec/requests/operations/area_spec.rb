@@ -200,6 +200,8 @@ RSpec.describe "Operations area", type: :request do
     end
 
     it "adds no nav items of its own when the fork lists none" do
+      allow_any_instance_of(Operations::ForkNavHelper).to receive(:operations_fork_nav_items).and_return([])
+
       get operations_workspaces_path
 
       expect(Capybara.string(response.body).all("nav ul li").size).to eq(4)
