@@ -13,10 +13,6 @@ RSpec.describe "Filters glossary", type: :system do
   # for why wcag2aaa alone is not enough.
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2a", "wcag2aa", "wcag2aaa" ] } } }
 
-  # `characteristics#glossary` also runs under DirectoryScoped (Current.workspace
-  # resolved by TenancyConfig.shared_workspace_slug) — same shared-posture setup
-  # as find_a_room_spec.rb, and for the same reason: without it the controller's
-  # before_action can't resolve a workspace at all and redirects to root.
   let!(:workspace) { create(:workspace, slug: "directory", personal: false) }
 
   before do

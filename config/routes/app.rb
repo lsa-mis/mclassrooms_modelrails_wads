@@ -5,13 +5,8 @@
 root to: "pages#show", defaults: { id: "home" }
 resources :pages, only: :show, path: "", constraints: { id: /about|privacy|contact/ }
 
-# Find a Room (MiClassrooms Phase 3 Task 4, Brief §5.2). filters-glossary is
-# drawn here alongside find-a-room even though CharacteristicsController#glossary
-# ships in a later phase-3 task — Rails routes are inert data until dispatched,
-# so pre-drawing the named route now lets Task 5's glossary link use
-# `filters_glossary_path` without a second routes.rb touch.
-get "find-a-room",      to: "rooms#index",              as: :find_a_room
-get "filters-glossary", to: "characteristics#glossary", as: :filters_glossary
+get "find-a-room",      to: "rooms#index",           as: :find_a_room
+get "filters-glossary", to: "characteristics#index", as: :filters_glossary
 
 # Convenience alias (product navigation): users naturally type /rooms
 # expecting the room directory; the real index lives at /find-a-room. This

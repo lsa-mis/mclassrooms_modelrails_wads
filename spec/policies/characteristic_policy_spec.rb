@@ -1,10 +1,5 @@
 require "rails_helper"
 
-# MiClassrooms Phase 3 Task 1 (spec D5): CharacteristicPolicy authorizes the
-# characteristic glossary + filter data (Find a Room screen). It's headless —
-# controllers call `authorize :characteristic, :glossary?` rather than
-# authorizing a record — so `record` is just the :characteristic symbol.
-# Any signed-in user (viewer+) may read; no mutations exist this phase.
 RSpec.describe CharacteristicPolicy do
   let(:workspace) { create(:workspace) }
 
@@ -19,18 +14,6 @@ RSpec.describe CharacteristicPolicy do
   let(:admin_user) { member_with_role("admin") }
   let(:viewer_user) { member_with_role("viewer") }
   let(:no_membership_user) { create(:user) }
-
-  describe "#glossary?" do
-    it "allows any signed-in user regardless of role" do
-      expect(described_class.new(admin_user, :characteristic).glossary?).to be true
-      expect(described_class.new(viewer_user, :characteristic).glossary?).to be true
-      expect(described_class.new(no_membership_user, :characteristic).glossary?).to be true
-    end
-
-    it "denies a nil (signed-out) user" do
-      expect(described_class.new(nil, :characteristic).glossary?).to be false
-    end
-  end
 
   describe "#index?" do
     it "allows any signed-in user regardless of role" do

@@ -28,8 +28,7 @@ ModelRails/NoI18nDefault:
     - 'app/lib/room_presenter.rb'
     - 'app/lib/room_search.rb'
 
-# Offense count: 5
+# Offense count: 4
 ModelRails/RestfulActions:
   Exclude:
-    - 'app/controllers/characteristics_controller.rb'
     - 'app/controllers/legacy_redirects_controller.rb'
