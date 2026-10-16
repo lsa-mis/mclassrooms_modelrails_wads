@@ -7,11 +7,10 @@ RSpec.describe "Bullet" do
   end
 
   it "catches an N+1 query on this Active Record" do
-    create_list(:project, 2)
-    # Bullet exempts records created in the current request; a new one separates setup from the read.
+    create_list(:building, 2)
     Bullet.end_request
     Bullet.start_request
-    Project.all.each { |project| project.workspace.name }
+    Building.all.each { |building| building.workspace.name }
 
     expect(Bullet.notification?).to be(true)
   ensure

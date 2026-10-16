@@ -203,7 +203,7 @@ RSpec.describe "Code smell: destroy requests name their target" do
   end
 
   it "derives the discarding destroys from the controllers" do
-    expect(discarding).to include("workspaces#destroy", "workspaces/projects#destroy")
+    expect(discarding).to include("workspaces#destroy")
   end
 
   it "catches #1402: Remove photo on the Profile page pointed at the workspace" do

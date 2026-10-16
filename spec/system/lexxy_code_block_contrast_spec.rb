@@ -3,18 +3,25 @@
 require "rails_helper"
 
 RSpec.describe "A code block in the rich-text editor", type: :system do
-  let(:user) { create(:user) }
-  let(:workspace) { user.workspaces.sole }
-  let(:project) { create(:project, workspace: workspace, created_by: user) }
-  let(:document) do
-    create(:document, body: %(<pre data-language="ruby">def greet(name)\n  puts "Hello, \#{name}!" # say hi\nend</pre>))
+  let!(:workspace) { create(:workspace, slug: "lexxy-code-block-workspace", personal: false) }
+  let(:admin) do
+    create(:user).tap do |user|
+      Membership.find_by!(user: user, workspace: workspace).update!(role: Role.system_default!("admin"))
+    end
   end
-  let!(:resource) { create(:resource, project: project, resourceable: document, created_by: user) }
+  let!(:announcement) do
+    create(:announcement, workspace: workspace,
+      body: %(<pre data-language="ruby">def greet(name)\n  puts "Hello, \#{name}!" # say hi\nend</pre>))
+  end
 
-  before { sign_in_via_form(user) }
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+    sign_in_via_form(admin)
+  end
 
   it "highlights its syntax at AAA in both themes" do
-    visit edit_workspace_project_resource_path(workspace, project, resource)
+    visit edit_admin_announcement_path(announcement)
 
     expect(page).to have_css("lexxy-editor .code-token__function", text: "greet")
     expect(page).to have_css("lexxy-editor .code-token__comment", text: "# say hi")

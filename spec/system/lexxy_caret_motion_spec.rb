@@ -3,15 +3,19 @@
 require "rails_helper"
 
 RSpec.describe "The rich-text editor's block caret", type: :system do
-  let(:user) { create(:user) }
-  let(:workspace) { user.workspaces.sole }
-  let(:project) { create(:project, workspace: workspace, created_by: user) }
-  let!(:resource) { create(:resource, project: project, resourceable: create(:document), created_by: user) }
+  let!(:workspace) { create(:workspace, slug: "lexxy-caret-workspace", personal: false) }
+  let(:admin) do
+    create(:user).tap do |user|
+      Membership.find_by!(user: user, workspace: workspace).update!(role: Role.system_default!("admin"))
+    end
+  end
 
-  before { sign_in_via_form(user) }
+  before do
+    allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+    allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
+    sign_in_via_form(admin)
+  end
 
-  # Lexical draws this element beside a block it cannot put a text caret next to; it is planted
-  # here because Lexxy's spacer paragraphs leave no such spot in ordinary content.
   def caret_animation
     page.evaluate_script(<<~JS)
       (() => {
@@ -27,7 +31,7 @@ RSpec.describe "The rich-text editor's block caret", type: :system do
   end
 
   it "blinks, and holds still under Reduce Motion" do
-    visit edit_workspace_project_resource_path(workspace, project, resource)
+    visit new_admin_announcement_path(slot: "home_page")
     expect(page).to have_css("lexxy-editor .lexxy-editor__content")
     expect(caret_animation).to eq("blink")
 

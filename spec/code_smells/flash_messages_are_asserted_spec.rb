@@ -107,12 +107,23 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
       "app/controllers/workspaces/invitations_controller.rb" => [ "notice" ],
       "app/controllers/workspaces/logos_controller.rb" => [ "result.error_message" ],
       "app/controllers/workspaces/members_controller.rb" => [ "message" ],
-      "app/controllers/workspaces_controller.rb" => [ "message" ]
+      "app/controllers/workspaces_controller.rb" => [ "message" ],
+      "app/controllers/admin/announcements_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/bulk_uploads_controller.rb" => [ "notice" ],
+      "app/controllers/admin/characteristic_display_rules_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/editor_assignments_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/sync_scope_rules_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/admin/unit_display_names_controller.rb" => [ "result.errors.to_sentence" ],
+      "app/controllers/notes_controller.rb" => [ 't("notes.toasts.#{action_name}")', "result.errors.to_sentence" ],
+      "app/controllers/rooms/media_controller.rb" => [ "result.errors.to_sentence" ]
     }
   end
 
   # Lines that name a flash without setting one.
-  let(:not_flash_setters) { [ 'toast_stream("notice", message)', 'toast_stream("alert", message)' ] }
+  let(:not_flash_setters) do
+    [ 'toast_stream("notice", message)', 'toast_stream("alert", message)',
+      "params.expect(note: [ :body, :alert ])", ".group(:notable_id, :alert).count" ]
+  end
 
   it "reads a flash from every controller line that names one" do
     unread = controller_sources.flat_map do |path, source|
