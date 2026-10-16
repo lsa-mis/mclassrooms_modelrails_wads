@@ -184,6 +184,26 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   clearing the choice brings the saved image back.
   Replacing an existing photo's file counts as a change, and its
   `image_blob` is preloaded.
+- **Media saves land in place.** A media dialog's successful save answers
+  a Turbo request with `rooms/update.turbo_stream.erb`: it morphs
+  `#room_media_strip` and `#room_documents` (their dialogs come back closed,
+  with fresh previews and empty add-photo rows), replaces the contents of
+  `#room_media_view` (a morph would strip the panorama viewer's
+  client-built DOM), and appends "Panorama saved.", "Seating chart saved."
+  or "Photos saved." as a toast. The page stays in edit mode at the same
+  scroll position. When a morph would remove `open` from an open dialog,
+  `modal_controller.js` cancels it and runs its own `close()`, so focus
+  returns to the button that opened it. A morph keeps a file input's chosen
+  file, so each editor form resets itself after a successful submit
+  (`form_reset_controller.js`, on `turbo:submit-end`), and the preview
+  restores from its image's `data-saved-src`, which the morph keeps current.
+  Without Turbo the save redirects
+  to `edit`. "Save room" and the visibility switch still return to the
+  view page. `#edit`, the failure re-render and this response share
+  `prepare_edit_page`, and `RoomPresenter#stage_photos` is the one
+  definition of the stage's photos. The stream template lists its regions
+  by hand; a reactive template engine (ReActionView) that re-renders the
+  page itself would replace it.
 - **Removal is RESTful.** Each **Remove** is a submit button pointed by
   `form=` at its own small `DELETE` form, rendered after the main one so no
   form nests: `Rooms::PanoramasController`, `Rooms::SeatingChartsController`

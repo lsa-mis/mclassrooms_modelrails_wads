@@ -1,6 +1,6 @@
 <%# locals: (room:, form_room:, manage_media:, open_media:) %>
 <% if manage_media || room.seating_chart.attached? || room.floor.present? %>
-  <div data-testid="documents-card" class="rounded-lg border border-border p-4">
+  <div id="room_documents" data-testid="documents-card" class="rounded-lg border border-border p-4">
     <h2 class="text-sm font-semibold text-text-heading"><%= t("rooms.show.documents_heading") %></h2>
     <div class="mt-3 space-y-3">
       <% if manage_media %>

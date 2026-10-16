@@ -56,6 +56,10 @@ class RoomPresenter
     contents.any? ? contents.join(" · ") : I18n.t("rooms.edit.media_strip_none")
   end
 
+  def stage_photos
+    @stage_photos ||= room.gallery.includes(image_attachment: :blob).first(5)
+  end
+
   def chips
     @chips ||= room.room_characteristics.sort_by(&:short_code).map { |c| build_chip(c) }
   end

@@ -1,5 +1,5 @@
 <%# locals: (room:, presenter:, editing:, form_room: room, saved_id: nil, open_media: nil) %>
-<% gallery = room.gallery.includes(image_attachment: :blob).first(5) %>
+<% gallery = presenter.stage_photos %>
 <% has_pano = room.panorama.attached? %>
 <% has_photos = gallery.any? %>
 <% manage_media = editing && policy(room).manage_media? %>
@@ -16,8 +16,10 @@
     <div data-testid="media-dock" class="mt-6 overflow-hidden rounded-lg border border-border">
       <%= render "rooms/edit/media_strip", room: room, presenter: presenter, form_room: form_room, manage_media: manage_media,
             open_media: open_media, photo_count: gallery.size %>
-      <%= render "rooms/media", room: room, presenter: presenter, gallery: gallery,
-            has_pano: has_pano, has_photos: has_photos, permanent: false, docked: true %>
+      <div id="room_media_view">
+        <%= render "rooms/media", room: room, presenter: presenter, gallery: gallery,
+              has_pano: has_pano, has_photos: has_photos, permanent: false, docked: true %>
+      </div>
     </div>
 
     <%= render "rooms/curated_fields", room: form_room %>

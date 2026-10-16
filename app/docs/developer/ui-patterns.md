@@ -255,6 +255,12 @@ Uses the native `<dialog>` element with a Stimulus controller for open/close man
 - Escape key closes the modal
 - Focus trapped inside the modal while open
 - `aria-modal="true"`, `aria-labelledby`, `aria-describedby`
+- A Turbo morph that renders an open dialog closed closes it the normal
+  way, with its animation and focus returned to its opener, instead of
+  stripping the `open` attribute
+- Don't append a `modal-closer` and then morph the same dialog in one
+  response: controllers load lazily, so the morph removes the closer
+  before it connects
 
 ### Editable images
 

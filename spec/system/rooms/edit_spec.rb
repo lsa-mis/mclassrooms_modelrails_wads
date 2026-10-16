@@ -71,7 +71,7 @@ RSpec.describe "Room edit", type: :system do
     expect(room.reload.nickname).to eq("New Name")
   end
 
-  it "replaces the panorama from its dialog, accessibly in both themes" do
+  it "replaces the panorama from its dialog in place, accessibly in both themes" do
     visit edit_room_path(room)
     original_preview = find("#room_panorama_stage img", visible: :all)[:src]
 
@@ -87,9 +87,14 @@ RSpec.describe "Room edit", type: :system do
 
     within("dialog#panorama-editor") { click_button I18n.t("rooms.edit.save_media") }
 
-    expect(page).to have_current_path(room_path(room))
-    expect(page).to have_content(I18n.t("rooms.edit.success"))
+    expect(page).to have_content(I18n.t("rooms.edit.panorama_saved"))
+    expect(page).to have_no_css("dialog#panorama-editor[open]")
+    expect(page).to have_current_path(edit_room_path(room))
     expect(find("#room_panorama_stage img", visible: :all)[:src]).not_to eq(original_preview)
+    expect(page.evaluate_script("document.activeElement.textContent").squish).to eq(I18n.t("rooms.edit.edit_panorama"))
+
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations after the in-place save:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
 
   it "reorders the gallery from the photos sheet" do
@@ -103,7 +108,8 @@ RSpec.describe "Room edit", type: :system do
       click_button I18n.t("rooms.edit.save_media")
     end
 
-    expect(page).to have_current_path(room_path(room))
+    expect(page).to have_content(I18n.t("rooms.edit.gallery_saved"))
+    expect(page).to have_current_path(edit_room_path(room))
     expect(first_image.reload.position).to eq(2)
     expect(second_image.reload.position).to eq(1)
   end
