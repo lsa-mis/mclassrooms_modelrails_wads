@@ -22,6 +22,8 @@ class MediaAsset < ApplicationRecord
 
   belongs_to :owner, polymorphic: true
 
+  before_validation(on: :create) { self.workspace_id ||= owner&.workspace_id }
+
   # Every variant is webp so a HEIC upload renders anywhere. Declared HERE, once
   # — not per owner — because consumers choosing their own sizes is how the
   # ~219 orphaned VariantRecords accumulated during the panorama work.

@@ -152,6 +152,21 @@ RSpec.describe "Authoring room media metadata", type: :system do
     end
   end
 
+  it "adds a photo from the photos dialog" do
+    room = create(:room, building: building, workspace: workspace)
+
+    visit edit_room_path(room)
+    click_button I18n.t("rooms.show.add_photos")
+    within("dialog#gallery-editor") do
+      attach_file I18n.t("rooms.edit.gallery_add_label", position: 1), browser_upload_fixture("room.jpg")
+      click_button I18n.t("rooms.edit.save_media")
+    end
+
+    expect(page).to have_content(I18n.t("rooms.edit.gallery_saved"))
+    expect(page).to have_no_css("dialog#gallery-editor[open]")
+    expect(room.gallery.count).to eq(1)
+  end
+
   # Matches spec/system/rooms/edit_spec.rb's fuller A+AA+AAA sweep (not the
   # AAA-only convention some other specs use) since this is the same edit
   # page that spec already audits — full-branch coverage for the new fields

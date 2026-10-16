@@ -183,7 +183,10 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   draw (PDF, HEIC) hides the preview rather than show the old image, and
   clearing the choice brings the saved image back.
   Replacing an existing photo's file counts as a change, and its
-  `image_blob` is preloaded.
+  `image_blob` is preloaded. A photo added from an empty add-photo row
+  arrives through nested attributes with no workspace; `MediaAsset` copies
+  its owner's `workspace_id` on create (ids only, so saving a gallery
+  loads no workspaces), and an explicit mismatch is still rejected.
 - **Media saves land in place.** A media dialog's successful save answers
   a Turbo request with `rooms/update.turbo_stream.erb`: it morphs
   `#room_media_strip` and `#room_documents` (their dialogs come back closed,

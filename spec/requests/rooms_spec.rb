@@ -1148,6 +1148,19 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(ActivityLog.where(action: "room.media_updated").count).to eq(0)
     end
 
+    it "adds a photo from an empty add-photo row, in the room's workspace" do
+      create(:media_asset, owner: room, workspace: workspace, position: 1)
+
+      expect {
+        patch room_path(room), params: { room: { gallery_attributes: {
+          "1" => { position: "2", image: fixture_file_upload("room.jpg", "image/jpeg") }
+        } } }
+      }.to change { room.gallery.count }.from(1).to(2)
+
+      expect(response).to have_http_status(:redirect)
+      expect(room.gallery.last.workspace).to eq(room.workspace)
+    end
+
     it "persists a gallery reorder" do
       first = create(:media_asset, owner: room, workspace: workspace, position: 1)
       second = create(:media_asset, owner: room, workspace: workspace, position: 2)
