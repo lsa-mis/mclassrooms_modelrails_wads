@@ -51,7 +51,7 @@
       <span class="sr-only"><%= presenter.capacity_line %></span>
       <span aria-hidden="true">
         <span class="block text-2xl font-bold text-text-heading tabular-nums leading-tight"><%= room.instructional_seat_count.to_i %></span>
-        <span class="block text-xs uppercase tracking-wide text-text-body">
+        <span class="block text-sm font-medium text-text-body">
           <%= t("rooms.show.seats_unit") %><% if room.ada_seat_count.to_i.positive? %> · <%= t("rooms.row.ada", count: room.ada_seat_count) %><% end %>
         </span>
       </span>

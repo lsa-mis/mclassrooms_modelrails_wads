@@ -5,12 +5,12 @@
     crops with object-cover by design. The badge is the polite live region
     that announces caption + position on every change. %>
 <div data-media-stage-target="photosLayer" data-testid="photo-frame"
-     <%= "hidden" if start_hidden %>>
+     <% if start_hidden %>hidden<% end %>>
   <%= ui :aspect_ratio, ratio: Panorama::Rectilinear::ASPECT,
         class: "relative #{docked ? "rounded-b-md" : "rounded-md"} bg-surface-sunken overflow-hidden",
         data: { action: "keydown.left->media-stage#prev keydown.right->media-stage#next" } do %>
     <% gallery.each_with_index do |asset, i| %>
-      <button type="button" <%= "hidden" if i.positive? %>
+      <button type="button" <% if i.positive? %>hidden<% end %>
               class="absolute inset-0 block w-full cursor-zoom-in focus-ring"
               aria-label="<%= t("ui.gallery.enlarge", alt: asset.alt_for(:image)) %>"
               data-media-stage-target="slide"
