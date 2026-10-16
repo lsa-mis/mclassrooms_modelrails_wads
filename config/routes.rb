@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  passwords = Rails.configuration.x.authentication.passwords == :enabled
+
   mount Markdowndocs::Engine, at: "/docs"
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
   mount Lookbook::Engine, at: "/lookbook" if Rails.env.development?
@@ -13,12 +15,10 @@ Rails.application.routes.draw do
   # adoption forms are text-only). Controller lives in spec/support/harness.
   resource :draft_harness, only: %i[show create], controller: "draft_harness" if Rails.env.test?
 
-  resource :session do
+  resource :session, except: (passwords ? [] : [ :create ]) do
     scope module: :sessions do
-      # The two steps of email-first sign-in (#1007): the lookup sends the right
-      # link and renders the next step; the password step's form posts to sessions#create.
+      # Email-first sign-in (#1007): the lookup renders the next step, whose password form posts to sessions#create.
       resource :lookup, only: [ :create ]
-      resource :password, only: [ :new ]
     end
   end
   resource :email_verification, only: [ :new, :show, :create ]
@@ -44,7 +44,7 @@ Rails.application.routes.draw do
   resource :email_verification_resend, only: [ :create ]
 
   resource :magic_link, only: [ :create ]
-  resource :password_reset, only: [ :create ]
+  resource :password_reset, only: [ :create ] if passwords
   # GET only renders a confirmation; the session is a nested resource whose
   # create is the POST, so a mail scanner or prefetch can't burn the token or
   # sign anyone in (SEC-5). Registration keeps its POST on the callback itself.
@@ -65,7 +65,7 @@ Rails.application.routes.draw do
 
   namespace :settings do
     resource :profile, only: [ :edit, :update ]
-    resource :password, only: [ :new, :create, :edit, :update, :destroy ]
+    resource :password, only: [ :new, :create, :edit, :update, :destroy ] if passwords
     # show is the picker hub the profile page lazy-loads (#1007).
     resource :avatar, only: [ :show, :update, :destroy ]
     resource :theme_preference, only: [ :edit, :update ]
@@ -109,8 +109,8 @@ Rails.application.routes.draw do
     scope module: :workspaces do
       # Archived is a state, so it is a singular resource: POST archives, DELETE restores (#1007).
       resource :archival, only: [ :create, :destroy ]
-      # The logo picker hub; saves post to workspaces#update, where the logo lives (#1007).
-      resource :logo, only: [ :show ]
+      # The logo picker hub and logo removal; saves post to workspaces#update, where the logo lives (#1007, #1402).
+      resource :logo, only: [ :show, :destroy ]
       resources :members, only: [ :index, :edit, :update, :destroy ] do
         # Deactivating is members#destroy; reactivating creates a reactivation (#1007).
         scope module: :members do

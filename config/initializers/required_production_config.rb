@@ -4,12 +4,12 @@
 # user read raises. Deterministic checks only — a previously-healthy config
 # must never fail a restart. See /docs/developer/deployment (Production
 # preflight).
-require_relative "../../lib/mail_delivery"
-
 module RequiredProductionConfig
   # example.com is IANA-reserved (RFC 2606); `.example` is the TLD bin/fork
   # substitutes into placeholders. Neither can ever be a real deployment host.
   PLACEHOLDER_HOST = /\A(.+\.)?example(\.com)?\z/
+  # Where Rails mails by default; nothing listens there on a deployed host.
+  LOOPBACK = /\A(localhost|127\.0\.0\.1)\z/
 
   # The three values `bin/rails db:encryption:init` generates. Credentials are
   # the template's home for them; the config path is the environment-variable
@@ -24,13 +24,13 @@ module RequiredProductionConfig
   end
 
   def self.check_mail!(env)
-    reason = MailDelivery.unconfigured_reason(env) or return
+    problem = mail_problem(env) or return
 
     raise <<~MSG
-      Production preflight failed: SMTP_ADDRESS is #{reason}.
+      Production preflight failed: #{problem}.
 
-      Sign-in is an email. With no mail server the app boots, /up reports healthy,
-      and every magic link, invitation and reset is a job that fails to connect.
+      Sign-in is an email. Without a mail server it can log in to, the app boots,
+      /up reports healthy, and every magic link, invitation and reset is a failed job.
 
       Fix: point SMTP_ADDRESS at your provider and set SMTP_USERNAME and SMTP_PASSWORD
         - Kamal: SMTP_ADDRESS under env.clear in config/deploy.yml, the credentials
@@ -41,6 +41,16 @@ module RequiredProductionConfig
       Opting out for good: git rm config/initializers/required_production_config.rb
     MSG
   end
+
+  def self.mail_problem(env)
+    address = env["SMTP_ADDRESS"].to_s.strip
+    return "SMTP_ADDRESS is unset" if address.empty?
+    return "SMTP_ADDRESS is #{address.inspect}" if LOOPBACK.match?(address) || PLACEHOLDER_HOST.match?(address)
+
+    blank = %w[SMTP_USERNAME SMTP_PASSWORD].select { |name| env[name].to_s.strip.empty? }
+    "#{blank.to_sentence} #{blank.one? ? "is" : "are"} unset" if blank.any?
+  end
+  private_class_method :mail_problem
 
   def self.check_host!(env)
     host = env["RAILS_HOST"].to_s.strip

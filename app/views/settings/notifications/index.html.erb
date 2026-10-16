@@ -34,7 +34,7 @@
       The period is rendered from the preferences page's own option labels so
       "1 year" reads the same on both sides of the link. Bare inline anchor —
       the suite's 44px check exempts only display:inline links. %>
-  <p class="text-xs text-text-muted mb-6">
+  <p class="text-sm text-text-muted mb-6">
     <%= t("notifications.index.retention_hint.text",
           period: t("notifications.preferences.advanced.retention_options.#{@retention_days}")) %>
     <%= link_to t("notifications.index.retention_hint.change"),

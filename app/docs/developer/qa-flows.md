@@ -78,7 +78,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 **Config:** set `SIGNUP_MODE=invite_only` in `.env` and restart `bin/dev`.
 
 1. In a private window navigate to `/session/new`, enter a **new** email address (no existing account), and click **Continue**.
-   **Expect:** The closed page (`sessions/lookups/closed.html.erb`) renders inline — a heading, a body paragraph, and a link to sign in. **Not a 404.** The response renders the `:closed` template via `sessions/lookups#create`.
+   **Expect:** The same `check_email` page an existing account gets renders inline, and **no email is sent** (check `/letter_opener`). The page must not say signups are closed: that would tell anyone the address has no account. **Not a 404**, and not Turbo's "Content missing".
 2. Check that OAuth buttons on the sign-in page redirect with an alert rather than proceeding when signups are closed — this is the `signups_open?` guard in the OAuth callback.
 
 ### 1c. Invite flow (owner sends, recipient accepts)
@@ -128,9 +128,11 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 ### Existing user (has password)
 
 1. Navigate to `/session/new` and enter the email address.
-   **Expect:** The `check_email` page renders inline (same as passwordless). A magic-link sign-in email is dispatched — check `/letter_opener`. Because the user `has_password?`, a secondary **"Use your password instead"** link to `new_session_password_path` also appears on the `check_email` page.
-2. Click **Use your password instead** → enter the password and submit to `POST /session`.
+   **Expect:** The `check_email` page renders inline (same as passwordless). A magic-link sign-in email is dispatched — check `/letter_opener`. The **"Prefer to use your password?"** disclosure appears for every address, password holder or not, and no link carries the address in its URL.
+2. Open the disclosure → enter the password and submit to `POST /session`.
    **Expect:** You are signed in and redirected to `after_authentication_url`.
+3. Repeat with a wrong password, then with an address that has no account.
+   **Expect:** Both re-render the password step (422) with the same error summary, focused, and the address kept. Five wrong passwords lock the account: the page still shows the same message, and the holder receives a "password sign-in is paused" email.
 
 ### Unknown email (new user)
 

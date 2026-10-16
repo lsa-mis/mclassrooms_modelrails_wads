@@ -69,7 +69,8 @@ terminal** — it is never emailed, so this step needs no working SMTP even on
 an invite-only instance where the open-signup path above does. Opening the
 link and confirming signs you in (satisfying the reauthentication the area
 force-checks on every request, [below](#how-it-stays-safe)) and lands you on
-`/settings/password/new` to set one; open `/operations` from there, or
+`/settings/password/new` to set one (when `AUTH_PASSWORDS=enabled`; otherwise
+on the signed-in home page); open `/operations` from there, or
 navigate there directly while that sign-in is still fresh. If you let the 15-minute
 reauth window lapse before setting a password, the next `/operations`
 request bounces you to the reauthentication interstitial, and a

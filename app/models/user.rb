@@ -115,7 +115,7 @@ class User < ApplicationRecord
 
   def available_reauth_factors
     factors = []
-    factors << :password if has_password?
+    factors << :password if has_password? && User.passwords_enabled?
     factors << :passkey if webauthn_credentials.kept.any?
     factors << :email
     factors

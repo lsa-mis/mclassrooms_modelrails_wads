@@ -31,7 +31,7 @@ You can cancel a pending email change from the profile page at any time. If the 
 
 ### Setting a Password (OAuth-only accounts)
 
-If you signed up via Google or GitHub and have no password yet, visit `/settings/password/new` to add one. This creates an email-based Authentication record so you can also sign in with email and password.
+Password sign-in is available only where the instance turns it on. If it does, and you signed up via Google or GitHub with no password yet, visit `/settings/password/new` to add one. This creates an email-based Authentication record so you can also sign in with email and password.
 
 ### Password Requirements
 

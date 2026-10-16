@@ -96,17 +96,18 @@ values, never of code:
 | --- | --- | --- |
 | `SMTP_ADDRESS` | The provider's SMTP host | none; the guard refuses `localhost` and placeholders |
 | `SMTP_PORT` | Submission port | `587` |
-| `SMTP_USERNAME`, `SMTP_PASSWORD` | The provider's credentials, as secrets | none |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | The provider's credentials, as secrets | none; the guard refuses a blank one |
 | `SMTP_DOMAIN` | The HELO domain | `RAILS_HOST` |
 | `MAIL_FROM` | The sender on every message | `noreply@RAILS_HOST` |
-| `MAIL_DELIVERY` | The transport; only `smtp` ships | `smtp` |
 
 `config/deploy.yml` already carries the Postmark host under `env.clear` and the
 two credentials under `env.secret`; `.kamal/secrets` references them from the
-deployer's environment. `MAIL_DELIVERY` is reserved: an API transport, for
-tags, bounce webhooks or inbound mail, would join under that name without
-renaming anything a deployment already sets. A failed delivery raises, so it
-fails its Solid Queue job where you can see it rather than vanishing.
+deployer's environment. A send that could not reach the server (a connect
+timeout, a refused connection, a busy reply) is retried four more times over
+about seven minutes, inside a magic link's fifteen. Any other failure raises at
+once, so it fails its Solid Queue job where you can see it rather than
+vanishing; a read timeout is not retried, because the server may already have
+accepted the message.
 
 #### Postmark, the worked default
 
@@ -167,8 +168,8 @@ campaign should never cost a sign-in link its reputation.
   data-processing agreement, which satisfies GDPR for most apps; a fork that
   promises EU residency uses the SES recipe in an EU region.
 - **Inbound mail** (replies into the app, an address users can write to) is the
-  trigger for an API transport under `MAIL_DELIVERY`. Postmark and SES both
-  receive mail; neither is wired here.
+  trigger for an API transport. Postmark and SES both receive mail; neither is
+  wired here.
 - **Self-hosting the mail server** becomes worth a look when sending costs
   exceed the hours it takes to run one. Deliverability — IP reputation,
   warm-up, blocklists — is the cost that moves from the provider to you.
@@ -184,7 +185,7 @@ bin/kamal setup     # First-time only — installs Docker on the host
 bin/kamal deploy    # Subsequent deploys
 ```
 
-The `docker_build` CI job (see [Getting Started](/docs/developer/getting-started)) verifies your production image builds successfully on every PR, so the first time you run `kamal deploy` you're not also debugging Dockerfile issues.
+The `docker_build` workflow (see [Getting Started](/docs/developer/getting-started)) verifies your production image builds on every pull request that touches a build input and on every push to `main`, and the pre-push hook runs the same build locally when you change one, so the first time you run `kamal deploy` you're not also debugging Dockerfile issues.
 
 Once the app is up, mint the first instance operator — see [Instance operations: Day one](operations#day-one-on-an-invite-only-instance).
 
@@ -291,7 +292,7 @@ Before the first deploy:
 
 ## Production preflight
 
-`config/initializers/required_production_config.rb` refuses to boot a production process when `RAILS_HOST` is unset or still a placeholder (`example.com`, anything ending in `.example`), when `SMTP_ADDRESS` is unset, `localhost` or a placeholder (see [Configure outbound mail](#3-configure-outbound-mail)), or when the Active Record encryption keys are missing from the production credentials. The reason it refuses rather than warns: every mailer link — magic links, password resets, invitations — is generated from `RAILS_HOST`, and DNS-rebinding protection (`config.hosts`) is derived from it. With a placeholder value the app boots, `/up` reports healthy, and nobody can sign in. Missing encryption keys fail the same way — healthy `/up`, then the first read of a user raises. A failed boot is the only version of either failure you can see. Keys: `bin/rails db:encryption:init`, pasted into `bin/rails credentials:edit --environment production` ([Forking](/docs/developer/forking#bootstrap-secrets-and-configuration)).
+`config/initializers/required_production_config.rb` refuses to boot a production process when `RAILS_HOST` is unset or still a placeholder (`example.com`, anything ending in `.example`), when `SMTP_ADDRESS` is unset, `localhost` or a placeholder, or `SMTP_USERNAME` or `SMTP_PASSWORD` is blank (see [Configure outbound mail](#3-configure-outbound-mail)), or when the Active Record encryption keys are missing from the production credentials. The reason it refuses rather than warns: every mailer link — magic links, password resets, invitations — is generated from `RAILS_HOST`, and DNS-rebinding protection (`config.hosts`) is derived from it. With a placeholder value the app boots, `/up` reports healthy, and nobody can sign in. Missing encryption keys fail the same way — healthy `/up`, then the first read of a user raises. A failed boot is the only version of either failure you can see. Keys: `bin/rails db:encryption:init`, pasted into `bin/rails credentials:edit --environment production` ([Forking](/docs/developer/forking#bootstrap-secrets-and-configuration)).
 
 Rules the guard follows:
 

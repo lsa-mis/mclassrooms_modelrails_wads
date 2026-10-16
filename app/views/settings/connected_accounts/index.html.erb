@@ -43,10 +43,10 @@
             </span>
           <% end %>
           <% if authentication.pending? %>
-            <p class="text-xs text-info">
+            <p class="text-sm text-info">
               <%= t("settings.connected_accounts.index.pending_label", email: authentication.email) %>
             </p>
-            <p class="text-xs text-text-muted mt-1">
+            <p class="text-sm text-text-muted mt-1">
               <%= t("settings.connected_accounts.index.pending_help") %>
             </p>
           <% else %>

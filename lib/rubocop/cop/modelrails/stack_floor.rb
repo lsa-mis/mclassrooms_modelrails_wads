@@ -32,7 +32,8 @@ module RuboCop
           "sidekiq" => "Solid Queue", "resque" => "Solid Queue", "good_job" => "Solid Queue",
           "delayed_job" => "Solid Queue", "delayed_job_active_record" => "Solid Queue"
         }.freeze
-        # Any 8.1 release satisfies a requirement that admits the floor.
+        # Below the floor means admitting no version at or above 8.1; the requirement's own versions are probed too.
+        FLOOR = Gem::Version.new("8.1")
         FLOOR_PROBE = Gem::Version.new("8.1.99999")
 
         RESTRICT_ON_SEND = %i[gem].freeze
@@ -53,7 +54,10 @@ module RuboCop
         def check_rails_floor(node)
           requirements = node.arguments.drop(1).select(&:str_type?).map(&:value)
           return if requirements.empty?
-          return if Gem::Requirement.new(requirements).satisfied_by?(FLOOR_PROBE)
+
+          requirement = Gem::Requirement.new(requirements)
+          probes = [ FLOOR_PROBE, *requirement.requirements.map(&:last) ]
+          return if probes.any? { |version| version >= FLOOR && requirement.satisfied_by?(version) }
 
           add_offense(node, message: format(MSG_RAILS, requirement: requirements.map(&:inspect).join(", ")))
         rescue Gem::Requirement::BadRequirementError

@@ -80,15 +80,13 @@ export default class extends Controller {
     return window.isSecureContext && !!window.PublicKeyCredential
   }
 
-  // POST with CSRF token; throws {body} on non-2xx
+  // Throws {body} on non-2xx
   async #post(url, body = null) {
-    const token = document.querySelector('meta[name="csrf-token"]')?.content
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type":  "application/json",
-        "Accept":        "application/json",
-        ...(token && { "X-CSRF-Token": token })
+        "Accept":        "application/json"
       },
       ...(body !== null && { body: JSON.stringify(body) })
     })

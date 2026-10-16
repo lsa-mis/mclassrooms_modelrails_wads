@@ -73,13 +73,6 @@ RSpec.describe "Template invariants" do
     let(:gemfile) { File.read(root.join("Gemfile")) }
     let(:lockfile) { Bundler::LockfileParser.new(File.read(root.join("Gemfile.lock"))) }
 
-    def requirement_for(gem_name)
-      line = gemfile[/^gem "#{Regexp.escape(gem_name)}".*$/]
-      raise "no `gem \"#{gem_name}\"` line in Gemfile" if line.nil?
-
-      Gem::Requirement.new(line.scan(/"([~><=!\s\d.]+)"/).flatten)
-    end
-
     def locked_version(gem_name)
       spec = lockfile.specs.find { |s| s.name == gem_name }
       raise "#{gem_name} is not in Gemfile.lock" if spec.nil?
@@ -87,21 +80,43 @@ RSpec.describe "Template invariants" do
       spec.version
     end
 
-    # GHSA-xr9x-r78c-5hrm / CVE-2026-66066 — Active Storage did not disable
-    # libvips's unfuzzed loaders, so a crafted upload could read arbitrary
-    # server files. Patched in 7.2.3.2 / 8.0.5.1 / 8.1.3.1.
-    it "excludes Rails versions vulnerable to CVE-2026-66066" do
-      requirement = requirement_for("rails")
+    # GHSA-xr9x-r78c-5hrm / CVE-2026-66066: the last unpatched release of each series.
+    let(:vulnerable_rails_releases) { %w[8.1.3 8.0.5 7.2.3.1].map { |v| Gem::Version.new(v) } }
 
-      expect(requirement).not_to be_satisfied_by(Gem::Version.new("8.1.3")),
-        "Gemfile `rails` requirement (#{requirement}) still admits 8.1.3, which is vulnerable " \
-        "to CVE-2026-66066; raise the floor to >= 8.1.3.1"
-      expect(requirement).not_to be_satisfied_by(Gem::Version.new("8.0.5"))
-      expect(requirement).to be_satisfied_by(Gem::Version.new("8.1.3.1"))
+    def rails_pin_problems(line)
+      if line.match?(/\b(?:github|git):/)
+        line.match?(/\bref:\s*"\h{40}"/) ? [] : [ "a git-sourced rails must pin `ref:` to a 40-character commit" ]
+      else
+        requirement = Gem::Requirement.new(line.scan(/"([~><=!\s\d.]+)"/).flatten)
+        vulnerable_rails_releases.select { |v| requirement.satisfied_by?(v) }.map { |v| "admits #{v}" }
+      end
     end
 
-    it "locks a Rails version at or above the CVE-2026-66066 fix" do
-      expect(locked_version("rails")).to be >= Gem::Version.new("8.1.3.1")
+    it "reads the rails line by its shape: a released requirement or a pinned commit" do
+      sha = "0" * 40
+      expect(rails_pin_problems(%(gem "rails", "~> 8.2.0"))).to be_empty
+      expect(rails_pin_problems(%(gem "rails", "~> 8.1.3", ">= 8.1.3.1"))).to be_empty
+      expect(rails_pin_problems(%(gem "rails", "~> 8.1.3"))).to eq([ "admits 8.1.3" ])
+      expect(rails_pin_problems(%(gem "rails", github: "rails/rails", ref: "#{sha}"))).to be_empty
+      expect(rails_pin_problems(%(gem "rails", github: "rails/rails", branch: "main"))).not_to be_empty
+      expect(rails_pin_problems(%(gem "rails", github: "rails/rails", ref: "0901f2cc"))).not_to be_empty
+    end
+
+    it "pins rails so a fresh resolve cannot land on a release vulnerable to CVE-2026-66066" do
+      line = gemfile[/^gem "rails".*$/]
+      expect(rails_pin_problems(line)).to be_empty, "Gemfile `#{line}`: #{rails_pin_problems(line).join("; ")}"
+    end
+
+    # The fix itself, which a git pin's version string cannot show: libvips refuses an untrusted loader.
+    it "locks an Active Storage that disables libvips's untrusted loaders (the CVE-2026-66066 fix)" do
+      bmp = Rails.root.join("spec/fixtures/files/unfuzzed.bmp").to_s
+      expect { Vips::Image.new_from_file(bmp).avg }.to raise_error(Vips::Error)
+
+      # The control: unblocked, this libvips reads the file, so the refusal above is the block.
+      Vips.block_untrusted(false)
+      expect(Vips::Image.new_from_file(bmp).avg).to be_a(Float)
+    ensure
+      Vips.block_untrusted(true)
     end
 
     # Active Storage raises at boot below this — it cannot disable the unfuzzed
@@ -437,14 +452,62 @@ RSpec.describe "Template invariants" do
     # COPY regression from #129 (fixed in #132). The only safety net for that
     # class of bug is running `docker build .` in CI. These assertions ensure
     # that safety net stays wired up.
-    let(:ci_workflow_path) { root.join(".github/workflows/ci.yml") }
-    let(:ci_workflow) { YAML.safe_load(File.read(ci_workflow_path), aliases: true) }
-    let(:docker_build_job) { ci_workflow.dig("jobs", "docker_build") }
+    let(:build_workflow_path) { root.join(".github/workflows/docker_build.yml") }
+    let(:build_workflow) { YAML.safe_load(File.read(build_workflow_path), aliases: true) }
+    # Psych (YAML 1.1) parses the unquoted `on:` trigger key as boolean true.
+    let(:build_triggers) { build_workflow[true] }
+    let(:docker_build_job) { build_workflow.dig("jobs", "docker_build") }
+    let(:lefthook_config) { YAML.safe_load(File.read(root.join("lefthook.yml")), aliases: true) }
+    let(:build_inputs) { %w[Dockerfile .dockerignore Gemfile Gemfile.lock .tool-versions bin/docker-entrypoint] }
 
-    it "has a docker_build job in .github/workflows/ci.yml" do
-      expect(docker_build_job).not_to be_nil,
-        "expected a `docker_build` job in CI so the production Dockerfile is verified to " \
-        "build on every PR. Without this, build-time regressions can ship to main (see #129 -> #132)."
+    it "has a docker_build workflow with a docker_build job" do
+      expect(File.exist?(build_workflow_path)).to be(true),
+        "expected .github/workflows/docker_build.yml so the production Dockerfile is verified " \
+        "to build. Without it, build-time regressions can ship to main (see #129 -> #132)."
+      expect(docker_build_job).not_to be_nil, "expected a `docker_build` job in docker_build.yml"
+    end
+
+    it "builds on a pull request only when a build input changes, and on every push to main" do
+      expect(build_triggers.dig("pull_request", "paths"))
+        .to include(*build_inputs, ".github/workflows/docker_build.yml"),
+        "expected pull_request.paths to name every file the Dockerfile's early layers COPY, " \
+        "plus the workflow itself — a PR touching none of them does not pay for a build"
+      expect(build_triggers.dig("push", "branches")).to include("main"),
+        "expected a push trigger on main as the unfiltered backstop"
+      expect(build_triggers["push"]).not_to have_key("paths"),
+        "expected the push-to-main run to be unfiltered: `COPY . .` makes every file a build " \
+        "input, so the merged tree is proven to build even when a PR's paths did not trigger it"
+    end
+
+    it "Lefthook's pre-push builds the image on the same inputs, diffed against main" do
+      command = lefthook_config.dig("pre-push", "commands", "docker_build") || {}
+
+      expect(command["run"].to_s).to include("bin/docker-build-check"),
+        "expected the pre-push docker_build command to run bin/docker-build-check so a local " \
+        "push of a build-input change proves the image builds before CI does"
+      expect(command["files"].to_s).to include("origin/main"),
+        "expected `files:` to diff against origin/main — the push range is empty on a branch's " \
+        "first push (lefthook.yml's skip_empty note), which would silently skip the gate"
+      build_inputs.each do |input|
+        expect(command["glob"].to_s).to include(input),
+          "expected the pre-push glob to name #{input}, the same build inputs the workflow's " \
+          "pull_request.paths names — the two lists must stay in sync"
+      end
+    end
+
+    it "runs the image build last: every other pre-push command carries a priority, it does not" do
+      commands = lefthook_config.dig("pre-push", "commands") || {}
+      others = commands.except("docker_build")
+
+      expect(others).not_to be_empty
+      others.each do |name, config|
+        expect(config["priority"]).to be_a(Integer).and(be > 0),
+          "expected pre-push command #{name} to carry priority: N — lefthook runs piped commands " \
+          "alphabetically unless told otherwise, and 0 or unset means last; the slow image build " \
+          "must come after the fast gates and the suite"
+      end
+      expect(commands.fetch("docker_build", {})).not_to have_key("priority"),
+        "expected docker_build to carry no priority (0 = run at the very end)"
     end
 
     it "docker_build job uses Buildx + build-push-action for native GHA layer caching" do
@@ -487,6 +550,24 @@ RSpec.describe "Template invariants" do
       expect(run_steps).to include(match(%r{bin/parallel-rspec})),
         "expected CI's test_shard job to run bin/parallel-rspec (shard slice + parallel " \
         "suite + per-shard parity); a raw rspec invocation loses those gates"
+    end
+
+    it "takes the shard count and worker count from repository variables, defaulting to the public-runner shape" do
+      split_seed_env = Array(ci_workflow.dig("jobs", "split_seed", "steps")).map { |s| s["env"].to_h.values.join(" ") }.join(" ")
+      shard_job = ci_workflow.dig("jobs", "test_shard") || {}
+
+      expect(split_seed_env).to include("vars.CI_SHARDS || 8"),
+        "expected split_seed to read `vars.CI_SHARDS || 8` into a step env — a fork sets the " \
+        "variable in its Actions settings instead of editing a tracked file (private forks are " \
+        "billed per job; 8 shards is the free public-runner shape, not every fork's)"
+      expect(shard_job.dig("strategy", "matrix", "shard").to_s).to include("fromJSON(needs.split_seed.outputs.indices)"),
+        "expected the shard matrix to come from split_seed's `indices` output, not a literal list"
+      expect(shard_job.dig("env", "CI_SHARD_TOTAL").to_s).to include("needs.split_seed.outputs.total"),
+        "expected CI_SHARD_TOTAL to come from split_seed's `total` output so the split and the " \
+        "matrix can never disagree"
+      expect(shard_job.dig("env", "PARALLEL_TEST_PROCESSORS").to_s).to include("vars.CI_WORKERS || 4"),
+        "expected PARALLEL_TEST_PROCESSORS to read `vars.CI_WORKERS || 4` — pinned to the public " \
+        "runner's 4 vCPUs by default; a fork on a smaller runner sets its own"
     end
 
     it "the merged coverage floor and shard-union parity run in coverage_merge" do
@@ -911,6 +992,27 @@ RSpec.describe "Template invariants" do
       expect(db.dig("default", "timeout")).to eq(5000),
         "expected `timeout: 5000` — installs the sqlite3 busy handler so writers wait up to 5s " \
         "for the lock (NOT the busy_timeout PRAGMA; see spec/config/sqlite_pragmas_spec.rb)"
+    end
+
+    # Development wires the queue database and runs bin/jobs; without the adapter every job ran
+    # in-process instead, so concurrency limits and recurring schedules behaved unlike production.
+    it "runs development's jobs through Solid Queue, as production does" do
+      %w[development production].each do |env|
+        config = File.read(root.join("config/environments/#{env}.rb"))
+        expect(config).to match(/^\s*config\.active_job\.queue_adapter = :solid_queue$/),
+          "expected config/environments/#{env}.rb to set `config.active_job.queue_adapter = :solid_queue`"
+      end
+      expect(File.read(root.join("Procfile.dev"))).to match(/^jobs: bin\/jobs$/)
+    end
+
+    # A job in bin/jobs is a separate process; the async cable adapter reaches only its own process's browsers.
+    it "carries development's broadcasts across processes, so a job's updates reach the browser" do
+      cable = YAML.safe_load(File.read(root.join("config/cable.yml")), aliases: true)
+      expect(cable.dig("development", "adapter")).to eq("solid_cable")
+      expect(cable.dig("development", "connects_to", "database", "writing")).to eq("cable")
+
+      db = YAML.safe_load(ERB.new(File.read(root.join("config/database.yml"))).result, aliases: true)
+      expect(db.dig("development", "cable", "migrations_paths")).to eq("db/cable_migrate")
     end
   end
 
@@ -1470,6 +1572,27 @@ RSpec.describe "Template invariants" do
         "expected .github/dependabot.yml to ignore modelrails_ui in its bundler block — " \
         "a git-tag gem is bumped by hand (re-vendor pre-flight, generator, parity), and " \
         "Dependabot's cooldown has proposed it as a downgrade three times (#665, #888, #1261)"
+    end
+
+    it "groups bundler updates into one weekly pull request, as the actions already are" do
+      groups = Array(bundler_updates && bundler_updates["groups"]&.values)
+      patterns = groups.flat_map { |group| Array(group["patterns"]) }
+
+      expect(patterns).to include("*"),
+        "expected the bundler block to carry a group matching \"*\" — one PR per week instead " \
+        "of one per gem. Each ungrouped bump fires CI, Image Scan and Devcontainer on every fork; " \
+        "on a private fork that was ~87 billed minutes per gem, six gems in one morning (2026-10-14)"
+    end
+
+    it "ignores exactly the gems the lockfile takes from git" do
+      lockfile = Bundler::LockfileParser.new(File.read(root.join("Gemfile.lock")))
+      from_git = lockfile.specs.select { |s| s.source.is_a?(Bundler::Source::Git) }.map(&:name).uniq.sort
+      ignored = Array(bundler_updates["ignore"]).map { |entry| entry["dependency-name"] }.sort
+
+      expect(ignored).to eq(from_git),
+        "Dependabot's bundler ignore must list exactly the git-pinned gems. Missing: #{(from_git - ignored).join(", ")}; " \
+        "released, so drop the ignore: #{(ignored - from_git).join(", ")} " \
+        "(/docs/developer/getting-started, Rails comes from a pinned commit)"
     end
   end
 end

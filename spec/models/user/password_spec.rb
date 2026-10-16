@@ -102,6 +102,27 @@ RSpec.describe User, type: :model do
       user.register_successful_login!
       expect(user.reload.failed_login_attempts).to eq(0)
     end
+
+    it "decides the lock from the database's count, so two requests loaded at the same count cannot both slip under it" do
+      3.times { user.register_failed_login! }
+      first = User.find(user.id)
+      second = User.find(user.id)
+
+      first.register_failed_login!
+      second.register_failed_login!
+
+      expect(user.reload.failed_login_attempts).to eq(5)
+      expect(user).to be_locked
+    end
+
+    it "tells the holder once, when the lock starts" do
+      4.times { user.register_failed_login! }
+
+      expect { user.register_failed_login! }
+        .to change { Noticed::Event.where(type: "PasswordLockedNotifier").count }.by(1)
+      expect { user.register_failed_login! }
+        .not_to change { Noticed::Event.where(type: "PasswordLockedNotifier").count }
+    end
   end
 
   describe "password digest audit trail" do

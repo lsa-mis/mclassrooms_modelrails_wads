@@ -69,21 +69,18 @@ RSpec.describe "Invite-only signup flow", type: :system do
     # sessions#new is always accessible — it's both sign-in AND signup entry.
     # No 'closed' state; signups_open? gates the magic-link flow server-side.
     expect(page).to have_field(I18n.t("sessions.new.email_label"))
-    expect(page).not_to have_text(I18n.t("registrations.closed.title"))
   end
 
-  scenario "submitting an unknown email shows the closed message inline, not 'Content missing'" do
-    # The closed view (sessions/closed) swaps into the email form's
-    # <turbo-frame id="sign_in_form">. turbo-rails' frame layout does NOT
-    # auto-wrap, so that template must carry the matching frame itself — or
-    # Turbo discards the body and renders its built-in "Content missing". A
-    # request spec greps the body and can't see this; only a real Turbo render
-    # in the browser exposes it. (Regression guard for the sign-in bug.)
+  # The answer an existing account gets, so the page names no one; the frame
+  # must still match, or Turbo renders "Content missing" (a request spec can't see that).
+  scenario "submitting an unknown email shows the check-email page inline and sends nothing" do
     visit new_session_path
     fill_in I18n.t("sessions.new.email_label"), with: "uninvited@example.com"
-    click_button I18n.t("sessions.new.continue")
 
-    expect(page).to have_text(I18n.t("registrations.closed.title"))
+    expect {
+      click_button I18n.t("sessions.new.continue")
+      expect(page).to have_text(I18n.t("sessions.check_email.title"))
+    }.not_to change(MagicLinkToken, :count)
     expect(page).not_to have_text("Content missing")
   end
 

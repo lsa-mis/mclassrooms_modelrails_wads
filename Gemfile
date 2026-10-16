@@ -2,13 +2,9 @@ source "https://rubygems.org"
 
 ruby file: ".tool-versions"
 
-# Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-# The `>= x.y.z` floor is a security floor, not decoration: it keeps a fork's
-# fresh resolve off a version patched for a known CVE (here 8.1.3.1 for
-# CVE-2026-66066). Dependabot rewrites this line on every Rails bump and will
-# drop the floor — spec/code_smells/template_invariants_spec.rb fails if the
-# requirement ever admits a vulnerable release again.
-gem "rails", "~> 8.1.3", ">= 8.1.3.1"
+# Rails main at a full commit, moved by hand; Dependabot ignores it.
+# See /docs/developer/getting-started (Rails comes from a pinned commit).
+gem "rails", github: "rails/rails", ref: "0901f2cc03e7c8dc9bc1d3be67895be7ee0141ea"
 # Security floor: resolv < 0.7.2 carries CVE-2026-80212. Ruby 4.0.7 ships 0.7.2
 # as the default gem; the pin keeps a fork's fresh resolve from landing below it.
 gem "resolv", ">= 0.7.2"
@@ -45,7 +41,7 @@ gem "pagy"
 gem "markdowndocs", "~> 0.11"
 
 # User-facing notifications (in-app, email, digest) — see `app/notifiers/`.
-gem "noticed", "~> 3.0"
+gem "noticed", "~> 3.1"
 
 # IDN punycode conversion for email domain canonicalization (EmailNormalizer).
 # Already pulled in transitively by capybara/webmock in test, but those are
@@ -70,7 +66,7 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 2.1"
+gem "image_processing", "~> 2.2"
 # image_processing 2.0 dropped the transitive backend dep; libvips is installed in CI
 # (.github/workflows/ci.yml) and the production Dockerfile, and Rails 8.1 defaults
 # active_storage.variant_processor to :vips, so we declare ruby-vips explicitly.
@@ -112,7 +108,8 @@ group :development, :test do
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
 
-  gem "rspec-rails"
+  # A main commit: the Rails main fixes are merged but unreleased (#1338).
+  gem "rspec-rails", github: "rspec/rspec-rails", ref: "89b571228152ac00e21a0cd79e71896d9c446b2f"
   gem "factory_bot_rails"
   gem "faker"
 
@@ -149,7 +146,7 @@ end
 gem "axe-core-rspec", "~> 4.13", group: :test
 gem "axe-core-api", "~> 4.11", group: :test
 
-gem "lefthook", "~> 2.1", groups: [ :development, :test ], require: false
+gem "lefthook", "~> 2.2", groups: [ :development, :test ], require: false
 
 gem "biscuit-rails", "~> 0.3.0"
 

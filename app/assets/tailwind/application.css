@@ -224,7 +224,9 @@ lexxy-toolbar {
 
 /* Lexxy's stylesheet (linked before this one) themed onto the semantic tokens,
    so it follows .dark. Unlayered on purpose: layered rules lose to Lexxy's. */
-:root {
+:root,
+lexxy-editor,
+.lexxy-content {
   --lexxy-color-ink: var(--color-text-heading);
   --lexxy-color-ink-medium: var(--color-text-body);
   --lexxy-color-ink-light: var(--color-text-muted);
@@ -238,6 +240,49 @@ lexxy-toolbar {
   --lexxy-color-selected-dark: var(--color-interactive);
   --lexxy-focus-ring-color: var(--color-interactive-focus);
   --lexxy-font-base: var(--font-sans);
+  /* Lexxy derives these on :root alone; restated so a workspace's interactive colour reaches them. */
+  --lexxy-color-link: var(--lexxy-color-accent-dark);
+  --lexxy-color-selected: var(--lexxy-color-accent-lightest);
+  --lexxy-color-selected-hover: var(--lexxy-color-accent-light);
+  --lexxy-color-selected-50: color-mix(in oklch, var(--lexxy-color-selected-dark) 50%, transparent);
+  --lexxy-color-table-cell-selected: var(--lexxy-color-selected);
+  --lexxy-color-table-cell-selected-border: var(--lexxy-color-selected-dark);
+  --lexxy-color-table-cell-selected-bg: var(--lexxy-color-accent-lightest);
+  --lexxy-color-table-cell-add: var(--lexxy-color-selected-50);
+  --lexxy-color-table-cell-toggle: var(--lexxy-color-accent-lightest);
+  /* Code blocks use the Rouge palette and ground, which syntax_contrast_spec holds to 7:1. */
+  --lexxy-color-code-bg: var(--color-surface);
+  --lexxy-color-code-token-att: var(--syntax-keyword);
+  --lexxy-color-code-token-comment: var(--syntax-comment);
+  --lexxy-color-code-token-function: var(--syntax-function);
+  --lexxy-color-code-token-operator: var(--syntax-operator);
+  --lexxy-color-code-token-property: var(--syntax-name);
+  --lexxy-color-code-token-punctuation: var(--syntax-operator);
+  --lexxy-color-code-token-selector: var(--syntax-string);
+  --lexxy-color-code-token-variable: var(--syntax-escape);
+}
+
+/* The ALT dialog floats over the form, so it needs a visible edge; Save is its only filled button. */
+.lexxy-alternative-text-dialog {
+  @apply shadow-lg;
+  border-color: var(--color-border-strong);
+}
+
+.lexxy-alternative-text-dialog button:not(.lexxy-alternative-text-dialog__save) {
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-body);
+
+  &:hover {
+    background-color: var(--color-surface-sunken);
+  }
+}
+
+/* Lexxy blinks its block caret with no Reduce Motion fallback; its rule has zero specificity. */
+@media (prefers-reduced-motion: reduce) {
+  [data-lexical-cursor] {
+    animation: none;
+  }
 }
 
 /* Focus lands on the contenteditable inside the host; ring the whole field as focus-ring does. */
@@ -248,6 +293,25 @@ lexxy-editor:has(.lexxy-editor__content:focus) {
 
 .lexxy-editor__content:focus {
   outline: none;
+}
+
+/* Lexxy's floating controls, ALT-dialog buttons and code-language picker sit under the 44px floor. */
+.lexxy-floating-controls button,
+.lexxy-alternative-text-dialog button,
+.lexxy-code-language-picker {
+  min-block-size: var(--form-input-height);
+  min-inline-size: var(--form-input-height);
+}
+
+/* Reading defaults, once: playbook standards/frontend/css.md (Reading type and layout defaults). */
+@layer base {
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  code, kbd, .font-mono {
+    font-variant-ligatures: none;
+  }
 }
 
 /* Overlays promoted to the top layer (app/javascript/overlays/top_layer.js) take the

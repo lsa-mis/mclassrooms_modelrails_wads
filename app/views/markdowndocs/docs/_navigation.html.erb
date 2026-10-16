@@ -25,7 +25,7 @@
         <% related_docs.each do |related_doc| %>
           <li>
             <%= link_to related_doc.title, markdowndocs.doc_path(related_doc.slug), class: "text-sm text-accent hover:text-accent-hover font-medium transition-colors inline-flex min-h-input items-center" %>
-            <p class="text-xs text-text-body mt-1"><%= related_doc.description %></p>
+            <p class="text-sm text-text-body mt-1"><%= related_doc.description %></p>
           </li>
         <% end %>
       </ul>

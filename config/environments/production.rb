@@ -58,9 +58,7 @@ Rails.application.configure do
   config.action_mailer.default_url_options = { host: ENV.fetch("RAILS_HOST", "example.com") }
 
   # Mail leaves over SMTP from ENV, and a failed send fails its job (#1318).
-  config.action_mailer.delivery_method = MailDelivery.delivery_method(ENV)
   config.action_mailer.smtp_settings = MailDelivery.smtp_settings(ENV)
-  config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to

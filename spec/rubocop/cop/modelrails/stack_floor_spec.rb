@@ -31,6 +31,22 @@ RSpec.describe RuboCop::Cop::ModelRails::StackFloor, :config do
     RUBY
   end
 
+  it "accepts a rails requirement at a later minor or a git pin" do
+    expect_no_offenses(<<~RUBY, "Gemfile")
+      gem "rails", "~> 8.2.0"
+      gem "rails", github: "rails/rails", ref: "0901f2cc03e7c8dc9bc1d3be67895be7ee0141ea"
+    RUBY
+  end
+
+  it "flags rails pinned below 8.1 by minor or exact version" do
+    expect_offense(<<~RUBY, "Gemfile")
+      gem "rails", "~> 8.0.0"
+      ^^^^^^^^^^^^^^^^^^^^^^^ `rails` is pinned below the stack floor (`"~> 8.0.0"`): the app is Rails 8.1 or newer. Fix: raise the requirement and run the upgrade. Pattern: Rails 8.1+ floor. Read: /docs/developer/getting-started (The stack).
+      gem "rails", "= 8.0.5"
+      ^^^^^^^^^^^^^^^^^^^^^^ `rails` is pinned below the stack floor (`"= 8.0.5"`): the app is Rails 8.1 or newer. Fix: raise the requirement and run the upgrade. Pattern: Rails 8.1+ floor. Read: /docs/developer/getting-started (The stack).
+    RUBY
+  end
+
   it "accepts the stack itself" do
     expect_no_offenses(<<~RUBY, "Gemfile")
       gem "rails", "~> 8.1.3", ">= 8.1.3.1"

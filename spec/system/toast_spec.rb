@@ -3,11 +3,9 @@ require "rails_helper"
 RSpec.describe "Toast notification system", type: :system do
   let(:user) { create(:user) }
 
-  def trigger_login_failure
-    # The lookup action now sends a magic link; reach the password form directly.
-    visit new_session_password_path(email_address: user.email_address)
-    fill_in I18n.t("sessions.passwords.new.password_label"), with: "wrongpassword"
-    click_button I18n.t("sessions.passwords.new.submit")
+  # A failed OAuth handshake redirects with an alert; a failed password renders an error summary instead.
+  def trigger_alert_toast
+    visit omniauth_failure_path
   end
 
   # #683: a live region must exist and be registered BEFORE content arrives —
@@ -79,12 +77,12 @@ RSpec.describe "Toast notification system", type: :system do
 
   describe "card toasts (warning/error)" do
     it "renders an error flash as a card in the bottom-center container" do
-      trigger_login_failure
+      trigger_alert_toast
       expect(page).to have_css("#toast-cards [data-controller='toast-card']")
     end
 
     it "keeps role=alert but no own live attrs — the container announces (#683)" do
-      trigger_login_failure
+      trigger_alert_toast
       card = find("[data-controller='toast-card']")
       expect(card["role"]).to eq("alert")
       expect(card["aria-live"]).to be_nil
@@ -105,7 +103,7 @@ RSpec.describe "Toast notification system", type: :system do
           return realSetTimeout(fn, delay, ...args);
         };
       JS
-      trigger_login_failure
+      trigger_alert_toast
       expect(page).to have_css("[data-controller='toast-card']")
       expect(page.evaluate_script("window.__longTimers")).to eq([]),
         "a long timer was scheduled while the persistent toast was mounting — " \
@@ -114,7 +112,7 @@ RSpec.describe "Toast notification system", type: :system do
     end
 
     it "dismisses when close button is clicked" do
-      trigger_login_failure
+      trigger_alert_toast
       expect(page).to have_css("[data-controller='toast-card']")
       dismiss_cookie_banner
       find("[data-controller='toast-card'] button[aria-label]").click
@@ -122,7 +120,7 @@ RSpec.describe "Toast notification system", type: :system do
     end
 
     it "close button is keyboard accessible" do
-      trigger_login_failure
+      trigger_alert_toast
       expect(page).to have_css("[data-controller='toast-card']")
       dismiss_cookie_banner
       close_button = find("[data-controller='toast-card'] button[aria-label]")

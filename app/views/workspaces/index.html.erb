@@ -57,7 +57,7 @@
     <% section_attrs = show_filter ? { data: { controller: "workspace-filter",
          workspace_filter_status_template_value: t("workspaces.index.filter.status") } } : {} %>
     <%= tag.section class: "mt-8", **section_attrs do %>
-      <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
+      <h2 class="text-base font-semibold text-text-heading mb-3">
         <%= t("workspaces.index.other_workspaces_heading") %>
       </h2>
       <% if show_filter %>
@@ -92,7 +92,7 @@
 
   <% if @archived_memberships.any? %>
     <section class="mt-8" data-test="archived-workspaces">
-      <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
+      <h2 class="text-base font-semibold text-text-heading mb-3">
         <%= t("workspaces.index.archived_heading") %>
       </h2>
       <%= ui :list_group do %>

@@ -47,7 +47,7 @@ module MagicLinkCallbacks
     # Server-side intent → fixed path. Never trust a user-supplied URL here.
     def magic_link_return_path(token_record)
       case token_record.intent
-      when "set_password" then edit_settings_password_path
+      when "set_password" then User.passwords_enabled? ? edit_settings_password_path : after_authentication_url
       else after_authentication_url
       end
     end

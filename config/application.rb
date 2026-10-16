@@ -21,7 +21,7 @@ Bundler.require(*Rails.groups)
 module ModelrailsBase
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 8.1
+    config.load_defaults 8.2
 
     config.yjit = true
 
@@ -55,6 +55,9 @@ module ModelrailsBase
     config.generators.system_tests = nil
 
     config.x.signup.mode = ENV.fetch("SIGNUP_MODE", "invite_only").to_sym
+
+    # Off by default: the template avoids storing passwords. See /docs/developer/security (Password sign-in).
+    config.x.authentication.passwords = ENV.fetch("AUTH_PASSWORDS", "disabled").to_sym
 
     # Instance ceiling on per-workspace Workspace#join_policy. Defaults to
     # [:invite] (preserves Solo-default). Operators opt in to :open_link by

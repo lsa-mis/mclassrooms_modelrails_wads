@@ -20,7 +20,7 @@ module Settings
     end
 
     def create
-      if params[:password].present?
+      if params[:password].present? && Current.user.available_reauth_factors.include?(:password)
         verify_password
       elsif params[:code].present?
         verify_code

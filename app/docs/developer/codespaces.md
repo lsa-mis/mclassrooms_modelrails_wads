@@ -17,10 +17,11 @@ ModelRails runs in a browser-hosted [GitHub Codespace](https://docs.github.com/e
 
 ## Why the Codespaces-specific config exists
 
-Two `localhost`-only assumptions break when the origin becomes `*.app.github.dev`, so `config/environments/development.rb` adapts when `CODESPACES=true` (see `lib/codespaces.rb`):
+Three `localhost`-only assumptions break when the origin becomes `*.app.github.dev`, so `config/environments/development.rb` adapts when `CODESPACES=true` (see `lib/codespaces.rb`):
 
 - **Host authorization.** Rails' DNS-rebinding protection allows only `localhost`/IPs by default and returns `403 Blocked host` for the forwarded domain. The Codespaces block adds `.app.github.dev` to `config.hosts`.
 - **Mailer link host.** Magic-link emails are built from `config.action_mailer.default_url_options`. In a Codespace that host is set to the forwarded URL (HTTPS, with the port baked into the subdomain) so sign-in links work from the browser.
+- **The CSRF Origin check.** Rails compares the browser's `Origin` with the app's own base URL before it looks at anything else. Behind the forwarded proxy, and through VS Code's `localhost` port-forward, the two never match (`http://localhost:3000` against `https://<codespace>-3000.app.github.dev`), so every form post (magic-link sign-in, the docs audience switcher, cookie consent) would fail with 422. The Codespaces block turns off only that comparison. Writes are still verified by the browser's `Sec-Fetch-Site` header, which a page and a form on the same forwarded URL always send as `same-origin` (see [Security](security), Cross-Site Request Forgery).
 
 The server already binds correctly: `.devcontainer/devcontainer.json` sets `BINDING=0.0.0.0`, which `rails server` needs to be reachable through the forward (its development default is `localhost`).
 

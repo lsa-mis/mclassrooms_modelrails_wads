@@ -164,7 +164,6 @@ export default class extends Controller {
       if (this._pendingFile) formData.append("avatar_original", this._pendingFile)
       formData.append("avatar_source", "upload")
       formData.append("crop_coordinates", JSON.stringify(coordinates))
-      this._appendCsrfToken(formData)
 
       const response = await fetch(this.formUrlValue, {
         method: "PATCH",
@@ -322,17 +321,5 @@ export default class extends Controller {
     const template = this.colorAnnounceTemplateValue || "Color: %{name}"
     const label = `${this._hueToColorName(hue)} (${hue}°)`
     if (el) el.textContent = template.replace("%{name}", label)
-  }
-
-  _appendCsrfToken(formData) {
-    const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
-    if (csrfToken) {
-      formData.append("authenticity_token", csrfToken)
-    } else {
-      console.warn(
-        "[identity-picker] CSRF token meta tag not found — request will likely fail. " +
-        "Ensure <%= csrf_meta_tags %> is in the layout."
-      )
-    }
   }
 }

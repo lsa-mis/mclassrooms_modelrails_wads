@@ -20,7 +20,7 @@ module UI
 
     INNER_CLS = "container mx-auto grid gap-6 p-6"
 
-    COLUMN_HEADING = "mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted"
+    COLUMN_HEADING = "mb-2 text-sm font-medium text-text-muted"
 
     # min-h-11: a navigation link, not a role="menuitem" widget interior, so
     # the 44px AAA floor (2.5.5) applies. items-start stays (not items-center)

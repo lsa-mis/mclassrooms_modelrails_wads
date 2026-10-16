@@ -122,6 +122,8 @@ en:
       message: "Your password was changed for your account, %{user_name}."
     password_removed:
       message: "Your password was removed from your account, %{user_name}."
+    password_locked:
+      message: "Too many wrong passwords were entered for your account, %{user_name}, so password sign-in is paused for %{duration}. You can still sign in with an emailed link or a passkey. If this wasn’t you, someone may be guessing your password."
     sign_in_from_new_device:
       message: "We noticed a new sign-in from %{os}. If this wasn't you, please review your account."
     welcome:

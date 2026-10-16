@@ -31,9 +31,9 @@ RSpec.describe "Magic link sign-in", type: :system do
       token = request_magic_link(user.email_address)
       expect(page).to have_text(user.email_address)
 
-      # The 'use password instead' escape hatch is present for password-holders
-      expect(page).to have_link(I18n.t("sessions.check_email.use_password"),
-                                href: new_session_password_path(email_address: user.email_address))
+      # The password escape hatch is inline, so the address never rides in a URL.
+      expect(page).to have_css("summary", text: I18n.t("sessions.check_email.use_password"))
+      expect(page).to have_no_css("a[href*='email_address=']")
 
       visit magic_link_callback_path(token: token)
       click_button I18n.t("magic_link_callbacks.confirm.sign_in_button")

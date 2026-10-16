@@ -8,6 +8,12 @@ class User < ApplicationRecord
     MAX_FAILED_ATTEMPTS = 5
     LOCK_DURATION = 1.hour
 
+    class_methods do
+      def passwords_enabled?
+        Rails.configuration.x.authentication.passwords == :enabled
+      end
+    end
+
     included do
       has_secure_password validations: false
 
@@ -21,6 +27,8 @@ class User < ApplicationRecord
       # Strict tier: after_update, not _commit, so the audit row commits with the credential write.
       # See /docs/developer/architecture (Activity Tracking).
       after_update :audit_password_digest_change, if: :saved_change_to_password_digest?
+      # The page never says an account is locked (that would name it), so the holder hears by email.
+      after_update_commit :notify_password_locked, if: -> { saved_change_to_locked_at? && locked_at.present? }
     end
 
     def locked?
@@ -28,12 +36,15 @@ class User < ApplicationRecord
       locked_at > LOCK_DURATION.ago
     end
 
-    # An expired lock starts the count over: nothing else clears the counter
-    # when the hour passes, so the stale count would re-lock on the next miss.
+    # with_lock re-reads the row, so concurrent failures count from the database, not a stale load.
+    # An expired lock starts the count over; nothing else clears it when the hour passes.
     def register_failed_login!
-      update!(failed_login_attempts: 0, locked_at: nil) if locked_at.present? && !locked?
-      increment!(:failed_login_attempts)
-      update!(locked_at: Time.current) if failed_login_attempts >= MAX_FAILED_ATTEMPTS
+      with_lock do
+        self.failed_login_attempts, self.locked_at = 0, nil if locked_at.present? && !locked?
+        self.failed_login_attempts += 1
+        self.locked_at = Time.current if locked_at.nil? && failed_login_attempts >= MAX_FAILED_ATTEMPTS
+        save!(validate: false)
+      end
     end
 
     # Clears the same two columns unlock! does, but writes no audit row: the
@@ -101,6 +112,13 @@ class User < ApplicationRecord
       PasswordChangedNotifier.with(record: self, removed: password_digest.nil?).deliver(self)
     rescue ActiveRecord::ActiveRecordError => e
       Rails.logger.warn("[password-changed] swallowed error for user=#{id}: #{e.class}: #{e.message}")
+    end
+
+    # Best-effort, like notify_password_changed: the alert must never fail the lock itself.
+    def notify_password_locked
+      PasswordLockedNotifier.with(record: self).deliver(self)
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.warn("[password-locked] swallowed error for user=#{id}: #{e.class}: #{e.message}")
     end
 
     def password_not_pwned

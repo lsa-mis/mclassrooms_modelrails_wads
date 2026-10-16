@@ -81,7 +81,7 @@
 
           <%# Freshly minted/rotated, so never expired yet — no colour, just the
               date in words, matching the steady-state expiry line below (#952). %>
-          <p class="mt-1 text-xs text-text-muted">
+          <p class="mt-1 text-sm text-text-muted">
             <time datetime="<%= current_link.expires_at.iso8601 %>">
               <%= t("workspaces.settings.join_policy.expires_on", date: l(current_link.expires_at, format: :long)) %>
             </time>
@@ -103,14 +103,14 @@
           <span class="sr-only"><%= t("workspaces.settings.join_policy.masked_aria") %></span>
           <span aria-hidden="true"><%= current_link.masked_token %></span>
         </div>
-        <p class="mt-1 text-xs text-text-muted">
+        <p class="mt-1 text-sm text-text-muted">
           <%= t("workspaces.settings.join_policy.masked_help") %>
         </p>
 
         <%# Expiry conveyed in words, never by colour alone (#952). The
             paragraph's id is the aria-describedby target for both the rotate
             button and the masked stub above. %>
-        <p id="join_link_expiry" class="mt-1 text-xs text-text-muted">
+        <p id="join_link_expiry" class="mt-1 text-sm text-text-muted">
           <% if current_link.expired? %>
             <%= t("workspaces.settings.join_policy.expired") %>
           <% else %>

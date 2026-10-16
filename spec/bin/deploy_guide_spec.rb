@@ -62,6 +62,16 @@ RSpec.describe "bin/deploy-guide" do
     end
   end
 
+  describe "outbound mail" do
+    it "names the SMTP settings for every target, since the preflight refuses to boot without them" do
+      %w[kamal managed].each do |target|
+        stdout, _stderr, _status = run_guide(target)
+
+        expect(stdout).to include("SMTP_ADDRESS", "SMTP_USERNAME", "SMTP_PASSWORD"), target
+      end
+    end
+  end
+
   describe "unknown target" do
     it "fails with the list of valid targets" do
       _stdout, stderr, status = run_guide("kubernetes")
@@ -77,7 +87,7 @@ RSpec.describe "bin/deploy-guide" do
     it "only points at doc sections that exist" do
       deployment_doc = File.read(File.join(app_root, "app", "docs", "developer", "deployment.md"))
 
-      expect(deployment_doc).to include("## Deploying without Kamal")
+      expect(deployment_doc).to include("## Deploying without Kamal", "### 3. Configure outbound mail")
     end
   end
 end

@@ -8,7 +8,7 @@ module UI
     include UI::ModalChrome
 
     PANEL = "relative w-full rounded-t-xl bg-surface-overlay border-t border-border shadow-xl " \
-            "max-h-[calc(100vh-3rem)] flex flex-col opacity-0 translate-y-full"
+            "max-h-[calc(100dvh-3rem)] flex flex-col opacity-0 translate-y-full"
 
     # title:       heading text (also the accessible name via aria-labelledby) — required
     # id:          dialog id (auto-generated if omitted)

@@ -187,6 +187,7 @@ find again.
 | Brand mark | `app/views/shared/_site_mark.html.erb` (one `<svg>`, nothing else) + the icon set in `public/` | Replace wholesale; keep `fill="currentColor"`, `aria-hidden="true"`, and a `viewBox` with no width/height ([Extending](extending#customizing-the-site-logo)) |
 | Vocabulary | `config/vocabulary.local.yml` | Your names for workspace and project (singular + plural); every template string follows ([i18n](i18n#vocabulary)) |
 | Marketing copy | `config/locales/en/pages.en.yml` + `app/views/pages/` | Fork-owned — rewrite wholesale |
+| Operations pages | `app/helpers/operations/fork_nav_helper.rb` | Return your own operations pages as `[label, path]` pairs; the operations nav lists them after the template's, with the same current-page cue |
 | Languages | `config/application.rb` (`config.i18n.available_locales`) | Register a locale here *before* adding its files, or `I18n.t(locale:)` raises in production — see [Internationalization](i18n) |
 | PWA app name | `public/manifest.webmanifest` (`name` / `short_name`) | Shown on the home screen if users install the PWA |
 | CI image tags | `.github/workflows/ci.yml` + `image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
@@ -265,6 +266,7 @@ on every sync.
 | `app/views/shared/_site_mark.html.erb` | The brand mark — a file that is one `<svg>` ([Extending](extending#customizing-the-site-logo)) |
 | `public/icon.svg`, `public/icon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `public/favicon.ico` | The favicon and PWA icon set — same artwork, same filenames and sizes ([Getting started](getting-started#favicon-and-pwa-icons)) |
 | `config/vocabulary.local.yml` | Your product's nouns — any subset; `config/vocabulary.yml` fills the rest ([i18n](i18n#vocabulary)) |
+| `app/helpers/operations/fork_nav_helper.rb` | Your own operations pages for the operations nav, as `[label, path]` pairs |
 | `README.md` | Your product's README |
 
 A fork may also take `merge=ours` ownership of **template files it has rewritten
@@ -530,7 +532,8 @@ Three guardrails before you open the PR:
 - **When you must edit any template file** (an initializer, `application.rb`),
   make the edit additive — append rather than rewrite.
 - **`.github/` is template-owned and churns weekly** — 33+ action refs are
-  SHA-pinned and bumped by grouped Dependabot PRs, and the suite's pin
+  SHA-pinned and bumped by grouped Dependabot PRs (gem bumps arrive the same
+  way, one grouped PR a week), and the suite's pin
   invariant fails on ANY unpinned `uses:` (yours included). Add fork CI as
   new workflow files, SHA-pinned with the `# <tag>` trailer the invariant
   reads; never edit the template's workflows in place.
@@ -540,7 +543,9 @@ Three guardrails before you open the PR:
   update — it did, three times. The bundler block ignores the gem; a bump is
   a hand PR that diffs each vendored component against the tag it came from
   before regenerating (see [Components](components)). The suite's invariant
-  fails if the ignore is removed.
+  fails if the ignore is removed. Rails and `rspec-rails` come from git
+  commits too, and are ignored and moved by hand the same way (see
+  [Getting started](getting-started)).
 - **Fetching a URL a user typed?** Read the outbound-request (SSRF) posture
   in [Security](security) first — the template deliberately ships no
   fetch-by-URL feature, and the first fork that adds one owns the pinning.

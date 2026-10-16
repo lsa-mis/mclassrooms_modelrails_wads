@@ -12,6 +12,14 @@ RSpec.describe "Code smell: motion respects Reduce Motion" do
   # transition-colors / -opacity / -shadow do not move anything and stay bare.
   let(:motion) { /(?<=["'`\s])(transition|transition-all|transition-transform|animate-[a-z0-9-]+)(?=["'`\s]|\z)/ }
   let(:comment_line) { %r{\A\s*(#|//|\*|/\*|<%#)} }
+  let(:arbitrary_transition) { /(?<=["'`\s])transition-\[([^\]]+)\](?=["'`\s]|\z)/ }
+  # A transition-[…] list moves something unless every property in it only repaints.
+  let(:repaint_properties) { %w[color background-color border-color outline-color text-decoration-color fill stroke opacity box-shadow] }
+
+  def motion_tokens(line)
+    arbitrary = line.scan(arbitrary_transition).flatten.reject { |list| (list.split(",") - repaint_properties).empty? }
+    line.scan(motion).flatten + arbitrary.map { |list| "transition-[#{list}]" }
+  end
 
   # 2.3.3 exempts motion essential to what is conveyed. Each entry is a decision
   # with its reason, not a way to quiet the check.
@@ -29,7 +37,7 @@ RSpec.describe "Code smell: motion respects Reduce Motion" do
     File.readlines(path).each_with_index.flat_map do |line, index|
       next [] if line.match?(comment_line)
 
-      line.scan(motion).flatten.map { |token| [ "#{relative} #{token}", "#{relative}:#{index + 1} #{token}" ] }
+      motion_tokens(line).map { |token| [ "#{relative} #{token}", "#{relative}:#{index + 1} #{token}" ] }
     end
   end
 
@@ -40,8 +48,9 @@ RSpec.describe "Code smell: motion respects Reduce Motion" do
   end
 
   it "recognises a bare motion utility and lets a guarded one through (positive control)" do
-    sample = %(class: "p-2 transition-all animate-spin motion-safe:transition-transform transition-colors transition")
-    expect(sample.scan(motion).flatten).to eq(%w[transition-all animate-spin transition])
+    sample = %(class: "p-2 transition-all animate-spin motion-safe:transition-transform transition-colors transition ) +
+             %(transition-[width] transition-[opacity,color] motion-safe:transition-[height]")
+    expect(motion_tokens(sample)).to eq(%w[transition-all animate-spin transition transition-[width]])
   end
 
   it "moves nothing outside motion-safe" do

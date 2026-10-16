@@ -15,10 +15,7 @@
 <% end %>
 
 <%= turbo_stream.replace "workspace_logo_branding" do %>
-  <span id="workspace_logo_branding" class="block relative">
-    <%= workspace_icon_for(@workspace, size: :lg) %>
-    <%= render "shared/image_edit_cue", shape: :circle, size: :sm %>
-  </span>
+  <%= render "workspaces/logo_branding", workspace: @workspace %>
 <% end %>
 
 <% if @close_modal %>
