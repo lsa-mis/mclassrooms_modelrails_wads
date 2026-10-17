@@ -256,7 +256,13 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   confirmation first and puts the switch back if it is declined, and the
   Turbo answer morphs the switch (focus stays on it), refreshes
   `#room_media_view` for the hidden overlay, and appends a toast. Nothing
-  navigates, so an unsaved nickname edit survives the toggle. An editor who
+  navigates, so an unsaved nickname edit survives the toggle. While a change
+  is in flight the switch is held (`aria-disabled`, and its clicks are
+  cancelled rather than the input disabled, which would drop focus) until
+  `turbo:submit-end`, and a failed request puts it back. The form's
+  `_method` is set from the switch at submit time, not from the last
+  render, so a toggle in the moment before the morph still sends the action
+  the user chose. An editor who
   hides a room is redirected to Find a Room, as they can no longer see it.
   Buildings use the same shape (`Buildings::HidingsController`). The switch
   is the curator's flag only: `Room.listed` also needs `in_feed`, so for a

@@ -94,4 +94,32 @@ RSpec.describe "Room page view and edit modes", type: :system do
     expect(page.evaluate_script("document.activeElement.id")).to eq("room_listed")
     expect(room.reload).to be_hidden
   end
+  it "holds the switch while a visibility change is pending, so a quick second toggle can't send the stale action" do
+    release = Queue.new
+    allow_any_instance_of(Rooms::HidingsController).to receive(:create).and_wrap_original do |create, *args|
+      release.pop
+      create.call(*args)
+    end
+    sign_in_via_form(admin)
+    visit edit_room_path(room)
+
+    accept_confirm(I18n.t("rooms.hide.admin_confirmation")) do
+      first("label[for='room_listed']").click
+    end
+    expect(page).to have_css("#room_listed[aria-disabled='true']", visible: :all)
+
+    first("label[for='room_listed']").click
+    expect(page).to have_unchecked_field(I18n.t("rooms.edit.listed_label"), visible: :all)
+
+    release << true
+    expect(page).to have_content(I18n.t("rooms.hide.success"))
+    expect(page).to have_no_css("#room_listed[aria-disabled]", visible: :all)
+    expect(room.reload).to be_hidden
+
+    first("label[for='room_listed']").click
+    expect(page).to have_content(I18n.t("rooms.unhide.success"))
+    expect(room.reload).not_to be_hidden
+  ensure
+    release << true
+  end
 end

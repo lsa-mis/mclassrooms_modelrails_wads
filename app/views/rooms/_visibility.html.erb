@@ -3,12 +3,15 @@
 <div id="room_visibility" class="flex max-w-sm flex-col"
      data-controller="room-visibility"
      data-room-visibility-confirm-value="<%= current_grant.admin? ? t("rooms.hide.admin_confirmation") : t("rooms.hide.editor_confirmation") %>">
-  <%= form_with url: room_hiding_path(room), method: room.hidden? ? :delete : :post,
-        data: { room_visibility_target: "form" } do %>
+  <%= form_with url: room_hiding_path(room), method: :post,
+        data: { room_visibility_target: "form", action: "turbo:submit-end->room-visibility#settle" } do %>
+    <%= hidden_field_tag "_method", room.hidden? ? "delete" : "post", id: nil,
+          data: { room_visibility_target: "method" } %>
     <%= ui :switch, label: t("rooms.edit.listed_label"), checked: !room.hidden?,
           name: "listed", value: "1", id: "room_listed",
           describedby: listed_hints.join(" ").presence,
-          data: { room_visibility_target: "switch", action: "room-visibility#toggle" } %>
+          data: { room_visibility_target: "switch",
+                  action: "click->room-visibility#hold change->room-visibility#toggle" } %>
   <% end %>
   <% unless current_grant.admin? %>
     <p id="room_listed_hint" class="text-sm text-text-body"><%= t("rooms.edit.listed_editor_hint") %></p>
