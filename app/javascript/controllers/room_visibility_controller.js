@@ -1,16 +1,30 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["switch", "submit"]
+  static targets = ["form", "method", "switch"]
   static values = { confirm: String }
 
-  sync() {
-    if (!this.hasSwitchTarget || !this.hasSubmitTarget) return
+  hold(event) {
+    if (this.pending) event.preventDefault()
+  }
 
-    if (this.switchTarget.defaultChecked && !this.switchTarget.checked) {
-      this.submitTarget.dataset.turboConfirm = this.confirmValue
-    } else {
-      delete this.submitTarget.dataset.turboConfirm
+  toggle() {
+    const listing = this.switchTarget.checked
+
+    if (!listing && !window.confirm(this.confirmValue)) {
+      this.switchTarget.checked = true
+      return
     }
+
+    this.methodTarget.value = listing ? "delete" : "post"
+    this.pending = true
+    this.switchTarget.setAttribute("aria-disabled", "true")
+    this.formTarget.requestSubmit()
+  }
+
+  settle(event) {
+    this.pending = false
+    this.switchTarget.removeAttribute("aria-disabled")
+    if (!event.detail.success) this.switchTarget.checked = !this.switchTarget.checked
   }
 }

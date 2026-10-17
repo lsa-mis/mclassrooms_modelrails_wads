@@ -18,6 +18,9 @@ RSpec.describe "Room media as nested resources", type: :request do
 
     it "draws only resourceful routes for a room's media and floor plan" do
       expect(route(:delete, "/rooms/123/panorama")).to include(controller: "rooms/panoramas", action: "destroy", room_id: "123")
+      expect(route(:patch, "/rooms/123/panorama")).to include(controller: "rooms/panoramas", action: "update", room_id: "123")
+      expect(route(:patch, "/rooms/123/seating_chart")).to include(controller: "rooms/seating_charts", action: "update")
+      expect(route(:patch, "/rooms/123/gallery")).to include(controller: "rooms/galleries", action: "update")
       expect(route(:delete, "/rooms/123/seating_chart")).to include(controller: "rooms/seating_charts", action: "destroy")
       expect(route(:delete, "/rooms/123/photos/9")).to include(controller: "rooms/photos", action: "destroy", id: "9")
       expect(route(:get, "/rooms/123/floor_plan")).to include(controller: "rooms/floor_plans", action: "show")
@@ -132,6 +135,25 @@ RSpec.describe "Room media as nested resources", type: :request do
       get edit_room_path(room, open: "everything")
 
       expect(page).to have_no_css("[data-modal-open-value='true'] dialog", visible: :all)
+    end
+  end
+
+  describe "saving a media dialog as the room's unit editor" do
+    before { sign_in(editor_for(unit)) }
+
+    it "is refused for the panorama, the seating chart and the photos, and writes nothing" do
+      expect {
+        patch room_panorama_path(room), params: { room: { panorama_alt: "Hijacked" } }
+        patch room_seating_chart_path(room), params: { room: { seating_chart_alt: "Hijacked" } }
+        patch room_gallery_path(room), params: { room: { gallery_attributes: {
+          "0" => { position: "1", image: fixture_file_upload("room.jpg", "image/jpeg") }
+        } } }
+      }.not_to change(ActivityLog, :count)
+
+      expect(response).to redirect_to(find_a_room_path)
+      expect(room.reload.panorama_alt).not_to eq("Hijacked")
+      expect(room.seating_chart_alt).not_to eq("Hijacked")
+      expect(room.gallery).to be_empty
     end
   end
 

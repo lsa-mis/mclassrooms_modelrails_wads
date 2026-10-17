@@ -23,17 +23,9 @@ class RoleResolver
   end
 
   def initialize(user)
-    # Prefer the request-resolved Current.workspace (set by DirectoryScoped/
-    # WorkspaceScoped) so this doesn't re-derive tenancy when a controller
-    # already has. Fall back to TenancyConfig.shared_workspace for callers
-    # that run before any workspace-scoping concern sets Current.workspace —
-    # e.g. PagesController#home's admin check on the unauthenticated-access
-    # marketing page, which has no DirectoryScoped before_action to resolve
-    # it first. Both resolve to the same single shared workspace (D1).
+    # Current.workspace is unset outside DirectoryScoped, as in the sign-in landing check.
     workspace = Current.workspace || TenancyConfig.shared_workspace
-    # includes(:role): keep the resolve at two queries, not three — dropping
-    # this makes membership&.role&.slug below fire a separate SELECT on
-    # every authorized request (whole-branch review M-1).
+    # includes(:role): without it every authorized request fires a third query.
     membership = user && workspace&.memberships&.kept&.includes(:role)&.find_by(user: user)
     @admin = ADMIN_ROLE_SLUGS.include?(membership&.role&.slug)
     @viewer = membership.present?

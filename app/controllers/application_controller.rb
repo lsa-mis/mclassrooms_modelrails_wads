@@ -95,20 +95,12 @@ class ApplicationController < ActionController::Base
     Current.workspace.effective_roles.select { |role| policy(policy_record).may_grant?(role) }
   end
 
-  # Fork override of the template's authenticated-landing seam
-  # (Authenticatable#authenticated_home_path): signing in drops a non-admin
-  # straight into the product — Find a Room — ONCE, at authentication time.
-  # Root itself never redirects (panel call, 2026-07-13: "where sign-in drops
-  # you" and "what home is" are different decisions — the logo links to root,
-  # and a link named for the site must mean the same thing for every role).
-  # Same admittable gate DirectoryScoped applies to GET /find-a-room, so a
-  # missing/personal-posture/suspended shared workspace falls back to the
-  # landing instead of chaining through DirectoryScoped's own redirect.
+  # Fork seam: a non-admin lands on Find a Room once, at sign-in. See /docs/developer/rooms-directory (Landing and denials).
   def authenticated_home_path
     resume_session
-    workspace = TenancyConfig.shared_workspace # nil unless shared posture + kept workspace
+    workspace = TenancyConfig.shared_workspace
     return root_path unless Current.user && workspace && !workspace.suspended?
-    return root_path if RoleResolver.for(Current.user).admin? # admins keep the landing
+    return root_path if RoleResolver.for(Current.user).admin?
 
     find_a_room_path
   end
@@ -123,22 +115,7 @@ class ApplicationController < ActionController::Base
     redirect_to(not_authorized_redirect_path, alert: t("errors.not_authorized"))
   end
 
-  # Where a denied user lands. Reuses the fork's established idiom (see
-  # RoomsController#update, BuildingsController#update): send them to the
-  # record only if they can actually SEE it, else somewhere safe. Because
-  # WorkspacePolicy#show? is admin-only under the shared/directory posture, a
-  # non-admin denial that fell through to workspace_path would loop — so we
-  # only land there when show? permits, and otherwise drop the user at the
-  # product home they can reach.
-  # find_a_room requires a viewer grant (RoomPolicy#index?), so a non-member
-  # (e.g. membership revoked mid-session) falls through to root_path — which
-  # never redirects — keeping every branch loop-safe.
-  # url_from filters cross-origin referers (SEC-10): a forged Referer must
-  # fall back to root, not make the error handler raise UnsafeRedirectError.
-  # #931: even the show?-permitted branch can loop — a refused PATCH/DELETE
-  # at the workspace's OWN path (`/workspaces/:slug`, shared by GET/PATCH/PUT/
-  # DELETE) would redirect right back to itself, so that one case falls
-  # through to workspaces_path instead.
+  # Every branch must be loop-safe (#931, SEC-10). See /docs/developer/rooms-directory (Landing and denials).
   def not_authorized_redirect_path
     return url_from(request.referer) || root_path if Current.workspace.blank?
 

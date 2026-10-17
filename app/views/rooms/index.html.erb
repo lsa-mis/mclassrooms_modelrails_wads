@@ -1,21 +1,3 @@
-<%# Redesign (2026-07 design sprint) of the Phase 3 Task 5 page: filter card
-    (_filters.html.erb) above, results Turbo frame below. The frame now opens
-    with a STICKY results header — live count, removable applied-filter chips,
-    sort, and the admin view nav — so the live feedback stays in view while
-    the card grid scrolls (the sprint's core finding: the old full-height
-    filter form pushed results below the fold, making the already-working
-    Turbo updates invisible). Filter submissions still target only the
-    `find_a_room_results` frame; the heading/announcement/form chrome outside
-    it never re-renders. The `[busy]` opacity utility on the frame is the
-    pending state — Turbo sets/clears the attribute itself.
-
-    The filter-form Stimulus controller sits on this wrapper (not the <form>)
-    so frame-side controls — the sort select, wired to the form via its
-    `form=` attribute — keep their actions after every frame re-render.
-
-    Phase 5 Task 8: the announcement banner is the SHARED announcements/_banner
-    partial (also rendered on pages#home/#about) — see that partial for the
-    no-op-on-nil and landmark-<aside> contract. %>
 <% content_for(:title) { t("rooms.index.title") } %>
 
 <div class="max-w-5xl mx-auto px-4 py-8" data-controller="filter-form"
