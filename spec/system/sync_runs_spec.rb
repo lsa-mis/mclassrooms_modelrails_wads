@@ -46,6 +46,8 @@ RSpec.describe "Sync runs", type: :system do
     expect(axe_clean_in_both_themes?).to be(true), axe_violations_in_both_themes.join("\n")
 
     click_link href: operations_sync_run_path(failed)
+    expect(page).to have_link(I18n.t("operations.sync_runs.show.back"))
+    expect(page).to have_no_css("html[aria-busy]")
     expect(axe_clean_in_both_themes?).to be(true), axe_violations_in_both_themes.join("\n")
     click_button I18n.t("operations.sync_runs.actions.retry")
     expect(page).to have_text(I18n.t("operations.sync_runs.resumptions.create.success"))
