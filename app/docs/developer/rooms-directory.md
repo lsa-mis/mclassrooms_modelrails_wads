@@ -32,6 +32,14 @@ loses focus; every change re-renders only `#find_a_room_results`
 - The in-frame **sort select** submits the form via its `form=` attribute;
   the `filter-form` Stimulus controller sits on a wrapper around form AND
   frame so those actions survive re-renders.
+- **The results header is sticky.** The frame opens with the live count,
+  the removable filter chips, sort and the admin view nav, pinned while the
+  cards scroll, so a filter change is visible where the results are. The
+  frame's `[busy]` opacity utility is the pending state; Turbo sets and
+  clears the attribute itself.
+- **The announcement banner** is the shared `announcements/_banner`
+  partial, also on the home and About pages; it renders nothing without an
+  announcement.
 
 ## The media stage (room page)
 
@@ -298,7 +306,69 @@ unscoped preload trips Bullet's unused-eager-load check.
 `BuildingsController#update` follows the same two rules for floors
 (`stale_floor_ids?`, then a preload limited to floors receiving a new plan),
 and saves the building's fields, photo and floor plans in one
-`Curation::Apply` transaction (`building.curated`).
+`Curation::Apply` transaction (`building.curated`). Only a floor receiving a
+new plan is validated on save; `remove_plan` alone never marks a floor
+changed, so preloading it would be an unused eager load. The preload covers
+`plan_blob` as well as `plan_attachment: :blob`, because the content-type
+validator reads the blob through that shortcut, which Bullet tracks
+separately. The building form takes no address fields and no visibility
+params: the nightly sync owns the address, so an admin's edit would be
+overwritten (or would overwrite sync data), and hiding is
+`Buildings::HidingsController`.
+
+## Lookups, scopes and caching
+
+- **Finding the room.** `set_room` looks a room up by `rmrecnbr` (its
+  `to_param`) through `for_current_workspace`, and deliberately does not
+  filter `listed`: an admin must reach a hidden room to edit or unhide it,
+  and the inactive redirect needs the record to decide. An unknown or
+  other-workspace room number lands on Find a Room with "room not found",
+  not on the app-wide not-found redirect to the home page.
+- **Hidden rooms for non-admins.** `redirect_inactive_for_non_admins` runs
+  on `show` only. A non-admin never reaches `edit` or `update` for a hidden
+  room, because `RoomPolicy#edit?`/`#update?` already require it visible, so
+  adding the redirect there would only block admins.
+- **Inactive views.** Find a Room's `view=inactive_rooms` and
+  `view=inactive_buildings` authorize `view_inactive?` first, then build
+  `RoomPolicy::Scope#resolve_including_inactive` directly: Pundit's
+  `policy_scope` only ever calls `resolve`. A viewer asking for either view is
+  refused rather than quietly shown the active list.
+- **Old search links.** `building` and `room` stay permitted search params
+  beside the merged `q` box, because links shared before the redesign still
+  use them.
+- **Conditional GET (D14).** `show` answers 304 when nothing it renders has
+  changed, and keeps Rails' default `Cache-Control: private, max-age=0,
+  must-revalidate`; the legacy app's `no-store` is deliberately not set. The
+  ETag covers the room, its contact record (which can change without the
+  room's `updated_at`), whether the viewer is an admin and their saved-room
+  state (both change what the page shows), and the newest notes on the room
+  and its building. Attachments count through `created_at`, the newest
+  across the room's own slots and its gallery photos:
+  `active_storage_attachments` has no `updated_at`, because attaching makes a
+  new row. The gallery half matches `record_type: MediaAsset.name`, not a
+  string, because a mismatch fails silently as an ETag that never changes.
+  The JSON branch preloads gallery attachments inside the fresh-response
+  branch only, so a 304 carries no unused eager load.
+
+## Landing and denials
+
+- **Where sign-in lands.** The fork overrides the template's
+  `authenticated_home_path` seam: a signed-in non-admin starts on Find a
+  Room, decided once at sign-in, and admins keep the home page. Root itself
+  never redirects, because the logo links there and a link named for the
+  site must mean the same thing for every role. The check is the same one
+  `DirectoryScoped` applies to Find a Room (a shared workspace that exists
+  and isn't suspended), so a broken posture falls back to the home page
+  instead of chaining redirects.
+- **Where a refused request lands** (`ApplicationController#not_authorized_redirect_path`).
+  Every branch has to be loop-safe. The workspace page is used only when
+  `WorkspacePolicy#show?` allows it, which under the shared posture means
+  admins, and never when the refused request was the workspace's own path
+  (#931: GET, PATCH, PUT and DELETE share `/workspaces/:slug`). Otherwise a
+  viewer goes to Find a Room, which needs a viewer grant, and anyone else to
+  the home page, which never redirects. Outside a workspace the referer is
+  used only through `url_from` (SEC-10), so a forged cross-origin referer
+  falls back to the home page instead of raising `UnsafeRedirectError`.
 
 ## Public pages
 

@@ -1,6 +1,4 @@
-# Fork-owned: your product's routes live here. Upstream (modelrails_base)
-# freezes this file after creation — add and rewrite routes freely in a fork
-# without merge conflicts on config/routes.rb. See /docs/developer/forking.
+# Fork-owned (merge=ours): this product's routes. See /docs/developer/forking.
 
 root to: "pages#show", defaults: { id: "home" }
 resources :pages, only: :show, path: "", constraints: { id: /about|privacy|contact/ }
@@ -8,14 +6,8 @@ resources :pages, only: :show, path: "", constraints: { id: /about|privacy|conta
 get "find-a-room",      to: "rooms#index",           as: :find_a_room
 get "filters-glossary", to: "characteristics#index", as: :filters_glossary
 
-# Convenience alias (product navigation): users naturally type /rooms
-# expecting the room directory; the real index lives at /find-a-room. This
-# redirect does not conflict with `resources :rooms` below, which only draws
-# /rooms/:id (no #index).
 get "rooms", to: redirect("/find-a-room")
 
-# Saved rooms (shortlist): plain REST create/destroy; the toggle button on
-# cards and room pages posts here and gets a Turbo Stream back.
 resources :saved_rooms, only: [ :create, :destroy ]
 
 resources :rooms, only: [ :show, :edit, :update ] do
@@ -29,63 +21,18 @@ resources :rooms, only: [ :show, :edit, :update ] do
   end
 end
 
-# Admin Buildings section (MiClassrooms Phase 4 Task 8, contract). Only
-# #index/#show ship this task — #edit/#update land in Task 9 — but all four
-# routes are drawn now per the contract, mirroring the `resources :rooms`
-# precedent above (nothing links to the unimplemented actions yet). JSON is
-# supported on #index/#show only (the contract doesn't require it on
-# #edit/#update).
 resources :buildings, only: [ :index, :show, :edit, :update ] do
   scope module: :buildings do
     resource :hiding, only: [ :create, :destroy ]
   end
 end
 
-# Notes & alerts (MiClassrooms Phase 5 Task 7, Brief §14.1, D15): a product
-# resource, NOT nested under rooms/buildings — a note's own
-# notable_type/notable_id (hidden fields on notes/_form.html.erb) says which
-# record it's on, mirroring how NotePolicy authorizes off `record.notable`
-# rather than a parent resource in the URL. Only create/update/destroy ship
-# here — notes render inline via notes/_list (rendered from rooms#show), so
-# there is no #index/#show/#edit; edit is an inline Turbo Stream swap on the
-# same page, not a separate route.
+# Not nested: a note names its own notable, and NotePolicy authorizes through it.
 resources :notes, only: [ :create, :update, :destroy ]
 
-# Feedback / support (MiClassrooms Phase 8, D17): we adopt the lsa_tdx_feedback
-# gem's self-contained modal (rendered site-wide in the app layout, themed to
-# our WCAG 2.2 AAA gate). Its JS POSTs to /lsa_tdx_feedback/feedback, so the
-# engine is mounted here; that route resolves to our app/controllers override
-# (LsaTdxFeedback::FeedbackController) which allows UNAUTHENTICATED submissions
-# (someone who can't sign in must still be able to report it), rate-limits by
-# IP, and routes through Feedback::Submit (TDX ticket, or email-to-admins
-# fallback when TDX isn't configured). The modal is the UI — no bespoke resource.
+# The feedback modal posts here; our LsaTdxFeedback::FeedbackController override takes signed-out reports.
 mount LsaTdxFeedback::Engine => "/lsa_tdx_feedback"
 
-# Admin bulk upload (MiClassrooms Phase 4 Task 11, Brief §5.3): a stateless
-# drop -> review -> commit flow with NO persisted model, so only :new/:create
-# are drawn — a deliberate SUBSET of the roadmap contract's bare
-# `resources :bulk_uploads`. There is no row to #show/#edit/#update/#destroy;
-# the "review" step is just #create re-rendering a template (params[:confirmed]
-# unset) rather than a separate route, and the final commit redirects back to
-# #new rather than to a #show that doesn't exist.
-#
-# Admin announcements (MiClassrooms Phase 5 Task 8, Brief §14.1): the three
-# fixed slots (home_page/find_a_room_page/about_page). No #show: the index
-# already renders each slot's filled/empty state inline, so there is no
-# separate detail page to link to — a deliberate SUBSET of the seven Pundit
-# actions AnnouncementPolicy defines, mirroring the `resources :bulk_uploads`
-# precedent just above.
-#
-# Admin editor assignments (MiClassrooms Phase 5 Task 9, Brief §14.1): grant/
-# revoke unit editor claims. No #show/#edit/#update — a grant/revoke pair has
-# nothing to edit (EditorAssignmentPolicy defines exactly index?/new?/
-# create?/destroy?, mirroring the announcements precedent's deliberate
-# subset).
-#
-# Admin reference data (MiClassrooms Phase 5 Task 11, Brief §11.4/§14.1):
-# CharacteristicDisplayRule/UnitDisplayName/SyncScopeRule — standard REST
-# minus #show (the index already renders every row's editable fields inline;
-# there is no separate detail page), mirroring the announcements precedent.
 namespace :admin do
   resources :bulk_uploads, only: [ :new, :create ]
   resources :announcements, except: [ :show ]
@@ -104,16 +51,10 @@ namespace :operations do
   end
 end
 
-# Fork deviation (MiClassrooms Phase 0 Task 8): non-production test login for
-# accessibility crawlers — Siteimprove can't complete Google/Okta SSO. Drawn only when
-# AuthConfig.test_login_enabled? is true at boot — i.e. never in production,
-# and never without a configured TEST_LOGIN_TOKEN — so the route is
-# structurally absent (not merely guarded) rather than drawn-and-blocked.
-# See TestLoginsController for the request-time defenses.
+# Drawn only when test login is enabled, never in production: Siteimprove's crawler can only send a GET.
 if AuthConfig.test_login_enabled?
   get "test_login", to: "test_logins#create"
 end
 
-# D18 (Brief §5.9): retired Classroom Database URLs. Drawn last so the legacy
-# catch-alls (e.g. /classrooms/:facility_code) never shadow a product route.
+# D18 legacy URLs, drawn last so a catch-all never shadows a product route.
 draw(:legacy)

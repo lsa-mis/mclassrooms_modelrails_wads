@@ -1,9 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Editor hides a room", type: :system do
-  # Matches spec/system/admin/*_axe_spec.rb's AAA-only convention (both
-  # themes) rather than find_a_room_spec.rb's fuller A+AA+AAA sweep — this
-  # spec mirrors the admin axe specs' shape per the task brief.
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
   let!(:workspace) { create(:workspace, slug: "editor-hide-room-workspace", personal: false) }
@@ -20,10 +17,6 @@ RSpec.describe "Editor hides a room", type: :system do
            room_number: "1200", facility_code: "MAS1200")
   end
 
-  # An editor: a plain viewer-role membership (the auto-onboard default under
-  # MiClassrooms' shared_join_role, app/lib/tenancy_config.rb) PLUS an
-  # EditorAssignment on the room's unit — mirrors
-  # spec/requests/room_visibility_spec.rb's editor_for(unit).
   let(:editor) do
     user = create(:user)
     create(:editor_assignment, user: user, unit: unit)
@@ -53,11 +46,6 @@ RSpec.describe "Editor hides a room", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "AAA violations on Find a Room (post-hide):\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
 
-    # Post-hide blindness (phase-4 carryover, Brief §14.1): the editor's very
-    # next GET /rooms/:id redirects them straight back out via
-    # redirect_inactive_for_non_admins, with the same inactive notice a plain
-    # viewer would get — mirrors spec/requests/room_visibility_spec.rb's
-    # "post-hide blindness" describe block, as an end-to-end browser proof.
     visit room_path(room)
 
     expect(page).to have_current_path(find_a_room_path)
