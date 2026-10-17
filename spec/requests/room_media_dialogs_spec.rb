@@ -105,7 +105,7 @@ RSpec.describe "Room media editing dialogs", type: :request do
     end
 
     it "re-renders a rejected photo replacement with its error instead of failing" do
-      patch room_path(room), params: { room: { gallery_attributes: {
+      patch room_gallery_path(room), params: { room: { gallery_attributes: {
         "0" => { id: first_photo.id, image: fixture_file_upload("seating_chart.pdf", "application/pdf") }
       } } }
 
@@ -118,7 +118,7 @@ RSpec.describe "Room media editing dialogs", type: :request do
     it "replaces an existing photo's file" do
       original_blob = first_photo.image.blob
 
-      patch room_path(room), params: { room: { gallery_attributes: {
+      patch room_gallery_path(room), params: { room: { gallery_attributes: {
         "0" => { id: first_photo.id, image: fixture_file_upload("room.jpg", "image/jpeg") }
       } } }
 
@@ -147,7 +147,7 @@ RSpec.describe "Room media editing dialogs", type: :request do
 
   it "no longer accepts the auto-alt flag" do
     attach_panorama!(room)
-    patch room_path(room), params: { room: { panorama_derived_ok: "1", panorama_alt: "A lecture hall" } }
+    patch room_panorama_path(room), params: { room: { panorama_derived_ok: "1", panorama_alt: "A lecture hall" } }
 
     expect(room.reload.panorama_derived_ok).to be(false)
     expect(room.panorama_alt).to eq("A lecture hall")

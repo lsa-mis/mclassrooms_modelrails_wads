@@ -41,15 +41,10 @@ RSpec.describe "Editor hides a room", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "AAA violations on the room page in edit mode (pre-hide):\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
 
-    uncheck I18n.t("rooms.edit.listed_label"), allow_label_click: true
-
     accept_confirm(I18n.t("rooms.hide.editor_confirmation")) do
-      click_button I18n.t("rooms.edit.submit")
+      uncheck I18n.t("rooms.edit.listed_label"), allow_label_click: true
     end
 
-    # RoomsController#hide redirects to policy(@room).show? ? room_path :
-    # find_a_room_path — false for the now-hidden room under this editor's
-    # grant, so the editor lands on Find a Room, not back on the room.
     expect(page).to have_current_path(find_a_room_path)
     expect(page).to have_content(I18n.t("rooms.hide.success"))
 

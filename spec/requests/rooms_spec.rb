@@ -1107,13 +1107,9 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(room.reload.nickname).to eq("Old Name")
     end
 
-    # Room's own `content_type: [:png, :jpeg, :webp]` validation on :panorama
-    # is the natural, already-existing validation reachable through this form —
-    # a PDF is allowed for seating_chart but not the panorama, so attaching one
-    # here is a genuine ActiveRecord::RecordInvalid, not a stub.
-    it "re-renders :edit with 422 on a validation failure and writes no ActivityLog" do
+    it "re-renders :edit with 422 on a panorama validation failure and writes no ActivityLog" do
       expect {
-        patch room_path(room), params: {
+        patch room_panorama_path(room), params: {
           room: { panorama: fixture_file_upload("seating_chart.pdf", "application/pdf") }
         }
       }.not_to change(ActivityLog, :count)
@@ -1122,37 +1118,24 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(room.reload.panorama).not_to be_attached
     end
 
-    # Pins the documented trade-off in #update's comment: curated and media
-    # changes are now TWO separate Curation::Apply calls (two transactions),
-    # so a valid curated change can commit even though the accompanying media
-    # change fails validation in the same request — the nickname save is not
-    # rolled back by the panorama's content_type rejection. Exactly one
-    # ActivityLog ("room.updated") is written; no "room.media_updated" row
-    # exists for the failed media half.
-    it "commits the curated change even when the accompanying media change fails validation" do
+    it "takes only the room's own fields: media sent to the room update is ignored" do
       expect {
         patch room_path(room), params: {
-          room: {
-            nickname: "New Name",
-            panorama: fixture_file_upload("seating_chart.pdf", "application/pdf")
-          }
+          room: { nickname: "New Name", panorama: fixture_file_upload("room.jpg", "image/jpeg") }
         }
       }.to change(ActivityLog, :count).by(1)
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to redirect_to(room_path(room))
       expect(room.reload.nickname).to eq("New Name")
       expect(room.panorama).not_to be_attached
-
-      log = ActivityLog.last
-      expect(log.action).to eq("room.updated")
-      expect(ActivityLog.where(action: "room.media_updated").count).to eq(0)
+      expect(ActivityLog.last.action).to eq("room.updated")
     end
 
     it "adds a photo from an empty add-photo row, in the room's workspace" do
       create(:media_asset, owner: room, workspace: workspace, position: 1)
 
       expect {
-        patch room_path(room), params: { room: { gallery_attributes: {
+        patch room_gallery_path(room), params: { room: { gallery_attributes: {
           "1" => { position: "2", image: fixture_file_upload("room.jpg", "image/jpeg") }
         } } }
       }.to change { room.gallery.count }.from(1).to(2)
@@ -1165,7 +1148,7 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       first = create(:media_asset, owner: room, workspace: workspace, position: 1)
       second = create(:media_asset, owner: room, workspace: workspace, position: 2)
 
-      patch room_path(room), params: {
+      patch room_gallery_path(room), params: {
         room: { gallery_attributes: {
           "0" => { id: first.id, position: "2" },
           "1" => { id: second.id, position: "1" }
@@ -1178,39 +1161,19 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(second.reload.position).to eq(1)
     end
 
-    # Whole-branch review regression (Important): the exact parallel of
-    # BuildingsController's floors_attributes guard
-    # (spec/requests/buildings_spec.rb "422s and mutates nothing when
-    # floors_attributes references another building's floor id") had no
-    # analogue here — a gallery_attributes row whose `:id` belongs to
-    # ANOTHER room raises ActiveRecord::RecordNotFound from inside
-    # `Room#assign_attributes` (via
-    # `assign_nested_attributes_for_collection_association`), BEFORE
-    # Curation::Apply's own transaction (and its RecordInvalid/
-    # RecordNotDestroyed rescue) ever runs. Left unguarded that bubbles up to
-    # ApplicationController's blanket `rescue_from ActiveRecord::RecordNotFound`
-    # — a redirect-bounce off the edit page, not the documented graceful 422
-    # re-render. Fails against the pre-fix controller (raises, uncaught by
-    # Curation::Apply, surfaced as a redirect by the global rescue_from);
-    # passes against the pre-Curation::Apply id guard (422, :edit
-    # re-rendered, neither room's gallery touched).
     it "422s and mutates nothing when gallery_attributes references another room's gallery image id" do
       other_building = create(:building, workspace: workspace)
       other_room = create(:room, building: other_building, workspace: workspace)
       foreign_image = create(:media_asset, owner: other_room, workspace: workspace, position: 3)
 
       expect {
-        patch room_path(room), params: {
-          room: {
-            nickname: "New Name",
-            gallery_attributes: { "0" => { id: foreign_image.id, position: "1" } }
-          }
+        patch room_gallery_path(room), params: {
+          room: { gallery_attributes: { "0" => { id: foreign_image.id, position: "1" } } }
         }
       }.not_to raise_error
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(page.find("dialog#gallery-editor", visible: :all).text(:all)).to include(I18n.t("rooms.edit.stale_gallery"))
-      expect(room.reload.nickname).to eq("Old Name")
       expect(room.gallery.reload).to be_empty
       expect(foreign_image.reload.position).to eq(3)
       expect(foreign_image.owner).to eq(other_room)

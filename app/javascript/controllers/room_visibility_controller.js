@@ -1,16 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["switch", "submit"]
+  static targets = ["form", "switch"]
   static values = { confirm: String }
 
-  sync() {
-    if (!this.hasSwitchTarget || !this.hasSubmitTarget) return
-
-    if (this.switchTarget.defaultChecked && !this.switchTarget.checked) {
-      this.submitTarget.dataset.turboConfirm = this.confirmValue
-    } else {
-      delete this.submitTarget.dataset.turboConfirm
+  toggle() {
+    if (!this.switchTarget.checked && !window.confirm(this.confirmValue)) {
+      this.switchTarget.checked = true
+      return
     }
+
+    this.formTarget.requestSubmit()
   }
 }

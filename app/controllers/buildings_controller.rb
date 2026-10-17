@@ -96,12 +96,6 @@ class BuildingsController < ApplicationController
     load_floors
   end
 
-  # Routes the whole payload — nickname, photo (+ remove_photo), and each
-  # floor's plan (+ remove_plan) — through Curation::Apply.call in ONE
-  # transaction (spec D13), exactly like RoomsController#update. Attachment
-  # operations aren't dirty-tracked, so their before_after diff is empty —
-  # the "building.curated" action string is their audit signal; a genuine
-  # column change (nickname) still appears in the diff normally.
   def update
     authorize @building
     attrs = building_params.to_h
@@ -131,17 +125,6 @@ class BuildingsController < ApplicationController
       return
     end
 
-    # Preloaded BEFORE Curation::Apply.call, not just before a failure
-    # re-render: a floor RECEIVING A NEW plan upload is the one case
-    # Building#save!'s autosave cascade actually (re-)validates this
-    # request — remove_plan alone or an untouched floor (skipped by
-    # Building#floors' reject_if) never registers as `changed_for_autosave?`
-    # (see this method's own comment), so preloading every floor
-    # unconditionally flagged Bullet's OWN "unused eager loading" check on
-    # the remove-only path. Scoping the preload to just the touched
-    # floor(s) satisfies both directions. Mirrors RoomsController#update's
-    # `preload_gallery_image_attachments` call before its own
-    # Curation::Apply.call.
     preload_new_floor_plan_attachments(attrs)
     result = Curation::Apply.call(record: @building, actor: Current.user,
                                   attributes: attrs, action: "building.curated")

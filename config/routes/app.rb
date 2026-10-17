@@ -21,9 +21,11 @@ resources :saved_rooms, only: [ :create, :destroy ]
 resources :rooms, only: [ :show, :edit, :update ] do
   scope module: :rooms do
     resource :floor_plan, only: :show
-    resource :panorama, only: :destroy
-    resource :seating_chart, only: :destroy
+    resource :panorama, only: [ :update, :destroy ]
+    resource :seating_chart, only: [ :update, :destroy ]
+    resource :gallery, only: :update
     resources :photos, only: :destroy
+    resource :hiding, only: [ :create, :destroy ]
   end
 end
 

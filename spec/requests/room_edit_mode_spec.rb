@@ -59,8 +59,8 @@ RSpec.describe "Room page view and edit modes", type: :request do
       expect(page).to have_field(I18n.t("rooms.edit.nickname_label"))
       expect(page).to have_css("input[name='room[nickname]'][form='room-edit-form']")
       expect(page).to have_css("input[name='room[ada_seat_count]'][form='room-edit-form'][value='2']")
-      expect(page).to have_css("input[role='switch'][name='room[listed]'][form='room-edit-form'][checked]")
-      expect(page).to have_css("input[type='hidden'][name='room[listed]'][value='0'][form='room-edit-form']", visible: :all)
+      expect(page).to have_css("form[action='#{room_hiding_path(room)}'] input[role='switch'][checked]")
+      expect(page).to have_no_css("[form='room-edit-form'][name='room[listed]']", visible: :all)
       expect(page).to have_button(I18n.t("rooms.edit.submit"))
       expect(page).to have_css("button[form='room-edit-form']", text: I18n.t("rooms.edit.submit"))
       expect(page).to have_link(I18n.t("rooms.edit.cancel"), href: room_path(room))
@@ -94,8 +94,8 @@ RSpec.describe "Room page view and edit modes", type: :request do
 
       expect(page).to have_button(I18n.t("rooms.edit.edit_panorama"))
       expect(page).to have_button(I18n.t("rooms.edit.add_seating_chart"))
-      expect(page).to have_css("dialog form[action='#{room_path(room)}'] input[type='file'][name='room[panorama]']", visible: :all)
-      expect(page).to have_css("dialog form[action='#{room_path(room)}'] input[type='file'][name='room[seating_chart]']", visible: :all)
+      expect(page).to have_css("dialog form[action='#{room_panorama_path(room)}'] input[type='file'][name='room[panorama]']", visible: :all)
+      expect(page).to have_css("dialog form[action='#{room_seating_chart_path(room)}'] input[type='file'][name='room[seating_chart]']", visible: :all)
     end
 
     it "tells an admin that a room outside the Facilities feed isn't listed, whatever the switch says" do
@@ -164,14 +164,14 @@ RSpec.describe "Room page view and edit modes", type: :request do
     end
   end
 
-  describe "saving (PATCH /rooms/:id)" do
+  describe "saving a media dialog" do
     def stray_upload
       Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/stray.txt"), "text/plain")
     end
 
     it "re-renders the room page in edit mode and reopens the seating chart dialog when its upload fails" do
       sign_in(admin)
-      patch room_path(room), params: { room: { seating_chart: stray_upload } }
+      patch room_seating_chart_path(room), params: { room: { seating_chart: stray_upload } }
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(page).to have_css("[data-room-mode='edit']")
@@ -181,7 +181,7 @@ RSpec.describe "Room page view and edit modes", type: :request do
 
     it "reports a stale gallery row inside the reopened photos sheet" do
       sign_in(admin)
-      patch room_path(room), params: { room: { gallery_attributes: { "0" => { id: "999999", position: "1" } } } }
+      patch room_gallery_path(room), params: { room: { gallery_attributes: { "0" => { id: "999999", position: "1" } } } }
 
       expect(response).to have_http_status(:unprocessable_entity)
       sheet = page.find("[data-modal-open-value='true'] dialog#gallery-editor", visible: :all)
@@ -190,7 +190,7 @@ RSpec.describe "Room page view and edit modes", type: :request do
 
     it "reopens the panorama dialog when a panorama upload fails" do
       sign_in(admin)
-      patch room_path(room), params: { room: { panorama: stray_upload } }
+      patch room_panorama_path(room), params: { room: { panorama: stray_upload } }
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(page).to have_css("[data-modal-open-value='true'] dialog#panorama-editor", visible: :all)

@@ -157,10 +157,12 @@ and closes it in another, so the templates stay well-formed for an
 HTML-aware ERB engine (Herb, in Rails 8.2).
 
 - **One form, inputs in place.** `_page` renders an empty
-  `form#room-edit-form`. The nickname, ADA seat count and listing switch are
-  built with `fields model:` and carry `form: "room-edit-form"`, so they can
-  sit anywhere in the layout without wrapping the page in a `<form>`. Media
-  and note forms stay separate elements; nesting forms is invalid HTML.
+  `form#room-edit-form`, which `PATCH`es `RoomsController#update`. The
+  nickname and ADA seat count are built with `fields model:` and carry
+  `form: "room-edit-form"`, so they can sit anywhere in the layout without
+  wrapping the page in a `<form>`. That update takes only those two fields;
+  a media or visibility param sent to it is dropped. The listing switch,
+  media and note forms stay separate elements; nesting forms is invalid HTML.
 - **Media editors.** In edit mode `_page` wraps the stage (or empty band)
   in a `media-dock` with `rooms/edit/_media_strip` fused to its top edge:
   a summary and, for admins, `rooms/edit/_panorama_editor` (`ui :dialog`)
@@ -170,9 +172,10 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   seating chart's `_seating_chart_editor` (`ui :dialog`) lives on its
   thumbnail in the documents card. All three are full-size dialogs that
   put a large preview (`_media_preview`, a `<label>` for the file input)
-  beside the alt text and description. Each holds its own form posting to
-  `#update`, with its submit button in the dialog footer pointed at the
-  form by `form=`. **Upload new** is `ui :file_input` with `show_selection`
+  beside the alt text and description. Each holds its own form, `PATCH`ing
+  its own resource (`Rooms::PanoramasController`,
+  `Rooms::SeatingChartsController` or `Rooms::GalleriesController#update`),
+  with its submit button in the dialog footer pointed at the form by `form=`. **Upload new** is `ui :file_input` with `show_selection`
   behind a label (`_media_actions`) that shows "Upload new panorama" or
   "Upload new photo". The input's `aria-label` repeats those words and adds
   only the photo number (WCAG 2.5.3, Label in Name); it outranks the
@@ -188,7 +191,7 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   its owner's `workspace_id` on create (ids only, so saving a gallery
   loads no workspaces), and an explicit mismatch is still rejected.
 - **Media saves land in place.** A media dialog's successful save answers
-  a Turbo request with `rooms/update.turbo_stream.erb`: it morphs
+  a Turbo request with `rooms/media/update.turbo_stream.erb`: it morphs
   `#room_media_strip` and `#room_documents` (their dialogs come back closed,
   with fresh previews and empty add-photo rows), replaces the contents of
   `#room_media_view` (a morph would strip the panorama viewer's
@@ -201,9 +204,9 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   (`form_reset_controller.js`, on `turbo:submit-end`), and the preview
   restores from its image's `data-saved-src`, which the morph keeps current.
   Without Turbo the save redirects
-  to `edit`. "Save room" and the visibility switch still return to the
-  view page. `#edit`, the failure re-render and this response share
-  `prepare_edit_page`, and `RoomPresenter#stage_photos` is the one
+  to `edit`. "Save room" still returns to the view page. `#edit`, the
+  failure re-render and this response share `prepare_edit_page` (the
+  `RoomEditPage` concern), and `RoomPresenter#stage_photos` is the one
   definition of the stage's photos. The stream template lists its regions
   by hand; a reactive template engine (ReActionView) that re-renders the
   page itself would replace it.
@@ -219,7 +222,7 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   a toast outside an open modal is ignored by the accessibility tree
   (`activeModalDialog`), so the message must live in the dialog. A photo is
   numbered by its row in the editor, `Room#gallery_by_position` (position,
-  then id), never by its stored `position`, which can have gaps and ties. `#update` no longer takes removal flags. The
+  then id), never by its stored `position`, which can have gaps and ties. The
   floor plan is `resource :floor_plan` (`Rooms::FloorPlansController`);
   nested controllers find their room through the `RoomScoped` concern.
 - **Floor plan page** (`Rooms::FloorPlansController#show`). It lists the
@@ -236,25 +239,27 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   mode). Turbo therefore never carries the edit page's stage over to the
   view page, so a replaced panorama shows on save while the view page
   still keeps its booted viewer across refreshes.
-- **Visibility rides on `#update`.** `room[listed]` is permitted alongside
-  the curated params. A value that differs from the room's state is
-  authorized with `hide?` or `unhide?` before anything is written, so an
-  editor's one-way hide holds against a crafted request. The change applies
-  through `Room#hide!`/`#unhide!` (their own audit rows) only after the
-  curated and media halves succeed. An editor who hides a room is redirected
-  to Find a Room, as they can no longer see it. The standalone
-  `hide`/`unhide` member routes are gone; buildings keep theirs.
-  `room_visibility_controller.js` puts the existing hide confirmation on
-  **Save changes** only when the switch went from on to off. The switch is
-  the curator's flag only: `Room.listed` also needs `in_feed`, so for a room
-  the sync has dropped, the switch carries a description saying Find a Room
-  won't list it until it returns.
+- **Visibility is its own resource.** The listing switch sits in its own
+  small form (`rooms/_visibility`): `POST /rooms/:id/hiding` hides the room
+  and `DELETE` lists it again (`Rooms::HidingsController`), authorized with
+  `hide?` and `unhide?`, so an editor's one-way hide holds against a crafted
+  request. `Room#hide!`/`#unhide!` write their own audit rows. Toggling the
+  switch saves at once: `room_visibility_controller.js` asks the hide
+  confirmation first and puts the switch back if it is declined, and the
+  Turbo answer morphs the switch (focus stays on it), refreshes
+  `#room_media_view` for the hidden overlay, and appends a toast. Nothing
+  navigates, so an unsaved nickname edit survives the toggle. An editor who
+  hides a room is redirected to Find a Room, as they can no longer see it.
+  Buildings use the same shape (`Buildings::HidingsController`). The switch
+  is the curator's flag only: `Room.listed` also needs `in_feed`, so for a
+  room the sync has dropped, the switch carries a description saying Find a
+  Room won't list it until it returns.
 - **Failure re-render.** A failed save renders `edit` with a 422. The page
   draws from a freshly loaded copy of the room (`@display_room`), because
   the failed record can hold an unsaved attachment that can't be previewed.
   Its forms bind to the failed record, so values and errors survive.
-  `@open_media` reopens the dialog that was submitted (`media_slot` reads
-  which media keys came in).
+  `@open_media` reopens the dialog that was submitted; each media controller
+  passes its own slot.
 - **Notes.** The composer renders only in edit mode (`notes/_list`'s
   `editing:` local; the building page keeps the default). A note's Edit,
   Delete and Reply controls still render by policy, because Turbo broadcasts
@@ -265,21 +270,35 @@ HTML-aware ERB engine (Herb, in Rails 8.2).
   and a warning pill over the media stage or empty band. Only admins can
   reach a hidden room, so only they see it.
 
-### The strong-params boundary
+### Who may save what
 
-`CURATED_PARAMS` (nickname, ADA seat count) is always permitted, and
-`MEDIA_PARAMS` only when `RoomPolicy#manage_media?` (admins). The media
-metadata (`*_alt`, `*_description`) stays in `MEDIA_PARAMS`,
-behind the same gate as the attachments. The `*_derived_ok` columns are retired:
-not editable, not permitted, and ignored by `Describable#alt_status_for`, so
-an image without authored alt text counts as needs-review on
+`RoomsController#update` permits only `CURATED_PARAMS` (nickname, ADA seat
+count), which `RoomPolicy#update?` opens to the room's unit editor. Each
+media resource authorizes `manage_media?` (admins) and permits only its own
+slot's fields, so the media gate is the policy check on the resource, not a
+branch in strong params. The `*_derived_ok` columns are retired: not
+editable, not permitted, and ignored by `Describable#alt_status_for`, so an
+image without authored alt text counts as needs-review on
 `media:alt_coverage`, whatever an old flag says. `gallery_attributes` uses the
 double-array `[[ ... ]]` shape `params.expect` needs for a hash of nested
 rows: the single-array shape silently permits nothing, which would break
 every gallery add, reorder and delete. The media editors resubmit the
-metadata fields on every save, so `media_metadata_changed?` compares each one
-with the room's current value (`to_s` on both sides, so nil and "" match)
-rather than testing for presence.
+metadata fields on every save, so `media_change?` compares each one with the
+room's current value (`to_s` on both sides, so nil and "" match) rather than
+testing for presence, and a save that changes nothing writes no audit row.
+
+The gallery save checks every submitted row `id` against the room's own
+gallery first. A row naming another room's photo, or one deleted since the
+page loaded, would otherwise raise `RecordNotFound` inside
+`assign_attributes`, before `Curation::Apply`'s transaction opens, and the
+app-wide handler would bounce the editor off the page instead of re-rendering
+the photos dialog with the stale-row error. It then preloads the attachments
+of the rows it will validate, and only those: `with_attached_image` or an
+unscoped preload trips Bullet's unused-eager-load check.
+`BuildingsController#update` follows the same two rules for floors
+(`stale_floor_ids?`, then a preload limited to floors receiving a new plan),
+and saves the building's fields, photo and floor plans in one
+`Curation::Apply` transaction (`building.curated`).
 
 ## Public pages
 
