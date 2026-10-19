@@ -14,13 +14,10 @@ RSpec.describe "Saving a room media dialog in place", type: :request do
 
   before { sign_in(membership_with("admin")) }
 
-  def streams = Nokogiri::HTML5.fragment(response.body).css("turbo-stream")
-  def stream_shape = streams.map { [ it["action"], it["target"], it["method"] ] }
-
   it "closes the panorama dialog, refreshes the media in place and says it saved" do
     attach_panorama!(room)
 
-    patch room_path(room), params: { room: { panorama_alt: "Tiered lecture hall" } }, headers: turbo
+    patch room_panorama_path(room), params: { room: { panorama_alt: "Tiered lecture hall" } }, headers: turbo
 
     expect(response.media_type).to eq("text/vnd.turbo-stream.html")
     expect(room.reload.panorama_alt).to eq("Tiered lecture hall")
@@ -36,7 +33,7 @@ RSpec.describe "Saving a room media dialog in place", type: :request do
   end
 
   it "renders the seating chart dialog closed in the refreshed documents card" do
-    patch room_path(room), params: { room: { seating_chart: fixture_file_upload("seating_chart.pdf", "application/pdf") } },
+    patch room_seating_chart_path(room), params: { room: { seating_chart: fixture_file_upload("seating_chart.pdf", "application/pdf") } },
                            headers: turbo
 
     expect(room.reload.seating_chart).to be_attached
@@ -48,7 +45,7 @@ RSpec.describe "Saving a room media dialog in place", type: :request do
   it "closes the photos dialog and rebuilds it with what was saved" do
     photo = create(:media_asset, owner: room, workspace: workspace, position: 1)
 
-    patch room_path(room), params: { room: { gallery_attributes: {
+    patch room_gallery_path(room), params: { room: { gallery_attributes: {
       "0" => { id: photo.id, image_alt: "Front row from the lectern" }
     } } }, headers: turbo
 
@@ -62,7 +59,7 @@ RSpec.describe "Saving a room media dialog in place", type: :request do
   it "returns to the edit page, not view mode, when the save isn't a Turbo request" do
     attach_panorama!(room)
 
-    patch room_path(room), params: { room: { panorama_alt: "Tiered lecture hall" } }
+    patch room_panorama_path(room), params: { room: { panorama_alt: "Tiered lecture hall" } }
 
     expect(response).to redirect_to(edit_room_path(room))
     expect(flash[:notice]).to eq(I18n.t("rooms.edit.panorama_saved"))
@@ -76,7 +73,7 @@ RSpec.describe "Saving a room media dialog in place", type: :request do
   end
 
   it "keeps a rejected media save on the edit page with its error" do
-    patch room_path(room), params: { room: { panorama: fixture_file_upload("seating_chart.pdf", "application/pdf") } },
+    patch room_panorama_path(room), params: { room: { panorama: fixture_file_upload("seating_chart.pdf", "application/pdf") } },
                            headers: turbo
 
     expect(response).to have_http_status(:unprocessable_entity)

@@ -115,8 +115,7 @@ RSpec.describe "Flash messages are asserted, not just redirects" do
       "app/controllers/admin/sync_scope_rules_controller.rb" => [ "result.errors.to_sentence" ],
       "app/controllers/admin/unit_display_names_controller.rb" => [ "result.errors.to_sentence" ],
       "app/controllers/notes_controller.rb" => [ 't("notes.toasts.#{action_name}")', "result.errors.to_sentence" ],
-      "app/controllers/rooms/media_controller.rb" => [ "result.errors.to_sentence" ],
-      "app/controllers/rooms_controller.rb" => [ 't("rooms.edit.#{@saved_media}_saved")' ]
+      "app/controllers/rooms/media_controller.rb" => [ "result.errors.to_sentence" ]
     }
   end
 

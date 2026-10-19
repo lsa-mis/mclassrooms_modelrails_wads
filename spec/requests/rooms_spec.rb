@@ -1,8 +1,5 @@
 require "rails_helper"
 
-# MiClassrooms navigation: the rooms index lives at /find-a-room, so /rooms is
-# a route-level convenience redirect (config/routes/app.rb) for anyone who types
-# or bookmarks the obvious URL. Route-level redirect — fires before auth.
 RSpec.describe "GET /rooms", type: :request do
   it "redirects to Find a Room" do
     get "/rooms"
@@ -10,12 +7,6 @@ RSpec.describe "GET /rooms", type: :request do
   end
 end
 
-# MiClassrooms Phase 3 Task 4 (Brief §5.2, §3.2): Find a Room's controller —
-# wires RoomSearch (Task 2), CharacteristicFilterGroups (Task 3), and
-# RoomPolicy (Task 1) into GET /find-a-room. DirectoryScoped resolves
-# Current.workspace off TenancyConfig.shared_workspace_slug (same stubbing
-# pattern as spec/requests/test_login_spec.rb and directory_scoped_spec.rb),
-# so every example below runs under a single shared workspace.
 RSpec.describe "GET /find-a-room", type: :request do
   let(:workspace) { create(:workspace, slug: "rooms-spec-workspace", personal: false) }
 
@@ -45,14 +36,8 @@ RSpec.describe "GET /find-a-room", type: :request do
       get find_a_room_path
 
       expect(response).to have_http_status(:ok)
-      # Card titles are room number + building (2026-07 redesign), not codes.
       expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
-      # Assert absence of each excluded room's full CARD TITLE (number +
-      # building), mirroring the positive check above. A bare room_number is a
-      # 4-digit string (sequence "%04d" -> "0106") that false-matches unrelated
-      # digits elsewhere in the body — e.g. a visible room's rmrecnbr link
-      # (/rooms/2000106 contains "0106") — once FactoryBot's global sequence
-      # shifts. The full card title is unique to the card and can't collide.
+      # Full card titles: a bare 4-digit room number collides with digits in rmrecnbr links.
       hidden_title = "#{hidden_classroom.room_number} #{hidden_classroom.building.display_name}"
       non_classroom_title = "#{non_classroom.room_number} #{non_classroom.building.display_name}"
       expect(response.body).not_to include(hidden_title)
@@ -81,12 +66,6 @@ RSpec.describe "GET /find-a-room", type: :request do
     end
   end
 
-  # Fix wave (task-8 review): the shared announcements/_banner partial is
-  # wired at this call site via @announcement = Announcement.for(:find_a_room_page)
-  # (RoomsController#index) — proves the render actually reaches the page
-  # (would fail if that call site were removed or the slot name typo'd),
-  # mirroring the home_page banner proof in
-  # spec/requests/admin/announcements_spec.rb.
   describe "the find_a_room_page banner" do
     let(:viewer) { membership_with("viewer") }
 
@@ -212,25 +191,11 @@ RSpec.describe "GET /find-a-room", type: :request do
     end
   end
 
-  # Regression guard for characteristics-filter + pagination (a common user
-  # path: "show me all projector rooms" spanning several pages). RoomSearch's
-  # `with_all_characteristics` merges in a GROUP BY rooms.id + HAVING relation,
-  # so `.count` on it is a GROUP BY count — which returns a Hash
-  # ({room_id => n}) on a bare ActiveRecord relation. Pagy 43.5.6 normalizes
-  # that Hash to `.size` (the number of matching groups) internally, so
-  # pagination.count/pages come out as the correct Integer and pages stay
-  # disjoint. This spec pins that end-to-end contract: nothing else in the
-  # suite guards it, so a future Pagy upgrade or a with_all_characteristics
-  # refactor that reintroduced the raw Hash would break characteristics
-  # pagination silently — here it would surface as `pagination.count` being a
-  # Hash (failing the `be_a(Integer)` teeth) and page 1's slice returning all
-  # 5 rooms instead of 2 (the Hash's truthy count defeating the LIMIT math).
+  # with_all_characteristics groups, so .count is a Hash; this pins that Pagy still pages it.
   describe "characteristics filter + pagination" do
     let(:viewer) { membership_with("viewer") }
     let(:building) { create(:building, workspace: workspace) }
-    # Already-normalized short_code: RoomSearch normalizes the query param via
-    # CodeNormalizer before matching room_characteristics.short_code, so the
-    # stored value must be in normalized form for the join to hit.
+    # Stored normalized: RoomSearch normalizes the query before matching short_code.
     let(:matching_code) { "projector" }
 
     let!(:matching_rooms) do
@@ -254,8 +219,6 @@ RSpec.describe "GET /find-a-room", type: :request do
         get find_a_room_path, params: { characteristics: [ matching_code ], per: "2", page: page.to_s }, as: :json
         json = response.parsed_body
 
-        # Grouped-relation count must surface as a plain Integer, never the
-        # raw GROUP BY Hash leaking through.
         expect(json["pagination"]["count"]).to be_a(Integer)
         expect(json["pagination"]["count"]).to eq(5)
         expect(json["pagination"]["pages"]).to eq(3)
@@ -266,26 +229,17 @@ RSpec.describe "GET /find-a-room", type: :request do
         seen_ids.concat(page_ids)
       end
 
-      # All 5 matching rooms seen exactly once across the 3 pages; the 2
-      # non-matching rooms never leaked in.
       expect(seen_ids).to match_array(matching_rooms.map(&:id))
       expect(seen_ids).not_to include(*non_matching_rooms.map(&:id))
     end
   end
 
-  # MiClassrooms Phase 3 Task 5 (Brief §5.2): the filter form + results Turbo
-  # Frame + admin view toggles. A basic render/interaction check per the task
-  # brief — the comprehensive axe-AAA pass is Task 8; this only proves the
-  # screen assembles (frame id, fieldset/legend groups, summary line) and that
-  # a filter change narrows the SAME frame's results without a full reload.
   describe "Task 5 UI: filter form, results frame, admin toggles" do
     let(:building) { create(:building, workspace: workspace, name: "Mason Hall") }
     let!(:listed_classroom) { create(:room, building: building, workspace: workspace, facility_code: "MLB1001") }
 
     before do
-      # A described characteristic ("Category: Value") so CharacteristicFilterGroups
-      # produces a real named group — proves the fieldset/legend-per-group markup,
-      # not just the "Other" catch-all a bare short_code would fall into.
+      # Described, so it lands in a named group rather than the Other catch-all.
       create(:room_characteristic, room: listed_classroom, workspace: workspace,
              short_code: "seating_fixed", description: "Seating: Fixed")
     end
@@ -317,10 +271,8 @@ RSpec.describe "GET /find-a-room", type: :request do
       get find_a_room_path, params: { building: "Mason" }
 
       expect(response.body).to include('id="find_a_room_results"')
-      # Card titles are room number + building (2026-07 redesign), not codes.
       expect(response.body).to include("#{listed_classroom.room_number} #{listed_classroom.building.display_name}")
-      # full title, not the bare 4-digit number — sequences can collide with
-      # unrelated digits elsewhere in the page (seat counts, other numbers)
+      # Full title: a bare 4-digit room number collides with other digits on the page.
       expect(response.body).not_to include("#{other_room.room_number} #{other_room.building.display_name}")
     end
 
@@ -341,23 +293,10 @@ RSpec.describe "GET /find-a-room", type: :request do
       expect(response.body).to include(I18n.t("rooms.index.views.inactive_buildings"))
     end
 
-    # Exercises the row branches a bare factory room never touches: a gallery
-    # thumbnail (Active Storage variant), the ADA badge, and a real
-    # characteristic icon chip (icon_key must resolve via IconRegistry — the
-    # display_rule factory's own default "wifi" isn't a real icon, so this
-    # proves the happy path with one that is). None of this is covered
-    # elsewhere, so a regression here (e.g. a bad variant call) would
-    # otherwise only surface in Task 8's system specs. (The buildings card
-    # grid was dropped in the 2026-07 redesign — cards carry the building
-    # name themselves.)
     it "renders a gallery thumbnail, ADA badge, and characteristic icon chip" do
       listed_classroom.update!(ada_seat_count: 5)
       create(:media_asset, owner: listed_classroom, workspace: workspace)
-      # Normalization-stable short_code: RoomCharacteristic stores the raw value
-      # while CharacteristicDisplayRule normalizes via CodeNormalizer (strips
-      # non-alphanumerics), so the row's icon-key join only hits when the code
-      # survives normalization unchanged. "projector" does; "seating_fixed"
-      # would not (the underscore is stripped to "seatingfixed").
+      # "projector" survives CodeNormalizer unchanged; "seating_fixed" would not.
       create(:room_characteristic, room: listed_classroom, workspace: workspace,
              short_code: "projector", description: "Media: Projector")
       create(:characteristic_display_rule, workspace: workspace, short_code: "projector", icon_key: "computer_desktop")
@@ -367,24 +306,13 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("rooms.row.ada", count: 5))
-      # The pre-redesign "Buildings" section heading must stay gone. Element-
-      # shaped match, not a bare substring — "Buildings" can appear in names.
-      # (The old rooms.index.buildings_heading key was deleted with the layout.)
+      # Element-shaped: "Buildings" can appear in building names.
       expect(response.body).not_to match(%r{>\s*Buildings\s*<})
     end
 
-    # Teeth for the nested-interactive a11y posture: card chips are plain,
-    # LABELED spans, and the <details> <summary> — now the "+N more features"
-    # toggle (2026-07-14 unified-chiclet redesign) — must contain NO
-    # focusable/interactive descendant: HTML5 forbids focusable descendants of
-    # <summary>, and axe-core's nested-interactive rule flags exactly a
-    # `tabindex`-bearing tooltip wrapper here. The room needs more than
-    # CARD_TAG_LIMIT chips so a remainder disclosure actually renders;
-    # "projdigit" (CARD_TAG_CODES index 0, locale override "Projector") leads
-    # the always-visible strip.
+    # A <summary> may hold no focusable descendant (axe nested-interactive); needs over CARD_TAG_LIMIT chips.
     it "renders a labeled card chip and no focusable element in the summary" do
-      # 5 chips total (4 here + seating_fixed from the before) → a strip of 4 +
-      # a one-item remainder disclosure whose summary must stay focusable-free.
+      # 5 chips: a strip of 4 plus a one-item remainder disclosure.
       create(:room_characteristic, room: listed_classroom, workspace: workspace,
              short_code: "projdigit", description: "Projection: Digital Data&Video")
       %w[lecturecap doccam whtbrd].each do |code|
@@ -395,9 +323,6 @@ RSpec.describe "GET /find-a-room", type: :request do
 
       get find_a_room_path
 
-      # The visible chip rides the card-body strip (not the summary — that's now
-      # the "+N more features" toggle, which must stay free of focusable/
-      # interactive descendants).
       page = Capybara.string(response.body)
       card = page.all("li").find { |li| li.has_text?("Projector") }
       expect(card).to be_present
@@ -408,20 +333,6 @@ RSpec.describe "GET /find-a-room", type: :request do
   end
 end
 
-# MiClassrooms Phase 4 Task 3 (Brief §5.3, phase-4 plan Task 3): room detail —
-# HTML + JSON, D14 conditional GET, and the hidden-room redirect. A sibling
-# top-level example group (not nested in "GET /find-a-room" above) so its
-# ETag-busting mutations (notes, gallery images, attachments) can't leak
-# state into the Find-a-Room examples. Mirrors the same tenancy setup:
-# shared-posture stub + workspace-scoped fixtures + `sign_in`.
-#
-# `app/views/rooms/show.html.erb` doesn't exist yet — it ships in Task 4 — so
-# every example below requests `as: :json` even where the brief's language
-# ("200 on a listed room") doesn't name a format; an unqualified HTML request
-# would hit `respond_to`'s `format.html` branch and raise
-# ActionView::MissingTemplate before Task 4 adds the view. The hidden-room
-# redirect is safe to request in the default (HTML) format because it fires
-# from a before_action, before the controller ever reaches `respond_to`.
 RSpec.describe "GET /rooms/:id", type: :request do
   let(:workspace) { create(:workspace, slug: "rooms-show-spec-workspace", personal: false) }
 
@@ -453,16 +364,8 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(flash[:notice]).to eq(I18n.t("rooms.inactive_notice"))
     end
 
-    # Regression guard (review fix): rooms/_media.html.erb's seating-chart
-    # IMAGE branch used to reuse `rooms.show.seating_chart_link` — "Seating
-    # chart for %{room} (PDF)" — as its `alt:`, falsely telling screen-reader
-    # users an image attachment was a PDF. The dedicated `seating_chart_alt`
-    # key (no "(PDF)" suffix) must render instead whenever the attachment's
-    # content_type isn't application/pdf.
     it "renders an image seating chart's alt without the PDF suffix" do
-      # This test exercises the derived backstop specifically (no authored
-      # seating_chart_alt) — the :room factory now defaults to an authored
-      # alt (Task 6 factory-hygiene ratchet), so nil it out here.
+      # The factory authors an alt; clear it to reach the derived fallback.
       room.update!(seating_chart_alt: nil)
       room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
@@ -472,17 +375,11 @@ RSpec.describe "GET /rooms/:id", type: :request do
 
       get room_path(room)
 
-      # The image path's alt comes from the Describable resolver
-      # (Room.describable :seating_chart), not a view-local key.
       expect(response.body).to include(I18n.t("media.derived_alt.seating_chart", room: room.display_name))
       expect(response.body).not_to include("(PDF)")
     end
 
-    # Task 10 fix round 2: no display path may serve an original image blob.
-    # HEIC/HEIF are now accepted uploads and browsers cannot decode HEIC, so a
-    # raw blob URL in a viewer/img slot renders a broken image for exactly the
-    # phone-photo uploads the widened allowlist exists for. Every display
-    # render must resolve through a declared webp variant instead.
+    # Browsers can't decode HEIC uploads, so every display path serves a webp variant.
     it "serves the panorama viewer texture as a variant, never the original blob" do
       room.panorama.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
@@ -511,9 +408,6 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).to include(rails_representation_path(room.seating_chart.variant(:lightbox)))
     end
 
-    # Guard the guard: a PDF seating chart has no browser-renderable variant
-    # (`.variant` on a PDF raises) — the PDF-guarded branch must keep linking
-    # to the original blob, inline.
     it "still links a PDF seating chart to its original blob" do
       room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/seating_chart.pdf")),
@@ -526,15 +420,6 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).to include(%(href="#{rails_blob_path(room.seating_chart, disposition: :inline)}"))
     end
 
-    # Two-mode media stage (2026-08-07): the retired grid served :thumb in
-    # the pane and only opened :full inside a separate lightbox. The stage
-    # now renders full-frame photo slides directly, and each slide's own
-    # popout trigger points at that same rendition — so the frame serves
-    # :full end to end, never upscaling a smaller thumb. (The chip swatch,
-    # which only exists when a room has both a panorama and photos, serves
-    # :card instead — see "renders the chip swatch at :card" below.) The
-    # original gallery blob (possibly HEIC, which browsers can't decode) must
-    # never reach the page.
     it "serves the photo frame at :full, never the original blob" do
       asset = create(:media_asset, owner: room, workspace: workspace)
 
@@ -544,11 +429,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).not_to include(rails_blob_path(asset.image))
     end
 
-    # Final fix round (F7): the chip only renders when a room has both a
-    # panorama and photos, and its swatch is a distinct render call from the
-    # frame's :full slides — pin it separately so a future edit can't widen
-    # the chip to :full (a much larger download for a 44x32 swatch) without
-    # this failing.
+    # Pinned on its own so the 44x32 swatch can't widen to :full.
     it "renders the chip swatch at :card" do
       room.panorama.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/equirect.png")),
@@ -562,10 +443,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response.body).to include(rails_representation_path(asset.image.variant(:card)))
     end
 
-    # Task 11 fix round 1: RoomPresenter#media_json walks asset.image per
-    # gallery row, and set_room loads @room via a plain find (no preload) — so
-    # the JSON path N+1s on image_attachment as soon as a room has 2+ assets
-    # (Bullet raises; a single-asset room can't trip it, which is how it hid).
+    # Needs two or more assets: one can't trip the N+1.
     it "serves the JSON gallery for multiple assets without an attachment N+1" do
       create(:media_asset, owner: room, workspace: workspace, position: 1)
       create(:media_asset, owner: room, workspace: workspace, position: 2)
@@ -577,12 +455,6 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(json["media"]["gallery_urls"]).to all(include("/rails/active_storage/representations/"))
     end
 
-    # Phase 5 realty-model retrofit (supersedes the original Task 8 admin-only
-    # gate — see git history for the superseded RoleResolver predicate):
-    # BuildingPolicy#show? opens a non-hidden building's detail page to any
-    # viewer, mirroring RoomPolicy#show? exactly — so rooms/_header.html.erb's
-    # `policy(room.building).show?` gate renders the crumb as a REAL link for
-    # a viewer once the building isn't hidden.
     it "renders the building breadcrumb crumb as a link when the building is not hidden" do
       get room_path(room)
 
@@ -613,10 +485,6 @@ RSpec.describe "GET /rooms/:id", type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    # MiClassrooms Phase 4 Task 8 breadcrumb retrofit: an admin CAN follow
-    # the building crumb (BuildingsController grants them every action), so
-    # rooms/_header.html.erb renders it as a real link once building_path
-    # exists.
     it "renders the building breadcrumb crumb as a link to the admin building page" do
       get room_path(room)
 
@@ -629,14 +497,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
 
     before do
       sign_in(viewer)
-      # Rails' built-in ActionController::EtagWithFlash folds `flash` into the
-      # ETag (so a stale cache never hides a flash message) — `sign_in`'s
-      # `post session_path` leaves a "Signed in successfully." notice that
-      # would otherwise survive into the FIRST request below and inflate that
-      # request's ETag with flash content the second, comparison request
-      # never sees (flash is one-request-lived), producing a spurious
-      # mismatch unrelated to the room. This warm-up request drains it before
-      # any example starts comparing ETags across two requests.
+      # Drains sign-in's flash first: Rails' EtagWithFlash folds flash into the ETag.
       get room_path(room), as: :json
     end
 
@@ -726,10 +587,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       get room_path(room), as: :json
       etag = response.headers["ETag"]
 
-      # has_one_attached replace = purge the old attachment row + create a new
-      # one (never an UPDATE-in-place), so the new row's created_at becomes
-      # the new max — proving media_attachments.maximum(:created_at) tracks
-      # replace, not just first-insert.
+      # Replacing attaches a new row, so its created_at moves the max.
       room.seating_chart.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
         filename: "room-replacement.png",
@@ -752,9 +610,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       get room_path(room), as: :json
       etag = response.headers["ETag"]
 
-      # purge (not purge_later): the row must be gone before the very next
-      # request. media_attachments.maximum(:created_at) drops to nil, which
-      # show_last_modified's `.compact.max` already tolerates.
+      # purge, not purge_later: the row must be gone before the next request.
       room.seating_chart.purge
 
       get room_path(room), headers: { "If-None-Match" => etag }, as: :json
@@ -768,10 +624,7 @@ RSpec.describe "GET /rooms/:id", type: :request do
       viewer_etag = response.headers["ETag"]
 
       Membership.find_by!(user: viewer, workspace: workspace).update!(role: Role.system_default!("admin"))
-      # Re-signing in (rather than just re-roling and reusing the session)
-      # leaves a fresh "Signed in successfully." flash — same warm-up-drain
-      # concern as the outer before block, so drain it before the comparison
-      # request.
+      # Re-signing in leaves a fresh flash; drain it before comparing ETags.
       sign_in(viewer)
       get room_path(room), as: :json
 
@@ -801,10 +654,6 @@ RSpec.describe "GET /rooms/:id", type: :request do
     end
 
     before do
-      # Normalization-stable short_code (RoomCharacteristic#short_code is NOT
-      # model-normalized, unlike CharacteristicDisplayRule#short_code, which
-      # goes through CodeNormalizer — an underscore here would only matter if
-      # this spec also created a matching display rule, which it doesn't).
       create(:room_characteristic, room: full_room, workspace: workspace, short_code: "projector")
       create(:room_contact, room: full_room, workspace: workspace)
       sign_in(viewer)
@@ -844,14 +693,6 @@ RSpec.describe "GET /rooms/:id", type: :request do
   end
 end
 
-# MiClassrooms Phase 4 Task 6 (Brief §5.3): the floor-plan view — authorizes
-# like #show (RoomPolicy#show?) and reuses the shared
-# redirect_inactive_for_non_admins before_action (now extended to
-# :floor_plan), so a hidden room's non-admin redirect and an admin's 200 both
-# mirror "GET /rooms/:id" above. Also pins the nil-floor redirect and
-# Room.natural_room_order's same-floor room ordering. Mirrors the tenancy
-# setup from the two describe blocks above: shared-posture stub +
-# workspace-scoped fixtures + sign_in.
 RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
   let(:workspace) { create(:workspace, slug: "rooms-floor-plan-spec-workspace", personal: false) }
 
@@ -893,12 +734,6 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
       expect(flash[:notice]).to eq(I18n.t("rooms.inactive_notice"))
     end
 
-    # Regression guard (review fix): floor_plan.html.erb used to render
-    # `@floor.plan` unconditionally through `ui :image`/`<img>`, but
-    # Floor#plan's content_type validation allows PDF (Task 9's building edit
-    # can attach one) — a PDF floor plan rendered a browser broken-image icon.
-    # Mirrors rooms/_media.html.erb's seating-chart PDF branch: a PDF plan
-    # must render as a link, never an `<img>`.
     it "renders a PDF floor plan as a link instead of an image" do
       floor.plan.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/seating_chart.pdf")),
@@ -915,11 +750,6 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
       expect(response.body).not_to include("<img")
     end
 
-    # Task 10 fix round 2 (same rule as the room page's media slots): an IMAGE
-    # floor plan must render through a declared webp variant — HEIC/HEIF are
-    # now model-sanctioned uploads and a raw blob URL hands the browser an
-    # image it cannot decode. The PDF branch above keeps its original-blob
-    # link (a PDF has no variant).
     it "serves an image floor plan as a variant, never the original blob" do
       floor.plan.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
@@ -933,10 +763,7 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
       expect(response.body).to include(rails_representation_path(floor.plan.variant(:display)))
     end
 
-    # "B100" CASTs to 0 (SQLite CAST stops at the first non-digit character)
-    # and tiebreaks alphabetically ahead of any purely-numeric label; "20" <
-    # "100" numerically. Same three-case semantics documented on
-    # RoomSearch::DEFAULT_ORDER's tail, which Room.natural_room_order mirrors.
+    # "B100" CASTs to 0 and sorts before numeric labels; "20" < "100" numerically.
     it "lists same-floor classrooms in natural room-number order" do
       lettered = create(:room, building: building, workspace: workspace, floor: floor,
                          room_number: "B100", facility_code: "MLB2001")
@@ -973,12 +800,6 @@ RSpec.describe "GET /rooms/:id/floor_plan", type: :request do
   end
 end
 
-# MiClassrooms Phase 4 Task 7 (Brief §5.3, §14.1): admin room editing — the
-# phase's first audited mutation. Every write here must flow through
-# Curation::Apply (Task 1), never a bare `@room.update`, so the ActivityLog
-# examples below double as the contract's regression guard. Mirrors the
-# tenancy setup from the sibling describe blocks above: shared-posture stub +
-# workspace-scoped fixtures + sign_in.
 RSpec.describe "GET /rooms/:id/edit", type: :request do
   let(:workspace) { create(:workspace, slug: "rooms-edit-spec-workspace", personal: false) }
 
@@ -1010,12 +831,7 @@ RSpec.describe "GET /rooms/:id/edit", type: :request do
       expect(response.body).to include(room.display_name)
     end
 
-    # Final fix round: the editor's gallery thumb must spend MediaAsset's
-    # DECLARED :card variant, not restate its transformations inline — the
-    # declaration in media_asset.rb is the single source of truth the warm
-    # job processes by name. (The anonymous call happened to compile to the
-    # same variation digest, so this pins the contract going forward rather
-    # than distinguishing the two.)
+    # The declared variant, not inline transformations: the warm job processes it by name.
     it "renders each persisted gallery photo via the declared :gallery variant" do
       asset = create(:media_asset, owner: room, workspace: workspace)
       sign_in(admin)
@@ -1025,9 +841,6 @@ RSpec.describe "GET /rooms/:id/edit", type: :request do
       expect(response.body).to include(rails_representation_path(asset.image.variant(:gallery)))
     end
 
-    # Task 10 widened the validators to accept HEIC/HEIF on every image slot;
-    # the pickers must OFFER what the server accepts, or iPhone users get
-    # their camera rolls greyed out. One accept attr pins the whole round.
     it "offers HEIC/HEIF in the image pickers' accept lists" do
       sign_in(admin)
 
@@ -1067,16 +880,6 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
 
     before { sign_in(admin) }
 
-    # The audit-granularity contract Curation::Apply already proves in
-    # isolation (spec/lib/curation/apply_spec.rb): a real column change
-    # (nickname) appears in before_after; this pins that RoomsController's
-    # #update wires it correctly end-to-end, one ActivityLog per request.
-    #
-    # Phase 5 Task 6 retrofit: action string changed from the phase-4
-    # "room.curated" (one combined call) to "room.updated" (the curated half
-    # of the now-split curated/media Curation::Apply pair) — a curated-only
-    # submission like this one never touches the media half at all, so this
-    # is still exactly one ActivityLog.
     it "updates the curated field via Curation::Apply and writes exactly one audited ActivityLog" do
       expect {
         patch room_path(room), params: { room: { nickname: "New Name" } }
@@ -1092,13 +895,6 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       )
     end
 
-    # Phase 5 Task 6 audit contract: an AUTHORIZED resubmission of the exact
-    # same value is a genuine no-op — apply_curated_change's `@room.changed?`
-    # guard means this never reaches Curation::Apply, so it must write ZERO
-    # ActivityLogs. Distinct from both specs above: neither the
-    # unauthorized-viewer PATCH (shared example) nor the validation-failure
-    # PATCH below covers the authorized-and-genuinely-nothing-changed branch
-    # those changed?/media_change? guards exist for.
     it "writes no ActivityLog when an admin resubmits the same nickname unchanged" do
       expect {
         patch room_path(room), params: { room: { nickname: room.nickname } }
@@ -1107,13 +903,9 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(room.reload.nickname).to eq("Old Name")
     end
 
-    # Room's own `content_type: [:png, :jpeg, :webp]` validation on :panorama
-    # is the natural, already-existing validation reachable through this form —
-    # a PDF is allowed for seating_chart but not the panorama, so attaching one
-    # here is a genuine ActiveRecord::RecordInvalid, not a stub.
-    it "re-renders :edit with 422 on a validation failure and writes no ActivityLog" do
+    it "re-renders :edit with 422 on a panorama validation failure and writes no ActivityLog" do
       expect {
-        patch room_path(room), params: {
+        patch room_panorama_path(room), params: {
           room: { panorama: fixture_file_upload("seating_chart.pdf", "application/pdf") }
         }
       }.not_to change(ActivityLog, :count)
@@ -1122,37 +914,24 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(room.reload.panorama).not_to be_attached
     end
 
-    # Pins the documented trade-off in #update's comment: curated and media
-    # changes are now TWO separate Curation::Apply calls (two transactions),
-    # so a valid curated change can commit even though the accompanying media
-    # change fails validation in the same request — the nickname save is not
-    # rolled back by the panorama's content_type rejection. Exactly one
-    # ActivityLog ("room.updated") is written; no "room.media_updated" row
-    # exists for the failed media half.
-    it "commits the curated change even when the accompanying media change fails validation" do
+    it "takes only the room's own fields: media sent to the room update is ignored" do
       expect {
         patch room_path(room), params: {
-          room: {
-            nickname: "New Name",
-            panorama: fixture_file_upload("seating_chart.pdf", "application/pdf")
-          }
+          room: { nickname: "New Name", panorama: fixture_file_upload("room.jpg", "image/jpeg") }
         }
       }.to change(ActivityLog, :count).by(1)
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to redirect_to(room_path(room))
       expect(room.reload.nickname).to eq("New Name")
       expect(room.panorama).not_to be_attached
-
-      log = ActivityLog.last
-      expect(log.action).to eq("room.updated")
-      expect(ActivityLog.where(action: "room.media_updated").count).to eq(0)
+      expect(ActivityLog.last.action).to eq("room.updated")
     end
 
     it "adds a photo from an empty add-photo row, in the room's workspace" do
       create(:media_asset, owner: room, workspace: workspace, position: 1)
 
       expect {
-        patch room_path(room), params: { room: { gallery_attributes: {
+        patch room_gallery_path(room), params: { room: { gallery_attributes: {
           "1" => { position: "2", image: fixture_file_upload("room.jpg", "image/jpeg") }
         } } }
       }.to change { room.gallery.count }.from(1).to(2)
@@ -1165,7 +944,7 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       first = create(:media_asset, owner: room, workspace: workspace, position: 1)
       second = create(:media_asset, owner: room, workspace: workspace, position: 2)
 
-      patch room_path(room), params: {
+      patch room_gallery_path(room), params: {
         room: { gallery_attributes: {
           "0" => { id: first.id, position: "2" },
           "1" => { id: second.id, position: "1" }
@@ -1178,39 +957,19 @@ RSpec.describe "PATCH /rooms/:id", type: :request do
       expect(second.reload.position).to eq(1)
     end
 
-    # Whole-branch review regression (Important): the exact parallel of
-    # BuildingsController's floors_attributes guard
-    # (spec/requests/buildings_spec.rb "422s and mutates nothing when
-    # floors_attributes references another building's floor id") had no
-    # analogue here — a gallery_attributes row whose `:id` belongs to
-    # ANOTHER room raises ActiveRecord::RecordNotFound from inside
-    # `Room#assign_attributes` (via
-    # `assign_nested_attributes_for_collection_association`), BEFORE
-    # Curation::Apply's own transaction (and its RecordInvalid/
-    # RecordNotDestroyed rescue) ever runs. Left unguarded that bubbles up to
-    # ApplicationController's blanket `rescue_from ActiveRecord::RecordNotFound`
-    # — a redirect-bounce off the edit page, not the documented graceful 422
-    # re-render. Fails against the pre-fix controller (raises, uncaught by
-    # Curation::Apply, surfaced as a redirect by the global rescue_from);
-    # passes against the pre-Curation::Apply id guard (422, :edit
-    # re-rendered, neither room's gallery touched).
     it "422s and mutates nothing when gallery_attributes references another room's gallery image id" do
       other_building = create(:building, workspace: workspace)
       other_room = create(:room, building: other_building, workspace: workspace)
       foreign_image = create(:media_asset, owner: other_room, workspace: workspace, position: 3)
 
       expect {
-        patch room_path(room), params: {
-          room: {
-            nickname: "New Name",
-            gallery_attributes: { "0" => { id: foreign_image.id, position: "1" } }
-          }
+        patch room_gallery_path(room), params: {
+          room: { gallery_attributes: { "0" => { id: foreign_image.id, position: "1" } } }
         }
       }.not_to raise_error
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(page.find("dialog#gallery-editor", visible: :all).text(:all)).to include(I18n.t("rooms.edit.stale_gallery"))
-      expect(room.reload.nickname).to eq("Old Name")
       expect(room.gallery.reload).to be_empty
       expect(foreign_image.reload.position).to eq(3)
       expect(foreign_image.owner).to eq(other_room)

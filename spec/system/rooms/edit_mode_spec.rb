@@ -60,7 +60,7 @@ RSpec.describe "Room page view and edit modes", type: :system do
       "Accessibility violations with the media strip on the empty band:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
 
-  it "shows an admin the hidden overlay and lists the room again from the switch, accessibly in both themes" do
+  it "shows an admin the hidden overlay and lists and hides the room from the switch in place, accessibly in both themes" do
     room.update!(hidden_at: Time.current, hidden_by: admin)
     sign_in_via_form(admin)
 
@@ -70,12 +70,56 @@ RSpec.describe "Room page view and edit modes", type: :system do
       "Accessibility violations on a hidden room:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
 
     click_link I18n.t("rooms.show.edit_link")
+    fill_in I18n.t("rooms.edit.nickname_label"), with: "Not saved yet"
     check I18n.t("rooms.edit.listed_label"), allow_label_click: true
-    click_button I18n.t("rooms.edit.submit")
 
-    expect(page).to have_current_path(room_path(room))
     expect(page).to have_content(I18n.t("rooms.unhide.success"))
+    expect(page).to have_field(I18n.t("rooms.edit.nickname_label"), with: "Not saved yet")
     expect(page).to have_no_css("[data-testid='hidden-overlay']")
+    expect(page).to have_current_path(edit_room_path(room))
     expect(room.reload).not_to be_hidden
+
+    dismiss_confirm(I18n.t("rooms.hide.admin_confirmation")) do
+      uncheck I18n.t("rooms.edit.listed_label"), allow_label_click: true
+    end
+    expect(page).to have_checked_field(I18n.t("rooms.edit.listed_label"), visible: :all)
+    expect(room.reload).not_to be_hidden
+
+    accept_confirm(I18n.t("rooms.hide.admin_confirmation")) do
+      uncheck I18n.t("rooms.edit.listed_label"), allow_label_click: true
+    end
+    expect(page).to have_content(I18n.t("rooms.hide.success"))
+    expect(page).to have_css("[data-testid='hidden-overlay']")
+    expect(page).to have_unchecked_field(I18n.t("rooms.edit.listed_label"), visible: :all)
+    expect(page.evaluate_script("document.activeElement.id")).to eq("room_listed")
+    expect(room.reload).to be_hidden
+  end
+  it "holds the switch while a visibility change is pending, so a quick second toggle can't send the stale action" do
+    release = Queue.new
+    allow_any_instance_of(Rooms::HidingsController).to receive(:create).and_wrap_original do |create, *args|
+      release.pop
+      create.call(*args)
+    end
+    sign_in_via_form(admin)
+    visit edit_room_path(room)
+
+    accept_confirm(I18n.t("rooms.hide.admin_confirmation")) do
+      first("label[for='room_listed']").click
+    end
+    expect(page).to have_css("#room_listed[aria-disabled='true']", visible: :all)
+
+    first("label[for='room_listed']").click
+    expect(page).to have_unchecked_field(I18n.t("rooms.edit.listed_label"), visible: :all)
+
+    release << true
+    expect(page).to have_content(I18n.t("rooms.hide.success"))
+    expect(page).to have_no_css("#room_listed[aria-disabled]", visible: :all)
+    expect(room.reload).to be_hidden
+
+    first("label[for='room_listed']").click
+    expect(page).to have_content(I18n.t("rooms.unhide.success"))
+    expect(room.reload).not_to be_hidden
+  ensure
+    release << true
   end
 end

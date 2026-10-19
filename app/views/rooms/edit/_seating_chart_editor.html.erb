@@ -15,7 +15,7 @@
     </button>
   <% end %>
 
-  <%= form_with model: form_room, url: room_path(form_room), method: :patch, multipart: true,
+  <%= form_with model: form_room, url: room_seating_chart_path(form_room), method: :patch, multipart: true,
         id: "seating-chart-editor-form",
         data: { controller: "form-reset", action: "turbo:submit-end->form-reset#reset" } do |form| %>
     <%= form.error_summary %>
