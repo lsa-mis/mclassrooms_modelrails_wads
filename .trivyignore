@@ -12,8 +12,7 @@ CVE-2026-33210
 # precompiled binary (0.1.27, the newest release; toolchain read from the
 # published x86_64-linux binary). Three denial-of-service findings, all fixed
 # only in Go 1.27.2 (stdlib) and x/net 0.60.0: crafted-HTTP net/http (78667),
-# net/http/internal/http2 and x/net/http2 (78669), crypto/tls (97031), plus a
-# crypto/x509 man-in-the-middle finding fixed in Go 1.27.3 (111943). No
+# net/http/internal/http2 and x/net/http2 (78669), crypto/tls (97031). No
 # thruster release built on the fixed versions exists, so there is no action
 # available to us regardless of reachability. The eight go1.26.5-era entries
 # this block held were cleared by 0.1.27's go1.27.1 build, their Revisit
@@ -22,4 +21,14 @@ CVE-2026-33210
 CVE-2026-78667
 CVE-2026-78669
 CVE-2026-97031
+
+# Go stdlib crypto/x509 man-in-the-middle finding (fixed in Go 1.27.3) in the same
+# thruster 0.1.27 binary. Not reachable here: kamal-proxy terminates TLS and
+# issues the certificate (config/deploy.yml `proxy: ssl: true`); thruster
+# listens on plain HTTP :80 with no TLS_DOMAIN set, so it does no ACME and no
+# outbound certificate verification, and talks to Puma over localhost HTTP.
+# Reachability is from our config, not the advisory text. No thruster release
+# built on Go 1.27.3 exists.
+# Revisit: on the next thruster release (> 0.1.27), if TLS_DOMAIN or an outbound
+# HTTPS call is ever added to the container, or 2026-11-15.
 CVE-2026-111943
