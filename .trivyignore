@@ -7,3 +7,37 @@
 # it at runtime, so the vulnerable copy is dormant until a Ruby patch replaces it.
 # Revisit: on the next Ruby 4.0.x patch (bump .tool-versions), or 2026-12-01.
 CVE-2026-33210
+
+# Go stdlib v1.27.1 and golang.org/x/net v0.59.0 baked into thruster's
+# precompiled binary (0.1.27, the newest release; toolchain read from the
+# published x86_64-linux binary). Three denial-of-service findings, all fixed
+# only in Go 1.27.2 (stdlib) and x/net 0.60.0: crafted-HTTP net/http (78667),
+# net/http/internal/http2 and x/net/http2 (78669), crypto/tls (97031). No
+# thruster release built on the fixed versions exists, so there is no action
+# available to us regardless of reachability. The eight go1.26.5-era entries
+# this block held were cleared by 0.1.27's go1.27.1 build, their Revisit
+# trigger, and removed; the image scan on that change is the proof.
+# Revisit: on the next thruster release (> 0.1.27), or 2026-12-15.
+CVE-2026-78667
+CVE-2026-78669
+CVE-2026-97031
+
+# Go stdlib crypto/x509 man-in-the-middle finding (fixed in Go 1.27.3) in the same
+# thruster 0.1.27 binary. Not reachable here: kamal-proxy terminates TLS and
+# issues the certificate (config/deploy.yml `proxy: ssl: true`); thruster
+# listens on plain HTTP :80 with no TLS_DOMAIN set, so it does no ACME and no
+# outbound certificate verification, and talks to Puma over localhost HTTP.
+# Reachability is from our config, not the advisory text. No thruster release
+# built on Go 1.27.3 exists.
+# Revisit: on the next thruster release (> 0.1.27), if TLS_DOMAIN or an outbound
+# HTTPS call is ever added to the container, or 2026-12-15.
+CVE-2026-111943
+
+# Go golang.org/x/net/html denial-of-service finding (v0.59.0, fixed in 0.62.0)
+# in the same thruster 0.1.27 binary. Not reachable: the x86_64-linux binary links
+# no x/net/html code (zero symbols; x/net/idna, dnsmessage, http2/hpack,
+# httpproxy and httpguts are present), so the vulnerable HTML parser is not in the
+# executable and Trivy matches only the module version in its build info. Read
+# from the published gem with strings(1), not from the advisory text.
+# Revisit: on the next thruster release (> 0.1.27), or 2026-12-15.
+CVE-2026-78661
