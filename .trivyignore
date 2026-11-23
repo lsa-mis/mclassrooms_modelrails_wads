@@ -17,7 +17,7 @@ CVE-2026-33210
 # available to us regardless of reachability. The eight go1.26.5-era entries
 # this block held were cleared by 0.1.27's go1.27.1 build, their Revisit
 # trigger, and removed; the image scan on that change is the proof.
-# Revisit: on the next thruster release (> 0.1.27), or 2026-11-15.
+# Revisit: on the next thruster release (> 0.1.27), or 2026-12-15.
 CVE-2026-78667
 CVE-2026-78669
 CVE-2026-97031
@@ -30,5 +30,14 @@ CVE-2026-97031
 # Reachability is from our config, not the advisory text. No thruster release
 # built on Go 1.27.3 exists.
 # Revisit: on the next thruster release (> 0.1.27), if TLS_DOMAIN or an outbound
-# HTTPS call is ever added to the container, or 2026-11-15.
+# HTTPS call is ever added to the container, or 2026-12-15.
 CVE-2026-111943
+
+# Go golang.org/x/net/html denial-of-service finding (v0.59.0, fixed in 0.62.0)
+# in the same thruster 0.1.27 binary. Not reachable: the x86_64-linux binary links
+# no x/net/html code (zero symbols; x/net/idna, dnsmessage, http2/hpack,
+# httpproxy and httpguts are present), so the vulnerable HTML parser is not in the
+# executable and Trivy matches only the module version in its build info. Read
+# from the published gem with strings(1), not from the advisory text.
+# Revisit: on the next thruster release (> 0.1.27), or 2026-12-15.
+CVE-2026-78661
