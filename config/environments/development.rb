@@ -4,6 +4,7 @@ require_relative "../../lib/bullet_safelists"
 # Required explicitly (not autoloaded): environment config runs before Zeitwerk
 # autoloading is active — same pattern as config/initializers/markdowndocs.rb.
 require_relative "../../lib/codespaces"
+require_relative "../../lib/dev_server"
 
 Rails.application.configure do
   config.enable_reloading = true
@@ -36,11 +37,7 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
   config.action_mailer.delivery_method = :letter_opener_web
 
-  # Set localhost to be used by links generated in mailer templates.
-  # Port follows the PORT env var so letter_opener links match the running server
-  # (e.g. PORT=3001 bin/dev → links use 3001). bin/dev exports PORT before foreman starts;
-  # puma.rb reads the same env var, so both are always in sync.
-  config.action_mailer.default_url_options = { host: "localhost", port: ENV.fetch("PORT", 3000).to_i }
+  config.action_mailer.default_url_options = { host: "localhost", port: DevServer.port }
 
   # GitHub Codespaces: the browser reaches the app through a forwarded HTTPS
   # proxy at <codespace>-<port>.app.github.dev, not localhost. Allow that host
@@ -50,7 +47,7 @@ Rails.application.configure do
     config.hosts << ".#{Codespaces.forwarding_domain}"
 
     config.action_mailer.default_url_options = {
-      host: Codespaces.forwarded_host(port: ENV.fetch("PORT", 3000)),
+      host: Codespaces.forwarded_host(port: DevServer.port),
       protocol: "https"
     }
 
