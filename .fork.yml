@@ -1,0 +1,8 @@
+name: mclassrooms
+product_name: MClassrooms
+preset: shared
+template_url: git@github.com:lsa-mis/modelrails_base_wads.git
+template_baseline: cf1c7a593e33c37f31998d20fdcd1629ab6ac9ae
+template_release: v2026.11.20
+forked_at: '2026-04-03'
+fork_script_version: 1

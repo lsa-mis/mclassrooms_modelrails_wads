@@ -64,7 +64,7 @@ RSpec.describe "Code smell: attachments are validated" do
     end
   end
 
-  it "finds the attachments it was written against" do
+  it "finds the attachments it was written against", :template_only do
     expect(attachments.call(sources.call).map { |a| "#{a[:file]}##{a[:name]}" }).to match_array(%w[
       app/models/project.rb#logo app/models/user/avatar.rb#avatar app/models/user/avatar.rb#avatar_original
       app/models/workspace/branding.rb#logo app/models/workspace/branding.rb#logo_original

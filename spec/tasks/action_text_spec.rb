@@ -83,14 +83,14 @@ RSpec.describe "action_text rake tasks" do
     end
 
     it "cleans the stored body, so an edit saved after the row was loaded survives" do
-      document = document_with(alt: "IMG_2034.JPG")
-      loaded_before_the_edit = ActionText::RichText.find(document.rich_text_body.id)
-      document.update!(body: "<p>Edited after loading</p>")
+      announcement = announcement_with(alt: "IMG_2034.JPG")
+      loaded_before_the_edit = ActionText::RichText.find(announcement.body.id)
+      announcement.update!(body: "<p>Edited after loading</p>")
       allow(ActionText::RichText).to receive(:find_each).and_yield(loaded_before_the_edit)
 
       run_task("action_text:clear_filename_alts")
 
-      expect(Nokogiri::HTML5.fragment(stored_body(document)).text).to include("Edited after loading")
+      expect(Nokogiri::HTML5.fragment(stored_body(announcement)).text).to include("Edited after loading")
     end
 
     it "finds nothing to change on a second run" do

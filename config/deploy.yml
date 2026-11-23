@@ -103,11 +103,9 @@ env:
     # TENANCY_OWNER_EMAIL: you@yourdomain.com   # required on shared: the first deploy seeds this owner
     # TENANCY_WORKSPACE_CREATION: disabled      # usual on shared: no workspaces beyond the one
 
-    # Outbound mail: the server here, its login in credentials (smtp.user_name, smtp.password).
-    # Production refuses to boot without both. Recipes: /docs/developer/deployment.
-    # Mail goes through the U-M SMTP relay: its login is smtp.user_name / smtp.password in
-    # production credentials. SMTP_ADDRESS stays unset until LSA TS supplies the host, so
-    # production refuses to boot without it — see deployment-miclassrooms.
+    # Outbound mail: the U-M relay; its login is in credentials (smtp.user_name, smtp.password).
+    # The .example host is a stand-in LSA TS replaces: production refuses to boot on it.
+    SMTP_ADDRESS: smtp-relay.example
     SMTP_PORT: 587
     # MAIL_FROM: hello@app.yourdomain.com   # default: noreply@RAILS_HOST
 

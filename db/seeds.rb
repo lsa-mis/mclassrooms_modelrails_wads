@@ -77,7 +77,7 @@ end
 
 # --- MiClassrooms domain seeds (fork-owned) ---------------------------------
 if TenancyConfig.shared?
-  shared_workspace = Workspace.find_by!(slug: ENV.fetch("TENANCY_SHARED_WORKSPACE_SLUG"))
+  shared_workspace = Workspace.find_by!(slug: TenancyConfig.shared_workspace_slug)
   ReferenceData.seed!(workspace: shared_workspace)
 end
 

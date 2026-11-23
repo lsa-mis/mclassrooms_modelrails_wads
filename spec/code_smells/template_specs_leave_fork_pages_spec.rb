@@ -24,7 +24,7 @@ RSpec.describe "Template specs and fork-owned pages" do
     expect(fork_owned_specs).to include("spec/system/pages/**", "spec/requests/pages_spec.rb")
   end
 
-  it "opens them only from fork-owned specs" do
+  it "opens them only from fork-owned specs", :template_only do
     offenders = Dir[Rails.root.join("spec/**/*_spec.rb")].reject { |file|
       file == __FILE__ || fork_owned_specs.any? { |glob| File.fnmatch?(glob, repo_path(file), File::FNM_PATHNAME) }
     }.flat_map { |file|

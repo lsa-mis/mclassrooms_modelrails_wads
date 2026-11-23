@@ -3,7 +3,7 @@ require "tmpdir"
 
 load Rails.root.join("bin/sync")
 
-RSpec.describe Sync do
+RSpec.describe TemplateSync do
   let(:workdir) { Pathname.new(Dir.mktmpdir) }
   let(:template) { workdir.join("template") }
   let(:template_origin) { workdir.join("template.git") }
@@ -27,7 +27,7 @@ RSpec.describe Sync do
   end
 
   def git(*args, dir: clone)
-    out = IO.popen(Sync::CLEAN_GIT_ENV, [ "git", "-C", dir.to_s, *args ], err: [ :child, :out ], &:read)
+    out = IO.popen(TemplateSync::CLEAN_GIT_ENV, [ "git", "-C", dir.to_s, *args ], err: [ :child, :out ], &:read)
     raise "git #{args.join(' ')} failed: #{out}" unless $?.success?
 
     out.strip
@@ -170,7 +170,7 @@ RSpec.describe Sync do
     end
 
     it "stops with the fork's changelog already fixed, and names the files to resolve" do
-      expect { run_sync }.to raise_error(Sync::Error, /app\.rb.*bin\/sync again/m)
+      expect { run_sync }.to raise_error(TemplateSync::Error, /app\.rb.*bin\/sync again/m)
 
       expect(clone.join("changelog.d/template-v2026.10.31.md").read).to include("- Brings in the template's release [v2026.10.31]")
       expect(clone.join("CHANGELOG.md").read).to eq(fork_changelog)
@@ -179,7 +179,7 @@ RSpec.describe Sync do
     end
 
     it "finishes when run again once they're resolved" do
-      expect { run_sync }.to raise_error(Sync::Error)
+      expect { run_sync }.to raise_error(TemplateSync::Error)
       clone.join("app.rb").write("resolved\n")
       git("add", "app.rb")
 
@@ -192,9 +192,9 @@ RSpec.describe Sync do
     end
 
     it "won't finish while a conflict is unresolved" do
-      expect { run_sync }.to raise_error(Sync::Error)
+      expect { run_sync }.to raise_error(TemplateSync::Error)
 
-      expect { run_sync }.to raise_error(Sync::Error, /still conflicted: app\.rb/)
+      expect { run_sync }.to raise_error(TemplateSync::Error, /still conflicted: app\.rb/)
       expect(calls).to be_empty
     end
   end
@@ -205,11 +205,11 @@ RSpec.describe Sync do
     git("commit", "-q", "-am", "our app.rb")
     git("push", "-q", "origin", "next")
     template_release("2026.10.31")
-    expect { run_sync }.to raise_error(Sync::Error)
+    expect { run_sync }.to raise_error(TemplateSync::Error)
     git("merge", "--abort")
     git("switch", "-q", "next")
 
-    expect { run_sync }.to raise_error(Sync::Error, /app\.rb/)
+    expect { run_sync }.to raise_error(TemplateSync::Error, /app\.rb/)
   end
 
   it "stops when the sync branch is already on origin, since its PR brings that release in" do
@@ -218,7 +218,7 @@ RSpec.describe Sync do
     run_sync
     git("switch", "-q", "next")
 
-    expect { run_sync }.to raise_error(Sync::Error, %r{sync/template-v2026\.10\.31 is already on origin})
+    expect { run_sync }.to raise_error(TemplateSync::Error, %r{sync/template-v2026\.10\.31 is already on origin})
   end
 
   it "refuses outside a fork" do
@@ -226,7 +226,7 @@ RSpec.describe Sync do
     git("rm", "-q", ".fork.yml")
     git("commit", "-q", "-m", "not a fork")
 
-    expect { run_sync }.to raise_error(Sync::Error, /no \.fork\.yml/)
+    expect { run_sync }.to raise_error(TemplateSync::Error, /no \.fork\.yml/)
   end
 
   it "refuses with uncommitted changes, which a merge could tangle" do
@@ -234,6 +234,6 @@ RSpec.describe Sync do
     template_release("2026.10.30")
     clone.join("CHANGELOG.md").write("edited")
 
-    expect { run_sync }.to raise_error(Sync::Error, /uncommitted changes/)
+    expect { run_sync }.to raise_error(TemplateSync::Error, /uncommitted changes/)
   end
 end

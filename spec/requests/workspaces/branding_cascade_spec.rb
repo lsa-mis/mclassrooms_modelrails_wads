@@ -30,7 +30,7 @@ RSpec.describe "Workspace branding cascade", type: :request do
     end
 
     it "leaves the brand's own tokens in place when primary_color is nil" do
-      workspace.update!(primary_color: nil)
+      workspace = sign_in_owner_of_workspace(primary_color: nil)
       get workspace_path(workspace)
       expect(response.body).not_to include("data-workspace-branded")
       expect(response.body).not_to include("--ws-primary")

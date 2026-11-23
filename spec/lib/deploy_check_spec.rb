@@ -362,7 +362,7 @@ RSpec.describe DeployCheck do
     expect(check.warnings.join).to include("192.168.0.1", "Backups are off")
   end
 
-  it "reads the template's own deploy files, as a fork first meets them" do
+  it "reads the template's own deploy files, as a fork first meets them", :template_only do
     %w[config/deploy.yml config/environments/production.rb .kamal/secrets .tool-versions].each { |path| write(path, template.join(path).read) }
 
     expect(headlines(check.refusals)).to contain_exactly(/production.yml.enc doesn't exist/, /RAILS_HOST is unset/, /no proxy with ssl: true/)

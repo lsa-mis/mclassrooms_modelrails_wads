@@ -934,11 +934,6 @@ RSpec.describe "OmniAuth Callbacks", type: :request do
       )
     end
 
-    before do
-      OmniAuth.config.test_mode = true
-      OmniAuth.config.mock_auth[:google_oauth2] = auth_hash
-    end
-
 
     context "when SIGNUP_MODE is :invite_only with no token (Branch 3, new Google user, allowlist armed)" do
       # MiClassrooms Phase 0 Task 7: OAuth providers listed in

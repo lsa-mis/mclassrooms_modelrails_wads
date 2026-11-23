@@ -128,7 +128,7 @@ RSpec.describe MailSetup do
       expect(described_class.editable?(":bad: [")).to be(false)
     end
 
-    it "reads the plain values under env.clear" do
+    it "reads the plain values under env.clear", :template_only do
       expect(described_class.values(real)).to include("SMTP_ADDRESS" => "smtp.postmarkapp.com")
       expect(described_class.values(":bad: [")).to eq({})
     end
@@ -862,7 +862,7 @@ RSpec.describe MailSetup do
         expect(credentials).not_to have_received(:write_login)
       end
 
-      it "offers Replace login?, default No, when the address is unchanged and a login exists" do
+      it "offers Replace login?, default No, when the address is unchanged and a login exists", :template_only do
         allow(credentials).to receive(:login?).and_return(true)
 
         expect(flow("1", "", "new@acme.example").run).to eq(0)
@@ -871,7 +871,7 @@ RSpec.describe MailSetup do
         expect(clear["MAIL_FROM"]).to eq("new@acme.example")
       end
 
-      it "replaces the login on a yes" do
+      it "replaces the login on a yes", :template_only do
         allow(credentials).to receive(:login?).and_return(true)
 
         flow("1", "y", "new-token", "").run
@@ -1009,7 +1009,7 @@ RSpec.describe MailSetup do
       expect(output.string).to include('labelled "my_app"', "TENANCY_OWNER_EMAIL")
     end
 
-    it "skips the key backup once the credentials file is committed" do
+    it "skips the key backup once the credentials file is committed", :template_only do
       allow(credentials).to receive(:login?).and_return(true)
 
       expect(flow("1", "", "").run).to eq(0)
@@ -1063,7 +1063,7 @@ RSpec.describe MailSetup do
         expect(last_lines(1)).to eq([ "Wrote config/credentials/production.yml.enc (new), config/credentials/production.key (new), config/deploy.yml." ])
       end
 
-      it "says deploy.yml already has the answers, then what was written" do
+      it "says deploy.yml already has the answers, then what was written", :template_only do
         rails_writes(enc, key)
 
         expect(flow("1", "tok", "").run).to eq(0)
@@ -1073,7 +1073,7 @@ RSpec.describe MailSetup do
         ])
       end
 
-      it "marks a rewritten file without (new)" do
+      it "marks a rewritten file without (new)", :template_only do
         enc.write("before")
         key.write("key")
         git("add", ".")

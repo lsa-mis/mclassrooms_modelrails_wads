@@ -151,6 +151,10 @@ class Room < ApplicationRecord
                        size: { less_than_or_equal_to: 10.megabytes }
   validates :seating_chart, content_type: ImageContentTypes::ACCEPTED_WITH_PDF,
                     size: { less_than_or_equal_to: 10.megabytes }
+  # App-rendered (RenderFlatPanoramaJob attaches a WebP), never uploaded; checked anyway
+  # so a bad render can't be attached.
+  validates :flat_panorama, content_type: ImageContentTypes::ACCEPTED,
+                            size: { less_than_or_equal_to: 10.megabytes }
 
   before_save :normalize_facility_code
 

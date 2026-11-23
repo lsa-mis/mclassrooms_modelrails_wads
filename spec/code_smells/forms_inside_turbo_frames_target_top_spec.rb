@@ -92,7 +92,7 @@ RSpec.describe "Code smell: forms inside Turbo frames" do
   erb_tags = lambda do |source|
     source.to_enum(:scan, /<%(?!#)(=|-|)?(.*?)-?%>/m).map do
       match = Regexp.last_match
-      { code: match[2].lines.grep_v(/\A\s*#/).join.strip, offset: match.begin(0) }
+      { code: match[2].lines.grep_v(/\A\s*#(?!\{)/).join.strip, offset: match.begin(0) }
     end
   end
 

@@ -11,7 +11,7 @@ require_relative "../lib/github_origin"
 require_relative "../lib/fork_config"
 require "release_flow"
 
-class Sync
+class TemplateSync
   class Error < StandardError; end
 
   CLEAN_GIT_ENV = ::CleanGitEnv::HASH
@@ -131,8 +131,8 @@ end
 
 if $PROGRAM_NAME == __FILE__
   begin
-    Sync.new(root: File.expand_path("..", __dir__)).run
-  rescue Sync::Error, ReleaseFlow::Error => e
+    TemplateSync.new(root: File.expand_path("..", __dir__)).run
+  rescue TemplateSync::Error, ReleaseFlow::Error => e
     abort("bin/sync: #{e.message}")
   end
 end

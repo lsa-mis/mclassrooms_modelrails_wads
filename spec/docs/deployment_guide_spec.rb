@@ -145,7 +145,7 @@ RSpec.describe "the deployment guide" do
     expect(sections - headings).to be_empty
   end
 
-  it "gives a deploy-host check that matches what kamal config prints" do
+  it "gives a deploy-host check that matches what kamal config prints", :template_only do
     target = guide[/bin\/kamal config \| grep -A1 (\S+)/, 1]
     config = Dir.chdir(Rails.root) { Kamal::Configuration.create_from(config_file: Pathname("config/deploy.yml")) }
     printed = Kamal::Utils.redacted(config.to_h).to_yaml

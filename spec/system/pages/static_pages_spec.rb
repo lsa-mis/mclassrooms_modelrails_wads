@@ -20,9 +20,9 @@ RSpec.describe "Static pages", type: :system do
     end
 
     it "displays feature cards" do
-      expect(page).to have_text(I18n.t("pages.home.features.auth.title"))
-      expect(page).to have_text(I18n.t("pages.home.features.workspaces.title"))
-      expect(page).to have_text(I18n.t("pages.home.features.projects.title"))
+      expect(page).to have_text(I18n.t("pages.home.features.capacity.title"))
+      expect(page).to have_text(I18n.t("pages.home.features.equipment.title"))
+      expect(page).to have_text(I18n.t("pages.home.features.media.title"))
     end
   end
 
@@ -52,7 +52,7 @@ RSpec.describe "Static pages", type: :system do
     it "has policy sections" do
       expect(page).to have_text(I18n.t("pages.privacy.collection.title"))
       expect(page).to have_text(I18n.t("pages.privacy.usage.title"))
-      expect(page).to have_text(I18n.t("pages.privacy.security.title"))
+      expect(page).to have_text(I18n.t("pages.privacy.sharing.title"))
     end
   end
 

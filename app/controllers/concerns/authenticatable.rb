@@ -140,13 +140,7 @@ module Authenticatable
     end
 
     def invitation_landing_path(invitation)
-      if invitation.client_invite?
-        clientside_project_path(invitation.invitable)
-      elsif invitation.invitable_type == "Project"
-        workspace_project_path(invitation.invitable.workspace, invitation.invitable)
-      else
-        workspace_path(invitation.invitable)
-      end
+      workspace_path(invitation.invitable)
     end
 
     # Best-effort new-device detection, once per Session.create!. Only

@@ -4,7 +4,6 @@ require_relative "../../lib/bullet_safelists"
 # Required explicitly (not autoloaded): environment config runs before Zeitwerk
 # autoloading is active — same pattern as config/initializers/markdowndocs.rb.
 require_relative "../../lib/codespaces"
-require_relative "../../lib/dev_server"
 
 Rails.application.configure do
   config.enable_reloading = true

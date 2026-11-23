@@ -40,7 +40,7 @@ RSpec.describe "Lexxy's alternative text dialog", type: :system do
     end
   end
 
-  it "lets an author describe an image, in an AAA dialog, and the description reaches the page" do
+  it "names the ALT button with the word it shows (WCAG 2.5.3 Label in Name)" do
     visit edit_admin_announcement_path(announcement)
     find("lexxy-editor figure img").click
     button = find("lexxy-editor button.lexxy-attachment-toolbar__alternative-text")
@@ -49,8 +49,7 @@ RSpec.describe "Lexxy's alternative text dialog", type: :system do
   end
 
   it "lets an author describe an image, in an AAA dialog, and the description reaches the page" do
-    workspace, project, resource = signed_in_image_resource
-    visit edit_workspace_project_resource_path(workspace, project, resource)
+    visit edit_admin_announcement_path(announcement)
     find("lexxy-editor figure img").click
     find("lexxy-editor button.lexxy-attachment-toolbar__alternative-text").click
 

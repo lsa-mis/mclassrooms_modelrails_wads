@@ -27,7 +27,9 @@ module ChangeLanes
         spec/system/docs_*_spec.rb
         spec/code_smells/{btn_text_is_action_row_only,kamal_secrets_hold_no_literals,no_new_bearer_tokens_in_route_paths,no_unscoped_tenant_loads,required_production_config_outputs_are_current,template_invariants}_spec.rb
         spec/initializers/cookie_classification_spec.rb
+        spec/jobs/geocode_building_job_spec.rb
         spec/lib/comment_block_check_spec.rb
+        spec/lib/sync/update_campuses_spec.rb
         spec/models/user_password_change_notification_spec.rb
         spec/policies/cross_workspace_authorization_spec.rb
         spec/rubocop/**/*_spec.rb

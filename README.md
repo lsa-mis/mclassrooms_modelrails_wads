@@ -25,7 +25,7 @@ and a role model of admin / editor / viewer rather than per-tenant accounts.
 
 ## Tech stack
 
-- **Framework:** Rails 8.1, Ruby 4.0.6
+- **Framework:** Rails 8.1, Ruby 4.0 (the exact release is pinned in `.tool-versions`)
 - **Database:** SQLite (Solid Queue/Cache/Cable in-process, single host)
 - **Frontend:** TailwindCSS 4 with OKLCH semantic tokens, Turbo, Stimulus;
   `UI::*` ViewComponents from the vendored `modelrails_ui` gem
@@ -40,7 +40,7 @@ and a role model of admin / editor / viewer rather than per-tenant accounts.
   image on every PR
 - **Version management:** [mise](https://mise.jdx.dev/) — `Gemfile` reads
   `.tool-versions`, so Bundler enforces the Ruby version everywhere
-- **Dev container:** optional, on `ruby:4.0.6-slim` (production parity)
+- **Dev container:** optional, on the same Ruby as production (the release pinned in `.tool-versions`)
 
 ## Getting started
 

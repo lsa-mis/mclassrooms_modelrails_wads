@@ -1,0 +1,123 @@
+# MClassrooms's own production inputs, in the template catalog's format
+# (config/required_production_config.yml). Describes what production needs, never a value.
+inputs:
+  AUTH_SSO_ONLY:
+    home: env
+    required: optional
+    secret: false
+    purpose: "Hides the email, password, magic-link and passkey sign-in, leaving Google and Okta only"
+    where: "true in production; defaults to true there when unset"
+    set_with: "config/deploy.yml → env.clear"
+    regenerable: "Yes, any time; redeploy"
+    step: 6
+  ALLOWED_GOOGLE_DOMAINS:
+    home: env
+    required: optional
+    secret: false
+    purpose: "The email domains Google sign-in accepts; empty accepts every domain"
+    where: "Comma-separated bare domains, such as umich.edu,lsa.umich.edu"
+    set_with: "config/deploy.yml → env.clear"
+    regenerable: "Yes, any time; redeploy"
+    step: 6
+  TENANCY_SHARED_JOIN_ROLE:
+    home: env
+    required: optional
+    secret: false
+    purpose: "The role a person gets on first sign-in to the shared workspace"
+    where: "A role slug; viewer for MClassrooms, member when unset"
+    set_with: "config/deploy.yml → env.clear"
+    regenerable: "Yes, any time; redeploy"
+    step: 6
+  OKTA_ISSUER:
+    home: env
+    required: optional
+    secret: false
+    purpose: "The U-M Okta org's issuer URL"
+    where: "LSA Technology Services, with the Okta client below"
+    set_with: "config/deploy.yml → env.clear"
+    regenerable: "No: Okta issues it"
+    step: 6
+  OKTA_CLIENT_ID:
+    home: env
+    required: optional
+    secret: false
+    purpose: "The Okta application's client id, which turns on Sign in with Okta"
+    where: "LSA Technology Services"
+    set_with: "config/deploy.yml → env.clear"
+    regenerable: "No: Okta issues it"
+    step: 6
+  OKTA_CLIENT_SECRET:
+    home: kamal_secret
+    required: optional
+    secret: true
+    purpose: "The Okta application's client secret"
+    where: "LSA Technology Services"
+    set_with: "Read by .kamal/secrets from the deployer's environment"
+    regenerable: "Yes, rotate it in Okta and redeploy"
+    step: 4
+  UM_API_BASE_URL:
+    home: env
+    required: optional
+    secret: false
+    purpose: "The U-M API gateway the nightly sync reads campuses, buildings and rooms from"
+    where: "https://gw.api.it.umich.edu/um"
+    set_with: "config/deploy.yml → env.clear"
+    regenerable: "Yes, any time; redeploy"
+    step: 6
+  UM_API_TOKEN_URL:
+    home: env
+    required: optional
+    secret: false
+    purpose: "The OAuth token endpoint for the U-M API gateway"
+    where: "https://gw.api.it.umich.edu/um/oauth2/token"
+    set_with: "config/deploy.yml → env.clear"
+    regenerable: "Yes, any time; redeploy"
+    step: 6
+  UM_API_CLIENT_ID:
+    home: kamal_secret
+    required: optional
+    secret: true
+    purpose: "The U-M API application's client id"
+    where: "The U-M API gateway developer portal, via LSA Technology Services"
+    set_with: "Read by .kamal/secrets from the deployer's environment"
+    regenerable: "Yes, rotate it in the developer portal and redeploy"
+    step: 4
+  UM_API_CLIENT_SECRET:
+    home: kamal_secret
+    required: optional
+    secret: true
+    purpose: "The U-M API application's client secret"
+    where: "The U-M API gateway developer portal, via LSA Technology Services"
+    set_with: "Read by .kamal/secrets from the deployer's environment"
+    regenerable: "Yes, rotate it in the developer portal and redeploy"
+    step: 4
+exclusions:
+  API_UPDATE_DELETE_DRY_RUN: "Makes the campus sync preview its deletes by default; an operator's choice, never a deploy input"
+  FEEDBACK_FLOATING_TRIGGER: "Hides the floating feedback button when false; has a working default"
+  TDX_ACCOUNT_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_API_BASE_URL: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_APP_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_CLASSIFICATION: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_CLIENT_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_CLIENT_SECRET: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_FORM_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_OAUTH_URL: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_PRIORITY_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_RESPONSIBLE_GROUP_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_SERVICE_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_SERVICE_OFFERING_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_SOURCE_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_STATUS_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TDX_TYPE_ID: "TeamDynamix feedback ticket setting; with any TDX value unset, feedback is emailed to the admins instead"
+  TEST_LOGIN_ADMIN: "Test sign-in switch; never set in production"
+  TEST_LOGIN_TOKEN: "Test sign-in switch; never set in production"
+  DIR: "Argument to a one-off media rake task, never a deploy input"
+  EXPORT: "Argument to the legacy-import rake task, never a deploy input"
+  FORCE: "Argument to a one-off media rake task, never a deploy input"
+  INLINE: "Argument to a one-off media rake task, never a deploy input"
+  LIMIT: "Argument to a one-off media rake task, never a deploy input"
+  ONLY: "Argument to the legacy-import rake task, never a deploy input"
+  REPLACE: "Argument to a one-off media rake task, never a deploy input"
+  REPORT_DIR: "Argument to the legacy-import rake task, never a deploy input"
+  ROOM: "Argument to a one-off media rake task, never a deploy input"
+  WORKSPACE: "Argument to a one-off rake task, never a deploy input"

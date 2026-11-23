@@ -7,12 +7,10 @@ require "rails_helper"
 RSpec.describe "Onboarding · invitees", type: :request do
   before { allow(TenancyConfig).to receive(:onboarding).and_return(:none) }
 
-  # Membership before project: the project factory seats its creator.
   def owned_workspace
     owner = create(:user, :with_zero_workspaces, onboarded_at: Time.current)
     workspace = create(:workspace)
     create(:membership, :owner, user: owner, workspace: workspace)
-    create(:project, workspace: workspace, created_by: owner)
     [ workspace, owner ]
   end
 

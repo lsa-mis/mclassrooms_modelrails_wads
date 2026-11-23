@@ -22,7 +22,7 @@ RSpec.describe RequiredProductionConfigCatalog do
     end
   end
 
-  it "loads the template entries" do
+  it "loads the template entries", :template_only do
     catalog = described_class.load(root: Rails.root)
 
     expect(catalog.entries.map(&:key)).to include("RAILS_HOST", "smtp.password", "RAILS_MASTER_KEY")
