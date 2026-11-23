@@ -20,7 +20,7 @@ live — every state, the source, and the a11y contract — at **[`/lookbook`](/
 The ergonomic entry point is the `ui` helper:
 
 ```erb
-<%= ui :button, "Save changes", variant: :primary %>
+<%= ui :button, "Save changes", variant: :solid, tone: :primary %>
 <%= ui :dialog, title: "Edit profile" do |d| %>
   <% d.with_trigger { tag.button("Open", type: "button") } %>
   Body content
@@ -64,9 +64,10 @@ gem's default component. Those live here instead.
 
 #### Fork notes
 
-- **Badge** — the `[:soft, :neutral]` cell's AAA proof (and the tenth cell in
-  general) is pending this app's 0b axe row, since gem CI disables
-  `color-contrast` (see `docs/testing.md` in the modelrails_ui gem).
+- **Badge** — the `[:soft, :neutral]` cell (the tenth) is proven AAA in this
+  app, not in the gem, since gem CI disables `color-contrast` (see
+  `docs/testing.md` in the modelrails_ui gem): its `neutral` preview is audited
+  in both themes by `spec/system/ui/badge_component_spec.rb`.
 - **Button** — this is an app-local copy that intentionally diverges from
   modelrails_ui's self-contained (raw-utility) `ButtonComponent`: this app owns
   its design tokens, so the component applies the app's button-family CSS
@@ -82,12 +83,6 @@ gem's default component. Those live here instead.
   for the mapping instead.
 - **Chart** — `bin/importmap pin chart.js` downloads the library to
   `vendor/javascript`, since production CSP allows no CDN.
-- **Combobox** — options are not tab stops (`tabindex="-1"`): Tab leaves the
-  widget and closes it, as does any focus leaving it. This is a real
-  accessibility fix this app made (`#684`) that the gem's shipped combobox
-  doesn't yet have — `combobox_component.rb` adds `tabindex: "-1"` to each
-  option button, and `combobox_controller.js` adds a `closeOnFocusOut` action
-  and a `keepFocus` mousedown guard.
 
 ## Adding a component
 
@@ -95,8 +90,7 @@ gem's default component. Those live here instead.
    Or browse `/lookbook`.
 2. **Generate (vendor)** — `bin/rails g modelrails_ui:add badge` writes
    `app/components/ui/badge_component.rb` (and a Stimulus controller for interactive
-   components, which auto-registers). You own and commit it. *(Known gaps: `form_field`,
-   `qr_code`, `input_otp` don't generate cleanly.)*
+   components, which auto-registers). You own and commit it.
 3. **Use it** — `ui :badge, "New"` in new markup, or point an adapter at it to replace an
    existing seam (call sites unchanged). It already uses the app's semantic tokens.
 4. **Document it** — add `spec/components/previews/ui/badge_component_preview.rb` following the
@@ -111,7 +105,7 @@ gem's default component. Those live here instead.
 - **Baked in:** AAA contrast tokens, focus rings, and 44px touch targets live *inside* the
   components — using them as prescribed keeps you compliant.
 - **Boundary validation:** components validate their inputs and fail loud in development
-  (e.g. an unknown button `variant:` raises), while degrading safely in production.
+  (e.g. an unproven button `(variant, tone)` cell raises), while degrading safely in production.
 - **Outcome gate:** the axe-core system specs audit rendered pages at WCAG 2.2 AAA in both
   light and dark themes, so a regression fails CI regardless of how the markup was written.
 

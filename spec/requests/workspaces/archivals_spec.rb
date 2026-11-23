@@ -10,15 +10,23 @@ RSpec.describe "Workspace Archival", type: :request do
     end
   end
 
+  def signed_in_owned_workspace
+    user = create(:user)
+    workspace = create(:workspace)
+    sign_in_as_owner_of(workspace, user: user)
+    workspace
+  end
+
+  def sign_in_member_of(workspace)
+    member = create(:user)
+    create(:membership, user: member, workspace: workspace)
+    sign_in(member)
+  end
+
   context "authenticated" do
-    let(:user) { create(:user) }
-    let(:workspace) { create(:workspace) }
-    let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-    before { sign_in(user) }
-
     describe "POST /workspaces/:slug/archival" do
       it "archives the workspace and redirects to the index" do
+        workspace = signed_in_owned_workspace
         post workspace_archival_path(workspace)
         expect(workspace.reload).to be_archived
         expect(response).to redirect_to(workspaces_path)
@@ -26,9 +34,8 @@ RSpec.describe "Workspace Archival", type: :request do
       end
 
       it "denies non-owners" do
-        member = create(:user)
-        create(:membership, user: member, workspace: workspace)
-        sign_in(member)
+        workspace = signed_in_owned_workspace
+        sign_in_member_of(workspace)
         post workspace_archival_path(workspace)
         expect(workspace.reload).not_to be_archived
       end
@@ -36,6 +43,7 @@ RSpec.describe "Workspace Archival", type: :request do
 
     describe "DELETE /workspaces/:slug/archival" do
       it "restores an archived workspace and redirects to it" do
+        workspace = signed_in_owned_workspace
         workspace.archive!
         delete workspace_archival_path(workspace)
         expect(workspace.reload).not_to be_archived
@@ -44,10 +52,9 @@ RSpec.describe "Workspace Archival", type: :request do
       end
 
       it "denies non-owners" do
+        workspace = signed_in_owned_workspace
         workspace.archive!
-        member = create(:user)
-        create(:membership, user: member, workspace: workspace)
-        sign_in(member)
+        sign_in_member_of(workspace)
         delete workspace_archival_path(workspace)
         expect(workspace.reload).to be_archived
       end

@@ -7,12 +7,9 @@ require "rails_helper"
 # regions present. Axe is asserted INLINE — the teardown audit never runs for
 # system specs (#912).
 RSpec.describe "Join link copy control", type: :system do
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme") }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-  let(:link_noun) { I18n.t("workspaces.settings.join_policy.link_aria") }
-  let(:stub_clipboard) { <<~JS }
+  def link_noun = I18n.t("workspaces.settings.join_policy.link_aria")
+
+  def stub_clipboard = <<~JS
     window.__copied = []
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText: (text) => { window.__copied.push(text); return Promise.resolve() } },
@@ -20,16 +17,18 @@ RSpec.describe "Join link copy control", type: :system do
     })
   JS
 
-  before do
-    allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-    workspace.update!(join_policy: "open_link")
-    sign_in_via_form(user)
+  def reveal_join_link
+    permit_open_join_links
+    workspace = create(:workspace, :open_link, name: "Acme")
+    sign_in_via_form(create(:membership, :owner, workspace: workspace).user)
     visit edit_workspace_settings_path(workspace)
     click_button I18n.t("workspaces.settings.join_policy.generate")
     expect(page).to have_text(I18n.t("workspaces.settings.join_policy.show_once_warning_lead"))
   end
 
   it "renders the reveal as a copy field wired to the warning and lands focus on the copy trigger" do
+    reveal_join_link
+
     expect(page).to have_css("input[readonly][data-copy-target='source'][value^='http']")
     expect(page).to have_css("button[data-action='copy#copy'][aria-describedby='join_link_show_once_warning'][autofocus]")
     expect(page).to have_css("label.sr-only", text: link_noun, visible: :all)
@@ -39,6 +38,8 @@ RSpec.describe "Join link copy control", type: :system do
   end
 
   it "copies the URL and announces it without changing the button's text" do
+    reveal_join_link
+
     page.execute_script(stub_clipboard)
     url = find("input[data-copy-target='source']").value
 
@@ -52,6 +53,9 @@ RSpec.describe "Join link copy control", type: :system do
   end
 
   it "is axe-clean at AAA in both themes on the reveal" do
+    reveal_join_link
+    axe_options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
+
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       axe_violations_in_both_themes(axe_options).join("\n")
   end

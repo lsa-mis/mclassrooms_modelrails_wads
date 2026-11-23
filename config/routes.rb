@@ -87,10 +87,6 @@ Rails.application.routes.draw do
       end
     end
     resource :connected_account_verification, only: [ :show, :create ], path: "connected_accounts/verify"
-    # Legacy path-token route, kept for one token lifetime (24 h) after the
-    # 2026-09 deploy so in-flight verification emails still land; remove after
-    # that deploy plus one day. Renders the confirmation only (#950/#916).
-    get "connected_accounts/verify/:token", to: "connected_account_verifications#show", as: :legacy_verify_settings_connected_accounts
     resource :email_confirmation, only: [ :show, :destroy ]
     resources :notifications, only: [ :index, :update ] do
       # POST-only open-and-mark-read (#686): a GET here MUTATED (read_at), so

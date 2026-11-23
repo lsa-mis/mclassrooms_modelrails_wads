@@ -1,0 +1,53 @@
+# Installs Ubuntu packages from the Actions cache when this runner image has cached them, so an
+# Ubuntu mirror outage fails only the first run after an image update (#1462).
+name: Install apt packages
+description: Install Ubuntu packages, from the Actions cache when this runner image has them
+
+inputs:
+  packages:
+    description: Space-separated package names
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Name the cache for this runner image and package list
+      id: key
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+      run: echo "key=apt-$ImageOS-$ImageVersion-$(echo "$PACKAGES" | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the packages
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.apt-packages
+        key: ${{ steps.key.outputs.key }}
+
+    - name: Install the packages
+      id: install
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+      run: |
+        read -ra packages <<< "$PACKAGES"
+        debs="$HOME/.apt-packages"
+        if [ "$CACHE_HIT" = true ] && sudo dpkg -i "$debs"/*.deb && dpkg -s "${packages[@]}" > /dev/null; then
+          exit 0
+        fi
+
+        rm -rf "$debs" && mkdir -p "$debs/partial"
+        apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30)
+        sudo apt-get update -qq "${apt_options[@]}"
+        sudo apt-get install -y --no-install-recommends "${apt_options[@]}" -o Dir::Cache::Archives="$debs" "${packages[@]}"
+        sudo chown -R "$(id -u):$(id -g)" "$debs" && rm -rf "$debs/partial" "$debs/lock"
+        if compgen -G "$debs/*.deb" > /dev/null; then echo "fetched=true" >> "$GITHUB_OUTPUT"; fi
+
+    - name: Save the packages for the next run on this image
+      if: steps.install.outputs.fetched == 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.apt-packages
+        key: ${{ steps.key.outputs.key }}

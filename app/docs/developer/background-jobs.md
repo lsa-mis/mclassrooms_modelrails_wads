@@ -6,13 +6,13 @@ keywords: solid queue jobs mailers default low recurring digest cron observabili
 
 # Background Jobs
 
-This template uses **Solid Queue** as its background job backend — the Rails 8 default. Jobs persist to SQLite (the same database that holds your app data, separated by Active Record's multi-DB support).
+This template uses **Solid Queue** as its background job backend — the Rails 8 default. Jobs persist to SQLite, in their own `queue` database (`storage/production_queue.sqlite3` beside the app's `storage/production.sqlite3`) through Active Record's multi-DB support.
 
 > **Design rationale:** queue topology decisions on this page came out of an Ops panel review.
 
 ## Where jobs run
 
-By default — and **per the template's design** — Solid Queue runs **inside the web server's Puma process**. The `SOLID_QUEUE_IN_PUMA: true` setting in `config/deploy.yml` activates the `puma-plugin-solid_queue` plugin, which starts the Supervisor as part of Puma's boot.
+By default — and **per the template's design** — Solid Queue runs **inside the web server's Puma process**. The `SOLID_QUEUE_IN_PUMA: true` setting in `config/deploy.yml` activates Solid Queue's Puma plugin (`plugin :solid_queue` in `config/puma.rb`), which starts the Supervisor as part of Puma's boot.
 
 This means:
 
@@ -29,7 +29,7 @@ It's the right default for a SQLite + one-VPS template. When you outgrow it, see
 
 ```yaml
 workers:
-  - queues: [ default, mailers, low ]
+  - queues: [ mailers, default, low ]
     threads: 3
     processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
     polling_interval: 0.1
@@ -40,7 +40,7 @@ workers:
 | Queue | Convention | Examples |
 |---|---|---|
 | `default` | Business logic, model callbacks, the notifier sweeps, anything you `perform_later` without specifying a queue | `WorkspaceInvitationExpiringSweepJob`, `WorkspaceCapacitySweepJob`, `NotificationDispatchReconcileJob`, custom callback jobs |
-| `mailers` | Action Mailer / mailer-class jobs (network-bound, slower) | `DigestMailerJob`, `UserMailer.deliver_later` |
+| `mailers` | Action Mailer / mailer-class jobs (network-bound, slower) | `DigestMailerJob`, `MagicLinkMailer.sign_in_link(...).deliver_later` |
 | `low` | Best-effort cleanup and retention sweeps — nobody is waiting on it, and it must never delay work someone *is* waiting on | `clear_solid_queue_finished_jobs`, `NotificationCleanupJob`, `ExpiredSessionsSweepJob`, `WebauthnChallengesSweepJob`, `UnattachedBlobsSweepJob`, `ActivityLogRetentionSweepJob` |
 
 ### Routing a job to a specific queue
@@ -63,14 +63,15 @@ Or route at perform time:
 SomeJob.set(queue: :low).perform_later(arg)
 ```
 
-Mailer jobs from `Mailer.deliver_later` calls automatically use the `mailers` queue if the Action Mailer adapter is configured for it (the Rails default since 8.0).
+`Mailer.deliver_later` jobs use the `mailers` queue (`config.action_mailer.deliver_later_queue_name` in `config/application.rb`). The worker claims `mailers` first, so a sign-in link goes ahead of backups and sweeps.
 
 ## Recurring jobs
 
-Recurring jobs are declared in `config/recurring.yml` and dispatched by Solid Queue's scheduler. The template ships ten:
+Recurring jobs are declared in `config/recurring.yml` and dispatched by Solid Queue's scheduler. The template ships eleven:
 
 | Job | Cadence | Queue | What it does |
 |---|---|---|---|
+| `database_backup` | Daily at 2am (`BACKUP_SCHEDULE`) | `default` | Backs up the app database and uploaded files once a destination is set; see [Deployment](/docs/developer/deployment#back-up-the-database) |
 | `clear_solid_queue_finished_jobs` | Every hour at :12 | `low` | Cleans up completed/failed jobs from Solid Queue's own tables in batches with 0.3s sleep between |
 | `workspace_invitation_expiring_sweep` | Every 6 hours | `default` | Notifies users whose invitations expire soon (per-day idempotency) |
 | `workspace_capacity_sweep` | Every 12 hours | `default` | Alerts workspace owners approaching member limits |
@@ -84,7 +85,7 @@ Recurring jobs are declared in `config/recurring.yml` and dispatched by Solid Qu
 
 ### Why the sweeps are on the `low` queue
 
-Six of the ten entries are pure housekeeping — nothing downstream is waiting on them — so they belong on `low`, where they cannot delay work someone *is* waiting on. Three stay on `default` because they put a notification in front of a user: the two `workspace_*` sweeps dispatch user-facing notifiers, and `notification_dispatch_reconcile` re-delivers one that already failed to arrive.
+Six of the eleven entries are pure housekeeping — nothing downstream is waiting on them — so they belong on `low`, where they cannot delay work someone *is* waiting on. Three stay on `default` because they put a notification in front of a user: the two `workspace_*` sweeps dispatch user-facing notifiers, and `notification_dispatch_reconcile` re-delivers one that already failed to arrive. `database_backup` is on `default` too.
 
 A recurring entry with **no** `queue:` key is not "the default queue" — Solid Queue resolves it to `SolidQueue::RecurringJob`, whose queue is `solid_queue_recurring`. Nothing in `config/queue.yml` polls that, so such a job enqueues and is never claimed, silently. Always name a queue.
 
@@ -108,10 +109,10 @@ Schedule syntax supports `every N seconds/minutes/hours/days`, `at H:Mam every d
 
 ## Mission Control (the job dashboard)
 
-In development you can mount Solid Queue's Mission Control dashboard:
+Mission Control isn't in the template's Gemfile. Add the `mission_control-jobs` gem, then in development you can mount the dashboard:
 
 ```ruby
-# config/routes.rb (if not already present)
+# config/routes.rb
 mount MissionControl::Jobs::Engine, at: "/jobs" if Rails.env.development?
 ```
 
@@ -130,8 +131,8 @@ In production, mount it behind Pundit authorization so only admins can see it. T
 
 When `kamal deploy` rolls a new container:
 
-1. Solid Queue's `puma-plugin-solid_queue` receives the shutdown signal alongside Puma
-2. Its `on_worker_shutdown` hook begins draining in-flight jobs
+1. Solid Queue's Puma plugin receives the shutdown signal alongside Puma
+2. It stops the Supervisor when Puma stops, which begins draining in-flight jobs
 3. Docker waits `stop_timeout` seconds before SIGKILL (45 in `config/deploy.yml` — see [Deployment](/docs/developer/deployment#stop_timeout-45-at-top-level))
 4. Any job that hasn't completed by then gets SIGKILLed and re-runs on the next container (via Solid Queue's at-least-once delivery semantics)
 
@@ -160,7 +161,7 @@ Development runs jobs the way production does: `config.active_job.queue_adapter 
 
 **If you start only `bin/rails server`, jobs queue up and nothing works them.** That includes mail sent with `deliver_later`. Use `bin/dev`, or run `bin/jobs` alongside the server.
 
-Foreman gives each `Procfile.dev` process its own `PORT`, 100 apart (web 3000, css 3100, jobs 3200), so mail rendered in `bin/jobs` can't take its link port from `PORT`. `bin/dev` records the web server's port as `DEV_SERVER_PORT` before Foreman starts, and development's mailer links use `DevServer.port` (`lib/dev_server.rb`), which falls back to `PORT` when the server was started some other way. `PORT=3001 bin/dev` still gives links on 3001.
+Mail sent from a job links to the web server's port, not the job process's. Foreman gives each `Procfile.dev` process its own `PORT` (3000 for the server, 3200 for `bin/jobs`), so `bin/dev` also exports the server's port as `DEV_SERVER_PORT`, and development mail links read that first. `bin/dev` takes the port from `-p`, then `PORT` in `.env`, then `PORT` in your shell. If you run `bin/jobs` yourself beside a server on another port, give both the same `PORT`. `bin/rails server -p` changes only the server, so prefer `PORT=3001 bin/rails server`.
 
 Action Cable uses Solid Cable in development too, on its own `cable` database. A job runs in `bin/jobs`, a separate process, and Rails' default `async` cable adapter only reaches browsers connected to the process that broadcast. With Solid Cable, a job's Turbo broadcasts reach the page. An existing checkout needs `bin/rails db:prepare` once to create `storage/development_cable.sqlite3`.
 

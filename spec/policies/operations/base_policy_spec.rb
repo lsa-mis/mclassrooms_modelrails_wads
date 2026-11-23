@@ -69,7 +69,7 @@ RSpec.describe "Operations policies" do
     end
 
     it "refuses to suspend an operator record, the operator themself included" do
-      other_operator = create(:user).tap { |u| Operatorship.grant!(user: u) }
+      other_operator = create(:user, :operator)
 
       expect(described_class.new(operator, other_operator).suspend?).to be false
       expect(described_class.new(operator, operator).suspend?).to be false

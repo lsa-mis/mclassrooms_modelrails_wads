@@ -3,7 +3,6 @@ module Workspaces
   #   Flow A (Reshape 2a) — existing authenticated user joins via the link.
   #   Flow B (Reshape 2b) — unauthenticated visitor; stash token, redirect to
   #     signup; claim the workspace on email verification.
-  # See docs/reshape-2-per-workspace-join-policy-spec.md.
   class JoinsController < ApplicationController
     allow_unauthenticated_access
     before_action :set_workspace_and_link

@@ -10,17 +10,13 @@ require "rails_helper"
 # Measured at PHONE width, where the leftover space is smallest and the failure
 # is deterministic rather than a coin flip on column widths.
 RSpec.describe "Inline role select target size", type: :system do
-  let(:workspace) { create(:workspace) }
-  let(:owner) { create(:user) }
-  let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
-
-  before { %w[admin member viewer].each { |slug| Role.system_default!(slug) } }
-
   it "keeps the select at or above the 44px floor on both axes" do
-    sign_in_via_form(owner)
+    owner_membership = create(:membership, :owner, user: create(:user), workspace: create(:workspace))
+    %w[admin member viewer].each { |slug| Role.system_default!(slug) }
+    sign_in_via_form(owner_membership.user)
 
     with_viewport(ResponsiveViewport::PHONE) do
-      visit workspace_members_path(workspace)
+      visit workspace_members_path(owner_membership.workspace)
 
       within "##{ActionView::RecordIdentifier.dom_id(owner_membership)}" do
         click_link I18n.t("workspaces.members.index.edit_role")

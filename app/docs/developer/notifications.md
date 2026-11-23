@@ -16,8 +16,8 @@ Implementation reference for the notifications subsystem. The end-user view of t
 | Per-event delivery rules | Notifier subclasses under `app/notifiers/` |
 | In-app real-time | Turbo Streams 4-target broadcast on `[user, :notifications]` channel via `NotificationBroadcaster` |
 | Email delivery | `NotificationMailer` (per-event + `digest`); cadence on per-user `notification_preferences` |
-| Per-user config | `NotificationPreferences` value object wrapping `user_preferences.notification_preferences` JSONB |
-| Background jobs | `DigestMailerJob`, `NotificationCleanupJob` — cadence + queue in `config/recurring.yml` |
+| Per-user config | `NotificationPreferences` value object wrapping `user_preferences.notification_preferences` JSON |
+| Background jobs | `DigestMailerJob`, `NotificationCleanupJob`, `NotificationDispatchReconcileJob` — cadence + queue in `config/recurring.yml` |
 | Authorization | `NotificationPolicy` + `Settings::NotificationPreferencesPolicy` (Pundit) |
 
 ## Schema
@@ -39,9 +39,9 @@ One row per `(event, recipient)` pair. `recipient` is polymorphic (always `User`
 | `type` | STI shape — e.g., `PasswordChangedNotifier::Notification` |
 | `read_at` | Nullable timestamp; the read/unread state and nothing else — a *return to me later* state, if one is ever built, gets its own column rather than a `read_at` reset |
 
-There's a composite index `(recipient_id, read_at, created_at)` to back the `/account/notifications` index page (default sort + `?filter=unread`), the per-user unread breakdown that drives the bell indicator, and the cleanup job's `read_at < cutoff` scan.
+There's a composite index `(recipient_type, recipient_id, read_at, created_at)` to back the `/settings/notifications` index page (default sort + `?filter=unread`), the per-user unread breakdown that drives the bell indicator, and the cleanup job's `read_at < cutoff` scan.
 
-### `user_preferences.notification_preferences` (JSONB)
+### `user_preferences.notification_preferences` (JSON)
 
 The canonical per-user config. Shape (with database-level defaults applied automatically on row creation):
 
@@ -74,26 +74,37 @@ A user with no `user_preferences` row at all still gets sane defaults because `A
 All inherit from `ApplicationNotifier` (which extends `Noticed::Event`). Each declares its `category` (drives preference opt-in/opt-out) and its `severity` (drives the bell indicator color) via DSL macros:
 
 ```ruby
-class PasswordChangedNotifier < ApplicationNotifier
+class PasswordLockedNotifier < ApplicationNotifier
   category :security
   severity :danger
 
-  deliver_by :email, mailer: "NotificationMailer", method: :password_changed,
-             if: ->(recipient) { deliver_email_now? }
+  deliver_by :email do |config|
+    config.mailer = "NotificationMailer"
+    config.method = :password_locked
+    config.before_enqueue = -> { throw(:abort) unless deliver_email_now? }
+    config.enqueue = true
+  end
 
   notification_methods do
-    def message = I18n.t("notifications.password_changed.message", user_name: recipient.full_name)
-    def url     = main_app.settings_connected_accounts_path
+    def message
+      render_safe_or_placeholder do
+        I18n.t("notifications.password_locked.message", locale: recipient_locale,
+               user_name: event.record.first_name, duration: User::LOCK_DURATION.inspect)
+      end
+    end
+
+    def url
+      Rails.application.routes.url_helpers.new_session_path
+    end
   end
 end
 ```
 
-`category` stores as a `String` (compared against JSONB preference keys); `severity` stores as a `Symbol` (used to index into `NotificationBellHelper::SEVERITY_RANK`/`SEVERITY_CLASSES`). Default `severity` is `:info` when a subclass doesn't declare one.
+`category` stores as a `String` (compared against JSON preference keys); `severity` stores as a `Symbol` (used to index into `UnreadNotificationSummary::SEVERITY_RANK` and `NotificationBellHelper::SEVERITY_CLASSES`). Default `severity` is `:info` when a subclass doesn't declare one.
 
 | Notifier | Category | Severity | What it dispatches on |
 |---|---|---|---|
 | `PasswordChangedNotifier` | `security` | `danger` | `User#password_digest` change |
-| `PasswordLockedNotifier` | `security` | `danger` | Failed password attempts lock the account (`User#locked_at` set) |
 | `PasswordLockedNotifier` | `security` | `danger` | Failed password attempts lock the account (`User#locked_at` set) |
 | `PasskeyAddedNotifier` | `security` | `danger` | Passkey enrollment (`Passkeys::Registration::CredentialsController#create`) |
 | `SignInFromNewDeviceNotifier` | `security` | `danger` | Login from a previously-unseen browser fingerprint |
@@ -115,11 +126,11 @@ Its copy varies by channel, not by reader. The in-app row is third-person event-
 
 ### Category → notifier types
 
-`ApplicationNotifier.notification_types_for(category)` returns the `Noticed::Notification` STI type strings for that category — used by `NotificationsController#index` for `?category=foo` filtering, and by `NotificationCleanupJob` for retention-floor enforcement. The suffix-free variant `ApplicationNotifier.notifier_class_names_for(category)` returns the parent Notifier class names.
+`ApplicationNotifier.notification_types_for(category)` returns the `Noticed::Notification` STI type strings for that category — used by `Settings::NotificationsController#index` for `?category=foo` filtering, and by `DigestMailerJob` to keep `security` types out of the digest. The suffix-free variant `ApplicationNotifier.notifier_class_names_for(category)` returns the parent Notifier class names.
 
 ### Preference resolution and the missing-row fallback
 
-`ApplicationNotifier.preferences_for(user)` resolves a `NotificationPreferences` object for any user, **including users with no persisted `user_preferences` row**: it falls back to wrapping `UserPreferences.new.notification_preferences`. Why a transient record instead of a Ruby constant? The `notification_preferences` JSONB column carries a database-level default containing the canonical permission matrix (see `db/schema.rb`), and Rails populates column defaults on the in-memory record — so the schema default stays the single source of truth. Hard-coding the matrix in Ruby would create a second copy that could silently drift from the schema.
+`ApplicationNotifier.preferences_for(user)` resolves a `NotificationPreferences` object for any user, **including users with no persisted `user_preferences` row**: it falls back to wrapping `UserPreferences.new.notification_preferences`. Why a transient record instead of a Ruby constant? The `notification_preferences` JSON column carries a database-level default containing the canonical permission matrix (see `db/schema.rb`), and Rails populates column defaults on the in-memory record — so the schema default stays the single source of truth. Hard-coding the matrix in Ruby would create a second copy that could silently drift from the schema.
 
 This replaced an earlier behavior that wrapped `nil`, which made every category except `security` answer `false` from `deliver_now?` — a silent default-deny posture for freshly-created users with no preferences row yet. Incorrect, since the schema default permits in-app delivery for every category.
 
@@ -127,9 +138,9 @@ The method is available as both a class method (backing the per-recipient `recip
 
 ### In-app gating lives in `recipients`
 
-Noticed 2.9.x deprecates the `:database` delivery method — notification rows are auto-saved by the deliver pipeline itself, so there is no delivery-method conditional to hang an "is in-app enabled for this recipient?" check on. The only place to prevent a `noticed_notifications` row from ever existing is **recipient resolution**: the notifier's `recipients` block filters out users whose `<category>.in_app` preference is `false` (which, for non-security categories, also covers quiet hours via `deliver_now?`). This is the pattern for every notifier that respects in-app preferences — `WorkspaceMemberAddedNotifier`, `WorkspaceCapacityApproachingNotifier`, `WorkspaceCreatedNotifier`, `WorkspaceJoinedNotifier` and `WelcomeNotifier` all declare a `recipients` block and are dispatched with `deliver(nil)` so the block, not the caller's argument, resolves recipients. Combined with the missing-row fallback above, users without a preferences row are correctly treated as opted-in at the column-default level instead of being silently filtered out of every dispatch.
+Noticed 2.9.x deprecates the `:database` delivery method — notification rows are auto-saved by the deliver pipeline itself, so there is no delivery-method conditional to hang an "is in-app enabled for this recipient?" check on. The only place to prevent a `noticed_notifications` row from ever existing is **recipient resolution**: the notifier's `recipients` block filters out users whose `<category>.in_app` preference is `false` (which, for non-security categories, also covers quiet hours via `deliver_now?`). This is the pattern for every notifier that respects in-app preferences — `WorkspaceMemberAddedNotifier`, `WorkspaceMemberRemovedNotifier`, `WorkspaceCapacityApproachingNotifier`, `WorkspaceCreatedNotifier`, `WorkspaceJoinedNotifier` and `WelcomeNotifier` all declare a `recipients` block and are dispatched with `deliver(nil)` so the block, not the caller's argument, resolves recipients. Combined with the missing-row fallback above, users without a preferences row are correctly treated as opted-in at the column-default level instead of being silently filtered out of every dispatch.
 
-**The `deliver(nil)` invariant, both directions.** `Noticed::Deliverable#deliver` is `recipients ||= evaluate_recipients` — `noticed-3.0.0`, `app/models/concerns/noticed/deliverable.rb:87`. An explicit recipient does not *add* to the block; it *replaces* it, and the block never runs. So:
+**The `deliver(nil)` invariant, both directions.** `Noticed::Deliverable#deliver` is `recipients ||= evaluate_recipients` — `noticed-3.1.0`, `app/models/concerns/noticed/deliverable.rb:89`. An explicit recipient does not *add* to the block; it *replaces* it, and the block never runs. So:
 
 - A notifier that **declares** a `recipients` block must be dispatched with `deliver(nil)`. Passing a recipient skips `permitted_in_app` — delivering to someone who opted out or is inside quiet hours — and skips the actor exclusion below. Nothing raises, nothing is logged; the preference is just quietly ignored.
 - A notifier that declares **no** block must be dispatched with an explicit recipient. `deliver(nil)` there resolves to zero recipients, so `ApplicationNotifier#deliver` returns `:skipped` and writes no rows at all — a dispatch that silently does nothing.
@@ -201,7 +212,7 @@ Know the contract's edge: only deletion shapes that surface as a *nil receiver* 
 
 ## Bell indicator + helper
 
-There is no dropdown panel and no standalone bell link. The unread indicator is a small severity-colored **dot** rendered by `shared/_notifications_indicator`: the desktop avatar button carries it at its bottom-right, and the mobile hamburger button carries its twin. The dot's color encodes the highest-severity unread; the numeric `[N new]` badge lives in the user-menu **Notifications** row, which is also the navigation path to `/account/notifications`. The dot itself is purely decorative (`aria-hidden`) — the accessible announcement lives elsewhere (see the broadcast pipeline below).
+There is no dropdown panel and no standalone bell link. The unread indicator is a small severity-colored **dot** rendered by `shared/_notifications_indicator`: the desktop avatar button carries it at its bottom-right, and the mobile hamburger button carries its twin. The dot's color encodes the highest-severity unread; the numeric `[N new]` badge lives in the user-menu **Notifications** row, which is also the navigation path to `/settings/notifications`. The dot itself is purely decorative (`aria-hidden`) — the accessible announcement lives elsewhere (see the broadcast pipeline below).
 
 ### `User#unread_notification_breakdown`
 
@@ -223,13 +234,13 @@ The helper owns view-token mapping + severity orchestration. The three public su
 
 | Method | Returns | Used by |
 |---|---|---|
-| `unread_notification_summary(user)` | `{ count:, severity: }` (severity nil when count zero) | The three frame-rendering broadcasts (avatar indicator, hamburger indicator, menu count row); passed in as a `summary:` local from `NotificationBroadcaster` to avoid redundant queries |
+| `unread_notification_summary(user)` | `{ count:, severity: }` (severity nil when count zero) | The page-render pass of the three frame partials (avatar indicator, hamburger indicator, menu count row), memoized per user for the render; `NotificationBroadcaster` builds the same hash from `UnreadNotificationSummary` and passes it in as a `summary:` local |
 | `notification_bell_classes(severity, variant: :icon)` | `{ icon: "text-<severity>" }` for `:icon`; a dot class (`SEVERITY_DOT_CLASSES`) for `:dot` | The indicator partial (`variant: :dot`) — maps severity to the saturated `--color-{severity}` token already used by toasts; `variant:` selects the icon-tint vs. dot-indicator form |
 | `avatar_button_aria_label(user, summary = …)` | I18n-composed string ("User menu for Nell. 3 unread notifications, including a security alert.") | Retained from the retired standalone bell; the current avatar button carries a static identity-only label (`navigation.user_menu_label_simple`), so unread phrasing no longer rides the button's accessible name |
 
-`SEVERITY_RANK = { danger: 4, warning: 3, info: 2, success: 1 }` — higher rank wins when multiple severities are unread. `canonical_severity(severity)` clamps any input to one of the four canonical values (defensive coverage for non-production paths; production is already guarded by `ApplicationNotifier.severity`'s DSL).
+`UnreadNotificationSummary::SEVERITY_RANK = { danger: 4, warning: 3, info: 2, success: 1 }` — higher rank wins when multiple severities are unread. `canonical_severity(severity)` clamps any input to one of the four canonical values (defensive coverage for non-production paths; production is already guarded by `ApplicationNotifier.severity`'s DSL).
 
-The helper uses `extend self` so every method is callable BOTH as a module method (`NotificationBellHelper.unread_notification_summary(user)`, used by `NotificationBroadcaster` which has no view context) AND as a public instance method when mixed into a view. Unlike `module_function`, instance-mixed methods stay public, so `helper.foo` works in specs.
+The count + severity computation lives in `UnreadNotificationSummary` (`app/lib/unread_notification_summary.rb`), not in the helper, so `NotificationBroadcaster`, which has no view context, uses that class directly. The helper is an ordinary view helper on top of it.
 
 ### Forced-colors fallback for AAA
 
@@ -275,7 +286,7 @@ Idempotency answers "is this the same dispatch?". Coalescing answers "should the
 - **A `read_at` reset on each coalesced arrival**, so the item returns to unread.
 - **A mark-read compare-and-swap keyed on `event_id`.** A stale `event_id` re-renders the row instead of marking a newer arrival read.
 - **`RecordNotUnique` scoped to the coalescing insert**, distinct from the outer idempotency rescue that returns `:deduplicated`.
-- **The gem-internal write order, pinned to noticed 3.0.0:** `validate!` → transaction → `notifications_count=` → `save!` → `insert_all!` → `EventJob` enqueue. The enqueue must follow the `event_id` re-point, or email fans out over the wrong `has_many`.
+- **The gem-internal write order, pinned to noticed 3.1.0:** `validate!` → transaction → `notifications_count=` → `save!` → `insert_all!` → `EventJob` enqueue. The enqueue must follow the `event_id` re-point, or email fans out over the wrong `has_many`.
 - **One decision between manual `notifications_count` assignment and a counter cache.** Both at once double-count.
 - **The write path returns the touched row ids**, so `broadcast_notifications_arrival` does not silently no-op for a re-pointed row.
 - **`mark_all_read` zeroes the counter.**
@@ -309,12 +320,12 @@ Every authenticated page subscribes via the layout:
 
 ### The four broadcasts
 
-`NotificationBroadcaster.refresh_for(user, announcement_key:)` (in `app/lib/notification_broadcaster.rb`) issues a four-target broadcast per call. Each frame target is an independent slim partial rendered into its own `<turbo-frame>`, so the surfaces refresh atomically without rewiring unrelated chrome.
+`NotificationBroadcaster.refresh_for(user, announcement_key:, severity: nil)` (in `app/lib/notification_broadcaster.rb`) issues a four-target broadcast per call. Each frame target is an independent slim partial rendered into its own `<turbo-frame>`, so the surfaces refresh atomically without rewiring unrelated chrome.
 
 1. **`notifications_indicator_avatar`** — the severity-colored dot on the desktop avatar button (`shared/_notifications_indicator`, `surface: :avatar`)
 2. **`notifications_indicator_hamburger`** — the dot's twin on the mobile hamburger button (same partial, `surface: :hamburger`)
 3. **`notifications_menu_count_frame`** — the `[N new]` badge inside the user-menu **Notifications** row (`shared/_user_menu_notifications_row`)
-4. **`notifications-live`** — the page-level `aria-live="polite"` region; content is `I18n.t(announcement_key)` (`notifications.bell.arrival_announcement` or `notifications.bell.read_state_announcement`)
+4. **`notifications-live`** — the page-level `aria-live="polite"` region; content is `I18n.t(announcement_key)` (`notifications.bell.arrival_announcement` or `notifications.bell.read_state_announcement`). An arrival passes the notifier's `severity:`, which swaps the text for `notifications.bell.arrival_announcement_with_severity` and, for `:danger`, sends it to the `notifications-live-assertive` twin instead (#926)
 
 All four use `broadcast_update_to`, never `broadcast_replace_to`. The partials render each frame's **contents**, not the frame element itself — `replace` would swap the whole `<turbo-frame>` away, so repeat broadcasts couldn't re-target it and the surfaces would freeze after the first refresh. `update` swaps the inner content and keeps the frame addressable for the next refresh.
 
@@ -328,7 +339,7 @@ Performance: the unread breakdown summary is computed ONCE at the top of `refres
 
 | Caller | When | Announcement key |
 |---|---|---|
-| `ApplicationNotifier#broadcast_notifications_arrival` (after_create_commit on the event) | New notification arrives | `arrival_announcement` |
+| `ApplicationNotifier#broadcast_notifications_arrival` (after_create_commit on the event) | New notification arrives | `arrival_announcement_with_severity` (passes `severity:`) |
 | `Settings::NotificationsController#broadcast_bell_refresh` (private), called from `update`; `Settings::NotificationReadingsController#create` (mark all read) and `Settings::Notifications::ReadingsController#create` calls `NotificationBroadcaster.refresh_for` directly for the same reason | Read-state mutation | `read_state_announcement` |
 
 Both flow through `NotificationBroadcaster.refresh_for` — no duplicate broadcast code lives anywhere else. The fan-out in `broadcast_notifications_arrival` iterates `User.where(id: recipient_ids).find_each` so per-user broadcast failures are isolated (one bad user can't poison the rest).
@@ -341,10 +352,11 @@ Noticed v2 uses `notifications.insert_all!` to fan out per-recipient rows — th
 
 | Frame ID | Lives in | Contents rendered by |
 |---|---|---|
-| `notifications_indicator_avatar` | `shared/_user_menu_avatar_button.html.erb` — a positioned sibling of the avatar image inside the button, outside its accessible-name path | `_notifications_indicator.html.erb` (`surface: :avatar`) |
+| `notifications_indicator_avatar` | `shared/_user_avatar_header.html.erb`, rendered inside the button by `shared/_user_menu_avatar_button.html.erb` — a positioned sibling of the avatar image inside the button, outside its accessible-name path | `_notifications_indicator.html.erb` (`surface: :avatar`) |
 | `notifications_indicator_hamburger` | `shared/_header.html.erb` — inside the mobile hamburger button, same sibling pattern | `_notifications_indicator.html.erb` (`surface: :hamburger`) |
 | `notifications_menu_count_frame` | `shared/_user_menu.html.erb` — wraps the Notifications row | `_user_menu_notifications_row.html.erb` |
 | `notifications-live` | `shared/_layout_tail.html.erb` — page-level `aria-live="polite"` region | Plain text content via `broadcast_update_to` |
+| `notifications-live-assertive` | `shared/_layout_tail.html.erb` — its `aria-live="assertive"` twin, for `:danger` arrivals | Plain text content via `broadcast_update_to` |
 
 The buttons themselves are OUTSIDE every broadcast frame — they're stable focusable elements. Only the decorative dot and the count badge swap on broadcast, so clicks landing mid-broadcast still hit a live target.
 
@@ -356,7 +368,7 @@ The tab that performs a read-state mutation gets its own surfaces refreshed by t
 
 ## NotificationPreferences value object
 
-`app/lib/notification_preferences.rb` wraps the JSONB hash with typed accessors. The two methods you'll touch most:
+`app/lib/notification_preferences.rb` wraps the JSON hash with typed accessors. The two methods you'll touch most:
 
 ### `deliver_now?` / `defer_to_digest?` — the decision surface
 
@@ -403,11 +415,11 @@ The preference policies look "decorative" (always-true for an authenticated user
 
 ## Background jobs
 
-Both scheduled in `config/recurring.yml` under the `production:` key — that file is the source of truth for cadence and queue assignment; the values are deliberately not repeated here. Not active in development/test by default.
+All three scheduled in `config/recurring.yml` under the `production:` key — that file is the source of truth for cadence and queue assignment; the values are deliberately not repeated here. Not active in development/test by default.
 
 ### `DigestMailerJob`
 
-**Scope strategy**: one indexed range scan against `user_preferences.digest_next_due_at` per run — no per-user polling. The index is **partial** (`WHERE digest_next_due_at IS NOT NULL` in `db/schema.rb`), so users without a digest schedule never appear in the scan at all; a user on `"instant"` frequency has `digest_next_due_at = nil` and is skipped by construction.
+**Scope strategy**: one indexed range scan against `user_preferences.digest_next_due_at` per run — no per-user polling. The index is **partial** (`WHERE digest_next_due_at IS NOT NULL` in `db/schema.rb`), so a user who has never chosen a digest never appears in the scan. A user who switches back to `"instant"` keeps a due time, because `reschedule_digest!` always writes one: the scan still picks them up once a cycle, `digest_enabled?` is false, and the job reschedules them without sending.
 
 For each due user:
 
@@ -415,7 +427,7 @@ For each due user:
 2. If non-empty: dispatches `NotificationMailer.digest(user, ids)` — **ids, not records** — and stamps `digest_last_sent_at = cycle_started_at`. The half-open window means a notification arriving while the mail is built sits above the new watermark and lands in the next cycle, rather than falling below a watermark stamped after delivery and never being selected. The mailer re-queries those ids `where(read_at: nil)` at delivery time and sends nothing if they have all been read since — so reading an item in-app suppresses its digest line, and a row deleted by retention between enqueue and render cannot raise `DeserializationError` and dead-letter the whole digest.
 3. Updates `digest_last_sent_at` + recomputes `digest_next_due_at` via `UserPreferences#reschedule_digest!`, which writes `NotificationPreferences#next_due_at` — the user's cadence (`daily` or `weekly`, stored in `notification_preferences`) in their own timezone (digest hour is hardcoded at 8 AM local)
 
-If quiet hours block delivery at the digest time, the digest is held until the window closes.
+If quiet hours are active when the digest comes due, the job sends nothing and reschedules to the next due time. `digest_last_sent_at` does not move, so those notifications carry into the next digest.
 
 **Cycle-boundary semantics**: dedupe between cycles is the half-open watermark, not a stamp on the notification. `cycle_started_at` is captured before the SELECT and becomes the next floor, so the windows tile exactly — no gap, no overlap. What suppresses a digest line is the recipient **reading** the item; the job marks nothing on the row itself. That is a deliberate change: `seen_at` was written only by this job, to itself, and read only by this job's own scope, so the digest deduped against its own bookkeeping and emailed people things they had already read. The accepted trade, stated: glancing at the list without opening an item does not suppress its digest line. If the downstream mail job fails after the watermark is stamped, those items do not re-enter a later digest — recovery is the in-app surface, which still shows them unread, plus the mail job's own retry policy.
 
@@ -433,16 +445,16 @@ Per-user retention enforcement. For every user:
 
 **Fault isolation**: each user's sweep runs under its own `rescue StandardError`, reported through `Rails.error` with the user id. That isolates a per-user data fault (a malformed preferences row). It does not isolate a systemic one — SQLite's writer lock is global — so a cycle in which every attempted user failed re-raises and Solid Queue records a failure. There is no retry policy on this job and none from the queue: the recovery is tomorrow's fresh sweep, which re-attempts every user from scratch because nothing is stamped as done. A *partial* failure raises nothing, so the job logs a one-line summary naming how many users it swept, how many failed, and the last error class — without it the run reads as clean (#944).
 
-**Batched deletion**: rows go out via `in_batches(of: 100, &:delete_all)` so the writer lock is released between rounds. Each yielded batch is derived from the scoped relation, so its DELETE still carries `read_at IS NOT NULL AND read_at < cutoff` and a row marked unread between the id SELECT and the DELETE is not deleted. That holds in both of `in_batches`' modes (`activerecord-8.1.3.1/lib/active_record/relation/batches.rb:440` for the id-list `rewhere`, `:457-458` for the range mode's `apply_finish_limit` on the same relation). A partial batch is re-entrant: the next run recomputes the cutoff.
+**Batched deletion**: rows go out via `in_batches(of: 100, &:delete_all)` so the writer lock is released between rounds. Each yielded batch is derived from the scoped relation, so its DELETE still carries `read_at IS NOT NULL AND read_at < cutoff` and a row marked unread between the id SELECT and the DELETE is not deleted. That holds in both of `in_batches`' modes (`activerecord/lib/active_record/relation/batches.rb:469` at the pinned Rails ref `7a78da5a` for the id-list `rewhere`, `:461-462` for the range mode's `apply_finish_limit` on the same relation). A partial batch is re-entrant: the next run recomputes the cutoff.
 
-`delete_all`, not `destroy_all`: `Noticed::Notification` has no callbacks worth running here. The one it has — noticed's counter cache on `noticed_events.notifications_count` — is bypassed by every deletion path in the app (this job, `Noticed::Event#has_many :notifications, dependent: :delete_all`, and `User#notifications, dependent: :delete_all`), so the counter is not a reliable signal; orphan-event pruning (#811) must use `NOT EXISTS`. `User#notifications, dependent: :delete_all` is also the *only* enforcement against orphaned notification rows: `noticed_notifications` carries no foreign key to users, so raw SQL or `User.delete_all` in a fork orphans them silently, and this job — which iterates `User.find_each` — never sees them again.
+`delete_all`, not `destroy_all`: `Noticed::Notification` has no callbacks worth running here. The one it has — noticed's counter cache on `noticed_events.notifications_count` — is bypassed by every deletion path in the app (this job, `Noticed::Event#has_many :notifications, dependent: :delete_all`, and `User#notifications, dependent: :delete_all`), so the counter is not a reliable signal; orphan-event pruning (#811) asks `noticed_notifications` directly instead (`NotificationCleanupJob.orphan_events`). `User#notifications, dependent: :delete_all` is also the *only* enforcement against orphaned notification rows: `noticed_notifications` carries no foreign key to users, so raw SQL or `User.delete_all` in a fork orphans them silently, and this job — which iterates `User.find_each` — never sees them again.
 
 ### `NotificationDispatchReconcileJob`
 
 Re-enqueues `Noticed::EventJob` for every event whose `dispatched_at` is still NULL — see [Dispatch reliability](#dispatch-reliability) for why that column exists and what it deliberately does not cover. The scan is bounded at both ends, `created_at BETWEEN MAX_LOOKBACK.ago AND GRACE.ago`:
 
 - **`GRACE` (5 minutes)** is well past any plausible enqueue latency, and short enough that a recovered notification is late rather than missing.
-- **`MAX_LOOKBACK` (24 hours)** stops a row that can never be stamped — a deserialization discard, a fork's hand-written row — from being re-enqueued every cycle forever. It is also why the migration that added the column **backfills existing rows** with their own `created_at`: without that, the first sweep after deploy would have re-delivered the entire notification history, since nothing prunes events and `NotificationCleanupJob` deletes notification rows without touching `notifications_count`.
+- **`MAX_LOOKBACK` (24 hours)** stops a row that can never be stamped — a deserialization discard, a fork's hand-written row — from being re-enqueued every cycle forever. It is also why the migration that added the column **backfills existing rows** with their own `created_at`: without that, the first sweep after deploy would have re-delivered the entire notification history, since an event row lives as long as any of its notification rows does and `NotificationCleanupJob` deletes notification rows without touching `notifications_count`.
 
 Events with `notifications_count == 0` are skipped: nobody for a re-enqueue to reach. The scan rides the partial index on `noticed_events (created_at) WHERE dispatched_at IS NULL`, which is empty in steady state.
 
@@ -473,11 +485,11 @@ Retention for this tier is governed by `ActivityLogRetentionSweepJob::SECURITY_R
 
 ## Record preloads (index N+1 prevention)
 
-The `/account/notifications` index eager-loads `includes(:recipient, event: :record)` for every row, but `includes` stops at the polymorphic `event.record` — it cannot reach the subtype-specific associations a notifier's `#message` traverses (a `ProjectMembership`'s `project`, an `Invitation`'s `invitable`). Each notifier therefore declares what its `#message` reads:
+The `/settings/notifications` index eager-loads `includes(:recipient, event: :record)` for every row, but `includes` stops at the polymorphic `event.record` — it cannot reach the subtype-specific associations a notifier's `#message` traverses (a `ProjectMembership`'s `project`, an `Invitation`'s `invitable`). Each notifier therefore declares what its `#message` reads:
 
 ```ruby
 class ProjectMembershipChangedNotifier < ApplicationNotifier
-  record_preloads :project
+  record_preloads project: :workspace
 end
 
 class WorkspaceInvitationAcceptedNotifier < ApplicationNotifier
@@ -505,7 +517,7 @@ Two `:recipient` n_plus_one_query entries lived here until #1054 and are now gon
 
 Watch for:
 
-- **`Rails.error` reports tagged `source: "NotificationBroadcaster.refresh_for"`** — cable adapter outages or partial-render errors. Notification persistence is unaffected, but the real-time UX degrades to "next page load."
+- **`Rails.error` reports tagged `source: "NotificationBroadcaster.<surface>"`** — cable adapter outages or partial-render errors. Notification persistence is unaffected, but the real-time UX degrades to "next page load."
 - **Job failures** on `DigestMailerJob` and `NotificationCleanupJob` — queue assignment lives in `config/recurring.yml`. Neither declares `retry_on` and Solid Queue adds no policy of its own, so a failed run lands in `solid_queue_failed_executions` and stays there; the recovery is the next scheduled run, not a retry. Watch `NotificationCleanupJob`'s `swept N of M users` warning for partial failures, which never raise.
 - **`noticed_events` growth rate** — `NotificationCleanupJob` prunes an event once it has no notifications left, in the same pass that deleted them. Pruning is **childless-only and never age-based**: deleting an event cascades to every recipient's row through the FK, so age is the one criterion that could take live notifications with it. Childlessness is decided by a subquery against `noticed_notifications`, never by `noticed_events.notifications_count`, which is deliberately stale (#811).
 

@@ -8,13 +8,20 @@ RSpec.describe Membership, type: :model do
   # without these, the after_*_commit registrations could be deleted and the
   # suite would stay green.
   describe "notification wiring" do
-    let(:owner) { create(:user) }
-    let(:workspace) { create(:workspace) }
-    let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
-    let(:member) { create(:user) }
+    def workspace_with_owner
+      owner = create(:user)
+      workspace = create(:workspace)
+      [ workspace, owner, create(:membership, :owner, user: owner, workspace: workspace) ]
+    end
+
+    def workspace_member(workspace)
+      create(:membership, user: create(:user), workspace: workspace)
+    end
 
     describe "member added (after_create_commit)" do
       it "notifies the added user and the existing owner" do
+        workspace, owner, = workspace_with_owner
+        member = create(:user)
         membership = create(:membership, user: member, workspace: workspace)
         event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
         expect(event).to be_present
@@ -23,6 +30,7 @@ RSpec.describe Membership, type: :model do
       end
 
       it "does not notify when seeding a workspace's first owner" do
+        member = create(:user)
         fresh_workspace = create(:workspace)
         expect {
           create(:membership, :owner, user: member, workspace: fresh_workspace)
@@ -30,6 +38,8 @@ RSpec.describe Membership, type: :model do
       end
 
       it "excludes the actor who performed the add" do
+        workspace, owner, = workspace_with_owner
+        member = create(:user)
         workspace.admit(member, role: Role.system_default!("member"), granted_by: owner)
         event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
         expect(event.notifications.map(&:recipient)).to eq([ member ])
@@ -38,6 +48,8 @@ RSpec.describe Membership, type: :model do
       # #935: this fan-out is best-effort — a raising notifier must not turn a
       # committed membership into a 500.
       it "still adds the member when the notifier raises" do
+        workspace, = workspace_with_owner
+        member = create(:user)
         allow(WorkspaceMemberAddedNotifier).to receive(:with).and_raise(StandardError, "boom")
         expect(Rails.error).to receive(:report).with(
           kind_of(StandardError),
@@ -57,9 +69,9 @@ RSpec.describe Membership, type: :model do
     # CALLBACK wiring — the actor arriving as an argument, the direction of the
     # discarded_at change, and the write surviving a broken notifier.
     describe "member removed (after_update_commit)" do
-      let!(:membership) { create(:membership, user: member, workspace: workspace) }
-
       it "hands the notifier the actor the caller named, without reading Current" do
+        workspace, owner, = workspace_with_owner
+        membership = workspace_member(workspace)
         membership.deactivate!(removed_by: owner)
 
         event = Noticed::Event.where(type: "WorkspaceMemberRemovedNotifier").last
@@ -69,6 +81,8 @@ RSpec.describe Membership, type: :model do
       end
 
       it "leaves the actor nil when the caller names none" do
+        workspace, = workspace_with_owner
+        membership = workspace_member(workspace)
         membership.deactivate!
 
         event = Noticed::Event.where(type: "WorkspaceMemberRemovedNotifier").last
@@ -76,6 +90,8 @@ RSpec.describe Membership, type: :model do
       end
 
       it "does not reuse an earlier actor when a later removal names none" do
+        workspace, owner, = workspace_with_owner
+        membership = workspace_member(workspace)
         membership.deactivate!(removed_by: owner)
         membership.reactivate!(granted_by: owner)
         # Past the one-minute idempotency bucket, so the second removal is a
@@ -89,6 +105,8 @@ RSpec.describe Membership, type: :model do
       # Same best-effort posture the rest of the notification wiring has: the
       # business write is not hostage to the fan-out.
       it "still removes the member when the notifier raises" do
+        workspace, owner, = workspace_with_owner
+        membership = workspace_member(workspace)
         allow(WorkspaceMemberRemovedNotifier).to receive(:with).and_raise(StandardError, "boom")
 
         expect { membership.deactivate!(removed_by: owner) }.not_to raise_error
@@ -103,17 +121,20 @@ RSpec.describe Membership, type: :model do
     describe "member re-admitted (after_update_commit)" do
       include ActiveJob::TestHelper
 
-      let!(:membership) { create(:membership, user: member, workspace: workspace) }
-
-      before do
+      def removed_member_scene
+        workspace, owner, = workspace_with_owner
+        membership = workspace_member(workspace)
         membership.deactivate!
         Noticed::Notification.delete_all
         Noticed::Event.delete_all
         ActionMailer::Base.deliveries.clear
         clear_enqueued_jobs
+        [ workspace, owner, membership ]
       end
 
       it "notifies the re-admitted member and the owners on Membership#reactivate!" do
+        _workspace, owner, membership = removed_member_scene
+        member = membership.user
         expect {
           membership.reactivate!
         }.to change { Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").count }.by(1)
@@ -124,12 +145,16 @@ RSpec.describe Membership, type: :model do
       end
 
       it "excludes the actor who performed the re-admission" do
+        _workspace, owner, membership = removed_member_scene
+        member = membership.user
         membership.reactivate!(granted_by: owner)
         event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
         expect(event.notifications.map(&:recipient)).to eq([ member ])
       end
 
       it "notifies through Workspace#admit's undiscard branch too, minus the actor" do
+        workspace, owner, membership = removed_member_scene
+        member = membership.user
         workspace.admit(member, role: Role.system_default!("member"), granted_by: owner)
         event = Noticed::Event.where(type: "WorkspaceMemberAddedNotifier").last
         expect(event).to be_present
@@ -139,6 +164,8 @@ RSpec.describe Membership, type: :model do
       # WorkspaceMemberAddedNotifier's email, not WelcomeNotifier's — that one
       # is the account's day-one notice and has no email leg at all.
       it "sends the re-admitted member WorkspaceMemberAddedNotifier's email, as a fresh add would" do
+        _workspace, _owner, membership = removed_member_scene
+        member = membership.user
         perform_enqueued_jobs(only: Noticed::EventJob) { membership.reactivate! }
         perform_enqueued_jobs(only: Noticed::DeliveryMethods::Email)
         perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob)
@@ -147,6 +174,7 @@ RSpec.describe Membership, type: :model do
       end
 
       it "does not notify on deactivation" do
+        _workspace, _owner, membership = removed_member_scene
         membership.reactivate!
         Noticed::Event.delete_all
         expect {
@@ -157,6 +185,7 @@ RSpec.describe Membership, type: :model do
       # #935: same best-effort posture as the fresh-add path above — it is the
       # same underlying callback, reached through the undiscard branch.
       it "still re-admits the member when the notifier raises" do
+        _workspace, _owner, membership = removed_member_scene
         allow(WorkspaceMemberAddedNotifier).to receive(:with).and_raise(StandardError, "boom")
         expect(Rails.error).to receive(:report).with(
           kind_of(StandardError),
@@ -175,14 +204,14 @@ RSpec.describe Membership, type: :model do
       # spec on SQLite would only prove the writer lock, which was never the
       # missing half.
       describe "a second re-admission of the same row" do
-        def reactivation_rows
+        def reactivation_rows(membership)
           ActivityLog.where(action: "membership.updated", trackable: membership)
             .select { |row| row.display_action == "membership.reactivated" }
         end
 
-        before { ActivityLog.where(trackable: membership).delete_all }
-
         it "dispatches one re-admit notification and writes one audit row" do
+          _workspace, _owner, membership = removed_member_scene
+          ActivityLog.where(trackable: membership).delete_all
           first = Membership.find(membership.id)
           second = Membership.find(membership.id)
 
@@ -195,13 +224,16 @@ RSpec.describe Membership, type: :model do
           first.reactivate!
           second.reactivate!
 
-          expect(reactivation_rows.size).to eq(1)
+          expect(reactivation_rows(membership).size).to eq(1)
         end
 
         # The guard must not turn Workspace#admit's re-admit branch into a
         # silent no-op: admit reaches reactivate! only when the existing
         # membership is discarded, so the guard never fires there.
         it "still reactivates through Workspace#admit's re-admit branch" do
+          workspace, owner, membership = removed_member_scene
+          member = membership.user
+          ActivityLog.where(trackable: membership).delete_all
           expect {
             workspace.admit(member, role: Role.system_default!("member"), granted_by: owner)
           }.to change { membership.reload.kept? }.from(false).to(true)
@@ -213,52 +245,63 @@ RSpec.describe Membership, type: :model do
       # recorded who did it nowhere: `changes: {discarded_at: [...]}` and an
       # actor that, on the invitation path, is the invitee themselves.
       describe "grant provenance on the audit row" do
-        def reactivation_row
+        def reactivation_row(membership)
           ActivityLog.where(action: "membership.updated", trackable: membership).last
         end
 
-        before { ActivityLog.where(trackable: membership).delete_all }
+        def removed_member_scene_without_audit_rows
+          scene = removed_member_scene
+          ActivityLog.where(trackable: scene.last).delete_all
+          scene
+        end
 
         it "records the granter on the re-admission row" do
+          _workspace, owner, membership = removed_member_scene_without_audit_rows
           membership.reactivate!(granted_by: owner)
 
-          expect(reactivation_row.metadata["granted_by"]).to eq(owner.id)
+          expect(reactivation_row(membership).metadata["granted_by"]).to eq(owner.id)
         end
 
         it "records the granter when the re-admission comes through Workspace#admit" do
+          workspace, owner, membership = removed_member_scene_without_audit_rows
+          member = membership.user
           workspace.admit(member, role: Role.system_default!("member"), granted_by: owner)
 
-          expect(reactivation_row.metadata["granted_by"]).to eq(owner.id)
+          expect(reactivation_row(membership).metadata["granted_by"]).to eq(owner.id)
         end
 
         it "still records the changed columns alongside it" do
+          _workspace, owner, membership = removed_member_scene_without_audit_rows
           membership.reactivate!(granted_by: owner)
 
-          expect(reactivation_row.metadata["changes"]).to have_key("discarded_at")
+          expect(reactivation_row(membership).metadata["changes"]).to have_key("discarded_at")
         end
 
         it "claims no granter for a re-admission that had none" do
+          _workspace, _owner, membership = removed_member_scene_without_audit_rows
           membership.reactivate!
 
-          expect(reactivation_row.metadata).not_to have_key("granted_by")
+          expect(reactivation_row(membership).metadata).not_to have_key("granted_by")
         end
 
         it "claims no granter for an ordinary update that is not a re-admission" do
+          _workspace, owner, membership = removed_member_scene_without_audit_rows
           membership.reactivate!
           ActivityLog.where(trackable: membership).delete_all
           membership.granted_by = owner
           membership.update!(role: Role.system_default!("admin"))
 
-          expect(reactivation_row.metadata).not_to have_key("granted_by")
+          expect(reactivation_row(membership).metadata).not_to have_key("granted_by")
         end
       end
     end
 
     describe "role changed (after_update_commit)" do
-      let!(:membership) { create(:membership, user: member, workspace: workspace) }
-      let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
-
       it "notifies the member when their role changes" do
+        workspace, = workspace_with_owner
+        membership = workspace_member(workspace)
+        member = membership.user
+        admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
         expect {
           membership.change_role!(admin_role)
         }.to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }.by(1)
@@ -267,12 +310,17 @@ RSpec.describe Membership, type: :model do
       end
 
       it "does not notify on a save that leaves the role unchanged" do
+        workspace, = workspace_with_owner
+        membership = workspace_member(workspace)
         expect {
           membership.update!(last_accessed_at: Time.current)
         }.not_to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }
       end
 
       it "transfer_ownership_to! notifies the promoted member, not the demoted initiator" do
+        workspace, _owner, owner_membership = workspace_with_owner
+        membership = workspace_member(workspace)
+        member = membership.user
         expect {
           owner_membership.transfer_ownership_to!(membership)
         }.to change { Noticed::Event.where(type: "WorkspaceRoleChangedNotifier").count }.by(1)
@@ -282,6 +330,9 @@ RSpec.describe Membership, type: :model do
 
       # #935: same best-effort posture as the rest of the notification wiring.
       it "still changes the role when the notifier raises" do
+        workspace, = workspace_with_owner
+        membership = workspace_member(workspace)
+        admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
         allow(WorkspaceRoleChangedNotifier).to receive(:with).and_raise(StandardError, "boom")
         expect(Rails.error).to receive(:report).with(
           kind_of(StandardError),
@@ -297,6 +348,8 @@ RSpec.describe Membership, type: :model do
     # raising notifier must not turn the join or the re-admission into a 500.
     describe "self joined (after_create_commit)" do
       it "still creates the membership when the notifier raises" do
+        workspace, = workspace_with_owner
+        member = create(:user)
         allow(WorkspaceJoinedNotifier).to receive(:with).and_raise(StandardError, "boom")
         expect(Rails.error).to receive(:report).with(
           kind_of(StandardError),
@@ -312,11 +365,10 @@ RSpec.describe Membership, type: :model do
     end
 
     describe "self rejoined (after_update_commit)" do
-      let!(:membership) { create(:membership, user: member, workspace: workspace) }
-
-      before { membership.deactivate! }
-
       it "still re-admits the member when the notifier raises" do
+        workspace, = workspace_with_owner
+        membership = workspace_member(workspace)
+        membership.deactivate!
         allow(WorkspaceJoinedNotifier).to receive(:with).and_raise(StandardError, "boom")
         expect(Rails.error).to receive(:report).with(
           kind_of(StandardError),

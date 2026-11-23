@@ -2,27 +2,21 @@
 
 require "rails_helper"
 
-# #1050: Deactivate, Reactivate and Transfer ownership are button_to forms
-# rendered INSIDE the members_results Turbo frame, and all three controllers
-# answer with a redirect carrying a flash. Without an explicit `_top` target
-# Turbo frames that redirect into members_results, so the notice — rendered
-# outside the frame, in the layout — is fetched and thrown away. The action
-# succeeds and the user is never told what happened. Same class as #1038
-# (spec/system/workspaces/invitation_row_actions_spec.rb), and the reason
-# Deactivate cannot answer with a row-replacing stream instead: its
-# self-deactivation and last-owner branches redirect to a DIFFERENT page.
+# Row actions post from inside the members_results frame and answer with a redirect's flash, which must
+# reach the page (#1050, like #1038). Leaving redirects to another page, so Deactivate can't be a row stream.
 RSpec.describe "Member row actions escape the members frame", type: :system do
-  let(:owner) { create(:user, first_name: "Olivia", last_name: "Owner") }
-  let(:member) { create(:user, first_name: "Mel", last_name: "Member") }
-  let(:workspace) { create(:workspace, name: "Acme", max_members: 50) }
-  let(:actor) { owner }
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
+  def add_owner_and_member
+    owner = create(:user, first_name: "Olivia", last_name: "Owner")
+    workspace = create(:workspace, name: "Acme", max_members: 50)
+    owner_membership = create(:membership, :owner, user: owner, workspace: workspace)
+    member = create(:user, first_name: "Mel", last_name: "Member")
+    [ owner_membership, create(:membership, user: member, workspace: workspace) ]
+  end
 
-  # Seed-agnostic: CI seeds the global roles, local rspec does not.
-  let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
-  let!(:member_membership) { create(:membership, user: member, workspace: workspace) }
-
-  before { sign_in_via_form(actor) }
+  def sign_in_and_visit_members(actor_membership)
+    sign_in_via_form(actor_membership.user)
+    visit workspace_members_path(actor_membership.workspace)
+  end
 
   def row_for(membership)
     "##{ActionView::RecordIdentifier.dom_id(membership)}"
@@ -32,19 +26,42 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
     within(row_for(membership)) { click_button label }
   end
 
-  it "shows the deactivated notice after Deactivate, on an accessible restored page" do
-    visit workspace_members_path(workspace)
+  def confirm_deactivate(membership, action: I18n.t("workspaces.members.deactivate_dialog.action"))
+    click_row_action(membership, I18n.t("workspaces.members.index.deactivate"))
+    within("dialog[open]") { click_button action }
+  end
+
+  it "says what Deactivate removes, and Cancel leaves the member active" do
+    owner_membership, member_membership = add_owner_and_member
+    sign_in_and_visit_members(owner_membership)
 
     click_row_action(member_membership, I18n.t("workspaces.members.index.deactivate"))
+
+    expect(page).to have_css("dialog[open]", text: I18n.t("workspaces.members.deactivate_dialog.message",
+                                                           name: member_membership.user.full_name,
+                                                           workspace_name: member_membership.workspace.name))
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "AAA violations with the Deactivate dialog open: #{axe_violations_in_both_themes(axe_options).join("\n")}"
+
+    within("dialog[open]") { click_button I18n.t("modals.cancel") }
+
+    expect(page).to have_no_css("dialog[open]")
+    expect(page).to have_css(row_for(member_membership), text: I18n.t("workspaces.members.index.active"))
+    expect(member_membership.reload).not_to be_discarded
+  end
+
+  it "shows the deactivated notice after Deactivate, on an accessible restored page" do
+    owner_membership, member_membership = add_owner_and_member
+    sign_in_and_visit_members(owner_membership)
+
+    confirm_deactivate(member_membership)
 
     expect(page).to have_text(I18n.t("workspaces.members.destroy.deactivated"))
     expect(page).to have_css(row_for(member_membership),
                              text: I18n.t("workspaces.members.index.deactivated"))
 
-    # #912: the state this fix creates — the full-page render Turbo would
-    # otherwise have discarded — is audited, not just the pristine index. The
-    # toast is a transient overlay that dismisses on a timer; it is asserted
-    # textually above and removed here so the audit reads the settled page.
+    # #912: audits the full-page render this fix creates; the transient toast,
+    # asserted above, is removed so the audit reads the settled page.
     page.execute_script(
       "document.querySelectorAll('[data-controller=\"toast-pill\"], [data-controller=\"toast-card\"]').forEach(el => el.remove())"
     )
@@ -54,8 +71,9 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
   end
 
   it "shows the reactivated notice after Reactivate" do
+    owner_membership, member_membership = add_owner_and_member
     member_membership.update!(discarded_at: Time.current)
-    visit workspace_members_path(workspace)
+    sign_in_and_visit_members(owner_membership)
 
     click_row_action(member_membership, I18n.t("workspaces.members.index.reactivate"))
 
@@ -65,7 +83,8 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
   end
 
   it "shows the transferred notice after Transfer ownership" do
-    visit workspace_members_path(workspace)
+    owner_membership, member_membership = add_owner_and_member
+    sign_in_and_visit_members(owner_membership)
 
     click_row_action(member_membership, I18n.t("workspaces.members.index.transfer_ownership"))
 
@@ -77,34 +96,34 @@ RSpec.describe "Member row actions escape the members frame", type: :system do
   # The branch that forces `_top` rather than merely preferring it: leaving
   # redirects to /workspaces, a page the members_results frame cannot become.
   context "when the actor deactivates their own membership" do
-    let!(:second_owner_membership) do
+    def add_second_owner(workspace)
       create(:membership, :owner, user: create(:user), workspace: workspace)
     end
 
     it "lands on the workspaces list with the 'left' notice" do
-      visit workspace_members_path(workspace)
+      owner_membership, _member_membership = add_owner_and_member
+      add_second_owner(owner_membership.workspace)
+      sign_in_and_visit_members(owner_membership)
 
-      click_row_action(owner_membership, I18n.t("workspaces.members.index.deactivate"))
+      confirm_deactivate(owner_membership, action: I18n.t("workspaces.members.deactivate_dialog.leave_action"))
 
       expect(page).to have_current_path(workspaces_path)
       expect(page).to have_text(
-        I18n.t("workspaces.members.destroy.left", workspace_name: workspace.name)
+        I18n.t("workspaces.members.destroy.left", workspace_name: owner_membership.workspace.name)
       )
     end
   end
 
   # The alert twin of the notice: an admin may deactivate anyone, so the
-  # last-owner refusal is reachable without stubbing, and it is rendered
-  # outside the frame exactly like the notice is.
+  # last-owner refusal is reachable without stubbing.
   context "when an admin deactivates the last owner" do
-    let(:admin) { create(:user, first_name: "Adam", last_name: "Admin") }
-    let(:actor) { admin }
-    let!(:admin_membership) { create(:membership, :admin, user: admin, workspace: workspace) }
-
     it "keeps the owner and shows the last-owner alert on the members page" do
-      visit workspace_members_path(workspace)
+      owner_membership, _member_membership = add_owner_and_member
+      admin = create(:user, first_name: "Adam", last_name: "Admin")
+      admin_membership = create(:membership, :admin, user: admin, workspace: owner_membership.workspace)
+      sign_in_and_visit_members(admin_membership)
 
-      click_row_action(owner_membership, I18n.t("workspaces.members.index.deactivate"))
+      confirm_deactivate(owner_membership)
 
       expect(page).to have_text(
         I18n.t("workspaces.members.destroy.cannot_deactivate_last_owner")

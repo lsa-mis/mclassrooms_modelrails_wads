@@ -1,13 +1,14 @@
 require "rails_helper"
 
 RSpec.describe "Workspace Profile in the workspace shell", type: :request do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme") }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-  before { sign_in(user) }
+  def sign_in_owner_of_acme
+    workspace = create(:workspace, name: "Acme")
+    sign_in_as_owner_of(workspace)
+    workspace
+  end
 
   it "renders in the workspace shell (primary sidebar), not the settings hub aside" do
+    workspace = sign_in_owner_of_acme
     get edit_workspace_path(workspace)
     doc = Nokogiri::HTML(response.body)
     # Primary workspace sidebar present, with Settings marked current.
@@ -18,7 +19,16 @@ RSpec.describe "Workspace Profile in the workspace shell", type: :request do
     expect(doc.at_css("#settings-aria-live")).to be_nil
   end
 
+  it "names the logo button with the initials it shows (WCAG 2.5.3 Label in Name)" do
+    workspace = sign_in_owner_of_acme
+    get edit_workspace_path(workspace)
+    button = Capybara.string(response.body).find("button:has(#workspace_logo_branding)")
+    expect(button[:"aria-label"]).to be_nil
+    expect(button.find(".sr-only").text).to contain_visible_text(workspace.identity.initials).and include("change logo")
+  end
+
   it "shows the secondary sub-nav with Profile current and a distinct aria-label" do
+    workspace = sign_in_owner_of_acme
     get edit_workspace_path(workspace)
     doc = Nokogiri::HTML(response.body)
     subnav = doc.at_css('nav[aria-label="' + I18n.t("settings.sidebar.strip_heading.workspace") + '"]')
@@ -30,6 +40,7 @@ RSpec.describe "Workspace Profile in the workspace shell", type: :request do
   end
 
   it "renders a mobile breadcrumb whose last crumb is the current, non-link Settings" do
+    workspace = sign_in_owner_of_acme
     get edit_workspace_path(workspace)
     doc = Nokogiri::HTML(response.body)
     crumb = doc.at_css('nav[aria-label="Breadcrumb"] [aria-current="page"]')

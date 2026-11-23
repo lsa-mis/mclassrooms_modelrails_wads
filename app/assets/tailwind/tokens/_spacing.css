@@ -9,7 +9,6 @@
    - Templates should never reference them directly (no `mt-section-gap` etc.).
    - For one-off spacing in templates, use Tailwind utilities directly (mt-3, gap-3).
 
-   PREFERRED PRIMITIVE SPACING SCALE (convention — see docs/design-system.md):
    When choosing a Tailwind spacing utility, prefer this 9-step subset of the
    default scale for visual rhythm:
        0    → 0

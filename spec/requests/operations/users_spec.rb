@@ -1,11 +1,13 @@
 require "rails_helper"
 
 RSpec.describe "Operations users", type: :request do
-  let(:operator) { create(:user).tap { |u| Operatorship.grant!(user: u) } }
-  let!(:target) { create(:user, email_address: "target@example.com", first_name: "Tess", last_name: "Target") }
-  let!(:other) { create(:user, email_address: "other@example.com", first_name: "Otto", last_name: "Other") }
+  def create_target
+    create(:user, email_address: "target@example.com", first_name: "Tess", last_name: "Target")
+  end
 
-  before { sign_in(operator) }
+  def create_other
+    create(:user, email_address: "other@example.com", first_name: "Otto", last_name: "Other")
+  end
 
   # A paginated list of every user (#1135), ordered by created_at because names are
   # encrypted non-deterministically (#1124).
@@ -13,6 +15,9 @@ RSpec.describe "Operations users", type: :request do
     def rows_in(response) = Capybara.string(response.body).all("[data-testid='operations-user-row']")
 
     it "lists every user newest first, without a query" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       get operations_users_path
       expect(response).to have_http_status(:ok)
       html = Capybara.string(response.body)
@@ -21,6 +26,9 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "orders by creation, newest first" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       newest = create(:user, first_name: "Nina", last_name: "Newest")
       get operations_users_path
       names = rows_in(response).map(&:text)
@@ -31,6 +39,9 @@ RSpec.describe "Operations users", type: :request do
 
     # Pages, not any labelled nav: the operations layout's own nav also matches.
     it "paginates rather than rendering the whole instance" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       stub_const("Pagy::OPTIONS", Pagy::OPTIONS.merge(limit: 2))
       create_list(:user, 3)
       get operations_users_path
@@ -41,6 +52,9 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "filters to the exact email match" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       get operations_users_path(q: "Target@Example.com")
       html = Capybara.string(response.body)
       expect(html).to have_text("Tess Target")
@@ -49,6 +63,9 @@ RSpec.describe "Operations users", type: :request do
 
     # Names match by decrypting in Ruby, the only way into a non-deterministic column.
     it "filters by name, not only by address" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       get operations_users_path(q: "tess")
       html = Capybara.string(response.body)
       expect(html).to have_text("Tess Target")
@@ -57,6 +74,9 @@ RSpec.describe "Operations users", type: :request do
 
     # Never a silent cap (#1166).
     it "says when names were too numerous to search" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       stub_const("User::Search::NAME_SEARCH_LIMIT", 0)
       get operations_users_path(q: "tess")
       expect(Capybara.string(response.body))
@@ -64,6 +84,9 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "says when the match list was capped" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       stub_const("User::Search::RESULT_LIMIT", 1)
       get operations_users_path(q: "t")
       expect(Capybara.string(response.body))
@@ -73,18 +96,28 @@ RSpec.describe "Operations users", type: :request do
     # .btn-cell-link sets no colour of its own — .btn-text-interactive is what
     # makes it read as a link rather than plain text (1.4.1).
     it "renders the found user's name link as visibly a link" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       get operations_users_path(q: "Target@Example.com")
       link = Capybara.string(response.body).find_link("Tess Target")
       expect(link[:class]).to include("btn-text-interactive")
     end
 
     it "says so when nothing matches" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       get operations_users_path(q: "nobody@example.com")
       expect(Capybara.string(response.body)).to have_text(I18n.t("operations.users.index.no_match"))
     end
 
     # The row carries the same state badges as the user's page, from one partial.
     it "renders a row with the address and every state badge the show page opens with" do
+      target = create_target
+      create_other
+      operator = create(:user, :operator)
+      sign_in(operator)
       Operatorship.grant!(user: target)
       target.update!(locked_at: Time.current)
       get operations_users_path(q: target.email_address)
@@ -97,6 +130,9 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "hands a miss to the ledger, whose search also matches workspaces and projects" do
+      create_target
+      create_other
+      sign_in(create(:user, :operator))
       get operations_users_path(q: "nobody@example.com")
       expect(Capybara.string(response.body)).to have_link(I18n.t("operations.users.index.search_activity"),
         href: operations_activity_logs_path(q: "nobody@example.com"))
@@ -105,6 +141,9 @@ RSpec.describe "Operations users", type: :request do
 
   describe "GET /operations/users/:id" do
     it "shows memberships with roles, no badges, no lockout line, and a Suspend form for a plain user" do
+      target = create_target
+      operator = create(:user, :operator)
+      sign_in(operator)
       workspace = create(:workspace, name: "Acme")
       create(:membership, :admin, user: target, workspace: workspace)
       get operations_user_path(target)
@@ -126,6 +165,8 @@ RSpec.describe "Operations users", type: :request do
     # .btn-cell-link sets no colour of its own — .btn-text-interactive is what
     # makes it read as a link rather than plain text (1.4.1).
     it "renders a membership's workspace name link as visibly a link" do
+      target = create_target
+      sign_in(create(:user, :operator))
       workspace = create(:workspace, name: "Acme")
       create(:membership, :admin, user: target, workspace: workspace)
       get operations_user_path(target)
@@ -134,6 +175,8 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "shows the lockout sentence and a 'Let them try again' form only for a locked account, alongside the Suspend form" do
+      target = create_target
+      sign_in(create(:user, :operator))
       freeze_time do
         5.times { target.register_failed_login! }
         get operations_user_path(target)
@@ -149,6 +192,9 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "shows the Suspended badge, the since sentence in the operator's zone, and a Reinstate form — no Suspend form" do
+      target = create_target
+      operator = create(:user, :operator)
+      sign_in(operator)
       # A zone that differs from the test default (UTC), so the assertion
       # only passes if the view converts through the viewer's preference.
       (operator.preferences || operator.create_preferences!).update!(timezone: "America/Chicago")
@@ -170,6 +216,9 @@ RSpec.describe "Operations users", type: :request do
     # controls share one row with the lockout clear (the transient state)
     # before the destructive suspend/reinstate. The confirm names the person.
     it "opens with the states as badges, the sentences after, and the controls in one row" do
+      target = create_target
+      operator = create(:user, :operator)
+      sign_in(operator)
       freeze_time do
         5.times { target.register_failed_login! }
         target.suspend!(by: operator)
@@ -189,6 +238,8 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "names the person in the suspend confirm" do
+      target = create_target
+      sign_in(create(:user, :operator))
       get operations_user_path(target)
       form = Capybara.string(response.body).find("form[action='#{operations_user_suspension_path(target)}']")
       expect(form[:"data-turbo-confirm"]).to eq(I18n.t("operations.users.show.suspend_confirm", name: "Tess Target"))
@@ -197,6 +248,8 @@ RSpec.describe "Operations users", type: :request do
     # A locked workspace is the one reason "they can't get in" the membership
     # list would otherwise not show; an active one gets no chip.
     it "badges a membership in a locked workspace and leaves an active one plain" do
+      target = create_target
+      sign_in(create(:user, :operator))
       locked = create(:workspace, name: "Frozen")
       locked.suspend!
       create(:membership, user: target, workspace: locked)
@@ -204,11 +257,14 @@ RSpec.describe "Operations users", type: :request do
 
       get operations_user_path(target)
       list = Capybara.string(response.body).find("#ops-user-memberships")
-      expect(list.find("li", text: "Frozen")).to have_css("span[aria-label='#{I18n.t("lifecycle_status.prefix")}: #{I18n.t("lifecycle_status.suspended")}']")
-      expect(list.find("li", text: "Open")).to have_no_css("span[aria-label^='#{I18n.t("lifecycle_status.prefix")}']")
+      expect(list.find("li", text: "Frozen")).to have_css("span[data-variant='soft']", exact_text: "#{I18n.t("lifecycle_status.prefix")}: #{I18n.t("lifecycle_status.suspended")}")
+      expect(list.find("li", text: "Open")).to have_no_css("span.sr-only", text: I18n.t("lifecycle_status.prefix"))
     end
 
     it "shows the Operator badge, no Suspend form, and the revoke-first sentence linking to the roster" do
+      target = create_target
+      operator = create(:user, :operator)
+      sign_in(operator)
       Operatorship.grant!(user: target)
       get operations_user_path(target)
       html = Capybara.string(response.body)
@@ -228,6 +284,8 @@ RSpec.describe "Operations users", type: :request do
     # nor ORDER BY'd in SQL), so this can be fixed in SQL rather than sorted
     # in Ruby.
     it "orders memberships by workspace name case-insensitively" do
+      target = create_target
+      sign_in(create(:user, :operator))
       create(:membership, user: target, workspace: create(:workspace, name: "zeta"))
       create(:membership, user: target, workspace: create(:workspace, name: "Acme"))
       create(:membership, user: target, workspace: create(:workspace, name: "beta"))
@@ -252,6 +310,9 @@ RSpec.describe "Operations users", type: :request do
 
   describe "DELETE /operations/users/:id/lock" do
     it "unlocks and writes a user.unlocked row naming the operator" do
+      target = create_target
+      operator = create(:user, :operator)
+      sign_in(operator)
       5.times { target.register_failed_login! }
       expect(target.reload).to be_locked
       delete operations_user_lock_path(target)
@@ -265,6 +326,8 @@ RSpec.describe "Operations users", type: :request do
 
   describe "POST /operations/users/:id/suspension" do
     it "suspends access, ends sessions, and leaves memberships kept" do
+      target = create_target
+      sign_in(create(:user, :operator))
       workspace = create(:workspace)
       create(:membership, :owner, user: target, workspace: workspace)
       create(:membership, :owner, workspace: workspace)
@@ -280,6 +343,8 @@ RSpec.describe "Operations users", type: :request do
     end
 
     it "refuses to suspend an operator" do
+      target = create_target
+      sign_in(create(:user, :operator))
       Operatorship.grant!(user: target)
 
       post operations_user_suspension_path(target)
@@ -292,6 +357,9 @@ RSpec.describe "Operations users", type: :request do
 
   describe "DELETE /operations/users/:id/suspension" do
     it "reinstates access" do
+      target = create_target
+      operator = create(:user, :operator)
+      sign_in(operator)
       target.suspend!(by: operator)
 
       delete operations_user_suspension_path(target)

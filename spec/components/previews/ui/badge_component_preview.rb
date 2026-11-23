@@ -14,8 +14,7 @@ module UI
   # - It's a real action — use `UI::ButtonComponent` (or `button_to` for non-GET).
   #
   # ## Accessibility contract
-  # - **Guarantees:** AAA-contrast text on 9 of the 10 shipped cells (`soft`/`neutral`
-  #   pending this app's 0b axe row), including the adaptive signal treatments
+  # - **Guarantees:** AAA-contrast text on all 10 shipped cells, including the adaptive signal treatments
   #   (`danger`/`success`/`info`/`warning`) that stay legible in dark mode.
   # - **You supply:** an accessible name when the badge conveys status not already in
   #   the surrounding text, and a valid `variant` (an unknown one raises in development).
@@ -31,7 +30,7 @@ module UI
 
     # @!group Overview
 
-    # Every shipped variant × tone cell on one screen — 9 AAA-proven, soft/neutral pending.
+    # Every shipped variant × tone cell on one screen — all 10 AAA-proven.
     def showcase
     end
 
@@ -47,8 +46,7 @@ module UI
     def secondary
     end
 
-    # Muted chip for draft-style pills — the two-axis `[:soft, :neutral]` cell, pending
-    # this app's 0b axe row (see the class docblock).
+    # Muted chip for draft-style pills — the two-axis `[:soft, :neutral]` cell.
     def neutral
     end
 
@@ -93,9 +91,8 @@ module UI
     # @!group Reference
 
     # Edit `label` and the two-axis `variant`/`tone` cell live. Only the 10 shipped
-    # cells are offered — 9 AAA-proven, plus `soft/neutral` pending this app's
-    # 0b axe row (signals live on the SOFT variant as tinted chips; an unproven pairing
-    # raises in dev).
+    # cells are offered, all AAA-proven (signals live on the SOFT variant as tinted chips;
+    # an unproven pairing raises in dev).
     # @param label text
     # @param cell select [solid/primary, soft/primary, soft/info, soft/success, soft/warning, soft/danger, soft/neutral, outline/neutral, ghost/neutral, link/primary]
     def playground(label: "Badge", cell: "soft/primary")

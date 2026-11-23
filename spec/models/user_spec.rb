@@ -102,25 +102,28 @@ RSpec.describe User, type: :model do
   end
 
   describe "#unread_notification_breakdown" do
-    let(:user) { create(:user) }
     # SignInFromNewDeviceNotifier requires :user_agent and :os params.
-    let(:user_agent) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15" }
-    let(:os) { "Macintosh" }
+    def sign_in_from_new_device_params
+      { user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15", os: "Macintosh" }
+    end
 
     it "returns an empty hash when there are no notifications" do
+      user = create(:user)
       expect(user.unread_notification_breakdown).to eq({})
     end
 
     it "returns an empty hash when all notifications are read" do
+      user = create(:user)
       PasswordChangedNotifier.with(record: user).deliver(user)
       user.notifications.update_all(read_at: Time.current)
       expect(user.unread_notification_breakdown).to eq({})
     end
 
     it "groups unread notifications by notifier event type with counts" do
+      user = create(:user)
       PasswordChangedNotifier.with(record: user).deliver(user)
       PasswordChangedNotifier.with(record: user, idempotency_key: "another").deliver(user)
-      SignInFromNewDeviceNotifier.with(record: user, user_agent: user_agent, os: os).deliver(user)
+      SignInFromNewDeviceNotifier.with(record: user, **sign_in_from_new_device_params).deliver(user)
 
       expect(user.unread_notification_breakdown).to eq(
         "PasswordChangedNotifier"     => 2,
@@ -129,8 +132,9 @@ RSpec.describe User, type: :model do
     end
 
     it "ignores read notifications when counting unread" do
+      user = create(:user)
       PasswordChangedNotifier.with(record: user).deliver(user)
-      SignInFromNewDeviceNotifier.with(record: user, user_agent: user_agent, os: os).deliver(user)
+      SignInFromNewDeviceNotifier.with(record: user, **sign_in_from_new_device_params).deliver(user)
       user.notifications.where(type: "PasswordChangedNotifier::Notification")
           .update_all(read_at: Time.current)
 
@@ -228,19 +232,21 @@ RSpec.describe User, type: :model do
   end
 
   describe "operator reach" do
-    let(:user) { create(:user) }
-    let!(:workspace) { create(:workspace) }
-    let!(:suspended) { create(:workspace).tap(&:suspend!) }
-    let!(:discarded) { create(:workspace).tap(&:discard!) }
+    def operated_workspace_cast
+      [ create(:workspace), create(:workspace).tap(&:suspend!), create(:workspace).tap(&:discard!) ]
+    end
 
     it "is not an operator by default and reaches no workspaces" do
+      operated_workspace_cast
+      user = create(:user)
       expect(user).not_to be_operator
       expect(user.operated_workspaces).to be_empty
       expect(user.operated_workspaces).to be_a(ActiveRecord::Relation)
     end
 
     it "reaches every kept workspace, suspended included, once granted" do
-      Operatorship.grant!(user: user)
+      workspace, suspended, discarded = operated_workspace_cast
+      user = create(:user, :operator)
 
       expect(user.reload).to be_operator
       # `include`, not `contain_exactly`: under the default :personal preset,
@@ -252,6 +258,8 @@ RSpec.describe User, type: :model do
     end
 
     it "loses reach when the operatorship is revoked" do
+      operated_workspace_cast
+      user = create(:user)
       Operatorship.grant!(user: user).revoke!
 
       expect(user.reload).not_to be_operator
@@ -261,15 +269,15 @@ RSpec.describe User, type: :model do
 
   # The users half of the operations reach, one line for scoped operators (#1123).
   describe "#operated_users" do
-    let(:user) { create(:user) }
-
     it "reaches nobody, as a relation, without an operatorship" do
+      user = create(:user)
       expect(user).not_to be_operator
       expect(user.operated_users).to be_empty
       expect(user.operated_users).to be_a(ActiveRecord::Relation)
     end
 
     it "reaches every user once granted, suspended included and itself among them" do
+      user = create(:user)
       suspended_user = create(:user).tap { |u| u.suspend!(by: user) }
       other = create(:user)
       Operatorship.grant!(user: user)
@@ -279,6 +287,7 @@ RSpec.describe User, type: :model do
     end
 
     it "loses reach when the operatorship is revoked" do
+      user = create(:user)
       Operatorship.grant!(user: user).revoke!
 
       expect(user.reload).not_to be_operator

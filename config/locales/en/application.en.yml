@@ -48,14 +48,13 @@ en:
     all_workspaces: "All %{workspaces}"
     toggle_theme: "Toggle theme"
     user_menu_label: "User menu for %{name}"
-    user_menu_label_simple: "Open user menu for %{name}"
+    user_menu_label_simple: "%{initials}, open user menu for %{name}"
     user_menu_label_with_unread:
       one: "User menu for %{name}. 1 unread notification, including %{phrase}."
       other: "User menu for %{name}. %{count} unread notifications, including %{phrase}."
     mobile_menu:
       open: "Open menu"
       close: "Close menu"
-      aria_label: "Main menu"
     admin:
       label: "Admin"
       aria_label: "Admin navigation"

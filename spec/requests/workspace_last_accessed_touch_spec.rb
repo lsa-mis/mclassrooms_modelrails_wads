@@ -3,13 +3,15 @@ require "rails_helper"
 # The stamp writes at most once per window (#171). A guarded UPDATE still runs,
 # matching no rows, so these watch the stamp rather than counting queries.
 RSpec.describe "Workspace last-accessed touch", type: :request do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace) }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-  before { sign_in(user) }
+  def signed_in_owner_membership
+    workspace = create(:workspace)
+    owner = sign_in_as_owner_of(workspace)
+    owner.memberships.find_by!(workspace: workspace)
+  end
 
   it "does not re-stamp inside the window" do
+    membership = signed_in_owner_membership
+    workspace = membership.workspace
     get workspace_path(workspace)
     first = membership.reload.last_accessed_at
     expect(first).to be_present
@@ -22,6 +24,8 @@ RSpec.describe "Workspace last-accessed touch", type: :request do
   end
 
   it "re-stamps once the window has passed" do
+    membership = signed_in_owner_membership
+    workspace = membership.workspace
     get workspace_path(workspace)
     first = membership.reload.last_accessed_at
 
@@ -33,6 +37,8 @@ RSpec.describe "Workspace last-accessed touch", type: :request do
   end
 
   it "stamps a membership that has never been accessed" do
+    membership = signed_in_owner_membership
+    workspace = membership.workspace
     membership.update_column(:last_accessed_at, nil)
 
     expect { get workspace_path(workspace) }

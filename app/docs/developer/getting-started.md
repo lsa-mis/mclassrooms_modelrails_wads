@@ -6,10 +6,12 @@ keywords: setup install mise ruby bundle rspec tests oauth credentials developme
 
 # Getting Started
 
+Starting a product? Follow the [quickstart](quickstart) first. This page is the reference for working in the code.
+
 ## Prerequisites
 
 - [mise](https://mise.jdx.dev/) for runtime version management (see `.tool-versions`)
-- Chromium (managed automatically by Cuprite/Ferrum for system tests)
+- Chrome or Chromium, for the system tests: Cuprite finds an installed browser and doesn't download one
 
 ## The stack
 
@@ -24,6 +26,13 @@ The template runs on Rails main (8.2.0.alpha) for two features that have not shi
 ```bash
 DRY_RUN=1 bin/rails action_text:clear_filename_alts   # counts the rich texts it would change
 bin/rails action_text:clear_filename_alts
+```
+
+On a deployment, through Kamal:
+
+```bash
+bin/kamal app exec "bin/rails action_text:clear_filename_alts" --env DRY_RUN:1
+bin/kamal app exec "bin/rails action_text:clear_filename_alts"
 ```
 
 It removes `alt` only where it equals that same attachment's file name, leaves every other attribute and the surrounding text alone, and writes the body without touching the owning record or its timestamps. A second run finds nothing. Afterwards those images open the dialog empty and render like new uploads: an image nobody has described gets `alt=""`, so screen readers skip it and read the caption, which names the file once.
@@ -72,7 +81,7 @@ Bump Ruby in `.tool-versions`, run `bundle install`, and the lockfile + producti
 
 This template ships a Dev Container configuration so you can develop in an isolated environment that matches production runtime closely. Open the project in VS Code and accept the "Reopen in Container" prompt, or run **Dev Containers: Rebuild Container** from the command palette.
 
-The container is built on `ruby:4.0.7-slim` — the **same base image as the production `Dockerfile`** (Option C: shared base, separate files). That means libvips, glibc, SQLite, and OpenSSL versions all match prod. Bugs that depend on those library versions surface in dev rather than only in production.
+The container is built on the `ruby:<version>-slim` image for the Ruby in `.tool-versions` — the **same base image as the production `Dockerfile`** (Option C: shared base, separate files). That means libvips, glibc, SQLite, and OpenSSL versions all match prod. Bugs that depend on those library versions surface in dev rather than only in production.
 
 Capabilities baked in:
 
@@ -87,16 +96,18 @@ Native development (no devcontainer) continues to work the same way as before �
 
 ## Choose your app preset
 
-modelrails_base supports several distinct product shapes — solo prosumer, internal single-tenant, multi-tenant SaaS — all built on the same multi-tenant data layer underneath. Before you start customizing, read [App Presets](/docs/developer/presets) to identify which shape matches what you're building. The defaults you just installed are the **Solo-default** preset; additional presets ship as they're built.
+modelrails_base supports several distinct product shapes — solo prosumer, internal single-tenant, multi-tenant SaaS — all built on the same multi-tenant data layer underneath. Before you start customizing, read [App Presets](/docs/developer/presets) to identify which shape matches what you're building. The defaults you just installed are the **Solo-default** preset (`personal`).
 
 If you are forking the template, `bin/fork --preset personal|shared|none` records the
-choice and writes it to `.env` — see [Forking](/docs/developer/forking). Switching
+choice in `.fork.yml`, which is committed: production reads it from there, and `bin/setup`
+copies it into each clone's `.env` — see [Forking](/docs/developer/forking). Switching
 later is a migration, not a config flip, so it is worth deciding up front.
 
 ## Running Tests
 
 ```bash
-bin/parallel-rspec                       # Full suite across all cores (what CI and pre-push run)
+bin/parallel-rspec                       # Full suite across all cores (what CI runs)
+bin/test-plan --run                      # The specs your branch can break (what pre-push runs)
 bundle exec rspec spec/path/to_spec.rb   # Focused single-process run
 bundle exec rspec --format documentation # Verbose output
 ```
@@ -104,36 +115,32 @@ bundle exec rspec --format documentation # Verbose output
 `bin/parallel-rspec` splits the suite across your CPU cores (each worker gets
 its own SQLite database and browser) and adds two integrity gates: the executed
 example count must match a dry-run enumeration, and the merged coverage must
-meet the 40% floor. Each run records per-file timings to
+meet the 90% floor. Each run records per-file timings to
 `tmp/parallel_runtime_rspec.log`, so the next run balances workers by measured
 runtime instead of file size (it falls back to file size when the log is
 absent). Coverage report is generated at `coverage/index.html`.
 
-### Spec conventions: the let diet, and when guards are warranted
+### Spec conventions: setup lives in the example, and when guards are warranted
 
-Two conventions keep the suite readable as it grows (adopted from the
-2026-08-14 panel review, #440):
+Two conventions keep the suite readable as it grows:
 
-**The let diet.** `let` is for records that several examples *in the same
-context* genuinely share — it is not a place to park setup. Symptoms of let
-bloat: the same paired `let!`s copy-pasted across contexts, and files whose
-let count grows every month (the worked example:
-`spec/requests/workspaces/members_spec.rb` carried the same
-target-user/target-membership pair as `let!`s in six separate contexts; a
-named `add_member` builder replaced them, 48 lets → 37, and each example's
-cast is now visible at its call site). Rules of thumb:
+**No `let` or `let!`.** An example builds what it needs itself, in local
+variables named for their role (`target = add_member(role: :admin)`). When
+several examples need the same thing, extract a helper method and call it
+where the record is needed, so each example still shows its own cast. This
+is thoughtbot's rule ("Avoid `let` (or `let!`) in RSpec. Prefer extracting
+helper methods, but do not re-implement the functionality of `let`."), and
+it replaced a milder "let diet" (#440) in November 2026. `let` hides an
+example's inputs at the top of a context; it grows into a shared fixture
+that every new context bends; and `let!` builds its record for every
+example, including the ones that never read it.
 
-- One example uses it → build it inline in the example, with a local
-  variable named for its role (`target = add_member`).
-- Several examples in one context share it → a single `let` in that
-  context, built through a named builder so the reader sees *what* it is.
-- Several contexts repeat it → extract a builder method; the repetition was
-  a missing name, not shared state.
-
-There is deliberately **no lint or count ratchet** for this: a counter is
-trivially gamed (inline a let into a `before` block; nothing improves) and
-teaches metric-satisfaction instead of design judgment. The convention is
-enforced in review, by example.
+Two moves look like fixes and aren't: a memoizing helper
+(`@workspace ||= create(:workspace)`) is `let` under another name, and
+moving setup into a new `before` block hides it the same way. A `let` or
+`let!` still in the suite comes out when its example is next edited. There is deliberately **no lint or count ratchet**: a
+counter is easy to game, and it teaches satisfying a number rather than
+design judgment. The convention is enforced in review.
 
 **When a guard spec IS warranted.** Everything in `spec/code_smells/` earns
 its place by naming, in its header, the shipped bug class it catches —
@@ -210,6 +217,7 @@ Biscuit's gem normally renders a floating "Manage cookies" button in the bottom-
 |---------|---------|
 | `bin/dev` | Start development server |
 | `bin/parallel-rspec` | Run full test suite in parallel (CI parity) |
+| `bin/test-plan --run` | Run the specs your branch's changes can break |
 | `bundle exec rspec` | Run focused specs single-process |
 | `bundle exec brakeman` | Security scan |
 | `rails 'users:unlock[email]'` | Unlock a locked account |
@@ -224,22 +232,25 @@ The project uses a two-gate CI pipeline:
 
 ### Gate 1: Local (Lefthook pre-push)
 
-Runs automatically when you `git push`. No setup needed beyond `bundle exec lefthook install` (runs once after clone). The checks run one at a time, in this order, and the first failure stops the push:
+Runs automatically when you `git push`. `bin/setup` installs the hooks; in a clone made before it did, run `bundle exec lefthook install` once. The checks run one at a time, in this order, and the first failure stops the push:
 
 | Check | Tool |
 |-------|------|
-| Stylesheet | `tailwindcss:build`, first, so system specs never read a half-written stylesheet |
+| Protected branch | `bin/protected-branch-check`, first. A push to an existing `next` or `main` stops here within a second and prints the commands that move your commits to a branch and open a pull request; GitHub would refuse it anyway, but only after every check below had run. A push that creates the branch passes, and so does `git -c branch-rules.off=next push …` for a branch with no ruleset yet, which is how `bin/fork` pushes a Fork-button fork's `next` |
+| Stylesheet | `tailwindcss:build`, before the specs, so system specs never read a half-written stylesheet |
 | Security scan | Brakeman |
-| Gem CVEs | bundler-audit, against the same vendored advisory database CI uses |
+| Gem CVEs | bundler-audit, only when the branch changes `Gemfile.lock` or `hotcell/Gemfile.lock`, after updating the advisory database to the latest, as CI's fresh clone does; it needs the network. It audits the Hot Cell image's lockfile too |
 | Code style | RuboCop |
-| ERB templates | erb_lint |
-| Markdown | `mdl` |
-| Full test suite | `bin/parallel-rspec`, including the axe-core WCAG 2.2 AAA audit on every system spec |
+| ERB templates | erb_lint, only when the branch changes an `.erb` file |
+| Markdown | `mdl`, only when the branch changes a `.md` file |
+| Workflows | `jactionlint`, only when the branch changes something under `.github/` or `mise.toml`/`mise.lock` |
+| Specs the change can break | `bin/test-plan --run` (see [Change lanes](/docs/developer/testing#change-lanes)), including the axe-core WCAG 2.2 AAA audit on every system spec it selects; the full suite runs in CI |
+| Hot Cell image | `docker build --pull hotcell`, only when the branch changes something under `hotcell/`; the build installs libheif's HEVC and AV1 decoders by name and fails unless libvips registers its HEIF loader |
 | Production image | `docker build`, last, and only when the branch changes a build input (`Dockerfile`, `.dockerignore`, `Gemfile`, `Gemfile.lock`, `.tool-versions`, `bin/docker-entrypoint`); refuses the push if Docker isn't running |
 
 Pre-commit hooks also auto-fix Ruby style issues on staged files.
 
-Skip hooks in emergencies with `LEFTHOOK=0 git push` or `--no-verify`.
+Don't skip the hooks. When one fails, run that check on its own to see why — each one's command is in `lefthook.yml`, and the specs are `bin/test-plan --run` — fix it, and push again. `LEFTHOOK=0` and `--no-verify` do turn the hooks off, but they only move the failure: CI runs the same checks on the pull request, and the image build runs again on every push to `main`.
 
 ### Gate 2: GitHub Actions (on push/PR)
 
@@ -247,32 +258,37 @@ Runs the same checks plus additional linting:
 
 | Job | What it checks |
 |-----|---------------|
-| `scan_ruby` | Brakeman + bundler-audit (gem CVEs) |
-| `scan_js` | importmap audit (JS dependency CVEs) |
-| `lint` | RuboCop with GitHub annotations |
-| `lint_docs` | `mdl` (markdown) + `erb_lint` (ERB) |
-| `test` | Full RSpec with Cuprite, axe accessibility, screenshot artifacts on failure |
-| `docker_build` | Verifies the production `Dockerfile` builds (catches build-time regressions that structural specs cannot). Its own workflow: a pull request runs it only when a build input changes (`Dockerfile`, `.dockerignore`, `Gemfile`, `Gemfile.lock`, `.tool-versions`, `bin/docker-entrypoint`); every push to `main` runs it unfiltered. The pre-push hook runs the same build locally through `bin/docker-build-check` on the same inputs. Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/developer/deployment). |
+| `static` | One job for every static check: Brakeman, bundler-audit (gem CVEs), the importmap audit (JS dependency CVEs), RuboCop with GitHub annotations, the comment-block gate over the PR's diff, `mdl` (markdown) and `erb_lint` (ERB). Each check runs even after an earlier one fails, so one push reports every failure. They were four jobs; one runner minute bills for what took four. |
+| `changes` | Sorts a pull request's changed files into [change lanes](/docs/developer/testing#change-lanes) with `bin/test-plan`, for a pull request into `next`. A push, and a pull request into `main` or a `release/` branch, is always `full` |
+| `lane_specs` | On a pull request that touches only lanes (locale, docs, workflows), runs just those lanes' specs on one runner, with the same browser and compiled assets as a shard |
+| `test_shard` | The full RSpec suite with Cuprite and the axe accessibility audit, split across parallel shards (eight by default, set by the `CI_SHARDS` repository variable), on a `full` change and on every push to `next` and `main`; each uploads screenshots when it fails |
+| `test` | Passes only when whichever path ran passed: `lane_specs` on a lane change, every shard on a `full` one. After a full run it checks the merged results: every example ran, and coverage meets the 90% floor. This is the check the branch ruleset requires by name |
+| `docker_build` | Verifies the production `Dockerfile` builds (catches build-time regressions that structural specs cannot). Its own workflow, run on every push to `main`, unfiltered. A pull request that changes a build input (`Dockerfile`, `.dockerignore`, `Gemfile`, `Gemfile.lock`, `.tool-versions`, `bin/docker-entrypoint`) gets the same proof from `image_scan`, which builds the identical image from scratch, so `docker_build` runs on a pull request only when its own workflow changes. The pre-push hook runs the same build locally through `bin/docker-build-check` on the same inputs. Uses GHA layer caching — cold builds ~3-5 min, warm builds ~30-60s. See [Deployment](/docs/developer/deployment). |
 
 ### Gate 3: Scheduled lanes (not on push/PR)
 
-Three checks answer questions a per-PR run cannot, because what they watch changes without anyone committing. Each also runs on demand from the Actions tab (`workflow_dispatch`).
+Six checks answer questions a per-PR run cannot, because what they watch changes without anyone committing. Every one but `workflow_audit` also runs on demand from the Actions tab (`workflow_dispatch`).
 
 | Workflow | When | What it checks |
 |----------|------|---------------|
-| `js_advisory` | Daily | The same importmap audit as `scan_js`, against `main` — an advisory published between pushes is otherwise invisible until the next PR happens to touch the tree. `scan_js` stays the required check; this is additive. |
-| `image_scan` | Weekly (plus Dockerfile-affecting PRs) | OS-package CVEs in the production image, which appear without any code change. |
+| `js_advisory` | Daily | The same importmap audit as the `static` job, against `main` — an advisory published between pushes is otherwise invisible until the next PR happens to touch the tree. `static` stays the required check; this is additive. |
+| `image_scan` | Weekly, plus every PR that changes a build input | OS-package CVEs in the production image, which appear without any code change. It builds the image from scratch, so on those PRs it is also the proof that the image builds. |
+| `hotcell_image_scan` | Weekly where the `HOTCELL_SCAN` repository variable is set, plus every PR that changes `hotcell/` | The same scan of the [Hot Cell](/docs/developer/hot-cell) image. A fork that keeps the cell off leaves the variable unset and pays for no weekly build. |
 | `fork_vocabulary` | Weekly | The whole suite under `spec/fixtures/vocabulary.course.yml`, proving the promise that a fork renaming its nouns keeps this suite green. The per-PR gate catches literal-noun copy assertions in the shapes it knows; this catches the rest. |
+| `devcontainer` | Weekly, plus every PR that changes `.devcontainer/`, `Dockerfile`, `Gemfile.lock`, `.tool-versions` or `bin/setup` | Builds the Dev Container and runs its setup, which a change to the base image or a feature can break with no commit here. |
+| `workflow_audit` | Weekly, plus every PR that changes `.github/` or `mise.toml`/`mise.lock` | `jactionlint` over the workflows and `dependabot.yml`; the weekly run catches a pinned action archived or advised against since. |
 
-**Scheduled workflows switch themselves off in an inactive public repository.** GitHub disables them after 60 days with no repository activity — see [Events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows) (`schedule`). The condition is repository *visibility*, so a private fork is not affected; a public fork that goes quiet loses these three lanes silently and re-enables them with any repository activity.
+**Scheduled workflows switch themselves off in an inactive public repository.** GitHub disables them after 60 days with no repository activity — see [Events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows) (`schedule`). The condition is repository *visibility*, so a private fork is not affected; a public fork that goes quiet loses these six lanes silently and re-enables them with any repository activity.
 
 ### Development Workflow
 
-1. Create a feature branch: `git checkout -b my-feature`
-2. Write tests, implement, verify locally: `bin/parallel-rspec`
-3. Commit (pre-commit hook auto-fixes Ruby style)
-4. Push (pre-push hook runs full CI locally)
-5. Open PR on GitHub (Actions run second round of checks)
+1. Create a feature branch from `next`: `git switch -c my-feature origin/next`
+2. Write tests, implement, verify locally: `bin/test-plan --run` (or `bin/parallel-rspec` for the whole suite)
+3. Commit (pre-commit hook auto-fixes Ruby style and refuses YAML that won't parse)
+4. Push (pre-push runs the checks your change can break)
+5. Open a PR into `next` on GitHub (Actions run second round of checks)
+
+`next` gathers merged work until a release ships it to `main`; see [Releasing](/docs/developer/releasing).
 
 ### Turning a house cop off in your fork
 
@@ -322,15 +338,17 @@ bin/rails credentials:edit --environment development
 ```
 
 ```yaml
-google:
-  client_id: your_id
-  client_secret: your_secret
-github:
-  client_id: your_id
-  client_secret: your_secret
+oauth:
+  google:
+    client_id: your_id
+    client_secret: your_secret
+  github:
+    client_id: your_id
+    client_secret: your_secret
 ```
 
 ## Next steps
 
-1. **[Choose your app shape →](/docs/developer/presets)** — Solo, Single-tenant, or Open SaaS. This is the most important decision; it sets signup, onboarding, and workspace behavior.
-2. **[Extend the framework →](/docs/developer/extending)** — add your own workspace-scoped models, authorization, and features.
+1. **[Choose your app shape →](/docs/developer/presets)** — Solo-default, Single-tenant, Open SaaS, or Workspace-optional. This is the most important decision; it sets signup, onboarding, and workspace behavior.
+2. **[Quickstart →](/docs/developer/quickstart)** — every step from a clone to a deployed product you can sign in to.
+3. **[Extend the framework →](/docs/developer/extending)** — add your own workspace-scoped models, authorization, and features.

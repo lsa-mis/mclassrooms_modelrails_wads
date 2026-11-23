@@ -42,11 +42,11 @@ ModelRails uses TailwindCSS 4 with a three-layer design token system, a custom f
 
 ## Design Token Architecture
 
-Tokens are organized in three layers under `app/assets/tailwind/tokens/`:
+Color tokens are organized in three layers under `app/assets/tailwind/tokens/`, beside `_brand.css` (a fork's palette overrides) and `_spacing.css`:
 
 ### 1. Primitives (`_primitives.css`)
 
-Map Tailwind color families to custom properties. **To retheme the entire app, swap the color family names.**
+Map Tailwind color families to custom properties. **To retheme the entire app, map these properties to another color family in `_brand.css`** — the fork-owned file imported after `_primitives.css`, which stays upstream-owned.
 
 | Palette | Default | Used for |
 |---------|---------|----------|
@@ -54,7 +54,7 @@ Map Tailwind color families to custom properties. **To retheme the entire app, s
 | Secondary | Indigo | Accents, prose links |
 | Neutral | Slate | Text, surfaces, borders |
 
-Example: change `--primary-700: var(--color-sky-700)` to `--primary-700: var(--color-purple-700)` to switch from sky to purple.
+Example: set `--primary-700: var(--color-purple-700)` (and the other `--primary-*` shades) in a `:root` block in `_brand.css` to switch from sky to purple.
 
 ### 2. Semantic Tokens (`_semantic.css`)
 
@@ -83,9 +83,9 @@ Fixed-meaning colors that don't shift with theming. Red is always danger, green 
 
 The notification bell is the reference case for using signal tokens on a **graphic** rather than on text, and it encodes two rules worth knowing before you color any icon or indicator.
 
-**Text contrast vs. non-text contrast.** The bell *icon* is tinted with the base signal tokens (`text-danger`, `text-warning`, `text-info`, `text-success`) — the same AAA (7:1) foreground colors used for flash messages and links — with a stacked white drop-shadow outline for legibility on arbitrary avatar backgrounds. The *indicator dot* variant (on the avatar/hamburger) is a different animal: it's decorative, so the applicable spec is WCAG **1.4.11 non-text contrast (3:1 for graphical objects)**, not **1.4.6 enhanced text contrast (7:1)**. That relaxation is legitimate only because the severity meaning doesn't live in the dot alone — it's also exposed textually in the user menu's Notifications row `aria-live` region.
+**Text contrast vs. non-text contrast.** The retired standalone bell *icon* was tinted with the base signal tokens (`text-danger`, `text-warning`, `text-info`, `text-success`) — the same AAA (7:1) foreground colors used for flash messages and links; those classes remain in `NotificationBellHelper::SEVERITY_CLASSES`, but no view renders them today. The *indicator dot* (on the avatar/hamburger), which is what ships, is a different animal: it's decorative, so the applicable spec is WCAG **1.4.11 non-text contrast (3:1 for graphical objects)**, not **1.4.6 enhanced text contrast (7:1)**. That relaxation is legitimate only because the severity meaning doesn't live in the dot alone — it's also exposed textually in the user menu's Notifications row `aria-live` region.
 
-**The red identity-shift problem.** An AAA-readable red on dark surfaces must sit at high OKLCH lightness (dark-mode `--color-danger` is L=0.825), and at that lightness red drifts toward coral/pink — on a bell-sized graphic it stops reading as "danger red." So danger alone gets a `-strong` variant: in light mode `--color-danger-strong` simply aliases `--color-danger` (the AAA warm red already reads as true red), while in dark mode it's a fire-engine red at L=0.65. The bell icon uses `dark:text-danger-strong`, and the danger dot uses `bg-danger-strong`. Because dark-mode `-strong` sits *below* the AAA text threshold (roughly 4–5:1 — AA only), it is for graphics and small accents exclusively: never use it for general text content, and never place a text descendant inside a `bg-danger-strong` fill. Do not extend the `-strong` pattern to other severities — only red has the high-lightness identity shift; amber, green, and sky stay recognizably themselves at AAA lightness. The canonical rule lives in `app/assets/tailwind/tokens/_signals.css`.
+**The red identity-shift problem.** An AAA-readable red on dark surfaces must sit at high OKLCH lightness (dark-mode `--color-danger` is L=0.825), and at that lightness red drifts toward coral/pink — on a bell-sized graphic it stops reading as "danger red." So danger alone gets a `-strong` variant: in light mode `--color-danger-strong` simply aliases `--color-danger` (the AAA warm red already reads as true red), while in dark mode it's a fire-engine red at L=0.65. The bell's `:icon` classes use `dark:text-danger-strong`, and the danger dot uses `bg-danger-strong`. Because dark-mode `-strong` sits *below* the AAA text threshold (roughly 4–5:1 — AA only), it is for graphics and small accents exclusively: never use it for general text content, and never place a text descendant inside a `bg-danger-strong` fill. Do not extend the `-strong` pattern to other severities — only red has the high-lightness identity shift; amber, green, and sky stay recognizably themselves at AAA lightness. The canonical rule lives in `app/assets/tailwind/tokens/_signals.css`.
 
 **Motion.** Only the danger dot pulses. Users with `prefers-reduced-motion` still get an instant static indicator, and everyone else gets attention-routing for the highest-severity events without warnings and info becoming noisy.
 
@@ -107,7 +107,8 @@ Dark mode uses a class-based toggle (`.dark` on `<html>`) instead of a media que
 
 Workspace-scoped routes emit two OKLCH custom properties and a
 `data-workspace-branded` marker on `<main>`, activating a cascade that
-recolors the interactive tokens for that workspace:
+recolors the interactive tokens for that workspace (a personal workspace
+gets `data-workspace-kind="personal"` instead):
 
 ```erb
 <main data-workspace-branded
@@ -120,7 +121,7 @@ The two-variable scheme:
 - `--ws-primary-dark` (L=0.78) — used in dark mode; hits 7:1 AAA on slate-800.
 
 The cascade (in `app/assets/tailwind/application.css` under the "Workspace
-Branding Override" block) remaps:
+branding" comment) remaps:
 
 - Light mode: `--color-interactive` ← `var(--ws-primary-light)`, hover/subtle
   derived via `color-mix(..., black|white)`.
@@ -131,8 +132,7 @@ Why direct OKLCH literals in dark mode: the previous design used
 `color-mix(--ws-primary, white)` to lighten the dark-mode brand color.
 That produced flaky AAA contrast in CI's Cuprite/axe renderer because
 OKLCH color-mix resolution varied across Chromium/Ubuntu builds. Direct
-literals are deterministic. See `project_flaky_tests_followup.md §2`
-for the investigation.
+literals are deterministic. See PR #81 for the change.
 
 The `primary_color` column on `workspaces` (and `users`) is an integer OKLCH
 hue (0–360) that defaults to `Identity::DEFAULT_HUE`, the brand's own hue:
@@ -220,6 +220,7 @@ SVG icons are loaded from `app/assets/icons/{outline,solid}/` and cached via `Ic
 | `:sm` | `w-4 h-4` |
 | `:md` | `w-5 h-5` (default) |
 | `:lg` | `w-6 h-6` |
+| `:xl` | `w-8 h-8` |
 
 ### Accessibility
 
@@ -245,8 +246,8 @@ Uses the native `<dialog>` element with a Stimulus controller for open/close man
 |------|-----------|
 | `:sm` | `max-w-sm` |
 | `:md` | `max-w-lg` (default) |
-| `:lg` | `max-w-3xl` |
-| `:full` | `max-w-5xl` |
+| `:lg` | `max-w-2xl` |
+| `:full` | `max-w-4xl` |
 
 ### Features
 
@@ -279,7 +280,7 @@ Two display styles based on severity:
 | Style | Position | Types | Behavior |
 |-------|----------|-------|----------|
 | **Pill** | Top center | success, notice, info | Auto-dismiss with progress bar |
-| **Card** | Bottom center | alert, error | Persistent until closed |
+| **Card** | Bottom center | warning, danger, alert, error | Persistent until closed |
 
 ### Timing
 
@@ -313,13 +314,13 @@ ModelRails targets **WCAG 2.2 Level AAA**:
 
 | Pattern | Implementation |
 |---------|---------------|
-| Touch targets | `--form-input-height` token (default 44px) drives `TailwindFormBuilder` inputs and the `.btn-touch-target` utility. Many existing partials still use the literal `min-h-[44px]` and migrate as touched. |
+| Touch targets | `--form-input-height` token (default 44px) drives `TailwindFormBuilder` inputs, the `min-h-input` utility and the `.btn-touch-target` utility. A few partials still use the literal `min-h-[44px]` and migrate as touched. |
 | Focus indicators | The `focus-ring` utility (2px offset outline) consistently — never `focus:ring-*` box-shadows, which vanish in forced-colors mode |
 | Color contrast | Default interactive token is primary-800 (7.56:1 AAA on white). On workspace-branded routes, contrast varies by hue — see Workspace Branding caveat below. |
 | Skip navigation | `sr-only` link to `#main-content` at top of every page |
 | Screen readers | ARIA labels, live regions, roles on all dynamic content |
 | Motion | Animations respect `prefers-reduced-motion` |
-| Form fields | Required indicators, error messages with `role="alert"`, help text linked |
+| Form fields | Required indicators, error messages linked by `aria-describedby` and announced by the focused `error_summary`, help text linked |
 
 ## Layout Structure
 
@@ -501,13 +502,13 @@ The footer is a two-row layout with responsive behavior.
 
 ### Row 2 — centered copyright
 
-A horizontal rule (`border-t border-border`) separates the two rows, followed by a centered `text-xs text-text-muted` paragraph with the current year and the `footer.copyright` i18n key.
+A horizontal rule (`border-t border-border`) separates the two rows, followed by a centered `text-sm text-text-muted` paragraph with the current year and the `footer.copyright` i18n key.
 
 ### Responsive behavior
 
 | Breakpoint | Row 1 layout |
 | ---------- | ------------ |
-| `< 640px` (mobile) | `flex-col items-center gap-6` — brand, clusters, dev trigger stack vertically |
+| `< 640px` (mobile) | `flex-col items-center gap-3` — brand, clusters, dev trigger stack vertically |
 | `640–1023px` (tablet) | `flex-row flex-wrap justify-center gap-4` — wraps naturally |
 | `≥ 1024px` (desktop) | `flex-row flex-nowrap justify-start gap-6` — brand left, clusters mid, `lg:flex-1` spacer pushes dev trigger to right |
 
@@ -519,14 +520,15 @@ Biscuit's gem normally renders a `position: fixed` "Manage cookies" button in th
 // app/javascript/controllers/footer_controller.js
 reopenCookies(event) {
   event.preventDefault()
+  this.#syncCheckboxesFromCookie()
   document.querySelector(".biscuit-manage-link")?.click()
 }
 ```
 
-Dispatching a synthetic click to the gem's (hidden) button decouples the footer from Biscuit's Stimulus target scope — the integration works purely through the DOM and needs no gem-side coordination.
+Dispatching a synthetic click to the gem's (hidden) button decouples the footer from Biscuit's Stimulus target scope — the integration works purely through the DOM and needs no gem-side coordination. The checkbox sync first re-reads the saved consent cookie, because Biscuit renders the category checkboxes once at page load and never updates them after "Accept all" or "Reject all".
 
 ### Footer accessibility
 
 - Two named `<nav>` landmarks allow screen readers to announce and skip clusters
 - Vertical and horizontal dividers are decorative (`aria-hidden` where needed)
-- All footer links and the Cookie settings button use `inline-flex items-center min-h-[44px] px-2` — meets WCAG 2.5.5 AAA (44×44 target size)
+- All footer links and the Cookie settings button use `inline-flex items-center min-h-input px-2` — meets WCAG 2.5.5 AAA (44×44 target size)

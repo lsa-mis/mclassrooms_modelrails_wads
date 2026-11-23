@@ -96,6 +96,13 @@ module AuthenticationHelpers
       cookies[:session_id] = signed_value
     end
   end
+
+  # Request specs: a new (or given) user becomes the workspace's owner and is signed in.
+  def sign_in_as_owner_of(workspace, user: create(:user))
+    add_member(workspace, role: :owner, user: user)
+    sign_in(user)
+    user
+  end
 end
 
 RSpec.configure do |config|

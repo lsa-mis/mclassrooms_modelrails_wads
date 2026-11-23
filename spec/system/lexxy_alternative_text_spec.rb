@@ -28,7 +28,7 @@ RSpec.describe "Lexxy's alternative text dialog", type: :system do
   it "takes the workspace's colours, with Save as the one filled button, in both themes" do
     visit edit_admin_announcement_path(announcement)
     find("lexxy-editor figure img").click
-    find("lexxy-editor button[aria-label='Alternative text']").click
+    find("lexxy-editor button.lexxy-attachment-toolbar__alternative-text").click
     dialog = find("lexxy-editor dialog.lexxy-alternative-text-dialog[open]")
     computed = ->(element, property) { page.evaluate_script("getComputedStyle(arguments[0]).#{property}", element) }
 
@@ -43,7 +43,16 @@ RSpec.describe "Lexxy's alternative text dialog", type: :system do
   it "lets an author describe an image, in an AAA dialog, and the description reaches the page" do
     visit edit_admin_announcement_path(announcement)
     find("lexxy-editor figure img").click
-    find("lexxy-editor button[aria-label='Alternative text']").click
+    button = find("lexxy-editor button.lexxy-attachment-toolbar__alternative-text")
+
+    expect(button[:"aria-label"]).to contain_visible_text(button.text)
+  end
+
+  it "lets an author describe an image, in an AAA dialog, and the description reaches the page" do
+    workspace, project, resource = signed_in_image_resource
+    visit edit_workspace_project_resource_path(workspace, project, resource)
+    find("lexxy-editor figure img").click
+    find("lexxy-editor button.lexxy-attachment-toolbar__alternative-text").click
 
     dialog = find("lexxy-editor dialog.lexxy-alternative-text-dialog[open]")
     expect(dialog.find("textarea[aria-label='Description']").value).to eq("")
@@ -71,7 +80,7 @@ RSpec.describe "Lexxy's alternative text dialog", type: :system do
     expect(page).to have_css("lexxy-editor lexxy-attachment-toolbar:not([hidden])")
 
     editable.send_keys([ :alt, :f10 ])
-    alt_button = find("lexxy-editor button[aria-label='Alternative text']")
+    alt_button = find("lexxy-editor button.lexxy-attachment-toolbar__alternative-text")
     expect(alt_button).to match_selector(":focus")
     alt_button.send_keys(:enter)
 

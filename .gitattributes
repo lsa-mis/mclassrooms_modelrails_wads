@@ -8,7 +8,7 @@ vendor/* linguist-vendored
 config/credentials/*.yml.enc diff=rails_credentials
 config/credentials.yml.enc diff=rails_credentials
 
-# Parallel pull requests each append under [Unreleased]; union keeps every side's lines.
+# Entries go in changelog.d/ files; union still keeps both sides of a release-section fix.
 CHANGELOG.md merge=union
 
 # Fork-owned paths — downstream forks rewrite these wholesale; upstream
@@ -20,6 +20,8 @@ CHANGELOG.md merge=union
 # Inert in this repo (driver deliberately unset upstream).
 app/views/pages/** merge=ours
 app/controllers/pages_controller.rb merge=ours
+spec/system/pages/** merge=ours
+spec/requests/pages_spec.rb merge=ours
 config/locales/en/pages.en.yml merge=ours
 config/locales/en/brand.en.yml merge=ours
 config/routes/app.rb merge=ours
@@ -60,3 +62,6 @@ config/initializers/project_tools.rb merge=ours
 app/docs/user/authentication.md merge=ours
 app/docs/user/welcome.md merge=ours
 app/docs/user/workspaces.md merge=ours
+# A fork's own production inputs and their example credentials file. Empty upstream, so freezing them is safe.
+config/required_production_config.local.yml merge=ours
+config/credentials/production.local.yml.example merge=ours

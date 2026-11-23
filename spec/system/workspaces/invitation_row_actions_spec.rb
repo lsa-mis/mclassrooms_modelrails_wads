@@ -9,16 +9,15 @@ require "rails_helper"
 # both rendered outside the frame — are fetched and thrown away. The user
 # clicks and nothing visibly happens.
 RSpec.describe "Invitation row actions escape the members frame", type: :system do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme") }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-  # Seed-agnostic: CI seeds the global roles, local rspec does not.
-  let!(:role) { Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" } }
-
-  before { sign_in_via_form(user) }
+  def signed_in_owner_of(workspace)
+    create(:membership, :owner, workspace: workspace).user.tap { |owner| sign_in_via_form(owner) }
+  end
 
   it "shows the refreshed magic link and its notice after Resend" do
-    create(:invitation, :magic_link, invitable: workspace, role: role, invited_by: user)
+    workspace = create(:workspace, name: "Acme")
+    owner = signed_in_owner_of(workspace)
+    role = Role.system_default!("member")
+    create(:invitation, :magic_link, invitable: workspace, role: role, invited_by: owner)
     visit workspace_members_path(workspace)
 
     click_button I18n.t("workspaces.members.index.pending_invitations.resend")
@@ -31,8 +30,11 @@ RSpec.describe "Invitation row actions escape the members frame", type: :system 
   end
 
   it "shows the resent notice after Resend on an email invitation" do
-    create(:invitation, invitable: workspace, role: role, invited_by: user,
-                        email: "invitee@example.com")
+    workspace = create(:workspace, name: "Acme")
+    owner = signed_in_owner_of(workspace)
+    role = Role.system_default!("member")
+    create(:invitation, invitable: workspace, role: role, email: "invitee@example.com",
+                        invited_by: owner)
     visit workspace_members_path(workspace)
 
     click_button I18n.t("workspaces.members.index.pending_invitations.resend")
@@ -41,8 +43,11 @@ RSpec.describe "Invitation row actions escape the members frame", type: :system 
   end
 
   it "shows the revoked notice after Revoke" do
-    create(:invitation, invitable: workspace, role: role, invited_by: user,
-                        email: "invitee@example.com")
+    workspace = create(:workspace, name: "Acme")
+    owner = signed_in_owner_of(workspace)
+    role = Role.system_default!("member")
+    create(:invitation, invitable: workspace, role: role, email: "invitee@example.com",
+                        invited_by: owner)
     visit workspace_members_path(workspace)
 
     click_button I18n.t("workspaces.members.index.pending_invitations.revoke")

@@ -10,7 +10,7 @@ keywords: none preset workspace-optional user-first auth-first community event p
 
 **What it is.** Signup creates **no** workspace. A new user's identity lives at the User level; `Current.workspace` is legitimately `nil` until they explicitly create or join one. The workspace switcher, workspace-scoped nav, and workspace-scoped surfaces simply don't render for workspace-less users — the app is nil-safe throughout.
 
-**Who it's for.** Auth-first / user-first products where workspaces are optional or emerge later: an event platform where users register and then join specific events, a community where members exist independently of any group, a personal dashboard that optionally connects to shared spaces. [Hallway Track](https://github.com/dschmura/hallwaytrack) is the reference downstream app using this posture.
+**Who it's for.** Auth-first / user-first products where workspaces are optional or emerge later: an event platform where users register and then join specific events, a community where members exist independently of any group, a personal dashboard that optionally connects to shared spaces.
 
 ## How users relate
 
@@ -110,6 +110,8 @@ WORKSPACE_ON_SIGNUP=none
 ```
 
 That's the only required change. No seed vars are needed (unlike `:shared`).
+`bin/fork --preset none` records it in `.fork.yml`, which production reads, so
+a fork needs to set the variable only to override that choice.
 
 **2. Override `authenticated_home_path` (optional).**
 
@@ -134,7 +136,7 @@ Your home view should work when `Current.workspace` is `nil`. The workspace swit
 
 The app is nil-safe throughout. When `Current.workspace` is `nil`:
 
-- The **workspace switcher** does not render.
+- The **workspace switcher** does not render, except on a phone on the All workspaces page, where its trigger names the user instead of a workspace.
 - **Workspace-scoped** sidebar sections and nav links are hidden.
 - **`Tenanted` model scopes** are never reached from workspace-less contexts — your user-scoped controllers don't set `Current.workspace`, so workspace-scoped queries never run.
 
@@ -151,8 +153,7 @@ bin/rails console
 ```ruby
 user = User.create!(
   email_address: "test@example.com",
-  first_name: "Test", last_name: "User",
-  password: "SecureP@ssw0rd123!", password_confirmation: "SecureP@ssw0rd123!"
+  first_name: "Test", last_name: "User"
 )
 
 user.workspaces.count   # => 0
@@ -162,18 +163,18 @@ A count of zero confirms the preset: no workspace was auto-created.
 
 Browser verification (requires `SIGNUP_MODE=open` or a valid invitation) — sign up a fresh user and confirm:
 
-1. After submitting the registration form, you are redirected to the "check your email" screen (`EmailVerificationsController#new`).
-2. A non-blocking "confirm your email" banner renders in the authenticated layout until the verification link is clicked.
-3. After clicking the verification link, the onboarding wizard starts — you are redirected to `onboarding_path` and land on the workspace-naming step.
+1. Entering an email on the sign-in page sends a magic link; following it opens the registration form (first and last name).
+2. Submitting the form creates the account with its email already verified and signs you in, so no "confirm your email" banner appears.
+3. The onboarding wizard starts — you are redirected to `onboarding_path` and funneled through workspace → team.
 4. Completing or skipping the wizard stamps `onboarded_at` and lands on the workspace.
-5. The workspace switcher is absent until a workspace exists.
+5. The sidebar's workspace switcher is absent until a workspace exists.
 6. No workspace appears in `user.workspaces` until they explicitly create or join one.
 
 **When to switch presets.**
 
 - *"Every user should get their own private workspace automatically."* → **[Solo-default](/docs/developer/presets-solo)** — the shipped default.
-- *"Everyone lands in one shared workspace."* → **[Single-tenant](/docs/developer/presets-single-tenant)** (Reshape 1).
-- *"Users get a personal workspace and can also join or create org workspaces."* → **[Open SaaS](/docs/developer/presets-open-saas)** (Reshape 2+).
+- *"Everyone lands in one shared workspace."* → **[Single-tenant](/docs/developer/presets-single-tenant)**.
+- *"Users get a personal workspace and can also join or create org workspaces."* → **[Open SaaS](/docs/developer/presets-open-saas)**.
 
 > **Switching TO `:none` on a live app** is effectively a from-scratch product shape, not a config flip. Existing users who already have workspaces keep them; the `WORKSPACE_ON_SIGNUP=none` change only affects new signups. A live migration would require a separate cleanup pass and a redesigned home experience — plan this at setup time.
 

@@ -7,30 +7,19 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
   include ActionMailer::TestHelper
   include ActiveSupport::Testing::TimeHelpers
 
-  let(:owner_role) do
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-    end
-  end
-
-  let(:workspace) { create(:workspace) }
-
-  # Two owners + one non-owner. All `let!` so the User-factory side effect
-  # (personal-workspace Membership creation triggers WorkspaceMemberAddedNotifier)
-  # is fully resolved before each example begins.
-  let!(:owner_a) { create(:user) }
-  let!(:owner_b) { create(:user) }
-  let!(:non_owner) { create(:user) }
-  let!(:owner_a_membership) { create(:membership, user: owner_a, workspace: workspace, role: owner_role) }
-  let!(:owner_b_membership) { create(:membership, user: owner_b, workspace: workspace, role: owner_role) }
-  let!(:non_owner_membership) { create(:membership, user: non_owner, workspace: workspace) }
-
-  before do
+  def capacity_cast
+    owner_a = create(:user)
+    owner_b = create(:user)
+    non_owner = create(:user)
+    workspace = create(:workspace)
+    create(:membership, :owner, user: owner_a, workspace: workspace)
+    create(:membership, :owner, user: owner_b, workspace: workspace)
+    create(:membership, user: non_owner, workspace: workspace)
     Noticed::Notification.delete_all
     Noticed::Event.delete_all
     ActionMailer::Base.deliveries.clear
     clear_enqueued_jobs
+    { workspace: workspace, owner_a: owner_a, owner_b: owner_b, non_owner: non_owner }
   end
 
   describe ".category" do
@@ -47,12 +36,13 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
   # "dispatching" below (a row for each owner, none for the non-owner) — the
   # public surface says the same thing, so there is no resolver example here.
   describe "recipient resolution query efficiency" do
-    # A third owner so an N+1 (one user_preferences query per owner) diverges
-    # loudly from the single preloaded query the contract requires.
-    let!(:owner_c) { create(:user) }
-    let!(:owner_c_membership) { create(:membership, user: owner_c, workspace: workspace, role: owner_role) }
-
     it "issues exactly one user_preferences query for N owners (preloaded, not N+1)" do
+      workspace = capacity_cast.fetch(:workspace)
+      # A third owner so an N+1 (one user_preferences query per owner) diverges
+      # loudly from the single preloaded query the contract requires.
+      owner_c = create(:user)
+      create(:membership, :owner, user: owner_c, workspace: workspace)
+
       event = described_class.with(record: workspace, metric: "members", current: 8, limit: 10)
 
       # evaluate_recipients is public API on Noticed::Deliverable — it needs
@@ -80,7 +70,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     def event_for_workspace_with(owner_count)
       fanned_out = create(:workspace, max_members: 60)
       owner_count.times do
-        create(:membership, user: create(:user), workspace: fanned_out, role: owner_role)
+        create(:membership, :owner, user: create(:user), workspace: fanned_out)
       end
       described_class.with(record: fanned_out, metric: "members", current: 8, limit: 10).deliver(nil)
       Noticed::Event.where(type: described_class.name).order(:created_at).last
@@ -105,6 +95,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
 
   describe "dispatching" do
     it "delivers in-app notifications to all owners under default preferences" do
+      workspace, owner_a, owner_b, non_owner = capacity_cast.values_at(:workspace, :owner_a, :owner_b, :non_owner)
       result = described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
       expect(result).to eq :delivered
       expect(Noticed::Notification.where(recipient: owner_a, type: "#{described_class.name}::Notification").count).to eq 1
@@ -113,6 +104,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "auto-populates idempotency_key on the event column" do
+      workspace = capacity_cast.fetch(:workspace)
       described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
       event = Noticed::Event.last
       expect(event.idempotency_key).to be_present
@@ -120,6 +112,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "enqueues NotificationMailer.workspace_capacity_approaching for each owner under default preferences" do
+      workspace = capacity_cast.fetch(:workspace)
       expect {
         described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
         drain_noticed_jobs
@@ -127,6 +120,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "creates exactly one Noticed::Event row per dispatch (regardless of recipient count)" do
+      workspace = capacity_cast.fetch(:workspace)
       expect {
         described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
       }.to change { Noticed::Event.where(type: described_class.name).count }.by(1)
@@ -135,6 +129,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
 
   describe "day-bucket idempotency" do
     it "deduplicates two consecutive dispatches within the same day for the same (workspace, metric)" do
+      workspace = capacity_cast.fetch(:workspace)
       freeze_time do
         first = described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
         second = described_class.with(record: workspace, metric: "members", current: 9, limit: 10).deliver(nil)
@@ -144,6 +139,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "delivers a fresh dispatch the next day" do
+      workspace = capacity_cast.fetch(:workspace)
       now = Time.current
       travel_to(now) do
         described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
@@ -156,6 +152,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "does not deduplicate across distinct metrics on the same day" do
+      workspace = capacity_cast.fetch(:workspace)
       freeze_time do
         members = described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
         projects = described_class.with(record: workspace, metric: "projects", current: 4, limit: 5).deliver(nil)
@@ -166,9 +163,9 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
   end
 
   describe "preference gating" do
-    let!(:prefs) { create(:user_preferences, user: owner_a) }
-
     it "suppresses both in-app and email under DND for that owner (billing does NOT bypass)" do
+      workspace, owner_a, owner_b = capacity_cast.values_at(:workspace, :owner_a, :owner_b)
+      prefs = create(:user_preferences, user: owner_a)
       prefs.update!(notification_preferences:
         prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
 
@@ -183,6 +180,8 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
     end
 
     it "fires in-app but skips email when the email channel is disabled" do
+      workspace, owner_a = capacity_cast.values_at(:workspace, :owner_a)
+      prefs = create(:user_preferences, user: owner_a)
       delivery_methods = prefs.notification_preferences["delivery_methods"].deep_dup
       delivery_methods["email"]["enabled"] = false
       prefs.update!(notification_preferences:
@@ -199,6 +198,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
 
   describe "#message" do
     it "renders the localized capacity-approaching message with workspace, metric, current and limit" do
+      workspace, owner_a = capacity_cast.values_at(:workspace, :owner_a)
       described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
       notification = Noticed::Notification.find_by(recipient: owner_a, type: "#{described_class.name}::Notification")
       expect(notification.message).to eq(
@@ -216,6 +216,7 @@ RSpec.describe WorkspaceCapacityApproachingNotifier, type: :notifier do
   # recipient's digest rather than just its own line.
   describe "#url once the workspace is gone" do
     it "renders the placeholder instead of raising" do
+      workspace = capacity_cast.fetch(:workspace)
       described_class.with(record: workspace, metric: "members", current: 8, limit: 10).deliver(nil)
       notification = Noticed::Event.where(type: described_class.name).last.notifications.first
       workspace.destroy!

@@ -84,7 +84,7 @@ RSpec.describe "Session Lookups", type: :request do
 
     context "invalid email format" do
       it "rejects email without a domain TLD" do
-        post session_lookup_path, params: { email_address: "hd@humbledaisy" }
+        post session_lookup_path, params: { email_address: "hd@acme" }
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(I18n.t("sessions.lookups.create.invalid_email"))
       end

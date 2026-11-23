@@ -3,9 +3,6 @@ require "rails_helper"
 # The switcher heads workspace pages, even with one workspace, and the capped
 # index; account-level pages omit it (#1091).
 RSpec.describe "Workspace switcher placement", type: :request do
-  let(:user) { create(:user) }                                  # :personal default → 1 workspace
-  before { sign_in(user) }
-
   # Both ids: the absence examples below prove nothing about the phone copy if
   # they only look for the desktop id (#1091).
   def trigger_in(html)
@@ -13,6 +10,8 @@ RSpec.describe "Workspace switcher placement", type: :request do
   end
 
   it "renders on a workspace page even with a single workspace" do
+    user = create(:user)
+    sign_in(user)
     get workspace_path(user.workspaces.kept.sole)
 
     expect(trigger_in(response.body)).not_to be_nil
@@ -20,7 +19,7 @@ RSpec.describe "Workspace switcher placement", type: :request do
 
   it "lists the user's other workspaces in its menu" do
     second = create(:workspace, name: "Zeta Org")
-    create(:membership, :owner, user: user, workspace: second)
+    sign_in_as_owner_of(second)
 
     get workspace_path(second)
 
@@ -35,16 +34,16 @@ RSpec.describe "Workspace switcher placement", type: :request do
   # "All workspaces" state: no workspace is current there, so the trigger
   # names the index and the menu marks that row current (#1090).
   describe "on the workspaces index (no current workspace)" do
-    let!(:second) do
-      ws = create(:workspace, name: "Zeta Org")
-      create(:membership, :owner, user: user, workspace: ws)
-      ws
+    def sign_in_with_zeta_workspace
+      zeta = create(:workspace, name: "Zeta Org")
+      [ sign_in_as_owner_of(zeta), zeta ]
     end
 
     # The trigger IS the page's identity anchor on phones: the user's name in
     # the slot a workspace name takes elsewhere, "All workspaces" in the slot
     # the role takes — the same two-line shape as on a workspace page.
     it "renders the phone trigger as the identity anchor: the user's name over All workspaces" do
+      user, = sign_in_with_zeta_workspace
       get workspaces_path
       doc = Nokogiri::HTML(response.body)
 
@@ -56,6 +55,7 @@ RSpec.describe "Workspace switcher placement", type: :request do
     end
 
     it "hides the page's own identity anchor below md, where the trigger carries it" do
+      sign_in_with_zeta_workspace
       get workspaces_path
       anchor = Nokogiri::HTML(response.body).at_css("[data-test='workspaces-identity']")
 
@@ -64,6 +64,7 @@ RSpec.describe "Workspace switcher placement", type: :request do
     end
 
     it "gives the current All-workspaces row the same current treatment as a workspace row" do
+      _, second = sign_in_with_zeta_workspace
       get workspaces_path
       all_row = Nokogiri::HTML(response.body).at_css("#workspace-switcher-menu-mobile a[aria-current]")
       get workspace_path(second)
@@ -76,6 +77,7 @@ RSpec.describe "Workspace switcher placement", type: :request do
     end
 
     it "marks All workspaces current in the menu and still lists the workspaces" do
+      _, second = sign_in_with_zeta_workspace
       get workspaces_path
       menu = Nokogiri::HTML(response.body).at_css("#workspace-switcher-menu-mobile")
 
@@ -85,6 +87,7 @@ RSpec.describe "Workspace switcher placement", type: :request do
     end
 
     it "puts no id on the page twice" do
+      sign_in_with_zeta_workspace
       get workspaces_path
       ids = Nokogiri::HTML(response.body).css("[id]").map { |el| el["id"] }
 
@@ -93,6 +96,7 @@ RSpec.describe "Workspace switcher placement", type: :request do
   end
 
   it "is absent from account settings, which carries no workspace context" do
+    sign_in(create(:user))
     get edit_settings_profile_path
 
     expect(trigger_in(response.body)).to be_nil

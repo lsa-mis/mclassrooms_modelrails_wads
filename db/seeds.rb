@@ -2,18 +2,16 @@
 # for seeds and every request-time Role.system_default! lookup.
 Role::SYSTEM_DEFAULTS.each_key { |slug| Role.system_default!(slug) }
 
-# --- Single-tenant preset bootstrap ----------------------------------------
-#
-# When TENANCY_ONBOARDING=shared, seed the shared workspace + the initial
-# Owner so the deployment is usable on first boot. Idempotent — safe to re-run.
-# See app/docs/developer/presets.md for the contract.
+# Under the shared preset, seed the shared workspace and its first Owner so the app works on first boot.
+# Idempotent. The slug is the one the app resolved, which a fork's .fork.yml supplies by default.
 if TenancyConfig.shared?
-  slug = ENV.fetch("TENANCY_SHARED_WORKSPACE_SLUG") {
-    raise "TENANCY_SHARED_WORKSPACE_SLUG is required when TENANCY_ONBOARDING=shared"
-  }
-  name = ENV.fetch("TENANCY_SHARED_WORKSPACE_NAME", slug.titleize)
+  slug = TenancyConfig.shared_workspace_slug
+  name = ENV.fetch("TENANCY_SHARED_WORKSPACE_NAME") { I18n.t("application.name", default: slug.titleize) }
+  # bin/setup's db:prepare never sees .env (only foreman loads it), so a fresh fork's owner is a placeholder.
   owner_email = ENV.fetch("TENANCY_OWNER_EMAIL") {
-    raise "TENANCY_OWNER_EMAIL is required when TENANCY_ONBOARDING=shared"
+    raise "TENANCY_OWNER_EMAIL is required when WORKSPACE_ON_SIGNUP=shared" if Rails.env.production?
+
+    "owner@#{slug.dasherize}.test"
   }
 
   workspace = Workspace.find_or_create_by!(slug: slug) do |w|
@@ -21,10 +19,10 @@ if TenancyConfig.shared?
     w.personal = false
   end
 
-  # Creating the User triggers User#onboard_workspace, which (under :shared)
-  # adds a Member-role Membership to `workspace`. The seed then upgrades that
-  # membership to Owner below — idempotent on re-runs.
+  owner_role = Role.find_by!(slug: "owner", workspace_id: nil)
+  # Onboarding seats a new owner as Owner, so no promotion follows to mail them a role change.
   owner = User.find_or_create_by!(email_address: owner_email) do |u|
+    u.shared_workspace_role = owner_role
     u.first_name = ENV.fetch("TENANCY_OWNER_FIRST_NAME", "Workspace")
     u.last_name  = ENV.fetch("TENANCY_OWNER_LAST_NAME",  "Owner")
     placeholder  = SecureRandom.urlsafe_base64(32)
@@ -39,7 +37,6 @@ if TenancyConfig.shared?
     auth.verified_at = Time.current
   end
 
-  owner_role = Role.find_by!(slug: "owner", workspace_id: nil)
   membership = workspace.memberships.find_or_create_by!(user: owner) { |m| m.role = owner_role }
   membership.update!(role: owner_role) unless membership.role_id == owner_role.id
 
@@ -68,14 +65,6 @@ if TenancyConfig.shared?
       "Run `bin/rails tenancy:owner_setup_link` for a short-lived sign-in link " \
       "(minted on demand — not logged here)."
   else
-    # Fork deviation (MiClassrooms Task 4): bug fix — this called
-    # AuthenticationMailer.password_reset_email, which does not exist in this
-    # codebase's passwordless-first auth mailers —
-    # it raised NoMethodError on every db:seed run under the :shared preset
-    # outside production (spec/db/seeds_spec.rb only covers the production
-    # branch above, so this line was never exercised). Use the same
-    # magic-link mechanism the app's own password-reset flow
-    # (PasswordResetsController#create) and `tenancy:owner_setup_link` use.
     token = MagicLinkToken.create_for_email(owner.email_address, intent: "set_password")
     MagicLinkMailer.sign_in_link(owner.email_address, token).deliver_now
   end

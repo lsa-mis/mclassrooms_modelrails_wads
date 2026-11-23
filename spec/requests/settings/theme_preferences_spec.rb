@@ -22,6 +22,11 @@ RSpec.describe "Account Theme Preferences", type: :request do
         expect(flash[:notice]).to eq(I18n.t("settings.theme_preferences.update.success"))
       end
 
+      it "updates the theme from the toggle's top-level field" do
+        patch settings_theme_preference_path, params: { theme: "dark" }
+        expect(user.preferences.reload.theme).to eq("dark")
+      end
+
       # Same redirect either way; only the message differs (#526).
       it "rejects an unknown theme with an alert, to the same destination" do
         patch settings_theme_preference_path, params: { user_preferences: { theme: "chartreuse" } }

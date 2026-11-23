@@ -76,8 +76,8 @@ Three concepts the flows plug into — knowing these is usually enough to avoid 
 <details>
 <summary>Why it's shaped this way</summary>
 
-- **Sign in or sign up** — One email-first door (`sessions#new` → `lookup`) for both. A new email gets a magic-link registration; an existing one gets a magic-link sign-in. There is **no password at signup** — password is a settings-only opt-in. A returning user with a passkey can tap **Sign in with a passkey** (usernameless/discoverable); any failure falls back to the magic link, so no one is stranded.
-- **Check your email** — The magic link proves email ownership: clicking it verifies the address **and** signs the user in in one step. "Forgot password?" reuses this same link (a `set_password`-intent magic link) — there is no separate reset flow.
+- **Sign in or sign up** — One email-first door (`sessions#new` → `lookup`) for both. A new email gets a magic-link registration; an existing one gets a magic-link sign-in. There is **no password at signup** — passwords are off unless the instance sets `AUTH_PASSWORDS=enabled`, and even then a user opts in from Settings. A returning user with a passkey can tap **Sign in with a passkey** (usernameless/discoverable); any failure falls back to the magic link, so no one is stranded.
+- **Check your email** — The magic link proves email ownership: clicking it verifies the address **and** signs the user in in one step. With passwords enabled, "Forgot your password?" reuses this same link (a `set_password`-intent magic link) — there is no separate reset flow.
 - **Set up a passkey?** — A one-time, dismissible prompt after the first sign-in (only when the user has no passkey yet and the browser supports WebAuthn). Adding one makes the next sign-in a single tap; magic link remains the universal fallback. Manage passkeys anytime in Settings.
 </details>
 
@@ -186,7 +186,7 @@ The **consent guard**: a brand-new account's signup is its own consent to join t
 
 ### Deferred claims on the unverified-OAuth path
 
-When an OAuth provider reports the email as unverified, the app refuses to auto-link or auto-verify; it creates a fresh user and parks both pending claims (invitation token, join-link digest) on the pending `Authentication` row, to be claimed when the user proves email ownership via the verification link. `Authentication#claim_pending!` then applies join-link semantics matching the signup path: stale-link conditions are silent no-ops (clear the digest and continue, so email verification is never blocked by a workspace whose join policy changed mid-flight, and a non-member learns nothing about its state), while capacity and already-member errors propagate for the caller to surface.
+When an OAuth provider reports the email as unverified, the app refuses to auto-link or auto-verify; it creates a fresh user and parks both pending claims (invitation token, join-link digest) on the pending `Authentication` row, to be claimed when the user proves email ownership via the verification link. `Authentication#claim_pending!` then applies join-link semantics matching the signup path: stale-link conditions are silent no-ops (clear the digest and continue, so email verification is never blocked by a workspace whose join policy changed mid-flight, and a non-member learns nothing about its state). Unlike signup, nothing here rolls back: already-member is benign, and a full workspace is recorded as a problem (`:join_link_at_capacity`) on the returned claims, which the verification controller shows as a flash, so a stale claim never blocks verification.
 
 The token is a **one-shot claim**: verification never retries, so once admission is attempted the digest is spent regardless of outcome. Clearing it lives in an `ensure` — deliberately *not* inside `admit`'s transaction — so a terminal failure like capacity rolls back the membership but does **not** resurrect the token.
 

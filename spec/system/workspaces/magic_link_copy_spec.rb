@@ -6,26 +6,24 @@ require "rails_helper"
 # `<code class="break-all">` splitting the token mid-word, and no `role="alert"`
 # wrapper that arrives pre-filled and therefore announces nothing. Axe inline (#912).
 RSpec.describe "Magic link copy control", type: :system do
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme") }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-  let(:link_noun) { I18n.t("workspaces.invitations.index.magic_link_aria") }
-
-  before do
+  def reveal_magic_link
+    user = create(:user)
+    workspace = create(:workspace, name: "Acme")
+    create(:membership, :owner, user: user, workspace: workspace)
     # Seed-agnostic: CI seeds the global roles, local rspec does not.
     Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
     sign_in_via_form(user)
     visit workspace_members_path(workspace)
-    # Scoped by id, not the "Role" label: the members-index filter bar above
-    # this form has its own select labelled "Role" (workspaces.members.index.role),
-    # so `from: I18n.t("...magic_link_role_label")` is ambiguous on this page.
+    # By id: the members filter bar has its own select labelled "Role".
     select "Member", from: "invitation_role_id"
     click_button I18n.t("workspaces.invitations.index.generate_magic_link")
     expect(page).to have_text(I18n.t("workspaces.invitations.index.magic_link_label"))
   end
 
   it "renders the reveal as a copy field without the mid-word wrap or the silent alert" do
+    reveal_magic_link
+    link_noun = I18n.t("workspaces.invitations.index.magic_link_aria")
+
     within("#magic_link_reveal") do
       expect(page).to have_css("input[readonly][data-copy-target='source'][value*='/invitations/']")
       expect(page).to have_css("button[data-action='copy#copy'][aria-label='#{I18n.t("modelrails_ui.copy.action")} #{link_noun}']")
@@ -37,6 +35,8 @@ RSpec.describe "Magic link copy control", type: :system do
   end
 
   it "copies the URL and announces it" do
+    reveal_magic_link
+    link_noun = I18n.t("workspaces.invitations.index.magic_link_aria")
     page.execute_script(<<~JS)
       window.__copied = []
       Object.defineProperty(navigator, "clipboard", {
@@ -55,6 +55,9 @@ RSpec.describe "Magic link copy control", type: :system do
   end
 
   it "is axe-clean at AAA in both themes with the reveal open" do
+    reveal_magic_link
+    axe_options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
+
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       axe_violations_in_both_themes(axe_options).join("\n")
   end

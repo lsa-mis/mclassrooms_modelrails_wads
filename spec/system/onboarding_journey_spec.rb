@@ -6,8 +6,6 @@ require "rails_helper"
 # Rails.configuration value and restore it after each example.
 # (RSpec mocks do not cross into the Capybara/Playwright server thread.)
 RSpec.describe "Onboarding journey", type: :system do
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
-
   around do |example|
     original = Rails.configuration.x.tenancy.onboarding
     Rails.configuration.x.tenancy.onboarding = :none

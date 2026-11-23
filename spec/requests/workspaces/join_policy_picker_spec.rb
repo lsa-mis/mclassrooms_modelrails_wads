@@ -13,13 +13,11 @@ require "rails_helper"
 # after the name. Nothing asserted any of this before, which is how two loose
 # radios with no group name survived this long.
 RSpec.describe "Workspace settings — join-policy picker", type: :request do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace) }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
+  def signed_in_owner_workspace
+    create(:workspace).tap { |workspace| sign_in_as_owner_of(workspace) }
+  end
 
-  before { sign_in(user) }
-
-  def doc
+  def doc(workspace)
     get edit_workspace_settings_path(workspace)
     Capybara::Node::Simple.new(response.body)
   end
@@ -47,7 +45,8 @@ RSpec.describe "Workspace settings — join-policy picker", type: :request do
   end
 
   it "wraps the options in a named group" do
-    page = doc
+    workspace = signed_in_owner_workspace
+    page = doc(workspace)
     group = page.find("[role=radiogroup]", visible: :all)
 
     named_by = group["aria-labelledby"]
@@ -56,7 +55,8 @@ RSpec.describe "Workspace settings — join-policy picker", type: :request do
   end
 
   it "describes each option rather than folding its help into the name" do
-    page = doc
+    workspace = signed_in_owner_workspace
+    page = doc(workspace)
     invite = radio(page, "invite")
 
     described_by = invite["aria-describedby"]
@@ -70,13 +70,15 @@ RSpec.describe "Workspace settings — join-policy picker", type: :request do
   end
 
   it "keeps every option's label at the 44px target floor" do
-    page = doc
+    workspace = signed_in_owner_workspace
+    page = doc(workspace)
 
     expect(page).to have_css("[role=radiogroup] label.min-h-input", count: 2, visible: :all)
   end
 
   it "posts the chosen policy under the name the controller reads" do
     permit_open_link
+    workspace = signed_in_owner_workspace
     patch workspace_settings_path(workspace), params: { workspace: { join_policy: "open_link" } }
 
     expect(workspace.reload.join_policy).to eq("open_link")
@@ -88,7 +90,8 @@ RSpec.describe "Workspace settings — join-policy picker", type: :request do
   # rejects the value even if the disabled control were bypassed.
   context "when the open-link strategy is not permitted (the default)" do
     it "disables that option and explains why in its description, not its name" do
-      page = doc
+      workspace = signed_in_owner_workspace
+    page = doc(workspace)
       open_link = radio(page, "open_link")
 
       expect(open_link).to be_disabled
@@ -102,7 +105,8 @@ RSpec.describe "Workspace settings — join-policy picker", type: :request do
     end
 
     it "still offers invite, enabled" do
-      page = doc
+      workspace = signed_in_owner_workspace
+    page = doc(workspace)
 
       expect(radio(page, "invite")).not_to be_disabled
     end
@@ -112,7 +116,8 @@ RSpec.describe "Workspace settings — join-policy picker", type: :request do
     before { permit_open_link }
 
     it "leaves the option enabled and says nothing about it being unavailable" do
-      page = doc
+      workspace = signed_in_owner_workspace
+    page = doc(workspace)
 
       expect(radio(page, "open_link")).not_to be_disabled
       expect(page).to have_no_text(t("open_link_disabled_explanation"))

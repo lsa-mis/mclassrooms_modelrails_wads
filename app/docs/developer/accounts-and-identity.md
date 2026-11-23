@@ -32,7 +32,7 @@ Tenant data is **workspace-scoped.** Business objects, records, and collaboratio
 
 There is a single `Workspace` model for both your own workspace and an organization workspace. They differ only in how they were created and how many members they have — not in their data structure.
 
-When a new user signs up, an auto-created workspace is flagged `owner_created: true` (and `personal: true` in the current column). That flag marks the starting point — it does not cap membership. "Your workspace" can grow into a team. "Graduation" to an organization is a transfer or scale path, not a new model entity.
+When a new user signs up under the `personal` preset, the auto-created workspace is flagged `personal: true` and recorded as the user's `personal_workspace_id`. That flag marks the starting point — it does not cap membership. "Your workspace" can grow into a team. "Graduation" to an organization is a transfer or scale path, not a new model entity.
 
 `Membership` joins `User` to `Workspace` with a `Role`. Every user is a member of every workspace they can access, including their own.
 
@@ -67,7 +67,7 @@ A password is optional (`has_secure_password validations: false`); the passwordl
 
 ## For forks
 
-See [Forking this template](/docs/developer/forking) for the full forking guide and the four signup presets.
+See [Forking this template](/docs/developer/forking) for the full forking guide and [Presets](/docs/developer/presets) for the four tenancy presets.
 
 `WORKSPACE_ON_SIGNUP` controls which workspace, if any, a new user lands in at registration:
 
@@ -75,4 +75,4 @@ See [Forking this template](/docs/developer/forking) for the full forking guide 
 - `shared` — land every new user in a single shared workspace (single-tenant SaaS)
 - `none` — no workspace at signup; the user is redirected to create or join one
 
-This env var pairs with `SIGNUP_MODE` (open/invite-only/closed) to define the full onboarding posture. The model above is the same in all three cases — only the initial landing changes.
+This env var pairs with `SIGNUP_MODE` (`open` or `invite_only`, the default) to define the full onboarding posture. The model above is the same in all three cases — only the initial landing changes.

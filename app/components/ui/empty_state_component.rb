@@ -19,7 +19,7 @@ module UI
     #
     # `outlined` is bg-surface-raised, never bg-surface: bg-surface is the PAGE, so a
     # container painted with it is the colour of the ground beneath it. See
-    # docs/design-tokens.md.
+    # modelrails_ui's docs/design-tokens.md.
     VARIANTS = {
       dashed: "rounded-lg border border-dashed border-border",
       outlined: "rounded-lg border border-border bg-surface-raised",

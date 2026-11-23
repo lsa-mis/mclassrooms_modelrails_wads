@@ -251,16 +251,11 @@ RSpec.describe WorkspaceJoinLink, type: :model do
     end
 
     it "admits through a fresh link but refuses once it has expired" do
-      # Fix round 1: the previous version built the link on the default
-      # factory workspace (join_policy: "invite"), so accepting_open_joins?
-      # was already false and short-circuited `admit` before `active?` was
-      # ever the deciding term — the assertion below would pass identically
-      # even with the expiry check deleted. An open-link workspace plus a
-      # positive-control admit first makes expiry the only thing that can
-      # explain the second admit's no-op.
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
+      # An open-link workspace plus a positive-control admit make expiry the only
+      # explanation for the second no-op (an invite workspace short-circuits admit).
+      permit_open_join_links
       Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
-      open_workspace = create(:workspace, personal: false, join_policy: "open_link")
+      open_workspace = create(:workspace, :open_link)
       link = create(:workspace_join_link, workspace: open_workspace)
       joiner = create(:user)
       latecomer = create(:user)

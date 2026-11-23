@@ -6,16 +6,21 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
   include ActiveJob::TestHelper
   include ActionMailer::TestHelper
 
-  let(:workspace) { create(:workspace) }
-  let(:inviter) { create(:user) }
-  let(:accepter) { create(:user) }
-  let(:invitation) do
+  def accepted_invitation(invitable, inviter:, accepter:, **attrs)
     create(:invitation,
-           invitable: workspace,
+           invitable: invitable,
            email: accepter.email_address,
            invited_by: inviter,
            accepted_by: accepter,
-           accepted_at: Time.current)
+           accepted_at: Time.current,
+           **attrs)
+  end
+
+  def accepted_workspace_invitation
+    workspace = create(:workspace)
+    accepter = create(:user)
+    inviter = create(:user)
+    [ inviter, accepter, workspace, accepted_invitation(workspace, inviter: inviter, accepter: accepter) ]
   end
 
   describe ".category" do
@@ -26,12 +31,14 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
 
   describe "dispatching" do
     it "delivers to the inviter and creates a Noticed::Notification row" do
+      inviter, _accepter, _workspace, invitation = accepted_workspace_invitation
       result = described_class.with(record: invitation).deliver(inviter)
       expect(result).to eq :delivered
       expect(inviter.notifications.count).to eq 1
     end
 
     it "auto-populates idempotency_key on the event column" do
+      inviter, _accepter, _workspace, invitation = accepted_workspace_invitation
       described_class.with(record: invitation).deliver(inviter)
       event = Noticed::Event.last
       expect(event.idempotency_key).to be_present
@@ -39,6 +46,7 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
     end
 
     it "deduplicates concurrent dispatches within the same minute" do
+      inviter, _accepter, _workspace, invitation = accepted_workspace_invitation
       freeze_time do
         described_class.with(record: invitation).deliver(inviter)
         result = described_class.with(record: invitation).deliver(inviter)
@@ -48,6 +56,7 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
     end
 
     it "does not enqueue any NotificationMailer email job (in-app + digest only)" do
+      inviter, _accepter, _workspace, invitation = accepted_workspace_invitation
       expect {
         described_class.with(record: invitation).deliver(inviter)
         # Drain the EventJob so any per-recipient deliveries also get enqueued.
@@ -57,9 +66,12 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
   end
 
   describe "preferences gating" do
-    let!(:prefs) { create(:user_preferences, user: inviter) }
-
     it "still routes through workspace_activity (does NOT bypass DND)" do
+      inviter = create(:user)
+      prefs = create(:user_preferences, user: inviter)
+      workspace = create(:workspace)
+      accepter = create(:user)
+      invitation = accepted_invitation(workspace, inviter: inviter, accepter: accepter)
       prefs.update!(notification_preferences:
         prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
       described_class.with(record: invitation).deliver(inviter)
@@ -69,6 +81,11 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
     end
 
     it "permits in-app + email under default preferences (workspace_activity)" do
+      inviter = create(:user)
+      create(:user_preferences, user: inviter)
+      workspace = create(:workspace)
+      accepter = create(:user)
+      invitation = accepted_invitation(workspace, inviter: inviter, accepter: accepter)
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true
@@ -78,6 +95,7 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
 
   describe "#message" do
     it "renders the localized accepted message with accepter and workspace context" do
+      inviter, accepter, workspace, invitation = accepted_workspace_invitation
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.message).to eq(
@@ -90,6 +108,7 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
 
   describe "#url" do
     it "links to the invitation's workspace" do
+      inviter, _accepter, workspace, invitation = accepted_workspace_invitation
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.url).to eq(
@@ -98,6 +117,7 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
     end
 
     it "returns the placeholder copy when the invitation has been deleted" do
+      inviter, _accepter, _workspace, invitation = accepted_workspace_invitation
       described_class.with(record: invitation).deliver(inviter)
       invitation.destroy
       notification = inviter.notifications.last
@@ -107,6 +127,9 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
 
   describe "Invitation#after_update_commit trigger" do
     it "fires the notifier when an invitation transitions to accepted" do
+      workspace = create(:workspace)
+      accepter = create(:user)
+      inviter = create(:user)
       pending_invitation = create(:invitation,
                                   invitable: workspace,
                                   email: accepter.email_address,
@@ -122,6 +145,8 @@ RSpec.describe WorkspaceInvitationAcceptedNotifier, type: :notifier do
     end
 
     it "does not fire when the inviter is also the accepter (self-accept edge)" do
+      workspace = create(:workspace)
+      inviter = create(:user)
       pending_invitation = create(:invitation,
                                   invitable: workspace,
                                   email: inviter.email_address,

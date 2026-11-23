@@ -32,13 +32,13 @@ Then hard-reload the browser (Cmd-Shift-R). Verify with `Stimulus.controllers.ma
 
 **Root cause**: Tailwind only compiles utilities for classes it scans in source files referenced by `@source` directives. Gem template files installed under `~/.local/share/mise/installs/.../gems/<gem>-<version>/app/views/` aren't in the default scan path.
 
-**Fix**: A `vendor/markdowndocs_views` symlink to the gem's view directory exists for exactly this reason — it gives Tailwind a stable, repo-relative scan target. The `@source` directive in `app/assets/tailwind/application.css` references it:
+**Fix**: A `vendor/markdowndocs_views` symlink to the gem's view directory, made by `bin/rails tailwind:setup_gem_sources`, exists for exactly this reason — it gives Tailwind a stable, repo-relative scan target. The `@source` directive in `app/assets/tailwind/application.css` references it:
 
 ```css
 @source "../../../vendor/markdowndocs_views/**/*.erb";
 ```
 
-If a class from a gem template still isn't compiling, verify the symlink target points at the right gem version's view directory and re-run `bin/rails tailwindcss:build`.
+If a class from a gem template still isn't compiling, verify the symlink exists and points at the right gem version's view directory (`bin/rails tailwind:setup_gem_sources` relinks it), then re-run `bin/rails tailwindcss:build`.
 
 ## Dark mode applies to gem templates but the surface stays light
 
@@ -106,7 +106,7 @@ invitation = Invitation.where(email: "invitee@example.com").order(created_at: :d
 2. **Blocked by the invitee** — `invitation.suppressed_at` is set, or `InvitationBlock.exists?(inviter: invitation.invited_by, email: invitation.email)`. See [Invitation blocks](/docs/developer/security#invitation-blocks-decline-and-block); unblocking is below.
 3. **Suppressed delivery attempts** — `ActivityLog.where(action: "invitation.delivery_suppressed", trackable: invitation)`. One row per refused mailer send. Only the mailer sites record here: the expiring-reminder sweep and its mail leg skip silently by design, so an empty result does not rule out a block.
 4. **Sender can't invite** — `invitation.invited_by.can_invite?`. The send surface refuses a sender with no verified email address.
-5. **Rate limit** — a resend can be swallowed by `Workspaces::InvitationsController#resend`'s limit of 10 per 3 minutes. The sender sees an alert, but a ticket rarely quotes it.
+5. **Rate limit** — a resend can be swallowed by `Workspaces::Invitations::ResendsController#create`'s limit of 10 per 3 minutes. The sender sees an alert, but a ticket rarely quotes it.
 6. **Queue or transport** — the `deliver_later` job never ran (check Solid Queue) or the mail bounced at the provider.
 
 **Unblocking is one call, because it is two statements:**

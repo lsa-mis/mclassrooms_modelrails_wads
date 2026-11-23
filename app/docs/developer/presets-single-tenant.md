@@ -8,7 +8,7 @@ keywords: single-tenant preset shared workspace internal tool owner bootstrap se
 
 # Single-tenant
 
-**What it is.** One shared workspace, no personal workspaces, the tenancy UI suppressed. Every authenticated user is a member of the same workspace; new signups land there automatically. There is no workspace switcher, no "New workspace" UI, and no way for users to create additional workspaces.
+**What it is.** One shared workspace, no personal workspaces, the tenancy UI suppressed. Every authenticated user is a member of the same workspace; new signups land there automatically. The workspace switcher names that workspace and lists no other; there is no "New workspace" UI and no way for users to create additional workspaces.
 
 **Who it's for.** Internal company tools, one-org deployments, classroom/cohort tools with central administration — any product where "the workspace" is implicit and there's no need to expose tenancy as a user-facing concept.
 
@@ -61,11 +61,11 @@ Everyone shares **one** workspace. Each person (with how they **sign in**) is a 
 | `signup.mode` | typically `:invite_only` (your call) | `config/initializers/signup.rb` |
 | `tenancy.onboarding` | `:shared` | `User#onboard_workspace` dispatches to `join_shared_workspace` |
 | `tenancy.workspace_creation` | `:disabled` | `RequiresWorkspaceCreationEnabled` (included by `WorkspacesController` and `Operations::WorkspacesController`) redirects `:new`/`:create` — operators included; a second workspace on a single-tenant instance means flipping the flag or a console one-liner |
-| `permitted_join_strategies` | `[:invite]` *(implicit — only mechanism built)* | `Invitation.consume!` is the single membership-grant path |
+| `permitted_join_strategies` | `[:invite]` (default — `SIGNUP_PERMITTED_JOIN_STRATEGIES`) | `Invitation.consume!` is the single membership-grant path |
 | `session.reauth_enabled` | `false` *(optional — your call)* | `config/initializers/sessions.rb`; internal tools often skip the "confirm it's you" interstitial |
 | `session.new_device_notification` | `false` *(optional — your call)* | same file; skips "new sign-in" alerts when every teammate's laptop would fire one |
 
-The workspace switcher auto-hides under this preset because every user has exactly one membership (the existing #145 "hide personal from switcher" logic plus the single-membership-no-switcher rule combine naturally — no extra suppression needed).
+The workspace switcher stays, naming the shared workspace: with one membership its menu lists no other workspace, only "All workspaces", so no extra suppression is needed.
 
 **Setup steps.**
 
@@ -73,11 +73,11 @@ The workspace switcher auto-hides under this preset because every user has exact
 
    | Variable | Required? | Example | Purpose |
    |---|---|---|---|
-   | `WORKSPACE_ON_SIGNUP` | yes | `shared` | Selects this preset |
+   | `WORKSPACE_ON_SIGNUP` | no, after `bin/fork --preset shared` | `shared` | Selects this preset; defaults to the preset in `.fork.yml` |
    | `TENANCY_WORKSPACE_CREATION` | yes | `disabled` | Turns off "New workspace" UI + route — operators included; a second workspace on a single-tenant instance means flipping the flag or a console one-liner |
-   | `TENANCY_SHARED_WORKSPACE_SLUG` | yes | `acme` | URL-safe slug of the shared workspace |
-   | `TENANCY_SHARED_WORKSPACE_NAME` | no | `Acme Inc.` | Display name (defaults to titleized slug) |
-   | `TENANCY_OWNER_EMAIL` | yes | `admin@acme.com` | Email of the initial Owner |
+   | `TENANCY_SHARED_WORKSPACE_SLUG` | no, after `bin/fork --preset shared` | `acme` | URL-safe slug of the shared workspace; defaults to the name in `.fork.yml` |
+   | `TENANCY_SHARED_WORKSPACE_NAME` | no | `Acme Inc.` | Display name (defaults to the product name in `config/locales/en/brand.en.yml`) |
+   | `TENANCY_OWNER_EMAIL` | in production | `admin@acme.com` | Email of the initial Owner; development falls back to `owner@<slug>.test`, so a fresh fork's `bin/setup` needs nothing set |
    | `TENANCY_OWNER_FIRST_NAME` | no | `Admin` | Display first name (default `Workspace`) |
    | `TENANCY_OWNER_LAST_NAME` | no | `User` | Display last name (default `Owner`) |
    | `SIGNUP_MODE` | yes | `invite_only` | Lock account creation to invitations |
@@ -85,15 +85,15 @@ The workspace switcher auto-hides under this preset because every user has exact
 
 2. Run `bin/setup` (or `bin/rails db:seed` on an existing app). The seed is idempotent — safe to re-run.
 
-3. The seed creates the shared workspace and the Owner user (with a verified email Authentication and an Owner Membership). In development the password-set email is captured by **Letter Opener** — open `/letter_opener` to see it (it isn't sent over SMTP). In `production` it deliberately does **not** put a credential in the logs (a logged token would linger in log retention past its short expiry); instead it logs the workspace URL and points you to an on-demand task. Mint the Owner's sign-in link when you're ready to use it:
+3. The seed creates the shared workspace and the Owner user (with a verified email Authentication and an Owner Membership). In development it emails the Owner a sign-in link, captured by **Letter Opener**: open `/letter_opener` to see it (it isn't sent over SMTP). With passwords turned on, the link lands on the set-a-password form. In `production` it deliberately does **not** put a credential in the logs (a logged token would linger in log retention past its short expiry); instead it logs the workspace URL and points you to an on-demand task. Mint the Owner's sign-in link when you're ready to use it:
 
    ```bash
    bin/rails tenancy:owner_setup_link
    ```
 
-   This prints a fresh, short-lived password-set URL — the expiry clock starts when you run it, not at deploy time. Deliver it to the Owner out-of-band (or run it yourself if you're claiming the account). It doubles as a break-glass Owner login if email delivery is ever down.
+   This prints a fresh sign-in link, valid for 15 minutes — the expiry clock starts when you run it, not at deploy time. Deliver it to the Owner out-of-band (or run it yourself if you're claiming the account). It doubles as a break-glass Owner login if email delivery is ever down.
 
-4. The Owner opens the password-set link, sets a password, signs in. They can then invite other users via the normal invitation flow — **each invitation specifies the role the invitee receives** (Member, Admin, etc.). The Owner remains the single source of new-role-granting authority for the shared workspace; roles can also be changed after signup via the members UI at `/workspaces/:slug/members`.
+4. The Owner opens the link, which signs them in (with `AUTH_PASSWORDS=enabled` it opens the set-password form first). They can then invite other users via the normal invitation flow — **each invitation specifies the role the invitee receives** (Member, Admin, etc.). The Owner remains the single source of new-role-granting authority for the shared workspace; roles can also be changed after signup via the members UI at `/workspaces/:slug/members`.
 
 > **Re-inviting under `:shared` updates the role, it doesn't error.** Because `:shared` onboarding pre-creates a placeholder membership for every new user, `Workspace#admit` *reconciles* — admitting an existing member to a new role updates their role rather than raising "already a member" (the behavior you'd get under the default `:personal` posture). So re-inviting someone at a higher role is a valid way to promote them.
 
@@ -115,9 +115,9 @@ owner.personal_workspace_id                    # => nil
 owner.memberships.first.role.slug              # => "owner"
 ```
 
-In the browser, after the Owner has set their password and signed in:
+In the browser, after the Owner has signed in:
 
-1. They land directly in the shared workspace (no chooser).
+1. They land on the home page; **Go to your workspaces** lists only the shared workspace.
 2. The workspace switcher at the top of the sidebar names the shared workspace and their role; its menu lists no other workspace — only "All workspaces".
    The user menu's own "All workspaces" entry point stays suppressed under
    `TenancyConfig.shared?` (see `shared/_user_menu.html.erb`).
@@ -127,9 +127,9 @@ In the browser, after the Owner has set their password and signed in:
 **When to switch presets.**
 
 - *"Users should each get their own personal workspace; this is too restrictive."* → **[Solo-default](/docs/developer/presets-solo)**.
-- *"Each customer should have their own workspace, and signup should be public."* → **[Open SaaS](/docs/developer/presets-open-saas)** (Reshape 2+).
+- *"Each customer should have their own workspace, and signup should be public."* → **[Open SaaS](/docs/developer/presets-open-saas)**.
 
 ## Next steps
 
-- **[← Compare all presets](/docs/developer/presets)** — the decision matrix and the other two shapes.
+- **[← Compare all presets](/docs/developer/presets)** — the decision matrix and the other three shapes.
 - **[Extending ModelRails →](/docs/developer/extending)** — add your own workspace-scoped features on top of this preset.

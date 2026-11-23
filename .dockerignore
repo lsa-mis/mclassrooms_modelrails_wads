@@ -10,9 +10,11 @@
 # Ignore all environment files.
 /.env*
 
-# Ignore all default key files.
+# Ignore all default key files and other local secrets.
 /config/master.key
 /config/credentials/*.key
+/fnox.local.toml
+/age.txt
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -49,3 +51,6 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# The Hot Cell image builds from its own directory; its edits must not bust this image's cache.
+/hotcell

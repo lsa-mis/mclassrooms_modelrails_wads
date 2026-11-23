@@ -7,27 +7,29 @@ require "rails_helper"
 RSpec.describe "Onboarding · invitees", type: :request do
   before { allow(TenancyConfig).to receive(:onboarding).and_return(:none) }
 
-  let(:owner) { create(:user, :with_zero_workspaces, onboarded_at: Time.current) }
-  let(:workspace) { create(:workspace) }
-  let!(:owner_membership) { create(:membership, :owner, user: owner, workspace: workspace) }
-  let!(:member_role) do
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
-      r.name = "Member"
-      r.permissions = { manage_projects: true }
-    end
+  # Membership before project: the project factory seats its creator.
+  def owned_workspace
+    owner = create(:user, :with_zero_workspaces, onboarded_at: Time.current)
+    workspace = create(:workspace)
+    create(:membership, :owner, user: owner, workspace: workspace)
+    create(:project, workspace: workspace, created_by: owner)
+    [ workspace, owner ]
   end
-  let(:invitee) { create(:user, :with_zero_workspaces) }
 
-  def accept_as(role)
+  def accept_as(role, workspace:, owner:)
+    invitee = create(:user, :with_zero_workspaces)
     create(:invitation, invitable: workspace, role: role, invited_by: owner, email: invitee.email_address)
       .accept!(invitee)
+    invitee
   end
 
   it "lands an invited Member on their workspace, never in the wizard" do
-    accept_as(member_role)
+    workspace, owner = owned_workspace
+    member_role = Role.system_default!("member")
+    invitee = accept_as(member_role, workspace: workspace, owner: owner)
     sign_in(invitee)
 
-    get root_path
+    get new_session_path
     expect(response).not_to redirect_to(onboarding_path)
     get workspace_path(workspace)
     expect(response).to have_http_status(:ok)

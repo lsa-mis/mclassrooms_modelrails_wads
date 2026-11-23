@@ -15,19 +15,19 @@ require "rails_helper"
 RSpec.describe "Settings sidebar context routing", type: :request do
   include_context "settings sidebar items"
 
-  let(:user) { create(:user) }
-
   def sidebar(body)
     Capybara.string(body)
             .find("aside[aria-label='#{I18n.t("settings.sidebar.aria_label")}']")
   end
 
-  before { sign_in(user) }
-
   # ── Identity context ────────────────────────────────────────────────────────
 
   describe "GET /settings/profile/edit (identity context)" do
-    before { get edit_settings_profile_path }
+    def identity_settings_sidebar
+      sign_in(create(:user))
+      get edit_settings_profile_path
+      sidebar(response.body)
+    end
 
     # The identity/workspace `data-workspace-kind` split lived on the settings
     # layout when it served both contexts. It's gone now that the layout is
@@ -36,14 +36,14 @@ RSpec.describe "Settings sidebar context routing", type: :request do
     # absence.
 
     it "renders identity sidebar items (Notifications, Security, Appearance)" do
-      sb = sidebar(response.body)
+      sb = identity_settings_sidebar
       expect(sb).to have_link(item("notifications"))
       expect(sb).to have_link(item("security"))
       expect(sb).to have_link(item("appearance"))
     end
 
     it "does not render workspace sidebar items in identity context" do
-      sb = sidebar(response.body)
+      sb = identity_settings_sidebar
       expect(sb).to have_no_link(item("members"))
       expect(sb).to have_no_link(item("invitations"))
     end
@@ -60,22 +60,25 @@ RSpec.describe "Settings sidebar context routing", type: :request do
   end
 
   describe "GET /workspaces/:slug/members (workspace shell)" do
-    let!(:workspace) { create(:workspace) }
-    before do
-      create(:membership, :owner, user: user, workspace: workspace)
+    def members_page_as_owner
+      workspace = create(:workspace)
+      sign_in_as_owner_of(workspace)
       get workspace_members_path(workspace)
     end
 
     it "renders in the workspace shell, not the settings hub" do
+      members_page_as_owner
       expect(Capybara.string(response.body)).to have_no_css("[data-workspace-kind='workspace']")
       expect(Capybara.string(response.body)).to have_no_css("#settings-aria-live")
     end
 
     it "renders workspace sub-nav items (Members present)" do
+      members_page_as_owner
       expect(workspace_subnav(response.body)).to have_link(item("members"))
     end
 
     it "does not render identity sidebar items in the workspace sub-nav" do
+      members_page_as_owner
       sb = workspace_subnav(response.body)
       expect(sb).to have_no_link(item("notifications"))
       expect(sb).to have_no_link(item("security"))
@@ -95,20 +98,20 @@ RSpec.describe "Settings sidebar context routing", type: :request do
     # itself is covered by spec/requests/workspaces/profile_in_shell_spec.rb.
     # This guards the one thing specific to *personal* workspaces: no
     # identity-settings items leak in via workspace_settings_nav_items.
-    let(:personal_workspace) { user.personal_workspace }
-
-    before do
-      # WorkspacesController#edit authorizes via WorkspacePolicy — the user is
-      # owner of their personal workspace, so this is permitted.
-      get edit_workspace_path(personal_workspace)
+    def personal_workspace_edit_page
+      user = create(:user)
+      sign_in(user)
+      get edit_workspace_path(user.personal_workspace)
     end
 
     it "renders in the workspace shell, not the settings hub" do
+      personal_workspace_edit_page
       expect(Capybara.string(response.body)).to have_no_css("[data-workspace-kind='identity']")
       expect(Capybara.string(response.body)).to have_no_css("#settings-aria-live")
     end
 
     it "does not show identity sidebar items in the workspace nav (Notifications/Security/Appearance absent)" do
+      personal_workspace_edit_page
       # Scoped to the workspace primary <aside> — the page body also contains
       # a "Notifications" link in the global header's user menu, which is
       # unrelated to settings-context routing.

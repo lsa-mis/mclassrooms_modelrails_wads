@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+# Usage: bin/protected-branch-check [REMOTE] < pre-push's ref lines
+# Refuses a push GitHub's rulesets would refuse; see /docs/developer/getting-started (Gate 1).
+require "open3"
+require_relative "../lib/clean_git_env"
+require_relative "../lib/protected_branch_check"
+
+off, = Open3.capture2(CleanGitEnv::HASH, "git", "config", "--get-all", "branch-rules.off")
+refusal = ProtectedBranchCheck.refusal($stdin.each_line.to_a, remote: ARGV.first || "origin", off: off.split)
+return unless refusal
+
+puts refusal
+exit 1

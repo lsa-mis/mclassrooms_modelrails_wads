@@ -82,6 +82,10 @@ jobs:
               exit 1
             }
 
+            # A fork's bin/setup adds its upstream remote; in the template a refused git just reads as "not a fork".
+            echo "=== git works in the checkout ==="
+            git rev-parse HEAD
+
             # Deliberately the repo's OWN specs rather than assertions restated
             # in YAML: the libvips floor already has a tested home, and a real
             # system spec is the smallest thing that proves the browser actually
@@ -90,4 +94,5 @@ jobs:
             echo "=== the container can boot Rails and drive a browser ==="
             bundle exec rspec \
               spec/config/active_storage_variant_safety_spec.rb \
-              spec/system/ui/kbd_component_spec.rb
+              spec/system/ui/kbd_component_spec.rb \
+              spec/system/cuprite_driver_config_spec.rb

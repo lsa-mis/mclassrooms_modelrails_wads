@@ -18,12 +18,16 @@ require "action_cable/engine"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+require_relative "../lib/fork_config"
+
 module ModelrailsBase
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.2
 
     config.yjit = true
+
+    config.action_mailer.deliver_later_queue_name = :mailers
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
@@ -59,17 +63,17 @@ module ModelrailsBase
     # Off by default: the template avoids storing passwords. See /docs/developer/security (Password sign-in).
     config.x.authentication.passwords = ENV.fetch("AUTH_PASSWORDS", "disabled").to_sym
 
-    # Instance ceiling on per-workspace Workspace#join_policy. Defaults to
-    # [:invite] (preserves Solo-default). Operators opt in to :open_link by
-    # setting SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link.
-    # See app/docs/developer/presets.md and docs/reshape-2-per-workspace-join-policy-spec.md.
+    # The instance's ceiling on Workspace#join_policy: invite only, unless SIGNUP_PERMITTED_JOIN_STRATEGIES
+    # adds open_link. Per preset: app/docs/developer/presets-none.md and presets-open-saas.md.
     config.x.signup.permitted_join_strategies =
       ENV.fetch("SIGNUP_PERMITTED_JOIN_STRATEGIES", "invite").split(",").map { |s| s.strip.to_sym }
 
     # Tenancy preset configuration. See app/docs/developer/presets.md.
-    config.x.tenancy.onboarding          = ENV.fetch("WORKSPACE_ON_SIGNUP", "personal").to_sym
+    # A fork's preset defaults to the one bin/fork recorded in .fork.yml.
+    tenancy = ForkConfig.tenancy_env(config.root, env: ENV, test: Rails.env.test?)
+    config.x.tenancy.onboarding          = tenancy.fetch("WORKSPACE_ON_SIGNUP", "personal").to_sym
     config.x.tenancy.workspace_creation  = ENV.fetch("TENANCY_WORKSPACE_CREATION", "enabled").to_sym
-    config.x.tenancy.shared_workspace_slug = ENV["TENANCY_SHARED_WORKSPACE_SLUG"]
+    config.x.tenancy.shared_workspace_slug = tenancy["TENANCY_SHARED_WORKSPACE_SLUG"]
 
     # Fork deviation (MiClassrooms Task 4): role slug granted by
     # User#join_shared_workspace to a user self-joining the shared workspace

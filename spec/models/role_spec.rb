@@ -125,21 +125,24 @@ RSpec.describe Role, type: :model do
   end
 
   describe "system defaults" do
-    let!(:default_roles) do
+    def seed_system_roles
       Role::SYSTEM_DEFAULTS.each_key { |slug| Role.system_default!(slug) }
     end
 
     it "has 4 default roles" do
+      seed_system_roles
       expect(Role.where(workspace_id: nil).count).to eq(4)
     end
 
     %w[owner admin member viewer].each do |slug|
       it "has #{slug} role" do
+        seed_system_roles
         expect(Role.find_by(slug: slug, workspace_id: nil)).to be_present
       end
     end
 
     it "owner has manage_workspace permission" do
+      seed_system_roles
       owner = Role.find_by(slug: "owner")
       expect(owner.permissions).to include("manage_workspace" => true)
     end

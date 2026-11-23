@@ -114,7 +114,7 @@ RSpec.describe "Switch component accessibility and visual transition", type: :sy
   end
 
   # Chromium latches :focus-visible only on a TRUSTED key event, so the track is reached by real CDP Tab
-  # presses; its motion-safe:transition-all animates the outline, so the read polls until it settles (B5).
+  # presses; its motion-safe:transition-all animates the outline, so the read polls until it settles.
   describe "focus-visible outline (peer-focus-visible cascade)" do
     it "renders the AAA focus outline on the track when the switch input is keyboard-focused" do
       visit "#{preview}/off"

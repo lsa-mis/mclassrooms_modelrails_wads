@@ -1,4 +1,3 @@
-# Page-level helpers shared by system specs, defined once so a copy cannot drift (#1273).
 module PageHelpers
   def focused_text
     page.evaluate_script("document.activeElement.textContent.trim()")

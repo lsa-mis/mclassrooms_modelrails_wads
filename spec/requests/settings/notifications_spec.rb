@@ -6,8 +6,6 @@ RSpec.describe "Account Notifications", type: :request do
   # D11: an unread item is the only one that needs attention, so it should not
   # be pushed off the page by newer read ones.
   describe "GET /settings/notifications ordering" do
-    let(:reader) { create(:user) }
-
     def deliver_to(reader)
       before = reader.notifications.pluck(:id)
       PasswordChangedNotifier.with(record: reader, idempotency_key: SecureRandom.hex(8)).deliver(reader)
@@ -15,6 +13,7 @@ RSpec.describe "Account Notifications", type: :request do
     end
 
     it "orders unread first, then newest, so an older unread outranks a newer read one" do
+      reader = create(:user)
       # Sign in first: the sign-in itself writes a new-device notification, and
       # creating fixtures after it keeps that row out of the ids under test.
       sign_in(reader)
@@ -47,23 +46,22 @@ RSpec.describe "Account Notifications", type: :request do
   end
 
   context "authenticated" do
-    let(:user) { create(:user) }
-    let(:other_user) { create(:user) }
-
-    before { sign_in(user) }
+    def signed_in_user
+      create(:user).tap { |user| sign_in(user) }
+    end
 
     # Dispatches a real notifier so the message body, recipient association,
     # idempotency key — everything the index renders — is exactly what
     # production builds. Using PasswordChangedNotifier (security category)
     # for the default; tests that need account_access dispatch their own.
-    def deliver_security_notification(recipient = user)
+    def deliver_security_notification(recipient)
       deliver_in_distinct_idempotency_bucket do
         PasswordChangedNotifier.with(record: recipient).deliver(recipient)
       end
       recipient.notifications.order(:id).last
     end
 
-    def deliver_account_access_notification(recipient: user, inviter: nil)
+    def deliver_account_access_notification(recipient:, inviter: nil)
       inviter ||= create(:user)
       workspace = create(:workspace)
       invitation = create(:invitation,
@@ -89,7 +87,8 @@ RSpec.describe "Account Notifications", type: :request do
 
     describe "GET /account/notifications" do
       it "returns 200 and renders the index" do
-        deliver_security_notification
+        user = signed_in_user
+        deliver_security_notification(user)
         get settings_notifications_path
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(I18n.t("notifications.index.heading"))
@@ -101,6 +100,7 @@ RSpec.describe "Account Notifications", type: :request do
       # can run. This request spec's sign_in helper never touches JS, so the
       # row genuinely stays absent — the one place this contract holds.
       it "states the default retention for a user with no preferences row" do
+        user = signed_in_user
         expect(user.preferences).to be_nil
 
         get settings_notifications_path
@@ -128,6 +128,7 @@ RSpec.describe "Account Notifications", type: :request do
       # The preload is correct (it prevents an N+1 for the common case); the
       # device-only page is the data-dependent false positive we safelist.
       it "renders an index of only device-sign-in notifications without tripping Bullet" do
+        user = signed_in_user
         SignInFromNewDeviceNotifier
           .with(record: user, user_agent: "Mozilla/5.0", os: "macOS")
           .deliver(user)
@@ -137,7 +138,9 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "scopes to the current user (own notifications visible, others' not)" do
-        own = deliver_security_notification
+        user = signed_in_user
+        own = deliver_security_notification(user)
+        other_user = create(:user)
         foreign = deliver_security_notification(other_user)
         # Sign-in detection itself dispatches a SignInFromNewDeviceNotifier
         # to the current user, so the user's notifications list is non-empty
@@ -155,6 +158,7 @@ RSpec.describe "Account Notifications", type: :request do
 
       # The component owns the row padding (#1119).
       it "uses the shared list-row padding, with no breakpoint step of its own" do
+        user = signed_in_user
         event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {}, record: user)
         Noticed::Notification.create!(event: event, recipient: user,
                                       type: "PasswordChangedNotifier::Notification")
@@ -171,6 +175,7 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "paginates with Pagy at 25 per page" do
+        user = signed_in_user
         # Create 30 notifications via direct insert (faster than dispatch).
         event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {}, record: user)
         notifications = Array.new(30) do
@@ -195,9 +200,10 @@ RSpec.describe "Account Notifications", type: :request do
       # attribute is not announced). The row must open with an sr-only status
       # and the timestamp must be the wrapped, localized "ago" form.
       it "conveys read state and a complete timestamp to assistive tech" do
-        read_notification = deliver_security_notification
+        user = signed_in_user
+        read_notification = deliver_security_notification(user)
         read_notification.update!(read_at: Time.current)
-        unread_notification = deliver_security_notification
+        unread_notification = deliver_security_notification(user)
 
         get settings_notifications_path
         page = Capybara.string(response.body)
@@ -214,9 +220,10 @@ RSpec.describe "Account Notifications", type: :request do
 
       context "?filter=unread" do
         it "renders only unread notifications" do
-          read_notification = deliver_security_notification
+          user = signed_in_user
+          read_notification = deliver_security_notification(user)
           read_notification.update!(read_at: Time.current)
-          unread_notification = deliver_security_notification
+          unread_notification = deliver_security_notification(user)
 
           get settings_notifications_path, params: { filter: "unread" }
           expect(response.body).to include(dom_id_fragment(unread_notification))
@@ -226,7 +233,8 @@ RSpec.describe "Account Notifications", type: :request do
 
       context "?category=security" do
         it "renders only notifications for that category" do
-          security_notification = deliver_security_notification
+          user = signed_in_user
+          security_notification = deliver_security_notification(user)
           access_notification = deliver_account_access_notification(recipient: user)
 
           get settings_notifications_path, params: { category: "security" }
@@ -241,7 +249,8 @@ RSpec.describe "Account Notifications", type: :request do
         # which notification each refers to. aria-label adds the message as
         # the label so each button announces its target.
         it "the Mark-as-read button includes the notification's message in its aria-label" do
-          notification = deliver_security_notification
+          user = signed_in_user
+          notification = deliver_security_notification(user)
           get settings_notifications_path
           expected = I18n.t(
             "notifications.index.item.mark_read_aria",
@@ -251,7 +260,8 @@ RSpec.describe "Account Notifications", type: :request do
         end
 
         it "the Mark-as-unread button includes the notification's message when the row is read" do
-          notification = deliver_security_notification
+          user = signed_in_user
+          notification = deliver_security_notification(user)
           notification.update!(read_at: Time.current)
           get settings_notifications_path
           expected = I18n.t(
@@ -264,20 +274,25 @@ RSpec.describe "Account Notifications", type: :request do
     end
 
     describe "PATCH /account/notifications/:id" do
-      let!(:notification) { deliver_security_notification }
-
       it "marks the notification as read when read_at is set" do
+        user = signed_in_user
+        notification = deliver_security_notification(user)
         patch settings_notification_path(notification), params: { read_at: "now" }
         expect(notification.reload.read_at).to be_present
       end
 
       it "marks the notification as unread when read_at is blank" do
+        user = signed_in_user
+        notification = deliver_security_notification(user)
         notification.update!(read_at: Time.current)
         patch settings_notification_path(notification), params: { read_at: "" }
         expect(notification.reload.read_at).to be_nil
       end
 
       it "redirects via the ApplicationController not-found rescue for another user's notification" do
+        user = signed_in_user
+        deliver_security_notification(user)
+        other_user = create(:user)
         foreign = deliver_security_notification(other_user)
         patch settings_notification_path(foreign), params: { read_at: "now" }
         # set_notification scopes through Current.user.notifications.find,
@@ -295,6 +310,8 @@ RSpec.describe "Account Notifications", type: :request do
       # opposite-state button), so keyboard/SR users land back on the same
       # logical control instead of being thrown to <body>.
       it "the turbo_stream response autofocuses the toggle button on the replaced row" do
+        user = signed_in_user
+        notification = deliver_security_notification(user)
         patch settings_notification_path(notification, read_at: "now"),
           headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -313,6 +330,7 @@ RSpec.describe "Account Notifications", type: :request do
     # the bulk twin of Settings::Notifications::ReadingsController.
     describe "POST /account/notification_readings" do
       it "marks ALL of the current user's unread notifications as read (250-row behavior assertion)" do
+        user = signed_in_user
         # Build 250 unread notifications without going through the notifier
         # (faster + avoids idempotency collisions). We assert the OUTCOME —
         # all 250 rows have read_at set after the request — not the
@@ -335,6 +353,8 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "does not affect other users' unread notifications" do
+        signed_in_user
+        other_user = create(:user)
         foreign_event = Noticed::Event.create!(type: "PasswordChangedNotifier", params: {}, record: other_user)
         foreign = Noticed::Notification.create!(
           event: foreign_event,
@@ -348,6 +368,7 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "redirects with a success notice" do
+        signed_in_user
         post settings_notification_readings_path
         expect(response).to redirect_to(settings_notifications_path)
         expect(flash[:notice]).to eq(I18n.t("settings.notification_readings.create.success"))
@@ -360,12 +381,10 @@ RSpec.describe "Account Notifications", type: :request do
     # from the direct response; broadcasts cover every other tab.
     # See /docs/developer/notifications.
     describe "cross-tab read-state sync (v2 avatar/hamburger/menu broadcasts)" do
-      let(:notification) { deliver_security_notification }
-
       # Helper: assert that all three v2 broadcast targets fire. The v2
       # broadcaster (lib/notification_broadcaster.rb) fans out to avatar,
       # hamburger, and menu-count frames on every refresh.
-      def expect_v2_refresh_broadcasts
+      def expect_v2_refresh_broadcasts(user)
         # All surfaces use broadcast_update_to (the frame ones keep the
         # <turbo-frame> addressable across refreshes); allow the aria-live one so
         # the three frame expectations below are the only constraints.
@@ -379,15 +398,17 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "broadcasts the v2 refresh trio on PATCH (mark single notification read)" do
-        notification # ensure dispatched
-        expect_v2_refresh_broadcasts
+        user = signed_in_user
+        notification = deliver_security_notification(user)
+        expect_v2_refresh_broadcasts(user)
 
         patch settings_notification_path(notification), params: { read_at: "now" }
       end
 
       it "broadcasts the v2 refresh trio on POST notification_readings (mark all read)" do
-        notification
-        expect_v2_refresh_broadcasts
+        user = signed_in_user
+        deliver_security_notification(user)
+        expect_v2_refresh_broadcasts(user)
 
         post settings_notification_readings_path
       end
@@ -396,13 +417,16 @@ RSpec.describe "Account Notifications", type: :request do
       # GET :open mutated, so link prefetchers and mail scanners marked
       # notifications read.
       it "broadcasts the v2 refresh trio on POST reading (notification-open from triage)" do
-        notification
-        expect_v2_refresh_broadcasts
+        user = signed_in_user
+        notification = deliver_security_notification(user)
+        expect_v2_refresh_broadcasts(user)
 
         post settings_notification_reading_path(notification)
       end
 
       it "does NOT broadcast on POST reading when notification is already read (idempotent no-op)" do
+        user = signed_in_user
+        notification = deliver_security_notification(user)
         notification.update!(read_at: 1.hour.ago)
 
         expect(Turbo::StreamsChannel).not_to receive(:broadcast_replace_to)
@@ -412,6 +436,9 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "marks read and forwards to the notifier's URL" do
+        user = signed_in_user
+        notification = deliver_security_notification(user)
+
         post settings_notification_reading_path(notification)
 
         expect(notification.reload.read_at).to be_present
@@ -419,6 +446,9 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "no longer routes the mutating GET /:id/open" do
+        user = signed_in_user
+        notification = deliver_security_notification(user)
+
         get "/settings/notifications/#{notification.id}/open"
 
         expect(response).to have_http_status(:not_found)
@@ -430,7 +460,8 @@ RSpec.describe "Account Notifications", type: :request do
       # read-state mutation that affects unread count refreshes
       # notifications_menu_count_frame too.
       it "DOES broadcast to notifications_menu_count_frame on read-state mutations (v2)" do
-        notification
+        user = signed_in_user
+        notification = deliver_security_notification(user)
 
         allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
 
@@ -446,7 +477,8 @@ RSpec.describe "Account Notifications", type: :request do
       # in Tab B would see Tab A's mark/destroy happen silently. This
       # closes that gap.
       it "broadcasts a read-state aria-live announcement on PATCH (mark read)" do
-        notification
+        user = signed_in_user
+        notification = deliver_security_notification(user)
 
         allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
         expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)
@@ -458,7 +490,8 @@ RSpec.describe "Account Notifications", type: :request do
       end
 
       it "broadcasts a read-state aria-live announcement on POST notification_readings (mark all read)" do
-        notification
+        user = signed_in_user
+        deliver_security_notification(user)
 
         allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
         expect(Turbo::StreamsChannel).to receive(:broadcast_update_to)

@@ -1,6 +1,6 @@
 class AddJoinPolicyToWorkspacesAndCreateJoinLinks < ActiveRecord::Migration[8.1]
   # Reshape 2a: per-workspace join policy + shareable join links.
-  # See docs/reshape-2-per-workspace-join-policy-spec.md and app/docs/developer/presets.md.
+  # See app/docs/developer/presets.md.
   def change
     add_column :workspaces, :join_policy, :string, null: false, default: "invite"
     add_index  :workspaces, :join_policy

@@ -21,4 +21,16 @@ RSpec.describe "Account Security destination", type: :system do
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "Accessibility violations:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
+
+  it "passes axe-core at WCAG 2.2 AAA in both themes while offering a provider to connect" do
+    allow(Rails.application.credentials).to receive(:dig).and_call_original
+    allow(Rails.application.credentials).to receive(:dig)
+      .with(:oauth, :github, :client_id).and_return("test-github-client-id")
+
+    visit settings_connected_accounts_path
+
+    expect(page).to have_button(I18n.t("settings.connected_accounts.index.connect_action", provider: "GitHub"))
+    expect(axe_clean_in_both_themes?(axe_options)).to be(true),
+      "Accessibility violations:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
+  end
 end

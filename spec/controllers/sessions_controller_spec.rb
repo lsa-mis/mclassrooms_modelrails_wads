@@ -19,10 +19,14 @@ RSpec.describe SessionsController, type: :controller do
       expect(response).to redirect_to("/settings/profile/edit")
     end
 
-    it "preserves a parked invitation token across the reset" do
-      request.session[:pending_invitation_token] = "tok-123"
+    it "carries a parked invitation token across the reset to the post-login claim" do
+      invitation = create(:invitation, email: user.email_address)
+      request.session[:pending_invitation_token] = invitation.token
+
       post :create, params: { email_address: user.email_address, password: "SecureP@ssw0rd123!" }
-      expect(session[:pending_invitation_token]).to eq("tok-123")
+
+      expect(response).to redirect_to(workspace_path(invitation.invitable))
+      expect(session[:pending_invitation_token]).to be_nil
     end
   end
 end

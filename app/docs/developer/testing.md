@@ -10,10 +10,11 @@ How the test suite is put together: the parallel runner and CI sharding, the con
 
 ## Suite architecture
 
-### Two ways to run the suite
+### Three ways to run the suite
 
 - `bundle exec rspec` is the single-process reference path — always correct, just slow.
-- `bin/parallel-rspec` is the full-suite path: it runs the suite across all cores via `parallel_tests`, with two integrity gates layered on top of pass/fail. Before the run it reloads the schema into every worker database and seeds it, so the pre-push suite and CI's shards both start from the same four global roles; a bare `rspec` does no seeding of its own.
+- `bin/parallel-rspec` is the full-suite path: it runs the suite across all cores via `parallel_tests`, with two integrity gates layered on top of pass/fail. Before the run it reloads the schema into every worker database and seeds it, so a local full run and CI's shards both start from the same four global roles; a bare `rspec` does no seeding of its own.
+- `bin/test-plan --run` runs the specs your branch's changes can break, and is what the pre-push hook runs. See [Change lanes](#change-lanes) below.
 
 The two gates exist because a parallel splitter can silently drop work:
 
@@ -24,9 +25,35 @@ The floor is a whole-suite number everywhere. A bare `bundle exec rspec` is held
 
 Worker count comes from `PARALLEL_TEST_PROCESSORS` or the machine's core count.
 
+### Change lanes
+
+A change to a locale file, a docs page or a workflow other than CI's own usually breaks only the specs that read those files, so running the whole suite for it is mostly wasted. `lib/change_lanes.rb` sorts a branch's changed paths into lanes, and `bin/test-plan` turns the lanes into a list of specs:
+
+| Lane | Paths | Specs it runs |
+|------|-------|---------------|
+| `locale` | `config/locales/**/*.yml` | The i18n gates, the locale and vocabulary config specs, and the code smells that read locale files |
+| `docs` | `app/docs/**/*.md`, a Markdown file at the repository root, `changelog.d/*.md` | `spec/docs/`, the docs request and system specs, and the specs that cite `app/docs` pages |
+| `workflows` | `.github/**` except `ci.yml` and `.github/actions/`, plus `lefthook.yml` | `spec/ci/`, the template invariants, and the specs that read workflow files |
+
+Everything else is `full`. The lanes fail closed: one path outside every lane makes the whole change `full`, and so do an empty diff, any push in CI, and any pull request into `main` or a `release/` branch (those deploy on merge without waiting for CI).
+
+**What a lane does not run.** Model, request, view and system specs that assert copy are not in the locale lane. `spec/models/role_spec.rb` checks a validation message, and request specs check flash text. A locale-only pull request into `next` that changes such a string passes its lane, merges, and turns `next` red on the full run that follows, and a red `next` blocks the next release cut. When you change copy a spec might assert, search `spec/` for the old text first, or run `bin/parallel-rspec`. `config/vocabulary.local.yml` is YAML but renames nouns across the whole suite, so it is `full`; so is a change to `ci.yml` or `.github/actions/`, so the changed workflow proves itself on the full suite.
+
+`bin/test-plan` diffs the branch against `origin/next` (else `origin/main`, else every tracked file) with renames off, so a code file moved into a lane path still shows its old path:
+
+```bash
+bin/test-plan                  # Prints the lanes and the selected specs
+bin/test-plan --run            # Seeds the test database, then runs them
+bin/test-plan --base origin/main
+```
+
+On a lane change `--run` runs that lane's specs. On a `full` change it runs the specs named after each changed file (`app/models/user.rb` → `spec/models/user_spec.rb`, a controller → its request specs, `bin/branch-changes` → `spec/bin/branch_changes_spec.rb`) plus every code smell. That's a fast local check, not the whole suite. CI runs the whole suite before merge on every `full` pull request, and after merge on every push to `next` and `main`, so whatever the plan misses is caught before a release is cut. The plan counts uncommitted and untracked files too, so you can run it before you commit. When your change reaches past what its file names say (a shared helper, a concern, a base class, configuration), run `bin/parallel-rspec` yourself.
+
+`spec/code_smells/change_lane_specs_are_complete_spec.rb` keeps the lanes honest. It fails when a spec's source names a lane's files (`config/locales`, `.github/`, `lefthook.yml`, `app/docs`) and that lane doesn't run it. When it names your new spec, add the spec to that lane's list in `lib/change_lanes.rb`.
+
 ### CI sharding
 
-CI splits the suite across a shard matrix (#495, PR #615) — 8 shards of 4 workers by default, the free public-runner shape. A fork sets the `CI_SHARDS` and `CI_WORKERS` repository variables in its Actions settings to change that without editing a tracked file; private repositories are billed per job, rounded up to the minute, so fewer, longer shards cost less there. With `CI_SHARD_INDEX` and `CI_SHARD_TOTAL` set, `bin/parallel-rspec` takes only its shard's slice of the spec files — greedy-packed by recorded per-file runtimes, with file size as the fallback weight — and skips the merged-coverage floor (each shard sees only a fraction of the suite; the `coverage_merge` CI job collates every shard's resultset and enforces the floor there). Example-count parity still runs per shard against the shard's own enumeration, and each shard records its file list so CI can assert the union of shards equals the full spec set — the shard splitter gets the same distrust as the worker splitter.
+CI runs the shards on every `full` change and on every push to `next` and `main`; a pull request into `next` that touches only [change lanes](#change-lanes) runs its lanes' specs in one `lane_specs` job instead, and the required `test` check passes on whichever ran. CI splits the suite across a shard matrix (#495, PR #615) — 8 shards of 4 workers by default, the free public-runner shape. A fork sets the `CI_SHARDS` and `CI_WORKERS` repository variables in its Actions settings to change that without editing a tracked file; private repositories are billed per job, rounded up to the minute, so fewer, longer shards cost less there. With `CI_SHARD_INDEX` and `CI_SHARD_TOTAL` set, `bin/parallel-rspec` takes only its shard's slice of the spec files — greedy-packed by recorded per-file runtimes, with file size as the fallback weight — and skips the merged-coverage floor (each shard sees only a fraction of the suite; the `test` CI job collates every shard's resultset and enforces the floor there). Example-count parity still runs per shard against the shard's own enumeration, and each shard records its file list so CI can assert the union of shards equals the full spec set — the shard splitter gets the same distrust as the worker splitter.
 
 ### The runtime log lifecycle
 
@@ -34,7 +61,7 @@ CI splits the suite across a shard matrix (#495, PR #615) — 8 shards of 4 work
 
 - `split_seed` snapshots one **frozen** copy of the log, downloaded by every shard — the cross-shard split must be computed from identical input or shards overlap and leave holes.
 - `test_shard` restores the live log separately to seed *in-shard* worker balancing.
-- `coverage_merge` reassembles every shard's partial log and saves the cache for the next run.
+- `test` reassembles every shard's partial log and saves the cache for the next run.
 
 A cache miss is harmless: the split falls back to file size — still correct, just less balanced.
 
@@ -53,13 +80,24 @@ A clean replay therefore rules out an ordering flake, not a data-dependent one
 — before concluding "cannot reproduce", check whether the failing assertion
 involves Faker-generated values (see #856-class collisions).
 
+### Unordered queries come back shuffled
+
+`config/environments/test.rb` sets `config.active_record.shuffle_unordered_selects`,
+so every SELECT Active Record builds without an `ORDER BY` returns its rows
+shuffled. A spec that leans on the order SQLite happens to return fails on every
+run, not once in a while. Two kinds of query are left alone: raw SQL strings, and
+queries ending in `LIMIT 1`, where the database has already picked the row.
+
+When one fails, decide which order the code means. If it means one, add the
+`order`; if it doesn't, compare with `match_array` or `contain_exactly`.
+
 ### The code-smells suite
 
 `spec/code_smells/` holds specs that enforce project conventions structurally rather than by review. Examples: `mutating_actions_are_authorized_spec.rb` fails if a POST/PATCH/PUT/DELETE action neither calls `authorize` nor sits on the reviewed allow-list, and `no_unscoped_tenant_loads_spec.rb` fails on unscoped tenant finders in controllers (see [Extending](/docs/developer/extending)).
 
 The largest member is `spec/code_smells/template_invariants_spec.rb`. ModelRails is a template meant to be forked, so every default it ships propagates into every downstream fork; this spec asserts the structural invariants that came out of an 8-reviewer panel review on 2026-05-18. Each one catches a class of subtle misconfiguration that would otherwise propagate silently — Ruby-version drift across `.tool-versions`, `Gemfile`, `Gemfile.lock`, and the `Dockerfile`; test gems leaking into the production image; Dockerfile layer-cache invalidation from COPY ordering; dev/prod base-image divergence; missing onboarding signals; unused free performance settings; every workflow `uses:` SHA-pinned with its `# <tag>` trailer (the action-pin invariant — a fork's own unpinned ref fails the suite too) — plus invariants added since, such as the vulnerability-scan rules below.
 
-One of those is worth understanding when a CI change makes it fire: the container vulnerability scan must **never** reuse the Docker layer cache (#536). GitHub Actions cache scoping makes a branch read its *own* cache scope first, so a PR replays its own stale apt layer and never sees the fix main already picked up — stale-package CVE findings then look identical to real ones. Rebuilding costs about 45 seconds per run, which is cheap for a red that always means what it says.
+One of those is worth understanding when a CI change makes it fire: the container vulnerability scan must **never** reuse the Docker layer cache (#536). GitHub Actions cache scoping makes a branch read its *own* cache scope first, so a PR replays its own stale apt layer and never sees the fix main already picked up — stale-package CVE findings then look identical to real ones. Rebuilding costs about 45 seconds per run, which is cheap for a red that always means what it says. Keying the cache on the base image's digest would not help: `ruby:slim` is rebuilt for Debian point releases, not for interim security updates, so the digest stays the same exactly when the packages inside it change.
 
 ### Destroy requests name their target
 
@@ -68,9 +106,13 @@ One of those is worth understanding when a CI change makes it fire: the containe
 So the guard reads every request a template can make (`button_to`, `link_to`, `form_with`, `form_tag`, under `app/views` and `app/components`) and, when the URL or the method is one of the template's declared locals, follows it to every `render` that passes it in, then up again until it reaches the template that names a real route helper. Each DELETE that comes out of that walk is checked against the route table:
 
 - it must land on a named route that actually has a DELETE action;
-- if that action soft-deletes (its controller's `destroy` calls `discard!`, a set derived from the controllers rather than listed by hand), the walk must pass through `shared/confirm_dialog`.
+- if that action soft-deletes, the request must be confirmed: the walk passes through `shared/confirm_dialog`, or the call carries `turbo_confirm` (Leave does). An action soft-deletes when its controller's `destroy` calls `discard!`, or calls a method that reaches `discard!` on a model it loads with `find` (`members#destroy` → `Membership#deactivate!`). Both sets are derived from the code by parsing it, not listed by hand.
 
-When it fires, the message names the whole render chain, outermost template first, so the place to look is usually the first template in it: that is where the URL was chosen. Point the control at the child resource it names, or put the destroy behind the confirm dialog. The guard reads template text, so it has blind spots, and it prints them whenever a rule fails: collection renders (`render partial:`), URLs built in Ruby, hand-written HTML method overrides, and partials nothing renders. Its negative control replays #1402 on the Profile page and must keep failing.
+When it fires, the message names the whole render chain, outermost template first, so the place to look is usually the first template in it: that is where the URL was chosen. Point the control at the child resource it names, or put the destroy behind the confirm dialog. The guard reads template text, so it has blind spots, and it prints them whenever a rule fails: collection renders (`render partial:`), URLs built in Ruby, hand-written HTML method overrides, partials nothing renders, and a destroy that changes a record it did not load with `find`. Its negative controls replay #1402 on the Profile page and strip Leave's `turbo_confirm`, and both must keep failing.
+
+### Attachments are validated
+
+`spec/code_smells/attachments_are_validated_spec.rb` reads every `has_one_attached` and `has_many_attached` under `app/models`, concerns and the block form included, and requires a `content_type:` and a `size:` validation on each. Beyond those it accepts only validators known to leave the upload's bytes alone — `total_size:`, `limit:`, `attached:` and `presence:` — and refuses `content_type: { spoofing_protection: … }`. Every other `active_storage_validations` check reads the upload in the app process: `dimension:`, `aspect_ratio:` and `processable_file:` through libvips, `pages:` through `pdfinfo`, `duration:` and `with_audio:` through ffprobe, and spoofing protection through the `file` command or Magika. Keeping that decoding out of the app is the point of the [Hot Cell](/docs/developer/hot-cell) sandbox. A new validator fails the guard until someone has checked what it does and added it to the list. Uploads attached through rich text are not model attachments; `DirectUploadsController` gates their type and size instead.
 
 ### The two i18n gates
 
@@ -177,7 +219,7 @@ The audits are memoized per example on page state + options, so an example that 
 
 `spec/support/webauthn_virtual_authenticator.rb` provides `with_virtual_authenticator { ... }`, which enables CDP's virtual authenticator (ctap2/internal, resident-key, `automaticPresenceSimulation: true`) so a system spec can drive real `navigator.credentials.create`/`get` calls with every gesture auto-approved.
 
-The subtle part is **origin alignment**: the WebAuthn RP origin from the initializer is `http://localhost`, but Capybara binds its test server to `127.0.0.1:<dynamic port>` — and WebAuthn treats `127.0.0.1` and `localhost` as *different* origins. The helper temporarily sets `Capybara.app_host` to `http://localhost:<port>` so the browser's origin matches, and extends `WebAuthn.configuration.allowed_origins` to that exact URL (the port matters for the gem's origin check). Both are restored after the block.
+The subtle part is **origin alignment**: the WebAuthn RP origin from the initializer is `http://localhost:3000` in test (the mailer host and port), but Capybara binds its test server to `127.0.0.1:<dynamic port>` — and WebAuthn treats `127.0.0.1` and `localhost` as *different* origins. The helper temporarily sets `Capybara.app_host` to `http://localhost:<port>` so the browser's origin matches, and sets `WebAuthn.configuration.allowed_origins` to that exact URL (the port matters for the gem's origin check). Both are restored after the block.
 
 ## Troubleshooting the suite
 
@@ -196,7 +238,7 @@ The guard lives in the spec boot path rather than a wrapper script on purpose: a
 
 System specs load the compiled Tailwind stylesheet from the test server. When it is missing, axe reports contrast violations on every page and interaction specs fail on collapsed layout — 132 failures that name neither Tailwind nor assets. `spec/support/compiled_assets_guard.rb` checks for `app/assets/builds/tailwind.css` before each system spec and fails with the actual fix: `bin/rails tailwindcss:build`.
 
-The hole is easy to fall into: `assets:clobber` (which `bin/setup` runs deliberately) also deletes the compiled stylesheet, and the tailwindcss-rails safety net that rebuilds it hooks `test:prepare` — the Minitest path, which `bundle exec rspec` never invokes. The guard is read-only by design: building the CSS from inside the suite would race, since `bin/parallel-rspec` boots one RSpec process per core.
+The hole is easy to fall into: `assets:clobber` (which `bin/setup` runs deliberately) also deletes the compiled stylesheet, and the tailwindcss-rails safety net that rebuilds it hooks `test:prepare` — the Minitest path, which `bundle exec rspec` never invokes. The guard is read-only by design: building the CSS from inside the suite would race, since `bin/parallel-rspec` boots one RSpec process per core. That is why `bin/parallel-rspec` runs `tailwindcss:build` once itself, before any worker starts; the guard fires on runs that skip that step, such as a bare `bundle exec rspec` after `bin/setup --skip-server`.
 
 ## Next steps
 

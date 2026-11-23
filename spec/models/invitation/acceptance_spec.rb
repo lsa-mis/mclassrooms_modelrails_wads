@@ -3,11 +3,28 @@ require "rails_helper"
 # Invitation::Acceptance's examples. A concern trait is not instantiated, so its
 # examples describe the model; this file is scoped by directory to the trait.
 RSpec.describe Invitation, type: :model do
-  describe "#accept! raise behavior" do
-    let(:user) { create(:user) }
+  def owned_project
+    workspace = create(:workspace)
+    owner = create(:user)
+    create(:membership, :owner, user: owner, workspace: workspace)
+    create(:project, workspace: workspace, created_by: owner)
+  end
 
+  def invite_to_project(project, inviter:, email:, project_role: "editor")
+    viewer_role = Role.system_default!("viewer")
+    project.invitations.create!(
+      email: email,
+      role: viewer_role,
+      project_role: project_role,
+      invited_by: inviter,
+      expires_at: 7.days.from_now
+    )
+  end
+
+  describe "#accept! raise behavior" do
     it "raises Invitation::NotAcceptable when invitation is already accepted" do
       invitation = create(:invitation, :accepted)
+      user = create(:user)
       expect {
         invitation.accept!(user)
       }.to raise_error(Invitation::NotAcceptable, /no longer acceptable/i)
@@ -15,6 +32,7 @@ RSpec.describe Invitation, type: :model do
 
     it "raises Invitation::NotAcceptable when invitation is expired" do
       invitation = create(:invitation, :expired)
+      user = create(:user)
       expect {
         invitation.accept!(user)
       }.to raise_error(Invitation::NotAcceptable, /no longer acceptable/i)
@@ -22,6 +40,7 @@ RSpec.describe Invitation, type: :model do
 
     it "raises Invitation::NotAcceptable when invitation is declined" do
       invitation = create(:invitation, :declined)
+      user = create(:user)
       expect {
         invitation.accept!(user)
       }.to raise_error(Invitation::NotAcceptable, /no longer acceptable/i)
@@ -29,6 +48,7 @@ RSpec.describe Invitation, type: :model do
 
     it "does NOT raise NotAcceptable on a valid pending invitation" do
       invitation = create(:invitation)
+      user = create(:user)
       expect {
         invitation.accept!(user)
       }.not_to raise_error
@@ -40,6 +60,7 @@ RSpec.describe Invitation, type: :model do
     # (the actor stays the invitee: they performed the accept).
     it "audits the granted membership with role and granter" do
       invitation = create(:invitation)
+      user = create(:user)
       invitation.accept!(user)
 
       membership = invitation.invitable.memberships.find_by(user: user)
@@ -55,7 +76,7 @@ RSpec.describe Invitation, type: :model do
       workspace.suspend!
       # Force user creation outside the expect block — onboarding callbacks
       # create their own membership, which would confound the count.
-      user
+      user = create(:user)
 
       expect {
         invitation.accept!(user)
@@ -65,11 +86,9 @@ RSpec.describe Invitation, type: :model do
   end
 
   describe "#accept!" do
-    let(:workspace) { create(:workspace) }
-    let!(:invitation) { create(:invitation, invitable: workspace) }
-    let!(:user) { create(:user) }
-
     it "creates a membership" do
+      invitation = create(:invitation, invitable: create(:workspace))
+      user = create(:user)
       expect { invitation.accept!(user) }.to change(Membership, :count).by(1)
     end
 
@@ -81,6 +100,8 @@ RSpec.describe Invitation, type: :model do
     end
 
     it "sets accepted status" do
+      invitation = create(:invitation, invitable: create(:workspace))
+      user = create(:user)
       invitation.accept!(user)
       expect(invitation.reload.status).to eq("accepted")
       expect(invitation.accepted_by).to eq(user)
@@ -88,16 +109,24 @@ RSpec.describe Invitation, type: :model do
     end
 
     it "assigns the invitation's role to the membership" do
+      workspace = create(:workspace)
+      invitation = create(:invitation, invitable: workspace)
+      user = create(:user)
       invitation.accept!(user)
       membership = workspace.memberships.find_by(user: user)
       expect(membership.role).to eq(invitation.role)
     end
 
     it "marks the invitee onboarded" do
+      invitation = create(:invitation, invitable: create(:workspace))
+      user = create(:user)
       expect { invitation.accept!(user) }.to change { user.reload.onboarded? }.from(false).to(true)
     end
 
     it "raises if user is already a member" do
+      workspace = create(:workspace)
+      invitation = create(:invitation, invitable: workspace)
+      user = create(:user)
       create(:membership, user: user, workspace: workspace)
       expect { invitation.accept!(user) }.to raise_error(Workspace::AlreadyMember)
     end
@@ -146,11 +175,10 @@ RSpec.describe Invitation, type: :model do
   # Shared consumption core used by both the session-based (Signupable) and
   # column-based (Authentication#claim_pending_invitation!) acceptance paths.
   describe ".consume!" do
-    let(:user) { create(:user) }
-    let(:workspace) { create(:workspace) }
-
     it "accepts the matching invitation and returns it" do
+      workspace = create(:workspace)
       invitation = create(:invitation, invitable: workspace)
+      user = create(:user)
 
       result = Invitation.consume!(token: invitation.token, user: user)
 
@@ -160,16 +188,19 @@ RSpec.describe Invitation, type: :model do
     end
 
     it "returns nil when the token is blank" do
+      user = create(:user)
       expect(Invitation.consume!(token: nil, user: user)).to be_nil
       expect(Invitation.consume!(token: "", user: user)).to be_nil
     end
 
     it "returns nil when no invitation matches the token" do
+      user = create(:user)
       expect(Invitation.consume!(token: "does-not-exist", user: user)).to be_nil
     end
 
     it "raises Invitation::NotAcceptable when the invitation is no longer acceptable" do
-      invitation = create(:invitation, :accepted, invitable: workspace)
+      invitation = create(:invitation, :accepted, invitable: create(:workspace))
+      user = create(:user)
 
       expect {
         Invitation.consume!(token: invitation.token, user: user)
@@ -178,6 +209,7 @@ RSpec.describe Invitation, type: :model do
 
     context "with expected_email (email-match guard)" do
       it "accepts when the proven email matches the invitation email (case-insensitive)" do
+        workspace = create(:workspace)
         invitation = create(:invitation, invitable: workspace, email: "Invitee@Example.com")
         matching = create(:user, email_address: "invitee@example.com")
 
@@ -188,6 +220,7 @@ RSpec.describe Invitation, type: :model do
       end
 
       it "raises EmailMismatch when the proven email differs from the invitation email" do
+        workspace = create(:workspace)
         invitation = create(:invitation, invitable: workspace, email: "invitee@example.com")
         other = create(:user, email_address: "someone-else@example.com")
 
@@ -204,7 +237,7 @@ RSpec.describe Invitation, type: :model do
       end
 
       it "consumes a magic-link invitation (nil email) regardless of expected_email" do
-        invitation = create(:invitation, :magic_link, invitable: workspace)
+        invitation = create(:invitation, :magic_link, invitable: create(:workspace))
         anyone = create(:user, email_address: "anyone@example.com")
 
         result = Invitation.consume!(token: invitation.token, user: anyone, expected_email: anyone.email_address)
@@ -214,7 +247,8 @@ RSpec.describe Invitation, type: :model do
       end
 
       it "skips the guard when expected_email is not provided (direct callers)" do
-        invitation = create(:invitation, invitable: workspace, email: "invitee@example.com")
+        invitation = create(:invitation, invitable: create(:workspace), email: "invitee@example.com")
+        user = create(:user)
         # user's email differs, but no expected_email is passed → no guard
         result = Invitation.consume!(token: invitation.token, user: user)
 
@@ -228,27 +262,20 @@ RSpec.describe Invitation, type: :model do
   # adopt the invitation's role rather than treating the existing membership
   # as a duplicate-accept error. Solo-default (:personal) semantics unchanged.
   describe "#accept! reconciles role under :shared posture" do
-    let!(:shared_workspace) { create(:workspace, slug: "acme", personal: false) }
-    let!(:admin_role) {
-      Role.find_or_create_by!(slug: "admin", workspace_id: nil) do |r|
-        r.name = "Admin"
-        r.permissions = { manage_members: true, manage_projects: true, manage_settings: true }
-      end
-    }
-    let!(:member_role) {
-      Role.find_or_create_by!(slug: "member", workspace_id: nil) do |r|
-        r.name = "Member"
-        r.permissions = { manage_projects: true }
-      end
-    }
-    let(:inviter) { create(:user) }
+    def shared_posture_cast
+      shared_workspace = create(:workspace, slug: "acme", personal: false)
+      admin_role = Role.system_default!("admin")
+      member_role = Role.system_default!("member")
+      [ shared_workspace, admin_role, member_role ]
+    end
 
     before do
       allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
-      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared_workspace.slug)
+      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return("acme")
     end
 
     it "promotes the placeholder Member to the invitation's Admin role" do
+      shared_workspace, admin_role, member_role = shared_posture_cast
       invitee = create(:user, email_address: "newbie@example.com")
       # Callback created a Member membership; verify state before reconciliation.
       placeholder = shared_workspace.memberships.find_by!(user: invitee)
@@ -258,7 +285,7 @@ RSpec.describe Invitation, type: :model do
                           invitable: shared_workspace,
                           role: admin_role,
                           email: "newbie@example.com",
-                          invited_by: inviter)
+                          invited_by: create(:user))
 
       expect {
         invitation.accept!(invitee)
@@ -269,12 +296,13 @@ RSpec.describe Invitation, type: :model do
     end
 
     it "no-ops when the invitation's role matches the placeholder Member role" do
+      shared_workspace, _admin_role, member_role = shared_posture_cast
       invitee = create(:user, email_address: "samerole@example.com")
       invitation = create(:invitation,
                           invitable: shared_workspace,
                           role: member_role,
                           email: "samerole@example.com",
-                          invited_by: inviter)
+                          invited_by: create(:user))
 
       expect { invitation.accept!(invitee) }.not_to raise_error
       expect(shared_workspace.memberships.where(user: invitee).count).to eq(1)

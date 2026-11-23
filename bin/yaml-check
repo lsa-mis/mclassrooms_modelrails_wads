@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+# Usage: bin/yaml-check FILE...  (Lefthook pre-commit). ERB-templated files are skipped: raw, they aren't YAML.
+require "yaml"
+require "date"
+
+failures = ARGV.reject { |path| File.read(path).include?("<%") }.filter_map do |path|
+  YAML.safe_load_file(path, aliases: true, permitted_classes: [ Symbol, Date, Time ])
+  nil
+rescue Psych::SyntaxError => e
+  "#{path}:#{e.line}: #{e.problem} #{e.context}".strip
+rescue Psych::DisallowedClass => e
+  "#{path}:1: #{e.message}"
+end
+
+puts failures
+exit(failures.empty? ? 0 : 1)

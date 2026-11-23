@@ -697,10 +697,8 @@ dialog[open]::backdrop {
   }
 }
 
-/* Workspace branding: two OKLCH literals (--ws-primary-light/dark set on <main>), NOT
-   color-mix toward white. color-mix lifted the dark-mode brand to L≈58 (6.2:1), failing
-   AAA 7:1 in CI's axe renderer; direct literals are deterministic. See PR #81 +
-   docs/superpowers/specs/2026-04-16-workspace-oklch-unification-design.md. */
+/* Two OKLCH literals (--ws-primary-light/dark on <main>), never color-mix toward white: color-mix
+   put the dark brand at 6.2:1 in CI's axe renderer, under AAA's 7:1. /docs/developer/ui-patterns. */
 
 [data-workspace-branded] {
   --color-interactive: var(--ws-primary-light);

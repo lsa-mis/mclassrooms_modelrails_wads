@@ -3,22 +3,20 @@ require "rails_helper"
 RSpec.describe "Onboarding · account step", type: :request do
   before { allow(TenancyConfig).to receive(:onboarding).and_return(:none) }
 
-  let(:user) { create(:user, :with_zero_workspaces) }
-  let!(:owner_role) do
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-    end
+  def signed_in_newcomer
+    user = create(:user, :with_zero_workspaces)
+    sign_in(user)
+    user
   end
 
-  before { sign_in(user) }
-
   it "renders the name-your-account form" do
+    signed_in_newcomer
     get new_onboarding_workspace_path
     expect(response).to have_http_status(:ok)
   end
 
   it "creates the workspace + owner membership and completes onboarding" do
+    user = signed_in_newcomer
     expect {
       post onboarding_workspace_path, params: { workspace: { name: "Acme Co" } }
     }.to change(Workspace.kept, :count).by(1)
@@ -32,6 +30,7 @@ RSpec.describe "Onboarding · account step", type: :request do
   end
 
   it "re-renders on a blank name" do
+    signed_in_newcomer
     post onboarding_workspace_path, params: { workspace: { name: "" } }
     expect(response).to have_http_status(:unprocessable_entity)
   end

@@ -1,0 +1,72 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "optparse"
+require "yaml"
+require "active_support"
+require "active_support/encrypted_file"
+require_relative "../lib/clean_git_env"
+
+class ProductionSetup
+  STEPS = %w[bin/mail-setup bin/encryption-setup bin/fnox-setup].freeze
+  CONTENT = "config/credentials/production.yml.enc"
+  KEY = "config/credentials/production.key"
+
+  def initialize(root:, env: ENV, output: $stdout)
+    @root = root
+    @env = env
+    @output = output
+  end
+
+  def run
+    STEPS.each do |step|
+      next say("✓ Mail is already set up. To change it, run bin/mail-setup on its own.") if step == "bin/mail-setup" && mail_login?
+
+      say "\n== #{step} =="
+      next if system(CleanGitEnv::HASH.merge("PRODUCTION_SETUP" => "1"), File.join(@root, step), chdir: @root)
+
+      say "\nbin/production-setup stopped at #{step}. Fix what it said, then run bin/production-setup again."
+      say "#{KEY} exists already: back it up in your password manager now. Never commit it." if File.exist?(path(KEY))
+      return 1
+    end
+    finish
+    0
+  end
+
+  private
+
+  def mail_login?
+    return false unless File.exist?(path(CONTENT)) && (File.exist?(path(KEY)) || @env["RAILS_MASTER_KEY"].to_s.strip != "")
+
+    login = (YAML.safe_load(credentials.read) || {})["smtp"]
+    login.is_a?(Hash) && %w[user_name password].all? { |field| login[field].to_s.strip != "" }
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage, Psych::Exception
+    false
+  end
+
+  def credentials
+    ActiveSupport::EncryptedFile.new(content_path: path(CONTENT), key_path: path(KEY),
+                                     env_key: "RAILS_MASTER_KEY", raise_if_missing_key: true)
+  end
+
+  def finish
+    say <<~DONE
+
+      Production's secrets are set up.
+        Commit #{CONTENT} and fnox.toml.
+        Back up #{KEY} and ~/.config/fnox/age.txt in your password manager. Never commit either.
+        git diff, git show and git log -p show the credentials decrypted, so don't run them on a shared screen.
+      Next: bin/rails deploy:check, then the quickstart's step 5 (/docs/developer/quickstart)
+    DONE
+  end
+
+  def path(relative) = File.join(@root, relative)
+  def say(message) = @output.puts(message)
+end
+
+if $PROGRAM_NAME == __FILE__
+  OptionParser.new { |o| o.banner = "Usage: bin/production-setup   (runs #{ProductionSetup::STEPS.join(', ')}, in that order)" }.parse!
+
+  exit ProductionSetup.new(root: File.expand_path("..", __dir__)).run
+end

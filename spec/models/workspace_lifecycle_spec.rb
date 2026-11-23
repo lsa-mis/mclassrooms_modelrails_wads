@@ -1,25 +1,27 @@
 require "rails_helper"
 
 RSpec.describe Workspace, type: :model do
-  let(:workspace) { create(:workspace) }
-
   describe "#status" do
     it "is :active with no lifecycle timestamps" do
+      workspace = create(:workspace)
       expect(workspace.status).to eq(:active)
     end
 
     it "is :archived when archived" do
+      workspace = create(:workspace)
       workspace.archive!
       expect(workspace.status).to eq(:archived)
     end
 
     it "is :suspended when suspended, taking precedence over archived" do
+      workspace = create(:workspace)
       workspace.archive!
       workspace.suspend!
       expect(workspace.status).to eq(:suspended)
     end
 
     it "is :discarded with highest precedence" do
+      workspace = create(:workspace)
       workspace.archive!
       workspace.discard!
       workspace.suspend!
@@ -29,12 +31,14 @@ RSpec.describe Workspace, type: :model do
 
   describe "guarded mutators" do
     it "blocks archive! while suspended" do
+      workspace = create(:workspace)
       workspace.suspend!
       expect { workspace.archive! }.to raise_error(Suspendable::SuspendedError)
       expect(workspace.reload.archived_at).to be_nil
     end
 
     it "blocks unarchive! while suspended (real transition attempt)" do
+      workspace = create(:workspace)
       workspace.archive!
       workspace.suspend!
       expect { workspace.unarchive! }.to raise_error(Suspendable::SuspendedError)
@@ -42,18 +46,21 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "blocks discard! while suspended" do
+      workspace = create(:workspace)
       workspace.suspend!
       expect { workspace.discard! }.to raise_error(Suspendable::SuspendedError)
       expect(workspace.reload).not_to be_discarded
     end
 
     it "does not raise on an idempotent archive! of an already-archived locked workspace" do
+      workspace = create(:workspace)
       workspace.archive!
       workspace.suspend!
       expect { workspace.archive! }.not_to raise_error
     end
 
     it "blocks admit while suspended" do
+      workspace = create(:workspace)
       member_role = Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
         r.name = "Member"
         r.permissions = {}
@@ -68,6 +75,7 @@ RSpec.describe Workspace, type: :model do
 
   describe "idempotency" do
     it "archives once: second call keeps the original timestamp and fires no callbacks" do
+      workspace = create(:workspace)
       workspace.archive!
       original = workspace.reload.archived_at
       expect { travel_to(1.hour.from_now) { workspace.archive! } }
@@ -76,6 +84,7 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "discards once: second call fires no callbacks" do
+      workspace = create(:workspace)
       workspace.discard!
       expect { workspace.discard! }.not_to change { ActivityLog.count }
     end
@@ -104,14 +113,14 @@ RSpec.describe Workspace, type: :model do
   end
 
   describe "home-workspace mutator guards" do
-    let(:home) { create(:workspace, personal: true) }
-
     it "raises HomeWorkspaceProtectedError on archive!" do
+      home = create(:workspace, personal: true)
       expect { home.archive! }.to raise_error(Workspace::HomeWorkspaceProtectedError)
       expect(home.reload.archived_at).to be_nil
     end
 
     it "raises HomeWorkspaceProtectedError on discard!" do
+      home = create(:workspace, personal: true)
       expect { home.discard! }.to raise_error(Workspace::HomeWorkspaceProtectedError)
       expect(home.reload).not_to be_discarded
     end

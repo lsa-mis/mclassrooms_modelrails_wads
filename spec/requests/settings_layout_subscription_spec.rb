@@ -9,15 +9,11 @@ require "rails_helper"
 # demotion-while-viewing flow (Task 15) cannot re-render the demoted user's
 # open settings tab.
 RSpec.describe "Settings layout workspace stream subscription", type: :request do
-  let(:user) { create(:user) }
-
-  before { sign_in(user) }
-
   context "on an org-context settings page" do
-    let(:workspace) { create(:workspace) }
-    let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
     it "subscribes the page to the workspace stream so membership broadcasts re-render the layout" do
+      workspace = create(:workspace)
+      sign_in_as_owner_of(workspace)
+
       # /workspaces/:slug/edit now renders the Profile destination directly
       # (no redirect) after the settings hub route consolidation.
       get edit_workspace_path(workspace), headers: { "HTTP_ACCEPT" => "text/html" }
@@ -35,6 +31,9 @@ RSpec.describe "Settings layout workspace stream subscription", type: :request d
 
   context "on a personal-context settings page" do
     it "does NOT subscribe to a workspace stream (personal workspace broadcasts are self-broadcasts)" do
+      user = create(:user)
+      sign_in(user)
+
       get edit_settings_profile_path
 
       personal = user.personal_workspace

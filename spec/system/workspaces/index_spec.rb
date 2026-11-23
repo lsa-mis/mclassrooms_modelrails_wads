@@ -1,34 +1,29 @@
 require "rails_helper"
 
 RSpec.describe "Strong workspaces index", type: :system, js: true do
-  let(:user) { create(:user, first_name: "Nell", last_name: "Hancock") }
-  let(:current_workspace) { create(:workspace, name: "Recent") }
-  let(:older_workspace) { create(:workspace, name: "Older") }
-
-  let!(:current_membership) {
+  def signed_in_user_with_two_workspaces
+    user = create(:user, first_name: "Nell", last_name: "Hancock")
+    current_workspace = create(:workspace, name: "Recent")
     create(:membership, :owner, user: user, workspace: current_workspace,
                                 last_accessed_at: 2.minutes.ago)
-  }
-  let!(:older_membership) {
+    older_workspace = create(:workspace, name: "Older")
     create(:membership, user: user, workspace: older_workspace,
                         last_accessed_at: 3.days.ago)
-  }
-  # Seed a co-owner for current_workspace so user can leave it in later examples.
-  let!(:co_owner) {
-    other = create(:user)
-    create(:membership, :owner, user: other, workspace: current_workspace)
-  }
-
-  before { sign_in_via_form(user) }
+    create(:membership, :owner, user: create(:user), workspace: current_workspace)
+    sign_in_via_form(user)
+    [ user, older_workspace ]
+  end
 
   describe "page structure" do
     it "renders the page title and the New workspace CTA" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
       expect(page).to have_selector("h1", text: I18n.t("workspaces.index.title"))
       expect(page).to have_link(I18n.t("workspaces.index.new_workspace"))
     end
 
     it "pins the most-recently-accessed workspace at the top with a CURRENT badge" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
       pinned = page.find("[data-test='current-workspace-row']")
       within(pinned) do
@@ -39,6 +34,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
     end
 
     it "renders an 'Other workspaces' heading and the older workspace below" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
       expect(page).to have_css("h2", text: I18n.t("workspaces.index.other_workspaces_heading"), exact_text: true)
       others_section = page.find("[data-test='other-workspaces-list']")
@@ -50,6 +46,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
   describe "row metadata" do
     it "shows plan, role, member count, and last-accessed text per row" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
 
       pinned = page.find("[data-test='current-workspace-row']")
@@ -69,6 +66,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
     end
 
     it "shows 'Never accessed' for memberships with nil last_accessed_at" do
+      user, = signed_in_user_with_two_workspaces
       never_workspace = create(:workspace, name: "Never visited")
       create(:membership, user: user, workspace: never_workspace, last_accessed_at: nil)
       visit workspaces_path
@@ -78,18 +76,18 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
   describe "Switch action" do
     it "navigates to the workspace overview when the row is clicked" do
+      _user, older_workspace = signed_in_user_with_two_workspaces
       visit workspaces_path
       within(page.find("[data-test='other-workspaces-list']")) do
-        # The overlay link is empty and named via aria-labelledby (#765);
-        # Capybara's text locator can't see a labelledby name, so click the
-        # row's overlay directly. The labelledby→name wiring is asserted in
-        # spec/requests/workspaces_spec.rb.
+        # The overlay link is named via aria-labelledby (#765), which Capybara's text
+        # locator cannot see, so click it directly.
         find("li[data-name='older'] a[aria-labelledby]").click
       end
       expect(page).to have_current_path(workspace_path(older_workspace))
     end
 
     it "renders a Switch button on every row (including the pinned current)" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
       pinned = page.find("[data-test='current-workspace-row']")
       within(pinned) do
@@ -104,6 +102,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
   describe "Leave action" do
     it "does NOT render a Leave button on the pinned current row" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
       pinned = page.find("[data-test='current-workspace-row']")
       within(pinned) do
@@ -112,6 +111,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
     end
 
     it "renders Leave on non-current rows where policy permits" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
       others = page.find("[data-test='other-workspaces-list']")
       within(others) do
@@ -120,8 +120,10 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
     end
 
     it "does NOT render Leave on the personal workspace" do
+      user, = signed_in_user_with_two_workspaces
       personal = create(:workspace, name: "Personal")
       create(:membership, :owner, user: user, workspace: personal, last_accessed_at: 1.year.ago)
+      create(:membership, :owner, user: create(:user), workspace: personal)
       user.update!(personal_workspace_id: personal.id)
       visit workspaces_path
 
@@ -134,6 +136,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
     end
 
     it "removes the row after a successful leave" do
+      signed_in_user_with_two_workspaces
       visit workspaces_path
       others = page.find("[data-test='other-workspaces-list']")
 
@@ -146,9 +149,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
       expect(page).to have_current_path(workspaces_path)
       expect(page).to have_text(I18n.t("workspaces.members.destroy.left", workspace_name: "Older"))
-      # Scope the row-removal assertion to the page's workspace listing region —
-      # the flash banner above includes "You left Older.", which a global
-      # have_no_text("Older") would incorrectly match.
+      # Scoped to main: the flash banner also says "You left Older.".
       within("main") do
         expect(page).to have_no_selector("[data-test='other-workspaces-list']", text: "Older")
       end
@@ -157,13 +158,12 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
   describe "single-membership user" do
     it "does NOT render the 'Other workspaces' heading when only one membership exists" do
+      signed_in_user_with_two_workspaces
       single_user = create(:user, :with_zero_workspaces)
       only_workspace = create(:workspace, name: "Only One")
       create(:membership, :owner, user: single_user, workspace: only_workspace, last_accessed_at: 1.minute.ago)
 
-      # Sign out the existing user, then sign in as single_user.
-      # If there's no project sign_out helper, just visit destroy session path
-      # or restart by visiting new_session_path and re-authenticating.
+      # Drop the first user's session, then sign in as single_user.
       cdp_clear_cookies
       sign_in_via_form(single_user)
       visit workspaces_path
@@ -175,6 +175,7 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
 
   describe "sort order" do
     it "places never-visited workspaces alphabetically after touched ones" do
+      user, = signed_in_user_with_two_workspaces
       a_never = create(:workspace, name: "AAA Never")
       z_never = create(:workspace, name: "ZZZ Never")
       create(:membership, user: user, workspace: a_never, last_accessed_at: nil)
@@ -190,15 +191,17 @@ RSpec.describe "Strong workspaces index", type: :system, js: true do
   end
 
   describe "accessibility (WCAG 2.2 AAA)" do
-    let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
-
     it "passes axe at default viewport in both themes" do
+      signed_in_user_with_two_workspaces
+      axe_options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
       visit workspaces_path
       expect(axe_clean_in_both_themes?(axe_options)).to be(true),
         "AAA violations: #{axe_violations_in_both_themes(axe_options).join("\n")}"
     end
 
     it "passes axe at iPhone-SE viewport in both themes (responsive sanity)" do
+      signed_in_user_with_two_workspaces
+      axe_options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
       cdp_resize(375, 667)
       visit workspaces_path
       expect(axe_clean_in_both_themes?(axe_options)).to be(true),

@@ -8,7 +8,7 @@ keywords: solo-default preset personal workspace prosumer multi-workspace signup
 
 # Solo-default
 
-**What it is.** The default shape modelrails_base ships with. Every user auto-gets a *personal* workspace on signup. They can be invited to additional workspaces (org or personal) by other users. The tenancy UI (workspace switcher, "create workspace") surfaces naturally when they belong to more than one workspace.
+**What it is.** The default shape modelrails_base ships with. Every user auto-gets a *personal* workspace on signup. They can be invited to additional workspaces (org or personal) by other users. The workspace switcher's menu lists their other workspaces once they belong to more than one, and "New workspace" is on the All workspaces page from the start.
 
 **Who it's for.** Prosumer / multi-workspace tools — products where a solo user can use the app meaningfully alone (in their personal workspace) but team workspaces are also a first-class concept. Notion, Figma, Linear's personal tier all fit this shape.
 
@@ -55,9 +55,9 @@ The shape modelrails_base ships with: each person gets **their own** personal wo
 | Knob | Value | Mechanism |
 |---|---|---|
 | `signup.mode` | `:invite_only` (default — set `SIGNUP_MODE=open` to flip) | `config/initializers/signup.rb` |
-| `tenancy.onboarding` | `:personal` *(implicit — only path currently built)* | `User#create_personal_workspace` callback runs on user creation |
-| `tenancy.workspace_creation` | `:enabled` *(implicit)* | `WorkspacesController#new` accessible to any authenticated user |
-| `permitted_join_strategies` | `[:invite]` *(implicit — only mechanism built)* | `Invitation.consume!` is the single membership-grant path |
+| `tenancy.onboarding` | `:personal` (default — `WORKSPACE_ON_SIGNUP`, or the preset `.fork.yml` records) | `User#onboard_workspace` (`after_create`) dispatches to `create_personal_workspace` |
+| `tenancy.workspace_creation` | `:enabled` (default — `TENANCY_WORKSPACE_CREATION`) | `RequiresWorkspaceCreationEnabled` lets any authenticated user reach `WorkspacesController#new` |
+| `permitted_join_strategies` | `[:invite]` (default — `SIGNUP_PERMITTED_JOIN_STRATEGIES`) | `Invitation.consume!` is the single membership-grant path |
 
 Three specific behaviors worth knowing:
 
@@ -74,8 +74,7 @@ bin/rails console
 ```ruby
 user = User.create!(
   email_address: "test@example.com",
-  first_name: "Test", last_name: "User",
-  password: "SecureP@ssw0rd123!", password_confirmation: "SecureP@ssw0rd123!"
+  first_name: "Test", last_name: "User"
 )
 
 user.workspaces.count                                  # => 1
@@ -87,16 +86,16 @@ Three positives confirm the preset: a new user has exactly one workspace, it's f
 
 Browser verification (optional, requires `SIGNUP_MODE=open` or a valid invitation) — sign up a fresh user and confirm:
 
-1. After verifying their email, they land in their personal workspace.
+1. After verifying their email, they land on the home page; **Go to your workspaces** lists their personal workspace.
 2. The workspace switcher names their personal workspace with the role Owner; its menu lists no other workspace yet.
 3. `/workspaces/new` is accessible and creates a second workspace.
 
 **When to switch presets.**
 
-- *"Every user should land in one shared workspace — there should* be *no personal workspaces, and the switcher should never list a second one."* → **[Single-tenant](/docs/developer/presets-single-tenant)** (Reshape 1).
-- *"I need self-serve join via shareable links (`open_link`), email-domain auto-join (`domain`), or a request-and-approve flow."* → **[Open SaaS](/docs/developer/presets-open-saas)** (Reshape 2+).
+- *"Every user should land in one shared workspace — there should* be *no personal workspaces, and the switcher should never list a second one."* → **[Single-tenant](/docs/developer/presets-single-tenant)**.
+- *"I need self-serve join via shareable links (`open_link`)."* → **[Open SaaS](/docs/developer/presets-open-saas)**. Email-domain auto-join and a request-and-approve flow are not built.
 
 ## Next steps
 
-- **[← Compare all presets](/docs/developer/presets)** — the decision matrix and the other two shapes.
+- **[← Compare all presets](/docs/developer/presets)** — the decision matrix and the other three shapes.
 - **[Extending ModelRails →](/docs/developer/extending)** — add your own workspace-scoped features on top of this preset.

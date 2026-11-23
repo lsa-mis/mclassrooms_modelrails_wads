@@ -12,33 +12,20 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
   include ActiveJob::TestHelper
   include ActionMailer::TestHelper
 
-  let(:owner_role) do
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
-    end
-  end
-  let(:member_role) do
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
-  end
-
-  let(:workspace) { create(:workspace) }
-
-  # `let!` throughout, for the reason spelled out in the member-added spec: the
-  # User factory's onboarding callback creates a personal workspace membership,
-  # and a lazy reference would fire notifiers during the action under test.
-  let!(:owner_a) { create(:user, first_name: "Ada") }
-  let!(:owner_b) { create(:user, first_name: "Bea") }
-  let!(:removed_user) { create(:user, first_name: "Dee") }
-  let!(:owner_a_membership) { create(:membership, user: owner_a, workspace: workspace, role: owner_role) }
-  let!(:owner_b_membership) { create(:membership, user: owner_b, workspace: workspace, role: owner_role) }
-  let!(:target_membership) { create(:membership, user: removed_user, workspace: workspace, role: member_role) }
-
-  before do
+  def removal_cast
+    owner_a = create(:user, first_name: "Ada")
+    owner_b = create(:user, first_name: "Bea")
+    removed_user = create(:user, first_name: "Dee")
+    workspace = create(:workspace)
+    create(:membership, :owner, user: owner_a, workspace: workspace)
+    owner_b_membership = create(:membership, :owner, user: owner_b, workspace: workspace)
+    target_membership = create(:membership, user: removed_user, workspace: workspace)
     Noticed::Notification.delete_all
     Noticed::Event.delete_all
     ActionMailer::Base.deliveries.clear
     clear_enqueued_jobs
+    { workspace: workspace, owner_a: owner_a, owner_b: owner_b, removed_user: removed_user,
+      owner_b_membership: owner_b_membership, target_membership: target_membership }
   end
 
   def mute(user, category)
@@ -69,18 +56,21 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
 
   describe "recipient resolution" do
     it "tells the removed member and the owners who did not do it" do
+      owner_a, owner_b, removed_user, target_membership = removal_cast.values_at(:owner_a, :owner_b, :removed_user, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
 
       expect(recipients_of_removal).to contain_exactly(removed_user, owner_b)
     end
 
     it "tells both owners, and not the leaver, when a member leaves on their own" do
+      owner_a, owner_b, removed_user, target_membership = removal_cast.values_at(:owner_a, :owner_b, :removed_user, :target_membership)
       target_membership.deactivate!(removed_by: removed_user)
 
       expect(recipients_of_removal).to contain_exactly(owner_a, owner_b)
     end
 
     it "leaves only the removed member when the sole owner does the removing" do
+      owner_a, removed_user, owner_b_membership, target_membership = removal_cast.values_at(:owner_a, :removed_user, :owner_b_membership, :target_membership)
       owner_b_membership.deactivate!(removed_by: owner_a)
       Noticed::Notification.delete_all
       Noticed::Event.delete_all
@@ -91,6 +81,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "tells everyone when no actor is named" do
+      owner_a, owner_b, removed_user, target_membership = removal_cast.values_at(:owner_a, :owner_b, :removed_user, :target_membership)
       target_membership.deactivate!
 
       expect(recipients_of_removal).to contain_exactly(removed_user, owner_a, owner_b)
@@ -105,6 +96,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "reads as a removal for everyone when someone else did it" do
+      workspace, owner_a, owner_b, removed_user, target_membership = removal_cast.values_at(:workspace, :owner_a, :owner_b, :removed_user, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
 
       expect(message_for(removed_user)).to eq("Dee was removed from #{workspace.name}")
@@ -112,6 +104,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "reads as a departure when the member removed themselves" do
+      workspace, owner_a, removed_user, target_membership = removal_cast.values_at(:workspace, :owner_a, :removed_user, :target_membership)
       target_membership.deactivate!(removed_by: removed_user)
 
       expect(message_for(owner_a)).to eq("Dee left #{workspace.name}")
@@ -120,6 +113,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
 
   describe "email leg" do
     it "emails the removed member and nobody else" do
+      workspace, owner_a, removed_user, target_membership = removal_cast.values_at(:workspace, :owner_a, :removed_user, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
       drain_noticed_jobs
       perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob)
@@ -130,6 +124,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "sends nothing when the member left on their own" do
+      removed_user, target_membership = removal_cast.values_at(:removed_user, :target_membership)
       expect {
         target_membership.deactivate!(removed_by: removed_user)
         drain_noticed_jobs
@@ -137,6 +132,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "never emails an owner" do
+      owner_a, owner_b, target_membership = removal_cast.values_at(:owner_a, :owner_b, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
       drain_noticed_jobs
       perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob)
@@ -146,6 +142,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "respects the removed member's account_access opt-out" do
+      owner_a, removed_user, target_membership = removal_cast.values_at(:owner_a, :removed_user, :target_membership)
       mute(removed_user, "account_access")
 
       expect {
@@ -157,6 +154,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     # The whole point of the category choice: losing access is not workspace
     # chatter, and muting the chatter must not mute this.
     it "still reaches a member who has muted workspace_activity" do
+      owner_a, removed_user, target_membership = removal_cast.values_at(:owner_a, :removed_user, :target_membership)
       mute(removed_user, "workspace_activity")
 
       expect {
@@ -194,9 +192,9 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     def queries_draining_removal_in(workspace_owner_count)
       workspace = create(:workspace, max_members: 60)
       workspace_owner_count.times do
-        create(:membership, user: create(:user), workspace: workspace, role: owner_role)
+        create(:membership, :owner, user: create(:user), workspace: workspace)
       end
-      membership = create(:membership, user: create(:user), workspace: workspace, role: member_role)
+      membership = create(:membership, user: create(:user), workspace: workspace)
       membership.deactivate!(removed_by: nil)
       event = Noticed::Event.where(type: described_class.name).order(:created_at).last
 
@@ -216,6 +214,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
 
   describe "dispatch trigger" do
     it "fires exactly one event on the discard" do
+      owner_a, target_membership = removal_cast.values_at(:owner_a, :target_membership)
       expect {
         target_membership.deactivate!(removed_by: owner_a)
       }.to change { Noticed::Event.where(type: described_class.name).count }.by(1)
@@ -227,6 +226,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     # (notifier, record, minute) swallows it — and the example passes while
     # the guard it exists to prove is gone.
     it "does not fire when the member is brought back" do
+      owner_a, target_membership = removal_cast.values_at(:owner_a, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
 
       expect {
@@ -235,6 +235,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "does not fire on an unrelated update" do
+      owner_a, target_membership = removal_cast.values_at(:owner_a, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
       target_membership.reactivate!(granted_by: owner_a)
 
@@ -254,6 +255,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     # following that link lands them on WorkspaceScoped's own gate and a
     # "not found" alert. The index is true for every recipient of this event.
     it "points at the workspace index, not at the workspace" do
+      owner_a, removed_user, target_membership = removal_cast.values_at(:owner_a, :removed_user, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
 
       expect(notification_for(removed_user).url)
@@ -261,6 +263,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     end
 
     it "gives the remaining owners the same destination" do
+      owner_a, owner_b, target_membership = removal_cast.values_at(:owner_a, :owner_b, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
 
       expect(notification_for(owner_b).url)
@@ -271,6 +274,7 @@ RSpec.describe WorkspaceMemberRemovedNotifier, type: :notifier do
     # by a rescue: the body reads nothing off the record, so there is nothing
     # for a vanished workspace to break.
     it "still resolves when the workspace is gone" do
+      workspace, owner_a, removed_user, target_membership = removal_cast.values_at(:workspace, :owner_a, :removed_user, :target_membership)
       target_membership.deactivate!(removed_by: owner_a)
       notification = notification_for(removed_user)
       allow(notification.event.record).to receive(:workspace).and_return(nil)

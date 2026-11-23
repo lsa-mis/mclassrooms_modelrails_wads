@@ -27,6 +27,11 @@ RSpec.describe "Account Notification Preferences", type: :request do
         expect(response).to have_http_status(:ok)
       end
 
+      it "sends the reader to the page that lists security history" do
+        expect(I18n.t("notifications.preferences.advanced.retention_help"))
+          .to include(I18n.t("settings.sidebar.items.sessions"))
+      end
+
       # Phase 0.5: the page surfaces the user's currently-stored timezone
       # prominently, with a native <select> for the Change action. The
       # form posts to the same timezone endpoint with override=true so it

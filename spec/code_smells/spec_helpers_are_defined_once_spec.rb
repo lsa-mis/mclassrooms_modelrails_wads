@@ -1,8 +1,6 @@
 require "rails_helper"
 require "set"
 
-# A helper copied into several spec files drifts, and a copy of a spec/support helper silently wins inside
-# its own file (#1252, #1273). Define it once under spec/support; same-named helpers that differ may stay.
 RSpec.describe "Spec helpers are defined once" do
   let(:helper_definition) { Struct.new(:name, :path, :line, :body) }
 

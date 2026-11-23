@@ -5,10 +5,8 @@ require "rails_helper"
 # DOM order of the two stable ids.
 RSpec.describe "Workspace overview reading order", type: :request do
   it "renders the workspace name heading before the section-nav strip" do
-    user = create(:user)
-    workspace = create(:workspace, personal: false)
-    create(:membership, :owner, user: user, workspace: workspace)
-    sign_in(user)
+    workspace = create(:workspace)
+    sign_in_as_owner_of(workspace)
 
     get workspace_path(workspace)
 

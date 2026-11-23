@@ -1,6 +1,7 @@
 require "rails_helper"
 require "json"
 require "yaml"
+require "comment_block_check"
 
 # modelrails_base is a template meant to be forked: every default it ships
 # propagates into every downstream fork. This spec asserts the structural
@@ -47,6 +48,11 @@ RSpec.describe "Template invariants" do
         "expected Dockerfile ARG RUBY_VERSION to equal .tool-versions Ruby (#{tool_versions_ruby})"
     end
 
+    it "hotcell/Dockerfile ARG RUBY_VERSION matches .tool-versions" do
+      expect(File.read(root.join("hotcell/Dockerfile"))).to match(/^ARG RUBY_VERSION=#{Regexp.escape(tool_versions_ruby)}\b/),
+        "expected the Hot Cell image's ARG RUBY_VERSION to equal .tool-versions Ruby (#{tool_versions_ruby})"
+    end
+
     it "Dockerfile comment references .tool-versions (not the obsolete .ruby-version)" do
       expect(dockerfile).to include(".tool-versions"),
         "expected Dockerfile to reference .tool-versions in its comments"
@@ -55,12 +61,30 @@ RSpec.describe "Template invariants" do
     end
 
     it "config/deploy.yml builder.args.RUBY_VERSION matches .tool-versions" do
-      deploy = YAML.safe_load(deploy_yml, aliases: true, permitted_classes: [ Symbol ])
+      rendered = Dir.chdir(root) { ERB.new(deploy_yml).result }
+      deploy = YAML.safe_load(rendered, aliases: true, permitted_classes: [ Symbol ])
       ruby_version_arg = deploy.dig("builder", "args", "RUBY_VERSION")
 
+      expect(deploy_yml).to match(/^\s+RUBY_VERSION: .*\.tool-versions/),
+        "expected config/deploy.yml to read builder.args.RUBY_VERSION from .tool-versions, not repeat it"
       expect(ruby_version_arg).to eq(tool_versions_ruby),
         "expected config/deploy.yml builder.args.RUBY_VERSION (#{ruby_version_arg.inspect}) " \
         "to equal .tool-versions Ruby (#{tool_versions_ruby}); uncomment and wire the args block"
+    end
+
+    it "the docs name no patch-level Ruby version, so a Ruby bump can't leave them stale" do
+      series = File.read(Rails.root.join(".tool-versions"))[/^ruby\s+(\d+\.\d+)\./, 1]
+      exact_ruby = /\bruby[\s:-]+\d+\.\d+\.\d+|(?<![\d.])#{Regexp.escape(series)}\.\d+(?!\.?\d)/i
+      docs = [ Rails.root.join("README.md"), *Dir[Rails.root.join("app/docs/**/*.md")] ]
+      offenders = docs.flat_map do |path|
+        File.readlines(path).each_with_index.filter_map do |line, index|
+          "#{Pathname(path).relative_path_from(Rails.root)}:#{index + 1}" if line.match?(exact_ruby)
+        end
+      end
+
+      expect(offenders).to be_empty,
+        "these lines name an exact Ruby version, which goes stale on the next bump; " \
+        "say \"Ruby 4.0\" or point at .tool-versions instead:\n  #{offenders.join("\n  ")}"
     end
   end
 
@@ -425,6 +449,8 @@ RSpec.describe "Template invariants" do
     excluded_env_vars = {
       "BUNDLE_GEMFILE"          => "set by Bundler, not an operator",
       "CI"                      => "set by the CI runner",
+      "DEPLOY_CHECK_COMPACT"    => "set by .kamal/hooks/pre-build",
+      "DEV_SERVER_PORT"         => "exported by bin/dev from PORT, the knob .env.example documents",
       "PIDFILE"                 => "set by bin/dev / Foreman",
       "SECRET_KEY_BASE_DUMMY"   => "set by the Dockerfile's assets:precompile RUN (build-time boot marker), never by a human editing .env",
       "SOLID_QUEUE_IN_PUMA"     => "set in config/deploy.yml env.clear, not .env (documented in deployment.md)",
@@ -467,11 +493,10 @@ RSpec.describe "Template invariants" do
       expect(docker_build_job).not_to be_nil, "expected a `docker_build` job in docker_build.yml"
     end
 
-    it "builds on a pull request only when a build input changes, and on every push to main" do
-      expect(build_triggers.dig("pull_request", "paths"))
-        .to include(*build_inputs, ".github/workflows/docker_build.yml"),
-        "expected pull_request.paths to name every file the Dockerfile's early layers COPY, " \
-        "plus the workflow itself — a PR touching none of them does not pay for a build"
+    it "builds on every push to main, and on a pull request only to test its own workflow" do
+      expect(build_triggers.dig("pull_request", "paths")).to eq([ ".github/workflows/docker_build.yml" ]),
+        "expected docker_build to run on a pull request only when its own workflow changes — a " \
+        "build-input pull request is already built from scratch by image_scan, so a second build bills twice"
       expect(build_triggers.dig("push", "branches")).to include("main"),
         "expected a push trigger on main as the unfiltered backstop"
       expect(build_triggers["push"]).not_to have_key("paths"),
@@ -485,12 +510,12 @@ RSpec.describe "Template invariants" do
       expect(command["run"].to_s).to include("bin/docker-build-check"),
         "expected the pre-push docker_build command to run bin/docker-build-check so a local " \
         "push of a build-input change proves the image builds before CI does"
-      expect(command["files"].to_s).to include("origin/main"),
-        "expected `files:` to diff against origin/main — the push range is empty on a branch's " \
-        "first push (lefthook.yml's skip_empty note), which would silently skip the gate"
+      expect(command["files"].to_s).to eq("bin/branch-changes"),
+        "expected `files:` to diff against the fork's base branch — a rebase replay pushes no changed files, so a " \
+        "push-range filter would skip the image build on exactly the push that re-lands a build change"
       build_inputs.each do |input|
         expect(command["glob"].to_s).to include(input),
-          "expected the pre-push glob to name #{input}, the same build inputs the workflow's " \
+          "expected the pre-push glob to name #{input}, the same build inputs image_scan's " \
           "pull_request.paths names — the two lists must stay in sync"
       end
     end
@@ -537,11 +562,8 @@ RSpec.describe "Template invariants" do
   end
 
   describe "CI and Lefthook run the same integrity-gated parallel suite" do
-    # CI and the local pre-push gate have drifted before (bundler-audit ran in
-    # CI only — PR #371), so the invariant is: BOTH run bin/parallel-rspec,
-    # which wraps parallel_tests with the example-count parity and merged
-    # coverage gates. A raw `rspec` invocation in either place silently loses
-    # those gates.
+    # CI and the pre-push gate have drifted before (#371, #1424): both run bin/parallel-rspec, whose parity
+    # and merged-coverage gates a raw `rspec` loses, and both audit gems against current advisories.
     let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
     let(:lefthook_config) { YAML.safe_load(File.read(root.join("lefthook.yml")), aliases: true) }
 
@@ -570,38 +592,114 @@ RSpec.describe "Template invariants" do
         "runner's 4 vCPUs by default; a fork on a smaller runner sets its own"
     end
 
-    it "the merged coverage floor and shard-union parity run in coverage_merge" do
-      run_steps = Array(ci_workflow.dig("jobs", "coverage_merge", "steps")).map { |s| s["run"].to_s }
+    it "the merged coverage floor and shard-union parity run in the test job" do
+      run_steps = Array(ci_workflow.dig("jobs", "test", "steps")).map { |s| s["run"].to_s }
       expect(run_steps).to include(match(%r{bin/ci-coverage-merge})),
-        "expected coverage_merge to run bin/ci-coverage-merge — shards skip the merged " \
+        "expected the test job to run bin/ci-coverage-merge — shards skip the merged " \
         "floor (each sees ~1/N of the suite), so without this job coverage is unenforced " \
         "and a shard-splitter bug that drops files is invisible"
     end
 
-    it "keeps a summary job named `test` gating on shards AND the merge (ruleset context)" do
+    it "the `test` job is the merge itself, and fails unless every shard succeeded (ruleset context)" do
       test_job = ci_workflow.dig("jobs", "test") || {}
-      expect(Array(test_job["needs"])).to include("test_shard", "coverage_merge"),
-        "the branch ruleset requires the status context `test` BY NAME; the summary job " \
-        "must need both test_shard and coverage_merge or a shard/merge failure leaves a " \
-        "mergeable-looking PR (or, if the job vanishes, every PR blocks forever)"
+      steps = Array(test_job["steps"])
+      guard_index = steps.index { |s| s.slice("run", "env").to_s.include?("needs.test_shard.result") }
+      merge_index = steps.index { |s| s["run"].to_s.include?("bin/ci-coverage-merge") }
+
+      expect(ci_workflow["jobs"].keys).not_to include("coverage_merge"),
+        "expected one `test` job doing the merge — a separate summary job bills its own minute"
+      expect(Array(test_job["needs"])).to include("test_shard")
+      expect(test_job["if"].to_s).to include("always()"),
+        "the ruleset requires `test` BY NAME; without `if: always()` a failed shard skips " \
+        "the job, and a skipped required check reads as passing"
+      expect(guard_index).not_to be_nil,
+        "expected a step that fails the job unless needs.test_shard.result is success"
+      expect(steps[guard_index]["run"]).to include("exit 1")
+      expect(merge_index).to be > guard_index, "expected the shard guard to run before the merge"
+
+      steps.drop(guard_index + 1).select { |s| s["if"].to_s.include?("always()") }.each do |step|
+        expect(step["if"]).to include("steps.#{steps[guard_index]["id"]}.outcome"),
+          "expected `#{step["name"]}` to run only after the shard guard passed — `always()` " \
+          "alone would also run it on a failed shard, with nothing merged"
+      end
     end
 
-    it "Lefthook's pre-push rspec command runs bin/parallel-rspec" do
+    it "Lefthook's bundler-audit refreshes the advisory database, as CI's fresh clone does" do
+      run = lefthook_config.dig("pre-push", "commands", "bundler_audit", "run").to_s
+      expect(run).to include("bin/bundler-audit check --update"),
+        "CI clones the advisory database on every run; a local check against a stale copy passed while CI " \
+        "failed on GHSA-w3mx-4vv9-hjpg (css_parser, #1424), so the pre-push gate must update it first"
+    end
+
+    it "Lefthook builds the cell image when hotcell/ changes" do
+      command = lefthook_config.dig("pre-push", "commands", "hotcell_build") || {}
+
+      expect(command["glob"].to_s).to include("hotcell/**")
+      expect(command["run"].to_s).to include("docker build --pull hotcell")
+      expect(command["files"].to_s).to eq("bin/branch-changes"),
+        "diffed against main, like docker_build, so a rebase replay still builds the cell"
+    end
+
+    it "audits the cell's gems pre-push and in CI" do
+      static_runs = Array(ci_workflow.dig("jobs", "static", "steps")).map { |step| step["run"].to_s }
+
+      expect(lefthook_config.dig("pre-push", "commands", "bundler_audit", "run").to_s).to include("bin/bundler-audit check hotcell")
+      expect(static_runs).to include(match(%r{bin/bundler-audit check hotcell})),
+        "the cell's Gemfile.lock is a second dependency graph; auditing only the app's lock leaves it unchecked"
+    end
+
+    it "Lefthook's pre-push rspec command runs bin/test-plan --run, and CI's shards still run bin/parallel-rspec" do
       run = lefthook_config.dig("pre-push", "commands", "rspec", "run").to_s
-      expect(run).to include("bin/parallel-rspec"),
-        "expected the pre-push rspec gate to run bin/parallel-rspec so local pushes " \
-        "get the same gates as CI (drift bit us before — see lefthook.yml's bundler_audit note)"
+      shard_runs = Array(ci_workflow.dig("jobs", "test_shard", "steps")).map { |s| s["run"].to_s }
+
+      expect(run).to include("bin/test-plan --run"),
+        "expected the pre-push rspec gate to run the specs the branch can break (bin/test-plan), " \
+        "the same selection CI's lane job makes"
+      expect(shard_runs).to include(match(%r{bin/parallel-rspec}))
     end
 
-    it "the comment-block gate runs in Lefthook pre-commit AND in CI's lint job over the PR's diff" do
+    it "keeps CI=true on the pre-push specs, for Capybara's longer wait under a loaded hook" do
+      expect(lefthook_config.dig("pre-push", "commands", "rspec", "env", "CI")).to eq("true")
+    end
+
+    {
+      "bundler_audit" => "{Gemfile.lock,hotcell/Gemfile.lock}",
+      "erb_lint" => "*.erb",
+      "markdown_lint" => "*.md"
+    }.each do |command_name, glob|
+      it "runs Lefthook's #{command_name} only when the branch changes #{glob}" do
+        command = lefthook_config.dig("pre-push", "commands", command_name) || {}
+
+        expect(command.slice("files", "glob")).to eq("files" => "bin/branch-changes", "glob" => glob),
+          "CI's static job runs #{command_name} on every pull request; pre-push checks only a branch that changed its inputs"
+      end
+    end
+
+    it "the comment-block gate runs in Lefthook pre-commit AND in CI's static job over the PR's diff" do
       hook = lefthook_config.dig("pre-commit", "commands", "comment_blocks", "run").to_s
-      ci_steps = Array(ci_workflow.dig("jobs", "lint", "steps")).map { |s| s["run"].to_s }
+      ci_steps = Array(ci_workflow.dig("jobs", "static", "steps")).map { |s| s["run"].to_s }
 
       expect(hook).to include("bin/comment-block-check"),
         "expected Lefthook pre-commit to run bin/comment-block-check on the staged files"
       expect(ci_steps).to include(match(%r{bin/comment-block-check --range})),
-        "expected CI's lint job to run bin/comment-block-check --range over the pull request's " \
+        "expected CI's static job to run bin/comment-block-check --range over the pull request's " \
         "diff — a skipped hook, or a fork without Lefthook, otherwise lands long comment blocks unchecked"
+    end
+
+    it "runs every static check in one job, and each check even after an earlier one fails" do
+      jobs = ci_workflow.fetch("jobs")
+      checks = %w[brakeman bundler-audit importmap\ audit rubocop markdown:check erb:check comment-block-check]
+      steps = Array(jobs.dig("static", "steps"))
+
+      expect(jobs.keys & %w[scan_ruby scan_js lint lint_docs]).to be_empty,
+        "expected the four static jobs folded into `static` — each billed a full runner minute for seconds of work"
+      checks.each do |check|
+        step = steps.find { |s| s["run"].to_s.include?(check) }
+        expect(step).not_to be_nil, "expected the static job to run #{check}"
+        expect(step["if"].to_s).to include("!cancelled()"),
+          "expected the #{check} step to run even after an earlier check fails (`if: !cancelled()`), " \
+          "so one push reports every failing check, as four separate jobs did"
+      end
     end
   end
 
@@ -708,6 +806,26 @@ RSpec.describe "Template invariants" do
         "are scanned pre-merge"
     end
 
+    it "is the one image build a build-input pull request runs" do
+      inputs = %w[Dockerfile .dockerignore Gemfile Gemfile.lock .tool-versions bin/docker-entrypoint]
+
+      expect(triggers.dig("pull_request", "paths")).to include(*inputs),
+        "expected image_scan's pull_request.paths to name every build input: docker_build no longer " \
+        "runs on pull requests, so this cold build is the pull request's proof that the image builds"
+    end
+
+    it "builds the same image docker_build does" do
+      build_with = lambda do |workflow|
+        steps = YAML.safe_load(File.read(root.join(".github/workflows/#{workflow}")), aliases: true)
+          .fetch("jobs").values.flat_map { |job| job["steps"] }
+        steps.find { |s| s["uses"].to_s.include?("docker/build-push-action") }["with"].slice("context", "file", "target", "platforms")
+      end
+
+      expect(build_with.call("image_scan.yml")).to eq(build_with.call("docker_build.yml")),
+        "expected image_scan and docker_build to build the same image (context, Dockerfile, target, " \
+        "platforms) — image_scan's build stands in for docker_build's on pull requests"
+    end
+
     it "loads the built image so the scanner has something to scan" do
       build_step = scan_steps.find { |s| s["uses"].to_s.include?("docker/build-push-action") }
       expect(build_step).not_to be_nil, "expected a docker/build-push-action build step"
@@ -771,9 +889,8 @@ RSpec.describe "Template invariants" do
   end
 
   describe "CI persists the spec runtime log for balanced parallel splits (#488)" do
-    # tmp/parallel_runtime_rspec.log feeds time-based spec splitting, so it must
-    # be cached across CI runs; since #495's sharding the lifecycle spans the
-    # split_seed/test_shard/coverage_merge jobs. See /docs/developer/testing.
+    # tmp/parallel_runtime_rspec.log seeds time-based splitting, so CI caches it across
+    # the split_seed/test_shard/test jobs (#488). See /docs/developer/testing.
     let(:ci_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/ci.yml")), aliases: true) }
 
     def job_steps(name) = Array(ci_workflow.dig("jobs", name, "steps"))
@@ -783,7 +900,7 @@ RSpec.describe "Template invariants" do
         step["uses"].to_s.include?("actions/cache/restore") &&
           step.dig("with", "path").to_s.include?("parallel_runtime_rspec.log")
       end
-      save = job_steps("coverage_merge").find do |step|
+      save = job_steps("test").find do |step|
         step["uses"].to_s.include?("actions/cache/save") &&
           step.dig("with", "path").to_s.include?("parallel_runtime_rspec.log")
       end
@@ -791,7 +908,7 @@ RSpec.describe "Template invariants" do
         "expected test_shard to restore tmp/parallel_runtime_rspec.log so in-shard " \
         "worker balancing has a seed"
       expect(save).not_to be_nil,
-        "expected coverage_merge to save the reassembled runtime log — each shard's " \
+        "expected the test job to save the reassembled runtime log — each shard's " \
         "log holds only its own files' timings, so without the merged save the next " \
         "run's split degrades to file size (#488)"
       expect(restore.dig("with", "restore-keys").to_s).to be_present,
@@ -865,6 +982,13 @@ RSpec.describe "Template invariants" do
         "— the comment is the documentation. (Donal McBreen)"
     end
 
+    it "deploy.yml offers, commented, each variable deploy:check asks a shared-preset fork for" do
+      %w[TENANCY_OWNER_EMAIL TENANCY_WORKSPACE_CREATION].each do |name|
+        expect(deploy_yml_raw).to match(/^\s*#\s*#{name}:/),
+          "deploy:check names #{name} on the shared preset, so env.clear should offer it to uncomment"
+      end
+    end
+
     it "deploy.yml warns that the job: block requires migrating off SQLite" do
       # The currently-commented `servers.job:` block is a SQLite trap: SQLite is
       # single-host, so a separate job role can't share the DB file across
@@ -885,11 +1009,13 @@ RSpec.describe "Template invariants" do
 
       queues_value = workers.first["queues"]
       expect(queues_value).to be_an(Array),
-        "expected queues to be an explicit array (e.g., [default, mailers, low]) instead of " \
+        "expected queues to be an explicit array (e.g., [mailers, default, low]) instead of " \
         "the \"*\" wildcard — named queues give clear operational signals when one backs up. " \
         "Got: #{queues_value.inspect}"
       expect(queues_value).to include("mailers"),
         "expected `mailers` queue declared explicitly so mailer jobs are routable separately"
+      expect(queues_value.first).to eq("mailers"),
+        "expected `mailers` first so a sign-in link is claimed ahead of backups and sweeps"
     end
 
     it "recurring.yml routes digest_mailer to the mailers queue" do
@@ -1117,15 +1243,12 @@ RSpec.describe "Template invariants" do
         "unaccepted preset gets a .env the app refuses to start on"
     end
 
-    # bin/setup validates the preset it reads from .fork.yml independently of
-    # bin/fork, so it carries its own copy of the list and can drift.
-    it "keeps bin/setup's preset validation in step with the initializer" do
+    it "keeps the presets bin/setup validates against in step with the initializer" do
       accepted = File.read(root.join("config/initializers/tenancy.rb"))[/valid_onboarding = \[(.*?)\]/m, 1]
                      .to_s.scan(/:(\w+)/).flatten
-      declared = File.read(root.join("bin/setup"))[/valid_presets = %w\[(.*?)\]/m, 1].to_s.split
 
-      expect(declared).to match_array(accepted),
-        "bin/setup validates presets as #{declared.inspect} but the app accepts " \
+      expect(ForkConfig::PRESETS).to match_array(accepted),
+        "ForkConfig knows presets #{ForkConfig::PRESETS.inspect} but the app accepts " \
         "#{accepted.inspect} — a drift here either rejects a valid fork or lets a " \
         "typo through into every teammate's .env"
     end
@@ -1138,21 +1261,11 @@ RSpec.describe "Template invariants" do
         "forks would abort in preflight"
     end
 
-    # FORK DEVIATION (MClassrooms): skipped here, not upstream.
-    #
-    # This example asserts the template still CONTAINS the tokens bin/fork
-    # rewrites ("ModelRails" in brand.en.yml, support@modelrails.dev in
-    # pages.en.yml). That is a true and useful invariant in the template — and
-    # structurally impossible in a repo that has already been forked. PR #61
-    # removed exactly those tokens on purpose; both files are merge=ours, so
-    # they will never come back. Keeping the example would mean a permanently
-    # red suite asserting something we deliberately made false.
-    #
-    # The block's other three examples are NOT skipped: preset parity with
-    # config/initializers/tenancy.rb and bin/setup still protects teammates
-    # running bin/setup on a fresh clone, and rename-target existence still
-    # catches a template file going missing.
-    it "searches for tokens that are still present in each file", skip: "template-only: #61 removed these tokens from this fork by design" do
+    # In a fork these tokens are gone BECAUSE bin/fork ran; the check is about
+    # the template's own tree, so it goes inert on the same .fork.yml signal
+    # the placeholder-hygiene group below switches on. Without this every
+    # fork's first CI run failed here, whatever it pushed.
+    it "searches for tokens that are still present in each file", :template_only do
       stale = ForkFlow::SUBSTITUTIONS.flat_map do |path, substitutions|
         content = File.read(root.join(path))
         substitutions.reject { |from, _| content.include?(from) }.map { |from, _| "#{path}: #{from.inspect}" }
@@ -1162,6 +1275,19 @@ RSpec.describe "Template invariants" do
         "bin/fork looks for tokens that are gone: #{stale.join(', ')}. A missing token is " \
         "indistinguishable from an already-completed rename, so bin/fork would report success " \
         "while leaving template identity in every fork."
+    end
+
+    it "names the template outside the rename targets only where it means the template", :template_only do
+      means_the_template = %w[.rubocop/app.yml app/assets/tailwind/tokens/_brand.css config/initializers/biscuit.rb config/routes/app.rb]
+      named = IO.popen(clean_git_env, [ "git", "-C", root.to_s, "grep", "-l", "-F", ForkFlow::TEMPLATE_TOKEN ], &:read).split("\n")
+      unrenamed = (named - ForkFlow::RENAME_FILES - [ ForkFlow::CHANGELOG ] - means_the_template).reject do |path|
+        (ForkFlow::TEMPLATE_OWNED_PATHS + ForkFlow::YOURS_TO_REWRITE_PATHS.map(&:first)).any? { |owned| path.match?(owned) }
+      end
+
+      expect(unrenamed).to be_empty,
+        "#{unrenamed.join(', ')} name the template as #{ForkFlow::TEMPLATE_TOKEN}, and bin/fork leaves them as they are. " \
+        "If the name means the app (an image, a container, a service), add the file to ForkFlow::SUBSTITUTIONS; " \
+        "if it means the template, list it here. A fork's verify sweep reads a token in a comment as harmless, so it can't tell."
     end
   end
 
@@ -1174,15 +1300,111 @@ RSpec.describe "Template invariants" do
     # someone acts (#553). merge=ours means upstream fixes to fork-owned
     # locale files never arrive on sync, so the fork's own suite is the only
     # place this class of leftover can be caught.
-    it "ships no placeholder support address in fork-owned locale files" do
-      skip "template repo — placeholders are correct here" unless Rails.root.join(".fork.yml").exist?
-
+    it "ships no placeholder support address in fork-owned locale files", :fork_only do
       content = Rails.root.join("config/locales/en/pages.en.yml").read
       stale = content.scan(/[\w.+-]+@[\w.-]+\.example\b/) + content.scan(/[\w.+-]+@example\.com\b/)
       expect(stale).to be_empty,
         "placeholder support address still shipping: #{stale.uniq.join(', ')} — " \
         "set a real address in config/locales/en/pages.en.yml (bin/fork listed this " \
         "in its post-fork TODOs; this spec is the durable reminder)"
+    end
+  end
+
+  describe "where a fork finds its mail and sign-up settings" do
+    it "points the Dev Container's next steps at the quickstart" do
+      expect(File.read(root.join(".devcontainer/setup.sh"))).to include("/docs/developer/quickstart")
+    end
+
+    # Directly after MAIL_FROM these lines would conflict with a fork's mail edits on sync.
+    it "keeps the commented sign-up lines above the outbound mail comment", :template_only do
+      deploy = File.read(root.join("config/deploy.yml"))
+      mail = deploy.index("# Outbound mail:")
+      expect(deploy.index("# SIGNUP_MODE: open")).to be < mail
+      expect(deploy.index("# WORKSPACE_ON_SIGNUP:")).to be < mail
+      expect(deploy.index("# TENANCY_SHARED_WORKSPACE_SLUG:")).to be < mail
+    end
+
+    it "doesn't send .env.example readers to a removed route" do
+      expect(File.read(root.join(".env.example"))).not_to include("/registrations/new")
+    end
+  end
+
+  describe "a fork's pending list means something" do
+    let(:source) { File.read(root.join("spec/code_smells/template_invariants_spec.rb")) }
+
+    # A permanent skip teaches people to ignore the list: tag the example, and forks never run it.
+    it "excludes template-only and fork-only examples instead of skipping them" do
+      fork_skip = /skip .*\.fork\.yml/
+
+      expect(source.lines.grep(fork_skip).reject { |line| line.include?("fork_skip") }).to be_empty
+      expect(source.scan(/, :template_only do/).size).to be >= 5
+      expect(source.scan(/, :fork_only do/).size).to be >= 1
+    end
+
+    it "runs the root-only browser flags in the job that runs as root" do
+      expect(File.read(root.join(".github/workflows/devcontainer.yml"))).to include("spec/system/cuprite_driver_config_spec.rb")
+    end
+  end
+
+  describe "bin/fork's rename and CI's comment gate" do
+    before { load Rails.root.join("bin/fork").to_s unless defined?(ForkFlow) }
+
+    # A rename touching a long comment block fails the fork's first PR on a line it didn't write.
+    it "renames no token inside a comment block over two lines", :template_only do
+      long_blocks = ForkFlow::SUBSTITUTIONS.flat_map do |path, substitutions|
+        source = File.read(root.join(path))
+        renamed = source.lines.each_index.select { |i| substitutions.any? { |from, _| source.lines[i].include?(from) } }
+        CommentBlockCheck.new.violations(path:, source:, added_lines: renamed.map(&:succ)).map { |block| "#{path}:#{block.first}" }
+      end
+
+      expect(ForkFlow::SUBSTITUTIONS).not_to be_empty
+      expect(long_blocks).to be_empty
+    end
+  end
+
+  describe "gh in a fork" do
+    # With no default, gh offers the template first when a branch isn't pushed yet.
+    it "pushes to the fork's own repository by default, in every clone" do
+      expect(File.read(root.join("bin/setup"))).to include("git config remote.pushDefault origin")
+    end
+  end
+
+  describe "Lefthook's changed-file filters on a fork without main" do
+    let(:filters) do
+      commands = YAML.safe_load(File.read(root.join("lefthook.yml")), aliases: true).fetch("pre-push").fetch("commands")
+      commands.filter_map { |name, command| [ name, command["files"] ] if command["files"] }
+    end
+
+    # git exits 128 on a missing ref, which fails the whole push.
+    it "never names a branch a fork may not have" do
+      expect(filters.size).to be >= 3
+      expect(filters.reject { |_, files| files == "bin/branch-changes" }).to be_empty
+    end
+  end
+
+  describe "Lefthook's pre-push and the protected branches" do
+    let(:commands) { YAML.safe_load(File.read(root.join("lefthook.yml")), aliases: true).dig("pre-push", "commands") }
+    let(:check) { commands.fetch("protected_branch", {}) }
+
+    it "refuses a push to an existing next or main before any other check runs" do
+      others = commands.except("protected_branch", "docker_build").values.map { |command| command["priority"] }
+
+      expect(check["run"].to_s).to include("bin/protected-branch-check {1}")
+      expect(check["use_stdin"]).to be(true), "expected use_stdin: the check reads git's pre-push ref lines"
+      expect(check["priority"]).to be_a(Integer).and(be < others.min)
+    end
+
+    it "runs on every push, filtered by nothing" do
+      expect(check).not_to be_empty
+      expect(check.keys & %w[skip glob files only exclude tags]).to be_empty
+    end
+  end
+
+  describe "bin/mail-setup can edit the shipped deploy.yml" do
+    it "finds SMTP_ADDRESS under env.clear", :template_only do
+      load root.join("bin/mail-setup") unless defined?(MailSetup)
+
+      expect(MailSetup::DeployFile.editable?(File.read(root.join("config/deploy.yml")))).to be(true)
     end
   end
 
@@ -1193,7 +1415,7 @@ RSpec.describe "Template invariants" do
   # `git remote rename` and a commit. Asserted on source because the safe way
   # to test "loading is safe" cannot itself be to load it.
   describe "bin scripts are safe to load in a spec" do
-    %w[bin/fork bin/parallel-rspec].each do |script|
+    %w[bin/fork bin/mail-setup bin/parallel-rspec].each do |script|
       it "#{script} guards top-level execution behind $PROGRAM_NAME" do
         source = File.read(root.join(script))
 
@@ -1216,41 +1438,6 @@ RSpec.describe "Template invariants" do
       expect(parse_at).to be > guard_at,
         "expected bin/fork's OptionParser block to sit INSIDE the $PROGRAM_NAME guard — " \
         "parse! mutates ARGV, so at load time it corrupts the spec runner's own arguments"
-    end
-  end
-
-  describe "bin/setup leaves a checkout whose specs can pass" do
-    # tailwindcss-rails enhances `assets:clobber` with `tailwindcss:clobber`,
-    # so the Propshaft heal below also deletes app/assets/builds/tailwind.css.
-    # bin/setup used to rebuild it only as a side effect of `exec bin/dev`,
-    # which --skip-server never reaches — leaving a fork's very first
-    # `bundle exec rspec` failing every system spec at once.
-    let(:setup_sh) { File.read(root.join("bin/setup")) }
-
-    # bin/fork records the tenancy preset in .fork.yml; bin/setup is what
-    # applies it per clone. That split is deliberate — a teammate cloning an
-    # already-forked repo runs bin/setup, never bin/fork, so if bin/setup
-    # doesn't read the provenance the second developer silently runs on the
-    # wrong tenancy mode.
-    it "applies the fork's recorded tenancy preset to .env" do
-      expect(setup_sh).to include(".fork.yml"),
-        "expected bin/setup to read .fork.yml — it is the only thing a teammate runs, " \
-        "so it must apply the fork's recorded preset to their .env"
-      expect(setup_sh).to match(/WORKSPACE_ON_SIGNUP/),
-        "expected bin/setup to write WORKSPACE_ON_SIGNUP from the recorded preset"
-    end
-
-    it "rebuilds the Tailwind stylesheet after clobbering assets" do
-      clobber = setup_sh.index("assets:clobber")
-      rebuild = setup_sh.index("tailwindcss:build")
-
-      expect(clobber).not_to be_nil, "expected bin/setup to clobber precompiled assets"
-      expect(rebuild).not_to be_nil,
-        "expected bin/setup to run tailwindcss:build — assets:clobber removes the " \
-        "compiled stylesheet, and without it every system spec fails on contrast/layout"
-      expect(rebuild).to be > clobber,
-        "tailwindcss:build must run AFTER assets:clobber, or the clobber deletes " \
-        "the stylesheet the rebuild just produced"
     end
   end
 
@@ -1283,18 +1470,66 @@ RSpec.describe "Template invariants" do
     end
   end
 
-  describe "the template ships zero encrypted credential blobs" do
-    # A committed .yml.enc is undecryptable dead weight to every fork and a
-    # guaranteed merge conflict whenever upstream rotates a secret. Forks
-    # generate per-environment credentials on day one (README "Forking this
-    # template") and may commit their own blobs in their private repos.
-    it "tracks no credential blobs or keys in git" do
-      tracked = IO.popen(clean_git_env, [ "git", "-C", root.to_s, "ls-files", "config" ], &:read)
-        .to_s.lines.map(&:strip)
-      offenders = tracked.grep(/\.yml\.enc\z|master\.key\z|credentials\/.*\.key\z/)
-      expect(offenders).to be_empty,
-        "expected no encrypted credential blobs or keys tracked in git, found: " \
-        "#{offenders.join(', ')}. The template ships zero credentials; see README."
+  describe "credentials in git: keys never, encrypted files only from a fork" do
+    let(:tracked) { IO.popen(clean_git_env, [ "git", "-C", root.to_s, "ls-files", "config" ], &:read).to_s.lines.map(&:strip) }
+
+    it "tracks no credentials key" do
+      keys = tracked.grep(/master\.key\z|credentials\/.*\.key\z/)
+      expect(keys).to be_empty, "expected no credentials key tracked in git, found: #{keys.join(', ')}"
+    end
+
+    it "ships no encrypted credentials from the template itself", :template_only do
+      blobs = tracked.grep(/\.yml\.enc\z/)
+      expect(blobs).to be_empty, "expected the template to track no encrypted credentials, found: #{blobs.join(', ')}"
+    end
+  end
+
+  describe "a deployer's local secrets stay out of git and out of the image" do
+    let(:local_secrets) { %w[config/master.key config/credentials/production.key .env fnox.local.toml age.txt] }
+    let(:dockerignore_rules) do
+      File.readlines(root.join(".dockerignore"), chomp: true).grep_v(/\A\s*(#|\z)/)
+    end
+
+    def git_ignores?(path)
+      system(clean_git_env, "git", "-C", root.to_s, "check-ignore", "--quiet", path)
+    end
+
+    def docker_excludes?(path)
+      dockerignore_rules.reduce(false) do |excluded, rule|
+        pattern = rule.delete_prefix("!").delete_prefix("/")
+        File.fnmatch?(pattern, path, File::FNM_PATHNAME | File::FNM_DOTMATCH) ? !rule.start_with?("!") : excluded
+      end
+    end
+
+    it "git ignores every one of them" do
+      tracked_if_created = local_secrets.reject { |path| git_ignores?(path) }
+      expect(tracked_if_created).to be_empty,
+        "expected .gitignore to cover #{tracked_if_created.join(', ')}"
+    end
+
+    it "already holds the lines Rails looks for, so a fork's first credentials:edit leaves .gitignore alone" do
+      require "rails/generators"
+      require "rails/generators/rails/encryption_key_file/encryption_key_file_generator"
+      Dir.mktmpdir do |dir|
+        FileUtils.cp(root.join(".gitignore"), dir)
+        generator = Rails::Generators::EncryptionKeyFileGenerator.new([], { quiet: true }, destination_root: dir)
+        Dir.chdir(dir) { local_secrets.grep(/\.key\z/).each { |key| generator.add_key_file(key) } }
+
+        expect(File.read(File.join(dir, ".gitignore"))).to eq(root.join(".gitignore").read)
+      end
+    end
+
+    it "still lets an app commit the encrypted files it deploys from" do
+      encrypted = %w[fnox.toml config/credentials/production.yml.enc config/credentials/staging.yml.enc config/credentials.yml.enc]
+      ignored = encrypted.select { |path| git_ignores?(path) }
+      expect(ignored).to be_empty,
+        "expected #{ignored.join(', ')} to stay committable: Kamal builds the image from a clone of the commit"
+    end
+
+    it "leaves every one of them out of the Docker build context" do
+      copied_into_image = local_secrets.reject { |path| docker_excludes?(path) }
+      expect(copied_into_image).to be_empty,
+        "expected .dockerignore to exclude #{copied_into_image.join(', ')}: `COPY . .` would bake them into the image"
     end
   end
 
@@ -1385,6 +1620,8 @@ RSpec.describe "Template invariants" do
       %w[
         app/views/pages/**
         app/controllers/pages_controller.rb
+        spec/system/pages/**
+        spec/requests/pages_spec.rb
         config/locales/en/pages.en.yml
         config/locales/en/brand.en.yml
         config/routes/app.rb
@@ -1435,6 +1672,11 @@ RSpec.describe "Template invariants" do
       expect(setup_script).to include("git remote get-url upstream"),
         "driver activation must be gated on an upstream remote existing — " \
         "the template repo itself must never set the driver"
+    end
+
+    it "makes origin gh's default from bin/setup, since gh would pick the upstream remote it adds" do
+      expect(File.read(Rails.root.join("bin/setup"))).to include("git config remote.origin.gh-resolved base"),
+        "a teammate's gh commands in a fork clone would act on the template"
     end
 
     it "marks the fork extension point in db/seeds.rb" do
@@ -1556,6 +1798,59 @@ RSpec.describe "Template invariants" do
     end
   end
 
+  describe "no workflow runs on pull_request_target" do
+    let(:triggers_by_workflow) do
+      Dir[root.join(".github/workflows/*.{yml,yaml}").to_s].to_h do |path|
+        on = YAML.safe_load(File.read(path), aliases: true).then { |workflow| workflow[true] || workflow["on"] }
+        [ Pathname(path).relative_path_from(root).to_s, Array(on.is_a?(Hash) ? on.keys : on) ]
+      end
+    end
+
+    it "reads a trigger from every workflow" do
+      expect(triggers_by_workflow.reject { |_path, triggers| triggers.any? }.keys).to be_empty
+    end
+
+    it "keeps every workflow off the trigger that pairs a writable token with a pull request's code" do
+      offenders = triggers_by_workflow.select { |_path, triggers| triggers.include?("pull_request_target") }.keys
+      expect(offenders).to be_empty,
+        "expected no workflow on pull_request_target, found: #{offenders.join(', ')}"
+    end
+  end
+
+  describe "jactionlint audits the workflows at one version, in CI and before a push" do
+    let(:audit_steps) do
+      YAML.safe_load(File.read(root.join(".github/workflows/workflow_audit.yml")), aliases: true)
+        .fetch("jobs").values.flat_map { |job| job["steps"] }
+    end
+    let(:mise_tools) { File.read(root.join("mise.toml")).scan(/^([\w-]+) = "([^"]+)"$/).to_h }
+
+    it "pins jactionlint and the shellcheck it runs to exact versions that mise.lock locks" do
+      expect(mise_tools.keys).to include("jactionlint", "shellcheck")
+      mise_lock = File.read(root.join("mise.lock"))
+      mise_tools.each do |tool, version|
+        expect(version).to match(/\A\d+\.\d+\.\d+\z/), "expected mise.toml to pin #{tool} to an exact X.Y.Z"
+        expect(mise_lock).to include(%([[tools.#{tool}]]\nversion = "#{version}")),
+          "expected mise.lock to lock #{tool} #{version}; run `mise lock #{mise_tools.keys.join(' ')}`"
+      end
+    end
+
+    it "installs exactly mise.toml's tools in CI, from the lockfile, and runs the online checks" do
+      install = audit_steps.find { |step| step["uses"].to_s.start_with?("jdx/mise-action@") }
+      lint = audit_steps.find { |step| step["run"].to_s.include?("jactionlint") }
+
+      expect(install&.dig("with", "install_args").to_s.split).to match_array(mise_tools.keys),
+        "expected jdx/mise-action to install mise.toml's tools alone, not compile the .tool-versions Ruby"
+      expect(lint&.dig("run")).to include("--online")
+      expect(lint&.dig("env", "GITHUB_TOKEN")).to eq("${{ github.token }}")
+    end
+
+    it "runs the same jactionlint before a push that changes .github" do
+      command = YAML.safe_load(File.read(root.join("lefthook.yml")), aliases: true).dig("pre-push", "commands", "jactionlint") || {}
+      expect(command["run"].to_s).to start_with("mise exec -- jactionlint")
+      expect(command["glob"].to_s).to include(".github/**")
+    end
+  end
+
   describe "Dependabot leaves the git-tag-pinned design-system gem to hand bumps (#1261)" do
     # To Dependabot a git gem's current version is the lockfile SHA, so its default
     # cooldown proposes the newest OLDER tag as a bump — see /docs/developer/forking.
@@ -1584,15 +1879,205 @@ RSpec.describe "Template invariants" do
         "on a private fork that was ~87 billed minutes per gem, six gems in one morning (2026-10-14)"
     end
 
-    it "ignores exactly the gems the lockfile takes from git" do
+    it "ignores exactly the git-pinned gems and the Hot Cell family" do
       lockfile = Bundler::LockfileParser.new(File.read(root.join("Gemfile.lock")))
-      from_git = lockfile.specs.select { |s| s.source.is_a?(Bundler::Source::Git) }.map(&:name).uniq.sort
+      from_git = lockfile.specs.select { |s| s.source.is_a?(Bundler::Source::Git) }.map(&:name)
+      hotcell = lockfile.specs.map(&:name).grep(/\A(hotcell|activestorage-hotcell)/)
+      hand_bumped = (from_git + hotcell).uniq.sort
       ignored = Array(bundler_updates["ignore"]).map { |entry| entry["dependency-name"] }.sort
 
-      expect(ignored).to eq(from_git),
-        "Dependabot's bundler ignore must list exactly the git-pinned gems. Missing: #{(from_git - ignored).join(", ")}; " \
-        "released, so drop the ignore: #{(ignored - from_git).join(", ")} " \
-        "(/docs/developer/getting-started, Rails comes from a pinned commit)"
+      expect(ignored).to eq(hand_bumped),
+        "Dependabot's bundler ignore must list exactly the git-pinned gems and the Hot Cell family (bumped by hand " \
+        "in both lockfiles together). Missing: #{(hand_bumped - ignored).join(", ")}; no longer hand-bumped, so drop " \
+        "the ignore: #{(ignored - hand_bumped).join(", ")} (/docs/developer/getting-started, /docs/developer/hot-cell)"
+    end
+  end
+
+  describe "Hot Cell ships wired but off" do
+    it "names no Hot Cell class in any environment file" do
+      hits = Dir[root.join("config/environments/*.rb")].select { |file| File.read(file).match?(/HotCell/) }
+
+      expect(hits).to be_empty,
+        "the Hot Cell flip lives only in config/initializers/hotcell.rb, keyed on the cell being enabled: #{hits.join(", ")}"
+      expect(File.read(root.join("config/initializers/hotcell.rb"))).to include('HotCell.register "active_storage"')
+    end
+
+    it "loads the client everywhere and the server only in test" do
+      gemfile = File.read(root.join("Gemfile"))
+
+      expect(gemfile).to match(/^gem "activestorage-hotcell-client"/)
+      expect(gemfile[/^group :test do(.*?)^end/m, 1]).to include('gem "activestorage-hotcell-server", require: false'),
+        "the cell's gems belong in the test group only, for the proving spec; the production image installs without it"
+    end
+
+    hotcell_versions = lambda do |*lockfiles|
+      lockfiles.flat_map do |lockfile|
+        Bundler::LockfileParser.new(lockfile).specs.select { |spec| spec.name.match?(/\A(hotcell|activestorage-hotcell)/) }
+      end.map { |spec| "#{spec.name} #{spec.version}" }.uniq
+    end
+
+    it "Dependabot leaves the Hot Cell gems to a hand bump of both lockfiles" do
+      updates = YAML.safe_load(File.read(root.join(".github/dependabot.yml"))).fetch("updates")
+      bundler = updates.find { |update| update["package-ecosystem"] == "bundler" }
+      family = hotcell_versions.call(File.read(root.join("Gemfile.lock"))).map { |entry| entry.split.first }
+
+      expect(family).to include("activestorage-hotcell-client", "hotcell-client")
+      expect(Array(bundler["ignore"]).map { |entry| entry["dependency-name"] }).to include(*family),
+        "a Dependabot bump of one lockfile alone would leave the app and the cell on different Hot Cell versions"
+      expect(updates.flat_map { |update| Array(update["directories"] || update["directory"]) }).not_to include("/hotcell")
+    end
+
+    it "the app and the cell lock the same Hot Cell version" do
+      app_lock = File.read(root.join("Gemfile.lock"))
+      locked = hotcell_versions.call(app_lock, File.read(root.join("hotcell/Gemfile.lock")))
+
+      expect(locked.map { |entry| entry.split.last }.uniq.size).to eq(1),
+        "the app's client and the cell's server must run one Hot Cell version: #{locked.sort.join(", ")}"
+      expect(locked.map(&:split).map(&:first)).to include("hotcell-client", "hotcell-server", "activestorage-hotcell-server")
+    end
+
+    it "catches a cell locked to another Hot Cell version" do
+      skewed = File.read(root.join("hotcell/Gemfile.lock")).sub(/^    hotcell-server \([^)]+\)/, "    hotcell-server (9.9.9)")
+      expect(skewed).to include("hotcell-server (9.9.9)"), "the injection point moved; the simulation proves nothing"
+
+      versions = hotcell_versions.call(File.read(root.join("Gemfile.lock")), skewed).map { |entry| entry.split.last }.uniq
+      expect(versions.size).to eq(2)
+    end
+
+    configured_operations = lambda do |initializer|
+      prefix = "ActiveStorage::HotCell::Client::"
+      stack = [ Prism.parse(initializer).value ]
+      found = []
+      while (node = stack.pop)
+        if node.is_a?(Prism::ConstantPathNode) && node.full_name.start_with?(prefix)
+          found << "active_storage/hot_cell/server/#{node.full_name.delete_prefix(prefix).split("::").map(&:underscore).join("/")}"
+        else
+          stack.concat(node.compact_child_nodes)
+        end
+      end
+      found.uniq
+    end
+
+    required_operations = lambda do |operation_sources|
+      operation_sources.flat_map do |source|
+        stack = [ Prism.parse(source).value ]
+        found = []
+        while (node = stack.pop)
+          argument = node.is_a?(Prism::CallNode) && node.name == :require ? node.arguments&.arguments&.first : nil
+          found << argument.unescaped if argument.is_a?(Prism::StringNode)
+          stack.concat(node.compact_child_nodes)
+        end
+        found
+      end
+    end
+
+    let(:initializer) { File.read(root.join("config/initializers/hotcell.rb")) }
+    let(:operation_sources) { Dir[root.join("hotcell/operations/**/*.rb")].map { |file| File.read(file) } }
+
+    it "the cell serves exactly the operations the app configures" do
+      expect(configured_operations.call(initializer)).to include("active_storage/hot_cell/server/transformers/image/vips")
+      expect(required_operations.call(operation_sources)).to match_array(configured_operations.call(initializer)),
+        "every Hot Cell class config/initializers/hotcell.rb names needs its operation required under hotcell/operations/, " \
+        "and the cell requires nothing the app never calls (/docs/developer/hot-cell)"
+    end
+
+    it "the Hot Cell docs sample keeps every volume deploy.yml already mounts", :template_only do
+      doc = File.read(root.join("app/docs/developer/hot-cell.md"))
+      sample = doc.scan(/^ *```yaml\n(.*?)^ *```/m).flatten.find { |block| block.include?("accessories:") }
+      existing = YAML.safe_load(File.read(root.join("config/deploy.yml")), aliases: true, permitted_classes: [ Symbol ])["volumes"]
+
+      expect(sample).to be_present
+      expect(YAML.safe_load(sample.gsub(/^ {3}/, ""), aliases: true)["volumes"]).to include(*existing),
+        "a YAML key listed twice keeps only the last value, so a copied sample without #{existing.inspect} drops " \
+        "the app's SQLite and Active Storage volume"
+    end
+
+    it "the Hot Cell docs sample's gid is the cell image's user" do
+      gid = File.read(root.join("hotcell/Dockerfile"))[/groupadd --gid (\d+)/, 1]
+      doc = File.read(root.join("app/docs/developer/hot-cell.md"))
+
+      expect(gid).to be_present
+      expect(doc).to include(%(HOTCELL_GROUP: "#{gid}"), "group-add: #{gid}", %(user: "#{gid}:#{gid}")),
+        "the app's group-add, HOTCELL_GROUP and the accessory's user must all be the cell image's gid (#{gid}), " \
+        "or every conversion fails with EPERM after deploy"
+    end
+
+    it "the cell answers before the app stops waiting" do
+      keywords = lambda do |source, method|
+        stack = [ Prism.parse(source).value ]
+        found = {}
+        while (node = stack.pop)
+          if node.is_a?(Prism::CallNode) && node.name == method
+            node.arguments&.arguments&.grep(Prism::KeywordHashNode)&.each do |hash|
+              hash.elements.each { |pair| found[pair.key.unescaped.to_sym] = pair.value.slice if pair.key.is_a?(Prism::SymbolNode) }
+            end
+          end
+          stack.concat(node.compact_child_nodes)
+        end
+        found
+      end
+      limits = keywords.call(File.read(root.join("hotcell/config.rb")), :limits)
+      timeout = Integer(keywords.call(initializer, :register).fetch(:timeout, "30"))
+      answer_within = Integer(limits.fetch(:queue_wait, "10")) + Integer(limits.fetch(:deadline, "60")) + 1
+
+      expect(answer_within).to be < timeout,
+        "the cell may take #{answer_within}s (queue_wait + deadline + 1) and the app waits #{timeout}s: every boot warns, " \
+        "and a slow request is a client timeout instead of the cell's own answer (/docs/developer/hot-cell, Tune it)"
+    end
+
+    it "catches an operation the app never calls, and a class the cell does not serve" do
+      extra = operation_sources + [ %(require "active_storage/hot_cell/server/previewers/pdf/mutool"\n) ]
+      expect(required_operations.call(extra)).not_to match_array(configured_operations.call(initializer))
+
+      unserved = initializer.sub("previewers = []", "previewers = [ ActiveStorage::HotCell::Client::Previewers::Pdf::Mutool ]")
+      expect(unserved).not_to eq(initializer), "the injection point moved; the simulation proves nothing"
+      expect(required_operations.call(operation_sources)).not_to match_array(configured_operations.call(unserved))
+    end
+  end
+
+  describe "CI scans the cell image" do
+    let(:scan_workflow) { YAML.safe_load(File.read(root.join(".github/workflows/hotcell_image_scan.yml")), aliases: true) }
+    let(:triggers) { scan_workflow[true] }
+    let(:scan_job) { scan_workflow.dig("jobs", "scan_hotcell_image") || {} }
+    let(:build_step) { Array(scan_job["steps"]).find { |step| step["uses"].to_s.include?("docker/build-push-action") } || {} }
+    let(:trivy_step) { Array(scan_job["steps"]).find { |step| step["uses"].to_s.include?("aquasecurity/trivy-action") } || {} }
+
+    it "runs on changes to the cell, and weekly only where a fork asks" do
+      expect(triggers.dig("pull_request", "paths")).to include("hotcell/**", ".github/workflows/hotcell_image_scan.yml")
+      expect(triggers).to include("schedule")
+      expect(scan_job["if"].to_s).to include("vars.HOTCELL_SCAN"),
+        "a fork that keeps the cell off must not pay for a weekly cold build of it"
+    end
+
+    it "builds the cell from scratch and loads it for the scanner" do
+      expect(build_step.dig("with", "context")).to eq("hotcell")
+      expect(build_step.dig("with", "load")).to be(true)
+      expect(build_step.dig("with", "no-cache")).to be(true), "a cached apt layer hides current package state (#536)"
+      expect(build_step.dig("with", "cache-from")).to be_nil
+    end
+
+    it "fails on a fixable HIGH or CRITICAL finding" do
+      expect(trivy_step.dig("with", "severity")).to eq("CRITICAL,HIGH")
+      expect(trivy_step.dig("with", "exit-code")).to eq("1")
+      expect(trivy_step.dig("with", "image-ref")).to eq(build_step.dig("with", "tags"))
+    end
+  end
+
+  describe "Hot Cell ships wired but off" do
+    it "names no Hot Cell class in any environment file" do
+      hits = Dir[root.join("config/environments/*.rb")].select { |file| File.read(file).match?(/HotCell/) }
+
+      expect(hits).to be_empty,
+        "the Hot Cell flip lives only in config/initializers/hotcell.rb, keyed on the cell being enabled: #{hits.join(", ")}"
+      expect(File.read(root.join("config/initializers/hotcell.rb"))).to include('HotCell.register "active_storage"')
+    end
+
+    it "loads the client everywhere and the server only in test" do
+      gemfile = File.read(root.join("Gemfile"))
+
+      expect(gemfile).to match(/^gem "activestorage-hotcell-client"/)
+      expect(gemfile[/^group :test do(.*?)^end/m, 1]).to include('gem "activestorage-hotcell-server", require: false'),
+        "the cell's gems belong in the test group only, for the proving spec; the production image installs without it"
     end
   end
 end

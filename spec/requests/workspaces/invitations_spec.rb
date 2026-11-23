@@ -1,18 +1,18 @@
 require "rails_helper"
 
 RSpec.describe "Workspace Invitations", type: :request do
+  def signed_in_owner
+    membership = create(:membership, :owner)
+    Current.workspace = membership.workspace
+    sign_in(membership.user)
+    membership
+  end
+
   context "authenticated" do
-    let(:workspace) { create(:workspace) }
-    let(:user) { create(:user) }
-    let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-    before do
-      Current.workspace = workspace
-      sign_in(user)
-    end
-
     describe "GET /workspaces/:workspace_slug/invitations/new" do
       it "renders the invitation form" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         get new_workspace_invitation_path(workspace)
         expect(response).to have_http_status(:ok)
       end
@@ -20,6 +20,8 @@ RSpec.describe "Workspace Invitations", type: :request do
 
     describe "POST /workspaces/:workspace_slug/invitations" do
       it "creates an invitation and sends email" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         expect {
           post workspace_invitations_path(workspace), params: {
             invitation: { emails: "test@example.com", role_id: membership.role.id }
@@ -32,6 +34,8 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
 
       it "creates batch invitations" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         expect {
           post workspace_invitations_path(workspace), params: {
             invitation: { emails: "a@example.com\nb@example.com", role_id: membership.role.id }
@@ -40,18 +44,22 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
 
       it "creates a magic link invitation" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         expect {
           post workspace_invitations_path(workspace), params: {
             invitation: { magic_link: "1", role_id: membership.role.id }
           }
         }.to change(Invitation, :count).by(1)
 
-        expect(workspace.invitations.find_by(email: nil)).to be_magic_link
+        expect(workspace.invitations.find_by(email: nil)).to be_magic_link.and be_acceptable
         expect(response).to redirect_to(workspace_members_path(workspace))
         expect(flash[:notice]).to eq(I18n.t("workspaces.invitations.create.magic_link_created"))
       end
 
       it "skips existing members" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         existing = create(:user, email_address: "existing@example.com")
         create(:membership, user: existing, workspace: workspace)
 
@@ -62,6 +70,9 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
 
       it "skips duplicate pending invitations" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        user = membership.user
         create(:invitation, invitable: workspace, email: "dup@example.com", invited_by: user)
 
         post workspace_invitations_path(workspace), params: {
@@ -72,9 +83,10 @@ RSpec.describe "Workspace Invitations", type: :request do
     end
 
     describe "DELETE /workspaces/:workspace_slug/invitations/:id" do
-      let!(:invitation) { create(:invitation, invitable: workspace, invited_by: user) }
-
       it "revokes the invitation" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        invitation = create(:invitation, invitable: workspace, invited_by: membership.user)
         delete workspace_invitation_path(workspace, invitation)
         expect(invitation.reload).to be_revoked
       end
@@ -82,21 +94,29 @@ RSpec.describe "Workspace Invitations", type: :request do
 
     # Resending is the create of a resend nested under the invitation (#1007).
     describe "POST /workspaces/:workspace_slug/invitations/:id/resend" do
-      let!(:invitation) { create(:invitation, invitable: workspace, invited_by: user) }
-
       it "resends the invitation email" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        invitation = create(:invitation, invitable: workspace, invited_by: membership.user)
         expect {
           post workspace_invitation_resend_path(workspace, invitation)
         }.to have_enqueued_mail(InvitationMailer, :invite)
       end
 
       it "dispatches a WorkspaceInvitationResentNotifier to the inviter on first resend" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        user = membership.user
+        invitation = create(:invitation, invitable: workspace, invited_by: membership.user)
         expect {
           post workspace_invitation_resend_path(workspace, invitation)
         }.to change { user.notifications.where(type: "WorkspaceInvitationResentNotifier::Notification").count }.by(1)
       end
 
       it "says it was rate limited once the limit is exceeded, and sends nothing" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        invitation = create(:invitation, invitable: workspace, invited_by: membership.user)
         allow(Rails.cache).to receive(:increment).and_return(11)
 
         expect { post workspace_invitation_resend_path(workspace, invitation) }.not_to have_enqueued_mail
@@ -105,11 +125,17 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
 
       it "shows the 'resent' flash on first resend" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        invitation = create(:invitation, invitable: workspace, invited_by: membership.user)
         post workspace_invitation_resend_path(workspace, invitation)
         expect(flash[:notice]).to eq(I18n.t("workspaces.invitations.resends.create.resent"))
       end
 
       it "shows the 'recently_sent' flash on a second rapid resend (sentinel :deduplicated branch)" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        invitation = create(:invitation, invitable: workspace, invited_by: membership.user)
         # Two resends inside the 1-minute idempotency bucket. The first
         # creates the notification (sentinel :delivered, "resent" flash);
         # the second collides on the unique idempotency_key and returns
@@ -144,6 +170,9 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
 
       it "still enqueues the invitee email even when the inviter notification is deduplicated" do
+        membership = signed_in_owner
+        workspace = membership.workspace
+        invitation = create(:invitation, invitable: workspace, invited_by: membership.user)
         # The mailer call is intentionally unconditional — the dedup applies
         # only to the in-app confirmation surface for the inviter, not to
         # the invitee email path. Verifies we didn't accidentally short-circuit
@@ -159,6 +188,8 @@ RSpec.describe "Workspace Invitations", type: :request do
 
     describe "POST /workspaces/:workspace_slug/invitations with empty emails" do
       it "creates no invitations for empty string" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         expect {
           post workspace_invitations_path(workspace), params: {
             invitation: { emails: "", role_id: membership.role.id }
@@ -169,6 +200,8 @@ RSpec.describe "Workspace Invitations", type: :request do
 
     describe "POST /workspaces/:workspace_slug/invitations with comma-separated emails" do
       it "creates invitations for comma-separated emails" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         expect {
           post workspace_invitations_path(workspace), params: {
             invitation: { emails: "comma1@example.com, comma2@example.com", role_id: membership.role.id }
@@ -179,6 +212,8 @@ RSpec.describe "Workspace Invitations", type: :request do
 
     describe "authorization" do
       it "denies member from creating invitations" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         member = create(:user)
         create(:membership, user: member, workspace: workspace)
         sign_in(member)
@@ -193,6 +228,8 @@ RSpec.describe "Workspace Invitations", type: :request do
 
     describe "role injection protection" do
       it "rejects role from another workspace" do
+        membership = signed_in_owner
+        workspace = membership.workspace
         other_workspace = create(:workspace)
         foreign_role = Role.create!(name: "Foreign", slug: "foreign", workspace: other_workspace)
         post workspace_invitations_path(workspace), params: {
@@ -204,13 +241,17 @@ RSpec.describe "Workspace Invitations", type: :request do
 
     # SEC-1: an Admin must not be able to invite (or magic-link) an Owner.
     describe "privilege escalation via invitation role" do
-      let(:owner_role)  { Role.system_default!("owner") }
-      let(:admin_user)  { create(:user) }
-      let!(:admin_membership) { create(:membership, :admin, user: admin_user, workspace: workspace) }
-
-      before { sign_in(admin_user) }
+      def signed_in_admin
+        membership = signed_in_owner
+        admin = create(:membership, :admin, workspace: membership.workspace)
+        sign_in(admin.user)
+        membership
+      end
 
       it "refuses an email invitation carrying the owner role" do
+        membership = signed_in_admin
+        workspace = membership.workspace
+        owner_role = Role.system_default!("owner")
         expect {
           post workspace_invitations_path(workspace), params: {
             invitation: { emails: "escalate@example.com", role_id: owner_role.id }
@@ -221,6 +262,9 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
 
       it "refuses a magic-link invitation carrying the owner role" do
+        membership = signed_in_admin
+        workspace = membership.workspace
+        owner_role = Role.system_default!("owner")
         expect {
           post workspace_invitations_path(workspace), params: {
             invitation: { magic_link: "1", role_id: owner_role.id }
@@ -230,6 +274,8 @@ RSpec.describe "Workspace Invitations", type: :request do
       end
 
       it "does not offer the Owner option in an admin's invitation form" do
+        membership = signed_in_admin
+        workspace = membership.workspace
         get new_workspace_invitation_path(workspace)
         select = Nokogiri::HTML(response.body).at_css("select[name='invitation[role_id]']")
         expect(select.to_s).not_to include("Owner")

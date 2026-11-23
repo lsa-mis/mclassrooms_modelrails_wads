@@ -4,7 +4,7 @@
 :root {
   /* Foreground tokens pinned to L* ≤ ~38% for WCAG 2.2 AAA (7:1) on the light surface
      (hue/chroma from the Tailwind palette; only lightness tightened). */
-  --syntax-comment:    var(--neutral-700);                 /* tighten for AAA */
+  --syntax-comment:    var(--neutral-700);
   --syntax-comment-alt: var(--neutral-700);
   --syntax-keyword:    oklch(38% 0.155 313.029);   /* ~purple-800 */
   --syntax-string:     oklch(38% 0.154 150.069);   /* ~green-800 */
@@ -22,13 +22,13 @@
   --syntax-namespace:  var(--neutral-800);
   --syntax-insert-bg:  oklch(98.2% 0.018 155.826);   /* ~green-50 */
   --syntax-whitespace: var(--neutral-300);
-  --syntax-prompt:     var(--neutral-700);             /* tighten for AAA */
+  --syntax-prompt:     var(--neutral-700);
 }
 
 .dark {
   /* Foreground tokens pinned to L* ≥ ~85% for AAA on the dark surface
      (chroma reduced slightly to stay in sRGB gamut). */
-  --syntax-comment:    var(--neutral-300);                 /* tighten for AAA */
+  --syntax-comment:    var(--neutral-300);
   --syntax-comment-alt: var(--neutral-300);
   --syntax-keyword:    oklch(85% 0.13 310.872);   /* ~purple-300 */
   --syntax-string:     oklch(85% 0.13 151.711);   /* ~green-300 */

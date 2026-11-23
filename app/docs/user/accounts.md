@@ -6,11 +6,11 @@ keywords: account profile email password avatar theme preferences connected acco
 
 # Account Management
 
-All account features live under the `/account` namespace and require authentication.
+All account features live under the `/settings` namespace and require authentication, except the connected-account verification link an email carries.
 
 ## Profile Editing
 
-**Route:** `PATCH /account/profile`
+**Route:** `PATCH /settings/profile`
 
 Update your first name and last name. Both fields have a 100-character maximum.
 
@@ -31,7 +31,7 @@ You can cancel a pending email change from the profile page at any time. If the 
 
 ### Setting a Password (OAuth-only accounts)
 
-Password sign-in is available only where the instance turns it on. If it does, and you signed up via Google or GitHub with no password yet, visit `/settings/password/new` to add one. This creates an email-based Authentication record so you can also sign in with email and password.
+Password sign-in is available only where the instance turns it on. If it does, and you signed up via Google or GitHub with no password yet, visit `/settings/password/new` to add one. This creates an email-based Authentication record so you can also sign in with email and password; it starts unverified, so you'll be asked to verify your email address.
 
 ### Password Requirements
 
@@ -47,7 +47,7 @@ Request a reset from the sign-in page ("Forgot password?"). If the account has a
 
 Some account changes ask you to confirm it's really you before they go through, so a borrowed session can't be turned into a lasting takeover. This applies when you:
 
-- change or remove your password
+- set, change or remove your password
 - add or delete a passkey
 - change your email address
 - disconnect a Google or GitHub account
@@ -60,9 +60,9 @@ You confirm with whatever you have — your password, a passkey, or a one-time c
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/account/avatar` | Identity picker modal content (the picker hub) |
-| PATCH | `/account/avatar` | Upload or change avatar |
-| DELETE | `/account/avatar` | Remove photo, revert to initials |
+| GET | `/settings/avatar` | Identity picker modal content (the picker hub) |
+| PATCH | `/settings/avatar` | Upload or change avatar |
+| DELETE | `/settings/avatar` | Remove photo, revert to initials |
 
 ### Avatar Sources
 
@@ -86,7 +86,7 @@ Each avatar source displays with a background hue. Use the inline color picker t
 
 ## Theme Preferences
 
-**Route:** `PATCH /account/theme_preference`
+**Route:** `PATCH /settings/theme_preference`
 
 Cycle through three modes: **Light**, **Dark**, **System** (follows OS preference). The choice is:
 
@@ -101,15 +101,15 @@ The theme toggle in the header cycles through all three modes on click.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/account/connected_accounts` | List all auth methods |
-| DELETE | `/account/connected_accounts/:id` | Disconnect a provider |
+| GET | `/settings/connected_accounts` | List all auth methods |
+| DELETE | `/settings/connected_accounts/:id` | Disconnect a provider |
 
-View all authentication methods linked to your account (email/password, Google, GitHub). You can disconnect any provider **except the last one** — at least one authentication method must remain.
+View all authentication methods linked to your account (email/password, Google, GitHub). You can disconnect any provider **except your last verified one** — at least one verified sign-in method must remain.
 
 ### Linking a New Provider
 
-Sign in to your existing account, then visit the OAuth provider's sign-in button. If the email matches your account, the provider is linked automatically. If the email doesn't match, a new account would be created instead.
+Sign in to your existing account, then visit the OAuth provider's sign-in button. If the provider has verified an email that matches your account, the provider is linked automatically. Otherwise the connection waits as pending and a verification link goes to the provider's address; it links once you click it, and you can resend or cancel it from the **Security** settings page meanwhile.
 
 ## Authorization
 
-All account controllers use Pundit policies scoped to the current user. You can only edit your own account — there is no admin override for account settings.
+Account controllers act only on the signed-in user's own records — some through Pundit policies, the rest by reaching records through `Current.user`, or by checking that an emailed token's record is yours. You can only edit your own account — there is no admin override for account settings.

@@ -10,11 +10,17 @@ RSpec.describe "Pending join banner (drive-by re-consent)", type: :system do
   let(:link) { create(:workspace_join_link, workspace: join_workspace) }
   let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
-  before do
-    # Direct config mutation (not allow stubs) so the value is visible on the
-    # Rack thread the browser hits, not just the test thread.
-    @original_strategies = Rails.configuration.x.signup.permitted_join_strategies
+  # Config, not stubs, so the server thread the browser hits sees it. `around` restores it
+  # even when a global setup hook (a Ferrum timeout) raises before this group's `before`.
+  around do |example|
+    original_strategies = Rails.configuration.x.signup.permitted_join_strategies
     Rails.configuration.x.signup.permitted_join_strategies = [ :invite, :open_link ]
+    example.run
+  ensure
+    Rails.configuration.x.signup.permitted_join_strategies = original_strategies
+  end
+
+  before do
     Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
 
     # Lure: park a pending join as a logged-out visitor, then sign in normally.
@@ -23,8 +29,6 @@ RSpec.describe "Pending join banner (drive-by re-consent)", type: :system do
     expect(page).to have_text(I18n.t("sessions.new.title"))
     sign_in_via_form(existing_user)
   end
-
-  after { Rails.configuration.x.signup.permitted_join_strategies = @original_strategies }
 
   it "does not auto-join, and offers an explicit Join / Dismiss banner" do
     expect(page).to have_css("#pending-join-banner")

@@ -1,46 +1,46 @@
 require "rails_helper"
 
-RSpec.describe "Static pages", type: :system do
+RSpec.describe "App chrome", type: :system do
   describe "layout" do
     it "has a skip-to-content link" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_css("a[href='#main-content']", visible: :all)
     end
 
     it "has a main content landmark" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_css("main#main-content")
     end
 
     it "has a lang attribute on html" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_css("html[lang='en']")
     end
 
     it "has the theme controller on the html element" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_css("html[data-controller~='theme']")
     end
 
     it "has a header with navigation" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_css("header nav")
     end
 
     it "displays the site logo SVG in the header" do
-      visit root_path
+      visit new_session_path
       within("header nav") do
         expect(page).to have_css("svg[aria-hidden='true']")
       end
     end
 
     it "has a footer" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_css("footer")
     end
 
     it "footer contains site links" do
-      visit root_path
+      visit new_session_path
       within("footer") do
         expect(page).to have_link(I18n.t("footer.about"))
         expect(page).to have_link(I18n.t("footer.privacy"))
@@ -49,7 +49,7 @@ RSpec.describe "Static pages", type: :system do
     end
 
     it "displays the site logo in the footer" do
-      visit root_path
+      visit new_session_path
       within("footer") do
         expect(page).to have_css("svg[aria-hidden='true']")
         expect(page).to have_text(I18n.t("application.name"))
@@ -57,26 +57,26 @@ RSpec.describe "Static pages", type: :system do
     end
 
     it "navigation contains the app name as home link" do
-      visit root_path
+      visit new_session_path
       within("header nav") do
         expect(page).to have_link(I18n.t("application.name"), href: root_path)
       end
     end
 
     it "has a theme toggle button" do
-      visit root_path
+      visit new_session_path
       within("header nav") do
         expect(page).to have_css("button[aria-label]", text: /Light|Dark|System/i, visible: :all)
       end
     end
 
     it "has a mobile menu toggle button" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_button(I18n.t("navigation.mobile_menu.open"), visible: :all)
     end
 
     it "has toast containers for pills and cards" do
-      visit root_path
+      visit new_session_path
       expect(page).to have_css("#toast-pills[aria-label]", visible: :all)
       expect(page).to have_css("#toast-cards[aria-label]", visible: :all)
     end
@@ -123,7 +123,7 @@ RSpec.describe "Static pages", type: :system do
     end
 
     def choose_theme(*cycle_stops)
-      visit root_path
+      visit new_session_path
       cycle_stops.each { find("[data-controller='theme-toggle']").click }
     end
 
@@ -132,7 +132,7 @@ RSpec.describe "Static pages", type: :system do
       expect(page).to have_css("html.dark")
 
       recording_when_dark_first_appears do
-        visit root_path
+        visit new_session_path
         expect(page).to have_css("html[data-theme-theme-value='dark']")
         expect(page).to have_css("html.dark")
         expect(dark_first_appeared_at).to eq("loading")
@@ -144,7 +144,7 @@ RSpec.describe "Static pages", type: :system do
       expect(page).to have_css("html[data-theme-theme-value='light']")
 
       recording_when_dark_first_appears do
-        visit root_path
+        visit new_session_path
         expect(page).to have_css("html[data-theme-theme-value='light']")
         expect(page).to have_no_css("html.dark")
         expect(dark_first_appeared_at).to be_nil
@@ -154,7 +154,7 @@ RSpec.describe "Static pages", type: :system do
     it "paints dark before the modules run when the preference is system and the OS prefers dark" do
       with_os_preferring("dark") do
         recording_when_dark_first_appears do
-          visit root_path
+          visit new_session_path
           expect(page).to have_css("html.dark")
           expect(dark_first_appeared_at).to eq("loading")
         end
@@ -265,26 +265,7 @@ RSpec.describe "Static pages", type: :system do
     # toggles to light, runs axe; toggles to dark, runs axe; ANDs the result.
     let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
 
-    %w[home about privacy contact].each do |page_name|
-      it "#{page_name} page passes automated accessibility checks (light + dark)" do
-        path = page_name == "home" ? root_path : page_path(page_name)
-        visit path
-        expect(axe_clean_in_both_themes?(axe_options)).to be(true),
-          "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
-      end
-    end
-
-    it "sign-in page passes automated accessibility checks (light + dark)" do
-      visit new_session_path
-      expect(axe_clean_in_both_themes?(axe_options)).to be(true),
-        "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"
-    end
-
-    # sessions/new is the single entry point for both sign-in and sign-up
-    # (passwordless-first posture). The sign-in accessibility test above already
-    # covers this page; this example is retained as a named anchor for the
-    # sign-up entry path now that registration/new is removed.
-    it "sign-up entry page (sessions/new) passes automated accessibility checks (light + dark)" do
+    it "sign-in and sign-up entry page (sessions/new) passes automated accessibility checks (light + dark)" do
       visit new_session_path
       expect(axe_clean_in_both_themes?(axe_options)).to be(true),
         "Accessibility violations found:\n#{axe_violations_in_both_themes(axe_options).join("\n")}"

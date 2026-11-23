@@ -8,16 +8,16 @@ keywords: presets configuration tenancy multi-tenant single-tenant SaaS signup o
 
 modelrails_base is **always multi-tenant at the data layer** — every row is workspace-scoped through `Current.workspace` and the `Tenanted` concern. What varies across products is the *presentation* of that tenancy: whether users see one workspace or many, whether signup is open or invite-only, and how membership is acquired.
 
-A **preset** is a named combination of four configuration knobs that collapses the multi-tenant architecture into a specific product shape. Four are recognized:
+A **preset** is a named combination of four configuration knobs that collapses the multi-tenant architecture into a specific product shape. Four are recognized, and all four ship:
 
-| Preset | Use this for… | Signup | A new user lands in… | More workspaces? |
-|---|---|---|---|---|
-| **[Solo-default](/docs/developer/presets-solo)** *(ships today)* | Prosumer / multi-workspace tools (Notion-style); private betas | Open or invite-only | A personal workspace (auto-created) | Yes |
-| **[Single-tenant](/docs/developer/presets-single-tenant)** *(Reshape 1 — see [#181](https://github.com/dschmura/modelrails_base/issues/181))* | Internal company tools; one-org deployments | Invite-only or SSO | The one shared workspace | No |
-| **[Open SaaS](/docs/developer/presets-open-saas)** *(Reshape 2+ — see [#181](https://github.com/dschmura/modelrails_base/issues/181))* | B2B SaaS with per-customer orgs; community products | Open *or* link-gated | An org they create or join | Yes |
-| **[Workspace-optional](/docs/developer/presets-none)** *(#343)* | Event / community / personal-dashboard products; user-first auth | Open or invite-only | A workspace-agnostic home (no workspace) | Created/joined explicitly |
+| Preset | `bin/fork --preset` | Use this for… | Signup | A new user lands in… | More workspaces? |
+|---|---|---|---|---|---|
+| **[Solo-default](/docs/developer/presets-solo)** | `personal` (the default) | Prosumer / multi-workspace tools (Notion-style); private betas | Open or invite-only | A personal workspace (auto-created) | Yes |
+| **[Single-tenant](/docs/developer/presets-single-tenant)** | `shared` | Internal company tools; one-org deployments | Invite-only or SSO | The one shared workspace | No |
+| **[Open SaaS](/docs/developer/presets-open-saas)** | `personal`, plus join links | B2B SaaS with per-customer orgs; community products | Open *or* link-gated | An org they create or join | Yes |
+| **[Workspace-optional](/docs/developer/presets-none)** | `none` | Event / community / personal-dashboard products; user-first auth | Open or invite-only | A workspace-agnostic home (no workspace) | Created/joined explicitly |
 
-The four configuration knobs and the full design rationale are documented in [#181](https://github.com/dschmura/modelrails_base/issues/181); each preset below pins specific values for them.
+Each preset's page lists the knob values it sets, under "What you get when configured." Open SaaS is not a value of its own: it is Solo-default's tenancy with shareable join links turned on, so a fork records `personal` and then follows the Open SaaS page.
 
 ## Quick decision
 
@@ -34,7 +34,9 @@ When in doubt, start with **Solo-default** — switching to any of the others is
 
 ## Switching presets later
 
-**Switching presets on a live app is a migration, not a config edit.** Flipping `WORKSPACE_ON_SIGNUP` later doesn't migrate existing data — for example, `:personal`→`:shared` leaves every user's personal workspace intact and adds them to the shared one. Pick a preset at setup time; mid-life changes require a deliberate migration plan. (Open SaaS has its own mid-life nuance — tightening the join-strategy allowlist — documented on its page.)
+A fork records its preset in `.fork.yml` with `bin/fork --preset`, and production reads it from there ([Forking](/docs/developer/forking)).
+
+**Switching presets on a live app is a migration, not a config edit.** Recording a new preset later (`bin/fork --preset shared` on an already-forked repo, which sets `WORKSPACE_ON_SIGNUP`) doesn't migrate existing data — for example, `:personal`→`:shared` leaves every user's personal workspace intact and adds them to the shared one. Pick a preset at setup time; mid-life changes require a deliberate migration plan. (Open SaaS has its own mid-life nuance — tightening the join-strategy allowlist — documented on its page.)
 
 Switching **to `:none`** is a special case: it's effectively a from-scratch product shape. Existing users keep their workspaces; the knob change only affects new signups. Landing new users on a workspace-agnostic home requires overriding `authenticated_home_path` (see [Workspace-optional](/docs/developer/presets-none) and [Forking](/docs/developer/forking)) and building a home view that works with no workspace in context. Plan this at setup time.
 
