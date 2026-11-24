@@ -1,7 +1,7 @@
 require "rails_helper"
 
 # `load` defines the class without running it (bottom-of-file guard), matching
-# the bin/deploy-guide spec's pattern of exercising bin scripts directly.
+# spec/bin/fork_spec.rb's pattern of exercising bin scripts directly.
 load Rails.root.join("bin/parallel-rspec")
 
 RSpec.describe ParallelRspecRunner do

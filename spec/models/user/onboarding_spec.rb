@@ -18,13 +18,13 @@ RSpec.describe User, type: :model do
   end
 
   describe "#personal_workspace" do
-    let(:user) { create(:user) }
-
     it "returns the workspace pointed to by personal_workspace_id" do
+      user = create(:user)
       expect(user.personal_workspace).to eq(Workspace.find(user.personal_workspace_id))
     end
 
     it "returns nil if the personal workspace has been soft-deleted" do
+      user = create(:user)
       # discard! now raises HomeWorkspaceProtectedError for a personal workspace, so set
       # the tombstone directly — this exercises the defensive nil-return for a
       # legacy/console-discarded personal workspace row, which is the case this
@@ -34,15 +34,15 @@ RSpec.describe User, type: :model do
     end
 
     it "returns nil if personal_workspace_id is unset" do
+      user = create(:user)
       user.update_column(:personal_workspace_id, nil)
       expect(user.personal_workspace).to be_nil
     end
   end
 
   describe "#create_personal_workspace (idempotency + uniqueness)" do
-    let(:user) { create(:user) }
-
     it "is idempotent when called a second time on the same user" do
+      user = create(:user)
       original_id = user.personal_workspace_id
       expect(original_id).to be_present
 
@@ -53,6 +53,7 @@ RSpec.describe User, type: :model do
 
     it "enforces uniqueness at the database level" do
       other_user = create(:user)
+      user = create(:user)
       # Try to point two users at the same personal workspace — the partial
       # unique index on personal_workspace_id (where IS NOT NULL) must reject.
       expect {
@@ -62,14 +63,17 @@ RSpec.describe User, type: :model do
   end
 
   describe "#onboard_workspace under :shared posture" do
-    let!(:shared_workspace) { create(:workspace, slug: "acme", name: "Acme", personal: false) }
+    def create_shared_workspace
+      create(:workspace, slug: "acme", name: "Acme", personal: false)
+    end
 
     before do
       allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
-      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(shared_workspace.slug)
+      allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return("acme")
     end
 
     it "joins the configured shared workspace instead of creating a personal one" do
+      shared_workspace = create_shared_workspace
       user = create(:user)
 
       expect(user.personal_workspace_id).to be_nil
@@ -77,6 +81,7 @@ RSpec.describe User, type: :model do
     end
 
     it "joins as a Member (not Owner)" do
+      shared_workspace = create_shared_workspace
       user = create(:user)
 
       membership = shared_workspace.memberships.find_by!(user: user)
@@ -84,12 +89,14 @@ RSpec.describe User, type: :model do
     end
 
     it "raises when the configured shared workspace doesn't exist" do
+      create_shared_workspace
       allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return("missing")
 
       expect { create(:user) }.to raise_error(/shared workspace/i)
     end
 
     it "creates the account but joins no membership when the shared workspace is suspended" do
+      shared_workspace = create_shared_workspace
       shared_workspace.suspend!
 
       user = nil
@@ -161,15 +168,8 @@ RSpec.describe User, type: :model do
   end
 
   describe "onboarding step derivation (:none wizard)" do
-    let(:owner_role) do
-      Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-        r.name = "Owner"
-        r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
-      end
-    end
-
     def join(user, workspace)
-      workspace.memberships.create!(user: user, role: owner_role)
+      create(:membership, :owner, user: user, workspace: workspace)
       user.reload
     end
 

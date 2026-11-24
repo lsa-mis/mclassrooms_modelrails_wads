@@ -8,8 +8,6 @@
    To retheme: swap the Tailwind color family in each section.
    For example, change all `--color-sky-*` references to `--color-purple-*`
    to switch the primary palette from sky to purple.
-
-   For advanced single-hue theming with OKLCH, see docs/theming.md.
    ========================================================================== */
 
 :root {

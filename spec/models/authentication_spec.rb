@@ -115,9 +115,12 @@ RSpec.describe Authentication, type: :model do
   end
 
   describe "email verification token" do
-    let(:auth) { create(:authentication, provider: "email", verified_at: nil) }
+    def unverified_email_auth
+      create(:authentication, provider: "email", verified_at: nil)
+    end
 
     it "round-trips a signed token back to the same record" do
+      auth = unverified_email_auth
       token = auth.generate_token_for(:email_verification)
       expect(Authentication.find_by_token_for(:email_verification, token)).to eq(auth)
     end
@@ -127,6 +130,7 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "expires the token after TOKEN_LIFETIME" do
+      auth = unverified_email_auth
       token = auth.generate_token_for(:email_verification)
       travel(Authentication::TOKEN_LIFETIME + 1.minute) do
         expect(Authentication.find_by_token_for(:email_verification, token)).to be_nil
@@ -134,6 +138,7 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "invalidates the token once the auth is verified (single-use)" do
+      auth = unverified_email_auth
       token = auth.generate_token_for(:email_verification)
       auth.verify!
       expect(Authentication.find_by_token_for(:email_verification, token)).to be_nil
@@ -164,15 +169,15 @@ end
 
 RSpec.describe Authentication, type: :model do
   describe "verification state" do
-    let(:auth) { build(:authentication) }
-
     describe "#verified?" do
       it "is true when verified_at is present" do
+        auth = build(:authentication)
         auth.verified_at = Time.current
         expect(auth.verified?).to be true
       end
 
       it "is false when verified_at is nil" do
+        auth = build(:authentication)
         auth.verified_at = nil
         expect(auth.verified?).to be false
       end
@@ -180,20 +185,21 @@ RSpec.describe Authentication, type: :model do
 
     describe "#pending?" do
       it "is true when verified_at is nil" do
+        auth = build(:authentication)
         auth.verified_at = nil
         expect(auth.pending?).to be true
       end
 
       it "is false when verified_at is set" do
+        auth = build(:authentication)
         auth.verified_at = Time.current
         expect(auth.pending?).to be false
       end
     end
 
     describe "#verify!" do
-      let(:auth) { create(:authentication, verified_at: nil) }
-
       it "sets verified_at to now" do
+        auth = create(:authentication, verified_at: nil)
         freeze_time do
           auth.verify!
           expect(auth.verified_at).to eq(Time.current)
@@ -203,15 +209,16 @@ RSpec.describe Authentication, type: :model do
   end
 
   describe "scopes" do
-    let!(:verified) { create(:authentication, verified_at: Time.current) }
-    let!(:pending)  { create(:authentication, verified_at: nil) }
-
     it ".verified returns rows with verified_at set" do
+      verified = create(:authentication, verified_at: Time.current)
+      pending = create(:authentication, verified_at: nil)
       expect(Authentication.verified).to include(verified)
       expect(Authentication.verified).not_to include(pending)
     end
 
     it ".pending returns rows with verified_at nil" do
+      verified = create(:authentication, verified_at: Time.current)
+      pending = create(:authentication, verified_at: nil)
       expect(Authentication.pending).to include(pending)
       expect(Authentication.pending).not_to include(verified)
     end
@@ -245,51 +252,38 @@ RSpec.describe Authentication, type: :model do
   end
 
   describe "#only_verified_remaining?" do
-    let(:user) { create(:user, :no_authentications) }
-
     context "when this is the only verified auth for the user" do
-      let!(:auth) { user.authentications.create!(provider: "email", email: user.email_address, verified_at: Time.current) }
-
       it "returns true" do
+        user = create(:user, :no_authentications)
+        auth = user.authentications.create!(provider: "email", email: user.email_address, verified_at: Time.current)
         expect(auth.only_verified_remaining?).to be true
       end
     end
 
     context "when other verified auths exist for the user" do
-      let!(:auth) { user.authentications.create!(provider: "email", email: user.email_address, verified_at: Time.current) }
-      let!(:other_verified) { user.authentications.create!(provider: "google", uid: "g-1", email: "test@example.com", verified_at: Time.current) }
-
       it "returns false" do
+        user = create(:user, :no_authentications)
+        auth = user.authentications.create!(provider: "email", email: user.email_address, verified_at: Time.current)
+        user.authentications.create!(provider: "google", uid: "g-1", email: "test@example.com", verified_at: Time.current)
         expect(auth.only_verified_remaining?).to be false
       end
     end
 
     context "when this auth is itself unverified" do
-      let!(:auth) { user.authentications.create!(provider: "email", email: user.email_address, verified_at: nil) }
-
       it "returns false (the auth being deleted isn't a verified auth, so deletion can't reduce the verified count)" do
+        user = create(:user, :no_authentications)
+        auth = user.authentications.create!(provider: "email", email: user.email_address, verified_at: nil)
         expect(auth.only_verified_remaining?).to be false
       end
     end
   end
 
   describe "#claim_pending!" do
-    let(:user) { create(:user, :no_authentications) }
-    let(:authentication) { create(:authentication, user: user, pending_invitation_token: nil) }
-    let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
-    let!(:member_role) {
-      Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
-        r.name = "Member"
-        r.permissions = {}
-      }
-    }
-    let(:link) { create(:workspace_join_link, workspace: workspace, created_by: create(:user)) }
-
-    before do
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-    end
+    before { permit_open_join_links }
 
     it "is a no-op with no problems when nothing is parked" do
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
       result = nil
       expect {
         result = authentication.claim_pending!(user)
@@ -298,6 +292,8 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "clears the invitation token when it matches no invitation" do
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
       authentication.update!(pending_invitation_token: "no-such-token-anywhere")
 
       result = authentication.claim_pending!(user)
@@ -307,6 +303,9 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "accepts the invitation and clears the token on success" do
+      Role.system_default!("member")
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
       invitation = create(:invitation, email: user.email_address)
       authentication.update!(pending_invitation_token: invitation.token)
 
@@ -318,6 +317,8 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "reports :invitation_consumed and clears the token when the invitation is stale" do
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
       invitation = create(:invitation, :expired, email: user.email_address)
       authentication.update!(pending_invitation_token: invitation.token)
 
@@ -333,6 +334,8 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "reports :invitation_email_mismatch and clears the token when the invitation is for a different email" do
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
       invitation = create(:invitation, email: "invited@example.com")
       authentication.update!(pending_invitation_token: invitation.token)
       # `user`'s email differs from the invitation's address.
@@ -348,12 +351,19 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "clears the join digest when it matches no link" do
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
       authentication.update!(pending_join_link_digest: "no-such-token")
       authentication.claim_pending!(user)
       expect(authentication.reload.pending_join_link_digest).to be_nil
     end
 
     it "admits the user as Member and clears the join digest on success" do
+      Role.system_default!("member")
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
+      workspace = create(:workspace, :open_link)
+      link = create(:workspace_join_link, workspace: workspace, created_by: create(:user))
       authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
 
       result = authentication.claim_pending!(user)
@@ -365,6 +375,10 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "silently clears the join digest when the link has been revoked" do
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
+      workspace = create(:workspace, :open_link)
+      link = create(:workspace_join_link, workspace: workspace, created_by: create(:user))
       link.revoke!
       authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
 
@@ -377,6 +391,10 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "silently clears the join digest when the workspace's policy is no longer open_link" do
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
+      workspace = create(:workspace, :open_link)
+      link = create(:workspace_join_link, workspace: workspace, created_by: create(:user))
       authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
       workspace.update!(join_policy: "invite")
 
@@ -387,8 +405,13 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "reports :join_link_at_capacity and clears the spent digest when the workspace is full" do
+      Role.system_default!("member")
+      user = create(:user, :no_authentications)
+      authentication = create(:authentication, user: user, pending_invitation_token: nil)
+      workspace = create(:workspace, :open_link)
+      link = create(:workspace_join_link, workspace: workspace, created_by: create(:user))
       workspace.update!(max_members: 1)
-      create(:membership, workspace: workspace, user: create(:user), role: member_role)
+      create(:membership, workspace: workspace, user: create(:user), role: Role.system_default!("member"))
       authentication.update!(pending_join_link_digest: WorkspaceJoinLink.digest(link.plaintext_token))
 
       result = nil
@@ -405,12 +428,14 @@ RSpec.describe Authentication, type: :model do
   end
 
   describe "broadcasting" do
-    let(:user) { create(:user, :no_authentications) }
-    # Turbo broadcasts to the stream name computed by stream_name_from([user, :authentications]),
-    # which concatenates each element's to_gid_param (or to_param) with ":".
-    let(:stream_name) { [ user, :authentications ].map { |s| s.try(:to_gid_param) || s.to_param }.join(":") }
+    # Turbo broadcasts to stream_name_from([user, :authentications]): each element's to_gid_param (or to_param), joined by ":".
+    def stream_name_for(user)
+      [ user, :authentications ].map { |s| s.try(:to_gid_param) || s.to_param }.join(":")
+    end
 
     it "broadcasts a refresh to the user's authentications stream on create" do
+      user = create(:user, :no_authentications)
+      stream_name = stream_name_for(user)
       expect {
         user.authentications.create!(provider: "google", uid: "g-broadcast-1",
           email: "test@example.com", verified_at: Time.current)
@@ -418,6 +443,8 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "broadcasts a refresh on update (e.g., verify!)" do
+      user = create(:user, :no_authentications)
+      stream_name = stream_name_for(user)
       auth = user.authentications.create!(provider: "google", uid: "g-broadcast-2",
         email: "test@example.com", verified_at: nil)
 
@@ -427,6 +454,8 @@ RSpec.describe Authentication, type: :model do
     end
 
     it "broadcasts a refresh on destroy (cancel pending or unlink)" do
+      user = create(:user, :no_authentications)
+      stream_name = stream_name_for(user)
       auth = user.authentications.create!(provider: "google", uid: "g-broadcast-3",
         email: "test@example.com", verified_at: Time.current)
 

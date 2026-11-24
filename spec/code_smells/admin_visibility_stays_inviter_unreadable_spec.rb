@@ -3,53 +3,53 @@ require "rails_helper"
 # Invariant I3 (security.md, Invitation blocks): an inviter must never read the
 # admin-visibility suppression row (#913). Fails if any read surface shows admin rows.
 RSpec.describe "Code smell: invitation.delivery_suppressed stays admin-only" do
-  let(:workspace) { create(:workspace) }
-  let(:inviter) { create(:user) }
-  let(:invitation) do
-    create(:invitation, invitable: workspace, invited_by: inviter, email: "blocked@example.com")
-  end
+  # Returns the suppressed row plus a visible row on the same trackable and workspace,
+  # so the examples prove the relations filter on visibility rather than match nothing.
+  def suppression_scene
+    workspace = create(:workspace)
+    inviter = create(:user)
+    invitation = create(:invitation, invitable: workspace, invited_by: inviter, email: "blocked@example.com")
+    suppressed_row = create(:activity_log,
+                            actor: nil,
+                            action: "invitation.delivery_suppressed",
+                            trackable: invitation,
+                            workspace: workspace,
+                            visibility: "admin",
+                            metadata: { "mailer_action" => "invite" })
+    visible_row = create(:activity_log,
+                         action: "invitation.resent",
+                         trackable: invitation,
+                         workspace: workspace,
+                         visibility: "workspace")
 
-  let!(:suppressed_row) do
-    create(:activity_log,
-           actor: nil,
-           action: "invitation.delivery_suppressed",
-           trackable: invitation,
-           workspace: workspace,
-           visibility: "admin",
-           metadata: { "mailer_action" => "invite" })
-  end
-
-  # Positive control on the same trackable/workspace: proves the relations
-  # below actually filter on visibility rather than passing because nothing
-  # matches at all — a guard trivially green for the wrong reason is worse
-  # than none (project convention: verify enumerables before publishing).
-  let!(:visible_row) do
-    create(:activity_log,
-           action: "invitation.resent",
-           trackable: invitation,
-           workspace: workspace,
-           visibility: "workspace")
+    { workspace:, inviter:, suppressed_row:, visible_row: }
   end
 
   it "never appears in ActivityLog.visible" do
+    suppressed_row, visible_row = suppression_scene.values_at(:suppressed_row, :visible_row)
+
     expect(ActivityLog.visible).to include(visible_row)
     expect(ActivityLog.visible).not_to include(suppressed_row)
   end
 
   it "never appears in the feed's own .visible.for_workspace composition" do
+    workspace, suppressed_row, visible_row = suppression_scene.values_at(:workspace, :suppressed_row, :visible_row)
+
     expect(ActivityLog.visible.for_workspace(workspace)).to include(visible_row)
     expect(ActivityLog.visible.for_workspace(workspace)).not_to include(suppressed_row)
   end
 
   it "never appears in ActivityLog.security_events_for the inviter" do
+    inviter, suppressed_row = suppression_scene.values_at(:inviter, :suppressed_row)
+
     expect(ActivityLog.security_events_for(inviter)).not_to include(suppressed_row)
   end
 
-  # The operations feed is the admin console this spec's header anticipated.
-  # On a :shared instance the bootstrap owner is BOTH the operator and the
-  # inviter, so an admin-tier surface is an inviter-facing one and I3 is a
-  # question about this scope, not only about the workspace feeds.
+  # On a :shared instance the bootstrap owner is BOTH operator and inviter, so
+  # the admin-console operations feed is an inviter-facing surface too.
   it "never appears in ActivityLog.for_operations_feed" do
+    suppressed_row, visible_row = suppression_scene.values_at(:suppressed_row, :visible_row)
+
     expect(ActivityLog.for_operations_feed).to include(visible_row)
     expect(ActivityLog.for_operations_feed).not_to include(suppressed_row)
   end

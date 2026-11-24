@@ -5,15 +5,14 @@ require "rails_helper"
 # so the browser proved nothing the request layer doesn't, at ~176× the cost.
 # Assertions are the system spec's, plus the response status it never checked.
 RSpec.describe "Membership last_accessed_at touch", type: :request do
-  let(:user) { create(:user) }
-  let(:workspace_a) { create(:workspace, name: "Alpha") }
-  let(:workspace_b) { create(:workspace, name: "Beta") }
-  let!(:membership_a) { create(:membership, :owner, user: user, workspace: workspace_a) }
-  let!(:membership_b) { create(:membership, :owner, user: user, workspace: workspace_b) }
-
-  before { sign_in(user) }
-
   it "touches the visited workspace's membership and no other" do
+    user = create(:user)
+    workspace_a = create(:workspace, name: "Alpha")
+    workspace_b = create(:workspace, name: "Beta")
+    membership_a = create(:membership, :owner, user: user, workspace: workspace_a)
+    membership_b = create(:membership, :owner, user: user, workspace: workspace_b)
+    sign_in(user)
+
     expect(membership_a.last_accessed_at).to be_nil
     expect(membership_b.last_accessed_at).to be_nil
 

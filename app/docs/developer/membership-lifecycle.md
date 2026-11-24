@@ -10,7 +10,7 @@ A membership is a seat: granted, re-graded, revoked, restored. It is soft-delete
 
 ## Two associations answer two different questions
 
-`User has_many :memberships` is **unscoped**: it owns `dependent: :destroy` and it is what the members page reads, so removed people still show in history. `User has_many :workspaces` goes **through `active_memberships`, the kept ones only**. Every reader of `workspaces` — `WorkspaceScoped`'s resolver, the workspace switcher — is asking "which workspaces may this user enter". Routing it through every membership once let a removed member resolve the workspace, get refused by the policy, and be redirected back to the page that had just refused them (#931). Keep the two associations distinct; do not "simplify" `workspaces` onto `memberships`.
+`User has_many :memberships` is **unscoped**: it owns `dependent: :destroy` and, like the workspace-side `memberships` the members page reads, keeps removed people in history. `User has_many :workspaces` goes **through `active_memberships`, the kept ones only**. Every reader of `workspaces` — `WorkspaceScoped`'s resolver, the workspace switcher — is asking "which workspaces may this user enter". Routing it through every membership once let a removed member resolve the workspace, get refused by the policy, and be redirected back to the page that had just refused them (#931). Keep the two associations distinct; do not "simplify" `workspaces` onto `memberships`.
 
 ## Removal is idempotent by construction
 
@@ -43,6 +43,8 @@ operations: Suspension keeps memberships](operations#suspension-keeps-membership
 
 ## Where these are pinned
 
-- `spec/models/membership_spec.rb` — "deactivation" (replay idempotence), "reactivation of an archived workspace's member", "exclusive grant provenance … as a model invariant", "grant provenance on the audit row".
+- `spec/models/membership_spec.rb` — "deactivation idempotency" (replay idempotence), "reactivation" › "reactivates a member even when the workspace is archived".
+- `spec/models/membership/provenance_spec.rb` — "exclusive grant provenance … as a model invariant".
+- `spec/models/membership/announcements_spec.rb` — "grant provenance on the audit row".
 - `spec/code_smells/membership_creation_declares_actor_stance_spec.rb` — every creation site declares `granted_by:` or `self_join:`.
 - `spec/models/user_spec.rb` — `workspaces` excludes discarded memberships.

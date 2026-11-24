@@ -1,26 +1,27 @@
 require "rails_helper"
 
 RSpec.describe "Workspace branding cascade", type: :request do
-  let(:user) { create(:user) }
-  let!(:owner_role) { Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" } }
-
   describe "on workspace-scoped routes" do
-    let(:workspace) { create(:workspace, primary_color: 270) }
-    let!(:membership) { create(:membership, user: user, workspace: workspace, role: owner_role) }
-
-    before { sign_in(user) }
+    def sign_in_owner_of_workspace(**attributes)
+      workspace = create(:workspace, **attributes)
+      sign_in_as_owner_of(workspace)
+      workspace
+    end
 
     it "emits data-workspace-branded on <main>" do
+      workspace = sign_in_owner_of_workspace(primary_color: 270)
       get workspace_path(workspace)
       expect(response.body).to match(/<main[^>]+data-workspace-branded/)
     end
 
     it "emits --ws-primary-light at AAA-friendly L=0.40 for the hue" do
+      workspace = sign_in_owner_of_workspace(primary_color: 270)
       get workspace_path(workspace)
       expect(response.body).to include("--ws-primary-light: oklch(0.40 0.15 270)")
     end
 
     it "emits --ws-primary-dark at AAA-friendly L=0.78 for dark mode" do
+      workspace = sign_in_owner_of_workspace(primary_color: 270)
       # Two-variable scheme: dark-mode brand uses a directly-lighter OKLCH
       # literal instead of color-mix(... toward white) so contrast is
       # deterministic across renderers (was a CI/local axe flake source).
@@ -29,7 +30,7 @@ RSpec.describe "Workspace branding cascade", type: :request do
     end
 
     it "leaves the brand's own tokens in place when primary_color is nil" do
-      workspace.update!(primary_color: nil)
+      workspace = sign_in_owner_of_workspace(primary_color: nil)
       get workspace_path(workspace)
       expect(response.body).not_to include("data-workspace-branded")
       expect(response.body).not_to include("--ws-primary")
@@ -38,13 +39,13 @@ RSpec.describe "Workspace branding cascade", type: :request do
 
   describe "on non-workspace routes" do
     it "does not emit data-workspace-branded on the home page" do
-      get root_path
+      get new_session_path
       expect(response.body).not_to include("data-workspace-branded")
     end
 
     it "does not emit data-workspace-branded on the home page when signed in" do
-      sign_in(user)
-      get root_path
+      sign_in(create(:user))
+      get new_session_path
       expect(response.body).not_to include("data-workspace-branded")
     end
   end

@@ -35,7 +35,7 @@ through `.kamal/secrets` and the deployer's shell.
 | `REPLACE_WITH_OKTA_ISSUER_URL` / `REPLACE_WITH_OKTA_CLIENT_ID` | U-M Okta org + OIDC app | LSA TS |
 | `REPLACE_WITH_OWNER_EMAIL` | initial Owner the seed mails a password-set link to | you |
 | `UM_API_BASE_URL` / `UM_API_TOKEN_URL` | confirm the production gateway URLs | U-M gateway team |
-| `SMTP_ADDRESS` (add it under `env.clear`) | the U-M SMTP relay host; left unset on purpose, so production refuses to boot until it is set | LSA TS |
+| `SMTP_ADDRESS` (`env.clear`; ships as the stand-in `smtp-relay.example`) | the U-M SMTP relay host; the stand-in is refused on purpose, so production will not boot until it is replaced | LSA TS |
 
 ## Environment variable inventory
 

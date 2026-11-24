@@ -32,6 +32,10 @@ else
   echo "(.env already exists — leaving it)"
 fi
 
+echo "=== Trusting the checkout ==="
+# The checkout is mounted from the host under another owner, so git refuses it ("dubious ownership").
+git config --global --get-all safe.directory | grep -Fqx "$PWD" || git config --global --add safe.directory "$PWD"
+
 echo "=== Running bin/setup ==="
 # bin/setup is the canonical Rails entry point. It handles bundle install,
 # db:prepare and asset clobber idempotently. --skip-server prevents it from
@@ -84,6 +88,7 @@ Next steps:
 For deployment with Kamal:
   1. Edit config/deploy.yml (server IP, registry, app name)
   2. Set KAMAL_REGISTRY_PASSWORD in .kamal/secrets
-  3. Run: bin/kamal setup
+  3. Follow the quickstart (/docs/developer/quickstart) for mail and the other settings production requires
+  4. Run: bin/kamal setup
 NEXT_STEPS
 fi

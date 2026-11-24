@@ -4,8 +4,8 @@ ruby file: ".tool-versions"
 
 # Rails main at a full commit, moved by hand; Dependabot ignores it.
 # See /docs/developer/getting-started (Rails comes from a pinned commit).
-gem "rails", github: "rails/rails", ref: "0901f2cc03e7c8dc9bc1d3be67895be7ee0141ea"
-# Security floor: resolv < 0.7.2 carries CVE-2026-80212. Ruby 4.0.7 ships 0.7.2
+gem "rails", github: "rails/rails", ref: "7a78da5a5576d7ab7549b10fb13156788478ba35"
+# Security floor: resolv < 0.7.2 carries CVE-2026-80212. Ruby 4.0.9 ships 0.7.2
 # as the default gem; the pin keeps a fork's fresh resolve from landing below it.
 gem "resolv", ">= 0.7.2"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
@@ -29,7 +29,7 @@ gem "jbuilder"
 gem "bcrypt", "~> 3.1.7"
 
 # Auth: OAuth providers and password breach checking
-gem "webauthn", "~> 3.0"
+gem "webauthn", "~> 3.5"
 gem "omniauth"
 gem "omniauth-google-oauth2"
 gem "omniauth-github"
@@ -38,7 +38,7 @@ gem "omniauth-rails_csrf_protection"
 gem "pwned"
 gem "pundit"
 gem "pagy"
-gem "markdowndocs", "~> 0.11"
+gem "markdowndocs", "~> 0.12"
 
 # User-facing notifications (in-app, email, digest) — see `app/notifiers/`.
 gem "noticed", "~> 3.1"
@@ -67,15 +67,13 @@ gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 2.2"
-# image_processing 2.0 dropped the transitive backend dep; libvips is installed in CI
-# (.github/workflows/ci.yml) and the production Dockerfile, and Rails 8.1 defaults
-# active_storage.variant_processor to :vips, so we declare ruby-vips explicitly.
-# require: false skips Bundler.require — Active Storage's image_processing
-# transformer pulls in `vips` lazily on first variant call. active_storage_validations
-# also eager-loads its vips analyzer at Rails boot, so libvips must be installed in
-# every job that boots Rails (test, scan_js, lint_docs).
+# Variants run in this process while the Hot Cell is off (config/initializers/hotcell.rb), so ruby-vips
+# and the libvips system library stay. Active Storage's engine loads it at boot, whatever require says.
 gem "ruby-vips", require: false
 gem "active_storage_validations"
+gem "activestorage-hotcell-client"
+# The object_storage service in config/storage.yml; without it production can't upload its database backups.
+gem "aws-sdk-s3", "~> 1.238", require: false
 
 # Address -> lat/lng geocoding for Building (Sync::UpdateBuildings /
 # GeocodeBuildingJob, phase 2 ingestion).
@@ -105,6 +103,9 @@ group :development, :test do
   # would have to mirror.
   gem "i18n-tasks", "~> 1.0", require: false
 
+  # bin/release: the next → release/<name> → main flow [https://github.com/dschmura/release_flow]
+  gem "release_flow", "~> 0.2.0", require: false
+
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
 
@@ -129,6 +130,7 @@ group :development, :test do
 end
 
 group :test do
+  gem "activestorage-hotcell-server", require: false
   gem "capybara"
   gem "cuprite" # pure-Ruby CDP driver (ferrum) — no Node/browser-driver dependency
   gem "simplecov", require: false
@@ -143,7 +145,7 @@ group :development do
   gem "hotwire-spark"
 end
 
-gem "axe-core-rspec", "~> 4.13", group: :test
+gem "axe-core-rspec", "~> 4.14", group: :test
 gem "axe-core-api", "~> 4.11", group: :test
 
 gem "lefthook", "~> 2.2", groups: [ :development, :test ], require: false
@@ -155,7 +157,7 @@ gem "lexxy", "~> 1.0"
 # Runtime dependency: the vendored app/components/ui/* are ViewComponents and are
 # loaded in production. This MUST stay a top-level gem — modelrails_ui (below) only
 # GENERATES the components in development and is excluded from production.
-gem "view_component", "~> 4.15"
+gem "view_component", "~> 4.23"
 
 # Runtime dependency of the vendored ApplicationComponent#cn helper: tailwind_merge
 # resolves conflicting Tailwind utilities so a per-instance `class:` passthrough
@@ -177,7 +179,7 @@ group :development do
   # moment the branch moves). Dev-only, so no production/runtime impact.
   # Setup: run `rails g modelrails_ui:agent_rules` to scaffold your local agent rules
   # (.modelrails_ui/ + a CLAUDE.md import — kept local, like CLAUDE.md itself).
-  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.24.0"
+  gem "modelrails_ui", git: "https://github.com/dschmura/modelrails_ui.git", tag: "v0.26.0"
 
   # Living documentation / component explorer for the vendored UI::* components
   # (scaffolded by `rails g modelrails_ui:lookbook`). Mounted at /lookbook in

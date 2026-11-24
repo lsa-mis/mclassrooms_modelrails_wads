@@ -192,7 +192,9 @@ so touching every workspace is just what "in batches" naturally does:
 
 ```ruby
 # ActivityLogRetentionSweepJob — 12-month retention window, no workspace filter
-ActivityLog.where(created_at: ...RETENTION_WINDOW.ago).in_batches(of: 100, &:delete_all)
+ActivityLog.where(created_at: ...RETENTION_WINDOW.ago)
+           .where.not(action: ActivityLog::SECURITY_ACTIONS)
+           .in_batches(of: 100, &:delete_all)
 
 # WorkspaceInvitationExpiringSweepJob — every workspace's expiring invitations at once
 Invitation.where(accepted_at: nil, declined_at: nil)
@@ -200,7 +202,8 @@ Invitation.where(accepted_at: nil, declined_at: nil)
           .find_each { |invitation| ... }
 
 # DigestMailerJob — User isn't even Tenanted, but the same shape applies
-User.joins(:preferences)
+User.not_suspended
+    .joins(:preferences)
     .where("user_preferences.digest_next_due_at <= ?", Time.current)
     .find_each { |user| ... }
 ```
@@ -238,8 +241,10 @@ signed-in operator's own reach relation:
 
 ```ruby
 # app/models/user.rb
-def operated_workspaces
-  operator? ? Workspace.kept : Workspace.none # scoped operators narrow this branch later
+def operated_workspaces(include_discarded: false)
+  return Workspace.none unless operator?
+
+  include_discarded ? Workspace.all : Workspace.kept
 end
 ```
 
@@ -250,7 +255,8 @@ end
 
 `Workspace` isn't `Tenanted`, so `no_unscoped_tenant_loads_spec.rb` wouldn't
 flag a bare `Workspace.find_by!` here — but the relation form is the point,
-not a guard dodge. `operated_workspaces` is every kept workspace today; it's
+not a guard dodge. `operated_workspaces` is every kept workspace today (the activity ledger
+alone passes `include_discarded: true`); it's
 also the one seam a future scoped-operator model changes, and every
 operations controller reading through it (rather than each reinventing "all
 workspaces") is what makes that a one-method change instead of an audit.
@@ -368,7 +374,7 @@ Biscuit::Consent.new(cookies).allowed?(:analytics)
 
 ### Disabling the banner
 
-If your deployment only uses functional cookies (session, theme, CSRF), you can remove the banner by deleting `<%= biscuit_banner %>` from both layouts.
+If your deployment only uses functional cookies (session, theme, CSRF), you can remove the banner by deleting `<%= biscuit_banner %>` from `app/views/shared/_layout_tail.html.erb` (the tail the app's layouts share) and from `app/views/layouts/markdowndocs/application.html.erb`.
 
 ## Invitation Types
 
@@ -413,6 +419,14 @@ end
 >
 > Editing `seeds.rb` does **not** touch Owner rows already persisted in
 > production/staging — backfill those with a data migration.
+
+## AI tooling: bring your own
+
+The template ships **no AI-agent configuration** — no `CLAUDE.md`, no `.cursorrules`, no `agent-os/`, nothing. This is a policy, not an omission: AI tooling is a per-developer choice layered onto a fork, not something a fork inherits. An agent-config file committed to the template becomes unexplainable cruft — or worse, doctrine — in every downstream fork, whose own test suite would then be enforcing another developer's tooling choices.
+
+The boundary is enforced by a template invariant in `spec/code_smells/template_invariants_spec.rb`: the suite fails if any AI-agent configuration file (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `.cursorrules`, `.aider`, and similar) becomes tracked in git. If you use AI assistance, keep your agent's configuration local via `.git/info/exclude`, which ignores files without touching the tracked `.gitignore`.
+
+In your own fork you set the policy. If you want agent configuration to ship with your app, extend (or delete) the pattern in that invariant — with a comment saying why — and commit your setup like any other file.
 
 ## Next steps
 

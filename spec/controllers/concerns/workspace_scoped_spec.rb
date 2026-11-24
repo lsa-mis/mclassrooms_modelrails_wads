@@ -1,16 +1,17 @@
 require "rails_helper"
 
 RSpec.describe WorkspaceScoped, type: :request do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace) }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-  before do
-    sign_in(user)
+  def sign_in_workspace_owner
+    workspace = create(:workspace)
+    owner = sign_in_as_owner_of(workspace)
+    owner.memberships.find_by!(workspace: workspace)
   end
 
   describe "touch_membership_last_accessed" do
     it "updates the membership's last_accessed_at when visiting a workspace-scoped page" do
+      membership = sign_in_workspace_owner
+      workspace = membership.workspace
+
       freeze_time do
         get workspace_path(workspace)
         expect(membership.reload.last_accessed_at).to eq(Time.current)
@@ -18,6 +19,8 @@ RSpec.describe WorkspaceScoped, type: :request do
     end
 
     it "does not touch discarded memberships" do
+      membership = sign_in_workspace_owner
+      workspace = membership.workspace
       original = 1.day.ago
       membership.update_column(:last_accessed_at, original)
       membership.update!(discarded_at: Time.current)
@@ -29,6 +32,7 @@ RSpec.describe WorkspaceScoped, type: :request do
     end
 
     it "silently swallows touch failures (Rails.error.report)" do
+      workspace = sign_in_workspace_owner.workspace
       allow(Membership).to receive(:where).and_call_original
       # `where` returns itself because the touch chains a staleness predicate (#171).
       bad_relation = double("ActiveRecord::Relation")

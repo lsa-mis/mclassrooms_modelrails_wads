@@ -10,11 +10,8 @@
     <button data-action="click->modal#open"
             type="button"
             class="shrink-0 rounded-full focus-ring cursor-pointer group"
-            aria-label="<%= t('settings.avatars.edit.change') %>">
-      <span id="user_avatar_profile" class="block relative">
-        <%= avatar_for(@user, size: :xl) %>
-        <%= render "shared/image_edit_cue", shape: :circle %>
-      </span>
+            aria-label="<%= t('settings.avatars.edit.change_aria_label', initials: @user.identity.initials) %>">
+      <%= render "settings/profiles/avatar", user: @user %>
     </button>
 
     <div>

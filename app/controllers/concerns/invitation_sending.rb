@@ -26,13 +26,8 @@ module InvitationSending
     return if Current.user&.can_invite?
 
     respond_to do |format|
-      format.html do
-        redirect_back fallback_location: root_path,
-                      alert: t("invitations.unverified_sender")
-      end
-      format.turbo_stream do
-        redirect_back fallback_location: root_path,
-                      alert: t("invitations.unverified_sender")
+      format.any(:html, :turbo_stream) do
+        redirect_back fallback_location: root_path, alert: t("invitations.unverified_sender")
       end
     end
   end

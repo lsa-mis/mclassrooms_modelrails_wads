@@ -1,0 +1,5 @@
+<%# locals: (user:) -%>
+<span id="user_avatar_profile" class="block relative">
+  <%= avatar_for(user, size: :xl) %>
+  <%= render "shared/image_edit_cue", shape: :circle %>
+</span>

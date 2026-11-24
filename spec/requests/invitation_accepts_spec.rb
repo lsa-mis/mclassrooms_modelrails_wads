@@ -1,11 +1,18 @@
 require "rails_helper"
 
 RSpec.describe "Invitation Accepts", type: :request do
-  let(:workspace) { create(:workspace) }
-  let!(:invitation) { create(:invitation, invitable: workspace) }
+  def pending_invitation(workspace = create(:workspace), **attrs)
+    create(:invitation, invitable: workspace, **attrs)
+  end
+
+  def viewer_role
+    Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
+  end
 
   describe "GET /invitations/:token/accept" do
     it "shows the accept page" do
+      workspace = create(:workspace)
+      invitation = pending_invitation(workspace)
       get accept_invitation_path(token: invitation.token)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(CGI.escapeHTML(workspace.name))
@@ -13,6 +20,8 @@ RSpec.describe "Invitation Accepts", type: :request do
 
     # Roles are workspace-defined, so no hard-coded article fits them (#1151).
     it "names the role without an article that may not fit it" do
+      workspace = create(:workspace)
+      pending_invitation(workspace)
       owner_role = Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
       owner_invitation = create(:invitation, invitable: workspace, role: owner_role)
 
@@ -30,12 +39,14 @@ RSpec.describe "Invitation Accepts", type: :request do
     end
 
     it "renders the register link as a brand-outline button" do
+      invitation = pending_invitation
       get accept_invitation_path(token: invitation.token)
       expect(Capybara.string(response.body)).to have_css("a.btn-outline-primary.w-full",
         text: I18n.t("invitation_accepts.show.register"))
     end
 
     it "shows error for expired invitation" do
+      invitation = pending_invitation
       invitation.update!(expires_at: 1.day.ago)
       get accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
@@ -60,6 +71,7 @@ RSpec.describe "Invitation Accepts", type: :request do
     end
 
     it "shows error for expired invitation" do
+      invitation = pending_invitation
       invitation.update!(expires_at: 1.day.ago)
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
@@ -68,36 +80,41 @@ RSpec.describe "Invitation Accepts", type: :request do
   end
 
   describe "POST /invitations/:token/accept (authenticated)" do
-    let(:user) { create(:user) }
-    # Invitation addressed to the signed-in user's email — the legitimate case.
-    let!(:invitation) { create(:invitation, invitable: workspace, email: user.email_address) }
-    before { sign_in(user) }
+    def sign_in_with_invitation
+      user = create(:user)
+      workspace = create(:workspace)
+      invitation = pending_invitation(workspace, email: user.email_address)
+      sign_in(user)
+      [ workspace, invitation ]
+    end
 
     it "accepts the invitation and creates membership" do
+      _workspace, invitation = sign_in_with_invitation
       expect {
         post accept_invitation_path(token: invitation.token)
       }.to change(Membership, :count).by(1)
     end
 
     it "redirects to the workspace and confirms acceptance" do
+      workspace, invitation = sign_in_with_invitation
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(workspace_path(workspace))
       expect(flash[:notice]).to eq(I18n.t("invitation_accepts.create.success"))
     end
 
     it "rejects an already-accepted invitation" do
+      _workspace, invitation = sign_in_with_invitation
       invitation.accept!(create(:user))
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(root_path)
-      # Caught by find_valid_invitation, NOT the NotAcceptable rescue — the
-      # redirect is identical either way, so only the message distinguishes
-      # them. acceptance_failed covers a different path (capacity / already a
-      # member) and is tracked separately.
+      # Caught by find_valid_invitation, NOT the NotAcceptable rescue; only the
+      # message distinguishes them (acceptance_failed is a different path).
       expect(flash[:alert]).to eq(I18n.t("invitation_accepts.expired_or_used"))
     end
 
     it "refuses an invitation addressed to a different email" do
-      mismatched = create(:invitation, invitable: workspace, email: "someone-else@example.com")
+      workspace, _invitation = sign_in_with_invitation
+      mismatched = pending_invitation(workspace, email: "someone-else@example.com")
 
       expect {
         post accept_invitation_path(token: mismatched.token)
@@ -109,10 +126,10 @@ RSpec.describe "Invitation Accepts", type: :request do
   end
 
   describe "POST /invitations/:token/accept (unauthenticated)" do
-    # The highest-traffic branch in this controller: most invitees arrive
-    # signed out. A redirect-only assertion here proved nothing about what the
-    # visitor actually reads on the sign-in page.
+    # Most invitees arrive signed out; assert the flash the visitor reads, not
+    # just the redirect.
     it "stores token in session and redirects to new_session_path" do
+      invitation = pending_invitation
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(new_session_path)
       expect(flash[:notice]).to eq(I18n.t("invitation_accepts.create.register_first"))
@@ -120,13 +137,13 @@ RSpec.describe "Invitation Accepts", type: :request do
   end
 
   describe "signup with a pending invitation via magic-link (atomic acceptance)" do
-    let!(:invitation) { create(:invitation, invitable: workspace, email: "newuser@example.com") }
-
     before do
       allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
     end
 
     it "parks the invitation token in session, then accepts it atomically on magic-link signup" do
+      workspace = create(:workspace)
+      invitation = pending_invitation(workspace, email: "newuser@example.com")
       # Unauthenticated POST to accept → stashes token in session, redirects to sign-in.
       post accept_invitation_path(token: invitation.token)
       expect(response).to redirect_to(new_session_path)

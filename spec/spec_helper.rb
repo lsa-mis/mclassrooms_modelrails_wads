@@ -13,6 +13,10 @@ RSpec.configure do |config|
   # when nothing is tagged, everything runs.
   config.filter_run_when_matching :focus
 
+  # .fork.yml marks a fork. Excluded, not skipped, so a fork's pending list stays worth reading.
+  fork = File.exist?(File.expand_path("../.fork.yml", __dir__))
+  config.filter_run_excluding(fork ? { template_only: true } : { fork_only: true })
+
   config.fail_if_no_examples = true
 
   # Persist example status so `--only-failures` / `--next-failure` work. Under

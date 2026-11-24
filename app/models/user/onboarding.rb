@@ -8,6 +8,8 @@ class User < ApplicationRecord
       after_create :onboard_workspace
     end
 
+    attr_accessor :shared_workspace_role
+
     def onboarded?
       onboarded_at.present?
     end
@@ -66,9 +68,9 @@ class User < ApplicationRecord
       # Return, never raise: this runs inside the after_create transaction and a raise would roll back registration.
       return unless workspace.admittable?
 
-      join_role = Role.system_default!(TenancyConfig.shared_join_role)
+      role = shared_workspace_role || Role.system_default!(TenancyConfig.shared_join_role)
       # self_join: :onboarding — see Membership#self_join and /docs/developer/notifications (The actor rule).
-      workspace.memberships.create!(user: self, role: join_role, self_join: :onboarding)
+      workspace.memberships.create!(user: self, role: role, self_join: :onboarding)
     end
   end
 end

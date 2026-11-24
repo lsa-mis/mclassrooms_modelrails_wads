@@ -55,8 +55,7 @@ module Workspaces
       authorize_role_grant!(Invitation, role)
       invitation = @workspace.invitations.create!(
         role: role,
-        invited_by: Current.user,
-        expires_at: 7.days.from_now
+        invited_by: Current.user
       )
 
       redirect_to workspace_members_path(@workspace),

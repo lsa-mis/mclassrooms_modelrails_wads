@@ -6,14 +6,16 @@ keywords: fork template upstream downstream merge sync rename clone brand seams 
 
 # Forking this template
 
+Starting a product? The [quickstart](quickstart) puts every step in order; this page holds the details.
+
 ModelRails is an **upstream template**: you clone it to start a product, build in
 fork-owned files, and periodically merge upstream improvements back in — the same
 workflow commercial Rails templates like Jumpstart Pro use.
 
 Three things make the merges cheap:
 
-1. **Shared git history** — your app is a true clone, so `git merge upstream/main`
-   is an ordinary merge.
+1. **Shared git history** — your app is a true clone, so merging a template
+   release (`bin/sync`) is an ordinary merge.
 2. **Fork-owned files** — everything you are expected to rewrite (marketing pages,
    brand strings, your routes, your docs) lives in files upstream never edits again.
 3. **A merge driver** — fork-owned paths are marked `merge=ours` in
@@ -33,64 +35,89 @@ everything else: the application code around the gems.
 
 ## Start a new app
 
-Create an **empty** private repository on GitHub first (no README, no license — it
-must be truly empty). Then:
+Clone the template under your product's name and run `bin/fork`:
 
 ```bash
-git clone git@github.com:dschmura/modelrails_base.git myapp
-cd myapp
+gh repo clone dschmura/modelrails_base my_app
+cd my_app
+mise install   # the Ruby in .tool-versions, plus the deploy tools
 bin/fork
 ```
 
-`bin/fork` runs **before** `bin/setup`. It asks for your project name and tenancy
-preset, then does the remote surgery and the identity rename in one commit, and
-records your answers in `.fork.yml`. It prints every git command as it runs, so
-you can read what it did — and finish by hand if you ever need to.
+`bin/fork` runs **before** `bin/setup`. It asks for:
+
+- the project name (default: the folder's name, snake_cased),
+- the tenancy preset,
+- the support address users write to,
+- whether to create the GitHub repo, its owner (you or one of your
+  organizations), and whether it's public (the default) or private,
+- whether a second person approves PRs (default: no, you merge your own).
+
+A clone checks out `next`, the template's integration branch, which can be ahead
+of its last release. So `bin/fork` first moves `next` to the newest release
+tagged on the template's `main`, and your product starts from released code.
+Then it does the remote surgery and the identity rename in one commit, records
+the name, preset, template and release in `.fork.yml`, creates the GitHub repo with `gh`, pushes `next`,
+and protects the branches with `bin/branch-rules` — in that order, so the rules
+never land before your rename does. It prints each step as it runs, so you
+can read what it did, and finish by hand if you ever need to. Without the `gh`
+CLI, it lists the GitHub steps instead.
 
 ```bash
-bin/fork --name myapp --preset personal --origin git@github.com:YOU/myapp.git --yes
+bin/fork --name my_app --display-name "My App" --preset personal --support-email help@my-app.com --github YOU --yes
 bin/fork --dry-run    # print the plan, change nothing
 ```
 
+Under `--yes`, `bin/fork` doesn't ask for the display name: it takes
+`--display-name`, or capitalizes the project name. It can't contain `"` or `\`.
+
+Under `--yes` nothing is created or pushed on GitHub unless you pass `--github` (`--github ORG`
+or `--github ORG/name` picks the owner and the repo's name). `--private` makes a
+private repo; GitHub's free plan can't apply branch rules to one, so `bin/fork`
+warns and, when it can ask, offers to make it public instead. `--team` requires one approval
+on every PR. A blank support address keeps a `support@my_app.example`
+placeholder, and the fork's CI fails until you set a real one.
+
+Moving `next` to the release:
+
+- fetches the template's tags first; offline, it uses the releases the clone
+  already knows;
+- says so and keeps `next` as cloned when `main` has no release tag;
+- says so and moves nothing when `next` is already at the release;
+- refuses when `next` has commits the template doesn't, since moving would
+  drop them;
+- never runs on a checkout that is already renamed, or whose `origin` is your
+  own repository ([the Fork-button path](#not-githubs-fork-button)), because moving `next` back there
+  would make its push fail.
+
+`--from-next` skips the move and forks `next` as cloned, unreleased template
+work included. It's for template contributors trying unreleased changes.
+
 It refuses to run on a dirty working tree: the identity rename wants to be one
 clean commit you can always find again. Re-running is safe — it detects what is
-already done, and completes a rename that was interrupted partway.
+already done, completes a rename that was interrupted partway, and picks up
+whatever is still missing: a real support address, and (when you answer yes, or
+pass `--github`) the GitHub repo, the push, or the branch rules.
 
-When run interactively it finishes by offering to run `bin/setup` for you (the
-dev server is not started — that stays your call). Under `--yes`, or when stdin
-isn't a terminal, it never does: scripted and CI runs stay fast and predictable.
+When run interactively it offers to run `bin/setup` for you, then prints its
+next steps: the quickstart's address, and `bin/production-setup`, which sets up
+mail, encryption keys and fnox before your first deploy. Last, it offers to
+start the app with `bin/dev` and open the quickstart. Under `--yes`, or when
+stdin isn't a terminal, it offers neither: scripted and CI runs stay fast and
+predictable.
 
-### From a GitHub fork, or a fork of a fork
+### From an organization's copy
 
 The template is meant to be forked, and forks get forked: an organization keeps
-its own synced copy under its own name, and products start from that copy. The
-shortest path is the **Fork** button, then a clone, then `bin/fork` with no
-remote flags at all:
+its own synced copy under its own name, and products start from that copy. Clone
+the copy the way you'd clone the template, and name it with `--template`:
 
 ```bash
-git clone git@github.com:YOU/myapp.git
-cd myapp
-bin/fork --name myapp --preset personal --yes
+git clone git@github.com:ORG/modelrails_base_mirror.git my_app
+cd my_app
+bin/fork --template git@github.com:ORG/modelrails_base_mirror.git
 ```
 
-Your clone's `origin` is already your product and there is no `upstream` yet.
-Git has no record of what a fork was forked from, but GitHub does, so when
-nothing else names the template and the `gh` CLI is installed, `bin/fork` asks
-GitHub for `origin`'s parent and records that URL in `.fork.yml`. That is the
-repository you pressed Fork on — the organization's copy if you forked the
-copy, the template if you forked the template. `bin/setup` reads the URL and
-adds it as the push-disabled `upstream` in every clone. The script says which
-it did: *template … (origin's GitHub parent)*.
-
-Without `gh`, or when GitHub reports no parent, name the template yourself with
-`--template URL`; an explicit flag always wins over the lookup:
-
-```bash
-bin/fork --name myapp --preset personal --template git@github.com:ORG/modelrails_base_wads.git --yes
-```
-
-`--template` is also how a copy under another name works on the **clone path**
-(`git clone <the copy> myapp`, then `bin/fork --origin <your empty repo>`).
 There `origin` *is* the template, so its GitHub parent would be one hop too far
 and the script deliberately does not ask; `bin/fork` knows the template by
 name — a remote ending in `/modelrails_base` — and `--template` extends that to
@@ -99,6 +126,48 @@ configured, and an `origin` equal to it gets the same remote surgery as the
 template itself. The match is URL equality, with or without `.git`, never a
 looser name pattern: a repository of your own that merely *starts* with
 `modelrails_base` is never mistaken for the template.
+
+### Not GitHub's Fork button
+
+Clone instead. A repository made with GitHub's **Fork** button:
+
+- starts from the template's `next`, not its latest release, since `next` is
+  already on your `origin` and `bin/fork` won't move a branch you've pushed;
+- arrives with no `main` (the button copies only the default branch);
+- says "forked from" on GitHub, and aims every new PR at the template;
+- can't be made private while it's a fork of a public repository;
+- starts with Dependabot alerts and security updates turned off.
+
+**If you haven't built anything on it yet**, delete it and follow
+[Start a new app](#start-a-new-app). `bin/fork` warns when it finds this case:
+*origin is a GitHub fork*.
+
+**If you're keeping it**, clone it and run `bin/fork`:
+
+```bash
+git clone git@github.com:YOU/my_app.git
+cd my_app
+bin/fork
+```
+
+Answer yes to *Push next to origin and protect it?* (or pass `--github` with
+`--yes`). `bin/branch-rules` creates `main` from `next` once the rename is
+pushed. Then, on GitHub:
+
+- **Settings → General → Leave fork network.** PRs then default to your own
+  repository, and you can make it private. Leave *after* `bin/fork`: it asks
+  GitHub for the parent to record the template, and `bin/sync` reads that record,
+  not the fork network.
+- **Turn on Dependabot alerts and security updates** in the security settings.
+
+How the template gets recorded: your clone's `origin` is already your product
+and there is no `upstream` yet. Git has no record of what a fork was forked
+from, but GitHub does. So when nothing else names the template and the `gh` CLI
+is installed, `bin/fork` asks GitHub for `origin`'s parent and records that URL
+in `.fork.yml`: the repository you pressed Fork on. `bin/setup` reads the URL
+and adds it as the push-disabled `upstream` in every clone. Without `gh`, or
+when GitHub reports no parent, name the template yourself with
+`--template URL`; an explicit flag always wins over the lookup.
 
 ### By hand (what bin/fork does)
 
@@ -111,9 +180,12 @@ git remote set-url --push origin DISABLED     # before the rename, so no window 
 git remote rename origin upstream             # a stray `git push upstream` now fails loudly
 git branch --unset-upstream                   # or `git pull` would still pull the TEMPLATE
 
-# Your new repository becomes origin
-git remote add origin git@github.com:YOU/myapp.git
-git push -u origin main
+# Your new repository becomes origin (create it EMPTY on GitHub: no README, no license)
+git remote add origin git@github.com:YOU/my_app.git
+git config remote.origin.gh-resolved base     # gh otherwise acts on upstream: the template
+git config remote.pushDefault origin          # gh otherwise offers the template first for an unpushed branch
+git push -u origin next
+bin/branch-rules --solo                       # only after the push: the rules then refuse direct pushes
 
 # Activate the fork-owned merge driver (bin/setup also does this for you,
 # but doing it now means your very first merge is already covered)
@@ -127,23 +199,22 @@ Two things you'll notice afterwards, both intentional:
 - `git remote -v` shows upstream's push URL as `DISABLED`. That string is not a
   real URL — it makes any accidental `git push upstream` fail loudly instead of
   writing to the template.
-- Your `main` tracks `origin/main` (your repo), so plain `git pull` stays inside
-  your app. Upstream only enters when you explicitly run `git merge upstream/main`.
+- Your branch tracks your own repo's copy, so plain `git pull` stays inside
+  your app. Upstream only enters when you run `bin/sync`
+  ([Pull upstream updates](#pull-upstream-updates)).
 
-Finally, record the cut point in the template repo — it answers "which template
-version is myapp based on?" forever:
-
-```bash
-# in your modelrails_base checkout
-git tag forks/myapp-baseline main && git push origin forks/myapp-baseline
-```
+`.fork.yml`'s `template_baseline` records the template commit you started from,
+and `template_release` names its release, which answers "which template version
+is my_app based on?" forever. A fork made with `--from-next`, or from the Fork
+button, has no `template_release`.
 
 > **Why not GitHub's "Use this template" button, or a GitHub fork?** "Use this
 > template" squashes the entire history into one unrelated commit — every later
-> `git merge upstream/main` would need `--allow-unrelated-histories` and conflict
-> on everything both sides touched. And GitHub will not fork a repository into
-> the account that already owns it. Clone + re-pointed remotes gives you a
-> private repo **and** mergeable history.
+> merge of a template release would need `--allow-unrelated-histories` and
+> conflict on everything both sides touched. A GitHub fork keeps the history but
+> makes the template its parent, so pull requests default to the template, and
+> GitHub will not fork a repository into the account that already owns it.
+> Clone + re-pointed remotes gives you a standalone repo **and** mergeable history.
 
 **Every teammate** who clones your new repository runs `bin/setup` — and only
 that. They must not run `bin/fork`; the identity rename is already committed, and
@@ -156,12 +227,11 @@ bin/setup
 ```
 
 `bin/setup` reads `.fork.yml` and does the per-clone work: adds the upstream
-remote (push disabled), activates the merge driver, and writes the fork's
-recorded tenancy preset into their `.env`. Those three things are per-clone, not
-per-fork, which is why they live in setup rather than in the one-time script.
-The git hooks are not among them: `bundle exec lefthook install` is a separate
-one-time step per clone (see [Getting started](getting-started#gate-1-local-lefthook-pre-push)),
-and until it runs a push runs nothing.
+remote (push disabled), activates the merge driver, points `gh` at your fork,
+and writes the fork's recorded tenancy preset into their `.env`. Those are
+per-clone, not per-fork, which is why they live in setup rather than in the one-time script.
+It also installs the git hooks (see [Getting started](getting-started#gate-1-local-lefthook-pre-push));
+a clone that skipped `bin/setup` checks nothing until CI does.
 
 > Teammates need **read access to the upstream template repository** for the
 > remote to be useful. If your template is private, grant it before they try to
@@ -183,16 +253,16 @@ find again.
 | Docker image name | `config/deploy.yml` (`image:`) | Must match your registry path |
 | Storage volume names | `config/deploy.yml` (`volumes:`) | Renaming later orphans the old volume — do it before first deploy |
 | Brand strings | `config/locales/en/brand.en.yml` | Product name, description, copyright — fork-owned, one file |
-| Brand colors | `config/locales/en/brand.en.yml`'s visual twin: `app/assets/tailwind/tokens/_brand.css` | Optional — swap the primary palette family here; re-prove AAA in CI ([Theming](theming)) |
+| Brand colors | `config/locales/en/brand.en.yml`'s visual twin: `app/assets/tailwind/tokens/_brand.css` | Optional — swap the primary palette family here (the file's header says how); re-prove AAA in CI |
 | Brand mark | `app/views/shared/_site_mark.html.erb` (one `<svg>`, nothing else) + the icon set in `public/` | Replace wholesale; keep `fill="currentColor"`, `aria-hidden="true"`, and a `viewBox` with no width/height ([Extending](extending#customizing-the-site-logo)) |
 | Vocabulary | `config/vocabulary.local.yml` | Your names for workspace and project (singular + plural); every template string follows ([i18n](i18n#vocabulary)) |
 | Marketing copy | `config/locales/en/pages.en.yml` + `app/views/pages/` | Fork-owned — rewrite wholesale |
 | Operations pages | `app/helpers/operations/fork_nav_helper.rb` | Return your own operations pages as `[label, path]` pairs; the operations nav lists them after the template's, with the same current-page cue |
 | Languages | `config/application.rb` (`config.i18n.available_locales`) | Register a locale here *before* adding its files, or `I18n.t(locale:)` raises in production — see [Internationalization](i18n) |
 | PWA app name | `public/manifest.webmanifest` (`name` / `short_name`) | Shown on the home screen if users install the PWA |
-| CI image tags | `.github/workflows/ci.yml` + `image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
+| CI image tags | `.github/workflows/docker_build.yml`, `image_scan.yml` + `hotcell_image_scan.yml` (`tags:`) | Local-only build tags; cosmetic but confusing if stale |
 | Devcontainer bundle-cache volume | `.devcontainer/devcontainer.json` | Optional; the invariant spec only checks the `bundle-cache` suffix |
-| Fork provenance | `.fork.yml` | Written by `bin/fork`: your name, tenancy preset, and the template commit you forked from. Committed so every clone inherits the decisions — `bin/setup` reads the preset. Two template invariants read it: the placeholder-support-address check runs only when it exists, and the check that `bin/fork`'s rename targets still exist upstream skips when it does. Everything else is derived from the repository |
+| Fork provenance | `.fork.yml` | Written by `bin/fork`: your name, tenancy preset, the template's URL, and the template commit and release you forked from. Committed so every clone inherits the decisions — `bin/setup` reads the preset and the template's URL, the app reads the preset at boot outside tests, and `bin/sync` and `bin/release` read the template's URL. The suite reads its presence as "this is a fork": it then runs the specs tagged `:fork_only` (today, the placeholder-support-address check) and leaves out those tagged `:template_only`, among them the check that `bin/fork`'s rename targets still exist upstream. Everything else is derived from the repository |
 | Session cookie key | optional `config/initializers/session_store.rb` | Only if multiple forks will share a cookie domain |
 
 Then verify nothing was missed:
@@ -220,10 +290,19 @@ bin/rails credentials:edit --environment development
 bin/rails credentials:edit --environment production
 ```
 
-Add OAuth keys and `mailer.from` (structure in [Getting Started](/docs/developer/getting-started)).
-Your fork **may** commit its own `.yml.enc` blobs — normal for a private app; the
-`.key` files stay gitignored. `.kamal/secrets` reads
-`config/credentials/production.key` at deploy time.
+`bin/mail-setup` handles the mail half of this: it creates the production credentials if
+they don't exist, adds the provider's login, and updates `config/deploy.yml`.
+
+Add OAuth keys and `mailer.from` (structure in [Getting Started](/docs/developer/getting-started)),
+and to production the mail provider's login as `smtp.user_name` and `smtp.password`
+([Deployment](/docs/developer/deployment#4-configure-outbound-mail)) and, once
+backups go to a bucket, its key as `object_storage.access_key_id` and
+`object_storage.secret_access_key` ([Deployment](/docs/developer/deployment#move-to-a-bucket-when-the-data-matters)).
+Commit your `.yml.enc` files; the `.key` files stay gitignored. Kamal builds the
+image from a clone of the commit, so an uncommitted credentials file never
+reaches production, and the app refuses to boot without it. `.kamal/secrets`
+takes `RAILS_MASTER_KEY` from the deploying environment, else reads
+`config/credentials/production.key`.
 
 Personal data — email addresses, names, company names — is encrypted at rest
 with Active Record Encryption, and **production refuses to boot without the
@@ -243,9 +322,59 @@ wherever the credentials key is backed up, because losing it loses every
 email lookup. Which columns, and why some are deterministic:
 [Security](/docs/developer/security#personal-data-at-rest).
 
-For production you'll also set `RAILS_HOST`, pick a tenancy preset
-(`WORKSPACE_ON_SIGNUP`), and choose a signup mode — see `.env.example`,
-[Presets](presets), and [Deployment](deployment).
+For production you'll also set `RAILS_HOST` and choose a signup mode — see
+`.env.example`, [Presets](presets), and [Deployment](deployment). The tenancy
+preset needs nothing more: production uses the one `bin/fork` recorded in
+`.fork.yml`, and a `WORKSPACE_ON_SIGNUP` set in the environment overrides it.
+
+## Protect the branches
+
+The template's default flow uses three branches:
+
+| Branch | Role |
+| --- | --- |
+| `next` | Integration, and the default branch: every feature PR targets it. Deploys nowhere. |
+| `release/<name>` | A release, cut from `next` by `bin/release cut` and deployed to staging for review. Fixes and reverts land on it by PR. |
+| `main` | Production. Takes a release by PR, with merge commits only. |
+
+`bin/fork` runs this for you once your rename is on GitHub. To run it yourself,
+or to change your mind later:
+
+```bash
+bin/branch-rules          # one approval on every PR
+bin/branch-rules --solo   # no approval: you merge your own PRs
+```
+
+It creates whichever of `main` and `next` is missing from the other (after
+`bin/fork`, that's `main`), makes `next` the default branch, turns on
+auto-merge (a PR, yours or an agent's, can be queued to merge once its checks
+pass; the rules still apply), then applies
+the rulesets in `config/github/rulesets/`. Under those rules, `next`,
+`release/**` and `main` take changes only by PR, and only after `static` and
+`test` pass on an up-to-date branch. Rerunning it updates the rulesets in
+place. It names any other ruleset on the repo, which you reconcile by hand.
+
+- **Push first.** Once the rules apply, a direct push to `next` or `main` is refused.
+- **`--solo`** exists because GitHub refuses an approval from a PR's own author.
+- **No one bypasses.** A bypass, even "through pull requests only", lets an
+  admin's ordinary merge skip the approval and the up-to-date check, and nothing
+  asks first.
+- **After anything lands on `main`, merge it back into `next`** with
+  `bin/release merge-back`, which goes through a branch cut from `main`. A PR
+  whose head is `main` can't be brought up to date, since that would push to
+  `main`.
+- **Plan limits.** GitHub Free applies rulesets to public repositories only. On
+  a private one the script reports each refused ruleset and exits non-zero.
+- **Turn on Dependabot alerts and security updates** in the repository's
+  security settings. A repository made with GitHub's Fork button starts with
+  both off, so `.github/dependabot.yml` alone opens no PRs.
+- **When bundler-audit goes red between syncs**, a new advisory has landed
+  against a gem you already have. Bump only the gems it names:
+  `bundle update --conservative <gem> <gem>`, then rerun `bin/bundler-audit`.
+
+Cutting, reviewing and shipping a release, hotfixes, and the merge-back are in
+[Releasing](releasing). To change the flow, edit the JSON files, or replace the
+script.
 
 ## Fork-owned files
 
@@ -257,16 +386,18 @@ on every sync.
 | ---- | --------------- |
 | `config/locales/en/brand.en.yml` | Product name, description, copyright |
 | `config/locales/en/pages.en.yml` | Marketing copy for your pages |
-| `app/views/pages/**`, `app/controllers/pages_controller.rb` | Your marketing/static pages |
+| `app/views/pages/**`, `app/controllers/pages_controller.rb` | Your marketing/static pages. A layout of your own for them must render `shared/toasts`: email verification lands on `/` with its message |
+| `spec/system/pages/**`, `spec/requests/pages_spec.rb` | The tests for those pages — rewrite them with the pages |
 | `config/routes/app.rb` | Your product's routes (loaded by `draw(:app)`) |
 | `.rubocop/app.yml` | Your RuboCop overrides — turn a house cop off here, with the reason ([Getting started](getting-started#turning-a-house-cop-off-in-your-fork)) |
 | `config/markdowndocs_categories.local.yml` | Registers your own docs pages on this `/docs` index |
-| `app/assets/tailwind/tokens/_brand.css` | Brand-color overrides — swap the primary palette family ([Theming](theming)) |
 | `config/initializers/project_tools.rb` | The template's project-tools registry seam; this fork carries no Project domain, so the file is absent here |
+| `app/assets/tailwind/tokens/_brand.css` | Brand-color overrides — swap the primary palette family (the file's header says how) |
 | `app/views/shared/_site_mark.html.erb` | The brand mark — a file that is one `<svg>` ([Extending](extending#customizing-the-site-logo)) |
 | `public/icon.svg`, `public/icon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `public/favicon.ico` | The favicon and PWA icon set — same artwork, same filenames and sizes ([Getting started](getting-started#favicon-and-pwa-icons)) |
 | `config/vocabulary.local.yml` | Your product's nouns — any subset; `config/vocabulary.yml` fills the rest ([i18n](i18n#vocabulary)) |
 | `app/helpers/operations/fork_nav_helper.rb` | Your own operations pages for the operations nav, as `[label, path]` pairs |
+| `config/required_production_config.local.yml`, `config/credentials/production.local.yml.example` | Your own production inputs, described in the catalog's format (never their values), and the credentials example file generated from them |
 | `README.md` | Your product's README |
 
 A fork may also take `merge=ours` ownership of **template files it has rewritten
@@ -340,6 +471,7 @@ These constants are yours to change and are **not** merge-frozen: an upstream ch
 - `NotificationPreferences::DEFAULT_RETENTION_DAYS` — the fallback for a row whose `retention_days` key is absent; the column default in `db/schema.rb` is what a new user actually gets — change both, or the column default wins
 - `NotificationPreferences::NEVER_CAP_DAYS` — what a pre-PR-5 "Never" choice reads as
 - `ActivityLogRetentionSweepJob::SECURITY_RETENTION_FLOOR` — how long credential-event audit rows are kept, regardless of the general window
+- `hotcell/config.rb` and the Hot Cell accessory's `cpus`/`memory` — the sandbox's limits, sized to your host ([Hot Cell](/docs/developer/hot-cell), Tune it)
 
 ### How the merge driver actually behaves
 
@@ -405,23 +537,64 @@ orphaned pages across both maps automatically.
 
 ## Pull upstream updates
 
-### 1. Look before you merge
+```bash
+bin/sync
+```
+
+`bin/sync` brings the template's newest releases into your `next`, as a PR:
+
+1. It finds the template's releases that your `next` doesn't have yet.
+2. It merges the latest one on a `sync/template-v<name>` branch.
+3. It keeps your `CHANGELOG.md`, and writes `changelog.d/template-v<name>.md`
+   with one line for each release it brings in, linking that release's notes
+   on the template's GitHub releases page.
+4. It pushes the branch and opens a PR into `next` that merges itself, with a
+   merge commit, once its checks pass. Merging it starts your next release
+   like any other PR.
+
+If `next` already has the template's latest release, it says so and stops.
+It needs a clean working tree, an `upstream` remote (`bin/setup` adds it) and
+the GitHub CLI, signed in. Like `bin/setup`, it points `gh` at your fork, not
+the template, so a clone set up before setup did that is fixed on its next sync.
+
+**A fork made before `bin/sync` existed doesn't have it yet.** Its first sync
+brings it in, so run that one from the template's copy. It needs the
+`release_flow` gem, which that sync adds to your `Gemfile`:
 
 ```bash
 git fetch upstream
-git log --oneline main..upstream/main                   # what's coming
-git log --diff-filter=R --stat main..upstream/main      # what moved — plan renames, don't discover them mid-merge
+gem install release_flow
+d=$(mktemp -d); mkdir -p $d/bin $d/lib
+for f in bin/sync lib/clean_git_env.rb lib/github_origin.rb lib/fork_config.rb; do git show upstream/main:$f > $d/$f; done
+ruby -e "load '$d/bin/sync'; Sync.new(root: Dir.pwd).run"
 ```
 
-Read `CHANGELOG.md` on `upstream/main` first — breaking changes and migrations
-are called out under [Unreleased]. If a change sounds structural (schema,
-`deploy.yml`), read its PR before merging, not after.
+Once its PR merges, every later sync is `bin/sync`.
+
+**Don't merge the template by hand.** Your changelog and the template's share a
+file but not their releases, and git's union merge files the template's lines
+into your shipped releases without a conflict. CI refuses that
+(`bin/release check`), and `bin/sync` exists so you never have to undo it.
+Merge sync PRs with a merge commit, never a squash: the merge is how the next
+`bin/sync` tells what you already have.
+
+### 1. Look before you sync
+
+```bash
+git fetch upstream
+git log --oneline origin/next..upstream/main                   # what's coming
+git log --diff-filter=R --stat origin/next..upstream/main      # what moved — plan renames, don't discover them mid-merge
+```
+
+Read the template's release notes on its GitHub releases page: breaking changes
+and migrations are called out there. If a change sounds structural (schema,
+`deploy.yml`), read its PR before syncing, not after.
 
 Then check whether upstream touched files **you own** — those changes will NOT
 arrive through the merge (the driver keeps yours):
 
 ```bash
-git log --oneline main..upstream/main -- \
+git log --oneline origin/next..upstream/main -- \
   app/views/pages app/controllers/pages_controller.rb \
   config/locales/en/pages.en.yml config/locales/en/brand.en.yml \
   config/routes/app.rb config/markdowndocs_categories.local.yml \
@@ -431,19 +604,17 @@ git log --oneline main..upstream/main -- \
 If a commit there looks like a fix you want, cherry-pick it after the merge:
 `git cherry-pick <sha>`, then adapt it to your version of the file.
 
-### 2. Merge on a branch
+### 2. If it stops on conflicts
 
-```bash
-git checkout -b chore/upstream-sync-$(date +%F)
-git merge upstream/main
-```
-
-### 3. If you hit conflicts
+`bin/sync` stops and names the files, with `CHANGELOG.md` already done. Resolve
+each one, `git add` it, then run `bin/sync` again: it commits the merge, pushes
+and opens the PR.
 
 | Conflict in | Resolution |
 | ----------- | ---------- |
-| Fork-owned paths | Shouldn't happen — the driver keeps yours. If it does, the driver isn't active: `git merge --abort`, run `git config merge.ours.driver true`, merge again |
-| Identity values (`config/deploy.yml` service/image/volumes, `config/application.rb` module) | Keep your names; take any structural changes around them |
+| `CHANGELOG.md` | Never — `bin/sync` keeps yours before it stops |
+| Fork-owned paths | Shouldn't happen — the driver keeps yours. If it does, the driver isn't active: `git merge --abort`, run `git config merge.ours.driver true`, then `bin/sync` again |
+| Identity values (`config/deploy.yml` service/image/volumes, `SMTP_*`, `MAIL_FROM`, `RAILS_HOST`; `config/application.rb` module) | Keep your values; take any structural changes around them. Taking theirs on `SMTP_ADDRESS` puts the old host beside your new login, and the boot check can't see that |
 | `Gemfile` | Keep **both** sides' gems, then regenerate the lockfile |
 | `Gemfile.lock` | Never hand-merge: `git checkout --theirs Gemfile.lock`, then `bundle install`, commit the regenerated result |
 | Behavior (app code, specs, config) | Take theirs — unless you deliberately diverged, in which case consider sending your version upstream instead |
@@ -454,27 +625,31 @@ git merge upstream/main
 A conflict looks like this — your side on top, upstream's below:
 
 ```text
+<<<<<<< HEAD
+    primary_cta: "Start organizing your photos"
+=======
     primary_cta: "Get started free"
+>>>>>>> 9f3c2e1 (the template's release)
 ```
 
 Decide which line the file should have (here it's your marketing copy — keep
 yours), delete the other line and all three marker lines, then `git add` the
 file. That's the whole skill; the doctrine table tells you which side to favor.
 
-### 4. Prove the merge
+### 3. Prove it
+
+CI runs the suite on the PR. Locally, on the sync branch:
 
 ```bash
 bin/rails db:migrate    # upstream may ship migrations
-bundle exec rspec       # full suite green before the PR
+bundle exec rspec
 ```
-
-Open a pull request into your app's main branch like any other change.
 
 ### If something looks wrong after the merge
 
 - **A fork-owned file changed unexpectedly** — the driver wasn't active during
   the merge. Restore your version from before the sync:
-  `git restore --source=main <path>`, commit, then fix the driver config.
+  `git restore --source=origin/next <path>`, commit, then fix the driver config.
 - **Bundler errors** — regenerate instead of debugging the lockfile:
   `git checkout --theirs Gemfile.lock && bundle install`.
 - **Tests fail** — run the failing spec alone, then
@@ -483,9 +658,9 @@ Open a pull request into your app's main branch like any other change.
 
 ### Cadence
 
-Merge after each meaningful upstream change — don't bank up months of drift.
-Small frequent merges conflict less than one big annual one; if upstream is
-busy, a fixed weekly sync keeps every merge boring.
+Run `bin/sync` often — don't bank up months of drift. Small frequent merges
+conflict less than one big annual one; if upstream is busy, a fixed weekly
+sync keeps every merge boring.
 
 ## Contribute a fix back
 

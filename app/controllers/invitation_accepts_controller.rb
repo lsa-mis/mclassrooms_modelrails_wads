@@ -22,7 +22,7 @@ class InvitationAcceptsController < ApplicationController
         # a specific email can't be claimed by a signed-in user with a different
         # one. (Emailless magic-link invitations stay bearer.)
         Invitation.consume!(token: @invitation.token, user: Current.user, expected_email: Current.user.email_address)
-        redirect_to workspace_path(@invitation.invitable), notice: t(".success")
+        redirect_to invitation_landing_path(@invitation), notice: t(".success")
       rescue Invitation::EmailMismatch
         redirect_to root_path, alert: t(".email_mismatch")
       rescue Invitation::NotAcceptable, ActiveRecord::RecordInvalid,

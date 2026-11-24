@@ -100,8 +100,8 @@
   --transition-fast: 75ms;
 }
 
-/* Chrome (header bar): today's tokens until _brand.css sets the family. :where() keeps
-   these at zero specificity — _brand.css loads first, so a :root default would beat it. */
+/* Header-bar defaults, which _brand.css overrides. :where() keeps them at zero specificity:
+   _brand.css loads first, so a :root default here would beat it. */
 :where(:root) {
   --color-chrome:           var(--color-surface-raised);
   --color-chrome-border:    var(--color-border);

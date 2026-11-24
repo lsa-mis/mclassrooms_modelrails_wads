@@ -12,13 +12,13 @@ When an admin invites you by email, you receive an invitation email with an **Ac
 
 ### If you already have an account
 
-Click **Accept** in the email, sign in if prompted, and the invitation is accepted immediately. Your account's verified email must match the address the invitation was sent to.
+Open the link in the email. If you're already signed in, click **Accept invitation** on the page it opens. If you're not, click **Sign in to accept**; the invitation is accepted as soon as you sign in. Either way you land in the workspace or project you were invited to. Your account's verified email must match the address the invitation was sent to.
 
 ### If you are new to the app
 
-1. Click **Accept** in the email.
-2. You will be prompted to sign in — enter the **same email address** the invitation was sent to and complete magic-link registration (you will receive a sign-in email).
-3. The invitation is claimed once you verify the invited email address — not at the point of signup.
+1. Click the link in the email, then **Create an account to accept**.
+2. On the sign-in page, enter the **same email address** the invitation was sent to and complete magic-link registration (you will receive an email to create your account).
+3. The invitation is claimed when you create the account: following the emailed link already proved you own the address.
 
 See [Authentication](/docs/user/authentication) for how magic-link sign-in works.
 

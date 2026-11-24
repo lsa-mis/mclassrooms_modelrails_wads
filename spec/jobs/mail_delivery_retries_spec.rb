@@ -11,7 +11,7 @@ RSpec.describe "Delivering mail from a job" do
     end
   end
 
-  before { MagicLinkMailer.registration_link("ada@humbledaisy.com", "token").deliver_later }
+  before { MagicLinkMailer.registration_link("ada@example.org", "token").deliver_later }
 
   it "tries again when the server could not be reached, so a sign-in link is not lost" do
     fail_transport_with(Net::OpenTimeout)

@@ -1,0 +1,146 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "fileutils"
+require "open3"
+require "optparse"
+
+class FnoxSetup
+  class Stop < StandardError; end
+
+  IDENTITY = ".config/fnox/age.txt"
+  CONFIG = "fnox.toml"
+  PROVIDERS = {
+    "age-production" => { key: "config/credentials/production.key", profile: nil, name: "production" },
+    "age-staging" => { key: "config/credentials/staging.key", profile: "staging", name: "staging" }
+  }.freeze
+
+  def initialize(root:, home: Dir.home, env: ENV, output: $stdout, dry_run: false)
+    @root = root
+    @home = home
+    @env = env.to_h.merge("HOME" => home)
+    @output = output
+    @dry_run = dry_run
+  end
+
+  def run
+    check_ready!
+    recipient = identity!
+    configure!(recipient)
+    PROVIDERS.each { |provider, details| store!(provider, **details) }
+    finish if @env["PRODUCTION_SETUP"].to_s.empty?
+    0
+  rescue Stop => e
+    say e.message
+    1
+  end
+
+  private
+
+  def check_ready!
+    raise Stop, "#{PROVIDERS['age-production'][:key]} isn't here yet. Run bin/mail-setup first: quickstart step 4." unless File.exist?(path(PROVIDERS["age-production"][:key]))
+    raise Stop, "fnox and age aren't installed. Run mise install, then try again." unless %w[fnox age-keygen].all? { |tool| installed?(tool) }
+  end
+
+  def identity!
+    file = File.join(@home, IDENTITY)
+    return create_identity(file) unless File.exist?(file)
+
+    recipient_of(file).tap { say "✓ Using ~/#{IDENTITY}" }
+  end
+
+  def recipient_of(file)
+    recipient, status = tool("age-keygen", "-y", file)
+    raise Stop, "~/#{IDENTITY} is there, but age can't read it, so nothing was changed. Restore it from your password manager, then try again." unless status.success?
+
+    recipient.strip
+  end
+
+  def create_identity(file)
+    return say("Would create ~/#{IDENTITY}") if @dry_run
+
+    FileUtils.mkdir_p(File.dirname(file))
+    _, status = tool("age-keygen", "-o", file)
+    raise Stop, "age couldn't create ~/#{IDENTITY}. Run age-keygen -o ~/#{IDENTITY} to see why." unless status.success?
+
+    File.chmod(0o600, file)
+    say "Created ~/#{IDENTITY}. Back it up in your password manager now: without it, nobody can read what fnox stores."
+    recipient_of(file)
+  end
+
+  def configure!(recipient)
+    return say("Would check #{CONFIG} can be read with ~/#{IDENTITY}") if recipient.nil? && File.exist?(path(CONFIG))
+
+    unless File.exist?(path(CONFIG))
+      return say("Would write #{CONFIG} with production and staging providers") if @dry_run
+
+      File.write(path(CONFIG), providers_block(recipient))
+      return say("Wrote #{CONFIG} with production and staging providers")
+    end
+
+    return say("✓ #{CONFIG} already lists you for production and staging") if lists?(File.read(path(CONFIG)), recipient)
+
+    raise Stop, "#{CONFIG} is here but doesn't list you for both providers, so it wasn't changed. " \
+                "Add this, then run bin/fnox-setup again:\n\n#{providers_block(recipient)}"
+  end
+
+  def lists?(config, recipient)
+    sections = config.split(/^(?=\[)/)
+    PROVIDERS.keys.all? do |provider|
+      sections.any? { |section| section.start_with?("[providers.#{provider}]") && section.include?(recipient) }
+    end
+  end
+
+  def providers_block(recipient)
+    PROVIDERS.keys.map { |provider| %([providers.#{provider}]\ntype = "age"\nrecipients = ["#{recipient}"]\n) }.join("\n")
+  end
+
+  def store!(provider, key:, profile:, name:)
+    unless File.exist?(path(key))
+      return say("· No #{key}, so #{name} was skipped. Run bin/fnox-setup again once #{name} has its key.")
+    end
+    return say("✓ #{name}'s RAILS_MASTER_KEY is already in fnox") if stored?(key, profile)
+    return say("Would store #{name}'s RAILS_MASTER_KEY in fnox") if @dry_run
+
+    _, status = tool("fnox", "set", "RAILS_MASTER_KEY", "--provider", provider, *profile_args(profile), stdin: File.read(path(key)))
+    raise Stop, "fnox couldn't store #{name}'s RAILS_MASTER_KEY. Run fnox check --all to see why." unless status.success?
+    raise Stop, "fnox gave back a different value for #{name}'s key, so this stops here. Run fnox check --all to see why." unless stored?(key, profile)
+
+    say "Stored #{name}'s RAILS_MASTER_KEY in fnox"
+  end
+
+  def stored?(key, profile)
+    value, status = tool("fnox", *profile_args(profile), "get", "RAILS_MASTER_KEY")
+    status.success? && value.strip == File.read(path(key)).strip
+  end
+
+  def profile_args(profile) = profile ? [ "--profile", profile ] : []
+
+  def finish
+    say ""
+    say "Commit #{CONFIG}. Back up ~/#{IDENTITY} in your password manager."
+    say "Never commit a .key file or age.txt."
+  end
+
+  def tool(*command, stdin: nil)
+    out, _err, status = Open3.capture3(@env, *command, stdin_data: stdin.to_s, chdir: @root)
+    [ out, status ]
+  end
+
+  def installed?(name)
+    @env.fetch("PATH", "").split(File::PATH_SEPARATOR).any? { |dir| File.executable?(File.join(dir, name)) }
+  end
+
+  def path(relative) = File.join(@root, relative)
+  def say(message) = @output.puts(message)
+end
+
+if $PROGRAM_NAME == __FILE__
+  options = { dry_run: false }
+  OptionParser.new do |o|
+    o.banner = "Usage: bin/fnox-setup [--dry-run]   (keeps production's and staging's RAILS_MASTER_KEY in fnox)"
+    o.on("--dry-run", "Say what would change, and change nothing") { options[:dry_run] = true }
+  end.parse!
+
+  exit FnoxSetup.new(root: File.expand_path("..", __dir__), **options).run
+end

@@ -81,56 +81,56 @@ RSpec.describe Membership, type: :model do
   end
 
   describe "Discardable" do
-    let(:membership) { create(:membership) }
-
     # A bare discard! skips the last-owner guard (#1120).
     it "does not expose discard! — removal goes through deactivate!" do
+      membership = create(:membership)
       expect { membership.discard! }.to raise_error(NoMethodError, /private method/)
     end
 
     it "is discarded by deactivate!" do
+      membership = create(:membership)
       membership.deactivate!(removed_by: nil)
       expect(membership).to be_discarded
     end
   end
 
   describe "associations" do
-    let(:membership) { create(:membership) }
-
     it "belongs to a user" do
+      membership = create(:membership)
       expect(membership.user).to be_a(User)
     end
 
     it "belongs to a workspace" do
+      membership = create(:membership)
       expect(membership.workspace).to be_a(Workspace)
     end
 
     it "belongs to a role" do
+      membership = create(:membership)
       expect(membership.role).to be_a(Role)
     end
   end
 
   describe "role change" do
-    let(:membership) { create(:membership) }
-    let(:admin_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
-
     it "changes role" do
+      membership = create(:membership)
+      admin_role = Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" }
       membership.change_role!(admin_role)
       expect(membership.reload.role).to eq(admin_role)
     end
   end
 
   describe "deactivation" do
-    let(:workspace) { create(:workspace) }
-    let(:membership) { create(:membership, :owner, workspace: workspace) }
-
     it "deactivates a member" do
+      workspace = create(:workspace)
+      membership = create(:membership, :owner, workspace: workspace)
       create(:membership, :owner, workspace: workspace)
       membership.deactivate!
       expect(membership.reload).to be_discarded
     end
 
     it "prevents deactivating the last owner" do
+      membership = create(:membership, :owner, workspace: create(:workspace))
       expect { membership.deactivate! }.to raise_error(ActiveRecord::RecordInvalid)
     end
 
@@ -140,6 +140,7 @@ RSpec.describe Membership, type: :model do
     # workspace ownerless. The post-discard invariant re-checks inside the
     # transaction (after our own discard), so a true race trips it.
     it "rolls back the deactivation if it would leave the workspace ownerless" do
+      workspace = create(:workspace)
       owner_a = create(:membership, :owner, workspace: workspace)
       owner_b = create(:membership, :owner, workspace: workspace)
       owner_a.deactivate!(removed_by: nil)  # workspace now has 1 kept owner: owner_b
@@ -165,34 +166,34 @@ RSpec.describe Membership, type: :model do
   # removal that never happened. The one-minute idempotency bucket absorbs a
   # rapid double-submit and nothing else.
   describe "deactivation idempotency" do
-    let(:workspace) { create(:workspace) }
-    let(:owner) { create(:user) }
-    let(:membership) { create(:membership, workspace: workspace) }
-
-    before do
-      create(:membership, :owner, user: owner, workspace: workspace)
-      membership
-    end
-
     def removal_events
       Noticed::Event.where(type: "WorkspaceMemberRemovedNotifier")
     end
 
-    def removal_audit_rows
+    def removal_audit_rows(membership)
       ActivityLog.where(trackable: membership, action: "membership.updated")
     end
 
+    def owner_and_member
+      workspace = create(:workspace)
+      owner = create(:user)
+      create(:membership, :owner, user: owner, workspace: workspace)
+      [ owner, create(:membership, workspace: workspace) ]
+    end
+
     it "records one removal and one notification however many times it is called" do
+      owner, membership = owner_and_member
       membership.deactivate!(removed_by: owner)
       # Past the notifier's dedup bucket, so a second dispatch would be a real
       # second event rather than a swallowed duplicate.
       travel_to(2.minutes.from_now) { membership.deactivate!(removed_by: owner) }
 
       expect(removal_events.count).to eq(1)
-      expect(removal_audit_rows.count).to eq(1)
+      expect(removal_audit_rows(membership).count).to eq(1)
     end
 
     it "leaves the removal timestamp where the first call put it" do
+      owner, membership = owner_and_member
       membership.deactivate!(removed_by: owner)
       first_stamp = membership.reload.discarded_at
 
@@ -202,6 +203,7 @@ RSpec.describe Membership, type: :model do
     end
 
     it "returns from the second call without writing an audit row" do
+      owner, membership = owner_and_member
       membership.deactivate!(removed_by: owner)
 
       expect {
@@ -212,6 +214,7 @@ RSpec.describe Membership, type: :model do
     # Belt to the return's braces: any other path that re-stamps discarded_at on
     # an already-removed membership must not read as a fresh removal either.
     it "does not treat a re-discard as a new removal" do
+      owner, membership = owner_and_member
       membership.deactivate!(removed_by: owner)
 
       expect {
@@ -221,9 +224,8 @@ RSpec.describe Membership, type: :model do
   end
 
   describe "reactivation" do
-    let(:membership) { create(:membership) }
-
     it "reactivates a deactivated member" do
+      membership = create(:membership)
       membership.deactivate!(removed_by: nil)
       membership.reactivate!
       expect(membership.reload).not_to be_discarded
@@ -235,6 +237,7 @@ RSpec.describe Membership, type: :model do
     # future refactor adds an admittable?/archived? guard to reactivate!, this
     # fails and forces that decision back into the open.
     it "reactivates a member even when the workspace is archived" do
+      membership = create(:membership)
       membership.deactivate!(removed_by: nil)
       membership.workspace.archive!
 
@@ -285,50 +288,61 @@ RSpec.describe Membership, type: :model do
   end
 
   describe "scopes" do
-    let(:workspace) { create(:workspace) }
-    let!(:alice_membership) { create(:membership, :owner, workspace: workspace) }
-    let!(:bob_membership) { create(:membership, :admin, workspace: workspace) }
-    let!(:carol_membership) { create(:membership, workspace: workspace) }
-
-    # Emails are pinned alongside names: .search also matches email_address,
-    # and the factory's Faker email can randomly contain another member's
-    # first name (e.g. "alice.baker@..."), making the exclusion assertions
-    # flake (issue #467).
-    before do
-      alice_membership.user.update!(first_name: "Alice", last_name: "Anderson", email_address: "alice.anderson@example.test")
-      bob_membership.user.update!(first_name: "Bob", last_name: "Baker", email_address: "bob.baker@example.test")
-      carol_membership.user.update!(first_name: "Carol", last_name: "Clark", email_address: "carol.clark@example.test")
+    # Names and emails are pinned: .search also matches email_address, and a
+    # Faker email could contain another member's first name (#467).
+    def alice_bob_carol(workspace)
+      alice = create(:membership, :owner, workspace: workspace)
+      bob = create(:membership, :admin, workspace: workspace)
+      carol = create(:membership, workspace: workspace)
+      alice.user.update!(first_name: "Alice", last_name: "Anderson", email_address: "alice.anderson@example.test")
+      bob.user.update!(first_name: "Bob", last_name: "Baker", email_address: "bob.baker@example.test")
+      carol.user.update!(first_name: "Carol", last_name: "Clark", email_address: "carol.clark@example.test")
+      [ alice, bob, carol ]
     end
 
     describe ".filter_by_role" do
       it "filters by role slug" do
+        workspace = create(:workspace)
+        alice_membership, bob_membership, = alice_bob_carol(workspace)
         results = workspace.memberships.filter_by_role("owner")
         expect(results).to include(alice_membership)
         expect(results).not_to include(bob_membership)
       end
 
       it "returns all when role is blank" do
+        workspace = create(:workspace)
+        alice_bob_carol(workspace)
         expect(workspace.memberships.filter_by_role("")).to match_array(workspace.memberships)
         expect(workspace.memberships.filter_by_role(nil)).to match_array(workspace.memberships)
       end
     end
 
     describe ".filter_by_status" do
-      before { carol_membership.update!(discarded_at: Time.current) }
+      def alice_bob_discarded_carol(workspace)
+        alice, bob, carol = alice_bob_carol(workspace)
+        carol.update!(discarded_at: Time.current)
+        [ alice, bob, carol ]
+      end
 
       it "filters active members" do
+        workspace = create(:workspace)
+        alice_membership, bob_membership, carol_membership = alice_bob_discarded_carol(workspace)
         results = workspace.memberships.filter_by_status("active")
         expect(results).to include(alice_membership, bob_membership)
         expect(results).not_to include(carol_membership)
       end
 
       it "filters deactivated members" do
+        workspace = create(:workspace)
+        alice_membership, _bob, carol_membership = alice_bob_discarded_carol(workspace)
         results = workspace.memberships.filter_by_status("deactivated")
         expect(results).to include(carol_membership)
         expect(results).not_to include(alice_membership)
       end
 
       it "returns all when status is blank" do
+        workspace = create(:workspace)
+        alice_bob_discarded_carol(workspace)
         expect(workspace.memberships.filter_by_status("")).to match_array(workspace.memberships)
       end
     end

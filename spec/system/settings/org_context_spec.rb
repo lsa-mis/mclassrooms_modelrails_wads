@@ -14,8 +14,7 @@ RSpec.describe "Settings hub — workspace context", type: :system do
 
   before do
     create(:membership, :owner, user: owner, workspace: workspace)
-    viewer_role = Role.find_or_create_by!(slug: "viewer", workspace_id: nil) { |r| r.name = "Viewer" }
-    create(:membership, user: viewer, workspace: workspace, role: viewer_role)
+    create(:membership, :viewer, user: viewer, workspace: workspace)
   end
 
   context "as Owner" do

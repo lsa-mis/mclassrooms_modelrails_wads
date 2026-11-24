@@ -20,7 +20,7 @@ The public-SaaS / multi-workspace shape: per-workspace control over how new memb
 | Instance allowlist (`SIGNUP_PERMITTED_JOIN_STRATEGIES`) | ✅ |
 | Flow A — *existing* authenticated user joins via link | ✅ |
 | Flow B — *new* user via link (link opens the signup gate) | ✅ |
-| `:domain` strategy (verified-email-domain auto-join) | ⏳ Reshape 3 |
+| `:domain` strategy (verified-email-domain auto-join) | ⏳ not built |
 
 **What you get when configured.**
 
@@ -35,7 +35,7 @@ Open SaaS is **Solo-default's tenancy** (personal onboarding, workspace creation
 
 ## How users relate
 
-An example Acme workspace. Each person (with how they **sign in**) connects to the workspace by their **membership** (role · how they joined). Sign-in is email-first and passwordless by default — a magic link unless a password has been set — with Google/GitHub OAuth alongside:
+An example Acme workspace. Each person (with how they **sign in**) connects to the workspace by their **membership** (role · how they joined). Sign-in is email-first and passwordless by default — a magic link, or a password where the instance turns passwords on (`AUTH_PASSWORDS=enabled`) — with Google/GitHub OAuth alongside:
 
 <svg viewBox="0 0 720 350" width="100%" role="img" aria-label="Acme org workspace. Alice: Owner, created the workspace, signs in with a magic link. Bob: Member, joined via a shareable join link, signs in with Google OAuth. Carol: Admin, joined via an invitation, signs in with email and password. Every user also owns a personal workspace; sign-in is email-first and passwordless by default." fill="none" stroke="currentColor" font-family="ui-sans-serif, system-ui, sans-serif">
   <defs>
@@ -83,14 +83,14 @@ Open SaaS supports two front-door postures. They differ *only* in whether a stra
 |---|---|---|
 | `SIGNUP_MODE` | `open` | `invite_only` |
 | `SIGNUP_PERMITTED_JOIN_STRATEGIES` | `invite,open_link` | `invite,open_link` |
-| Who can create an account | anyone, at `/sign-up` | only via an invitation or a valid open-link token |
+| Who can create an account | anyone, from the sign-in page (`/session/new`) | only via an invitation or a valid open-link token |
 | Good for | self-serve products, communities | B2B, controlled betas, "every user vouched-for" |
 
 Choose by whether you want an **anonymous front door**. `open` maximizes self-serve discovery. `invite_only + open_link` means every account traces to an invitation or a shared link — no cold signup — at the cost of no organic self-registration.
 
 **The two knobs are independent.** `SIGNUP_MODE` controls *who may create an account*; `SIGNUP_PERMITTED_JOIN_STRATEGIES` controls *which join mechanisms exist*. Setting `SIGNUP_MODE=open` does **not** enable shareable links — you still need `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` for that. Both postures above set the strategies allowlist explicitly for exactly this reason.
 
-> **`SIGNUP_MODE` is not how you "get an admin."** It only controls the anonymous front door. Your admin account, and the power to invite / approve / remove members, come from a workspace **Owner/Admin role** (`manage_members`) — present in *either* posture. There is no instance-wide super-admin: administration is per-workspace, so a user who self-registers under `open` owns and administers their own workspace. If you need cross-instance user administration, that's a feature to build, not a `SIGNUP_MODE` setting.
+> **`SIGNUP_MODE` is not how you "get an admin."** It only controls the anonymous front door. Your admin account, and the power to invite / approve / remove members, come from a workspace **Owner/Admin role** (`manage_members`) — present in *either* posture. Member administration is per-workspace, so a user who self-registers under `open` owns and administers their own workspace. Instance-wide administration is the operations area (`/operations`), open only to operators — see [Instance operations](/docs/developer/operations) — and it isn't a `SIGNUP_MODE` setting either.
 
 **Verify the strategy is enabled.** With `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` set, in `bin/rails console`:
 
@@ -101,7 +101,7 @@ w = Workspace.create!(name: "Acme", personal: false, join_policy: "open_link")
 w.open_join?                                  # => true (open to link-joins)
 ```
 
-If `permits_strategy?(:open_link)` is `false`, the env var isn't set — links will be inert and the join-policy radio won't offer "Shareable join link".
+If `permits_strategy?(:open_link)` is `false`, the env var isn't set — links will be inert and the join-policy radio shows "Shareable join link" disabled.
 
 **Setup (Reshape 2a — Flow A):**
 
@@ -122,12 +122,12 @@ If `permits_strategy?(:open_link)` is `false`, the env var isn't set — links w
 **Setup (Reshape 2b — Flow B):** Already enabled by the same `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` setting from 2a. The Flow B path is automatic:
 
 1. Brand-new visitor (no account) clicks a shareable join link.
-2. `Workspaces::JoinsController#create` stashes the token in `session[:pending_join_token]` and redirects to `/sign-up`.
+2. `Workspaces::JoinsController#create` stashes the token in `session[:pending_join_token]` and redirects to the sign-in page (`/session/new`).
 3. `SignupPolicy.allows_signup?` checks `workspace_join_acceptable?` — the open-link token opens the gate even under `SIGNUP_MODE=invite_only`. The signup form renders.
 4. Visitor signs up via magic-link (`MagicLinkCallbacksController#create`). `Signupable#commit_signup_atomically` claims the parked join token via `PendingClaims`, admitting them atomically during signup — no separate email-verification step required for join-link claims.
 5. User lands signed in and is immediately a workspace Member.
 
-Stale conditions at claim time (link revoked, workspace policy reverted to `:invite`, instance allowlist no longer permits `:open_link`) are silently no-op'd — email verification proceeds and the user lands signed in but without the workspace membership. Capacity errors at claim time surface as a flash without blocking sign-in.
+Stale conditions at claim time (link revoked, workspace policy reverted to `:invite`, instance allowlist no longer permits `:open_link`) are silently no-op'd — email verification proceeds and the user lands signed in but without the workspace membership. Capacity is the exception: a full workspace rolls a Flow B signup back, so no account is created (`PendingClaims#claim!` lets `Workspace::AtCapacity` propagate); only a claim made at email verification reports capacity as a flash without blocking sign-in.
 
 **Pre-existing users are never auto-joined.** Only a brand-new account created in the signup flow auto-joins — its signup is its consent. If the person who authenticates with a parked token turns out to be an *existing* user (e.g. they followed the link logged out, then signed in, or linked a new verified OAuth provider), they are **not** silently added. Instead they see a dismissible "You followed a link to join **X** — Join / Dismiss" banner (`PendingJoinsController`) and re-consent explicitly. This closes a drive-by-join where a lured-in token would otherwise force-join a victim.
 
@@ -147,9 +147,9 @@ Their already-issued join links stay in the table but are inert (`open_join?` is
 **When to switch presets.**
 
 - *"I want to lock signup entirely; users should only join via admin invitation."* → keep `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite` and the per-workspace radio defaults to invite — this *is* Solo-default with no further changes.
-- *"Everyone should be in one shared workspace with no join UI at all."* → **[Single-tenant](/docs/developer/presets-single-tenant)** preset (Reshape 1).
+- *"Everyone should be in one shared workspace with no join UI at all."* → **[Single-tenant](/docs/developer/presets-single-tenant)** preset.
 
 ## Next steps
 
-- **[← Compare all presets](/docs/developer/presets)** — the decision matrix and the other two shapes.
+- **[← Compare all presets](/docs/developer/presets)** — the decision matrix and the other three shapes.
 - **[Extending ModelRails →](/docs/developer/extending)** — add your own workspace-scoped features on top of this preset.

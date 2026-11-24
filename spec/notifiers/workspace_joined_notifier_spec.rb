@@ -11,30 +11,20 @@ RSpec.describe "Self-join notifications", type: :notifier do
   include ActiveJob::TestHelper
   include ActionMailer::TestHelper
 
-  let(:owner_role) do
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) do |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_projects: true, manage_settings: true }
-    end
-  end
-  let(:member_role) do
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
+  def member_role
+    build(:membership).role
   end
 
-  let(:workspace) { create(:workspace) }
-
-  # `let!` throughout: the User factory's onboarding callback creates a personal
-  # workspace + membership per user, and a lazy reference would run that inside
-  # the example under test.
-  let!(:owner) { create(:user) }
-  let!(:joiner) { create(:user) }
-  let!(:owner_membership) { create(:membership, user: owner, workspace: workspace, role: owner_role) }
-
-  before do
+  def self_join_cast
+    owner = create(:user)
+    joiner = create(:user)
+    workspace = create(:workspace)
+    create(:membership, :owner, user: owner, workspace: workspace)
     Noticed::Notification.delete_all
     Noticed::Event.delete_all
     ActionMailer::Base.deliveries.clear
     clear_enqueued_jobs
+    { workspace: workspace, owner: owner, joiner: joiner }
   end
 
   def member_added_recipients
@@ -47,24 +37,28 @@ RSpec.describe "Self-join notifications", type: :notifier do
 
   describe "a fresh self-join" do
     it "does not notify the self-joiner about their own join" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
 
       expect(member_added_recipients).not_to include(joiner)
     end
 
     it "still notifies the workspace owners that someone joined" do
+      workspace, owner, joiner = self_join_cast.values_at(:workspace, :owner, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
 
       expect(member_added_recipients).to contain_exactly(owner)
     end
 
     it "sends the self-joiner exactly one orientation notification" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
 
       expect(joined_notifications_for(joiner).count).to eq 1
     end
 
     it "orients them with the workspace name and carries the workspace url" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
       notification = joined_notifications_for(joiner).sole
 
@@ -79,6 +73,7 @@ RSpec.describe "Self-join notifications", type: :notifier do
     # read/delete controls, and nothing else. Copy that names a page is
     # therefore a promise the row itself cannot keep.
     it "promises no destination the in-app row cannot reach" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
       notification = joined_notifications_for(joiner).sole
 
@@ -89,6 +84,7 @@ RSpec.describe "Self-join notifications", type: :notifier do
     # outlives the membership it points at, and neither #message nor #url may
     # raise out of the notifications index or the digest render.
     it "renders the placeholder for both message and url once the membership is gone" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
       notification = joined_notifications_for(joiner).sole
       workspace.memberships.find_by!(user: joiner).destroy
@@ -98,12 +94,14 @@ RSpec.describe "Self-join notifications", type: :notifier do
     end
 
     it "does not notify the owners about the joiner's own orientation" do
+      workspace, owner, joiner = self_join_cast.values_at(:workspace, :owner, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
 
       expect(joined_notifications_for(owner).count).to eq 0
     end
 
     it "sends no email at all — the joiner is already in the app, the owners are digest-only" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
       drain_noticed_jobs(deliver_mail: true)
 
@@ -111,6 +109,7 @@ RSpec.describe "Self-join notifications", type: :notifier do
     end
 
     it "honours the in-app preference for the workspace_activity category" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       prefs = create(:user_preferences, user: joiner)
       types = prefs.notification_preferences.deep_dup
       types["notification_types"]["workspace_activity"] = false
@@ -125,6 +124,7 @@ RSpec.describe "Self-join notifications", type: :notifier do
     # joiner as their own granter would make a self-join indistinguishable from
     # an admin grant in the audit trail.
     it "records no grant provenance on the membership.created activity row" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
       membership = workspace.memberships.find_by!(user: joiner)
       entry = ActivityLog.where(action: "membership.created", trackable: membership).last
@@ -134,21 +134,23 @@ RSpec.describe "Self-join notifications", type: :notifier do
   end
 
   describe "a removed member self-joining again" do
-    let!(:membership) { create(:membership, user: joiner, workspace: workspace, role: member_role) }
-
-    before do
-      membership.deactivate!
+    def deactivate_joiners_membership(workspace, joiner)
+      create(:membership, user: joiner, workspace: workspace).deactivate!
       Noticed::Notification.delete_all
       Noticed::Event.delete_all
     end
 
     it "excludes the self-joiner from member-added but still notifies the owners" do
+      workspace, owner, joiner = self_join_cast.values_at(:workspace, :owner, :joiner)
+      deactivate_joiners_membership(workspace, joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
 
       expect(member_added_recipients).to contain_exactly(owner)
     end
 
     it "sends the self-joiner exactly one orientation notification" do
+      workspace, joiner = self_join_cast.values_at(:workspace, :joiner)
+      deactivate_joiners_membership(workspace, joiner)
       workspace.admit(joiner, role: member_role, self_join: true)
 
       expect(joined_notifications_for(joiner).count).to eq 1
@@ -158,6 +160,7 @@ RSpec.describe "Self-join notifications", type: :notifier do
   # Not in scope, and it must stay that way: an invitee is not the actor.
   describe "the invited-member path (unchanged)" do
     it "keeps the added user in member-added and raises no orientation notification" do
+      workspace, owner, joiner = self_join_cast.values_at(:workspace, :owner, :joiner)
       workspace.admit(joiner, role: member_role, granted_by: owner)
 
       expect(member_added_recipients).to contain_exactly(joiner)
@@ -184,24 +187,30 @@ RSpec.describe "Self-join notifications", type: :notifier do
   # actor stance declared explicitly. Its orientation notice is deliberately
   # suppressed — see the :onboarding grade on Membership#self_join.
   describe "the :shared preset's signup join" do
-    before do
+    def stub_shared_preset(workspace)
       allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
       allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return(workspace.slug)
     end
 
     it "does not tell the new user, in the third person, that they joined" do
+      workspace = self_join_cast.fetch(:workspace)
+      stub_shared_preset(workspace)
       newcomer = create(:user)
 
       expect(member_added_recipients).not_to include(newcomer)
     end
 
     it "still tells the shared workspace's owners that someone joined" do
+      workspace, owner = self_join_cast.values_at(:workspace, :owner)
+      stub_shared_preset(workspace)
       create(:user)
 
       expect(member_added_recipients).to contain_exactly(owner)
     end
 
     it "raises no orientation notice — WelcomeNotifier already covers day one" do
+      workspace = self_join_cast.fetch(:workspace)
+      stub_shared_preset(workspace)
       newcomer = create(:user)
 
       expect(joined_notifications_for(newcomer)).to be_empty

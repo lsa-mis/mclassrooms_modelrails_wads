@@ -137,6 +137,8 @@ data:
       line_width: -1
 
 search:
+  # Views reach whole key families through dynamic keys, e.g. t("a11y_sim.modes.#{mode}").
+  strict: false
   paths:
     - app/
   relative_roots:

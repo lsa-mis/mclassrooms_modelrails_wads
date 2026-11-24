@@ -38,7 +38,7 @@ User.create!(email_address: "owner@example.com", first_name: "Test", last_name: 
 
 Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 
-**Config lives in `.env`.** All environment variables below are read at boot time. After changing `.env`, restart `bin/dev` for the change to take effect. The valid values for each variable are documented in `.env.example`; the app raises on an unrecognized value at startup.
+**Config lives in `.env`.** All environment variables below are read at boot time. After changing `.env`, restart `bin/dev` for the change to take effect. The valid values for each variable are documented in `.env.example`; the app raises on an unrecognized value at startup, except `AUTH_PASSWORDS`, where anything but `enabled` leaves passwords off.
 
 **Private/incognito windows.** Several flows require acting as a different user simultaneously. Use a private window so the two sessions do not share cookies.
 
@@ -49,10 +49,11 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 | Variable | Where set | Values | What it controls |
 |---|---|---|---|
 | `SIGNUP_MODE` | `.env` | `open` · `invite_only` | Whether new-user signup is open or invite-only. Default: `invite_only`. |
-| `WORKSPACE_ON_SIGNUP` | `.env` | `personal` · `shared` · `none` | Which workspace (if any) a new user lands in after signup. Default: `personal`. |
+| `WORKSPACE_ON_SIGNUP` | `.env` | `personal` · `shared` · `none` | Which workspace (if any) a new user lands in after signup. Default: the preset `bin/fork` recorded in `.fork.yml`, else `personal`. |
 | `SIGNUP_PERMITTED_JOIN_STRATEGIES` | `.env` | `invite` · `invite,open_link` | Instance ceiling on join methods. `open_link` must appear here before any workspace can enable shareable join links. Default: `invite`. |
 | `TENANCY_WORKSPACE_CREATION` | `.env` | `enabled` · `disabled` | Whether the "New workspace" route and UI are available to signed-in users. Default: `enabled`. |
-| OAuth credentials | `bin/rails credentials:edit --environment development` | — | Google and GitHub client ID / secret. Without these, OAuth buttons redirect to the sign-in page with an error. |
+| `AUTH_PASSWORDS` | `.env` | `disabled` · `enabled` | Password sign-in, password reset, `/settings/password` and the password reauthentication factor; disabled means their routes are not drawn. Default: `disabled`. |
+| OAuth credentials | `bin/rails credentials:edit --environment development` | — | Google and GitHub client ID / secret. Without these, the OAuth buttons do not render. |
 
 ---
 
@@ -66,7 +67,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
    **Expect:** The `check_email` page renders inline (Turbo Frame replaces the form). A registration magic-link email is dispatched — check `/letter_opener`.
 2. Click the registration link in `/letter_opener`.
    **Expect:** `MagicLinkCallbacksController#show` finds no user for that email and renders the `:new_registration` view — a name-only form (no password field) with the email pre-filled. Fill in first and last name and submit.
-   **Expect:** You are signed in immediately and redirected (the app calls `start_new_session_for` inside the transaction). Your email address is already verified at this point (no separate verification step needed).
+   **Expect:** You are signed in immediately and redirected (the app calls `start_new_session_for` once the registration transaction commits). Your email address is already verified at this point (no separate verification step needed).
 3. Any pending invitation or open-link join token stashed in the session cookie is claimed automatically at this point (no separate verification step needed — email is verified inside the registration transaction).
 
 **What `SIGNUP_MODE=open` does not change.** Sign-up is always available to visitors who arrive with a valid `session[:pending_invitation_token]` or `session[:pending_join_token]` — even under `invite_only`. This is by design: an invitation or join-link is what opens the gate.
@@ -91,11 +92,13 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
    **Expect:** The invitation is created and an invitation email is dispatched — check `/letter_opener`.
 3. Open the invitation email in `/letter_opener`. Click **Accept invitation**.
    The link is `GET /invitations/:token/accept`.
-   **Expect (unauthenticated browser):** The accept page (`invitation_accepts#show`) renders. The token is stashed in `session[:pending_invitation_token]`. A "Register or sign in to accept" prompt is shown.
+   **Expect (unauthenticated browser):** The accept page (`invitation_accepts#show`) renders. The token is stashed in `session[:pending_invitation_token]`. **Sign in to accept** and **Create an account to accept** buttons are shown.
 4. From the same browser, navigate to `/session/new` and enter the invited email address.
    **Expect:** The `check_email` page renders (the session token satisfies `signups_open?`). Click the registration link in `/letter_opener`.
 5. Fill in first and last name and submit the `:new_registration` form (the email is pre-filled and already matches the invitation address).
-   **Expect:** You are signed in immediately. The email is verified inside the registration transaction. `auth.claim_pending!` claims the parked invitation (email-match guarded) — because your proven email matches the invitation address, the invitation is accepted and you are added to the workspace. You are redirected to `root_path` with a success notice.
+   **Expect:** You are signed in immediately. The email is verified inside the registration transaction. `commit_signup_atomically` claims the session's invitation through `PendingClaims` in that same transaction (email-match guarded) — because your proven email matches the invitation address, the invitation is accepted and you are added to the workspace. You land in that workspace with a success notice.
+
+**Existing account signing in.** If the recipient already has an account, step 4 signs them in instead. An invitation sent to their email is claimed at sign-in and they land in the workspace; one with no email returns them to its accept page for a click.
 
 **Signed-in accept (POST path).** If the recipient is already signed in when they click the accept link:
 `POST /invitations/:token/accept` calls `Invitation.consume!` immediately (no deferred email-match check needed — the signed-in user's proven email is used). If the signed-in email does not match the invitation email, `Invitation::EmailMismatch` is rescued and a mismatch alert is shown; you are redirected to `root_path`.
@@ -103,7 +106,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 ### Edge cases — Invitations
 
 - **Single-use.** After a successful claim, clicking the same accept link again shows an "expired or used" alert and redirects to `root_path`.
-- **Expired invitation.** Invitations expire after **7 days** (set at creation: `expires_at: 7.days.from_now`). Attempting to accept an expired invitation shows the same "expired or used" alert.
+- **Expired invitation.** Invitations expire after **7 days** (`Invitation::LIFETIME`, set at creation). Attempting to accept an expired invitation shows the same "expired or used" alert.
 - **Email-bound.** An invitation addressed to `alice@example.com` cannot be claimed by a signed-in user whose email is `bob@example.com` — `Invitation::EmailMismatch` is raised and the flow aborts with an alert.
 - **Race (already consumed).** If two requests attempt to accept the same invitation simultaneously, `Invitation#accept!` acquires a lock; the loser raises `NotAcceptable`.
 
@@ -121,11 +124,13 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
    **Expect:** The `check_email` page renders inline (Turbo Frame replaces the form). In development the heading is a link to `/letter_opener`.
 3. Open `/letter_opener` and click the magic-link sign-in email.
    The link is `GET /magic_link_callback/:token`.
-   **Expect:** `MagicLinkCallbacksController#show` finds the user and renders the `:confirm` page ("Sign in as …?"). The GET does **not** consume the token or start a session.
+   **Expect:** `MagicLinkCallbacksController#show` finds the user and renders the `:confirm` page ("Confirm sign-in": "You're about to sign in as …"). The GET does **not** consume the token or start a session.
 4. Press the confirmation button (`POST /magic_link_callback/:token/session`).
-   **Expect:** `MagicLinkCallbacks::SessionsController#create` atomically consumes the token (prevents double-spend), calls `start_new_session_for`, and redirects to `after_authentication_url`. Re-opening the original GET link now shows an invalid-token alert.
+   **Expect:** `MagicLinkCallbacks::SessionsController#create` atomically consumes the token (prevents double-spend), calls `start_new_session_for`, and redirects to `after_authentication_url`. Re-opening the original GET link in this signed-in browser now says "You're already signed in."; anywhere else it shows the invalid-token alert.
 
 ### Existing user (has password)
+
+**Config:** `AUTH_PASSWORDS=enabled`. Passwords are off by default, and then the disclosure below does not render.
 
 1. Navigate to `/session/new` and enter the email address.
    **Expect:** The `check_email` page renders inline (same as passwordless). A magic-link sign-in email is dispatched — check `/letter_opener`. The **"Prefer to use your password?"** disclosure appears for every address, password holder or not, and no link carries the address in its URL.
@@ -137,7 +142,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 ### Unknown email (new user)
 
 1. Navigate to `/session/new` and enter an email address that has **no account**.
-   **Expect:** The `check_email` page renders (same as passwordless — no user-enumeration difference). A registration magic-link email is dispatched to that address — check `/letter_opener`.
+   **Expect:** The `check_email` page renders (same as passwordless — no user-enumeration difference). When sign-up is open (`SIGNUP_MODE=open`, or a pending invitation or join-link token), a registration magic-link email is dispatched to that address — check `/letter_opener`. Under `invite_only` without one, nothing is sent (Flow 1b).
 2. Click the link in `/letter_opener`.
    **Expect:** `MagicLinkCallbacksController#show` finds no user for that email. It renders the `:new_registration` view — a name-only form (no password field) with the email pre-filled.
 3. Fill in first and last name and submit.
@@ -154,7 +159,7 @@ Or run `bin/rails db:seed` if you configured the shared-preset seed variables.
 
 ## Flow 3 — OAuth sign-in (Google / GitHub)
 
-**Config:** OAuth credentials must be present in `bin/rails credentials:edit --environment development`. Without them, clicking an OAuth button triggers the `/auth/failure` callback and shows an error alert on the sign-in page.
+**Config:** OAuth credentials must be present in `bin/rails credentials:edit --environment development`. Without them, the sign-in page shows no OAuth buttons (`OauthHelper#oauth_enabled?`). A provider round-trip that fails lands on `/auth/failure`, which redirects to the sign-in page with an error alert.
 
 ### New user, provider email verified
 
@@ -175,31 +180,31 @@ This path applies when Google explicitly returns `info.email_verified: false`.
 2. The user record is created and an email `Authentication` is saved as **pending** (no `verified_at`). The pending invitation/join-link tokens from the session (if present) are persisted onto this authentication for deferred claiming.
    **Expect:** You are **not** signed in. You are redirected to `new_session_path` with a notice: check your email. A verification link email is dispatched — check `/letter_opener`.
 3. Click the verification link in `/letter_opener`. It opens a confirmation page, which verifies nothing on its own; press its button.
-   `Settings::ConnectedAccountVerificationsController#create` verifies the authentication, signs you in (because `was_authenticated` is false), claims any pending invitation or join-link, and redirects to `root_path`.
+   `Settings::ConnectedAccountVerificationsController#create` verifies the authentication, signs you in (because `was_authenticated` is false), claims any pending invitation or join-link, and redirects to `settings/connected_accounts` with a success notice.
 
 ### Signed-in user linking a provider
 
-1. Sign in with email/password, then navigate to `settings/connected_accounts` (the sidebar item labelled **Security**).
+1. Sign in, then navigate to `settings/connected_accounts` (the sidebar item labelled **Security**).
 2. Click **Connect Google** (or GitHub). The browser returns to the callback.
    `Current.user` is present, so `OauthLink#claim_link` runs.
 3. If the OAuth email **matches** the account's primary email and `email_verified` is true: the authentication is created and immediately verified.
    **Expect:** Redirect to `settings/connected_accounts` with a "linked" notice. The provider now appears in the list as verified.
 4. If the OAuth email does **not** match (or `email_verified` is false): the authentication is saved as pending. A verification link email is dispatched to the OAuth address — check `/letter_opener`.
-   **Expect:** Redirect to `settings/connected_accounts` with a "pending" notice. The provider appears in the list with a "Verify" / "Resend" / "Remove" action.
+   **Expect:** Redirect to `settings/connected_accounts` with a "pending" notice. The provider appears in the list as "Confirming …" with **Resend confirmation** and **Cancel link** actions.
 5. Click the verification link in `/letter_opener` and press the button on the confirmation page.
    **Expect:** The authentication is verified, the pending entry is updated to verified, and you are redirected to `settings/connected_accounts` with a success notice (you were already authenticated, so `was_authenticated` is true — no re-sign-in).
 
 ### Removing a provider (`settings/connected_accounts`)
 
-Navigate to `settings/connected_accounts`. Next to a verified provider, click **Remove**.
+Navigate to `settings/connected_accounts`. Next to a verified provider, click **Unlink** and confirm.
 
 - **Expect (multiple verified authentications):** The provider is removed. Redirect with success notice.
-- **Expect (last verified authentication):** The request is rejected. `destroyed_auth.only_verified_remaining?` returns true; the destroy is skipped. Redirect with "cannot remove last verified" alert. This prevents locking the user out of their account.
+- **Expect (last verified authentication):** The row offers no **Unlink**; it reads "Your only sign-in method". A DELETE sent anyway is rejected: `destroyed_auth.only_verified_remaining?` returns true, the destroy is skipped, and you are redirected with the "cannot remove last verified" alert. This prevents locking the user out of their account.
 
 ### Edge cases — OAuth
 
 - **Cross-user collision.** If an attacker attempts to link a Google identity that is already linked to a different account, the legitimate owner receives a defense-in-depth collision-alert email (rate-limited), and the attacker is shown a generic "already linked" alert.
-- **Pending re-hit.** If you click an OAuth button while a pending (unverified) authentication for that provider already exists, you are redirected to `settings/connected_accounts` with a "pending in progress" alert and the verification email is re-sent (subject to the per-recipient throttle).
+- **Pending re-hit.** If you come back through OAuth with an identity whose authentication is still pending (unverified), the verification email is re-sent (subject to the per-recipient throttle) with a "We sent a fresh confirmation link" notice. A signed-in user linking a *different* account of a provider that already has a pending link gets a "pending in progress" alert on `settings/connected_accounts` instead, and no email.
 
 ---
 
@@ -221,25 +226,25 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
 **Config required:**
 
 1. `SIGNUP_PERMITTED_JOIN_STRATEGIES=invite,open_link` — the instance ceiling must include `open_link`.
-2. The target workspace's join policy must be set to `open_link`. A workspace owner navigates to the workspace settings and enables the shareable link (this sets `workspace.join_policy = "open_link"` and creates a `WorkspaceJoinLink`).
+2. The target workspace's join policy must be set to `open_link`. A workspace owner opens the workspace's **Limits & Plan** settings, chooses **Shareable join link** under Join policy and saves (this sets `workspace.join_policy = "open_link"`), then clicks **Generate link** (this creates a `WorkspaceJoinLink`, valid for 7 days; the full URL is shown only once).
 3. The workspace must not be `personal?` — personal workspaces are locked to invite-only at the model level.
 
 **Walkthrough — authenticated user joins:**
 
 1. Copy the join URL for the workspace (format: `/workspaces/:slug/joins/:token`).
 2. In the same browser session (signed in, not yet a member), navigate to that URL.
-   `Workspaces::JoinsController#show` is called. The `before_action :set_workspace_and_link` validates the workspace, link, and `workspace.open_join?`. On success the confirmation page renders.
+   `Workspaces::JoinsController#show` is called. The `before_action :set_workspace_and_link` validates the workspace, link, and `workspace.accepting_open_joins?`. On success the confirmation page renders.
    **Expect:** A confirmation page — not a join yet. The GET is intentionally read-only to prevent prefetch and link-unfurlers from triggering automatic admission.
-3. Click **Join** (the confirmation form submits `POST /workspaces/:slug/joins/:token`).
-   `admit_authenticated_user` calls `workspace.admit(Current.user, role: workspace.default_self_join_role, self_join: true)`.
+3. Click **Join *workspace name*** (the confirmation form submits `POST /workspaces/:slug/joins/:token`).
+   `admit_authenticated_user` calls `@link.admit(Current.user)`, which re-checks the link and the workspace inside the write and then calls `workspace.admit(user, role: workspace.default_self_join_role, self_join: true)`.
    **Expect:** Redirect to `workspace_path(@workspace)` with "joined" notice. You are now a member.
    **Expect (notifications):** the workspace owners get "X joined"; you do not — you get your own "You joined …" instead (`WorkspaceJoinedNotifier`), because nobody is notified about their own action.
 
 **Walkthrough — unauthenticated visitor joins (Flow B):**
 
 1. In a private window (no session), navigate to the join URL.
-   **Expect:** Confirmation page renders (same view — `authenticated?` check in `show` does not exist; the before_action only validates the link, not auth state). An existing member who navigates here is immediately redirected to the workspace.
-2. Click **Join** (`POST /workspaces/:slug/joins/:token`).
+   **Expect:** Confirmation page renders (same view — `authenticated?` check in `show` does not exist; the before_action only validates the link, not auth state).
+2. Click **Join *workspace name*** (`POST /workspaces/:slug/joins/:token`).
    `stash_for_signup` stores the link token in `session[:pending_join_token]` and redirects to `new_session_path`.
    **Expect (open signup):** Navigate to `/session/new`, enter your email, click the registration magic link, and fill in name — the pending join-link token satisfies `signups_open?` even under `invite_only`.
    **Expect (invite-only):** Same — the pending join token opens the gate regardless of `SIGNUP_MODE`.
@@ -248,8 +253,8 @@ Navigate to `settings/connected_accounts`. Next to a verified provider, click **
 
 ### Edge cases — Workspace join
 
-- **Already a member.** If an authenticated user who is already in the workspace navigates to the join URL, `show` immediately redirects to `workspace_path(@workspace)`.
-- **Revoked link.** `set_workspace_and_link` checks `join_links.active` (where `revoked_at: nil`). A revoked token produces a neutral "invalid or revoked" alert regardless of which condition failed — no information leakage about workspace existence or join policy.
+- **Already a member.** If an authenticated user who is already in the workspace navigates to the join URL, `show` still renders the confirmation; clicking **Join** redirects to `workspace_path(@workspace)` with a "You're already a member" notice.
+- **Revoked link.** `set_workspace_and_link` checks `join_links.active` (unrevoked and unexpired; a link lasts 7 days, `WorkspaceJoinLink::LIFETIME`). A revoked token produces a neutral "invalid or revoked" alert regardless of which condition failed — no information leakage about workspace existence or join policy.
 - **Personal workspace.** `workspace.open_join?` returns false for personal workspaces (the model validates this). The join URL for a personal workspace always produces the "invalid or revoked" alert.
 - **`open_link` removed from allowlist.** Removing `open_link` from `SIGNUP_PERMITTED_JOIN_STRATEGIES` takes effect immediately at runtime — `SignupPolicy.permits_strategy?(:open_link)` returns false, `open_join?` returns false, existing join links still exist in the database but are unusable.
 - **Pre-existing user follows a link (anti-drive-by-join).** A parked `session[:pending_join_token]` only auto-joins a **brand-new** account created in the same signup. If the person who authenticates turns out to be an *existing* user (e.g. they follow the link logged out, then sign in, or link a new verified OAuth provider), they are **not** silently added. Instead a dismissible "You followed a link to join X — Join / Dismiss" banner renders (`_pending_join_banner`), driven by `PendingJoinsController`: `POST /pending_join` admits, `DELETE /pending_join` dismisses. Verify a lured-in token does not force-join an existing account.
@@ -273,10 +278,13 @@ Navigate into the settings hub. The sidebar shows these items in personal contex
 |---|---|---|
 | Profile | `GET /settings/profile/edit` | Display name and email address. |
 | Notifications | `GET /settings/notification_preferences/edit` | Per-channel and digest preferences. |
-| Security | `GET /settings/connected_accounts` | Linked OAuth providers, verification status, resend, remove, password change. |
+| Security | `GET /settings/connected_accounts` | Linked OAuth providers, verification status, resend, unlink. |
+| Passkeys | `GET /settings/passkeys` | Add and remove passkeys. |
+| Blocked senders | `GET /settings/invitation_blocks` | Inviters blocked with "Don't invite me again"; unblock them here. |
+| Active devices | `GET /settings/sessions` | Signed-in sessions; sign one out, or all the others. |
 | Appearance | `GET /settings/theme_preference/edit` | Light / dark / system theme toggle. |
 
-**Password.** An account that was created via email/password has a Password item accessible from the Security section (`settings/password/new`). An account that was created via OAuth or magic-link may not have a password — check the presence of the form.
+**Password.** Only with `AUTH_PASSWORDS=enabled`: `settings/password/new` sets a first password and `settings/password/edit` changes or removes one. No sidebar item or settings page links to them, so open them by URL.
 
 **Timezone.** Timezone is set automatically by a client beacon (`settings/preferences/timezone`). There is no manual timezone setting page.
 
@@ -298,7 +306,7 @@ The switcher (`shared/_workspace_switcher.html.erb`; trigger in `shared/_workspa
 ### Edge cases — Identity
 
 - **`/workspaces` requires authentication.** Navigating to `/workspaces` when signed out triggers the authentication guard and redirects to the sign-in page.
-- **Settings sidebar in org context.** When the settings layout is loaded in the context of a workspace (e.g., `/workspaces/:slug/edit`), the sidebar shows workspace-scoped items (Profile, Members, Invitations, Limits & Plan), gated by Pundit. Items for which the current user lacks the required permission are omitted — they are not shown as disabled.
+- **Settings sidebar in org context.** When the settings layout is loaded in the context of a workspace (e.g., `/workspaces/:slug/edit`), the sidebar shows workspace-scoped items (Profile, Members, Limits & Plan), gated by Pundit. Items for which the current user lacks the required permission are omitted — they are not shown as disabled.
 - **Removing the last OAuth/email sign-in method.** `Settings::ConnectedAccountsController#destroy` checks `only_verified_remaining?` before destroying. Attempting to remove the last verified authentication method shows the "cannot remove last verified" alert without deleting anything.
 
 ---
@@ -332,11 +340,13 @@ The `:none` preset means new users are not automatically placed in a workspace a
 
 ### Manual QA (requires a secure context)
 
-Passkeys need HTTPS — over plain `http://localhost` the "Sign in with a passkey"
-button feature-detects off and the page falls back to magic link. To exercise the
-real ceremony locally, run with TLS and set the origin:
+Passkeys need a secure context; where the page is not one, the "Sign in with a
+passkey" button feature-detects off and the page falls back to magic link. Chrome
+treats plain `http://localhost` as secure (the passkey system specs run there),
+and the default development origin is `http://localhost:3000`, so no TLS is needed:
 
-1. `WEBAUTHN_ORIGIN=https://localhost:3000 bin/rails s --ssl` (or a tunnel).
+1. Run `bin/dev` and open `http://localhost:3000` in Chrome. For browsers that
+   need a real HTTPS origin, see [Passkeys](/docs/developer/passkeys#local-https-testing).
 2. Sign in (magic link) → Settings → Passkeys → **Add a passkey** → approve the
    platform prompt → the credential appears in the list.
 3. Sign out → on the sign-in screen tap **Sign in with a passkey** → approve →
@@ -362,7 +372,7 @@ real-crypto harnesses (no mocking the gem):
 
 ---
 
-## Flow 9 — Instance operations
+## Flow 8 — Instance operations
 
 **Config:** any preset. Two accounts: an **operator** and a plain **member**; keep the member in a private window. Background: [Instance operations](/docs/developer/operations).
 
@@ -375,7 +385,7 @@ real-crypto harnesses (no mocking the gem):
    bin/rails 'tenancy:owner_setup_link[op@example.com]'
    ```
 
-   **Expect:** the grant reports success; running it again reports they are already an operator. The setup link is printed to the terminal, never emailed. Open it, confirm → signed in → `/settings/password/new`. Set a password within 15 minutes: the area re-checks reauthentication on every request, and a passwordless account's only other factor is an emailed code.
+   **Expect:** the grant reports success; running it again reports they are already an operator. The setup link is printed to the terminal, never emailed. Open it, confirm → signed in → `/settings/password/new` with `AUTH_PASSWORDS=enabled`, otherwise the home page. With passwords on, set one within 15 minutes: the area re-checks reauthentication on every request, and a passwordless account's only other factor is an emailed code.
 2. As the member, navigate to `/operations`, `/operations/users`, `/operations/operatorships`.
    **Expect:** a plain 404 each time — not 403, not a redirect. No link to the area exists anywhere for a member.
 3. As the operator, navigate to `/operations`.
@@ -402,10 +412,10 @@ real-crypto harnesses (no mocking the gem):
 ### Look a user up, suspend, reinstate
 
 1. Users → enter the member's exact email address (any case) → **Search**.
-   **Expect:** one result linking to their page. A wrong address → "No user has that email address." Without a query the page lists nobody.
+   **Expect:** one result linking to their page. A wrong address → "No user matches that name or address." Without a query the page lists every account, newest first; part of a name also matches.
 2. On the member's page: **Suspend** → confirm ("This ends their sessions and blocks sign-in until you reinstate them. Their workspaces and roles stay as they are.").
    **Expect:** "Access suspended."; a **Suspended** badge with "since …" in your own time zone; **Reinstate** where Suspend was; the memberships list below is unchanged.
-3. As the member: their existing tab now redirects to sign-in (the session was ended). Sign in with the password.
+3. As the member: their existing tab now redirects to sign-in (the session was ended). Sign in with the password (with `AUTH_PASSWORDS=enabled`).
    **Expect:** "Your account has been suspended. Contact whoever runs this app to have it reinstated." Request a magic link and open it → the same refusal. Passkey and OAuth sign-in are refused the same way.
 4. Operator: **Reinstate**.
    **Expect:** "Access reinstated." The member signs in normally and every workspace and role is exactly as it was.
@@ -414,8 +424,10 @@ real-crypto harnesses (no mocking the gem):
 
 ### Clear a sign-in lockout
 
+**Config:** `AUTH_PASSWORDS=enabled`.
+
 1. As the member, enter a wrong password five times.
-   **Expect:** "Your account has been locked due to too many failed attempts. Please try again later."
+   **Expect:** "Invalid email or password." every time, the fifth included: the page never says an account is locked (Flow 2). The member gets a "password sign-in is paused" email.
 2. Operator: open the member's page.
    **Expect:** "Sign-in blocked after 5 failed attempts — clears in about 1 hour." and **Let them try again**. Click it → "Lockout cleared."; the sentence is gone; the member can sign in at once.
 
@@ -432,5 +444,5 @@ real-crypto harnesses (no mocking the gem):
 
 - **`TENANCY_WORKSPACE_CREATION=disabled`:** the Workspaces index shows no **New workspace**; `/operations/workspaces/new` redirects with "Workspace creation is disabled on this instance."; a member still gets 404.
 - **Break-glass:** `rails 'users:suspend[op@example.com]'` suspends an operator (the panel refuses; the task does not check) and `rails users:unsuspend` restores them; `rails 'operators:revoke[email]'` revokes even the last operator.
-- **Reauthentication:** sign in, wait 15 minutes, open `/operations` → the reauthentication interstitial (password, passkey, or emailed code), then the page.
+- **Reauthentication:** sign in, wait 15 minutes, open `/operations` → the reauthentication interstitial (an emailed code, a passkey if you have one, or your password when `AUTH_PASSWORDS=enabled`), then the page.
 - **AAA:** every operations page is audited in both themes by `spec/system/operations_area_spec.rb`; when checking by hand, switch theme and re-read a page with the pointer resting on a list row.

@@ -1,6 +1,10 @@
 #!/usr/bin/env ruby
 require_relative "../config/boot"
 require "bundler/audit/cli"
+require_relative "../lib/clean_git_env"
+
+# A linked worktree's git hook exports GIT_DIR, which would aim the advisory database's `git pull` at this repo.
+CleanGitEnv::HASH.each_key { |name| ENV.delete(name) }
 
 ARGV.concat %w[ --config config/bundler-audit.yml ] if ARGV.empty? || ARGV.include?("check")
 Bundler::Audit::CLI.start

@@ -11,44 +11,51 @@ require "rails_helper"
 # (see spec/support/axe_accessibility.rb). Do not claim AAA from a
 # local run — CI is the gate.
 RSpec.describe "Workspace settings section — AAA", type: :system do
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme", max_members: 50) }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-  before { sign_in_via_form(user) }
+  def sign_in_new_owner_of(workspace)
+    user = create(:user)
+    create(:membership, :owner, user: user, workspace: workspace)
+    sign_in_via_form(user)
+    user
+  end
 
   it "Profile settings page is axe-clean at AAA (both themes)" do
+    workspace = create(:workspace, name: "Acme", max_members: 50)
+    sign_in_new_owner_of(workspace)
     visit edit_workspace_path(workspace)
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "AAA violations on workspace profile: #{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
 
   it "Members page is axe-clean at AAA (both themes)" do
+    workspace = create(:workspace, name: "Acme", max_members: 50)
+    sign_in_new_owner_of(workspace)
     visit workspace_members_path(workspace)
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "AAA violations on workspace members: #{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
 
   it "Limits & Plan page is axe-clean at AAA (both themes)" do
+    workspace = create(:workspace, name: "Acme", max_members: 50)
+    sign_in_new_owner_of(workspace)
     visit edit_workspace_settings_path(workspace)
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "AAA violations on limits & plan: #{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
 
   it "Invite screen is axe-clean at AAA (both themes)" do
+    workspace = create(:workspace, name: "Acme", max_members: 50)
+    sign_in_new_owner_of(workspace)
     visit new_workspace_invitation_path(workspace)
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),
       "AAA violations on invite screen: #{axe_violations_in_both_themes(axe_options).join("\n")}"
   end
 
   describe "open-link join link (hashed at rest → show-once)" do
-    before do
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-      workspace.update!(join_policy: "open_link")
-    end
+    before { permit_open_join_links }
 
     it "show-once reveal state is axe-clean at AAA (both themes)" do
+      workspace = create(:workspace, :open_link, name: "Acme", max_members: 50)
+      sign_in_new_owner_of(workspace)
       visit edit_workspace_settings_path(workspace)
       click_button I18n.t("workspaces.settings.join_policy.generate")
       expect(page).to have_text(I18n.t("workspaces.settings.join_policy.show_once_warning_lead"))
@@ -57,6 +64,8 @@ RSpec.describe "Workspace settings section — AAA", type: :system do
     end
 
     it "masked steady state is axe-clean at AAA (both themes)" do
+      workspace = create(:workspace, :open_link, name: "Acme", max_members: 50)
+      user = sign_in_new_owner_of(workspace)
       create(:workspace_join_link, workspace: workspace, created_by: user)
       visit edit_workspace_settings_path(workspace)
       expect(page).to have_text(I18n.t("workspaces.settings.join_policy.masked_help"))
@@ -68,6 +77,8 @@ RSpec.describe "Workspace settings section — AAA", type: :system do
     # alone, and the expiry paragraph is the aria-describedby target for both
     # the rotate button and the masked stub.
     it "shows the live link's expiry in a time[datetime], wired to the rotate button and masked stub, and is axe-clean at AAA (both themes)" do
+      workspace = create(:workspace, :open_link, name: "Acme", max_members: 50)
+      user = sign_in_new_owner_of(workspace)
       link = create(:workspace_join_link, workspace: workspace, created_by: user)
       visit edit_workspace_settings_path(workspace)
 
@@ -84,6 +95,8 @@ RSpec.describe "Workspace settings section — AAA", type: :system do
     end
 
     it "shows the expired message in words (no colour cue) for a lapsed link, and is axe-clean at AAA (both themes)" do
+      workspace = create(:workspace, :open_link, name: "Acme", max_members: 50)
+      user = sign_in_new_owner_of(workspace)
       create(:workspace_join_link, workspace: workspace, created_by: user)
       travel_to 8.days.from_now do
         visit edit_workspace_settings_path(workspace)

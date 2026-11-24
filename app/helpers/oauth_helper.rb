@@ -29,4 +29,10 @@ module OauthHelper
   def oauth_enabled?
     enabled_oauth_providers.any?
   end
+
+  # A pending row counts as linked: connecting again only reports it in progress.
+  def connectable_oauth_providers(authentications)
+    linked = authentications.map(&:provider)
+    enabled_oauth_providers.reject { |key, _| linked.include?(OmniauthAdapters.normalize_provider(key.to_s)) }
+  end
 end

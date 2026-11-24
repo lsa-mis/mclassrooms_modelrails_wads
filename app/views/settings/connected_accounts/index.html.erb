@@ -103,4 +103,23 @@
       </li>
     <% end %>
   </ul>
+
+  <% connectable = connectable_oauth_providers(@authentications) %>
+  <% if connectable.any? %>
+    <section aria-labelledby="connect-provider-heading" class="mt-10">
+      <h2 id="connect-provider-heading" class="text-lg font-semibold text-text-heading">
+        <%= t("settings.connected_accounts.index.connect_heading") %>
+      </h2>
+      <p class="mt-1 text-sm text-text-muted"><%= t("settings.connected_accounts.index.connect_help") %></p>
+      <div class="mt-4 action-group">
+        <% connectable.each do |provider_key, config| %>
+          <%= button_to t("settings.connected_accounts.index.connect_action", provider: config[:name]),
+                "/auth/#{provider_key}",
+                method: :post,
+                form: { data: { turbo: false }, class: "inline" },
+                class: "btn-secondary" %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
 </div>

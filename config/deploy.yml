@@ -84,12 +84,28 @@ env:
     - OKTA_CLIENT_SECRET
     - UM_API_CLIENT_ID
     - UM_API_CLIENT_SECRET
-    # U-M SMTP relay credentials from LSA TS, referenced from .kamal/secrets.
-    - SMTP_USERNAME
-    - SMTP_PASSWORD
   clear:
-    # Mail goes through the U-M SMTP relay. SMTP_ADDRESS stays unset until LSA TS supplies the
-    # host, so production refuses to boot without it — see deployment-miclassrooms.
+    # RAILS_HOST: app.yourdomain.com   # required; production refuses to boot without it
+
+    # Daily backups of the database and uploads, to a folder or a bucket: /docs/developer/deployment
+    # BACKUP_PATH: /backups               # the folder mounted under volumes: below
+
+    # BACKUP_SCHEDULE: every day at 2am   # any Solid Queue schedule
+
+    # OBJECT_STORAGE_BUCKET: yourapp-backups   # or a bucket, its key in credentials (object_storage.*)
+    # OBJECT_STORAGE_REGION: eu-central-003
+
+    # SIGNUP_MODE: open   # default: invite_only. Read Open sign-up in /docs/developer/deployment first
+
+    # WORKSPACE_ON_SIGNUP: shared   # default: the preset bin/fork recorded in .fork.yml
+    # TENANCY_SHARED_WORKSPACE_SLUG: your_app   # default on shared: the name in .fork.yml
+
+    # TENANCY_OWNER_EMAIL: you@yourdomain.com   # required on shared: the first deploy seeds this owner
+    # TENANCY_WORKSPACE_CREATION: disabled      # usual on shared: no workspaces beyond the one
+
+    # Outbound mail: the U-M relay; its login is in credentials (smtp.user_name, smtp.password).
+    # The .example host is a stand-in LSA TS replaces: production refuses to boot on it.
+    SMTP_ADDRESS: smtp-relay.example
     SMTP_PORT: 587
     # MAIL_FROM: hello@app.yourdomain.com   # default: noreply@RAILS_HOST
 
@@ -117,8 +133,7 @@ env:
     # supervisor — confirm puma-plugin-solid_queue's behavior before raising this.
     # WEB_CONCURRENCY: 2
 
-    # Match this to any external database server to configure Active Record correctly
-    # Use modelrails_base-db for a db accessory server on same machine via local kamal docker network.
+    # Your database server, or modelrails_base-db for an accessory on this machine's kamal network.
     # DB_HOST: 192.168.0.2
 
     # Log everything from Rails
@@ -171,6 +186,7 @@ aliases:
 # Recommended to change this to a mounted volume path that is backed up off server.
 volumes:
   - "mclassrooms_modelrails_wads_storage:/rails/storage"
+  # - "/srv/backups:/backups"   # the BACKUP_PATH folder, writable by uid 1000
 
 # Bridge fingerprinted assets, like JS and CSS, between versions to avoid
 # hitting 404 on in-flight requests. Combines all files from new and old
@@ -184,18 +200,24 @@ builder:
   # # Build image via remote server (useful for faster amd64 builds on arm64 computers)
   # remote: ssh://docker@docker-builder-server
 
-  # Pass the Ruby version through so the production image always matches the
-  # version Bundler enforces via Gemfile.lock. Keep in sync with .tool-versions.
+  # The production image builds on the Ruby that .tool-versions pins, the one the Gemfile enforces.
   args:
-    RUBY_VERSION: "4.0.7"
+    RUBY_VERSION: '<%= File.read(".tool-versions")[/^ruby (\S+)/, 1] || raise(".tool-versions names no ruby") %>'
 
   # secrets:
   #   - GITHUB_TOKEN
   #   - RAILS_MASTER_KEY
 
+# Prints bin/rails deploy:check's warnings on every deploy; Kamal hides a passing hook's output.
+hooks_output:
+  pre-build: verbose
+
 # Use a different ssh user than root
 # ssh:
 #   user: app
+
+# Hot Cell (sandboxed image processing) is an accessory too, shipped off; its full block, the
+# group-add, volume and env lines, and the order to boot them in: /docs/developer/hot-cell.
 
 # Use accessory services (secrets come from .kamal/secrets).
 # accessories:

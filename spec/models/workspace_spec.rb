@@ -61,19 +61,20 @@ RSpec.describe Workspace, type: :model do
   end
 
   describe "Discardable" do
-    let(:workspace) { create(:workspace) }
-
     it "can be discarded" do
+      workspace = create(:workspace)
       workspace.discard!
       expect(workspace).to be_discarded
     end
 
     it "is excluded from kept scope when discarded" do
+      workspace = create(:workspace)
       workspace.discard!
       expect(Workspace.kept).not_to include(workspace)
     end
 
     it "can be undiscarded" do
+      workspace = create(:workspace)
       workspace.discard!
       workspace.undiscard!
       expect(workspace).not_to be_discarded
@@ -95,44 +96,40 @@ RSpec.describe Workspace, type: :model do
   end
 
   describe "#owners" do
-    let(:workspace) { create(:workspace) }
-    let(:owner_role) do
-      Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r| r.name = "Owner" }
-    end
-    let(:member_role) do
-      Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
-    end
-
     it "returns all kept users with owner role for the workspace" do
+      workspace = create(:workspace)
       owner_a = create(:user)
       owner_b = create(:user)
       member  = create(:user)
-      create(:membership, user: owner_a, workspace: workspace, role: owner_role)
-      create(:membership, user: owner_b, workspace: workspace, role: owner_role)
-      create(:membership, user: member,  workspace: workspace, role: member_role)
+      create(:membership, :owner, user: owner_a, workspace: workspace)
+      create(:membership, :owner, user: owner_b, workspace: workspace)
+      create(:membership, user: member,  workspace: workspace)
 
       expect(workspace.owners).to match_array([ owner_a, owner_b ])
     end
 
     it "excludes discarded owner memberships" do
+      workspace = create(:workspace)
       owner_a = create(:user)
       owner_b = create(:user)
-      create(:membership, user: owner_a, workspace: workspace, role: owner_role)
-      m2 = create(:membership, user: owner_b, workspace: workspace, role: owner_role)
+      create(:membership, :owner, user: owner_a, workspace: workspace)
+      m2 = create(:membership, :owner, user: owner_b, workspace: workspace)
       m2.update!(discarded_at: Time.current)
 
       expect(workspace.owners).to match_array([ owner_a ])
     end
 
     it "returns an empty collection when the workspace has no owner-role memberships" do
+      workspace = create(:workspace)
       member = create(:user)
-      create(:membership, user: member, workspace: workspace, role: member_role)
+      create(:membership, user: member, workspace: workspace)
       expect(workspace.owners).to be_empty
     end
 
     it "returns fresh data even when a stale association is loaded" do
-      first = create(:membership, user: create(:user), workspace: workspace, role: owner_role)
-      second = create(:membership, user: create(:user), workspace: workspace, role: owner_role)
+      workspace = create(:workspace)
+      first = create(:membership, :owner, user: create(:user), workspace: workspace)
+      second = create(:membership, :owner, user: create(:user), workspace: workspace)
       workspace.memberships.load
       Membership.find(second.id).update!(discarded_at: Time.current)
 
@@ -162,8 +159,8 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "can be set to 'open_link' when the instance permits it" do
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-      workspace = build(:workspace, join_policy: "open_link", personal: false)
+      permit_open_join_links
+      workspace = build(:workspace, :open_link)
       expect(workspace).to be_valid
       expect(workspace).to be_open_link
     end
@@ -171,7 +168,7 @@ RSpec.describe Workspace, type: :model do
 
   describe "personal-workspace hard guard validation" do
     it "rejects join_policy 'open_link' on a personal workspace" do
-      workspace = build(:workspace, personal: true, join_policy: "open_link")
+      workspace = build(:workspace, :open_link, personal: true)
       expect(workspace).not_to be_valid
       expect(workspace.errors[:join_policy]).to be_present
     end
@@ -185,14 +182,14 @@ RSpec.describe Workspace, type: :model do
   describe "instance allowlist validation" do
     it "rejects setting join_policy to a strategy the instance doesn't permit" do
       allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite])
-      workspace = build(:workspace, personal: false, join_policy: "open_link")
+      workspace = build(:workspace, :open_link)
       expect(workspace).not_to be_valid
       expect(workspace.errors[:join_policy]).to include(/not permitted/i)
     end
 
     it "permits setting join_policy to a strategy in the allowlist" do
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-      workspace = build(:workspace, personal: false, join_policy: "open_link")
+      permit_open_join_links
+      workspace = build(:workspace, :open_link)
       expect(workspace).to be_valid
     end
   end
@@ -224,9 +221,8 @@ RSpec.describe Workspace, type: :model do
   # workspace (no membership → unreachable and undeletable through the UI)
   # when the owner-role lookup raised after the commit.
   describe ".create_owned" do
-    let(:user) { create(:user) }
-
     it "creates the workspace with its owner membership" do
+      user = create(:user)
       workspace = Workspace.create_owned({ name: "Acme" }, owner: user)
 
       expect(workspace).to be_persisted
@@ -236,6 +232,7 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "resolves the owner role through the self-healing Role.system_default!, not find_by!" do
+      user = create(:user)
       allow(Role).to receive(:system_default!).and_call_original
 
       Workspace.create_owned({ name: "Acme" }, owner: user)
@@ -244,6 +241,7 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "rolls back the workspace INSERT when the owner membership cannot be created" do
+      user = create(:user)
       allow(Role).to receive(:system_default!).and_raise(ActiveRecord::RecordNotFound)
 
       expect {
@@ -253,6 +251,7 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "returns the unsaved workspace with errors on validation failure (form re-render contract)" do
+      user = create(:user)
       workspace = Workspace.create_owned({ name: nil }, owner: user)
 
       expect(workspace).not_to be_persisted
@@ -261,9 +260,8 @@ RSpec.describe Workspace, type: :model do
   end
 
   describe ".create_for_owner_email" do
-    let(:operator) { create(:user) }
-
     it "owns the workspace by an existing user's account, with no invitation" do
+      operator = create(:user)
       existing_owner = create(:user)
 
       workspace = nil
@@ -277,6 +275,7 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "owns the workspace by the operator and invites an unknown email as Owner" do
+      operator = create(:user)
       workspace = nil
       expect {
         workspace = Workspace.create_for_owner_email(
@@ -292,9 +291,9 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "does not persist a malformed owner_email, and issues no invitation" do
-      # See the blank-email example below: forces the operator's own
-      # onboarded workspace to exist before the count is measured.
-      operator
+      operator = create(:user)
+      # Created before the block: create(:user) onboards a workspace that would
+      # otherwise read as this verb's count.
       workspace = nil
       expect {
         workspace = Workspace.create_for_owner_email(
@@ -306,15 +305,10 @@ RSpec.describe Workspace, type: :model do
       expect(workspace.errors[:owner_email]).to be_present
     end
 
-    # The silent-skip guard: bulk_invite! swallows a malformed/blank email
-    # rather than raising, so a blank owner_email must fail Workspace's own
-    # validation before this verb ever reaches bulk_invite! — otherwise the
-    # workspace would be silently handed to the operator with no invitation.
+    # The silent-skip guard: bulk_invite! swallows a blank email, so Workspace's own
+    # validation must fail it first or the operator silently gets an uninvited workspace.
     it "does not persist a blank owner_email, and issues no invitation" do
-      # Created outside the block: create(:user) onboards its own workspace
-      # (User#onboard_workspace), which would otherwise read as this verb's
-      # count when it's really the operator's.
-      operator
+      operator = create(:user)
       workspace = nil
       expect {
         workspace = Workspace.create_for_owner_email(
@@ -326,11 +320,10 @@ RSpec.describe Workspace, type: :model do
       expect(workspace.errors[:owner_email]).to be_present
     end
 
-    # A POST with no owner_email key at all reaches the verb as nil, and the
-    # format validation's allow_nil would let the save through — the coercion
-    # to "" is what makes a missing key the same failure as a blank one.
+    # A missing owner_email key reaches the verb as nil, which allow_nil would let
+    # through; the coercion to "" makes it the same failure as a blank one.
     it "does not persist when the owner_email key is missing entirely" do
-      operator
+      operator = create(:user)
       workspace = nil
       expect {
         workspace = Workspace.create_for_owner_email({ name: "Acme" }, operator: operator)
@@ -341,6 +334,7 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "strips and case-folds an existing user's email before matching and validating" do
+      operator = create(:user)
       existing_owner = create(:user)
 
       workspace = Workspace.create_for_owner_email(
@@ -352,10 +346,9 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "issues the invitation after create_owned's transaction has committed" do
-      # open_transactions, not transaction_open?: transactional fixtures
-      # already hold one transaction open for the whole example, so
-      # transaction_open? would read true both inside and after
-      # create_owned's block and couldn't tell the two apart.
+      operator = create(:user)
+      # open_transactions, not transaction_open?: transactional fixtures hold one open
+      # for the whole example, so transaction_open? could not tell inside from after.
       baseline = Workspace.connection.open_transactions
 
       allow(Invitation).to receive(:bulk_invite!).and_wrap_original { |m, **kw|
@@ -373,9 +366,6 @@ RSpec.describe Workspace, type: :model do
   # workspaces that could be hard-destroyed were ones nobody had ever done
   # anything in — and "Delete permanently" is a user-facing action.
   describe "hard destroy with an audit trail" do
-    let(:workspace) { create(:workspace) }
-    let(:user) { create(:user) }
-
     # Trackable reads Current for the actor and the workspace; set both the way
     # the request cycle does, then put them back.
     def with_current(user, workspace)
@@ -388,6 +378,8 @@ RSpec.describe Workspace, type: :model do
     end
 
     it "destroys the workspace's own activity trail with it" do
+      workspace = create(:workspace)
+      user = create(:user)
       with_current(user, workspace) { create(:membership, user: user, workspace: workspace) }
       expect(ActivityLog.for_workspace(workspace)).to be_any
 
@@ -395,13 +387,11 @@ RSpec.describe Workspace, type: :model do
       expect(ActivityLog.where(workspace_id: workspace.id)).to be_empty
     end
 
-    # The retention floor's rows are written by ActivityLog.record_security_event!,
-    # which hardcodes `workspace_id: nil` and is the single writer for every
-    # SECURITY_ACTIONS row in both tiers. So no security row is workspace-scoped
-    # and a workspace destroy cannot reach one. This pins that, because the day
-    # a security row gains a workspace_id is the day `dependent: :destroy`
-    # starts eating credential evidence silently.
+    # record_security_event! hardcodes workspace_id: nil, so a workspace destroy cannot
+    # reach a security row; this pins it before dependent: :destroy eats evidence.
     it "leaves account-security rows alone, since none of them are workspace-scoped" do
+      workspace = create(:workspace)
+      user = create(:user)
       ActivityLog.record_security_event!(action: "user.password_changed", user: user)
       with_current(user, workspace) { create(:membership, user: user, workspace: workspace) }
 

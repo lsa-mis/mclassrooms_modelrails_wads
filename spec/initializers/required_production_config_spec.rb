@@ -6,7 +6,10 @@ load Rails.root.join("config/initializers/required_production_config.rb").to_s u
 
 RSpec.describe RequiredProductionConfig do
   describe ".check!" do
-    let(:mail) { { "SMTP_ADDRESS" => "smtp.postmarkapp.com", "SMTP_USERNAME" => "token", "SMTP_PASSWORD" => "token" } }
+    let(:backups) { { "OBJECT_STORAGE_BUCKET" => "app-backups", "OBJECT_STORAGE_REGION" => "auto" } }
+    let(:storage) { { object_storage: { access_key_id: "id", secret_access_key: "secret" } } }
+    let(:mail) { { "SMTP_ADDRESS" => "smtp.postmarkapp.com", **backups } }
+    let(:smtp) { { smtp: { user_name: "token", password: "token" }, **storage } }
 
     it "raises when RAILS_HOST is unset" do
       expect { described_class.check!({}) }
@@ -34,18 +37,25 @@ RSpec.describe RequiredProductionConfig do
     end
 
     it "accepts a real hostname" do
-      expect { described_class.check!({ "RAILS_HOST" => "app.humbledaisy.com", **mail }) }
+      expect { described_class.check!({ "RAILS_HOST" => "app.example.org", **mail }, smtp) }
         .not_to raise_error
     end
 
     it "accepts a hostname that merely contains the word example" do
-      expect { described_class.check!({ "RAILS_HOST" => "goodexample.io", **mail }) }
+      expect { described_class.check!({ "RAILS_HOST" => "goodexample.io", **mail }, smtp) }
         .not_to raise_error
     end
 
     # Sign-in is an email; a box that mails localhost:25 boots healthy and nobody can sign in (#1318).
     describe "outbound mail" do
-      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com" } }
+      let(:host) { { "RAILS_HOST" => "app.example.org" } }
+
+      it "gives a staging command that works, because --environment staging refuses" do
+        expect { described_class.check!(host) }.to raise_error(RuntimeError) { |error|
+          expect(error.message).to include("RAILS_CREDENTIALS_ENV=staging")
+          expect(error.message).not_to include("--environment staging")
+        }
+      end
 
       it "raises when SMTP_ADDRESS is unset" do
         expect { described_class.check!(host) }
@@ -66,11 +76,16 @@ RSpec.describe RequiredProductionConfig do
           .to raise_error(RuntimeError, /"mail\.my_app\.example"/)
       end
 
-      it "raises when the address is real but a credential is blank, since every send would be refused" do
-        expect { described_class.check!(host.merge(mail, "SMTP_PASSWORD" => " ")) }
-          .to raise_error(RuntimeError, /SMTP_PASSWORD is unset/)
-        expect { described_class.check!(host.merge(mail.except("SMTP_USERNAME", "SMTP_PASSWORD"))) }
-          .to raise_error(RuntimeError, /SMTP_USERNAME and SMTP_PASSWORD are unset/)
+      it "raises when the address is real but the login in credentials is blank, since every send would be refused" do
+        expect { described_class.check!(host.merge(mail), { smtp: { user_name: "token", password: " " } }) }
+          .to raise_error(RuntimeError, /smtp\.password is unset/)
+        expect { described_class.check!(host.merge(mail), {}) }
+          .to raise_error(RuntimeError, /smtp\.user_name and smtp\.password are unset/)
+      end
+
+      it "no longer accepts a login from the environment" do
+        expect { described_class.check!(host.merge(mail, "SMTP_USERNAME" => "token", "SMTP_PASSWORD" => "token"), {}) }
+          .to raise_error(RuntimeError, /smtp\.user_name and smtp\.password are unset/)
       end
 
       it "names the fix and the doc in the message" do
@@ -78,7 +93,7 @@ RSpec.describe RequiredProductionConfig do
         raise "expected check! to raise"
       rescue RuntimeError => e
         expect(e.message).to include("SMTP_ADDRESS")
-        expect(e.message).to include("env.secret")
+        expect(e.message).to include("credentials:edit --environment production")
         expect(e.message).to include("/docs/developer/deployment")
       end
     end
@@ -95,39 +110,184 @@ RSpec.describe RequiredProductionConfig do
     # Personal data is encrypted at rest (#902); without keys the app boots,
     # /up reports healthy, and the first user read raises.
     describe "Active Record encryption keys" do
-      let(:host) { { "RAILS_HOST" => "app.humbledaisy.com", **mail } }
+      let(:host) { { "RAILS_HOST" => "app.example.org", **mail } }
       let(:keys) { { primary_key: "p", deterministic_key: "d", key_derivation_salt: "s" } }
 
       it "raises when neither credentials nor config carry the keys" do
-        expect { described_class.check!(host, {}, {}) }
+        expect { described_class.check!(host, smtp, {}) }
           .to raise_error(RuntimeError, /active_record_encryption/)
       end
 
       it "names the missing key" do
-        credentials = { active_record_encryption: keys.except(:deterministic_key) }
+        credentials = smtp.merge(active_record_encryption: keys.except(:deterministic_key))
 
         expect { described_class.check!(host, credentials, {}) }
           .to raise_error(RuntimeError, /deterministic_key/)
       end
 
       it "accepts keys from the credentials" do
-        expect { described_class.check!(host, { active_record_encryption: keys }, {}) }
+        expect { described_class.check!(host, smtp.merge(active_record_encryption: keys), {}) }
           .not_to raise_error
       end
 
       it "accepts keys from the encryption config (the environment-variable path)" do
-        expect { described_class.check!(host, {}, keys) }
+        expect { described_class.check!(host, smtp, keys) }
           .not_to raise_error
       end
 
-      it "names the fix in the message" do
-        described_class.check!(host, {}, {})
+      it "tells a missing-keys deploy to run bin/encryption-setup and points at the credentials section" do
+        described_class.check!(host, smtp, {})
         raise "expected check! to raise"
       rescue RuntimeError => e
-        expect(e.message).to include("db:encryption:init")
-        expect(e.message).to include("credentials:edit --environment production")
-        expect(e.message).to include("/docs/developer/forking")
+        expect(e.message).to include("bin/encryption-setup", "deployment#what-production-credentials-hold")
+        expect(e.message).not_to include("db:encryption:init")
+        expect(e.message).not_to include("/docs/developer/forking")
       end
+    end
+
+    describe "database backups" do
+      let(:ready) { { "RAILS_HOST" => "app.example.org", "SMTP_ADDRESS" => "smtp.postmarkapp.com" } }
+      let(:login) { { smtp: { user_name: "token", password: "token" } } }
+
+      it "boots with backups off, and says so in the log" do
+        logger = instance_double(Logger, warn: nil)
+
+        expect { described_class.check!(ready, login, logger: logger) }.not_to raise_error
+        expect(logger).to have_received(:warn).with(/Backups are off.*BACKUP_PATH/m)
+      end
+
+      it "raises when a bucket is named without its region" do
+        expect { described_class.check!(ready.merge(backups.except("OBJECT_STORAGE_REGION")), login.merge(storage)) }
+          .to raise_error(RuntimeError, /OBJECT_STORAGE_BUCKET is set but OBJECT_STORAGE_REGION is unset/)
+      end
+
+      it "raises when the bucket's key is missing from the credentials" do
+        expect { described_class.check!(ready.merge(backups), login) }
+          .to raise_error(RuntimeError, /object_storage\.access_key_id and object_storage\.secret_access_key are unset/)
+      end
+
+      it "accepts a mounted folder in place of a bucket" do
+        expect { described_class.check!(ready.merge("BACKUP_PATH" => "/backups"), login) }
+          .not_to raise_error
+      end
+
+      it "refuses a folder and a bucket at once, since a backup goes to one place" do
+        expect { described_class.check!(ready.merge(backups, "BACKUP_PATH" => "/backups"), login.merge(storage)) }
+          .to raise_error(RuntimeError, /BACKUP_PATH and OBJECT_STORAGE_BUCKET are both set/)
+      end
+
+      it "names the fix, the doc and the opt-out in the message" do
+        described_class.check!(ready.merge(backups), login)
+        raise "expected check! to raise"
+      rescue RuntimeError => e
+        expect(e.message).to include("credentials:edit --environment production")
+        expect(e.message).to include("/docs/developer/deployment")
+        expect(e.message).to include("git rm config/initializers/required_production_config.rb")
+        expect(e.message).to include("BACKUP_PATH")
+      end
+    end
+  end
+
+  describe ".placeholder?" do
+    [ "<from Stripe → Developers → API keys>", "[secret]", "REPLACE_ME", "paste-here", "CHANGEME", "change_me",
+      "your_api_key", "YOUR SECRET", "TODO", "todo: get from stripe", "xxxx", "example",
+      "your_google_client_id", "YOUR_GOOGLE_CLIENT_ID", "your_github_client_secret" ].each do |value|
+      it "is true for #{value.inspect}" do
+        expect(described_class.placeholder?(value)).to be(true)
+      end
+    end
+
+    [ "sk_live_51Habc", "pm-token-1234", "a1b2c3", "postmark", "yourself_token", "changelog", "", nil, 42, { "a" => 1 },
+      "Todo4Ever!", "todolist-app", "your-app@acme.io", "change-alerts@acme.io", "paste-bin-svc", "your abcd efgh ijkl",
+      "todo-app.io", "todo-backups", "todo-app@mg.acme.io", "yourcompany-oauth-8f3a2c", "Ov23liYourAbc123",
+      "your_token_8f3a2c" ].each do |value|
+      it "is false for #{value.inspect}" do
+        expect(described_class.placeholder?(value)).to be(false)
+      end
+    end
+  end
+
+  describe "placeholder credentials" do
+    let(:env) { { "RAILS_HOST" => "app.example.org", "SMTP_ADDRESS" => "smtp.postmarkapp.com" } }
+    let(:smtp) { { user_name: "token", password: "token" } }
+    let(:keys) { { primary_key: "p", deterministic_key: "d", key_derivation_salt: "s" } }
+
+    def refusals_for(credentials) = described_class.refusals(env, credentials, keys)
+
+    it "refuses a placeholder SMTP login" do
+      refusals = refusals_for(smtp: { user_name: "REPLACE_ME", password: "REPLACE_ME" })
+
+      expect(refusals.join).to include("smtp.user_name and smtp.password look like placeholders")
+    end
+
+    it "refuses a present OAuth client id that is a placeholder" do
+      refusals = refusals_for(smtp:, oauth: { google: { client_id: "<from Google>", client_secret: "x1" } })
+
+      expect(refusals.join).to include("oauth.google.client_id").and include('"Sign in with Google"')
+    end
+
+    it "refuses an OAuth client id without a usable secret" do
+      [ {}, { client_secret: "REPLACE_ME" } ].each do |secret|
+        refusals = refusals_for(smtp:, oauth: { github: { client_id: "real-id", **secret } })
+
+        expect(refusals.join).to include("oauth.github.client_secret")
+      end
+    end
+
+    it "accepts absent OAuth credentials" do
+      expect(refusals_for(smtp:)).to be_empty
+    end
+
+    it "accepts a real OAuth pair" do
+      expect(refusals_for(smtp:, oauth: { google: { client_id: "real-id", client_secret: "real-secret" } })).to be_empty
+    end
+  end
+
+  describe ".refused_inputs" do
+    let(:env) { { "RAILS_HOST" => "app.example.org", "SMTP_ADDRESS" => "smtp.postmarkapp.com" } }
+    let(:credentials) { { smtp: { user_name: "token", password: "token" } } }
+    let(:keys) { { primary_key: "p", deterministic_key: "d", key_derivation_salt: "s" } }
+
+    def refused(env: self.env, credentials: self.credentials, keys: self.keys) = described_class.refused_inputs(env, credentials, keys)
+
+    it "names nothing for a configuration production boots on" do
+      expect(refused).to eq({})
+    end
+
+    it "names each input a refusal names, as missing or a placeholder" do
+      expect(refused(env: { "RAILS_HOST" => "app.acme.example", "SMTP_ADDRESS" => "localhost" }))
+        .to eq("RAILS_HOST" => :placeholder, "SMTP_ADDRESS" => :placeholder)
+      expect(refused(credentials: { smtp: { user_name: "", password: "REPLACE_ME" } }, keys: {}))
+        .to eq("smtp.user_name" => :missing, "active_record_encryption.primary_key" => :missing,
+               "active_record_encryption.deterministic_key" => :missing, "active_record_encryption.key_derivation_salt" => :missing)
+    end
+
+    it "names the OAuth input its refusal names, and nothing for a secret without an id" do
+      expect(refused(credentials: credentials.merge(oauth: { google: { client_id: "real-id" } }))).to eq("oauth.google.client_secret" => :missing)
+      expect(refused(credentials: credentials.merge(oauth: { google: { client_secret: "REPLACE_ME" } }))).to eq({})
+    end
+
+    it "names both backup destinations when both are set" do
+      expect(refused(env: env.merge("BACKUP_PATH" => "/backups", "OBJECT_STORAGE_BUCKET" => "b")))
+        .to eq("BACKUP_PATH" => :conflict, "OBJECT_STORAGE_BUCKET" => :conflict)
+    end
+  end
+
+  describe ".refusals" do
+    it "lists every refusal at once, in the order a boot meets them" do
+      refusals = described_class.refusals({ "OBJECT_STORAGE_BUCKET" => "app-backups" }, {}, {})
+
+      expect(refusals.map { |refusal| refusal.lines.first }).to match([
+        /RAILS_HOST is unset/, /SMTP_ADDRESS is unset/, /encryption keys are missing/, /OBJECT_STORAGE_REGION is unset/
+      ])
+    end
+
+    it "lists nothing for a configuration production boots on, backups off included" do
+      env = { "RAILS_HOST" => "app.example.org", "SMTP_ADDRESS" => "smtp.postmarkapp.com" }
+      credentials = { smtp: { user_name: "token", password: "token" } }
+      keys = { primary_key: "p", deterministic_key: "d", key_derivation_salt: "s" }
+
+      expect(described_class.refusals(env, credentials, keys)).to be_empty
     end
   end
 
@@ -156,6 +316,12 @@ RSpec.describe "config/environments/production.rb host authorization" do
   it "excludes /up from host authorization so the Kamal healthcheck cannot be blocked" do
     line = source.lines.find { |l| l.strip.start_with?("config.host_authorization") }
     expect(line).to include('request.path == "/up"')
+  end
+
+  it "decrypts the credentials a deploy names in RAILS_CREDENTIALS_ENV, before anything reads them" do
+    wiring = source.index("config.credentials.merge!(DeployCredentials.paths(ENV))")
+    expect(wiring).not_to be_nil
+    expect(wiring).to be < source.index("MailDelivery.smtp_settings")
   end
 
   it "takes its SMTP settings from MailDelivery, so a provider is a change of secrets" do

@@ -1,27 +1,5 @@
-/* ==========================================================================
-   Brand Palette Overrides — FORK-OWNED
-   ==========================================================================
-   Your app's brand colors. Upstream (modelrails_base) ships this file empty
-   and never edits it again — rebrand here without merge conflicts. This is
-   the visual companion to config/locales/en/brand.en.yml (brand words):
-   that file holds your name, this one holds your colors.
-
-   The defaults (primary: sky, secondary: indigo, neutral: slate) live in
-   tokens/_primitives.css, which stays upstream-owned so you keep inheriting
-   improvements to it. This file is imported AFTER _primitives.css, so any
-   value you set here WINS the cascade. Override only what you want to change.
-
-   To rebrand, add a :root block below mapping the --primary-* shades (50–950)
-   to your chosen Tailwind family — e.g. --primary-700 to the teal-700 token.
-   Override the secondary/neutral palettes the same way if needed. A full
-   copy-paste example lives in docs/theming.md (kept there, not here, so this
-   shipped file adds zero bytes to the compiled CSS until you use it).
-
-   AAA CAVEAT: changing a family shifts the contrast ratios the semantic layer
-   (tokens/_semantic.css) was tuned against. The CI axe job re-proves AAA at
-   7:1; a local run only checks AA. Push and read CI before shipping a rebrand.
-   See /docs/developer/forking.
-   ========================================================================== */
+/* Brand palette overrides, fork-owned: imported after _primitives.css, so what you set here wins.
+   Map the --primary-* shades to your family, then read CI's AAA axe job. See /docs/developer/forking. */
 
 :root {
   --primary-50:  oklch(97.2% 0.013 251.6);

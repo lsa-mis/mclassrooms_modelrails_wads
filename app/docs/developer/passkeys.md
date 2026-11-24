@@ -57,24 +57,24 @@ WebAuthn requires a **secure context** (`window.isSecureContext === true`). The 
 
 For full cross-browser local testing, use one of:
 
-- **Rails SSL server** — `bin/rails s --ssl` (generates a self-signed certificate; add it to your OS trust store once)
+- **Puma SSL bind** — make a certificate for `localhost` that your OS trusts (for example with mkcert), then `bin/rails s -b 'ssl://localhost:3000?key=localhost-key.pem&cert=localhost.pem'`
 - **Local tunnel** — ngrok or Cloudflare Tunnel: set `WEBAUTHN_ORIGIN=https://<tunnel-host>` before starting the server
 
 Always set `WEBAUTHN_ORIGIN` to match the exact origin the browser sees:
 
 ```bash
-WEBAUTHN_ORIGIN=https://localhost:3000 bin/rails s --ssl
+WEBAUTHN_ORIGIN=https://localhost:3000 bin/rails s -b 'ssl://localhost:3000?key=localhost-key.pem&cert=localhost.pem'
 ```
 
 ## Managing passkeys
 
 Users manage their passkeys at **Settings → Passkeys** (`/settings/passkeys`).
 
-- **List** — all registered passkeys are shown with their nickname and registration date.
+- **List** — all registered passkeys are shown with their nickname and when each was last used ("Never used" until the first sign-in with it).
 - **Add** — triggers the browser's native passkey enrollment flow; the optional nickname (e.g. "My MacBook") is stored for identification.
 - **Remove** — soft-deletes the credential (discard). The passkey is immediately unusable for authentication. Because multiple passkeys can be registered, removing one does not affect others. Magic link always remains available.
 
-After a user's first successful magic-link sign-in (while they have no passkey yet), a one-time, non-blocking banner suggests adding one. It links to **Settings → Passkeys**; dismissing it (×) — or registering a passkey — stamps `passkey_prompt_seen_at` so it never reappears. The banner hides on browsers without WebAuthn support.
+While a signed-in user has no passkey, a one-time, non-blocking banner suggests adding one, whichever way they signed in. It links to **Settings → Passkeys**; dismissing it (×) stamps `passkey_prompt_seen_at` so it never reappears, and registering a passkey hides it for as long as the user keeps one. The banner hides on browsers without WebAuthn support.
 
 **Writing passkey tests?** See the contributor harness notes in [QA flows](/docs/developer/qa-flows).
 

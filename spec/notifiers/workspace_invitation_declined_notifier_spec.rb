@@ -6,13 +6,10 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
   include ActiveJob::TestHelper
   include ActionMailer::TestHelper
 
-  let(:workspace) { create(:workspace) }
-  let(:inviter) { create(:user) }
-  let(:decliner_email) { Faker::Internet.email }
-  let(:invitation) do
+  def declined_invitation(inviter, email: Faker::Internet.email)
     create(:invitation,
-           invitable: workspace,
-           email: decliner_email,
+           invitable: create(:workspace),
+           email: email,
            invited_by: inviter,
            declined_at: Time.current,
            status: "declined")
@@ -26,12 +23,16 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
 
   describe "dispatching" do
     it "delivers to the inviter and creates a Noticed::Notification row" do
+      inviter = create(:user)
+      invitation = declined_invitation(inviter)
       result = described_class.with(record: invitation).deliver(inviter)
       expect(result).to eq :delivered
       expect(inviter.notifications.count).to eq 1
     end
 
     it "auto-populates idempotency_key on the event column" do
+      inviter = create(:user)
+      invitation = declined_invitation(inviter)
       described_class.with(record: invitation).deliver(inviter)
       event = Noticed::Event.last
       expect(event.idempotency_key).to be_present
@@ -39,6 +40,8 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
     end
 
     it "deduplicates concurrent dispatches within the same minute" do
+      inviter = create(:user)
+      invitation = declined_invitation(inviter)
       freeze_time do
         described_class.with(record: invitation).deliver(inviter)
         result = described_class.with(record: invitation).deliver(inviter)
@@ -48,6 +51,8 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
     end
 
     it "does not enqueue any NotificationMailer email job (in-app + digest only)" do
+      inviter = create(:user)
+      invitation = declined_invitation(inviter)
       expect {
         described_class.with(record: invitation).deliver(inviter)
         drain_noticed_jobs
@@ -56,9 +61,10 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
   end
 
   describe "preferences gating" do
-    let!(:prefs) { create(:user_preferences, user: inviter) }
-
     it "still routes through workspace_activity (does NOT bypass DND)" do
+      inviter = create(:user)
+      prefs = create(:user_preferences, user: inviter)
+      invitation = declined_invitation(inviter)
       prefs.update!(notification_preferences:
         prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
       described_class.with(record: invitation).deliver(inviter)
@@ -68,6 +74,9 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
     end
 
     it "permits in-app + email under default preferences (workspace_activity)" do
+      inviter = create(:user)
+      prefs = create(:user_preferences, user: inviter)
+      invitation = declined_invitation(inviter)
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.recipient_pref(:in_app)).to be true
@@ -77,26 +86,33 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
 
   describe "#message" do
     it "renders the localized declined message with decliner email and workspace context" do
+      inviter = create(:user)
+      decliner_email = Faker::Internet.email
+      invitation = declined_invitation(inviter, email: decliner_email)
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_invitation_declined.message",
                decliner_email: decliner_email,
-               workspace_name: workspace.name)
+               workspace_name: invitation.invitable.name)
       )
     end
   end
 
   describe "#url" do
     it "links to the invitation's workspace" do
+      inviter = create(:user)
+      invitation = declined_invitation(inviter)
       described_class.with(record: invitation).deliver(inviter)
       notification = inviter.notifications.last
       expect(notification.url).to eq(
-        Rails.application.routes.url_helpers.workspace_path(workspace)
+        Rails.application.routes.url_helpers.workspace_path(invitation.invitable)
       )
     end
 
     it "returns the placeholder copy when the invitation has been deleted" do
+      inviter = create(:user)
+      invitation = declined_invitation(inviter)
       described_class.with(record: invitation).deliver(inviter)
       invitation.destroy
       notification = inviter.notifications.last
@@ -106,9 +122,10 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
 
   describe "Invitation#after_update_commit trigger" do
     it "fires the notifier when an invitation transitions to declined" do
+      inviter = create(:user)
       pending_invitation = create(:invitation,
-                                  invitable: workspace,
-                                  email: decliner_email,
+                                  invitable: create(:workspace),
+                                  email: Faker::Internet.email,
                                   invited_by: inviter)
       expect {
         pending_invitation.decline!
@@ -117,13 +134,11 @@ RSpec.describe WorkspaceInvitationDeclinedNotifier, type: :notifier do
     end
 
     it "does not fire when the invitation email matches the inviter's email_address (self-decline edge)" do
-      # Mirror the self-accept guard on notify_accepted: an inviter who declines
-      # their own invitation (e.g., bulk-invited themselves, then declined via
-      # the magic link) shouldn't ping themselves about it. Decline path has no
-      # accepted_by analog, so the guard compares email-vs-inviter.email_address
-      # via EmailNormalizer.equivalent? for case + Unicode + IDN safety.
+      # Mirrors the self-accept guard: compares email to inviter.email_address
+      # via EmailNormalizer.equivalent? (case, Unicode, IDN).
+      inviter = create(:user)
       self_invitation = create(:invitation,
-                               invitable: workspace,
+                               invitable: create(:workspace),
                                email: inviter.email_address.upcase, # mixed case to verify normalization
                                invited_by: inviter)
       expect {

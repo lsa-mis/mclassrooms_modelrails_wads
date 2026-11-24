@@ -5,13 +5,31 @@ if ! gem list foreman -i --silent; then
   gem install foreman
 fi
 
-# Default to port 3000 if not specified
-export PORT="${PORT:-3000}"
-export DEV_SERVER_PORT="$PORT"
+# Foreman gives every process its own PORT (bin/jobs gets 3200), so mail links read DEV_SERVER_PORT.
+# Same precedence as foreman's base port: -p/--port, then PORT in .env, then the shell's PORT.
+port="${PORT:-3000}"
+origin="default"
+[ -n "$PORT" ] && origin="explicit"
+env_port=$(sed -n -E "s/^PORT=[\"']?([0-9]+)[\"']?\$/\1/p" .env 2>/dev/null | tail -n 1)
+[ -n "$env_port" ] && port="$env_port" && origin="explicit"
+previous=""
+for argument in "$@"; do
+  case "$previous" in -p|--port) port="$argument" origin="explicit" ;; esac
+  case "$argument" in --port=*) port="${argument#--port=}" origin="explicit" ;; -p?*) port="${argument#-p}" origin="explicit" ;; esac
+  previous="$argument"
+done
 
-# Let the debug gem allow remote connections,
-# but avoid loading until `debugger` is called
+dev_port="$(dirname "$0")/../lib/dev_port.rb"
+chosen=$(ruby "$dev_port" choose "$port" "$origin") || exit 1
+[ "$chosen" != "$port" ] && echo "Port $port is in use, so the app uses $chosen."
+ruby "$dev_port" announce "$chosen"
+export DEV_SERVER_PORT="$chosen"
+if [ -n "$DEV_OPEN_PATH" ]; then
+  # A subshell, so the opener isn't foreman's child: foreman stops every process when a child exits.
+  (ruby "$(dirname "$0")/../lib/dev_open.rb" "$chosen" "$DEV_OPEN_PATH" &)
+fi
+
 export RUBY_DEBUG_OPEN="true"
 export RUBY_DEBUG_LAZY="true"
 
-exec foreman start -f Procfile.dev "$@"
+exec foreman start -f Procfile.dev --port "$DEV_SERVER_PORT" "$@"

@@ -44,9 +44,7 @@ RSpec.describe "Cuprite driver configuration", type: :system do
   # real security boundary, and on a developer's own machine (non-root) there is
   # no reason to give it up.
   describe "running as root, as in the devcontainer" do
-    it "passes the flags Chromium needs to start in a container" do
-      skip "only meaningful when running as root (containers)" unless Process.uid.zero?
-
+    it "passes the flags Chromium needs to start in a container", if: Process.uid.zero? do
       flags = page.driver.options[:browser_options].to_h.keys.map(&:to_s)
       expect(flags).to include("no-sandbox")
       # Docker's default /dev/shm is 64MB; Chromium exhausts it and crashes

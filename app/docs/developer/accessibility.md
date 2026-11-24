@@ -55,6 +55,21 @@ Beyond axe's own rules, every audit also runs (2026-07 gate upgrade):
   (`elementsFromPoint`) and fails any interactive element that hits an
   image/canvas/video before any opaque background. Contrast over a raster
   is unknowable; give the control an opaque plate.
+- **`mc-focus-indicator-hidden`** — a focusable that is visually hidden (a
+  native input behind a styled label, say) must have something visible that
+  paints on its focus: its label, an ancestor, or a sibling (2.4.7).
+- **`mc-one-h1`** — a whole-page audit of an app page needs exactly one
+  rendered `<h1>`. Component and mailer previews, mail audited in
+  `about:blank`, the draft harness, and any audit scoped with `include:` are
+  exempt. axe's own `page-has-heading-one` only asks for at least one, and it
+  fires on every preview host.
+- **Surfaced `incomplete` `aria-hidden-focus`**: axe defers this rule while
+  it believes a modal is open, and the cookie banner is a `role="dialog"`.
+  The gate fails it anyway (`PROMOTED_INCOMPLETE_RULES`).
+- **Three promoted `best-practice` rules** — `landmark-unique`,
+  `landmark-no-duplicate-main` and `landmark-main-is-top-level`
+  (`PROMOTED_BEST_PRACTICE_RULES`) block like WCAG rules; the rest of axe's
+  `best-practice` tag stays out of the verdict (#464).
 
 ### Documented deviation: composite-widget interiors
 
@@ -63,7 +78,7 @@ Dropdown menu items and listbox options (`role=menuitem|option` inside
 under 2.5.5** on fine-pointer devices — 2.5.5 has no "dense widget"
 exception, so this is an honest deviation, not a reinterpretation. Two
 compensations, both enforced: the gate holds those items to the **24px
-2.5.8 AA floor**, and a global `@media (pointer: coarse)` rule
+2.5.8 AA floor**, and a global `@media (any-pointer: coarse)` rule
 (`app/assets/tailwind/application.css`) bumps every widget item to the full
 44px on touch devices — the population target size protects. Everything
 else — buttons, links, form controls, chips, tabs, breadcrumbs — is held to
@@ -107,19 +122,18 @@ For the token catalog and the live component states — each annotated with its 
 
 ## Deferred Debt and the Escape Hatch
 
-A few surfaces carry known AAA-contrast debt that is tracked rather than allowed to block unrelated work. They live in one constant, `DEFERRED_AAA_EXCLUDES`, and are excluded from the default audit:
-
-| Selector | Why it is deferred |
-|----------|--------------------|
-| `.highlight` | The Rouge syntax-highlighting palette sits at AA; raising it to AAA changes how every code sample looks sitewide |
-
-This list is a visible, documented ledger — not a silent bypass. Two rules keep it honest:
+No surface carries tracked AAA-contrast debt today. The ledger that held it, `DEFERRED_AAA_EXCLUDES`, was retired with its last entry (#1300), and every helper's `exclude:` now defaults to `[]`, so the default audit is the raw, unfiltered one. If debt ever has to be tracked rather than allowed to block unrelated work, two rules keep it honest:
 
 1. Every entry names a concrete reason and is meant to shrink, never grow.
-2. To audit an excluded surface deliberately, pass an explicit `exclude:` argument; use `exclude: []` for the raw, unfiltered audit.
+2. An exclusion is an explicit `exclude:` argument at the call that needs it; with no argument, nothing is excluded.
 
 ### Resolved
 
+- **`.highlight`** (resolved, #1300) — the Rouge syntax palette had been
+  retuned to AAA except the console-prompt token, `--syntax-prompt`, which
+  moved to `neutral-700`. `spec/code_smells/syntax_contrast_spec.rb` now
+  checks the syntax tokens against their backgrounds in both themes, and code
+  blocks are in every page's audit.
 - **`.biscuit-banner`** (resolved, #462) — the consent banner's contrast debt
   was fixed in the #500-era banner rework, but the exclusion outlived the
   debt: the first surface every signed-out visitor meets was exempt from
@@ -139,7 +153,8 @@ headline:
 **Covered by the automated gate:** every rendered app route and component
 preview exercised by the system suite, audited at AAA in **both themes**;
 target sizes and focus indicators via the custom rules above; the consent
-banner (#462); and **open-state keyboard contracts** for the widgets whose
+banner (#462); every mailer template, in one theme since mail carries its own
+colors (`spec/system/mailers_axe_spec.rb`, #461); and **open-state keyboard contracts** for the widgets whose
 operability is keyboard-defined — command palette, date picker, and
 timepicker each have keyboard-driven specs that arrow through the live
 widget and assert the ARIA state a screen reader consumes (the pattern to
@@ -147,9 +162,7 @@ copy when you add an interactive component: audit the OPEN state, not just
 the closed default — the closed-state-only audits above hid four real
 violations until #463).
 
-**Outside the gate, tracked:** mailer templates (no previews exist yet;
-issue #461 fires on the next mailer edit), the `.highlight` Rouge palette
-(AA, deferred above), and any widget state a spec never drives. Real assistive
+**Outside the gate, tracked:** any widget state a spec never drives. Real assistive
 technology is not exercised at all — axe reads the DOM/ARIA that AT
 consumes, which is strong evidence and still not the same as a screen-reader
 session.
@@ -197,13 +210,15 @@ lands on `<body>` or on a field rather than the summary.
 *Baseline, observed 2026-09-08 (VoiceOver/Safari): behaved as expected — no
 double announcement and no silence. NVDA/Firefox has never been run.*
 
-**B. A toast or a flash.** The container (`shared/_toasts.html.erb`) is
-`role="region"` with `aria-live="polite"` and an `aria-label`, present and empty
-from first render.
+**B. A toast or a flash.** The pill container (`#toast-pills` in
+`shared/_toasts.html.erb`) is `role="region"` with `aria-live="polite"` and an
+`aria-label`, present and empty from first render; its card twin,
+`#toast-cards`, is the same with `aria-live="assertive"`.
 
 A toast streamed in after load is spoken **once**, politely, and focus does not
-move. A flash rendered *with* the page is a different case: it is already
-inside the region at load rather than inserted into it. What a reader does
+move. A flash rendered *with* the page is a different case: it ships in a
+`<template>` outside the region, and `toast_flash_controller` moves it in
+after load (#901). What a reader does
 with that has **not been observed** — the expectation that used to sit here
 was read off the accessibility tree, not from a real reader (#901), and the
 2026-09-23 retrospective judged it wrong. #1267 owns the cold run: record what
@@ -219,7 +234,7 @@ app implements — record it rather than assuming it.
 
 **D. The command palette.** A combobox: the input keeps DOM focus with
 `aria-expanded="true"`, options live in a sibling `role="listbox"`, and a
-`role="status"` region reports the result count.
+`role="status"` region says when nothing matches.
 
 Correct: the input is announced as a combobox; each arrow key speaks the newly
 highlighted option by name; Enter activates it; Escape closes and returns focus

@@ -1,27 +1,21 @@
 require "rails_helper"
 
 RSpec.describe "Passwordless join-link signup", type: :system do
-  # Permit :open_link at the instance level (SignupPolicy) and allow the workspace
-  # factory to set join_policy: :open_link (validates join_policy_must_be_permitted_by_instance).
-  # Use direct config mutation (not allow stubs) so the value is visible on the Rack
-  # server thread that handles browser requests from the Playwright driver.
-  before do
-    # Capture originals BEFORE mutating. A lazy `let` referenced only from `after`
-    # evaluates AFTER these assignments — capturing :open as the "original" and
-    # making the restore a no-op, which leaks signup mode into later specs under
-    # random ordering. Capture into ivars here instead (cf. passwordless_auth_spec).
-    @original_strategies = Rails.configuration.x.signup.permitted_join_strategies
-    @original_mode = Rails.configuration.x.signup.mode
+  # Config, not stubs, so the server thread the browser hits sees it. `around` restores it
+  # even when a global setup hook (a Ferrum timeout) raises before this group's `before`.
+  around do |example|
+    original_strategies = Rails.configuration.x.signup.permitted_join_strategies
+    original_mode = Rails.configuration.x.signup.mode
     Rails.configuration.x.signup.permitted_join_strategies = [ :invite, :open_link ]
     Rails.configuration.x.signup.mode = :open
-    # default_self_join_role calls Role.find_by!(slug: "member", workspace_id: nil) — ensure it exists.
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
+    example.run
+  ensure
+    Rails.configuration.x.signup.permitted_join_strategies = original_strategies
+    Rails.configuration.x.signup.mode = original_mode
   end
 
-  after do
-    Rails.configuration.x.signup.permitted_join_strategies = @original_strategies
-    Rails.configuration.x.signup.mode = @original_mode
-  end
+  # default_self_join_role looks up the global "member" role.
+  before { Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" } }
 
   let(:join_workspace) { create(:workspace, join_policy: :open_link) }
   let(:join_link) { create(:workspace_join_link, workspace: join_workspace) }

@@ -7,31 +7,19 @@ require "rails_helper"
 # Task 5's widened guards drop the normal stale cases earlier, this race is
 # the only path that reaches the rescue, so it must be proven with a stub.
 RSpec.describe "Workspace admission (not_admittable rescue)", type: :request do
-  let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
-  let(:owner) { create(:user) }
-  let(:newcomer) { create(:user) }
-  let!(:owner_role) {
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-    }
-  }
-  let!(:member_role) {
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
-      r.name = "Member"
-      r.permissions = {}
-    }
-  }
-  let(:link) { create(:workspace_join_link, workspace: workspace, created_by: owner) }
-
   before do
-    allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-    workspace.memberships.create!(user: owner, role: owner_role)
-    sign_in(newcomer)
+    permit_open_join_links
     allow_any_instance_of(Workspace).to receive(:admit).and_raise(Workspace::NotAdmittableError)
   end
 
   it "redirects to root_path with the generic invalid_or_revoked flash, never disclosing lifecycle state" do
+    workspace = create(:workspace, :open_link)
+    owner = create(:user)
+    newcomer = create(:user)
+    create(:membership, :owner, user: owner, workspace: workspace)
+    link = create(:workspace_join_link, workspace: workspace, created_by: owner)
+    sign_in(newcomer)
+
     post workspace_join_path(workspace, token: link.plaintext_token)
 
     expect(response).to redirect_to(root_path)
@@ -46,35 +34,24 @@ end
 # setup from spec/requests/workspaces/joins_spec.rb and the invitation setup
 # from spec/requests/invitation_accepts_spec.rb.
 RSpec.describe "Admission into non-active workspaces", type: :request do
-  let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
-  let(:owner) { create(:user) }
-  let(:newcomer) { create(:user) }
-  let!(:owner_role) {
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-    }
-  }
-  let!(:member_role) {
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
-      r.name = "Member"
-      r.permissions = {}
-    }
-  }
-  let(:link) { create(:workspace_join_link, workspace: workspace, created_by: owner) }
+  before { permit_open_join_links }
 
-  before do
-    allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-    workspace.memberships.create!(user: owner, role: owner_role)
+  def non_active_workspace(lifecycle_action)
+    workspace = create(:workspace, :open_link)
+    owner = create(:user)
+    create(:membership, :owner, user: owner, workspace: workspace)
+    workspace.public_send("#{lifecycle_action}!")
+    [ workspace, owner ]
   end
 
   %i[archive discard].each do |lifecycle_action|
     lifecycle_name = lifecycle_action == :archive ? "archived" : "deleted"
 
     context "workspace is #{lifecycle_name}" do
-      before { workspace.public_send("#{lifecycle_action}!") }
-
       it "rejects an open-join-link GET with the generic invalid-or-revoked message, no disclosure" do
+        workspace, owner = non_active_workspace(lifecycle_action)
+        newcomer = create(:user)
+        link = create(:workspace_join_link, workspace: workspace, created_by: owner)
         sign_in(newcomer)
         get workspace_join_path(workspace, token: link.plaintext_token)
 
@@ -84,6 +61,9 @@ RSpec.describe "Admission into non-active workspaces", type: :request do
       end
 
       it "rejects an open-join-link POST — no membership created" do
+        workspace, owner = non_active_workspace(lifecycle_action)
+        newcomer = create(:user)
+        link = create(:workspace_join_link, workspace: workspace, created_by: owner)
         sign_in(newcomer)
 
         expect {
@@ -96,6 +76,7 @@ RSpec.describe "Admission into non-active workspaces", type: :request do
       end
 
       it "rejects a pending workspace invitation acceptance — no membership created" do
+        workspace, = non_active_workspace(lifecycle_action)
         invitee = create(:user)
         invitation = create(:invitation, invitable: workspace, email: invitee.email_address)
         sign_in(invitee)

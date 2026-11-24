@@ -34,7 +34,7 @@
         <nav aria-label="<%= t("operations.area.nav_label") %>">
           <%# role="list": same preflight list-style:none trap as the activity
               feed's <ol>. %>
-          <ul role="list" class="flex gap-1 -mx-3 text-sm">
+          <ul role="list" class="flex flex-wrap gap-1 -mx-3 text-sm">
             <% nav_items.each do |label, path| %>
               <% current = current_page?(path) %>
               <li>

@@ -1,13 +1,14 @@
 require "rails_helper"
 
 RSpec.describe "Workspace switcher trigger", type: :request do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme") }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-  before { sign_in(user) }
+  def signed_in_workspace
+    workspace = create(:workspace, name: "Acme")
+    sign_in_as_owner_of(workspace)
+    workspace
+  end
 
   it "names the workspace on every shell page, not only the Overview" do
+    workspace = signed_in_workspace
     [ workspace_path(workspace), edit_workspace_path(workspace) ].each do |path|
       get path
       trigger = Nokogiri::HTML(response.body).at_css("#workspace-switcher-button")
@@ -18,6 +19,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
 
   # An icon, not a U+25BE glyph (#1224).
   it "draws its chevron with the icon registry, like every other chevron" do
+    workspace = signed_in_workspace
     get workspace_path(workspace)
     trigger = Nokogiri::HTML(response.body).at_css("#workspace-switcher-button")
 
@@ -29,6 +31,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
 
   # Nothing focusable inside the trigger <button>; the index's avatar branch too (#1091).
   it "renders no focusable element inside the trigger button" do
+    workspace = signed_in_workspace
     [
       [ workspace_path(workspace), "#workspace-switcher-button" ],
       [ workspace_path(workspace), "#workspace-switcher-button-mobile" ],
@@ -49,6 +52,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
   # suffix on the trigger, the menu, and both inner ids — otherwise every one
   # of them is duplicated in the DOM at every width.
   it "renders a mobile trigger with its own ids, and no id on the page twice" do
+    workspace = signed_in_workspace
     get workspace_path(workspace)
     doc = Nokogiri::HTML(response.body)
 
@@ -63,6 +67,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
   # Opened from the keyboard there is no pointer hover, so the open state has to
   # key off aria-expanded — the pair UI::MenubarMenuComponent already uses.
   it "shows its open state without a pointer" do
+    workspace = signed_in_workspace
     get workspace_path(workspace)
     trigger = Nokogiri::HTML(response.body).at_css("#workspace-switcher-button")
 
@@ -70,6 +75,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
   end
 
   it "re-renders BOTH triggers on rename so the phone copy cannot go stale" do
+    workspace = signed_in_workspace
     patch workspace_path(workspace), params: { workspace: { name: "New Acme" } },
           headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -82,6 +88,7 @@ RSpec.describe "Workspace switcher trigger", type: :request do
   end
 
   it "re-renders the whole trigger on rename, still free of focusable descendants" do
+    workspace = signed_in_workspace
     patch workspace_path(workspace), params: { workspace: { name: "New Acme" } },
           headers: { "Accept" => "text/vnd.turbo-stream.html" }
 

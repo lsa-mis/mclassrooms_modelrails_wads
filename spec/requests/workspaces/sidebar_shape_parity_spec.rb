@@ -8,13 +8,6 @@ require "rails_helper"
 # Supersedes spec/requests/workspace_sidebar_settings_visibility_spec.rb, which
 # asserted the divergence this file asserts is gone.
 RSpec.describe "Workspace sidebar shape parity", type: :request do
-  let(:user) { create(:user) }
-  let(:org) { create(:workspace, name: "Acme") }
-  let!(:org_membership) { create(:membership, :owner, user: user, workspace: org) }
-  let(:personal) { user.personal_workspace }
-
-  before { sign_in(user) }
-
   def sidebar_items(path)
     get path
     Nokogiri::HTML(response.body)
@@ -23,6 +16,8 @@ RSpec.describe "Workspace sidebar shape parity", type: :request do
   end
 
   it "offers Settings on a personal workspace, pointing at the same route as an org's" do
+    org = create(:workspace, name: "Acme")
+    personal = sign_in_as_owner_of(org).personal_workspace
     personal_settings = sidebar_items(workspace_path(personal)).find { |label, _| label == "Settings" }
     org_settings = sidebar_items(workspace_path(org)).find { |label, _| label == "Settings" }
 
@@ -32,11 +27,16 @@ RSpec.describe "Workspace sidebar shape parity", type: :request do
   end
 
   it "gives both workspace kinds the same sidebar labels in the same order" do
+    org = create(:workspace, name: "Acme")
+    personal = sign_in_as_owner_of(org).personal_workspace
+
     expect(sidebar_items(workspace_path(personal)).map(&:first))
       .to eq(sidebar_items(workspace_path(org)).map(&:first))
   end
 
   it "no longer renders a Customize modal on a personal workspace" do
+    org = create(:workspace, name: "Acme")
+    personal = sign_in_as_owner_of(org).personal_workspace
     get workspace_path(personal)
 
     expect(Nokogiri::HTML(response.body).at_css("#workspace-customize")).to be_nil

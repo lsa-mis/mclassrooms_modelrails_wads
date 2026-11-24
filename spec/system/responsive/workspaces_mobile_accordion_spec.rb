@@ -8,17 +8,18 @@ require "rails_helper"
 # (Overview/Settings) lives in an in-page strip, not here. Mirrors the
 # settings accordion spec.
 RSpec.describe "Workspace pages — mobile accordion", type: :system, js: true do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, max_members: 50) }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-  let(:axe_options) { { runOnly: { type: "tag", values: [ "wcag2aaa" ] } } }
-
-  before do
+  def signed_in_owned_workspace
+    user = create(:user)
+    workspace = create(:workspace, max_members: 50)
+    create(:membership, :owner, user: user, workspace: workspace)
     sign_in_via_form(user)
-    cdp_resize(375, 667)
+    workspace
   end
 
+  before { cdp_resize(375, 667) }
+
   it "shows the hamburger and reveals global chrome on tap (not the section sub-nav)" do
+    workspace = signed_in_owned_workspace
     visit workspace_path(workspace)
     click_button I18n.t("navigation.mobile_menu.open")
     within("[data-mobile-menu-target='menu']") do
@@ -27,6 +28,7 @@ RSpec.describe "Workspace pages — mobile accordion", type: :system, js: true d
   end
 
   it "auto-closes on link tap inside the panel" do
+    workspace = signed_in_owned_workspace
     visit workspace_path(workspace)
     click_button I18n.t("navigation.mobile_menu.open")
     within("[data-mobile-menu-target='menu']") do
@@ -37,12 +39,10 @@ RSpec.describe "Workspace pages — mobile accordion", type: :system, js: true d
     expect(page).to have_css("[data-mobile-menu-target='menu'].hidden", visible: :all)
   end
 
-  # #1077: the sidebar that carries workspace identity is display:none below
-  # md, so a phone showed the section tabs with nothing naming the workspace
-  # unless the hamburger was opened. The switcher now renders a second time
-  # above the tabs — with its own id suffix, because the sidebar copy is
-  # hidden, not absent, and unsuffixed it would duplicate every id.
+  # #1077: the sidebar identity is display:none below md, so the switcher renders
+  # again above the tabs, with a suffixed id so no id is duplicated.
   it "names the workspace and the viewer's role above the section tabs, hamburger closed" do
+    workspace = signed_in_owned_workspace
     visit workspace_path(workspace)
 
     expect(page).to have_css("[data-mobile-menu-target=button][aria-expanded=false]")
@@ -67,6 +67,8 @@ RSpec.describe "Workspace pages — mobile accordion", type: :system, js: true d
   end
 
   it "passes axe AAA both themes both states" do
+    workspace = signed_in_owned_workspace
+    axe_options = { runOnly: { type: "tag", values: [ "wcag2aaa" ] } }
     visit workspace_path(workspace)
 
     expect(axe_clean_in_both_themes?(axe_options)).to be(true),

@@ -9,30 +9,23 @@ require "rails_helper"
 #   3. MagicLinkCallbacksController#create → accept_pending_join_link! via Signupable
 #   4. User is a member immediately (magic-link signup is atomic, no deferred verify)
 RSpec.describe "Flow B: new user signs up via workspace join link", type: :request do
-  let(:owner)     { create(:user) }
-  let(:workspace) { create(:workspace, personal: false, join_policy: "open_link") }
-  let!(:owner_role) {
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-    }
-  }
-  let!(:member_role) {
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
-      r.name = "Member"
-      r.permissions = {}
-    }
-  }
-  let(:link) { create(:workspace_join_link, workspace: workspace, created_by: owner) }
-
   before do
     # Tight posture for Flow B: invite_only instance with open_link permitted.
     allow(Rails.configuration.x.signup).to receive(:mode).and_return(:invite_only)
-    allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-    workspace.memberships.create!(user: owner, role: owner_role)
+    permit_open_join_links
+  end
+
+  def open_link_workspace_with_join_link
+    owner = create(:user)
+    workspace = create(:workspace, :open_link)
+    create(:membership, :owner, user: owner, workspace: workspace)
+    Role.system_default!("member")
+    [ workspace, create(:workspace_join_link, workspace: workspace, created_by: owner) ]
   end
 
   it "stashes the join token, opens the signup gate, admits the user on magic-link signup" do
+    workspace, link = open_link_workspace_with_join_link
+
     # 1. Unauthenticated visitor POSTs the join link → stash + redirect to sign-in.
     post workspace_join_path(workspace, token: link.plaintext_token)
     expect(session[:pending_join_token]).to eq(link.plaintext_token)
@@ -72,6 +65,7 @@ RSpec.describe "Flow B: new user signs up via workspace join link", type: :reque
     end
 
     it "rolls the signup back and re-offers sign-in rather than erroring out" do
+      workspace, link = open_link_workspace_with_join_link
       post workspace_join_path(workspace, token: link.plaintext_token)
       token = MagicLinkToken.create_for_email("newcomer@example.com")
 

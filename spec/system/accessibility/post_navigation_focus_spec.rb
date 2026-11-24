@@ -10,19 +10,19 @@ require "rails_helper"
 # there. Guarded here end-to-end because the failure is invisible to any
 # markup-level check.
 RSpec.describe "Post-navigation focus management", type: :system do
-  it "moves focus to #main-content after a Turbo Drive navigation" do
-    visit "/"
-    click_link I18n.t("footer.about") # destination has no autofocused field
+  # Workspace pages render a different <main> in the same layout, so they need their own check.
+  it "moves focus to #main-content after navigating between workspace pages" do
+    user = create(:user)
+    sign_in_via_form(user)
+    visit workspace_path(user.personal_workspace)
+    click_link I18n.t("workspaces.sidebar.settings")
 
-    # :focus predicate (Capybara-retried), not element presence + an
-    # activeElement sample: every layout renders #main-content, so presence
-    # matches the PRE-navigation DOM and the sample races the turbo:load
-    # focus handler.
+    expect(page).to have_no_current_path(workspace_path(user.personal_workspace))
     expect(page).to have_css("#main-content:focus")
   end
 
   it "leaves the browser's default focus alone on initial page load" do
-    visit "/"
+    visit "/docs"
 
     expect(page).to have_css("#main-content")
     expect(page.evaluate_script("document.activeElement === document.body")).to be(true)

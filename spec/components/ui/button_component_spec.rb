@@ -18,6 +18,11 @@ RSpec.describe UI::ButtonComponent, "app .btn-* parity", type: :component do
     expect(b[:class]).to eq("btn-primary")
   end
 
+  it "renders an inert button unless a type is given" do
+    render_inline(described_class.new("Open"))
+    expect(page.find("button")[:type]).to eq("button")
+  end
+
   it "secondary applies .btn-secondary" do
     render_inline(described_class.new("Cancel", variant: :secondary))
     expect(page.find("button")[:class]).to eq("btn-secondary")

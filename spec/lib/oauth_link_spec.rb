@@ -14,15 +14,21 @@ RSpec.describe OauthLink do
     )
   end
 
-  describe "existing identity (provider+uid already linked)" do
-    let!(:owner) { create(:user, :no_authentications, email_address: "owner@example.com") }
-    let!(:auth) do
-      owner.authentications.create!(
-        provider: "google", uid: "uid-1", email: "owner@example.com", verified_at: Time.current
-      )
-    end
+  def linked_owner_identity
+    owner = create(:user, :no_authentications, email_address: "owner@example.com")
+    owner.authentications.create!(
+      provider: "google", uid: "uid-1", email: "owner@example.com", verified_at: Time.current
+    )
+  end
 
+  def actor_user
+    create(:user, email_address: "actor@example.com")
+  end
+
+  describe "existing identity (provider+uid already linked)" do
     it "returns :signed_in with the identity's user and refreshes OAuth credentials" do
+      auth = linked_owner_identity
+      owner = auth.user
       outcome = described_class.new(google_hash(uid: "uid-1", token: "fresh")).claim
 
       expect(outcome.code).to eq(:signed_in)
@@ -31,6 +37,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :collision and alerts the owner when a different signed-in user presents the identity" do
+      owner = linked_owner_identity.user
       eve = create(:user)
 
       outcome = nil
@@ -43,6 +50,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :verification_resent with a fresh email when the identity is still pending" do
+      auth = linked_owner_identity
       auth.update!(verified_at: nil)
 
       outcome = nil
@@ -56,6 +64,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :failed when refreshing credentials trips validation (provider-sent bad avatar URL)" do
+      linked_owner_identity
       outcome = described_class.new(google_hash(uid: "uid-1", image: "notaurl")).claim
 
       expect(outcome.code).to eq(:failed)
@@ -63,11 +72,8 @@ RSpec.describe OauthLink do
   end
 
   describe "signed-in user linking a new provider" do
-    let(:actor) do
-      create(:user, email_address: "actor@example.com")
-    end
-
     it "returns :already_linked when the provider is already verified for this user" do
+      actor = actor_user
       actor.authentications.create!(
         provider: "google", uid: "other-uid", email: "actor@example.com", verified_at: Time.current
       )
@@ -78,6 +84,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :pending_in_progress with the pending link's email when one is in flight" do
+      actor = actor_user
       actor.authentications.create!(
         provider: "google", uid: "other-uid", email: "pending@example.com", verified_at: nil
       )
@@ -89,6 +96,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :failed when the provider supplies no email" do
+      actor = actor_user
       outcome = described_class.new(google_hash(email: nil), actor: actor).claim
 
       expect(outcome.code).to eq(:failed)
@@ -96,6 +104,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :linked and auto-verifies when the OAuth email matches the user's (case-insensitively)" do
+      actor = actor_user
       outcome = described_class.new(google_hash(email: "ACTOR@example.com"), actor: actor).claim
 
       expect(outcome.code).to eq(:linked)
@@ -103,6 +112,7 @@ RSpec.describe OauthLink do
     end
 
     it "returns :verification_sent with a pending auth when the OAuth email differs" do
+      actor = actor_user
       outcome = nil
       expect {
         outcome = described_class.new(google_hash(email: "other@example.com"), actor: actor).claim
@@ -262,9 +272,8 @@ RSpec.describe OauthLink do
 
     it "leaves a still-valid join token parked for a pre-existing user (drive-by guard)" do
       create(:user, email_address: "person@example.com")
-      allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies)
-        .and_return(%i[invite open_link])
-      workspace = create(:workspace, personal: false, join_policy: "open_link")
+      permit_open_join_links
+      workspace = create(:workspace, :open_link)
       link = create(:workspace_join_link, workspace: workspace, created_by: create(:user))
       Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" }
 

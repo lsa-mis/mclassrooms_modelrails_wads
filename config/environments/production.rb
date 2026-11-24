@@ -1,8 +1,12 @@
 require "active_support/core_ext/integer/time"
+require_relative "../../lib/deploy_credentials"
 require_relative "../../lib/mail_delivery"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
+
+  # First, so every later read decrypts the credentials this deploy names.
+  config.credentials.merge!(DeployCredentials.paths(ENV))
 
   # Code is not reloaded between requests.
   config.enable_reloading = false
@@ -54,7 +58,6 @@ Rails.application.configure do
   config.active_job.queue_adapter = :solid_queue
   config.solid_queue.connects_to = { database: { writing: :queue } }
 
-  # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV.fetch("RAILS_HOST", "example.com") }
 
   # Mail leaves over SMTP from ENV, and a failed send fails its job (#1318).

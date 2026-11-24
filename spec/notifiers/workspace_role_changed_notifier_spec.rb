@@ -6,11 +6,16 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
   include ActiveJob::TestHelper
   include ActionMailer::TestHelper
 
-  let(:workspace) { create(:workspace) }
-  let(:user) { create(:user) }
-  let(:initial_role) { Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r| r.name = "Member" } }
-  let(:new_role) { Role.find_or_create_by!(slug: "admin", workspace_id: nil) { |r| r.name = "Admin" } }
-  let(:membership) { create(:membership, user: user, workspace: workspace, role: initial_role) }
+  def admin_role
+    build(:membership, :admin).role
+  end
+
+  def role_change_cast
+    workspace = create(:workspace)
+    user = create(:user)
+    membership = create(:membership, user: user, workspace: workspace)
+    { workspace: workspace, user: user, membership: membership }
+  end
 
   describe ".category" do
     it "is :account_access" do
@@ -20,12 +25,14 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
 
   describe "dispatching" do
     it "delivers to the membership's user and creates a Noticed::Notification row" do
+      user, membership = role_change_cast.values_at(:user, :membership)
       result = described_class.with(record: membership).deliver(user)
       expect(result).to eq :delivered
       expect(user.notifications.count).to eq 1
     end
 
     it "auto-populates idempotency_key on the event column" do
+      user, membership = role_change_cast.values_at(:user, :membership)
       described_class.with(record: membership).deliver(user)
       event = Noticed::Event.last
       expect(event.idempotency_key).to be_present
@@ -33,6 +40,7 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
     end
 
     it "deduplicates concurrent dispatches within the same minute" do
+      user, membership = role_change_cast.values_at(:user, :membership)
       freeze_time do
         described_class.with(record: membership).deliver(user)
         result = described_class.with(record: membership).deliver(user)
@@ -41,6 +49,7 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
     end
 
     it "enqueues a NotificationMailer.workspace_role_changed email under default preferences" do
+      user, membership = role_change_cast.values_at(:user, :membership)
       create(:user_preferences, user: user)
       expect {
         described_class.with(record: membership).deliver(user)
@@ -50,9 +59,9 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
   end
 
   describe "preferences gating" do
-    let!(:prefs) { create(:user_preferences, user: user) }
-
     it "suppresses both in-app and email under DND (account_access does NOT bypass)" do
+      user, membership = role_change_cast.values_at(:user, :membership)
+      prefs = create(:user_preferences, user: user)
       prefs.update!(notification_preferences:
         prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
 
@@ -67,6 +76,8 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
     end
 
     it "fires in-app but skips email when the email channel is disabled" do
+      user, membership = role_change_cast.values_at(:user, :membership)
+      prefs = create(:user_preferences, user: user)
       delivery_methods = prefs.notification_preferences["delivery_methods"].deep_dup
       delivery_methods["email"]["enabled"] = false
       prefs.update!(notification_preferences:
@@ -85,27 +96,29 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
 
   describe "#message" do
     it "renders the localized role-changed message" do
-      membership.update!(role: new_role)
+      workspace, user, membership = role_change_cast.values_at(:workspace, :user, :membership)
+      membership.update!(role: admin_role)
       described_class.with(record: membership).deliver(user)
       notification = user.notifications.last
       expect(notification.message).to eq(
         I18n.t("notifications.workspace_role_changed.message",
                workspace_name: workspace.name,
-               new_role: new_role.name)
+               new_role: admin_role.name)
       )
     end
   end
 
   describe "Membership#after_update_commit trigger" do
     it "fires the notifier when role_id changes on a membership" do
+      user, membership = role_change_cast.values_at(:user, :membership)
       expect {
-        membership.update!(role: new_role)
+        membership.update!(role: admin_role)
       }.to change { Noticed::Event.where(type: described_class.name).count }.by(1)
       expect(user.notifications.count).to eq 1
     end
 
     it "does not fire on unrelated updates" do
-      membership # ensure created
+      membership = role_change_cast.fetch(:membership)
       expect {
         membership.touch
       }.not_to change { Noticed::Event.where(type: described_class.name).count }
@@ -117,7 +130,8 @@ RSpec.describe WorkspaceRoleChangedNotifier, type: :notifier do
   # recipient's digest rather than just its own line.
   describe "#url once the workspace is gone" do
     it "renders the placeholder instead of raising" do
-      membership.update!(role: new_role)
+      workspace, membership = role_change_cast.values_at(:workspace, :membership)
+      membership.update!(role: admin_role)
       notification = Noticed::Event.where(type: described_class.name).last.notifications.first
       workspace.destroy!
 

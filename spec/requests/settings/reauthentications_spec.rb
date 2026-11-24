@@ -184,6 +184,13 @@ RSpec.describe "Settings::Reauthentications", type: :request do
       expect(response).to redirect_to(new_settings_reauthentication_path)
     end
 
+    it "redirects removing a connected account to the interstitial" do
+      authentication = create(:authentication, :google, user: user)
+      delete settings_connected_account_path(authentication)
+      expect(response).to redirect_to(new_settings_reauthentication_path)
+      expect(authentication.reload).to be_persisted
+    end
+
     it "answers a gated XHR (passkey enrollment) with a reauth_required JSON signal" do
       post passkeys_registration_challenge_path, headers: { "ACCEPT" => "application/json" }
       expect(response).to have_http_status(:forbidden)

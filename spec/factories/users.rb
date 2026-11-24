@@ -130,5 +130,10 @@ FactoryBot.define do
         end
       end
     end
+
+    # Granted the real way, so the grant's security-event row exists as it would in production.
+    trait :operator do
+      after(:create) { |user| Operatorship.grant!(user: user) }
+    end
   end
 end

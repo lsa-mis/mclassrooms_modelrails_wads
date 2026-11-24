@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stops a deploy production would refuse to boot, before the image is built: bin/rails deploy:check.
+# Kamal names the destination and the check boots development: CI's exported DESTINATION or RAILS_ENV must not override either.
+cd "$(dirname "$0")/../.." || exit 1
+exec env DESTINATION="$KAMAL_DESTINATION" DEPLOY_CHECK_COMPACT=1 RAILS_ENV=development bin/rails deploy:check

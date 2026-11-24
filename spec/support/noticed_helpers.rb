@@ -1,4 +1,3 @@
-# Notifier-spec helpers, defined once so a copy cannot drift (#1273).
 module NoticedHelpers
   # Scoped, in sequence: each Noticed job enqueues the next; a bare drain runs the factory's CheckGravatarJob.
   # deliver_mail: also runs ActionMailer's job, without which a "sent no email" assertion passes vacuously.

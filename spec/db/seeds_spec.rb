@@ -8,7 +8,6 @@ require "rails_helper"
 RSpec.describe "db/seeds.rb :shared bootstrap", type: :request do
   let(:env_vars) do
     {
-      "TENANCY_SHARED_WORKSPACE_SLUG" => "acme",
       "TENANCY_SHARED_WORKSPACE_NAME" => "Acme Inc",
       "TENANCY_OWNER_EMAIL" => "owner@acme.test",
       "APP_HOST" => "acme.example.com"
@@ -24,6 +23,7 @@ RSpec.describe "db/seeds.rb :shared bootstrap", type: :request do
 
   before do
     allow(TenancyConfig).to receive(:shared?).and_return(true)
+    allow(TenancyConfig).to receive(:shared_workspace_slug).and_return("acme")
     allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
   end
 
@@ -90,5 +90,93 @@ RSpec.describe "db/seeds.rb :shared bootstrap", type: :request do
     Rails.application.load_seed
 
     expect(owner.reload).not_to be_operator
+  end
+
+  context "naming the shared workspace" do
+    before { allow(Rails.logger).to receive(:info) }
+
+    def stub_brand_name(&answer)
+      allow(I18n).to receive(:t).and_call_original
+      allow(I18n).to receive(:t).with("application.name", any_args, &answer)
+    end
+
+    context "without TENANCY_SHARED_WORKSPACE_NAME" do
+      let(:env_vars) { super().merge("TENANCY_SHARED_WORKSPACE_NAME" => nil) }
+
+      it "names the shared workspace after the brand" do
+        stub_brand_name { "Acme Garden" }
+
+        Rails.application.load_seed
+
+        expect(Workspace.find_by!(slug: "acme").name).to eq("Acme Garden")
+      end
+
+      it "falls back to the slug when the brand has no name" do
+        stub_brand_name { |_key, **options| options[:default] }
+
+        Rails.application.load_seed
+
+        expect(Workspace.find_by!(slug: "acme").name).to eq("Acme")
+      end
+    end
+
+    it "lets TENANCY_SHARED_WORKSPACE_NAME override the brand" do
+      stub_brand_name { "Acme Garden" }
+
+      Rails.application.load_seed
+
+      expect(Workspace.find_by!(slug: "acme").name).to eq("Acme Inc")
+    end
+  end
+
+  context "without TENANCY_OWNER_EMAIL" do
+    let(:env_vars) { super().merge("TENANCY_OWNER_EMAIL" => nil) }
+
+    it "refuses to seed production without the owner it names" do
+      expect { Rails.application.load_seed }.to raise_error(/TENANCY_OWNER_EMAIL is required/)
+    end
+
+    it "seeds a fresh fork's development database with a placeholder owner to claim from letter_opener" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+      allow(TenancyConfig).to receive(:shared_workspace_slug).and_return("acme_garden")
+      ActionMailer::Base.deliveries.clear
+
+      Rails.application.load_seed
+
+      expect(Workspace.find_by!(slug: "acme_garden").memberships.sole.user.email_address).to eq("owner@acme-garden.test")
+      expect(ActionMailer::Base.deliveries.sole.to).to eq([ "owner@acme-garden.test" ])
+    end
+  end
+
+  context "outside production" do
+    before do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+      ActionMailer::Base.deliveries.clear
+    end
+
+    context "when sign-up onboards into the shared workspace" do
+      before do
+        allow(Rails.configuration.x.tenancy).to receive(:onboarding).and_return(:shared)
+        allow(Rails.configuration.x.tenancy).to receive(:shared_workspace_slug).and_return("acme")
+      end
+
+      it "seats the bootstrap owner as Owner without announcing a role change", :aggregate_failures do
+        perform_enqueued_jobs { Rails.application.load_seed }
+
+        membership = Workspace.find_by!(slug: "acme").memberships.sole
+        expect(membership.role.slug).to eq("owner")
+        expect(Noticed::Event.where(type: "WorkspaceRoleChangedNotifier")).to be_none
+        expect(ActionMailer::Base.deliveries.map(&:subject)).to eq([ I18n.t("magic_link_mailer.sign_in_link.subject") ])
+      end
+    end
+
+    it "emails the bootstrap owner a set-password sign-in link" do
+      Rails.application.load_seed
+
+      mail = ActionMailer::Base.deliveries.sole
+      expect(mail.to).to eq([ "owner@acme.test" ])
+      token = mail.body.encoded[%r{/magic_link_callback/([\w-]+)}, 1]
+      expect(MagicLinkToken.find_by!(token_digest: MagicLinkToken.digest(token)).intent).to eq("set_password")
+    end
   end
 end

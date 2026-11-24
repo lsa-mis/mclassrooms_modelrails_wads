@@ -1,0 +1,92 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "optparse"
+require "securerandom"
+require "yaml"
+require "active_support"
+require "active_support/encrypted_file"
+
+class EncryptionSetup
+  class Stop < StandardError; end
+
+  CONTENT = "config/credentials/production.yml.enc"
+  KEY = "config/credentials/production.key"
+  SECTION = "active_record_encryption"
+  FIELDS = %w[primary_key deterministic_key key_derivation_salt].freeze
+  GUIDE = "/docs/developer/deployment#what-production-credentials-hold"
+
+  def initialize(root:, env: ENV, output: $stdout, dry_run: false)
+    @root = root
+    @env = env
+    @output = output
+    @dry_run = dry_run
+  end
+
+  def run
+    text = read_credentials
+    present = FIELDS & existing_fields(text)
+    if present == FIELDS
+      say "✓ The personal-data encryption keys are already in #{CONTENT}"
+    elsif present.any?
+      raise Stop, "#{CONTENT} has some of the encryption keys but not all (#{present.join(', ')}), so nothing was changed. Fix it by hand: #{GUIDE}"
+    elsif @dry_run
+      say "Would add the personal-data encryption keys to #{CONTENT}"
+    else
+      write(text)
+      say "Added the personal-data encryption keys to #{CONTENT}."
+      say "Commit it; production.key stays out of git." if @env["PRODUCTION_SETUP"].to_s.empty?
+    end
+    0
+  rescue Stop => e
+    say e.message
+    1
+  end
+
+  private
+
+  def read_credentials
+    shell_key = @env["RAILS_MASTER_KEY"].to_s.strip
+    raise Stop, "#{CONTENT} isn't here yet. Run bin/mail-setup first: quickstart step 4." unless File.exist?(path(CONTENT))
+    raise Stop, "#{KEY} isn't here, so #{CONTENT} can't be read. Get it from whoever set this app up." if shell_key.empty? && !File.exist?(path(KEY))
+    if !shell_key.empty? && File.exist?(path(KEY)) && shell_key != File.read(path(KEY)).strip
+      raise Stop, "RAILS_MASTER_KEY in this shell doesn't match #{KEY}. If the file is the right one, run `unset RAILS_MASTER_KEY` and try again."
+    end
+
+    credentials.read
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage
+    raise Stop, "#{KEY} can't read #{CONTENT}, so nothing was changed. Only the right key can."
+  end
+
+  def existing_fields(text)
+    section = (YAML.safe_load(text) || {})[SECTION]
+    section.is_a?(Hash) ? section.keys.map(&:to_s) : []
+  rescue Psych::Exception
+    raise Stop, "#{CONTENT} isn't valid YAML, so nothing was changed. Run bin/rails credentials:edit --environment production to fix it."
+  end
+
+  def write(text)
+    block = "#{SECTION}:\n" + FIELDS.map { |field| "  #{field}: #{SecureRandom.alphanumeric(32)}\n" }.join
+    credentials.write("#{text.rstrip}\n\n#{block}".lstrip)
+    raise Stop, "The keys didn't read back from #{CONTENT}. Run bin/rails credentials:edit --environment production to see why." unless existing_fields(credentials.read) == FIELDS
+  end
+
+  def credentials
+    ActiveSupport::EncryptedFile.new(content_path: path(CONTENT), key_path: path(KEY),
+                                     env_key: "RAILS_MASTER_KEY", raise_if_missing_key: true)
+  end
+
+  def path(relative) = File.join(@root, relative)
+  def say(message) = @output.puts(message)
+end
+
+if $PROGRAM_NAME == __FILE__
+  options = { dry_run: false }
+  OptionParser.new do |o|
+    o.banner = "Usage: bin/encryption-setup [--dry-run]   (adds production's personal-data encryption keys)"
+    o.on("--dry-run", "Say what would change, and change nothing") { options[:dry_run] = true }
+  end.parse!
+
+  exit EncryptionSetup.new(root: File.expand_path("..", __dir__), **options).run
+end

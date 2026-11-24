@@ -1,32 +1,19 @@
 require "rails_helper"
 
 RSpec.describe "Workspaces::JoinLinks", type: :request do
-  let(:workspace) { create(:workspace, personal: false) }
-  let(:owner) { create(:user) }
-  let(:member) { create(:user) }
-  let!(:owner_role) {
-    Role.find_or_create_by!(slug: "owner", workspace_id: nil) { |r|
-      r.name = "Owner"
-      r.permissions = { manage_workspace: true, manage_members: true, manage_settings: true }
-    }
-  }
-  let!(:member_role) {
-    Role.find_or_create_by!(slug: "member", workspace_id: nil) { |r|
-      r.name = "Member"
-      r.permissions = {}
-    }
-  }
+  def team_workspace = create(:workspace, personal: false)
 
-  before do
-    workspace.memberships.create!(user: owner, role: owner_role)
-    workspace.memberships.create!(user: member, role: member_role)
-  end
+  def owner_of(workspace) = create(:membership, :owner, workspace: workspace).user
+
+  def member_of(workspace) = create(:membership, workspace: workspace).user
 
   describe "POST /workspaces/:slug/join_links" do
     context "as an admin/owner" do
-      before { sign_in(owner) }
-
       it "creates a new active join link" do
+        workspace = team_workspace
+        sign_in_as_owner_of(workspace)
+        member_of(workspace)
+
         expect {
           post workspace_join_links_path(workspace)
         }.to change(workspace.join_links.active, :count).by(1)
@@ -36,6 +23,9 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
       end
 
       it "atomically rotates — revokes any existing active link and creates a new one" do
+        workspace = team_workspace
+        owner = sign_in_as_owner_of(workspace)
+        member_of(workspace)
         existing = create(:workspace_join_link, workspace: workspace, created_by: owner)
         original_digest = existing.token_digest
 
@@ -46,10 +36,12 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
         expect(workspace.join_links.active.first.token_digest).not_to eq(original_digest)
       end
 
-      # An expired-but-unrevoked link is still `current` (the partial unique
-      # index keys on revoked_at IS NULL), so rotation must revoke it before
-      # `create!` or the insert collides with RecordNotUnique (#952).
+      # Expired-but-unrevoked is still `current` (partial unique index), so
+      # rotation must revoke it first or create! collides (#952).
       it "rotates an expired current link without colliding, leaving exactly one current, active link" do
+        workspace = team_workspace
+        owner = sign_in_as_owner_of(workspace)
+        member_of(workspace)
         expired = create(:workspace_join_link, workspace: workspace, created_by: owner)
         travel_to 8.days.from_now do
           expect(expired).to be_expired
@@ -62,12 +54,13 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
       end
 
       describe "show-once reveal (the token is hashed at rest)" do
-        before do
-          allow(Rails.configuration.x.signup).to receive(:permitted_join_strategies).and_return(%i[invite open_link])
-          workspace.update!(join_policy: "open_link")
-        end
-
         it "reveals the full join URL exactly once after generating, then masks it" do
+          permit_open_join_links
+          workspace = team_workspace
+          sign_in_as_owner_of(workspace)
+          member_of(workspace)
+          workspace.update!(join_policy: "open_link")
+
           post workspace_join_links_path(workspace)
           follow_redirect!
 
@@ -90,9 +83,11 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
     end
 
     context "as a regular member" do
-      before { sign_in(member) }
-
       it "rejects with not-authorized (no link created)" do
+        workspace = team_workspace
+        owner_of(workspace)
+        sign_in(member_of(workspace))
+
         expect {
           post workspace_join_links_path(workspace)
         }.not_to change(workspace.join_links, :count)
@@ -101,12 +96,14 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
   end
 
   describe "DELETE /workspaces/:slug/join_links/:id" do
-    let!(:link) { create(:workspace_join_link, workspace: workspace, created_by: owner) }
-
     context "as an admin/owner" do
-      before { sign_in(owner) }
-
       it "revokes (soft-removes) the link" do
+        workspace = team_workspace
+        owner = owner_of(workspace)
+        member_of(workspace)
+        link = create(:workspace_join_link, workspace: workspace, created_by: owner)
+        sign_in(owner)
+
         delete workspace_join_link_path(workspace, link)
         expect(link.reload).to be_revoked
         expect(response).to redirect_to(edit_workspace_settings_path(workspace))
@@ -115,26 +112,30 @@ RSpec.describe "Workspaces::JoinLinks", type: :request do
     end
 
     context "as a regular member" do
-      before { sign_in(member) }
-
       it "rejects with not-authorized (link stays active)" do
+        workspace = team_workspace
+        owner = owner_of(workspace)
+        link = create(:workspace_join_link, workspace: workspace, created_by: owner)
+        sign_in(member_of(workspace))
+
         delete workspace_join_link_path(workspace, link)
         expect(link.reload).not_to be_revoked
       end
     end
 
     context "cross-workspace IDOR" do
-      let(:other_workspace) { create(:workspace, personal: false) }
-      let!(:other_link) { create(:workspace_join_link, workspace: other_workspace, created_by: owner) }
-
-      before { sign_in(owner) }
-
       it "does not let an owner delete another workspace's link via the wrong slug" do
+        workspace = team_workspace
+        owner = owner_of(workspace)
+        member_of(workspace)
+        create(:workspace_join_link, workspace: workspace, created_by: owner)
+        other_workspace = team_workspace
+        other_link = create(:workspace_join_link, workspace: other_workspace, created_by: owner)
+        sign_in(owner)
+
         delete workspace_join_link_path(workspace, other_link)
-        # Whether the request 404s or redirects with an error, the other
-        # workspace's link must remain active — that's the load-bearing
-        # IDOR-protection assertion. ApplicationController rescues
-        # RecordNotFound globally and redirects.
+        # 404 or redirect, the other workspace's link must stay active:
+        # that is the IDOR assertion.
         expect(other_link.reload).not_to be_revoked
       end
     end

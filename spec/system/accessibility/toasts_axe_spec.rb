@@ -12,11 +12,10 @@ require "rails_helper"
 # claim (see spec/support/axe_accessibility.rb) — do not claim AAA
 # from a local run.
 RSpec.describe "Toast containers — axe landmark audit", type: :system do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme") }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
   it "page with a live toast is axe-clean, chrome included (both themes)" do
+    user = create(:user)
+    workspace = create(:workspace, name: "Acme")
+    create(:membership, :owner, user: user, workspace: workspace)
     sign_in_via_form(user)
 
     expect(axe_clean_in_both_themes?).to be(true),
@@ -24,7 +23,7 @@ RSpec.describe "Toast containers — axe landmark audit", type: :system do
   end
 
   it "empty toast containers are axe-clean, chrome included (both themes)" do
-    visit page_path(:about)
+    visit "/docs"
     expect(page).to have_css("#toast-pills", visible: :all)
 
     expect(axe_clean_in_both_themes?).to be(true),

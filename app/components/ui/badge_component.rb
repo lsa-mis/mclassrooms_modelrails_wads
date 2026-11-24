@@ -11,15 +11,8 @@ module UI
            "aria-invalid:border-2 aria-invalid:border-danger " \
            "[&>svg]:pointer-events-none [&>svg]:size-3"
 
-    # The 10 shipped cells, keyed `[variant, tone]` — 9 AAA-proven, plus `[:soft, :neutral]`
-    # pending this app's 0b axe row (see the class docblock). Signal tones use the TINTED
-    # treatment (soft `*-surface` background + saturated `text-<level>` + `*-border`),
-    # matching the alert + toast cards. The `--color-<level>` base tokens are TEXT
-    # colors (dark in light mode for AAA-on-light readability), so using them as solid
-    # fills produces dark, muddy chips — e.g. `bg-warning` is amber-900 (a dark brown),
-    # which reads nothing like "warning." The tinted pairing is what the `*-surface`
-    # tokens are for, and `text-<level>` on `bg-<level>-surface` is AAA-proven on the
-    # toast cards. (info/success on their tinted surfaces: CI-verify.)
+    # All 10 cells are AAA-proven (soft/neutral by spec/system/ui/badge_component_spec.rb). Signals
+    # are tinted chips, never solid `bg-<level>`: those base tokens are text colors.
     COMBOS = {
       [ :solid, :primary ] => "bg-interactive text-text-on-interactive [a&]:hover:bg-interactive-hover",
       [ :soft, :primary ] => "bg-interactive-subtle text-interactive [a&]:hover:bg-interactive-subtle",

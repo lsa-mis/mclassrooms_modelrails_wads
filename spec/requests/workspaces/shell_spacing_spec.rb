@@ -1,16 +1,17 @@
 require "rails_helper"
 
 RSpec.describe "Workspace shell spacing hooks", type: :request do
-  let(:user) { create(:user) }
-  let(:workspace) { create(:workspace, name: "Acme", max_members: 50) }
-  let!(:membership) { create(:membership, :owner, user: user, workspace: workspace) }
-
-  before { sign_in(user) }
+  def signed_in_owner_workspace
+    workspace = create(:workspace, name: "Acme", max_members: 50)
+    sign_in_as_owner_of(workspace)
+    workspace
+  end
 
   # The sidebar and the content column open at the same height. The identity
   # bar that used to set this gap is gone (the sidebar switcher carries
   # identity now), so the sidebar is what the content column matches.
   it "opens the sidebar and the content column at the same top gap" do
+    workspace = signed_in_owner_workspace
     get workspace_path(workspace)
     sidebar = Nokogiri::HTML(response.body).at_css("aside[aria-label]")
 
@@ -21,6 +22,7 @@ RSpec.describe "Workspace shell spacing hooks", type: :request do
   # match so headings share one left edge (and don't drift 8px left on
   # mobile). pt-4 keeps the top gap uniform.
   it "uses a consistent px-6 pt-4 content gutter across all shell pages" do
+    workspace = signed_in_owner_workspace
     [
       workspace_path(workspace),
       workspace_members_path(workspace),

@@ -60,7 +60,6 @@ class Invitation < ApplicationRecord
               email: normalized,
               role: role,
               invited_by: invited_by,
-              expires_at: 7.days.from_now,
               suppressed_at: (Time.current if blocked.include?(normalized))
             )
           rescue ActiveRecord::RecordNotUnique

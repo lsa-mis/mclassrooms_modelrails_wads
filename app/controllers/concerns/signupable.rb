@@ -29,6 +29,7 @@ module Signupable
       yield(user)
       claims.claim!(user, newly_registered: newly_registered)
     end
+    land_in_claimed_invitation(user)
     settle_pending_claims(claims)
     true
   rescue Invitation::NotAcceptable
@@ -44,6 +45,14 @@ module Signupable
   end
 
   private
+
+  def land_in_claimed_invitation(user)
+    token = session[:pending_invitation_token]
+    invitation = token.presence && Invitation.find_by(token: token)
+    return unless invitation&.accepted_by == user
+
+    session[:return_to_after_authenticating] = invitation_landing_path(invitation)
+  end
 
   # Drops spent tokens and renders the one continue-past problem (mismatch)
   # with a persistent flash — these callers redirect, so flash.now wouldn't

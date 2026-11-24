@@ -7,15 +7,12 @@ RSpec.describe ActivityLog, type: :model do
   # `{ changes: … }` under a SYMBOL key on the in-memory row and a string key
   # once reloaded, and the derivation has to read both.
   describe "#display_action" do
-    let(:workspace) { create(:workspace) }
-    let(:owner) { create(:user) }
-    let(:membership) { create(:membership, workspace: workspace) }
-
-    before do
+    def act_as_owner_of(workspace)
+      owner = create(:user)
       create(:membership, :owner, user: owner, workspace: workspace)
       Current.session = owner.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
       Current.workspace = workspace
-      membership
+      owner
     end
 
     after do
@@ -23,30 +20,42 @@ RSpec.describe ActivityLog, type: :model do
       Current.workspace = nil
     end
 
-    def last_membership_update
+    def last_membership_update(membership)
       ActivityLog.where(trackable: membership, action: "membership.updated").order(:created_at).last
     end
 
     it "names a removal a deactivation" do
+      workspace = create(:workspace)
+      act_as_owner_of(workspace)
+      membership = create(:membership, workspace: workspace)
       membership.deactivate!
 
-      expect(last_membership_update.display_action).to eq("membership.deactivated")
+      expect(last_membership_update(membership).display_action).to eq("membership.deactivated")
     end
 
     it "names a re-admission a reactivation" do
+      workspace = create(:workspace)
+      owner = act_as_owner_of(workspace)
+      membership = create(:membership, workspace: workspace)
       membership.deactivate!
       membership.reactivate!(granted_by: owner)
 
-      expect(last_membership_update.display_action).to eq("membership.reactivated")
+      expect(last_membership_update(membership).display_action).to eq("membership.reactivated")
     end
 
     it "leaves a role change as the plain update" do
+      workspace = create(:workspace)
+      act_as_owner_of(workspace)
+      membership = create(:membership, workspace: workspace)
       membership.change_role!(Role.system_default!("admin"))
 
-      expect(last_membership_update.display_action).to eq("membership.updated")
+      expect(last_membership_update(membership).display_action).to eq("membership.updated")
     end
 
     it "reads the symbol-keyed metadata of a row that has not been reloaded" do
+      workspace = create(:workspace)
+      act_as_owner_of(workspace)
+      membership = create(:membership, workspace: workspace)
       membership.deactivate!
       row = ActivityLog.where(trackable: membership, action: "membership.updated").order(:created_at).last
 
@@ -125,14 +134,13 @@ RSpec.describe ActivityLog, type: :model do
   end
 
   describe "scopes" do
-    let(:workspace) { create(:workspace) }
-
     # include/not_to include rather than contain_exactly: the workspace's own
     # `workspace.created` row belongs to this scope too (Workspace answers
     # activity_workspace for itself, #1084). The old exact match only held
     # because that row used to be written with a nil workspace — the scope
     # was passing on a defect, and pinning the row COUNT was never its job.
     it ".for_workspace filters by workspace" do
+      workspace = create(:workspace)
       ws_log = create(:activity_log, workspace: workspace)
       other_log = create(:activity_log, workspace: create(:workspace))
 
@@ -157,9 +165,8 @@ RSpec.describe ActivityLog, type: :model do
   end
 
   describe ".security_events_for" do
-    let(:user) { create(:user) }
-
     it "returns only SECURITY_ACTIONS rows for that user, newest first" do
+      user = create(:user)
       travel_to(2.hours.ago) { ActivityLog.record_security_event!(action: "user.passkey_added", user: user) }
       newest = ActivityLog.record_security_event!(action: "user.password_changed", user: user)
       # Same user, personal visibility, but not a security action — the case
@@ -177,6 +184,7 @@ RSpec.describe ActivityLog, type: :model do
     # SQLite materializes every row for the user, builds a temp B-tree, sorts,
     # then discards all but 10 (#823).
     it "sorts on the index rather than in a temp B-tree" do
+      user = create(:user)
       plan = ActivityLog.security_events_for(user).limit(10).explain.inspect
       expect(plan).to include("index_activity_logs_on_trackable_and_created_at")
       expect(plan).not_to include("USE TEMP B-TREE FOR ORDER BY")
@@ -214,9 +222,8 @@ RSpec.describe ActivityLog, type: :model do
   end
 
   describe ".record_security_event!" do
-    let(:user) { create(:user) }
-
     it "writes the personal, workspace-less row shape shared by every security writer" do
+      user = create(:user)
       log = ActivityLog.record_security_event!(action: "user.passkey_added", user: user,
                                               metadata: { nickname: "laptop" })
 
@@ -227,6 +234,7 @@ RSpec.describe ActivityLog, type: :model do
     end
 
     it "defaults metadata to empty rather than nil" do
+      user = create(:user)
       log = ActivityLog.record_security_event!(action: "user.password_changed", user: user)
       expect(log.reload.metadata).to eq({})
     end
@@ -235,7 +243,7 @@ RSpec.describe ActivityLog, type: :model do
     # write a plausible row that the retention sweep deletes at 12 months
     # instead of the security floor, with every other spec still green.
     it "raises instead of writing when the action is outside SECURITY_ACTIONS" do
-      user # materialize before the count block — creating a user writes its own activity rows.
+      user = create(:user)
       expect {
         expect {
           ActivityLog.record_security_event!(action: "user.passkey_add", user: user)
@@ -247,6 +255,7 @@ RSpec.describe ActivityLog, type: :model do
     # and visibility: let a caller override the self-event default so the
     # row still fits that writer's shape.
     it "writes an operator-actor row at admin visibility when given actor: and visibility:" do
+      user = create(:user)
       operator = create(:user)
       log = ActivityLog.record_security_event!(action: "operatorship.granted", user: user,
                                               actor: operator, visibility: "admin",
@@ -256,6 +265,7 @@ RSpec.describe ActivityLog, type: :model do
     end
 
     it "accepts an explicit nil actor (a rake grant has no granter)" do
+      user = create(:user)
       log = ActivityLog.record_security_event!(action: "operatorship.granted", user: user,
                                               actor: nil, visibility: "admin")
 
@@ -321,8 +331,9 @@ RSpec.describe ActivityLog, type: :model do
   # Bullet::Detector::UnusedEagerLoading directly to check that marking, so a
   # Bullet upgrade that changes it breaks here, not mysteriously elsewhere.
   describe "#display_subject" do
-    let(:ada) { create(:user, first_name: "Ada", last_name: "Owner") }
-    let(:row) { create(:activity_log, actor: ada) }
+    def create_ada
+      create(:user, first_name: "Ada", last_name: "Owner")
+    end
 
     def pre_snapshot(row, actor_id: row.actor_id)
       ActivityLog.where(id: row.id).update_all(actor_name: nil, actor_id: actor_id)
@@ -330,20 +341,23 @@ RSpec.describe ActivityLog, type: :model do
     end
 
     it "names the actor from the snapshot, even after the actor is renamed" do
-      row
+      ada = create_ada
+      row = create(:activity_log, actor: ada)
       ada.update!(first_name: "Renamed")
 
       expect(row.reload.display_subject).to eq("Ada Owner")
     end
 
     it "resolves a pre-snapshot row from the live actor" do
-      row
+      ada = create_ada
+      row = create(:activity_log, actor: ada)
       ada.update!(first_name: "Renamed")
 
       expect(pre_snapshot(row).display_subject).to eq("Renamed Owner")
     end
 
     it "names a former member when a pre-snapshot row's actor is gone" do
+      row = create(:activity_log, actor: create_ada)
       gone = pre_snapshot(row, actor_id: User.maximum(:id) + 1)
 
       expect(gone.display_subject).to eq(I18n.t("activity.departed_actor"))
@@ -351,10 +365,15 @@ RSpec.describe ActivityLog, type: :model do
   end
 
   describe ".for_feed actor preloading" do
-    let(:ada) { create(:user, first_name: "Ada", last_name: "Owner") }
-    let!(:snapshot_row) { create(:activity_log, actor: ada) }
-    let!(:legacy_rows) do
-      create_list(:activity_log, 2, actor: ada).each { |row| ActivityLog.where(id: row.id).update_all(actor_name: nil) }
+    def create_ada
+      create(:user, first_name: "Ada", last_name: "Owner")
+    end
+
+    def feed_rows
+      ada = create_ada
+      snapshot_row = create(:activity_log, actor: ada)
+      legacy_rows = create_list(:activity_log, 2, actor: ada).each { |row| ActivityLog.where(id: row.id).update_all(actor_name: nil) }
+      [ snapshot_row, legacy_rows ]
     end
 
     def subjects_of(scope)
@@ -362,6 +381,7 @@ RSpec.describe ActivityLog, type: :model do
     end
 
     it "names the pre-snapshot rows' actors in one query, not one per row" do
+      snapshot_row, legacy_rows = feed_rows
       scope = ActivityLog.where(id: [ snapshot_row.id, *legacy_rows.map(&:id) ])
       subjects = nil
 
@@ -370,6 +390,7 @@ RSpec.describe ActivityLog, type: :model do
     end
 
     it "touches users not at all when every row carries its snapshot" do
+      snapshot_row, = feed_rows
       scope = ActivityLog.where(id: snapshot_row.id)
 
       expect(count_selects_touching("users") { subjects_of(scope) }).to eq(0)

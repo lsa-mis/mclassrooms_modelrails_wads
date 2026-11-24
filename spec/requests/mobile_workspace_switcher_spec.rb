@@ -5,21 +5,14 @@ require "rails_helper"
 # The phone switcher on workspace pages (#1077) and, capped, on the index (#1090).
 # Asserted on the raw body: the mobile copy is md:hidden, not absent.
 RSpec.describe "Mobile workspace switcher", type: :request do
-  let(:user) { create(:user) }
-  let!(:second_workspace) do
-    ws = create(:workspace)
-    create(:membership, :owner, user: user, workspace: ws)
-    ws
-  end
-
-  before { sign_in(user) }
-
   def mobile_menu_items(html)
     Nokogiri::HTML(html).css("#workspace-switcher-menu-mobile a[role=menuitem]")
   end
 
   describe "user with 2+ workspaces" do
     it "links both workspaces from the mobile dropdown on a workspace page" do
+      second_workspace = create(:workspace)
+      user = sign_in_as_owner_of(second_workspace)
       user.reload
       personal = user.personal_workspace
 
@@ -35,6 +28,8 @@ RSpec.describe "Mobile workspace switcher", type: :request do
     # screen. Current workspace pinned first, then five total, then the index
     # link as the overflow.
     it "caps the mobile dropdown at five workspaces and offers All workspaces for the rest" do
+      second_workspace = create(:workspace)
+      user = sign_in_as_owner_of(second_workspace)
       5.times { create(:membership, :owner, user: user, workspace: create(:workspace)) }
       user.reload
       personal = user.personal_workspace
@@ -50,6 +45,8 @@ RSpec.describe "Mobile workspace switcher", type: :request do
 
     # The index's branch: no current workspace, and enough workspaces to cap (#1091).
     it "caps the index dropdown too, where there is no current workspace to pin" do
+      second_workspace = create(:workspace)
+      user = sign_in_as_owner_of(second_workspace)
       5.times { create(:membership, :owner, user: user, workspace: create(:workspace)) }
       user.reload
 
@@ -62,6 +59,8 @@ RSpec.describe "Mobile workspace switcher", type: :request do
     end
 
     it "does not cap the desktop sidebar copy" do
+      second_workspace = create(:workspace)
+      user = sign_in_as_owner_of(second_workspace)
       5.times { create(:membership, :owner, user: user, workspace: create(:workspace)) }
       user.reload
 
@@ -75,11 +74,9 @@ RSpec.describe "Mobile workspace switcher", type: :request do
   end
 
   describe "user with 1 workspace" do
-    let(:solo_user) { create(:user) }
-
-    before { sign_in(solo_user) }
-
     it "still renders the trigger (it is the only thing naming the workspace on a phone) with only the index link in its menu" do
+      solo_user = create(:user)
+      sign_in(solo_user)
       solo_user.reload
 
       get workspace_path(solo_user.personal_workspace)
@@ -92,6 +89,7 @@ RSpec.describe "Mobile workspace switcher", type: :request do
 
   describe "the hamburger" do
     it "no longer lists workspaces, but still offers All workspaces from the account group" do
+      user = sign_in_as_owner_of(create(:workspace))
       get workspace_path(user.reload.personal_workspace)
 
       panel = Nokogiri::HTML(response.body).at_css("#mobile-menu-panel")

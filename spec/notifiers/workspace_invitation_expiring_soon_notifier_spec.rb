@@ -7,18 +7,12 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
   include ActionMailer::TestHelper
   include ActiveSupport::Testing::TimeHelpers
 
-  let(:workspace) { create(:workspace) }
-  let(:inviter) { create(:user) }
-  # The invitee is resolved by the scheduled sweep job (Task 9, future PR) via
-  # User.find_by(email_address: invitation.email). Construct that linkage by
-  # hand here so this spec exercises only the dispatch contract.
-  let(:invitee) { create(:user) }
-  let(:invitation) do
+  def expiring_invitation(invitee, inviter: create(:user), invitable: create(:workspace), **attrs)
     create(:invitation,
-           invitable: workspace,
-           email: invitee.email_address,
-           invited_by: inviter,
-           expires_at: 48.hours.from_now)
+           **{ invitable: invitable,
+               email: invitee.email_address,
+               invited_by: inviter,
+               expires_at: 48.hours.from_now }.merge(attrs))
   end
 
   describe ".category" do
@@ -29,28 +23,30 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
 
   describe "dispatching" do
     it "delivers to the invitee and creates a Noticed::Notification row" do
+      invitee = create(:user)
+      invitation = expiring_invitation(invitee)
       result = described_class.with(record: invitation).deliver(invitee)
       expect(result).to eq :delivered
       expect(invitee.notifications.count).to eq 1
     end
 
     it "auto-populates idempotency_key on the event column" do
+      invitee = create(:user)
+      invitation = expiring_invitation(invitee)
       described_class.with(record: invitation).deliver(invitee)
       event = Noticed::Event.last
       expect(event.idempotency_key).to be_present
       expect(event.params["idempotency_key"]).to be_nil
     end
 
-    # Day-bucket idempotency: the sweep job (`WorkspaceInvitationExpiringSweepJob`)
-    # runs every 6 hours and re-finds every invitation in the 24-hour expiring
-    # window on each tick. With the base ApplicationNotifier minute-bucket key
-    # this would dispatch ~4 notifications per invitation per day. The override
-    # collapses repeat dispatches to one per (invitation, day).
+    # Day-bucket idempotency: the 6-hourly sweep job re-finds each expiring
+    # invitation, so repeat dispatches collapse to one per (invitation, day).
     it "deduplicates two consecutive dispatches hours apart on the same day" do
+      invitee = create(:user)
       midday = Time.current.beginning_of_day + 6.hours
-      first = nil
-      second = nil
+      invitation = first = second = nil
       travel_to(midday) do
+        invitation = expiring_invitation(invitee)
         first = described_class.with(record: invitation).deliver(invitee)
       end
       travel_to(midday + 6.hours) do
@@ -61,8 +57,11 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
     end
 
     it "delivers a fresh dispatch the next day for the same invitation" do
+      invitee = create(:user)
       now = Time.current
+      invitation = nil
       travel_to(now) do
+        invitation = expiring_invitation(invitee)
         described_class.with(record: invitation).deliver(invitee)
       end
 
@@ -73,19 +72,21 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
     end
 
     it "enqueues a NotificationMailer.workspace_invitation_expiring_soon email under default preferences" do
+      invitee = create(:user)
       create(:user_preferences, user: invitee)
+      invitation = expiring_invitation(invitee)
       expect {
         described_class.with(record: invitation).deliver(invitee)
         drain_noticed_jobs
       }.to have_enqueued_mail(NotificationMailer, :workspace_invitation_expiring_soon)
     end
 
-    # Scoped to ActionMailer::MailDeliveryJob rather than a bare
-    # perform_enqueued_jobs — the latter also runs unrelated jobs like
-    # CheckGravatarJob (enqueued from the user factories above), which does
-    # network IO and isn't relevant to this notifier (same reasoning as the
-    # sibling notifier specs' drain_noticed_jobs comment).
+    # Scoped to MailDeliveryJob: a bare perform_enqueued_jobs also runs
+    # CheckGravatarJob (network IO) from the user factories.
     it "does not email when the block lands after dispatch (T14, final-hop gate)" do
+      invitee = create(:user)
+      invitation = expiring_invitation(invitee)
+      inviter = invitation.invited_by
       described_class.with(record: invitation).deliver(invitee)
       create(:invitation_block, inviter: inviter, email: invitation.email)
 
@@ -97,9 +98,10 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
   end
 
   describe "preferences gating" do
-    let!(:prefs) { create(:user_preferences, user: invitee) }
-
     it "suppresses both in-app and email under DND (account_access does NOT bypass)" do
+      invitee = create(:user)
+      prefs = create(:user_preferences, user: invitee)
+      invitation = expiring_invitation(invitee)
       prefs.update!(notification_preferences:
         prefs.notification_preferences.merge("quiet_hours" => { "enabled" => true, "start" => "00:00", "end" => "23:59", "allow_urgent" => true }))
 
@@ -114,6 +116,9 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
     end
 
     it "fires in-app but skips email when the email channel is disabled" do
+      invitee = create(:user)
+      prefs = create(:user_preferences, user: invitee)
+      invitation = expiring_invitation(invitee)
       delivery_methods = prefs.notification_preferences["delivery_methods"].deep_dup
       delivery_methods["email"]["enabled"] = false
       prefs.update!(notification_preferences:
@@ -132,12 +137,10 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
 
   describe "#message" do
     it "renders the localized expiring-soon message with workspace and hours_remaining" do
+      workspace = create(:workspace)
+      invitee = create(:user)
       freeze_time do
-        invitation_in_window = create(:invitation,
-                                      invitable: workspace,
-                                      email: invitee.email_address,
-                                      invited_by: inviter,
-                                      expires_at: 24.hours.from_now)
+        invitation_in_window = expiring_invitation(invitee, invitable: workspace, expires_at: 24.hours.from_now)
         described_class.with(record: invitation_in_window).deliver(invitee)
         notification = invitee.notifications.last
         expect(notification.message).to eq(
@@ -151,6 +154,8 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
 
   describe "#url" do
     it "links to the accept-invitation path with the invitation token" do
+      invitee = create(:user)
+      invitation = expiring_invitation(invitee)
       described_class.with(record: invitation).deliver(invitee)
       notification = invitee.notifications.last
       expect(notification.url).to eq(
@@ -159,6 +164,8 @@ RSpec.describe WorkspaceInvitationExpiringSoonNotifier, type: :notifier do
     end
 
     it "returns the placeholder copy when the invitation has been deleted" do
+      invitee = create(:user)
+      invitation = expiring_invitation(invitee)
       described_class.with(record: invitation).deliver(invitee)
       invitation.destroy
       notification = invitee.notifications.last
